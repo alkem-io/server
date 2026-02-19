@@ -128,7 +128,7 @@ export class CommunicationService {
     return results.map(r => r.id);
   }
 
-  async removeUserFromCommunications(
+  async removeActorFromCommunications(
     communication: ICommunication,
     actorID: string
   ): Promise<boolean> {

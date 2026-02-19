@@ -35,7 +35,7 @@ export class CommunityCommunicationService {
     actorID: string
   ): Promise<void> {
     this.communicationService
-      .removeUserFromCommunications(communication, actorID)
+      .removeActorFromCommunications(communication, actorID)
       .catch(error =>
         this.logger.error(
           {

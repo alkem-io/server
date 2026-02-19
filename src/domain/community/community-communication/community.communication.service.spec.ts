@@ -10,7 +10,7 @@ describe('CommunityCommunicationService', () => {
   let service: CommunityCommunicationService;
   let communicationService: {
     addContributorToCommunications: Mock;
-    removeUserFromCommunications: Mock;
+    removeActorFromCommunications: Mock;
   };
 
   beforeEach(async () => {
@@ -60,8 +60,8 @@ describe('CommunityCommunicationService', () => {
   });
 
   describe('removeMemberFromCommunication', () => {
-    it('should call removeUserFromCommunications with communication and actor id', async () => {
-      communicationService.removeUserFromCommunications.mockResolvedValue(
+    it('should call removeActorFromCommunications with communication and actor id', async () => {
+      communicationService.removeActorFromCommunications.mockResolvedValue(
         undefined
       );
 
@@ -71,12 +71,12 @@ describe('CommunityCommunicationService', () => {
       await service.removeMemberFromCommunication(communication, actorID);
 
       expect(
-        communicationService.removeUserFromCommunications
+        communicationService.removeActorFromCommunications
       ).toHaveBeenCalledWith(communication, 'user-1');
     });
 
     it('should not throw when the underlying communication service call fails (error is caught)', async () => {
-      communicationService.removeUserFromCommunications.mockRejectedValue(
+      communicationService.removeActorFromCommunications.mockRejectedValue(
         new Error('Communication error')
       );
 
