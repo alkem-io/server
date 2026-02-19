@@ -97,7 +97,7 @@ export class VirtualContributorService {
     virtualContributor.searchVisibility = SearchVisibility.ACCOUNT;
 
     virtualContributor.authorization = new AuthorizationPolicy(
-      AuthorizationPolicyType.VIRTUAL
+      AuthorizationPolicyType.VIRTUAL_CONTRIBUTOR
     );
 
     // Pull the settings from a defaults file
@@ -483,7 +483,7 @@ export class VirtualContributorService {
     if (!storageBucket) {
       throw new RelationshipNotFoundException(
         `Unable to find storage bucket to use for Virtual Contributor: ${virtualContributorID}`,
-        LogContext.VIRTUAL
+        LogContext.VIRTUAL_CONTRIBUTOR
       );
     }
     return storageBucket;
@@ -495,7 +495,7 @@ export class VirtualContributorService {
   ): Promise<boolean> {
     this.logger.verbose?.(
       `refreshing the body of knowledge ${virtualContributor.id}, by ${actorContext.actorID}`,
-      LogContext.VIRTUAL
+      LogContext.VIRTUAL_CONTRIBUTOR
     );
 
     // no refresh needed for these types
@@ -529,7 +529,7 @@ export class VirtualContributorService {
             virtualContributorID: vc.id,
           },
           error?.stack,
-          LogContext.VIRTUAL
+          LogContext.VIRTUAL_CONTRIBUTOR
         );
       }
     }
@@ -600,7 +600,7 @@ export class VirtualContributorService {
     if (!knowledgeBase) {
       throw new EntityNotFoundException(
         `Unable to find knowledge base for VirtualContributor: ${virtualContributor.id}`,
-        LogContext.VIRTUAL
+        LogContext.VIRTUAL_CONTRIBUTOR
       );
     }
 

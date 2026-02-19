@@ -64,7 +64,7 @@ export enum LogContext {
   LOCAL_STORAGE = 'local-storage',
   INNOVATION_FLOW = 'innovation-flow',
   FILE_INTEGRATION = 'file-integration',
-  VIRTUAL = 'virtual-contributor',
+  VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
   VIRTUAL_ENGINE_GENERIC = 'virtual-contributor-engine-generic',
   VIRTUAL_ENGINE_OPENAI_ASSISTANT = 'virtual-contributor-openai-assistant',
   VIRTUAL_ENGINE_EXPERT = 'virtual-contributor-engine-expert',

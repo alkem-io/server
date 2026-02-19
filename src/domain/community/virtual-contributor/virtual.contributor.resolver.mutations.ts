@@ -92,7 +92,7 @@ export class VirtualContributorResolverMutations {
     if (!accountAuthorization) {
       throw new RelationshipNotFoundException(
         `Unable to load authorizing account for VC ${virtualContributor.id}`,
-        LogContext.VIRTUAL
+        LogContext.VIRTUAL_CONTRIBUTOR
       );
     }
 
@@ -194,7 +194,7 @@ export class VirtualContributorResolverMutations {
   ): Promise<boolean> {
     this.logger.verbose?.(
       `Refresh body of knowledge mutation invoked for VC ${refreshData.virtualContributorID}`,
-      LogContext.VIRTUAL
+      LogContext.VIRTUAL_CONTRIBUTOR
     );
 
     const virtual =
@@ -203,7 +203,7 @@ export class VirtualContributorResolverMutations {
       );
     this.logger.verbose?.(
       `VC ${refreshData.virtualContributorID} found`,
-      LogContext.VIRTUAL
+      LogContext.VIRTUAL_CONTRIBUTOR
     );
 
     this.authorizationService.grantAccessOrFail(

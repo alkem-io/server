@@ -116,7 +116,7 @@ export class UrlGeneratorService {
           'virtual_contributor',
           profile.id
         );
-        return `${this.endpoint_cluster}/${UrlPathBase.VIRTUAL}/${vcEntityInfo.entityNameID}`;
+        return `${this.endpoint_cluster}/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/${vcEntityInfo.entityNameID}`;
       }
       case ProfileType.ORGANIZATION: {
         const organizationEntityInfo =
@@ -175,7 +175,7 @@ export class UrlGeneratorService {
           await this.getVirtualContributorFromKnowledgeBaseProfileOrFail(
             profile.id
           );
-        return `${this.endpoint_cluster}/${UrlPathBase.VIRTUAL}/${vc.nameID}/${UrlPathElement.KNOWLEDGE_BASE}`;
+        return `${this.endpoint_cluster}/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/${vc.nameID}/${UrlPathElement.KNOWLEDGE_BASE}`;
       }
     }
     return '';
@@ -186,7 +186,7 @@ export class UrlGeneratorService {
     nameID: string;
   }): string {
     const type = this.getContributorType(contributor);
-    let path: string = UrlPathBase.VIRTUAL;
+    let path: string = UrlPathBase.VIRTUAL_CONTRIBUTOR;
     switch (type) {
       case ActorType.USER:
         path = UrlPathBase.USER;
@@ -195,7 +195,7 @@ export class UrlGeneratorService {
         path = UrlPathBase.ORGANIZATION;
         break;
       case ActorType.VIRTUAL_CONTRIBUTOR:
-        path = UrlPathBase.VIRTUAL;
+        path = UrlPathBase.VIRTUAL_CONTRIBUTOR;
         break;
     }
     return `${this.endpoint_cluster}/${path}/${contributor.nameID}`;

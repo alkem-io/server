@@ -23,7 +23,7 @@ export const innovationPackPathMatcher = match(
 );
 
 export const virtualContributorPathMatcher = match(
-  `/${UrlPathBase.VIRTUAL}/:virtualContributorNameID{/${UrlPathElement.KNOWLEDGE_BASE}/:calloutNameID}{/${UrlPathElement.POSTS}/:postNameID}{/${UrlPathElement.MEMOS}/:memoNameID}{/*path}`
+  `/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/:virtualContributorNameID{/${UrlPathElement.KNOWLEDGE_BASE}/:calloutNameID}{/${UrlPathElement.POSTS}/:postNameID}{/${UrlPathElement.MEMOS}/:memoNameID}{/*path}`
 );
 
 export const innovationHubPathMatcher = match(

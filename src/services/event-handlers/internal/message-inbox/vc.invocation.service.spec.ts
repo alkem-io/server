@@ -185,7 +185,7 @@ describe('VcInvocationService', () => {
       const vcMentions = [
         {
           actorID: 'vc-1',
-          actorType: MentionedEntityType.VIRTUAL,
+          actorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
         },
       ];
       messageNotificationService.getMentionsFromText.mockResolvedValue([

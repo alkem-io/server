@@ -63,7 +63,7 @@ export class NotificationVirtualContributorAdapter {
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION,
-        NotificationEventCategory.VIRTUAL,
+        NotificationEventCategory.VIRTUAL_CONTRIBUTOR,
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload

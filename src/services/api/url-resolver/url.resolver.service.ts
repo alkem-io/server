@@ -164,7 +164,7 @@ export class UrlResolverService {
           result.virtualContributor.id
         );
         result.closestAncestor = {
-          type: UrlType.VIRTUAL,
+          type: UrlType.VIRTUAL_CONTRIBUTOR,
           url: url,
           virtualContributor: result.virtualContributor,
         };
@@ -225,8 +225,8 @@ export class UrlResolverService {
         result.userId = user.id;
         return result;
       }
-      case UrlPathBase.VIRTUAL: {
-        result.type = UrlType.VIRTUAL;
+      case UrlPathBase.VIRTUAL_CONTRIBUTOR: {
+        result.type = UrlType.VIRTUAL_CONTRIBUTOR;
         return await this.populateVirtualContributorResult(
           result,
           urlPath,
@@ -340,7 +340,7 @@ export class UrlResolverService {
     urlPath: string,
     actorContext: ActorContext
   ): Promise<UrlResolverQueryResults> {
-    result.type = UrlType.VIRTUAL;
+    result.type = UrlType.VIRTUAL_CONTRIBUTOR;
     const virtualContributorMatch =
       Utils.virtualContributorPathMatcher(urlPath);
     if (!virtualContributorMatch || !virtualContributorMatch.params) {

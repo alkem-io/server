@@ -206,7 +206,7 @@ export class VcInvocationService {
     );
 
     const vcMentions = mentions.filter(
-      (m: Mention) => m.actorType === MentionedEntityType.VIRTUAL
+      (m: Mention) => m.actorType === MentionedEntityType.VIRTUAL_CONTRIBUTOR
     );
 
     if (vcMentions.length === 0) {

@@ -39,7 +39,7 @@ export class VirtualContributorMessageService {
     if (!virtualContributor.aiPersonaID) {
       throw new EntityNotInitializedException(
         `AI Persona ID not set for VirtualContributor ${virtualContributor?.id}`,
-        LogContext.VIRTUAL
+        LogContext.VIRTUAL_CONTRIBUTOR
       );
     }
 

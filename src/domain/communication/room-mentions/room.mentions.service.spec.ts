@@ -112,7 +112,7 @@ describe('RoomMentionsService', () => {
       expect(result).toEqual([
         {
           actorID: 'vc-uuid-1',
-          actorType: MentionedEntityType.VIRTUAL,
+          actorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
         },
       ]);
     });
@@ -249,7 +249,7 @@ describe('RoomMentionsService', () => {
       const vcMentions: Mention[] = [
         {
           actorID: 'vc-entity-1',
-          actorType: MentionedEntityType.VIRTUAL,
+          actorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
         },
       ];
 
@@ -330,7 +330,7 @@ describe('RoomMentionsService', () => {
       const vcMentions: Mention[] = [
         {
           actorID: 'vc-entity-1',
-          actorType: MentionedEntityType.VIRTUAL,
+          actorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
         },
       ];
 

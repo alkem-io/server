@@ -22,7 +22,7 @@ import { VirtualContributorMessageService } from '../virtual.contributor.message
 @Injectable()
 export class RoomMentionsService {
   MENTION_REGEX_ALL = new RegExp(
-    `\\[@[^\\]]*]\\((http|https):\\/\\/[^)]*\\/(?<type>${MentionedEntityType.USER}|${MentionedEntityType.ORGANIZATION}|${MentionedEntityType.VIRTUAL})\\/(?<nameid>[^)]+)\\)`,
+    `\\[@[^\\]]*]\\((http|https):\\/\\/[^)]*\\/(?<type>${MentionedEntityType.USER}|${MentionedEntityType.ORGANIZATION}|${MentionedEntityType.VIRTUAL_CONTRIBUTOR})\\/(?<nameid>[^)]+)\\)`,
     'gm'
   );
 
@@ -78,7 +78,7 @@ export class RoomMentionsService {
   ) {
     const contextSpaceID = await this.getSpaceIdForRoom(room);
     const vcMentions = mentions.filter(
-      mention => mention.actorType === MentionedEntityType.VIRTUAL
+      mention => mention.actorType === MentionedEntityType.VIRTUAL_CONTRIBUTOR
     );
     // Only the first VC mention starts an interaction
     // check if interaction was not already created instead of hardcoded
@@ -87,7 +87,7 @@ export class RoomMentionsService {
     for (const vcMention of vcMentions) {
       this.logger.verbose?.(
         `got mention for VC: ${vcMention.actorID}`,
-        LogContext.VIRTUAL
+        LogContext.VIRTUAL_CONTRIBUTOR
       );
       if (!vcInteraction) {
         // Edge conversion: GraphQL mention (entity UUID) → agent.id for internal flow
@@ -188,14 +188,16 @@ export class RoomMentionsService {
           actorID: organization.id,
           actorType: MentionedEntityType.ORGANIZATION,
         });
-      } else if (match.groups?.type === MentionedEntityType.VIRTUAL) {
+      } else if (
+        match.groups?.type === MentionedEntityType.VIRTUAL_CONTRIBUTOR
+      ) {
         const virtualContributor =
           await this.virtualActorLookupService.getVirtualContributorByNameIdOrFail(
             contributorNamedID
           );
         result.push({
           actorID: virtualContributor.id,
-          actorType: MentionedEntityType.VIRTUAL,
+          actorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
         });
       }
     }

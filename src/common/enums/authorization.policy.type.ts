@@ -41,7 +41,7 @@ export enum AuthorizationPolicyType {
   USER_SETTINGS = 'user-settings',
   ORGANIZATION = 'organization',
   ORGANIZATION_VERIFICATION = 'organization-verification',
-  VIRTUAL = 'virtual-contributor',
+  VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
   SPACE = 'space',
   SPACE_ABOUT = 'space-about',
   ACCOUNT = 'account',
