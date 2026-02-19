@@ -88,7 +88,10 @@ export class CalloutsSetAuthorizationService {
     const globalAdminTransferCalloutOffer =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER],
-        [AuthorizationCredential.GLOBAL_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
+        ],
         CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_OFFER
       );
     globalAdminTransferCalloutOffer.cascade = false;
@@ -97,7 +100,10 @@ export class CalloutsSetAuthorizationService {
     const globalAdminTransferCalloutAccept =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT],
-        [AuthorizationCredential.GLOBAL_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
+        ],
         CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_ACCEPT
       );
     globalAdminTransferCalloutAccept.cascade = false;
