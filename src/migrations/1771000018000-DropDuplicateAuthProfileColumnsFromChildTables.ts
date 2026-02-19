@@ -8,14 +8,21 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *
  * Note: Data was already copied to actor table in the CTI migration
  * (MigrateUserToActor, MigrateOrganizationToActor, etc.)
+ *
+ * Column presence per table (from baseline schema):
+ *   user:                 authorizationId ✓  profileId ✓
+ *   organization:         authorizationId ✓  profileId ✓
+ *   virtual_contributor:  authorizationId ✓  profileId ✓
+ *   space:                authorizationId ✓  profileId ✗
+ *   account:              authorizationId ✓  profileId ✗
  */
 export class DropDuplicateAuthProfileColumnsFromChildTables1771000018000
   implements MigrationInterface
 {
   name = 'DropDuplicateAuthProfileColumnsFromChildTables1771000018000';
 
-  // Tables that had authorizationId and profileId before CTI
-  private readonly childTables = [
+  // Tables that have authorizationId
+  private readonly tablesWithAuth = [
     'user',
     'organization',
     'virtual_contributor',
@@ -23,25 +30,27 @@ export class DropDuplicateAuthProfileColumnsFromChildTables1771000018000
     'account',
   ];
 
+  // Tables that also have profileId
+  private readonly tablesWithProfile = ['user', 'organization', 'virtual_contributor'];
+
   public async up(queryRunner: QueryRunner): Promise<void> {
-    // Create backup tables for rollback purposes
-    for (const table of this.childTables) {
+    // Create backup tables for rollback
+    for (const table of this.tablesWithAuth) {
+      const hasProfile = this.tablesWithProfile.includes(table);
+      const profileCol = hasProfile ? ', "profileId"' : '';
       await queryRunner.query(`
         CREATE TABLE "_auth_profile_backup_${table}" AS
-        SELECT "id", "authorizationId", "profileId" FROM "${table}"
+        SELECT "id", "authorizationId"${profileCol} FROM "${table}"
       `);
     }
 
-    // Drop FK and unique constraints, then columns for each table
-    for (const table of this.childTables) {
-      // Drop authorizationId constraints and column
-      await this.dropColumnWithConstraints(
-        queryRunner,
-        table,
-        'authorizationId'
-      );
+    // Drop authorizationId from all child tables
+    for (const table of this.tablesWithAuth) {
+      await this.dropColumnWithConstraints(queryRunner, table, 'authorizationId');
+    }
 
-      // Drop profileId constraints and column
+    // Drop profileId only from tables that have it
+    for (const table of this.tablesWithProfile) {
       await this.dropColumnWithConstraints(queryRunner, table, 'profileId');
     }
   }
@@ -95,9 +104,9 @@ export class DropDuplicateAuthProfileColumnsFromChildTables1771000018000
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
-    // Re-add columns and restore data from backup
-    for (const table of this.childTables) {
-      // Check if backup table exists
+    for (const table of this.tablesWithAuth) {
+      const hasProfile = this.tablesWithProfile.includes(table);
+
       const backupExists = await queryRunner.query(`
         SELECT EXISTS (
           SELECT FROM information_schema.tables
@@ -109,38 +118,28 @@ export class DropDuplicateAuthProfileColumnsFromChildTables1771000018000
         continue;
       }
 
-      // Re-add authorizationId column
       await queryRunner.query(
         `ALTER TABLE "${table}" ADD COLUMN "authorizationId" uuid`
       );
 
-      // Re-add profileId column
-      await queryRunner.query(
-        `ALTER TABLE "${table}" ADD COLUMN "profileId" uuid`
-      );
+      if (hasProfile) {
+        await queryRunner.query(
+          `ALTER TABLE "${table}" ADD COLUMN "profileId" uuid`
+        );
+      }
 
-      // Restore data
+      const profileSet = hasProfile ? ', "profileId" = b."profileId"' : '';
       await queryRunner.query(`
         UPDATE "${table}" t
-        SET
-          "authorizationId" = b."authorizationId",
-          "profileId" = b."profileId"
+        SET "authorizationId" = b."authorizationId"${profileSet}
         FROM "_auth_profile_backup_${table}" b
         WHERE t."id" = b."id"
       `);
 
-      // Re-add unique constraints
       await queryRunner.query(`
         ALTER TABLE "${table}"
         ADD CONSTRAINT "UQ_${table}_authorizationId" UNIQUE ("authorizationId")
       `);
-
-      await queryRunner.query(`
-        ALTER TABLE "${table}"
-        ADD CONSTRAINT "UQ_${table}_profileId" UNIQUE ("profileId")
-      `);
-
-      // Re-add FK constraints
       await queryRunner.query(`
         ALTER TABLE "${table}"
         ADD CONSTRAINT "FK_${table}_authorizationId"
@@ -148,16 +147,21 @@ export class DropDuplicateAuthProfileColumnsFromChildTables1771000018000
         ON DELETE SET NULL
       `);
 
-      await queryRunner.query(`
-        ALTER TABLE "${table}"
-        ADD CONSTRAINT "FK_${table}_profileId"
-        FOREIGN KEY ("profileId") REFERENCES "profile"("id")
-        ON DELETE SET NULL
-      `);
+      if (hasProfile) {
+        await queryRunner.query(`
+          ALTER TABLE "${table}"
+          ADD CONSTRAINT "UQ_${table}_profileId" UNIQUE ("profileId")
+        `);
+        await queryRunner.query(`
+          ALTER TABLE "${table}"
+          ADD CONSTRAINT "FK_${table}_profileId"
+          FOREIGN KEY ("profileId") REFERENCES "profile"("id")
+          ON DELETE SET NULL
+        `);
+      }
     }
 
-    // Drop backup tables
-    for (const table of this.childTables) {
+    for (const table of this.tablesWithAuth) {
       await queryRunner.query(
         `DROP TABLE IF EXISTS "_auth_profile_backup_${table}"`
       );
