@@ -23,25 +23,25 @@ export class ActorTypeCacheService {
 
   /**
    * Get actor type from cache.
-   * @param actorId - Actor identifier.
+   * @param actorID - Actor identifier.
    * @returns Cached ActorType or undefined if not found.
    */
-  public getActorType(actorId: string): Promise<ActorType | undefined> {
-    return this.cacheManager.get<ActorType>(this.getActorTypeCacheKey(actorId));
+  public getActorType(actorID: string): Promise<ActorType | undefined> {
+    return this.cacheManager.get<ActorType>(this.getActorTypeCacheKey(actorID));
   }
 
   /**
    * Set actor type in cache.
-   * @param actorId - Actor identifier.
+   * @param actorID - Actor identifier.
    * @param actorType - Actor type to cache.
    * @returns The cached actor type.
    */
   public setActorType(
-    actorId: string,
+    actorID: string,
     actorType: ActorType
   ): Promise<ActorType> {
     return this.cacheManager.set<ActorType>(
-      this.getActorTypeCacheKey(actorId),
+      this.getActorTypeCacheKey(actorID),
       actorType,
       { ttl: this.cache_ttl }
     );
@@ -49,30 +49,30 @@ export class ActorTypeCacheService {
 
   /**
    * Set multiple actor types in cache.
-   * @param typeMap - Map of actorId to ActorType.
+   * @param typeMap - Map of actorID to ActorType.
    * @returns Promise resolving when all entries are cached.
    */
   public async setActorTypes(typeMap: Map<string, ActorType>): Promise<void> {
     const promises: Promise<ActorType>[] = [];
-    for (const [actorId, actorType] of typeMap) {
-      promises.push(this.setActorType(actorId, actorType));
+    for (const [actorID, actorType] of typeMap) {
+      promises.push(this.setActorType(actorID, actorType));
     }
     await Promise.all(promises);
   }
 
   /**
    * Get multiple actor types from cache.
-   * @param actorIds - Array of actor identifiers.
-   * @returns Map of actorId to ActorType for found entries.
+   * @param actorIDs - Array of actor identifiers.
+   * @returns Map of actorID to ActorType for found entries.
    */
   public async getActorTypes(
-    actorIds: string[]
+    actorIDs: string[]
   ): Promise<Map<string, ActorType>> {
     const result = new Map<string, ActorType>();
-    const promises = actorIds.map(async actorId => {
-      const type = await this.getActorType(actorId);
+    const promises = actorIDs.map(async actorID => {
+      const type = await this.getActorType(actorID);
       if (type !== undefined) {
-        result.set(actorId, type);
+        result.set(actorID, type);
       }
     });
     await Promise.all(promises);
@@ -81,14 +81,14 @@ export class ActorTypeCacheService {
 
   /**
    * Delete actor type from cache.
-   * @param actorId - Actor identifier.
+   * @param actorID - Actor identifier.
    * @returns Promise resolving when deletion is complete.
    */
-  public deleteActorType(actorId: string): Promise<void> {
-    return this.cacheManager.del(this.getActorTypeCacheKey(actorId));
+  public deleteActorType(actorID: string): Promise<void> {
+    return this.cacheManager.del(this.getActorTypeCacheKey(actorID));
   }
 
-  private getActorTypeCacheKey(actorId: string): string {
-    return `@actorType:${actorId}`;
+  private getActorTypeCacheKey(actorID: string): string {
+    return `@actorType:${actorID}`;
   }
 }

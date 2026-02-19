@@ -368,7 +368,7 @@ export class TemplateService {
       sourceSpace,
       templateInput.contentSpace,
       true,
-      actorContext.actorId
+      actorContext.actorID
     );
 
     return await this.getTemplateOrFail(templateInput.id);

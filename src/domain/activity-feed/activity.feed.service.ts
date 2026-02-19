@@ -72,7 +72,7 @@ export class ActivityFeedService {
 
     return this.getPaginatedActivity(collaborationIds, {
       types,
-      userID: myActivity ? actorContext.actorId : undefined,
+      userID: myActivity ? actorContext.actorID : undefined,
       visibility: true,
       paginationArgs,
       sort: 'DESC', // the most recent first
@@ -103,7 +103,7 @@ export class ActivityFeedService {
 
     return this.getGroupedActivity(collaborationIds, {
       types,
-      userID: myActivity ? actorContext.actorId : undefined,
+      userID: myActivity ? actorContext.actorID : undefined,
       visibility: true,
       limit: limit ? limit : undefined,
       sort: 'DESC', // the most recent first

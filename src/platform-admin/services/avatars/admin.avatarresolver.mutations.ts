@@ -42,13 +42,13 @@ export class AdminSearchContributorsMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `Update contributor avatars to be stored as Documents: ${actorContext.actorId}`
+      `Update contributor avatars to be stored as Documents: ${actorContext.actorID}`
     );
 
     let profile =
       await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
         profileID,
-        actorContext.actorId
+        actorContext.actorID
       );
     profile = await this.profileService.getProfileOrFail(profile.id, {
       relations: {

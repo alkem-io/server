@@ -69,7 +69,7 @@ describe('FileIntegrationService', () => {
       });
 
       vi.mocked(authenticationService.getActorContext).mockResolvedValue({
-        actorId: 'agent-1',
+        actorID: 'agent-1',
       } as any);
       vi.mocked(documentService.getDocumentOrFail).mockRejectedValue(
         new Error('Not found')
@@ -89,7 +89,7 @@ describe('FileIntegrationService', () => {
       });
 
       vi.mocked(authenticationService.getActorContext).mockResolvedValue({
-        actorId: 'agent-1',
+        actorID: 'agent-1',
       } as any);
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
         id: 'doc-1',
@@ -112,7 +112,7 @@ describe('FileIntegrationService', () => {
       });
 
       vi.mocked(authenticationService.getActorContext).mockResolvedValue({
-        actorId: 'agent-1',
+        actorID: 'agent-1',
       } as any);
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
         id: 'doc-1',
@@ -136,7 +136,7 @@ describe('FileIntegrationService', () => {
       });
 
       vi.mocked(authenticationService.getActorContext).mockResolvedValue({
-        actorId: 'agent-1',
+        actorID: 'agent-1',
       } as any);
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
         id: 'doc-1',

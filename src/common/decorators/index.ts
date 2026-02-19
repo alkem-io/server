@@ -1,4 +1,4 @@
-export * from './authorization.actor.privilege';
+export * from './authorizationActorHasPrivilege';
 export * from './current-actor.decorator';
 export * from './headers.decorator';
 export * from './innovation.hub.decoration';

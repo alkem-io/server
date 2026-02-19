@@ -89,7 +89,7 @@ describe('InAppNotificationService', () => {
       const payload = {
         spaceID: 'space-1',
         actorType: ActorType.USER,
-        actorId: 'user-contributor',
+        actorID: 'user-contributor',
       };
       notificationRepo.create!.mockImplementation((input: any) => input);
 
@@ -112,7 +112,7 @@ describe('InAppNotificationService', () => {
       const payload = {
         spaceID: 'space-1',
         actorType: ActorType.ORGANIZATION,
-        actorId: 'org-contributor',
+        actorID: 'org-contributor',
       };
       notificationRepo.create!.mockImplementation((input: any) => input);
 
@@ -134,7 +134,7 @@ describe('InAppNotificationService', () => {
       const payload = {
         spaceID: 'space-1',
         actorType: ActorType.VIRTUAL,
-        actorId: 'vc-contributor',
+        actorID: 'vc-contributor',
       };
       notificationRepo.create!.mockImplementation((input: any) => input);
 

@@ -1236,9 +1236,9 @@ export class SpaceService {
       }
       const roleSet = subspace.community.roleSet;
       const parentRoleSet = space.community.roleSet;
-      const isMember = actorContext?.actorId
+      const isMember = actorContext?.actorID
         ? await this.roleSetService.isMember(
-            actorContext.actorId,
+            actorContext.actorID,
             parentRoleSet
           )
         : false;
@@ -1339,28 +1339,28 @@ export class SpaceService {
     roleSet: IRoleSet,
     actorContext: ActorContext
   ) {
-    if (!actorContext.actorId || actorContext.actorId.length !== UUID_LENGTH) {
+    if (!actorContext.actorID || actorContext.actorID.length !== UUID_LENGTH) {
       // No userID to assign the role to
       return;
     }
     await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.MEMBER,
-      actorContext.actorId,
+      actorContext.actorID,
       actorContext
     );
 
     await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.LEAD,
-      actorContext.actorId,
+      actorContext.actorID,
       actorContext
     );
 
     await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.ADMIN,
-      actorContext.actorId,
+      actorContext.actorID,
       actorContext
     );
   }
@@ -1623,7 +1623,7 @@ export class SpaceService {
 
   /**
    * In the Actor model, Space IS the Actor (extends Actor directly via STI).
-   * Returns the space itself since space.id is the actorId.
+   * Returns the space itself since space.id is the actorID.
    */
   public async getAgent(subspaceId: string): Promise<IActor> {
     return await this.getSpaceOrFail(subspaceId);

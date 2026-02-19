@@ -84,7 +84,7 @@ describe('AdminLicensingService', () => {
         'licensing-1'
       );
 
-      // Space IS the Actor - space.id passed as actorId
+      // Space IS the Actor - space.id passed as actorID
       expect(licenseIssuerService.assignLicensePlan).toHaveBeenCalledWith(
         'space-1',
         licensePlan,
@@ -148,7 +148,7 @@ describe('AdminLicensingService', () => {
         'licensing-1'
       );
 
-      // Space IS the Actor - space.id passed as actorId
+      // Space IS the Actor - space.id passed as actorID
       expect(licenseIssuerService.revokeLicensePlan).toHaveBeenCalledWith(
         'space-1',
         licensePlan,
@@ -194,7 +194,7 @@ describe('AdminLicensingService', () => {
         'licensing-1'
       );
 
-      // Account IS the Actor - account.id passed as actorId
+      // Account IS the Actor - account.id passed as actorID
       expect(licenseIssuerService.assignLicensePlan).toHaveBeenCalledWith(
         'acc-1',
         licensePlan,
@@ -262,7 +262,7 @@ describe('AdminLicensingService', () => {
         'licensing-1'
       );
 
-      // Account IS the Actor - account.id passed as actorId
+      // Account IS the Actor - account.id passed as actorID
       expect(licenseIssuerService.revokeLicensePlan).toHaveBeenCalledWith(
         'acc-1',
         licensePlan,

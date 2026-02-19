@@ -72,7 +72,7 @@ export class ConversationResolverFields {
 
     // Find a user member, excluding the current user's agent
     const userMembership = memberships.find(
-      m => m.actorType === ActorType.USER && m.actorId !== actorContext.actorId
+      m => m.actorType === ActorType.USER && m.actorID !== actorContext.actorID
     );
 
     if (!userMembership) {
@@ -81,7 +81,7 @@ export class ConversationResolverFields {
 
     // Use the contributor loader to batch load the user
     const contributor = await contributorByAgentLoader.load(
-      userMembership.actorId
+      userMembership.actorID
     );
     return contributor as IUser | null;
   }
@@ -110,13 +110,13 @@ export class ConversationResolverFields {
       m => m.actorType === ActorType.VIRTUAL
     );
 
-    if (!vcMembership?.actorId) {
+    if (!vcMembership?.actorID) {
       return null;
     }
 
     // Use the contributor loader to batch load the virtual contributor
     const contributor = await contributorByAgentLoader.load(
-      vcMembership.actorId
+      vcMembership.actorID
     );
     return contributor as IVirtualContributor | null;
   }

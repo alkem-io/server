@@ -104,7 +104,7 @@ export class RoleSetCacheService {
   /**
    * Generate a cache key for a given prefix and identifiers.
    * @param prefix - Prefix for the key
-   * @param id1 - First identifier (actorId or userId)
+   * @param id1 - First identifier (actorID or userId)
    * @param roleSetId - Role set identifier.
    * @returns A string representing the cache key.
    */
@@ -113,10 +113,10 @@ export class RoleSetCacheService {
   }
 
   private getMembershipStatusCacheKey(
-    actorId: string,
+    actorID: string,
     roleSetId: string
   ): string {
-    return this.getCacheKey('membershipStatus', actorId, roleSetId);
+    return this.getCacheKey('membershipStatus', actorID, roleSetId);
   }
 
   private getOpenInvitationCacheKey(userId: string, roleSetId: string): string {
@@ -130,28 +130,28 @@ export class RoleSetCacheService {
     return this.getCacheKey('openApplication', userId, roleSetId);
   }
 
-  private getAgentRolesCacheKey(actorId: string, roleSetId: string): string {
-    return this.getCacheKey('actorRoles', actorId, roleSetId);
+  private getAgentRolesCacheKey(actorID: string, roleSetId: string): string {
+    return this.getCacheKey('actorRoles', actorID, roleSetId);
   }
 
-  private getAgentIsMemberCacheKey(actorId: string, roleSetId: string): string {
-    return this.getCacheKey('isMember', actorId, roleSetId);
+  private getAgentIsMemberCacheKey(actorID: string, roleSetId: string): string {
+    return this.getCacheKey('isMember', actorID, roleSetId);
   }
 
   /* Public Cache Retrieval Methods */
 
   /**
    * Retrieve the membership status from cache.
-   * @param actorId - Actor identifier.
+   * @param actorID - Actor identifier.
    * @param roleSetId - Role set identifier.
    * @returns Cached CommunityMembershipStatus or undefined.
    */
   public getMembershipStatusFromCache(
-    actorId: string,
+    actorID: string,
     roleSetId: string
   ): Promise<CommunityMembershipStatus | undefined> {
     return this.cacheGet<CommunityMembershipStatus>(
-      this.getMembershipStatusCacheKey(actorId, roleSetId)
+      this.getMembershipStatusCacheKey(actorID, roleSetId)
     );
   }
 
@@ -187,56 +187,56 @@ export class RoleSetCacheService {
 
   /**
    * Retrieve agent roles from cache.
-   * @param actorId - Actor identifier.
+   * @param actorID - Actor identifier.
    * @param roleSetId - Role set identifier.
    * @returns Cached RoleName array or undefined.
    */
   public getActorRolesFromCache(
-    actorId: string,
+    actorID: string,
     roleSetId: string
   ): Promise<RoleName[] | undefined> {
     return this.cacheGet<RoleName[]>(
-      this.getAgentRolesCacheKey(actorId, roleSetId)
+      this.getAgentRolesCacheKey(actorID, roleSetId)
     );
   }
 
   /**
    * Retrieve whether the agent is a member from cache.
-   * @param actorId - Actor identifier.
+   * @param actorID - Actor identifier.
    * @param roleSetId - Role set identifier.
    * @returns Cached boolean value or undefined.
    */
   public getActorIsMemberFromCache(
-    actorId: string,
+    actorID: string,
     roleSetId: string
   ): Promise<boolean | undefined> {
     return this.cacheGet<boolean>(
-      this.getAgentIsMemberCacheKey(actorId, roleSetId)
+      this.getAgentIsMemberCacheKey(actorID, roleSetId)
     );
   }
 
   /* Batch Cache Retrieval Methods (mget) */
 
   /**
-   * Retrieve agent roles for multiple (actorId, roleSetId) pairs in a single round-trip.
+   * Retrieve agent roles for multiple (actorID, roleSetId) pairs in a single round-trip.
    */
   public async getActorRolesBatchFromCache(
-    entries: ReadonlyArray<{ actorId: string; roleSetId: string }>
+    entries: ReadonlyArray<{ actorID: string; roleSetId: string }>
   ): Promise<(RoleName[] | undefined)[]> {
     const keys = entries.map(e =>
-      this.getAgentRolesCacheKey(e.actorId, e.roleSetId)
+      this.getAgentRolesCacheKey(e.actorID, e.roleSetId)
     );
     return this.cacheMget<RoleName[]>(keys);
   }
 
   /**
-   * Retrieve membership status for multiple (actorId, roleSetId) pairs in a single round-trip.
+   * Retrieve membership status for multiple (actorID, roleSetId) pairs in a single round-trip.
    */
   public async getMembershipStatusBatchFromCache(
-    entries: ReadonlyArray<{ actorId: string; roleSetId: string }>
+    entries: ReadonlyArray<{ actorID: string; roleSetId: string }>
   ): Promise<(CommunityMembershipStatus | undefined)[]> {
     const keys = entries.map(e =>
-      this.getMembershipStatusCacheKey(e.actorId, e.roleSetId)
+      this.getMembershipStatusCacheKey(e.actorID, e.roleSetId)
     );
     return this.cacheMget<CommunityMembershipStatus>(keys);
   }
@@ -245,18 +245,18 @@ export class RoleSetCacheService {
 
   /**
    * Deletes all cache entries related to an agent's membership.
-   * @param actorId - Actor identifier.
+   * @param actorID - Actor identifier.
    * @param roleSetId - Role set identifier.
    * @returns Promise that resolves when deletion is complete.
    */
   public async cleanActorMembershipCache(
-    actorId: string,
+    actorID: string,
     roleSetId: string
   ): Promise<void> {
     await Promise.all([
-      this.cacheDel(this.getMembershipStatusCacheKey(actorId, roleSetId)),
-      this.cacheDel(this.getAgentRolesCacheKey(actorId, roleSetId)),
-      this.cacheDel(this.getAgentIsMemberCacheKey(actorId, roleSetId)),
+      this.cacheDel(this.getMembershipStatusCacheKey(actorID, roleSetId)),
+      this.cacheDel(this.getAgentRolesCacheKey(actorID, roleSetId)),
+      this.cacheDel(this.getAgentIsMemberCacheKey(actorID, roleSetId)),
     ]);
   }
 
@@ -290,27 +290,27 @@ export class RoleSetCacheService {
 
   /**
    * Set membership status in cache.
-   * @param actorId - Actor identifier.
+   * @param actorID - Actor identifier.
    * @param roleSetId - Role set identifier.
    * @param membershipStatus - Membership status value.
    * @returns The cached membership status.
    */
   public setMembershipStatusCache(
-    actorId: string,
+    actorID: string,
     roleSetId: string,
     membershipStatus: CommunityMembershipStatus
   ): Promise<CommunityMembershipStatus> {
     return this.cacheSet(
-      this.getMembershipStatusCacheKey(actorId, roleSetId),
+      this.getMembershipStatusCacheKey(actorID, roleSetId),
       membershipStatus
     );
   }
 
   public deleteMembershipStatusCache(
-    actorId: string,
+    actorID: string,
     roleSetId: string
   ): Promise<any> {
-    return this.cacheDel(this.getMembershipStatusCacheKey(actorId, roleSetId));
+    return this.cacheDel(this.getMembershipStatusCacheKey(actorID, roleSetId));
   }
 
   /**
@@ -351,50 +351,50 @@ export class RoleSetCacheService {
 
   /**
    * Set agent roles in cache.
-   * @param actorId - Actor identifier.
+   * @param actorID - Actor identifier.
    * @param roleSetId - Role set identifier.
    * @param roles - Array of role names.
    * @returns The cached roles.
    */
   public setActorRolesCache(
-    actorId: string,
+    actorID: string,
     roleSetId: string,
     roles: RoleName[]
   ): Promise<RoleName[]> {
-    return this.cacheSet(this.getAgentRolesCacheKey(actorId, roleSetId), roles);
+    return this.cacheSet(this.getAgentRolesCacheKey(actorID, roleSetId), roles);
   }
 
   /**
    * Set agent membership status in cache.
-   * @param actorId - Actor identifier.
+   * @param actorID - Actor identifier.
    * @param roleSetId - Role set identifier.
    * @param isMember - Boolean indicating membership.
    * @returns The cached membership flag.
    */
   public setActorIsMemberCache(
-    actorId: string,
+    actorID: string,
     roleSetId: string,
     isMember: boolean
   ): Promise<boolean> {
     return this.cacheSet(
-      this.getAgentIsMemberCacheKey(actorId, roleSetId),
+      this.getAgentIsMemberCacheKey(actorID, roleSetId),
       isMember
     );
   }
 
   /**
    * Add a single role to the agent's existing cached roles.
-   * @param actorId - Actor identifier.
+   * @param actorID - Actor identifier.
    * @param roleSetId - Role set identifier.
    * @param role - Role name to add.
    * @returns The updated cached roles array or undefined if no existing roles.
    */
   public async appendActorRoleCache(
-    actorId: string,
+    actorID: string,
     roleSetId: string,
     role: RoleName
   ): Promise<RoleName[] | undefined> {
-    const existingRoles = await this.getActorRolesFromCache(actorId, roleSetId);
+    const existingRoles = await this.getActorRolesFromCache(actorID, roleSetId);
     if (!existingRoles) {
       return undefined;
     }
@@ -402,7 +402,7 @@ export class RoleSetCacheService {
     // Only add the role if it's not already present
     if (!existingRoles.includes(role)) {
       const updatedRoles = [...existingRoles, role];
-      await this.setActorRolesCache(actorId, roleSetId, updatedRoles);
+      await this.setActorRolesCache(actorID, roleSetId, updatedRoles);
       return updatedRoles;
     }
 

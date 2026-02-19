@@ -41,7 +41,7 @@ export class ForumResolverSubscriptions {
     ): Promise<IDiscussion> {
       const actorContext = context.req?.user;
       this.logger.verbose?.(
-        `[User (${actorContext.actorId}) Discussion Update] - Sending out event: ${payload.eventID} `,
+        `[User (${actorContext.actorID}) Discussion Update] - Sending out event: ${payload.eventID} `,
         LogContext.SUBSCRIPTIONS
       );
       return await this.discussionService.getDiscussionOrFail(
@@ -61,7 +61,7 @@ export class ForumResolverSubscriptions {
         variables.forumID
       );
       this.logger.verbose?.(
-        `[User (${actorContext.actorId}) Discussion Update] - Filtering event id '${payload.eventID}' - match? ${isMatch}`,
+        `[User (${actorContext.actorID}) Discussion Update] - Filtering event id '${payload.eventID}' - match? ${isMatch}`,
         LogContext.SUBSCRIPTIONS
       );
       return isMatch;
@@ -77,13 +77,13 @@ export class ForumResolverSubscriptions {
     forumID: string
   ) {
     // Only allow subscriptions for logged in users
-    if (actorContext.actorId.length !== UUID_LENGTH) {
+    if (actorContext.actorID.length !== UUID_LENGTH) {
       throw new SubscriptionUserNotAuthenticated(
         'Subscription attempted to DiscussionsUpdated for non-authenticated user',
         LogContext.SUBSCRIPTIONS
       );
     }
-    const logMsgPrefix = `[User (${actorContext.actorId}) Discussion Update] - `;
+    const logMsgPrefix = `[User (${actorContext.actorID}) Discussion Update] - `;
     this.logger.verbose?.(
       `${logMsgPrefix} Subscribing to Discussions on Forum: ${forumID}`,
       LogContext.SUBSCRIPTIONS

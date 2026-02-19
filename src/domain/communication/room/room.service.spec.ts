@@ -68,7 +68,7 @@ describe('RoomService', () => {
       );
     });
 
-    it('should pass senderActorId as initial member for non-direct rooms', async () => {
+    it('should pass senderActorID as initial member for non-direct rooms', async () => {
       const savedRoom = {
         id: 'room-1',
         displayName: 'Test Room',
@@ -80,7 +80,7 @@ describe('RoomService', () => {
       await service.createRoom({
         displayName: 'Test Room',
         type: RoomType.CALLOUT,
-        senderActorId: 'agent-1',
+        senderActorID: 'agent-1',
       });
 
       expect(communicationAdapter.createRoom).toHaveBeenCalledWith(
@@ -103,8 +103,8 @@ describe('RoomService', () => {
       await service.createRoom({
         displayName: 'DM Room',
         type: RoomType.CONVERSATION_DIRECT,
-        senderActorId: 'agent-1',
-        receiverActorId: 'agent-2',
+        senderActorID: 'agent-1',
+        receiverActorID: 'agent-2',
       });
 
       expect(communicationAdapter.createRoom).toHaveBeenCalledWith(
@@ -115,7 +115,7 @@ describe('RoomService', () => {
       );
     });
 
-    it('should throw Error when direct room is missing senderActorId', async () => {
+    it('should throw Error when direct room is missing senderActorID', async () => {
       roomRepo.save.mockResolvedValue({
         id: 'room-1',
         displayName: 'DM Room',
@@ -126,12 +126,12 @@ describe('RoomService', () => {
         service.createRoom({
           displayName: 'DM Room',
           type: RoomType.CONVERSATION_DIRECT,
-          receiverActorId: 'agent-2',
+          receiverActorID: 'agent-2',
         })
       ).rejects.toThrow(Error);
     });
 
-    it('should throw Error when direct room is missing receiverActorId', async () => {
+    it('should throw Error when direct room is missing receiverActorID', async () => {
       roomRepo.save.mockResolvedValue({
         id: 'room-1',
         displayName: 'DM Room',
@@ -142,7 +142,7 @@ describe('RoomService', () => {
         service.createRoom({
           displayName: 'DM Room',
           type: RoomType.CONVERSATION_DIRECT,
-          senderActorId: 'agent-1',
+          senderActorID: 'agent-1',
         })
       ).rejects.toThrow(Error);
     });
@@ -244,7 +244,7 @@ describe('RoomService', () => {
         messageId: 'msg-1',
       });
       expect(communicationAdapter.deleteMessage).toHaveBeenCalledWith({
-        actorId: 'sender-actor-1',
+        actorID: 'sender-actor-1',
         messageId: 'msg-1',
         roomID: 'room-1',
       });
@@ -281,7 +281,7 @@ describe('RoomService', () => {
       expect(result).toBe(true);
       expect(communicationAdapter.removeReaction).toHaveBeenCalledWith({
         alkemioRoomId: 'room-1',
-        actorId: 'reactor-actor-1',
+        actorID: 'reactor-actor-1',
         reactionId: 'reaction-1',
       });
     });

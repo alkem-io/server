@@ -57,10 +57,10 @@ export class AuthenticationService {
       );
       if (session?.identity) {
         const oryIdentity = session.identity as OryDefaultIdentitySchema;
-        const actorId = oryIdentity.metadata_public?.alkemio_actor_id;
+        const actorID = oryIdentity.metadata_public?.alkemio_actor_id;
 
-        if (actorId) {
-          return this.createActorContext(actorId, session);
+        if (actorID) {
+          return this.createActorContext(actorID, session);
         }
 
         this.logger.warn?.(
@@ -82,26 +82,26 @@ export class AuthenticationService {
   }
 
   /**
-   * Creates and returns an `ActorContext` based on the provided actorId.
+   * Creates and returns an `ActorContext` based on the provided actorID.
    *
    * This method performs the following steps:
-   * 1. Checks for cached context using actorId.
+   * 1. Checks for cached context using actorID.
    * 2. Loads credentials from database if not cached.
-   * 3. Caches the result using actorId as key.
+   * 3. Caches the result using actorID as key.
    *
-   * @param actorId - The Alkemio actor ID from the JWT token (set by identity resolver)
+   * @param actorID - The Alkemio actor ID from the JWT token (set by identity resolver)
    * @param session - Optional Kratos session for expiry information
    */
   async createActorContext(
-    actorId: string,
+    actorID: string,
     session?: Session
   ): Promise<ActorContext> {
-    if (!actorId) {
+    if (!actorID) {
       return this.actorContextService.createAnonymous();
     }
 
-    // Check cache first (using actorId as key)
-    const cachedCtx = await this.actorContextCacheService.getByActorId(actorId);
+    // Check cache first (using actorID as key)
+    const cachedCtx = await this.actorContextCacheService.getByActorID(actorID);
     if (cachedCtx) {
       // Update expiry from current session
       if (session?.expires_at) {
@@ -110,18 +110,18 @@ export class AuthenticationService {
       return cachedCtx;
     }
 
-    // Build context with actorId and expiry
+    // Build context with actorID and expiry
     const ctx = new ActorContext();
     ctx.isAnonymous = false;
     if (session?.expires_at) {
       ctx.expiry = new Date(session.expires_at).getTime();
     }
 
-    // Load credentials (actorId already known from token)
-    await this.actorContextService.populateFromActorId(ctx, actorId);
+    // Load credentials (actorID already known from token)
+    await this.actorContextService.populateFromActorID(ctx, actorID);
 
-    // Cache the result using actorId
-    await this.actorContextCacheService.setByActorId(ctx);
+    // Cache the result using actorID
+    await this.actorContextCacheService.setByActorID(ctx);
     return ctx;
   }
 

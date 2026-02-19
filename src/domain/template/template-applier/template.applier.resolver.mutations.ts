@@ -77,7 +77,7 @@ export class TemplateApplierResolverMutations {
       await this.templateApplierService.updateCollaborationFromSpaceTemplate(
         updateData,
         targetCollaboration,
-        actorContext.actorId
+        actorContext.actorID
       );
     // Reset the authorization policy to re-evaluate the access control rules.
     targetCollaboration =

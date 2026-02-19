@@ -7,7 +7,7 @@ import { ActorContext } from '@core/actor-context/actor.context';
 export const actorContextData: { actorContext: ActorContext } = {
   actorContext: {
     isAnonymous: false,
-    actorId: '91b7e044-61ff-468b-a705-1672b0bda510',
+    actorID: '91b7e044-61ff-468b-a705-1672b0bda510',
     guestName: undefined,
     credentials: [
       {

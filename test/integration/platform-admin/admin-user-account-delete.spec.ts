@@ -58,7 +58,7 @@ describe('Platform-admin identity deletion flows', () => {
     );
 
     const actorContext = new ActorContext();
-    actorContext.actorId = 'admin@example.com';
+    actorContext.actorID = 'admin@example.com';
 
     const result = await resolver.adminUserAccountDelete(
       actorContext,

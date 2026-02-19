@@ -34,7 +34,7 @@ export class RolesResolverQueries {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `roles user query: ${actorContext.actorId}`
+      `roles user query: ${actorContext.actorID}`
     );
     return this.rolesServices.getRolesForUser(rolesData);
   }

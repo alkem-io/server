@@ -5,14 +5,14 @@ import { IActor } from '@domain/actor/actor/actor.interface';
 import { IQuestion } from '@domain/common/question/question.interface';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationActorPrivilege, Profiling } from '@src/common/decorators';
+import { AuthorizationActorHasPrivilege, Profiling } from '@src/common/decorators';
 import { ApplicationService } from './application.service';
 
 @Resolver(() => IApplication)
 export class ApplicationResolverFields {
   constructor(private applicationService: ApplicationService) {}
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('contributor', () => IActor, {
     nullable: false,
@@ -23,7 +23,7 @@ export class ApplicationResolverFields {
     return await this.applicationService.getContributor(application.id);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('questions', () => [IQuestion], {
     nullable: false,

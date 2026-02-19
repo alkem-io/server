@@ -4,6 +4,6 @@ export enum MentionedEntityType {
   VIRTUAL = 'vc',
 }
 export abstract class Mention {
-  actorId!: string;
+  actorID!: string;
   actorType!: MentionedEntityType;
 }

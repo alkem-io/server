@@ -50,7 +50,7 @@ export class InvitationAuthorizationService {
 
     // get the actor - may be null if orphaned
     const actor = await this.actorLookupService.getFullActorById(
-      invitation.invitedActorId
+      invitation.invitedActorID
     );
 
     if (!actor) {
@@ -60,7 +60,7 @@ export class InvitationAuthorizationService {
         {
           message: 'Invitation references non-existent actor',
           invitationId: invitation.id,
-          actorId: invitation.invitedActorId,
+          actorID: invitation.invitedActorID,
         },
         LogContext.COMMUNITY
       );

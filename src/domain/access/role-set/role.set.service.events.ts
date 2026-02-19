@@ -26,16 +26,16 @@ export class RoleSetEventsService {
 
   public async registerCommunityNewMemberActivity(
     roleSet: IRoleSet,
-    actorId: string,
+    actorID: string,
     actorContext: ActorContext
   ) {
     const community =
       await this.communityResolverService.getCommunityForRoleSet(roleSet.id);
 
     const activityLogInput: ActivityInputMemberJoined = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       community,
-      contributor: { id: actorId } as IActor,
+      contributor: { id: actorID } as IActor,
     };
     await this.activityAdapter.memberJoined(activityLogInput);
   }
@@ -43,7 +43,7 @@ export class RoleSetEventsService {
   public async processCommunityNewMemberEvents(
     roleSet: IRoleSet,
     actorContext: ActorContext,
-    actorId: string,
+    actorID: string,
     actorType: ActorType
   ) {
     const community =
@@ -59,8 +59,8 @@ export class RoleSetEventsService {
 
     // Send the notification
     const notificationInput: NotificationInputCommunityNewMember = {
-      actorId,
-      triggeredBy: actorContext.actorId,
+      actorID,
+      triggeredBy: actorContext.actorID,
       actorType,
       community,
     };
@@ -77,7 +77,7 @@ export class RoleSetEventsService {
             name: communityDisplayName,
             space: levelZeroSpaceID,
           },
-          { id: actorId, email: '' }
+          { id: actorID, email: '' }
         );
         break;
       }
@@ -89,7 +89,7 @@ export class RoleSetEventsService {
             name: communityDisplayName,
             space: levelZeroSpaceID,
           },
-          { id: actorId, email: '' }
+          { id: actorID, email: '' }
         );
         break;
       }

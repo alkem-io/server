@@ -33,7 +33,7 @@ export class UserResolverQueries {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `users query: ${actorContext.actorId}`
+      `users query: ${actorContext.actorID}`
     );
     return await this.userService.getUsersForQuery(args);
   }
@@ -57,7 +57,7 @@ export class UserResolverQueries {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `users query: ${actorContext.actorId}`
+      `users query: ${actorContext.actorID}`
     );
 
     return this.userService.getPaginatedUsers(pagination, withTags, filter);
@@ -75,7 +75,7 @@ export class UserResolverQueries {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `user query: ${actorContext.actorId}`
+      `user query: ${actorContext.actorID}`
     );
     return await this.userService.getUserByIdOrFail(id);
   }

@@ -22,5 +22,5 @@ export class CreateCredentialInput {
 
   issuer?: string;
 
-  actorId?: string;
+  actorID?: string;
 }

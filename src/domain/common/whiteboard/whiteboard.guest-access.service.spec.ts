@@ -111,7 +111,7 @@ describe('WhiteboardGuestAccessService', () => {
       whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
 
       const actorContext = new ActorContext();
-      actorContext.actorId = 'user-1';
+      actorContext.actorID = 'user-1';
 
       const result = await service.updateGuestAccess(
         actorContext,
@@ -204,7 +204,7 @@ describe('WhiteboardGuestAccessService', () => {
       whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
 
       const actorContext = new ActorContext();
-      actorContext.actorId = 'user-1';
+      actorContext.actorID = 'user-1';
 
       const result = await service.updateGuestAccess(
         actorContext,
@@ -265,7 +265,7 @@ describe('WhiteboardGuestAccessService', () => {
       whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
 
       const actorContext = new ActorContext();
-      actorContext.actorId = 'user-2';
+      actorContext.actorID = 'user-2';
 
       await service.updateGuestAccess(actorContext, whiteboard.id, true);
 
@@ -297,14 +297,14 @@ describe('WhiteboardGuestAccessService', () => {
       whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
 
       const actorContext = new ActorContext();
-      actorContext.actorId = 'user-3';
+      actorContext.actorID = 'user-3';
 
       authorizationService.grantAccessOrFail.mockImplementationOnce(() => {
         throw new ForbiddenAuthorizationPolicyException(
           'missing PUBLIC_SHARE',
           AuthorizationPrivilege.PUBLIC_SHARE,
           authorization.id,
-          actorContext.actorId
+          actorContext.actorID
         );
       });
 
@@ -335,7 +335,7 @@ describe('WhiteboardGuestAccessService', () => {
         .mockResolvedValueOnce(hydratedWhiteboard);
 
       const actorContext = new ActorContext();
-      actorContext.actorId = 'user-4';
+      actorContext.actorID = 'user-4';
 
       const result = await service.updateGuestAccess(
         actorContext,
@@ -362,7 +362,7 @@ describe('WhiteboardGuestAccessService', () => {
       );
 
       const actorContext = new ActorContext();
-      actorContext.actorId = 'user-1';
+      actorContext.actorID = 'user-1';
 
       await expect(
         service.updateGuestAccess(actorContext, whiteboard.id, true)

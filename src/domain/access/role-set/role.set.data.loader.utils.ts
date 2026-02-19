@@ -5,21 +5,21 @@ import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { ActorRoleKey } from './types';
 
-/** Load credentials once per unique actorId across all keys. */
+/** Load credentials once per unique actorID across all keys. */
 export async function loadActorCredentials(
   keys: readonly ActorRoleKey[],
   actorService: ActorService
 ): Promise<Map<string, ICredential[]>> {
-  const uniqueActorIds = [
+  const uniqueActorIDs = [
     ...new Set(
-      keys.map(k => k.actorContext.actorId).filter(id => id.length > 0)
+      keys.map(k => k.actorContext.actorID).filter(id => id.length > 0)
     ),
   ];
   const result = new Map<string, ICredential[]>();
   await Promise.all(
-    uniqueActorIds.map(async actorId => {
-      const { credentials } = await actorService.getActorCredentials(actorId);
-      result.set(actorId, credentials);
+    uniqueActorIDs.map(async actorID => {
+      const { credentials } = await actorService.getActorCredentials(actorID);
+      result.set(actorID, credentials);
     })
   );
   return result;

@@ -17,9 +17,9 @@ export class ApplicationResolverMutations {
   ) {}
 
   @Mutation(() => IApplication, {
-    description: 'Removes the specified User Application.',
+    description: 'Removes the specified Application.',
   })
-  async deleteUserApplication(
+  async deleteApplication(
     @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteApplicationInput
   ): Promise<IApplication> {

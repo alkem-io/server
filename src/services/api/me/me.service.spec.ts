@@ -17,7 +17,7 @@ function makeActorContext(
   memberSpaceIds: string[]
 ): ActorContext {
   const actorContext = new ActorContext();
-  actorContext.actorId = userId;
+  actorContext.actorID = userId;
   actorContext.credentials = memberSpaceIds.map(spaceId => ({
     type: AuthorizationCredential.SPACE_MEMBER,
     resourceID: spaceId,

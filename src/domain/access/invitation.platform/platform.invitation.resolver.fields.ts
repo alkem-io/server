@@ -3,7 +3,7 @@ import { GraphqlGuard } from '@core/authorization';
 import { IUser } from '@domain/community/user/user.interface';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationActorPrivilege, Profiling } from '@src/common/decorators';
+import { AuthorizationActorHasPrivilege, Profiling } from '@src/common/decorators';
 import { IPlatformInvitation } from './platform.invitation.interface';
 import { PlatformInvitationService } from './platform.invitation.service';
 
@@ -11,7 +11,7 @@ import { PlatformInvitationService } from './platform.invitation.service';
 export class PlatformInvitationResolverFields {
   constructor(private platformInvitationService: PlatformInvitationService) {}
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('createdBy', () => IUser, {
     nullable: false,

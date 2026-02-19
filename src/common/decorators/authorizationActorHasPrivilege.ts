@@ -1,4 +1,4 @@
 import { SetMetadata } from '@nestjs/common';
 
-export const AuthorizationActorPrivilege = (privilege: string) =>
+export const AuthorizationActorHasPrivilege = (privilege: string) =>
   SetMetadata('privilege', privilege);

@@ -86,7 +86,7 @@ export class RoleSetResolverMutations {
     await this.roleSetService.assignActorToRole(
       roleSet,
       roleData.role,
-      roleData.actorId,
+      roleData.actorID,
       actorContext,
       true
     );
@@ -96,7 +96,7 @@ export class RoleSetResolverMutations {
         // reset the user authorization policy so that their profile is visible to other community members
         const authorizations =
           await this.userAuthorizationService.applyAuthorizationPolicy(
-            roleData.actorId
+            roleData.actorID
           );
         await this.authorizationPolicyService.saveAll(authorizations);
 
@@ -107,7 +107,7 @@ export class RoleSetResolverMutations {
       }
     }
 
-    return await this.userLookupService.getUserByIdOrFail(roleData.actorId);
+    return await this.userLookupService.getUserByIdOrFail(roleData.actorID);
   }
 
   @Mutation(() => IOrganization, {
@@ -139,10 +139,10 @@ export class RoleSetResolverMutations {
     await this.roleSetService.assignActorToRole(
       roleSet,
       roleData.role,
-      roleData.actorId
+      roleData.actorID
     );
     return await this.organizationLookupService.getOrganizationByIdOrFail(
-      roleData.actorId
+      roleData.actorID
     );
   }
 
@@ -177,7 +177,7 @@ export class RoleSetResolverMutations {
       const sameAccount =
         await this.roleSetService.isRoleSetAccountMatchingVcAccount(
           roleSet,
-          roleData.actorId
+          roleData.actorID
         );
       if (sameAccount) {
         requiredPrivilege =
@@ -205,13 +205,13 @@ export class RoleSetResolverMutations {
     await this.roleSetService.assignActorToRole(
       roleSet,
       roleData.role,
-      roleData.actorId,
+      roleData.actorID,
       actorContext,
       true
     );
 
     return await this.virtualContributorLookupService.getVirtualContributorByIdOrFail(
-      roleData.actorId
+      roleData.actorID
     );
   }
 
@@ -242,7 +242,7 @@ export class RoleSetResolverMutations {
           extendedAuthorization =
             this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
               roleSet,
-              roleData.actorId
+              roleData.actorID
             );
         }
         break;
@@ -256,7 +256,7 @@ export class RoleSetResolverMutations {
           extendedAuthorization =
             this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
               roleSet,
-              roleData.actorId
+              roleData.actorID
             );
         }
         break;
@@ -273,7 +273,7 @@ export class RoleSetResolverMutations {
     await this.roleSetService.removeActorFromRole(
       roleSet,
       roleData.role,
-      roleData.actorId,
+      roleData.actorID,
       true
     );
 
@@ -283,7 +283,7 @@ export class RoleSetResolverMutations {
         // to other community members
         const authorizations =
           await this.userAuthorizationService.applyAuthorizationPolicy(
-            roleData.actorId
+            roleData.actorID
           );
         await this.authorizationPolicyService.saveAll(authorizations);
 
@@ -294,7 +294,7 @@ export class RoleSetResolverMutations {
       }
     }
 
-    return await this.userLookupService.getUserByIdOrFail(roleData.actorId);
+    return await this.userLookupService.getUserByIdOrFail(roleData.actorID);
   }
 
   @Mutation(() => IOrganization, {
@@ -320,10 +320,10 @@ export class RoleSetResolverMutations {
     await this.roleSetService.removeActorFromRole(
       roleSet,
       roleData.role,
-      roleData.actorId
+      roleData.actorID
     );
     return await this.organizationLookupService.getOrganizationByIdOrFail(
-      roleData.actorId
+      roleData.actorID
     );
   }
 
@@ -345,7 +345,7 @@ export class RoleSetResolverMutations {
     const extendedAuthorization =
       await this.roleSetAuthorizationService.extendAuthorizationPolicyForVirtualContributorRemoval(
         roleSet,
-        roleData.actorId
+        roleData.actorID
       );
 
     this.authorizationService.grantAccessOrFail(
@@ -358,11 +358,11 @@ export class RoleSetResolverMutations {
     await this.roleSetService.removeActorFromRole(
       roleSet,
       roleData.role,
-      roleData.actorId
+      roleData.actorID
     );
 
     return await this.virtualContributorLookupService.getVirtualContributorByIdOrFail(
-      roleData.actorId
+      roleData.actorID
     );
   }
 
@@ -376,7 +376,7 @@ export class RoleSetResolverMutations {
   ): Promise<IActor> {
     // Look up contributor to determine its type (lightweight - only need id, type)
     const contributor = await this.actorLookupService.getActorByIdOrFail(
-      roleData.actorId
+      roleData.actorID
     );
 
     // Load roleSet with license for VC entitlement checks
@@ -404,7 +404,7 @@ export class RoleSetResolverMutations {
           actorContext,
           roleSet,
           roleData.role,
-          roleData.actorId
+          roleData.actorID
         );
         break;
     }
@@ -413,7 +413,7 @@ export class RoleSetResolverMutations {
     await this.roleSetService.assignActorToRole(
       roleSet,
       roleData.role,
-      roleData.actorId,
+      roleData.actorID,
       actorContext,
       true
     );
@@ -443,7 +443,7 @@ export class RoleSetResolverMutations {
   ): Promise<IActor> {
     // Look up contributor to determine its type (lightweight - only need id, type)
     const contributor = await this.actorLookupService.getActorByIdOrFail(
-      roleData.actorId
+      roleData.actorID
     );
 
     const roleSet = await this.roleSetService.getRoleSetOrFail(
@@ -457,7 +457,7 @@ export class RoleSetResolverMutations {
           actorContext,
           roleSet,
           roleData.role,
-          roleData.actorId
+          roleData.actorID
         );
         break;
       case ActorType.ORGANIZATION:
@@ -467,7 +467,7 @@ export class RoleSetResolverMutations {
         await this.authorizeRemoveVirtualContributor(
           actorContext,
           roleSet,
-          roleData.actorId
+          roleData.actorID
         );
         break;
     }
@@ -476,7 +476,7 @@ export class RoleSetResolverMutations {
     await this.roleSetService.removeActorFromRole(
       roleSet,
       roleData.role,
-      roleData.actorId,
+      roleData.actorID,
       contributor.type === ActorType.USER // triggerNewMemberEvents only for users
     );
 

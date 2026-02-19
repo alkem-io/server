@@ -68,20 +68,20 @@ export class PlatformRoleResolverMutations {
     await this.roleSetService.assignActorToRole(
       roleSet,
       roleData.role,
-      roleData.actorId,
+      roleData.actorID,
       actorContext,
       true
     );
 
     const user = await this.userLookupService.getUserByIdOrFail(
-      roleData.actorId
+      roleData.actorID
     );
     if (
       roleData.role === RoleName.PLATFORM_BETA_TESTER ||
       roleData.role === RoleName.PLATFORM_VC_CAMPAIGN
     ) {
       // Also assign the user account a license plan
-      // Account IS the Actor - use accountID directly as actorId
+      // Account IS the Actor - use accountID directly as actorID
       const accountLicenseCredential: ICredentialDefinition = {
         type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
         resourceID: user.accountID,
@@ -94,13 +94,13 @@ export class PlatformRoleResolverMutations {
     }
 
     this.notifyPlatformGlobalRoleChange(
-      actorContext.actorId,
+      actorContext.actorID,
       user,
       RoleChangeType.ADDED,
       roleData.role
     );
 
-    return await this.userLookupService.getUserByIdOrFail(roleData.actorId);
+    return await this.userLookupService.getUserByIdOrFail(roleData.actorID);
   }
 
   @Mutation(() => IUser, {
@@ -127,7 +127,7 @@ export class PlatformRoleResolverMutations {
       extendedAuthorization =
         this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
           roleSet,
-          roleData.actorId
+          roleData.actorID
         );
     }
 
@@ -141,18 +141,18 @@ export class PlatformRoleResolverMutations {
     await this.roleSetService.removeActorFromRole(
       roleSet,
       roleData.role,
-      roleData.actorId
+      roleData.actorID
     );
 
     const user = await this.userLookupService.getUserByIdOrFail(
-      roleData.actorId
+      roleData.actorID
     );
     if (
       roleData.role === RoleName.PLATFORM_BETA_TESTER ||
       roleData.role === RoleName.PLATFORM_VC_CAMPAIGN
     ) {
       // Also remove the user account a license plan
-      // Account IS the Actor - use accountID directly as actorId
+      // Account IS the Actor - use accountID directly as actorID
       const accountLicenseCredential: ICredentialDefinition = {
         type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
         resourceID: user.accountID,
@@ -166,13 +166,13 @@ export class PlatformRoleResolverMutations {
     }
 
     this.notifyPlatformGlobalRoleChange(
-      actorContext.actorId,
+      actorContext.actorID,
       user,
       RoleChangeType.REMOVED,
       roleData.role
     );
 
-    return await this.userLookupService.getUserByIdOrFail(roleData.actorId);
+    return await this.userLookupService.getUserByIdOrFail(roleData.actorID);
   }
 
   private async resetLicenseForUserAccount(user: IUser) {

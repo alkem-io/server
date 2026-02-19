@@ -81,13 +81,13 @@ export class InvitationService {
     );
     result.id = invitationID;
 
-    if (invitation.invitedActorId && invitation.roleSet) {
+    if (invitation.invitedActorID && invitation.roleSet) {
       await this.roleSetCacheService.deleteOpenInvitationFromCache(
-        invitation.invitedActorId,
+        invitation.invitedActorID,
         invitation.roleSet.id
       );
       const actorExists = await this.actorLookupService.actorExists(
-        invitation.invitedActorId
+        invitation.invitedActorID
       );
 
       if (!actorExists) {
@@ -96,14 +96,14 @@ export class InvitationService {
             message: 'Unable to invalidate membership status cache for Actor',
             cause: 'Actor not found',
             invitationId: invitation.id,
-            actorId: invitation.invitedActorId,
+            actorID: invitation.invitedActorID,
           },
           undefined,
           LogContext.COMMUNITY
         );
       } else {
         await this.roleSetCacheService.deleteMembershipStatusCache(
-          invitation.invitedActorId,
+          invitation.invitedActorID,
           invitation.roleSet.id
         );
       }
@@ -161,7 +161,7 @@ export class InvitationService {
 
   async getInvitedActor(invitation: IInvitation): Promise<IActor> {
     return this.actorLookupService.getFullActorByIdOrFail(
-      invitation.invitedActorId
+      invitation.invitedActorID
     );
   }
 
@@ -183,7 +183,7 @@ export class InvitationService {
   ): Promise<IInvitation[]> {
     const existingInvitations = await this.invitationRepository.find({
       where: {
-        invitedActorId: actorID,
+        invitedActorID: actorID,
         roleSet: { id: roleSetID },
       },
       relations: { roleSet: true },
@@ -199,7 +199,7 @@ export class InvitationService {
   ): Promise<IInvitation[]> {
     const findOpts: FindManyOptions<Invitation> = {
       relations: { roleSet: true },
-      where: { invitedActorId: actorID },
+      where: { invitedActorID: actorID },
     };
 
     if (states.length) {

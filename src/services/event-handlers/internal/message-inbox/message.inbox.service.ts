@@ -182,7 +182,7 @@ export class MessageInboxService {
       {
         id: payload.originalMessageId,
         message: payload.newContent,
-        sender: payload.senderActorId,
+        sender: payload.senderActorID,
         threadID: payload.threadId || '',
         timestamp: originalMessage.timestamp,
         reactions: originalMessage.reactions ?? [],
@@ -211,7 +211,7 @@ export class MessageInboxService {
 
     // Process activity event
     const actorContext = await this.actorContextService.buildForActor(
-      payload.redactorActorId
+      payload.redactorActorID
     );
     await this.roomServiceEvents.processActivityMessageRemoved(
       payload.redactedMessageId,
@@ -301,7 +301,7 @@ export class MessageInboxService {
     const { payload } = event;
 
     this.logger.verbose?.(
-      `Processing room created: roomId=${payload.roomId}, roomType=${payload.roomType}, creator=${payload.creatorActorId}`,
+      `Processing room created: roomId=${payload.roomId}, roomType=${payload.roomType}, creator=${payload.creatorActorID}`,
       LogContext.COMMUNICATION
     );
 
@@ -313,7 +313,7 @@ export class MessageInboxService {
     const { payload } = event;
 
     this.logger.verbose?.(
-      `Processing DM requested: initiator=${payload.initiatorActorId}, target=${payload.targetActorId}`,
+      `Processing DM requested: initiator=${payload.initiatorActorID}, target=${payload.targetActorID}`,
       LogContext.COMMUNICATION
     );
 
@@ -325,7 +325,7 @@ export class MessageInboxService {
     const { payload } = event;
 
     this.logger.verbose?.(
-      `Processing room member left: roomId=${payload.roomId}, actorId=${payload.actorId}, reason=${payload.reason || 'none'}`,
+      `Processing room member left: roomId=${payload.roomId}, actorID=${payload.actorID}, reason=${payload.reason || 'none'}`,
       LogContext.COMMUNICATION
     );
 
@@ -337,7 +337,7 @@ export class MessageInboxService {
     const { payload } = event;
 
     this.logger.verbose?.(
-      `Processing room member updated: roomId=${payload.roomId}, memberActorId=${payload.memberActorId}, membership=${payload.membership}`,
+      `Processing room member updated: roomId=${payload.roomId}, memberActorID=${payload.memberActorID}, membership=${payload.membership}`,
       LogContext.COMMUNICATION
     );
 
@@ -351,14 +351,14 @@ export class MessageInboxService {
     const { payload } = event;
 
     this.logger.verbose?.(
-      `Processing read receipt updated: roomId=${payload.roomId}, actorId=${payload.actorId}, eventId=${payload.eventId}`,
+      `Processing read receipt updated: roomId=${payload.roomId}, actorID=${payload.actorID}, eventId=${payload.eventId}`,
       LogContext.COMMUNICATION
     );
 
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
 
     this.subscriptionPublishService.publishRoomReceiptEvent(room, {
-      actorId: payload.actorId,
+      actorID: payload.actorID,
       eventId: payload.eventId,
       threadId: payload.threadId,
       timestamp: payload.timestamp,
@@ -452,7 +452,7 @@ export class MessageInboxService {
   ): Promise<void> {
     this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
-      memberAgentIds: [payload.actorId], // Only the reader receives this event
+      memberAgentIds: [payload.actorID], // Only the reader receives this event
       readReceiptUpdated: {
         roomId: room.id,
         lastReadMessageId: payload.eventId,

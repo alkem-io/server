@@ -62,24 +62,24 @@ export class ConversationService {
    * This is the core creation method that works purely with agent IDs.
    * Callers are responsible for resolving user/VC IDs to agent IDs.
    *
-   * @param currentUserActorId - Actor ID of the current user
-   * @param otherActorId - Actor ID of the other party (user or VC)
+   * @param currentUserActorID - Actor ID of the current user
+   * @param otherActorID - Actor ID of the other party (user or VC)
    * @param createRoom - Whether to create a room (true for USER_USER, false for USER_VC)
    * @returns The created or existing conversation
    */
   public async createConversation(
-    currentUserActorId: string,
-    otherActorId: string,
+    currentUserActorID: string,
+    otherActorID: string,
     createRoom: boolean
   ): Promise<IConversation> {
     // Check if conversation already exists between these agents
     const existingConversation = await this.findConversationBetweenAgents(
-      currentUserActorId,
-      otherActorId
+      currentUserActorID,
+      otherActorID
     );
     if (existingConversation) {
       this.logger.verbose?.(
-        `Returning existing conversation ${existingConversation.id} between agents ${currentUserActorId} and ${otherActorId}`,
+        `Returning existing conversation ${existingConversation.id} between agents ${currentUserActorID} and ${otherActorID}`,
         LogContext.COMMUNICATION_CONVERSATION
       );
       return existingConversation;
@@ -94,8 +94,8 @@ export class ConversationService {
     // Create room for the conversation
     if (createRoom) {
       conversation.room = await this.createConversationRoom(
-        currentUserActorId,
-        otherActorId,
+        currentUserActorID,
+        otherActorID,
         RoomType.CONVERSATION_DIRECT
       );
     }
@@ -108,11 +108,11 @@ export class ConversationService {
     // Create membership records for both agents
     const membership1 = this.conversationMembershipRepository.create({
       conversationId: savedConversation.id,
-      actorId: currentUserActorId,
+      actorID: currentUserActorID,
     });
     const membership2 = this.conversationMembershipRepository.create({
       conversationId: savedConversation.id,
-      actorId: otherActorId,
+      actorID: otherActorID,
     });
     await this.conversationMembershipRepository.save([
       membership1,
@@ -120,7 +120,7 @@ export class ConversationService {
     ]);
 
     this.logger.verbose?.(
-      `Created conversation ${savedConversation.id} with memberships for agents: ${currentUserActorId}, ${otherActorId}`,
+      `Created conversation ${savedConversation.id} with memberships for agents: ${currentUserActorID}, ${otherActorID}`,
       LogContext.COMMUNICATION_CONVERSATION
     );
 
@@ -129,20 +129,20 @@ export class ConversationService {
 
   /**
    * Create a room for a conversation between two agents.
-   * @param senderActorId - Actor ID of the sender/initiator
-   * @param receiverActorId - Actor ID of the receiver
+   * @param senderActorID - Actor ID of the sender/initiator
+   * @param receiverActorID - Actor ID of the receiver
    * @param roomType - Type of room to create
    */
   private async createConversationRoom(
-    senderActorId: string,
-    receiverActorId: string,
+    senderActorID: string,
+    receiverActorID: string,
     roomType: RoomType
   ): Promise<IRoom> {
     return await this.roomService.createRoom({
-      displayName: `conversation-${senderActorId}-${receiverActorId}`,
+      displayName: `conversation-${senderActorID}-${receiverActorID}`,
       type: roomType,
-      senderActorId: senderActorId,
-      receiverActorId: receiverActorId,
+      senderActorID: senderActorID,
+      receiverActorID: receiverActorID,
     });
   }
 
@@ -268,8 +268,8 @@ export class ConversationService {
 
     // Create the room
     const createdRoom = await this.createConversationRoom(
-      member1.actorId,
-      member2.actorId,
+      member1.actorID,
+      member2.actorID,
       RoomType.CONVERSATION_DIRECT
     );
 
@@ -306,13 +306,13 @@ export class ConversationService {
    * Reset a conversation by deleting its room and creating a fresh one.
    * Caller is responsible for validation (type check, ownership check).
    * @param conversation - Pre-fetched conversation with room relation
-   * @param senderActorId - Actor ID of the sender (initiator)
-   * @param receiverActorId - Actor ID of the receiver
+   * @param senderActorID - Actor ID of the sender (initiator)
+   * @param receiverActorID - Actor ID of the receiver
    */
   public async resetConversation(
     conversation: IConversation,
-    senderActorId: string,
-    receiverActorId: string
+    senderActorID: string,
+    receiverActorID: string
   ): Promise<IConversation> {
     if (conversation.room) {
       await this.roomService.deleteRoom({
@@ -322,8 +322,8 @@ export class ConversationService {
 
     // Create a new room
     conversation.room = await this.createConversationRoom(
-      senderActorId,
-      receiverActorId,
+      senderActorID,
+      receiverActorID,
       RoomType.CONVERSATION_DIRECT
     );
     return await this.save(conversation);
@@ -344,18 +344,18 @@ export class ConversationService {
       where: { conversationId },
       select: {
         conversationId: true,
-        actorId: true,
+        actorID: true,
       },
     });
 
     // Batch-lookup actor types from the Actor table
-    const actorIds = [...new Set(memberships.map(m => m.actorId))];
+    const actorIDs = [...new Set(memberships.map(m => m.actorID))];
     const actorTypeMap = new Map<string, ActorType>();
-    if (actorIds.length > 0) {
+    if (actorIDs.length > 0) {
       const actors = await this.conversationMembershipRepository.manager.find(
         Actor,
         {
-          where: { id: In(actorIds) },
+          where: { id: In(actorIDs) },
           select: { id: true, type: true },
         }
       );
@@ -367,22 +367,22 @@ export class ConversationService {
     // Enrich memberships with actor type
     return memberships.map(m => ({
       ...m,
-      actorType: actorTypeMap.get(m.actorId),
+      actorType: actorTypeMap.get(m.actorID),
     }));
   }
 
   /**
    * Check if an agent is a member of a conversation.
    * @param conversationId - UUID of the conversation
-   * @param actorId - UUID of the agent
+   * @param actorID - UUID of the agent
    * @returns true if the agent is a member, false otherwise
    */
   async isConversationMember(
     conversationId: string,
-    actorId: string
+    actorID: string
   ): Promise<boolean> {
     const count = await this.conversationMembershipRepository.count({
-      where: { conversationId, actorId },
+      where: { conversationId, actorID },
     });
     return count > 0;
   }
@@ -405,12 +405,12 @@ export class ConversationService {
       .innerJoin(
         'conversation_membership',
         'm2',
-        'm1.conversationId = m2.conversationId AND m1.actorId != m2.actorId'
+        'm1.conversationId = m2.conversationId AND m1.actorID != m2.actorID'
       )
       .innerJoinAndSelect('m1.conversation', 'conversation')
       .leftJoinAndSelect('conversation.authorization', 'authorization')
-      .where('m1.actorId = :agentId1', { agentId1 })
-      .andWhere('m2.actorId = :agentId2', { agentId2 })
+      .where('m1.actorID = :agentId1', { agentId1 })
+      .andWhere('m2.actorID = :agentId2', { agentId2 })
       .getOne();
 
     return result?.conversation || null;
@@ -505,7 +505,7 @@ export class ConversationService {
 
     // Resolve VC from actor ID
     return await this.virtualActorLookupService.getVirtualContributorById(
-      vcMember.actorId
+      vcMember.actorID
     );
   }
 
@@ -526,14 +526,14 @@ export class ConversationService {
     const userMember = members.find(
       m =>
         m.actorType === ActorType.USER &&
-        (!excludeAgentId || m.actorId !== excludeAgentId)
+        (!excludeAgentId || m.actorID !== excludeAgentId)
     );
 
     if (!userMember) {
       return null;
     }
 
-    return await this.userLookupService.getUserById(userMember.actorId);
+    return await this.userLookupService.getUserById(userMember.actorID);
   }
 
   /**
@@ -552,12 +552,12 @@ export class ConversationService {
 
     for (const member of members) {
       if (member.actorType === ActorType.USER) {
-        const user = await this.userLookupService.getUserById(member.actorId);
+        const user = await this.userLookupService.getUserById(member.actorID);
         if (user) users.push(user);
       } else if (member.actorType === ActorType.VIRTUAL) {
         const vc =
           await this.virtualActorLookupService.getVirtualContributorById(
-            member.actorId
+            member.actorID
           );
         if (vc) virtualContributors.push(vc);
       }
@@ -596,9 +596,9 @@ export class ConversationService {
   ): Promise<string[]> {
     const memberships = await this.conversationMembershipRepository.find({
       where: { conversationId },
-      select: ['actorId'],
+      select: ['actorID'],
     });
-    return memberships.map(m => m.actorId);
+    return memberships.map(m => m.actorID);
   }
 
   /**

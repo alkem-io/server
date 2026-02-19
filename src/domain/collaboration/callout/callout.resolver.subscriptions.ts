@@ -37,7 +37,7 @@ export class CalloutResolverSubscriptions {
         'Receive new Update messages on Communities the currently authenticated User is a member of.',
       resolve(this: CalloutResolverSubscriptions, payload, args, context) {
         const actorContext = context.req.user;
-        const logMsgPrefix = `[User (${actorContext.actorId}) Callout Post Collection] - `;
+        const logMsgPrefix = `[User (${actorContext.actorID}) Callout Post Collection] - `;
         this.logger.verbose?.(
           `${logMsgPrefix} sending out event for Posts on Callout: ${payload.calloutID} `,
           LogContext.SUBSCRIPTIONS
@@ -53,7 +53,7 @@ export class CalloutResolverSubscriptions {
       },
       filter(this: CalloutResolverSubscriptions, payload, variables, context) {
         const actorContext = context.req.user;
-        const logMsgPrefix = `[User (${actorContext.actorId}) Callout Post Collection] - `;
+        const logMsgPrefix = `[User (${actorContext.actorID}) Callout Post Collection] - `;
         this.logger.verbose?.(
           `${logMsgPrefix} Filtering event '${payload.eventID}'`,
           LogContext.SUBSCRIPTIONS
@@ -78,7 +78,7 @@ export class CalloutResolverSubscriptions {
     })
     calloutID: string
   ) {
-    const logMsgPrefix = `[User (${actorContext.actorId}) Callout Post Collection] - `;
+    const logMsgPrefix = `[User (${actorContext.actorID}) Callout Post Collection] - `;
     this.logger.verbose?.(
       `${logMsgPrefix} Subscribing to the Callout of type Post Collection: ${calloutID}`,
       LogContext.SUBSCRIPTIONS

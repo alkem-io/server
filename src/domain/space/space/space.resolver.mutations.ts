@@ -72,8 +72,8 @@ export class SpaceResolverMutations {
         space: updatedSpace.id,
       },
       {
-        id: actorContext.actorId,
-        email: actorContext.actorId,
+        id: actorContext.actorID,
+        email: actorContext.actorID,
       }
     );
 
@@ -198,7 +198,7 @@ export class SpaceResolverMutations {
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     this.activityAdapter.subspaceCreated({
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       subspace,
     });
 
@@ -209,8 +209,8 @@ export class SpaceResolverMutations {
         space: space.id, //TODO: should this be a root space ID?
       },
       {
-        id: actorContext.actorId,
-        email: actorContext.actorId,
+        id: actorContext.actorID,
+        email: actorContext.actorID,
       }
     );
 

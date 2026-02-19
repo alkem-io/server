@@ -497,15 +497,15 @@ export class InAppNotificationService {
         // contributor FKs
         result.contributorOrganizationID =
           typedPayload.actorType === ActorType.ORGANIZATION
-            ? typedPayload.actorId
+            ? typedPayload.actorID
             : undefined;
         result.contributorUserID =
           typedPayload.actorType === ActorType.USER
-            ? typedPayload.actorId
+            ? typedPayload.actorID
             : undefined;
         result.contributorVcID =
           typedPayload.actorType === ActorType.VIRTUAL
-            ? typedPayload.actorId
+            ? typedPayload.actorID
             : undefined;
 
         break;
@@ -526,7 +526,7 @@ export class InAppNotificationService {
         ).spaceID;
         result.contributorVcID = (
           payload as InAppNotificationPayloadSpaceCommunityActor
-        ).actorId;
+        ).actorID;
         break;
 
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
@@ -634,7 +634,7 @@ export class InAppNotificationService {
         ).spaceID;
         result.userID = (
           payload as InAppNotificationPayloadSpaceCommunityActor
-        ).actorId;
+        ).actorID;
         break;
 
       case NotificationEvent.USER_MESSAGE:

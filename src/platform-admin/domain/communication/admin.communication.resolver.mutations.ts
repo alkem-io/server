@@ -46,7 +46,7 @@ export class AdminCommunicationResolverMutations {
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
-      `grant community members access to communications: ${actorContext.actorId}`
+      `grant community members access to communications: ${actorContext.actorID}`
     );
     return await this.adminCommunicationService.ensureCommunityAccessToCommunications(
       ensureAccessData
@@ -66,7 +66,7 @@ export class AdminCommunicationResolverMutations {
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
-      `communications admin remove orphaned room: ${actorContext.actorId}`
+      `communications admin remove orphaned room: ${actorContext.actorID}`
     );
     return await this.adminCommunicationService.removeOrphanedRoom(
       orphanedRoomData
@@ -86,7 +86,7 @@ export class AdminCommunicationResolverMutations {
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT,
-      `communications admin update join rule on all rooms: ${actorContext.actorId}`
+      `communications admin update join rule on all rooms: ${actorContext.actorID}`
     );
     return await this.adminCommunicationService.updateRoomState(
       roomStateData.roomID,
@@ -107,7 +107,7 @@ export class AdminCommunicationResolverMutations {
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `communications admin migrate orphaned conversations: ${actorContext.actorId}`
+      `communications admin migrate orphaned conversations: ${actorContext.actorID}`
     );
     return await this.adminCommunicationService.migrateConversationRooms();
   }

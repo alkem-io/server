@@ -56,7 +56,7 @@ export class ConversationResolverMutations {
       actorContext,
       conversation.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
-      `conversation VC reset: ${actorContext.actorId}`
+      `conversation VC reset: ${actorContext.actorID}`
     );
 
     // Get VC's agent ID from already-fetched members
@@ -71,8 +71,8 @@ export class ConversationResolverMutations {
     // Reset with pre-resolved data (no duplicate queries in service)
     const resetConversation = await this.conversationService.resetConversation(
       conversation,
-      actorContext.actorId,
-      vcMember.actorId
+      actorContext.actorID,
+      vcMember.actorID
     );
 
     // Update authorization after reset

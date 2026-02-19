@@ -6,7 +6,7 @@ import { MessageID } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
 import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
-  AuthorizationActorPrivilege,
+  AuthorizationActorHasPrivilege,
   CurrentActor,
 } from '@src/common/decorators';
 import { IMessage } from '../message/message.interface';
@@ -24,7 +24,7 @@ export class RoomResolverFields {
     private readonly roomDataLoader: RoomDataLoader
   ) {}
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('messages', () => [IMessage], {
     nullable: false,
@@ -86,7 +86,7 @@ export class RoomResolverFields {
 
     return this.roomService.getUnreadCounts(
       reloadedRoom,
-      actorContext.actorId,
+      actorContext.actorID,
       threadIds
     );
   }
@@ -101,10 +101,10 @@ export class RoomResolverFields {
     @Parent() room: IRoom,
     @CurrentActor() actorContext: ActorContext
   ): Promise<number> {
-    return this.roomDataLoader.loadUnreadCount(room.id, actorContext.actorId);
+    return this.roomDataLoader.loadUnreadCount(room.id, actorContext.actorID);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('lastMessage', () => IMessage, {
     nullable: true,

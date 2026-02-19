@@ -29,7 +29,7 @@ export class InAppNotificationResolverMutations {
       await this.inAppNotificationService.getRawNotificationOrFail(
         notificationData.ID
       );
-    if (notification.receiverID !== actorContext.actorId) {
+    if (notification.receiverID !== actorContext.actorID) {
       throw new ForbiddenException(
         'Users can only update their own notifications',
         LogContext.IN_APP_NOTIFICATION,
@@ -45,10 +45,10 @@ export class InAppNotificationResolverMutations {
     // Update counter for the user
     const count =
       await this.inAppNotificationService.getRawNotificationsUnreadCount(
-        actorContext.actorId
+        actorContext.actorID
       );
     await this.subscriptionPublishService.publishInAppNotificationCounter(
-      actorContext.actorId,
+      actorContext.actorID,
       count
     );
 
@@ -103,7 +103,7 @@ export class InAppNotificationResolverMutations {
     // If filter with types provided, updates only those notification types
     const result =
       await this.inAppNotificationService.bulkUpdateNotificationStateByTypes(
-        actorContext.actorId,
+        actorContext.actorID,
         state,
         filter
       );
@@ -112,10 +112,10 @@ export class InAppNotificationResolverMutations {
     if ((result?.affected ?? 0) > 0) {
       const count =
         await this.inAppNotificationService.getRawNotificationsUnreadCount(
-          actorContext.actorId
+          actorContext.actorID
         );
       await this.subscriptionPublishService.publishInAppNotificationCounter(
-        actorContext.actorId,
+        actorContext.actorID,
         count
       );
     }

@@ -259,7 +259,7 @@ export class CalendarService {
     actorContext: ActorContext
   ) {
     const activityLogInput: ActivityInputCalendarEventCreated = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       calendar: calendar,
       calendarEvent: calendarEvent,
     };
@@ -277,8 +277,8 @@ export class CalendarService {
           space: spaceID,
         },
         {
-          id: actorContext.actorId,
-          email: actorContext.actorId,
+          id: actorContext.actorID,
+          email: actorContext.actorID,
         }
       );
     }

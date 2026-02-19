@@ -155,7 +155,7 @@ export class AccountService {
       );
     }
 
-    // Space IS an Actor - assign license plans directly using space.id as actorId
+    // Space IS an Actor - assign license plans directly using space.id as actorID
     await this.accountHostService.assignLicensePlansToSpace(
       space.id,
       account.accountType,
@@ -326,7 +326,7 @@ export class AccountService {
 
   /**
    * In the Actor model, Account IS the Actor (extends Actor directly).
-   * Returns the account itself since account.id is the actorId.
+   * Returns the account itself since account.id is the actorID.
    */
   public async getAgentOrFail(accountID: string): Promise<IAccount> {
     return await this.getAccountOrFail(accountID);
@@ -346,7 +346,7 @@ export class AccountService {
 
     if (!account.virtualContributors || !account.storageAggregator) {
       throw new RelationshipNotFoundException(
-        `Unable to load Account with required entities for creating VC: ${account.id} by actor ${actorContext?.actorId}`,
+        `Unable to load Account with required entities for creating VC: ${account.id} by actor ${actorContext?.actorID}`,
         LogContext.ACCOUNT
       );
     }

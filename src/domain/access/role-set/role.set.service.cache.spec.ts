@@ -107,8 +107,8 @@ describe('RoleSetCacheService', () => {
   describe('batch cache retrieval (mget available)', () => {
     it('should use mget for agent roles batch', async () => {
       const entries = [
-        { actorId: 'a1', roleSetId: 'rs-1' },
-        { actorId: 'a2', roleSetId: 'rs-2' },
+        { actorID: 'a1', roleSetId: 'rs-1' },
+        { actorID: 'a2', roleSetId: 'rs-2' },
       ];
 
       (cacheManager.store.mget as Mock).mockResolvedValue([
@@ -127,8 +127,8 @@ describe('RoleSetCacheService', () => {
 
     it('should use mget for membership status batch', async () => {
       const entries = [
-        { actorId: 'a1', roleSetId: 'rs-1' },
-        { actorId: 'a2', roleSetId: 'rs-2' },
+        { actorID: 'a1', roleSetId: 'rs-1' },
+        { actorID: 'a2', roleSetId: 'rs-2' },
       ];
 
       (cacheManager.store.mget as Mock).mockResolvedValue([
@@ -161,8 +161,8 @@ describe('RoleSetCacheService', () => {
 
     it('should fall back to sequential gets', async () => {
       const entries = [
-        { actorId: 'a1', roleSetId: 'rs-1' },
-        { actorId: 'a2', roleSetId: 'rs-2' },
+        { actorID: 'a1', roleSetId: 'rs-1' },
+        { actorID: 'a2', roleSetId: 'rs-2' },
       ];
 
       cacheManager.get
@@ -284,8 +284,8 @@ describe('RoleSetCacheService', () => {
       );
 
       const results = await service.getActorRolesBatchFromCache([
-        { actorId: 'a1', roleSetId: 'rs-1' },
-        { actorId: 'a2', roleSetId: 'rs-2' },
+        { actorID: 'a1', roleSetId: 'rs-1' },
+        { actorID: 'a2', roleSetId: 'rs-2' },
       ]);
 
       expect(results).toEqual([undefined, undefined]);
@@ -324,9 +324,9 @@ describe('RoleSetCacheService', () => {
         .mockResolvedValueOnce([RoleName.LEAD] as any);
 
       const results = await service.getActorRolesBatchFromCache([
-        { actorId: 'a1', roleSetId: 'rs-1' },
-        { actorId: 'a2', roleSetId: 'rs-2' },
-        { actorId: 'a3', roleSetId: 'rs-3' },
+        { actorID: 'a1', roleSetId: 'rs-1' },
+        { actorID: 'a2', roleSetId: 'rs-2' },
+        { actorID: 'a3', roleSetId: 'rs-3' },
       ]);
 
       expect(results).toEqual([[RoleName.MEMBER], undefined, [RoleName.LEAD]]);

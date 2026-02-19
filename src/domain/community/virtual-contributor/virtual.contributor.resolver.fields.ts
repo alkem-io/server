@@ -1,4 +1,4 @@
-import { AuthorizationActorPrivilege, CurrentActor } from '@common/decorators';
+import { AuthorizationActorHasPrivilege, CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { VirtualContributorStatus } from '@common/enums/virtual.contributor.status.enum';
@@ -37,7 +37,7 @@ export class VirtualContributorResolverFields {
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService
   ) {}
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField(
     'wellKnownVirtualContributor',
@@ -62,7 +62,7 @@ export class VirtualContributorResolverFields {
     return undefined;
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('engine', () => AiPersonaEngine, {
     nullable: false,
@@ -76,7 +76,7 @@ export class VirtualContributorResolverFields {
     );
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('aiPersona', () => IAiPersona, {
     nullable: false,
@@ -90,7 +90,7 @@ export class VirtualContributorResolverFields {
     );
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('modelCard', () => VirtualContributorModelCard, {
     nullable: false,
@@ -130,7 +130,7 @@ export class VirtualContributorResolverFields {
     return loader.load(virtualContributor.id);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: true,
@@ -192,7 +192,7 @@ export class VirtualContributorResolverFields {
     return knowledgeBase;
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('provider', () => IActor, {
     nullable: false,
@@ -204,7 +204,7 @@ export class VirtualContributorResolverFields {
     return await this.virtualContributorService.getProvider(virtualContributor);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('status', () => VirtualContributorStatus, {
     nullable: false,

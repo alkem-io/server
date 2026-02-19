@@ -40,7 +40,7 @@ export class ActivityLogResolverQueries {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Collaboration activity query READ_USERS: ${actorContext.actorId}`
+      `Collaboration activity query READ_USERS: ${actorContext.actorID}`
     );
     // does collaboration exist
     const collaboration =
@@ -52,7 +52,7 @@ export class ActivityLogResolverQueries {
       actorContext,
       collaboration.authorization,
       AuthorizationPrivilege.READ,
-      `Collaboration activity query: ${actorContext.actorId}`
+      `Collaboration activity query: ${actorContext.actorID}`
     );
 
     if (queryData.includeChild) {
@@ -70,7 +70,7 @@ export class ActivityLogResolverQueries {
               actorContext,
               childCollaboration.authorization,
               AuthorizationPrivilege.READ,
-              `Collaboration activity query: ${actorContext.actorId}`
+              `Collaboration activity query: ${actorContext.actorID}`
             );
           } catch {
             return false;
@@ -90,7 +90,7 @@ export class ActivityLogResolverQueries {
 
     this.logger.verbose?.(
       `Querying activityLog by user ${
-        actorContext.actorId
+        actorContext.actorID
       } + terms: ${JSON.stringify(queryData)}`,
       LogContext.ACTIVITY
     );

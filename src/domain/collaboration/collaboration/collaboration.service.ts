@@ -145,7 +145,7 @@ export class CollaborationService {
           collaboration.calloutsSet,
           collaborationData.calloutsSetData.calloutsData,
           storageAggregator,
-          actorContext?.actorId
+          actorContext?.actorID
         );
     }
 

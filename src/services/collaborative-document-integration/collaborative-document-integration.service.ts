@@ -111,7 +111,7 @@ export class CollaborativeDocumentIntegrationService {
   public async who(data: WhoInputData): Promise<string> {
     const authCtx = await this.authenticationService.getActorContext(data.auth);
 
-    return authCtx.actorId;
+    return authCtx.actorID;
   }
 
   public async save({

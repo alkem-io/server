@@ -34,7 +34,7 @@ describe('MessageNotificationService', () => {
   });
 
   const mockActorContext = (): ActorContext =>
-    ({ actorId: 'actor-1' }) as ActorContext;
+    ({ actorID: 'actor-1' }) as ActorContext;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -57,7 +57,7 @@ describe('MessageNotificationService', () => {
       const actorContext = mockActorContext();
       const mentions = [
         {
-          actorId: 'user-1',
+          actorID: 'user-1',
           actorType: MentionedEntityType.USER,
         },
       ];

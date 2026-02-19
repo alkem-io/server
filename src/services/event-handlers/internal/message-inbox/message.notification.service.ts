@@ -66,7 +66,7 @@ export class MessageNotificationService {
     // Extract user IDs from mentions to avoid double notifications
     const mentionedUserIDs = mentions
       .filter(m => m.actorType === MentionedEntityType.USER)
-      .map(m => m.actorId);
+      .map(m => m.actorID);
 
     // Process room-type-specific notifications and activities
     await this.processRoomTypeNotificationsAndActivities(
@@ -86,18 +86,18 @@ export class MessageNotificationService {
     actorContext: ActorContext,
     parentMessageId: string
   ): Promise<void> {
-    const parentMessageSenderActorId =
+    const parentMessageSenderActorID =
       await this.communicationAdapter.getMessageSenderActor({
         alkemioRoomId: room.id,
         messageId: parentMessageId,
       });
 
-    if (parentMessageSenderActorId) {
+    if (parentMessageSenderActorID) {
       await this.roomServiceEvents.processNotificationCommentReply(
         room,
         message,
         actorContext,
-        parentMessageSenderActorId
+        parentMessageSenderActorID
       );
     }
   }

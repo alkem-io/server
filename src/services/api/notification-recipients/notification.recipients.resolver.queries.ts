@@ -32,7 +32,7 @@ export class NotificationRecipientsResolverQueries {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `notificationRecipients query: ${actorContext.actorId}`
+      `notificationRecipients query: ${actorContext.actorID}`
     );
     return this.notificationRecipientsServices.getRecipients(eventData);
   }

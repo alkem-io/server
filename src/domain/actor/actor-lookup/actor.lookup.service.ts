@@ -35,20 +35,20 @@ export class ActorLookupService {
    * Returns the ActorType for a given actor ID.
    * Uses cache for performance - actor types are immutable.
    */
-  async getActorTypeById(actorId: string): Promise<ActorType | null> {
-    if (!isUUID(actorId)) {
+  async getActorTypeById(actorID: string): Promise<ActorType | null> {
+    if (!isUUID(actorID)) {
       return null;
     }
 
     // Check cache first
-    const cachedType = await this.actorTypeCacheService.getActorType(actorId);
+    const cachedType = await this.actorTypeCacheService.getActorType(actorID);
     if (cachedType !== undefined) {
       return cachedType;
     }
 
     // Query DB if not in cache
     const actor = await this.entityManager.findOne(Actor, {
-      where: { id: actorId },
+      where: { id: actorID },
       select: { type: true },
     });
 
@@ -57,7 +57,7 @@ export class ActorLookupService {
     }
 
     // Cache the result
-    await this.actorTypeCacheService.setActorType(actorId, actor.type);
+    await this.actorTypeCacheService.setActorType(actorID, actor.type);
     return actor.type;
   }
 
@@ -65,8 +65,8 @@ export class ActorLookupService {
    * Checks if the actor matches the specified type(s).
    * Pass a single type or multiple types to check against.
    */
-  async isType(actorId: string, ...types: ActorType[]): Promise<boolean> {
-    const actorType = await this.getActorTypeById(actorId);
+  async isType(actorID: string, ...types: ActorType[]): Promise<boolean> {
+    const actorType = await this.getActorTypeById(actorID);
     return actorType !== null && types.includes(actorType);
   }
 
@@ -74,12 +74,12 @@ export class ActorLookupService {
    * Checks if an actor with the given ID exists.
    * Single query - no entity loading.
    */
-  async actorExists(actorId: string): Promise<boolean> {
-    if (!isUUID(actorId)) {
+  async actorExists(actorID: string): Promise<boolean> {
+    if (!isUUID(actorID)) {
       return false;
     }
     const count = await this.entityManager.count(Actor, {
-      where: { id: actorId },
+      where: { id: actorID },
     });
     return count > 0;
   }
@@ -93,15 +93,15 @@ export class ActorLookupService {
    * For lightweight actor (id, type, profile only), use getActorById().
    */
   async getFullActorById(
-    actorId: string,
+    actorID: string,
     options?: FindOneOptions<IActorFull>
   ): Promise<IActorFull | null> {
-    if (!isUUID(actorId)) {
+    if (!isUUID(actorID)) {
       return null;
     }
 
     // First get the type to know which table to query (uses cache)
-    const type = await this.getActorTypeById(actorId);
+    const type = await this.getActorTypeById(actorID);
     if (!type) {
       return null;
     }
@@ -111,27 +111,27 @@ export class ActorLookupService {
       case ActorType.USER:
         return this.entityManager.findOne(User, {
           ...options,
-          where: { ...options?.where, id: actorId },
+          where: { ...options?.where, id: actorID },
         });
       case ActorType.ORGANIZATION:
         return this.entityManager.findOne(Organization, {
           ...options,
-          where: { ...options?.where, id: actorId },
+          where: { ...options?.where, id: actorID },
         });
       case ActorType.VIRTUAL:
         return this.entityManager.findOne(VirtualContributor, {
           ...options,
-          where: { ...options?.where, id: actorId },
+          where: { ...options?.where, id: actorID },
         });
       case ActorType.SPACE:
         return this.entityManager.findOne(Space, {
           ...options,
-          where: { ...options?.where, id: actorId },
+          where: { ...options?.where, id: actorID },
         });
       case ActorType.ACCOUNT:
         return this.entityManager.findOne(Account, {
           ...options,
-          where: { ...options?.where, id: actorId },
+          where: { ...options?.where, id: actorID },
         });
       default:
         return null;
@@ -143,15 +143,15 @@ export class ActorLookupService {
    * Only use when you need child-specific fields (nameID, email, phone, etc.).
    */
   async getFullActorByIdOrFail(
-    actorId: string,
+    actorID: string,
     options?: FindOneOptions<IActorFull>
   ): Promise<IActorFull> {
-    const actor = await this.getFullActorById(actorId, options);
+    const actor = await this.getFullActorById(actorID, options);
     if (!actor) {
       throw new EntityNotFoundException(
         'Actor not found',
         LogContext.COMMUNITY,
-        { actorId }
+        { actorID }
       );
     }
     return actor;
@@ -161,13 +161,13 @@ export class ActorLookupService {
    * Get the type and verify actor exists, or throw.
    * Use this when you need the type but not the full entity.
    */
-  async getActorTypeByIdOrFail(actorId: string): Promise<ActorType> {
-    const type = await this.getActorTypeById(actorId);
+  async getActorTypeByIdOrFail(actorID: string): Promise<ActorType> {
+    const type = await this.getActorTypeById(actorID);
     if (!type) {
       throw new EntityNotFoundException(
         'Actor not found',
         LogContext.COMMUNITY,
-        { actorId }
+        { actorID }
       );
     }
     return type;
@@ -180,16 +180,16 @@ export class ActorLookupService {
    * Use this for batch operations where you need to validate existence and get types.
    */
   async validateActorsAndGetTypes(
-    actorIds: string[]
+    actorIDs: string[]
   ): Promise<Map<string, ActorType>> {
-    if (actorIds.length === 0) {
+    if (actorIDs.length === 0) {
       return new Map();
     }
 
     // Filter out invalid UUIDs
-    const validIds = actorIds.filter(id => isUUID(id));
-    if (validIds.length !== actorIds.length) {
-      const invalidIds = actorIds.filter(id => !isUUID(id));
+    const validIds = actorIDs.filter(id => isUUID(id));
+    if (validIds.length !== actorIDs.length) {
+      const invalidIds = actorIDs.filter(id => !isUUID(id));
       throw new EntityNotFoundException(
         'Invalid actor ID format',
         LogContext.COMMUNITY,
@@ -244,18 +244,18 @@ export class ActorLookupService {
    * Use when you only need the authorization policy.
    */
   async getActorAuthorizationOrFail(
-    actorId: string
+    actorID: string
   ): Promise<IAuthorizationPolicy> {
-    if (!isUUID(actorId)) {
+    if (!isUUID(actorID)) {
       throw new EntityNotFoundException(
         'Invalid actor ID format',
         LogContext.COMMUNITY,
-        { actorId }
+        { actorID }
       );
     }
 
     const actor = await this.entityManager.findOne(Actor, {
-      where: { id: actorId },
+      where: { id: actorID },
       relations: { authorization: true },
     });
 
@@ -263,7 +263,7 @@ export class ActorLookupService {
       throw new EntityNotFoundException(
         'Actor not found',
         LogContext.COMMUNITY,
-        { actorId }
+        { actorID }
       );
     }
 
@@ -271,7 +271,7 @@ export class ActorLookupService {
       throw new RelationshipNotFoundException(
         'Actor authorization not initialized',
         LogContext.AUTH,
-        { actorId }
+        { actorID }
       );
     }
 
@@ -286,16 +286,16 @@ export class ActorLookupService {
    * @param options - Optional relations to load (profile loaded by default)
    */
   async getActorById(
-    actorId: string,
+    actorID: string,
     options?: FindOneOptions<Actor>
   ): Promise<Actor | null> {
-    if (!isUUID(actorId)) {
+    if (!isUUID(actorID)) {
       return null;
     }
 
     return this.entityManager.findOne(Actor, {
       ...options,
-      where: { ...options?.where, id: actorId },
+      where: { ...options?.where, id: actorID },
       relations: { profile: true, ...options?.relations },
     });
   }
@@ -306,15 +306,15 @@ export class ActorLookupService {
    * @param options - Optional relations to load (profile loaded by default)
    */
   async getActorByIdOrFail(
-    actorId: string,
+    actorID: string,
     options?: FindOneOptions<Actor>
   ): Promise<Actor> {
-    const actor = await this.getActorById(actorId, options);
+    const actor = await this.getActorById(actorID, options);
     if (!actor) {
       throw new EntityNotFoundException(
         'Actor not found',
         LogContext.COMMUNITY,
-        { actorId }
+        { actorID }
       );
     }
     return actor;
@@ -323,16 +323,16 @@ export class ActorLookupService {
   /**
    * Get credentials for an actor by ID.
    * Efficient query that only loads credentials, not the full actor entity.
-   * Used by authentication flow when actorId is already known from JWT.
+   * Used by authentication flow when actorID is already known from JWT.
    * @returns Array of credentials, empty array if actor not found
    */
-  async getActorCredentials(actorId: string): Promise<ICredential[]> {
-    if (!isUUID(actorId)) {
+  async getActorCredentials(actorID: string): Promise<ICredential[]> {
+    if (!isUUID(actorID)) {
       return [];
     }
 
     const actor = await this.entityManager.findOne(Actor, {
-      where: { id: actorId },
+      where: { id: actorID },
       relations: { credentials: true },
       select: { id: true },
     });
@@ -342,26 +342,26 @@ export class ActorLookupService {
 
   /**
    * Get credentials for an actor or throw if actor not found.
-   * Used when actor MUST exist (e.g., authenticated request with actorId from JWT).
+   * Used when actor MUST exist (e.g., authenticated request with actorID from JWT).
    */
-  async getActorCredentialsOrFail(actorId: string): Promise<ICredential[]> {
-    if (!isUUID(actorId)) {
+  async getActorCredentialsOrFail(actorID: string): Promise<ICredential[]> {
+    if (!isUUID(actorID)) {
       throw new EntityNotFoundException(
         'Invalid actor ID format',
         LogContext.AUTH,
-        { actorId }
+        { actorID }
       );
     }
 
     const actor = await this.entityManager.findOne(Actor, {
-      where: { id: actorId },
+      where: { id: actorID },
       relations: { credentials: true },
       select: { id: true },
     });
 
     if (!actor) {
       throw new EntityNotFoundException('Actor not found', LogContext.AUTH, {
-        actorId,
+        actorID,
       });
     }
 
@@ -394,7 +394,7 @@ export class ActorLookupService {
    * More efficient than actorsWithCredentials when you only need IDs.
    * Single query returning only the id column.
    */
-  async getActorIdsWithCredential(
+  async getActorIDsWithCredential(
     credentialCriteria: CredentialsSearchInput,
     actorTypes?: ActorType[],
     limit?: number
@@ -452,7 +452,7 @@ export class ActorLookupService {
     // Get organizations where user is owner/admin via credentials
     const orgCredentials = await this.entityManager.find(Credential, {
       where: {
-        actorId: userID,
+        actorID: userID,
         type: In([
           AuthorizationCredential.ORGANIZATION_OWNER,
           AuthorizationCredential.ORGANIZATION_ADMIN,

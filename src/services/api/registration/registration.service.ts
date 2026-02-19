@@ -205,7 +205,7 @@ export class RegistrationService {
       }
 
       const invitationInput: CreateInvitationInput = {
-        invitedActorId: user.id,
+        invitedActorID: user.id,
         roleSetID: roleSet.id,
         createdBy: platformInvitation.createdBy,
         extraRoles: platformInvitation.roleSetExtraRoles,

@@ -1,4 +1,4 @@
-import { AuthorizationActorPrivilege, Profiling } from '@common/decorators';
+import { AuthorizationActorHasPrivilege, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { GraphqlGuard } from '@core/authorization';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
@@ -75,7 +75,7 @@ export class InnovationHubResolverFields {
     return loader.load(innovationHub.id);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('provider', () => IActor, {
     nullable: false,

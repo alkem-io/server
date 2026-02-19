@@ -26,31 +26,31 @@ export class ActorContextCacheService {
   }
 
   /**
-   * Retrieves cached ActorContext by actorId.
+   * Retrieves cached ActorContext by actorID.
    */
-  public async getByActorId(
-    actorId: string
+  public async getByActorID(
+    actorID: string
   ): Promise<ActorContext | undefined> {
     return await this.cacheManager.get<ActorContext>(
-      this.getActorIdCacheKey(actorId)
+      this.getActorIDCacheKey(actorID)
     );
   }
 
   /**
-   * Deletes cached ActorContext by actorId.
+   * Deletes cached ActorContext by actorID.
    */
-  public async deleteByActorId(actorId: string): Promise<void> {
-    await this.cacheManager.del(this.getActorIdCacheKey(actorId));
+  public async deleteByActorID(actorID: string): Promise<void> {
+    await this.cacheManager.del(this.getActorIDCacheKey(actorID));
   }
 
   /**
-   * Caches ActorContext using the actorId as key.
+   * Caches ActorContext using the actorID as key.
    */
-  public async setByActorId(ctx: ActorContext): Promise<ActorContext> {
-    if (!ctx.actorId) {
+  public async setByActorID(ctx: ActorContext): Promise<ActorContext> {
+    if (!ctx.actorID) {
       return ctx;
     }
-    const cacheKey = this.getActorIdCacheKey(ctx.actorId);
+    const cacheKey = this.getActorIDCacheKey(ctx.actorID);
     return await this.cacheManager.set<ActorContext>(cacheKey, ctx, {
       ttl: this.cache_ttl,
     });
@@ -59,24 +59,24 @@ export class ActorContextCacheService {
   /**
    * Updates cached ActorContext credentials when an actor's credentials change.
    */
-  public async updateCredentialsByActorId(
-    actorId: string,
+  public async updateCredentialsByActorID(
+    actorID: string,
     credentials: ICredential[]
   ): Promise<ActorContext | undefined> {
-    const cached = await this.getByActorId(actorId);
+    const cached = await this.getByActorID(actorID);
     if (!cached) {
       this.logger.verbose?.(
-        'No cache entry found for actorId. Skipping cache update.',
+        'No cache entry found for actorID. Skipping cache update.',
         LogContext.AUTH
       );
       return undefined;
     }
 
     cached.credentials = credentials;
-    return await this.setByActorId(cached);
+    return await this.setByActorID(cached);
   }
 
-  private getActorIdCacheKey(actorId: string): string {
-    return `@actorContext:actorId:${actorId}`;
+  private getActorIDCacheKey(actorID: string): string {
+    return `@actorContext:actorID:${actorID}`;
   }
 }

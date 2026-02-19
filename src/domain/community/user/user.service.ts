@@ -84,7 +84,7 @@ export class UserService {
   ) {}
 
   private async invalidateActorContextCache(user: IUser): Promise<void> {
-    await this.actorContextCacheService.deleteByActorId(user.id);
+    await this.actorContextCacheService.deleteByActorID(user.id);
   }
 
   async createUser(
@@ -210,7 +210,7 @@ export class UserService {
   private async createGuidanceConversation(userID: string): Promise<void> {
     try {
       await this.messagingService.createConversation({
-        callerAgentId: userID, // user.id = actorId in the new model
+        callerAgentId: userID, // user.id = actorID in the new model
         wellKnownVirtualContributor: VirtualContributorWellKnown.CHAT_GUIDANCE,
       });
 
@@ -352,8 +352,8 @@ export class UserService {
 
     user.authenticationID = null;
     const updatedUser = await this.save(user);
-    // Invalidate cache by actorId
-    await this.actorContextCacheService.deleteByActorId(user.id);
+    // Invalidate cache by actorID
+    await this.actorContextCacheService.deleteByActorID(user.id);
     this.logger.verbose?.(
       `Cleared authentication ID for user ${updatedUser.id}`,
       LogContext.AUTH
@@ -561,7 +561,7 @@ export class UserService {
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
     const currentEntryRoleUserIds =
-      await this.actorLookupService.getActorIdsWithCredential(
+      await this.actorLookupService.getActorIDsWithCredential(
         entryRoleCredentials.role,
         [ActorType.USER]
       );
@@ -603,7 +603,7 @@ export class UserService {
     filter?: UserFilterInput
   ): Promise<IPaginatedType<IUser>> {
     const currentElevatedRoleUserIds =
-      await this.actorLookupService.getActorIdsWithCredential(
+      await this.actorLookupService.getActorIDsWithCredential(
         roleSetCredentials.elevatedRole,
         [ActorType.USER]
       );

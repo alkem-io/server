@@ -8,7 +8,7 @@ export class RemoveRoleOnRoleSetInput {
   roleSetID!: string;
 
   @Field(() => UUID, { nullable: false })
-  actorId!: string;
+  actorID!: string;
 
   @Field(() => RoleName, { nullable: false })
   role!: RoleName;

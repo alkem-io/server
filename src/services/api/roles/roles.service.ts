@@ -46,11 +46,11 @@ export class RolesService {
   async getRolesForUser(membershipData: RolesUserInput): Promise<ActorRoles> {
     const contributorRoles = new ActorRoles();
     const user = await this.userLookupService.getUserByIdOrFail(
-      membershipData.actorId,
+      membershipData.actorID,
       { relations: { credentials: true } }
     );
 
-    contributorRoles.id = membershipData.actorId;
+    contributorRoles.id = membershipData.actorID;
     contributorRoles.filter = membershipData.filter;
     contributorRoles.credentials = user.credentials || [];
 
@@ -65,11 +65,11 @@ export class RolesService {
     // Organization IS the Actor - credentials are directly on the entity
     const organization =
       await this.organizationLookupService.getOrganizationByIdOrFail(
-        membershipData.actorId,
+        membershipData.actorID,
         { relations: { credentials: true } }
       );
 
-    contributorRoles.id = membershipData.actorId;
+    contributorRoles.id = membershipData.actorID;
     contributorRoles.filter = membershipData.filter;
     contributorRoles.credentials = organization.credentials || [];
 
@@ -82,10 +82,10 @@ export class RolesService {
     const contributorRoles = new ActorRoles();
     const vc =
       await this.virtualActorLookupService.getVirtualContributorAndActor(
-        membershipData.actorId
+        membershipData.actorID
       );
 
-    contributorRoles.id = membershipData.actorId;
+    contributorRoles.id = membershipData.actorID;
     contributorRoles.credentials = vc.credentials || [];
 
     return contributorRoles;
@@ -247,12 +247,7 @@ export class RolesService {
       invitation.createdDate,
       invitation.updatedDate
     );
-    invitationResult.actorId = invitation.invitedActorId;
-    invitationResult.actorType =
-      await this.actorLookupService.getActorTypeByIdOrFail(
-        invitation.invitedActorId
-      );
-
+    invitationResult.actorID = invitation.invitedActorID;
     invitationResult.createdBy = invitation.createdBy ?? '';
     invitationResult.welcomeMessage = invitation.welcomeMessage;
 

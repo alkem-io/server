@@ -139,7 +139,7 @@ export class VisualResolverMutations {
       readStream,
       filename,
       mimetype,
-      actorContext.actorId
+      actorContext.actorID
     );
 
     await this.documentService.saveDocument(visualDocument);

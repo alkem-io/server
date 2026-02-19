@@ -47,13 +47,13 @@ export class VirtualContributorMessageService {
       virtualContributorID: virtualContributor.id,
       message,
       contextSpaceID,
-      userID: actorContext.actorId,
+      userID: actorContext.actorID,
       resultHandler: {
         action: InvocationResultAction.POST_REPLY,
         roomDetails: {
           roomID: room.id,
           threadID,
-          actorId: virtualContributorActorID,
+          actorID: virtualContributorActorID,
         },
       },
     };

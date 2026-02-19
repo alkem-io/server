@@ -443,7 +443,7 @@ export class BootstrapService {
     await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.ASSOCIATE,
-      adminActorContext.actorId,
+      adminActorContext.actorID,
       adminActorContext,
       false
     );
@@ -451,7 +451,7 @@ export class BootstrapService {
     await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.ADMIN,
-      adminActorContext.actorId,
+      adminActorContext.actorID,
       adminActorContext,
       false
     );
@@ -475,7 +475,7 @@ export class BootstrapService {
       );
     }
     const ctx = new ActorContext();
-    ctx.actorId = adminUser.id;
+    ctx.actorID = adminUser.id;
     ctx.isAnonymous = false;
     ctx.credentials = (adminUser.credentials || []).map(c => ({
       type: c.type,

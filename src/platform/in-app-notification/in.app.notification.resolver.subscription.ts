@@ -46,7 +46,7 @@ export class InAppNotificationResolverSubscription {
   public async inAppNotificationReceived(
     @CurrentActor() actorContext: ActorContext
   ) {
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       throw new ForbiddenException(
         'User could not be resolved',
         LogContext.IN_APP_NOTIFICATION,
@@ -84,7 +84,7 @@ export class InAppNotificationResolverSubscription {
   public async notificationsUnreadCount(
     @CurrentActor() actorContext: ActorContext
   ) {
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       throw new ForbiddenException(
         'User could not be resolved',
         LogContext.IN_APP_NOTIFICATION,

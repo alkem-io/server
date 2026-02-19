@@ -3,11 +3,11 @@ import { ICredentialDefinition } from '@domain/actor/credential/credential.defin
 /**
  * Context for the actor making a request.
  * Contains identity and credentials for authorization decisions.
- * Cached by actorId for performance.
+ * Cached by actorID for performance.
  */
 export class ActorContext {
   /** The Actor ID - for users this is the user's ID since User IS an Actor */
-  actorId: string = '';
+  actorID: string = '';
 
   /** Credentials for authorization decisions */
   credentials: ICredentialDefinition[] = [];

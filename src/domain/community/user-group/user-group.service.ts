@@ -167,7 +167,7 @@ export class UserGroupService {
       membershipData.userID
     );
 
-    // User IS an Actor - use user.id as actorId
+    // User IS an Actor - use user.id as actorID
     await this.actorService.grantCredentialOrFail(user.id, {
       type: AuthorizationCredential.USER_GROUP_MEMBER,
       resourceID: membershipData.groupID,
@@ -185,7 +185,7 @@ export class UserGroupService {
       membershipData.userID
     );
 
-    // User IS an Actor - use user.id as actorId
+    // User IS an Actor - use user.id as actorID
     await this.actorService.revokeCredential(user.id, {
       type: AuthorizationCredential.USER_GROUP_MEMBER,
       resourceID: membershipData.groupID,

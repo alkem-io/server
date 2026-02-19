@@ -38,7 +38,7 @@ export class ActivityLogResolverSubscriptions {
       context
     ) {
       const actorContext = context.req.user;
-      const logMsgPrefix = `[New activity subscription] - [${actorContext.actorId}] -`;
+      const logMsgPrefix = `[New activity subscription] - [${actorContext.actorID}] -`;
       this.logger.verbose?.(
         `${logMsgPrefix} sending out event for new activity on Collaboration: ${args.input.collaborationID} `,
         LogContext.SUBSCRIPTIONS
@@ -69,7 +69,7 @@ export class ActivityLogResolverSubscriptions {
     ) {
       const { types = [], collaborationID, includeChild } = variables.input;
       const actorContext = context.req.user;
-      const logMsgPrefix = `[New activity subscription] - [${actorContext.actorId}] -`;
+      const logMsgPrefix = `[New activity subscription] - [${actorContext.actorID}] -`;
       this.logger.verbose?.(
         `${logMsgPrefix} filtering event: ${payload.eventID}`,
         LogContext.SUBSCRIPTIONS
@@ -115,7 +115,7 @@ export class ActivityLogResolverSubscriptions {
   ) {
     const logMsgPrefix = '[New activity subscription] - ';
     this.logger.verbose?.(
-      `${logMsgPrefix} User ${actorContext.actorId} subscribed for new activities on Collaboration: ${input.collaborationID}`,
+      `${logMsgPrefix} User ${actorContext.actorID} subscribed for new activities on Collaboration: ${input.collaborationID}`,
       LogContext.SUBSCRIPTIONS
     );
     // validate args
@@ -150,7 +150,7 @@ export class ActivityLogResolverSubscriptions {
             actorContext,
             childCollaboration.authorization,
             AuthorizationPrivilege.READ,
-            `Collaboration activity query: ${actorContext.actorId}`
+            `Collaboration activity query: ${actorContext.actorID}`
           );
         } catch {
           return false;

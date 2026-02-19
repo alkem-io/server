@@ -41,14 +41,14 @@ export class AuthorizationService {
     if (this.isAccessGranted(actorContext, auth, privilegeRequired))
       return true;
 
-    const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg} user: ${actorContext.actorId} on authorization ${auth.id} of type '${auth.type}'`;
+    const errorMsg = `Authorization: unable to grant '${privilegeRequired}' privilege: ${msg} user: ${actorContext.actorID} on authorization ${auth.id} of type '${auth.type}'`;
     this.logCredentialCheckFailDetails(errorMsg, actorContext, auth);
     // If you get to here then no match was found
     throw new ForbiddenAuthorizationPolicyException(
       errorMsg,
       privilegeRequired,
       auth.id,
-      actorContext.actorId
+      actorContext.actorID
     );
   }
 
@@ -58,7 +58,7 @@ export class AuthorizationService {
     authorization: IAuthorizationPolicy
   ) {
     const msg = `${errorMsg}; actorContext: ${
-      actorContext.actorId
+      actorContext.actorID
     } has credentials '${JSON.stringify(
       actorContext.credentials,
       this.replacer
@@ -68,7 +68,7 @@ export class AuthorizationService {
 
   logActorContext(actorContext: ActorContext) {
     this.logger.debug?.(
-      `ActorContext: '${actorContext.actorId}' has credentials '${JSON.stringify(
+      `ActorContext: '${actorContext.actorID}' has credentials '${JSON.stringify(
         actorContext.credentials,
         this.replacer
       )}'`,

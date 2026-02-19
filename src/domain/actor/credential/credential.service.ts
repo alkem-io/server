@@ -148,9 +148,9 @@ export class CredentialService {
   /**
    * Find credentials by actor ID.
    */
-  async findCredentialsByActorId(actorId: string): Promise<Credential[]> {
+  async findCredentialsByActorID(actorID: string): Promise<Credential[]> {
     return await this.credentialRepository.find({
-      where: { actorId },
+      where: { actorID },
     });
   }
 
@@ -158,12 +158,12 @@ export class CredentialService {
    * Create a credential for an actor.
    */
   async createCredentialForActor(
-    actorId: string,
+    actorID: string,
     credentialInput: CreateCredentialInput
   ): Promise<ICredential> {
     const credential = Credential.create({
       ...credentialInput,
-      actorId,
+      actorID,
     });
     await this.credentialRepository.save(credential);
     return credential;
@@ -173,12 +173,12 @@ export class CredentialService {
    * Delete a credential by type and resourceID for a specific actor.
    */
   async deleteCredentialByTypeAndResource(
-    actorId: string,
+    actorID: string,
     type: string,
     resourceID: string
   ): Promise<boolean> {
     const result = await this.credentialRepository.delete({
-      actorId,
+      actorID,
       type,
       resourceID,
     });

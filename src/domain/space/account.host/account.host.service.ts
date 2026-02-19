@@ -100,7 +100,7 @@ export class AccountHostService {
 
   /**
    * Assign license plans to a Space.
-   * Space IS an Actor - credentials are granted directly to the Space using its ID as actorId.
+   * Space IS an Actor - credentials are granted directly to the Space using its ID as actorID.
    */
   public async assignLicensePlansToSpace(
     spaceId: string,
@@ -140,7 +140,7 @@ export class AccountHostService {
     }
 
     for (const licensePlan of licensePlansToAssign) {
-      // Space IS an Actor - grant credentials directly using spaceId as actorId
+      // Space IS an Actor - grant credentials directly using spaceId as actorID
       await this.licenseIssuerService.assignLicensePlan(
         spaceId,
         licensePlan,

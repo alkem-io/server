@@ -136,7 +136,7 @@ export class NotificationUserAdapter {
     const recipients = await this.getNotificationRecipientsUser(
       event,
       eventData,
-      eventData.actorId
+      eventData.actorID
     );
 
     const payload =
@@ -145,7 +145,7 @@ export class NotificationUserAdapter {
         eventData.triggeredBy,
         recipients.emailRecipients,
         space,
-        eventData.actorId
+        eventData.actorID
       );
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
 
@@ -157,7 +157,7 @@ export class NotificationUserAdapter {
       const inAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
         type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
         spaceID: space.id,
-        actorId: eventData.actorId,
+        actorID: eventData.actorID,
         actorType: eventData.actorType,
       };
 

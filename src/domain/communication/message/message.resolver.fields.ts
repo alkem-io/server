@@ -24,9 +24,9 @@ export class MessageResolverFields {
     @Loader(ContributorByAgentIdLoaderCreator, { resolveToNull: true })
     loader: ILoader<IActor | null>
   ): Promise<IActor | null> {
-    // sender contains the agent ID (actorId from the communication adapter)
-    const senderActorId = message.sender;
-    if (!senderActorId) {
+    // sender contains the agent ID (actorID from the communication adapter)
+    const senderActorID = message.sender;
+    if (!senderActorID) {
       return null;
     }
 
@@ -36,7 +36,7 @@ export class MessageResolverFields {
       this.logger?.warn(
         {
           message: 'Sender unable to be resolved when resolving message.',
-          senderActorId,
+          senderActorID,
           messageId: message.id,
         },
         LogContext.COMMUNICATION

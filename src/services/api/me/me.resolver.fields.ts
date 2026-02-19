@@ -34,7 +34,7 @@ export class MeResolverFields {
     @Args({ nullable: true }) pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: NotificationEventsFilterInput
   ): Promise<PaginatedInAppNotifications> {
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       throw new ForbiddenException(
         'User could not be resolved',
         LogContext.IN_APP_NOTIFICATION,
@@ -43,7 +43,7 @@ export class MeResolverFields {
     }
 
     return await this.inAppNotificationService.getPaginatedNotifications(
-      actorContext.actorId,
+      actorContext.actorID,
       pagination,
       filter
     );
@@ -56,7 +56,7 @@ export class MeResolverFields {
   public async notificationsUnreadCount(
     @CurrentActor() actorContext: ActorContext
   ): Promise<number> {
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       throw new ValidationException(
         'Unable to retrieve unread notifications count; no userID provided.',
         LogContext.IN_APP_NOTIFICATION
@@ -64,7 +64,7 @@ export class MeResolverFields {
     }
     // Always return the total unread count, regardless of any filtering on notifications
     return await this.inAppNotificationService.getRawNotificationsUnreadCount(
-      actorContext.actorId
+      actorContext.actorID
     );
   }
 
@@ -72,7 +72,7 @@ export class MeResolverFields {
     description: 'The query id',
   })
   public id(@CurrentActor() actorContext: ActorContext): string {
-    return `me-${actorContext.actorId}`;
+    return `me-${actorContext.actorID}`;
   }
 
   @ResolveField(() => IUser, {
@@ -84,11 +84,11 @@ export class MeResolverFields {
     @CurrentActor() actorContext: ActorContext
   ): Promise<IUser | null> {
     // Anonymous / guest requests do not carry identifiers; expose null instead of failing the whole query.
-    if (!actorContext.actorId || actorContext.isAnonymous) {
+    if (!actorContext.actorID || actorContext.isAnonymous) {
       return null;
     }
 
-    return this.userLookupService.getUserByIdOrFail(actorContext.actorId);
+    return this.userLookupService.getUserByIdOrFail(actorContext.actorID);
   }
 
   @ResolveField('communityInvitationsCount', () => Number, {
@@ -105,14 +105,14 @@ export class MeResolverFields {
     })
     states: string[]
   ): Promise<number> {
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       throw new ValidationException(
         'Unable to retrieve invitations as no userID provided.',
         LogContext.COMMUNITY
       );
     }
     return this.meService.getCommunityInvitationsCountForUser(
-      actorContext.actorId,
+      actorContext.actorID,
       states
     );
   }
@@ -130,14 +130,14 @@ export class MeResolverFields {
     })
     states: string[]
   ): Promise<CommunityInvitationResult[]> {
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       throw new ValidationException(
         'Unable to retrieve invitations as no userID provided.',
         LogContext.COMMUNITY
       );
     }
     return this.meService.getCommunityInvitationsForUser(
-      actorContext.actorId,
+      actorContext.actorID,
       states
     );
   }
@@ -156,14 +156,14 @@ export class MeResolverFields {
     })
     states: string[]
   ): Promise<CommunityApplicationResult[]> {
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       throw new ValidationException(
         'Unable to retrieve applications as no userID provided.',
         LogContext.COMMUNITY
       );
     }
     return this.meService.getCommunityApplicationsForUser(
-      actorContext.actorId,
+      actorContext.actorID,
       states
     );
   }
@@ -218,7 +218,7 @@ export class MeResolverFields {
   public async conversations(
     @CurrentActor() actorContext: ActorContext
   ): Promise<MeConversationsResult> {
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       throw new ValidationException(
         'Unable to retrieve conversations as no userID provided.',
         LogContext.COMMUNICATION

@@ -101,7 +101,7 @@ export class LookupByNameResolverFields {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `user lookup by NameID: ${actorContext.actorId}`
+      `user lookup by NameID: ${actorContext.actorID}`
     );
 
     return user.id;

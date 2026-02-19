@@ -33,7 +33,7 @@ import { IRoom } from './room.interface';
  * Current Limitation:
  * The activity, contribution tracking, and notification systems only support User IDs,
  * not Contributor IDs. When a VirtualContributor (VC) or Organization triggers an action,
- * actorContext.actorId is empty ('') because ActorContextService.buildForActor()
+ * actorContext.actorID is empty ('') because ActorContextService.buildForActor()
  * returns anonymous ActorContext for non-user agents.
  *
  * Technical Details:
@@ -46,7 +46,7 @@ import { IRoom } from './room.interface';
  *
  * Current Workaround:
  * Methods in this service guard activity/contribution/notification tracking with
- * `if (actorContext.actorId)` checks, silently skipping tracking for non-user agents
+ * `if (actorContext.actorID)` checks, silently skipping tracking for non-user agents
  * (VCs, Organizations). Debug logs are emitted when tracking is skipped.
  *
  * Impact:
@@ -100,9 +100,9 @@ export class RoomServiceEvents {
     messageOwnerId: string
   ) {
     // FIXME: Notification system only tracks User IDs - see file-level comment for details
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       this.logger.debug?.(
-        `Skipping notification for comment reply: actorContext.actorId is empty (agent: ${actorContext.actorId})`,
+        `Skipping notification for comment reply: actorContext.actorID is empty (agent: ${actorContext.actorID})`,
         LogContext.COMMUNICATION
       );
       return;
@@ -110,7 +110,7 @@ export class RoomServiceEvents {
 
     // Send the notification
     const notificationInput: NotificationInputCommentReply = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       roomId: room.id,
       messageRepliedToOwnerID: messageOwnerId,
       messageID: reply.id,
@@ -126,9 +126,9 @@ export class RoomServiceEvents {
     mentionedUserIDs?: string[]
   ) {
     // FIXME: Notification system only tracks User IDs - see file-level comment for details
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       this.logger.debug?.(
-        `Skipping notification for callout comment: actorContext.actorId is empty (agent: ${actorContext.actorId})`,
+        `Skipping notification for callout comment: actorContext.actorID is empty (agent: ${actorContext.actorID})`,
         LogContext.COMMUNICATION
       );
       return;
@@ -136,7 +136,7 @@ export class RoomServiceEvents {
 
     // Send the notification
     const notificationInput: NotificationInputCollaborationCalloutComment = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       callout,
       comments: room,
       commentSent: message,
@@ -157,9 +157,9 @@ export class RoomServiceEvents {
     mentionedUserIDs?: string[]
   ) {
     // FIXME: Notification system only tracks User IDs - see file-level comment for details
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       this.logger.debug?.(
-        `Skipping notification for post contribution comment: actorContext.actorId is empty (agent: ${actorContext.actorId})`,
+        `Skipping notification for post contribution comment: actorContext.actorID is empty (agent: ${actorContext.actorID})`,
         LogContext.COMMUNICATION
       );
       return;
@@ -168,7 +168,7 @@ export class RoomServiceEvents {
     // Send the notification
     const notificationInput: NotificationInputCollaborationCalloutPostContributionComment =
       {
-        triggeredBy: actorContext.actorId,
+        triggeredBy: actorContext.actorID,
         post,
         callout,
         contribution,
@@ -187,9 +187,9 @@ export class RoomServiceEvents {
     actorContext: ActorContext
   ) {
     // FIXME: Notification system only tracks User IDs - see file-level comment for details
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       this.logger.debug?.(
-        `Skipping notification for forum discussion comment: actorContext.actorId is empty (agent: ${actorContext.actorId})`,
+        `Skipping notification for forum discussion comment: actorContext.actorID is empty (agent: ${actorContext.actorID})`,
         LogContext.COMMUNICATION
       );
       return;
@@ -197,7 +197,7 @@ export class RoomServiceEvents {
 
     const forumDiscussionCommentNotificationInput: NotificationInputPlatformForumDiscussionComment =
       {
-        triggeredBy: actorContext.actorId,
+        triggeredBy: actorContext.actorID,
         discussion,
         commentSent: message,
         userID: discussion.createdBy,
@@ -235,9 +235,9 @@ export class RoomServiceEvents {
     }
 
     // FIXME: Notification system only tracks User IDs - see file-level comment for details
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       this.logger.debug?.(
-        `Skipping notification for calendar event comment: actorContext.actorId is empty (agent: ${actorContext.actorId})`,
+        `Skipping notification for calendar event comment: actorContext.actorID is empty (agent: ${actorContext.actorID})`,
         LogContext.COMMUNICATION
       );
       return;
@@ -245,7 +245,7 @@ export class RoomServiceEvents {
 
     // Send the notification
     const notificationInput: NotificationInputCommunityCalendarEventComment = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       calendarEvent,
       comments: room,
       commentSent: message,
@@ -264,16 +264,16 @@ export class RoomServiceEvents {
     actorContext: ActorContext
   ) {
     // FIXME: Activity system only tracks User IDs - see file-level comment for details
-    if (actorContext.actorId) {
+    if (actorContext.actorID) {
       const activityLogInput: ActivityInputCalloutPostComment = {
-        triggeredBy: actorContext.actorId,
+        triggeredBy: actorContext.actorID,
         post: post,
         message: message,
       };
       this.activityAdapter.calloutPostComment(activityLogInput);
     } else {
       this.logger.debug?.(
-        `Skipping activity creation for post comment: actorContext.actorId is empty (agent: ${actorContext.actorId})`,
+        `Skipping activity creation for post comment: actorContext.actorID is empty (agent: ${actorContext.actorID})`,
         LogContext.COMMUNICATION
       );
     }
@@ -288,7 +288,7 @@ export class RoomServiceEvents {
       );
 
     // FIXME: Contribution reporter only tracks User IDs - see file-level comment
-    if (actorContext.actorId) {
+    if (actorContext.actorID) {
       this.contributionReporter.calloutPostCommentCreated(
         {
           id: post.id,
@@ -296,13 +296,13 @@ export class RoomServiceEvents {
           space: levelZeroSpaceID,
         },
         {
-          id: actorContext.actorId,
-          email: actorContext.actorId,
+          id: actorContext.actorID,
+          email: actorContext.actorID,
         }
       );
     } else {
       this.logger.debug?.(
-        `Skipping contribution reporting for post comment: actorContext.actorId is empty (agent: ${actorContext.actorId})`,
+        `Skipping contribution reporting for post comment: actorContext.actorID is empty (agent: ${actorContext.actorID})`,
         LogContext.COMMUNICATION
       );
     }
@@ -313,15 +313,15 @@ export class RoomServiceEvents {
     actorContext: ActorContext
   ) {
     // FIXME: Activity system only tracks User IDs - see file-level comment for details
-    if (actorContext.actorId) {
+    if (actorContext.actorID) {
       const activityMessageRemoved: ActivityInputMessageRemoved = {
-        triggeredBy: actorContext.actorId,
+        triggeredBy: actorContext.actorID,
         messageID: messageID,
       };
       await this.activityAdapter.messageRemoved(activityMessageRemoved);
     } else {
       this.logger.debug?.(
-        `Skipping activity creation for message removal: actorContext.actorId is empty (agent: ${actorContext.actorId})`,
+        `Skipping activity creation for message removal: actorContext.actorID is empty (agent: ${actorContext.actorID})`,
         LogContext.COMMUNICATION
       );
     }
@@ -333,16 +333,16 @@ export class RoomServiceEvents {
     actorContext: ActorContext
   ) {
     // FIXME: Activity system only tracks User IDs - see file-level comment for details
-    if (actorContext.actorId) {
+    if (actorContext.actorID) {
       const activityLogInput: ActivityInputUpdateSent = {
-        triggeredBy: actorContext.actorId,
+        triggeredBy: actorContext.actorID,
         updates: room,
         message: message,
       };
       this.activityAdapter.updateSent(activityLogInput);
     } else {
       this.logger.debug?.(
-        `Skipping activity creation for update sent: actorContext.actorId is empty (agent: ${actorContext.actorId})`,
+        `Skipping activity creation for update sent: actorContext.actorID is empty (agent: ${actorContext.actorID})`,
         LogContext.COMMUNICATION
       );
     }
@@ -357,7 +357,7 @@ export class RoomServiceEvents {
       );
 
     // FIXME: Contribution reporter only tracks User IDs - see file-level comment
-    if (actorContext.actorId) {
+    if (actorContext.actorID) {
       this.contributionReporter.updateCreated(
         {
           id: room.id,
@@ -365,13 +365,13 @@ export class RoomServiceEvents {
           space: levelZeroSpaceID,
         },
         {
-          id: actorContext.actorId,
-          email: actorContext.actorId,
+          id: actorContext.actorID,
+          email: actorContext.actorID,
         }
       );
     } else {
       this.logger.debug?.(
-        `Skipping contribution reporting for update: actorContext.actorId is empty (agent: ${actorContext.actorId})`,
+        `Skipping contribution reporting for update: actorContext.actorID is empty (agent: ${actorContext.actorID})`,
         LogContext.COMMUNICATION
       );
     }
@@ -383,16 +383,16 @@ export class RoomServiceEvents {
     actorContext: ActorContext
   ) {
     // FIXME: Notification system only tracks User IDs - see file-level comment for details
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       this.logger.debug?.(
-        `Skipping notification for update sent: actorContext.actorId is empty (agent: ${actorContext.actorId})`,
+        `Skipping notification for update sent: actorContext.actorID is empty (agent: ${actorContext.actorID})`,
         LogContext.COMMUNICATION
       );
       return;
     }
 
     const notificationInput: NotificationInputUpdateSent = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       updates: updates,
       lastMessage: lastMessage,
     };
@@ -407,16 +407,16 @@ export class RoomServiceEvents {
     actorContext: ActorContext
   ) {
     // FIXME: Activity system only tracks User IDs - see file-level comment for details
-    if (actorContext.actorId) {
+    if (actorContext.actorID) {
       const activityLogInput: ActivityInputCalloutDiscussionComment = {
-        triggeredBy: actorContext.actorId,
+        triggeredBy: actorContext.actorID,
         callout: callout,
         message,
       };
       this.activityAdapter.calloutCommentCreated(activityLogInput);
     } else {
       this.logger.debug?.(
-        `Skipping activity creation for callout comment: actorContext.actorId is empty (agent: ${actorContext.actorId})`,
+        `Skipping activity creation for callout comment: actorContext.actorID is empty (agent: ${actorContext.actorID})`,
         LogContext.COMMUNICATION
       );
     }
@@ -431,7 +431,7 @@ export class RoomServiceEvents {
       );
 
     // FIXME: Contribution reporter only tracks User IDs - see file-level comment
-    if (actorContext.actorId) {
+    if (actorContext.actorID) {
       this.contributionReporter.calloutCommentCreated(
         {
           id: callout.id,
@@ -439,13 +439,13 @@ export class RoomServiceEvents {
           space: levelZeroSpaceID,
         },
         {
-          id: actorContext.actorId,
-          email: actorContext.actorId,
+          id: actorContext.actorID,
+          email: actorContext.actorID,
         }
       );
     } else {
       this.logger.debug?.(
-        `Skipping contribution reporting for callout comment: actorContext.actorId is empty (agent: ${actorContext.actorId})`,
+        `Skipping contribution reporting for callout comment: actorContext.actorID is empty (agent: ${actorContext.actorID})`,
         LogContext.COMMUNICATION
       );
     }

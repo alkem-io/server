@@ -36,18 +36,18 @@ function makeRoleSet(
 }
 
 function makeKey(
-  actorId: string,
+  actorID: string,
   userID: string,
   roleSet: IRoleSet
 ): ActorRoleKey {
   return {
-    actorContext: { actorId, userID } as any,
+    actorContext: { actorID, userID } as any,
     roleSet,
   };
 }
 
 /**
- * Helper to set up getActorCredentials mock from a Map<actorId, ICredential[]>.
+ * Helper to set up getActorCredentials mock from a Map<actorID, ICredential[]>.
  * The actual loadActorCredentials calls getActorCredentials per actor.
  */
 function mockActorCredentialsFromMap(
@@ -55,9 +55,9 @@ function mockActorCredentialsFromMap(
   credMap: Map<string, ICredential[]>
 ) {
   actorService.getActorCredentials.mockImplementation(
-    async (actorId: string) => ({
-      actor: { id: actorId } as any,
-      credentials: credMap.get(actorId) || [],
+    async (actorID: string) => ({
+      actor: { id: actorID } as any,
+      credentials: credMap.get(actorID) || [],
     })
   );
 }
@@ -128,10 +128,10 @@ describe('RoleSetMembershipStatusDataLoader', () => {
     mocks = createMocks();
   });
 
-  /* ─── Empty actorId ─── */
+  /* ─── Empty actorID ─── */
 
-  describe('empty actorId handling', () => {
-    it('should return NOT_MEMBER immediately for empty actorId', async () => {
+  describe('empty actorID handling', () => {
+    it('should return NOT_MEMBER immediately for empty actorID', async () => {
       const roleSet = makeRoleSet('rs-1', [
         {
           name: RoleName.MEMBER,
@@ -505,7 +505,7 @@ describe('RoleSetMembershipStatusDataLoader', () => {
 
       expect(result1).toBe(CommunityMembershipStatus.MEMBER);
       expect(result2).toBe(CommunityMembershipStatus.MEMBER);
-      // Credentials loaded once (same actorId deduplicated)
+      // Credentials loaded once (same actorID deduplicated)
       expect(mocks.actorService.getActorCredentials).toHaveBeenCalledTimes(1);
     });
 
@@ -547,7 +547,7 @@ describe('RoleSetMembershipStatusDataLoader', () => {
   /* ─── Cache key function ─── */
 
   describe('DataLoader cache key', () => {
-    it('should differentiate keys by actorId + roleSetID', async () => {
+    it('should differentiate keys by actorID + roleSetID', async () => {
       const rs1 = makeRoleSet('rs-1', [
         {
           name: RoleName.MEMBER,

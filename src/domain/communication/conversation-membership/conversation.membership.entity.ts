@@ -13,10 +13,10 @@ export class ConversationMembership implements IConversationMembership {
   @PrimaryColumn('uuid')
   conversationId!: string;
 
-  // actorId - the actor participating in this conversation
+  // actorID - the actor participating in this conversation
   @Index()
-  @PrimaryColumn('uuid')
-  actorId!: string;
+  @PrimaryColumn('uuid', { name: 'actorId' })
+  actorID!: string;
 
   @Index()
   @ManyToOne(

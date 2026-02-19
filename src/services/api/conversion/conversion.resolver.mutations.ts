@@ -68,7 +68,7 @@ export class ConversionResolverMutations {
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `convert challenge to space: ${actorContext.actorId}`
+      `convert challenge to space: ${actorContext.actorID}`
     );
     let space =
       await this.conversionService.convertSpaceL1ToSpaceL0OrFail(
@@ -94,7 +94,7 @@ export class ConversionResolverMutations {
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `convert space L2 to Space L1: ${actorContext.actorId}`
+      `convert space L2 to Space L1: ${actorContext.actorID}`
     );
     let spaceL1 =
       await this.conversionService.convertSpaceL2ToSpaceL1OrFail(
@@ -130,7 +130,7 @@ export class ConversionResolverMutations {
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `convert space L1 to Space L2: ${actorContext.actorId}`
+      `convert space L1 to Space L2: ${actorContext.actorID}`
     );
     let spaceL2 =
       await this.conversionService.convertSpaceL1ToSpaceL2OrFail(
@@ -163,7 +163,7 @@ export class ConversionResolverMutations {
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `convert VC of type Space to VC of type KnowledgeBase: ${actorContext.actorId}`
+      `convert VC of type Space to VC of type KnowledgeBase: ${actorContext.actorID}`
     );
     const virtualContributor =
       await this.virtualContributorService.getVirtualContributorByIdOrFail(

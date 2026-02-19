@@ -8,7 +8,7 @@ import { InAppNotificationPayloadSpaceBase } from './notification.in.app.payload
   implements: () => IInAppNotificationPayload,
 })
 export abstract class InAppNotificationPayloadSpaceCommunityActor extends InAppNotificationPayloadSpaceBase {
-  actorId!: string;
+  actorID!: string;
   actorType!: ActorType;
   declare type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR;
 }

@@ -64,7 +64,7 @@ export class CalloutsSetResolverMutations {
 
     const callout = await this.calloutsSetService.createCalloutOnCalloutsSet(
       calloutData,
-      actorContext.actorId
+      actorContext.actorID
     );
 
     // callout needs to be saved to apply the authorization policy
@@ -109,7 +109,7 @@ export class CalloutsSetResolverMutations {
       if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
         if (calloutData.sendNotification) {
           const notificationInput: NotificationInputCalloutPublished = {
-            triggeredBy: actorContext.actorId,
+            triggeredBy: actorContext.actorID,
             callout: callout,
           };
           this.notificationAdapterSpace.spaceCollaborationCalloutPublished(
@@ -118,7 +118,7 @@ export class CalloutsSetResolverMutations {
         }
 
         const activityLogInput: ActivityInputCalloutPublished = {
-          triggeredBy: actorContext.actorId,
+          triggeredBy: actorContext.actorID,
           callout: callout,
         };
         this.activityAdapter.calloutPublished(activityLogInput);
@@ -136,8 +136,8 @@ export class CalloutsSetResolverMutations {
           space: levelZeroSpaceID,
         },
         {
-          id: actorContext.actorId,
-          email: actorContext.actorId,
+          id: actorContext.actorID,
+          email: actorContext.actorID,
         }
       );
     }

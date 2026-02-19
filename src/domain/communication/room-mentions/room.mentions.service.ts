@@ -86,14 +86,14 @@ export class RoomMentionsService {
 
     for (const vcMention of vcMentions) {
       this.logger.verbose?.(
-        `got mention for VC: ${vcMention.actorId}`,
+        `got mention for VC: ${vcMention.actorID}`,
         LogContext.VIRTUAL
       );
       if (!vcInteraction) {
         // Edge conversion: GraphQL mention (entity UUID) → agent.id for internal flow
         const virtualContributor =
           await this.virtualActorLookupService.getVirtualContributorByIdOrFail(
-            vcMention.actorId
+            vcMention.actorID
           );
 
         vcInteraction = await this.roomLookupService.addVcInteractionToRoom({
@@ -122,7 +122,7 @@ export class RoomMentionsService {
     actorContext: ActorContext
   ) {
     const entityMentionsNotificationInput: NotificationInputEntityMentions = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       roomId: room.id,
       mentions,
       messageID: message.id,
@@ -137,7 +137,7 @@ export class RoomMentionsService {
       if (mention.actorType == MentionedEntityType.USER) {
         const entityMentionNotificationInput: NotificationInputUserMention = {
           triggeredBy: eventData.triggeredBy,
-          userID: mention.actorId,
+          userID: mention.actorID,
           roomID: eventData.roomId,
           messageID: eventData.messageID,
         };
@@ -149,7 +149,7 @@ export class RoomMentionsService {
         const entityMentionNotificationInput: NotificationInputOrganizationMention =
           {
             triggeredBy: eventData.triggeredBy,
-            organizationID: mention.actorId,
+            organizationID: mention.actorID,
             roomID: eventData.roomId,
             messageID: eventData.messageID,
           };
@@ -176,7 +176,7 @@ export class RoomMentionsService {
             contributorNamedID
           );
         result.push({
-          actorId: user.id,
+          actorID: user.id,
           actorType: MentionedEntityType.USER,
         });
       } else if (match.groups?.type === MentionedEntityType.ORGANIZATION) {
@@ -185,7 +185,7 @@ export class RoomMentionsService {
             contributorNamedID
           );
         result.push({
-          actorId: organization.id,
+          actorID: organization.id,
           actorType: MentionedEntityType.ORGANIZATION,
         });
       } else if (match.groups?.type === MentionedEntityType.VIRTUAL) {
@@ -194,7 +194,7 @@ export class RoomMentionsService {
             contributorNamedID
           );
         result.push({
-          actorId: virtualContributor.id,
+          actorID: virtualContributor.id,
           actorType: MentionedEntityType.VIRTUAL,
         });
       }

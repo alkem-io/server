@@ -75,7 +75,7 @@ describe('RoomMentionsService', () => {
 
       expect(result).toEqual([
         {
-          actorId: 'user-uuid-1',
+          actorID: 'user-uuid-1',
           actorType: MentionedEntityType.USER,
         },
       ]);
@@ -93,7 +93,7 @@ describe('RoomMentionsService', () => {
 
       expect(result).toEqual([
         {
-          actorId: 'org-uuid-1',
+          actorID: 'org-uuid-1',
           actorType: MentionedEntityType.ORGANIZATION,
         },
       ]);
@@ -111,7 +111,7 @@ describe('RoomMentionsService', () => {
 
       expect(result).toEqual([
         {
-          actorId: 'vc-uuid-1',
+          actorID: 'vc-uuid-1',
           actorType: MentionedEntityType.VIRTUAL,
         },
       ]);
@@ -149,7 +149,7 @@ describe('RoomMentionsService', () => {
 
       expect(result).toEqual([
         {
-          actorId: 'user-uuid-1',
+          actorID: 'user-uuid-1',
           actorType: MentionedEntityType.USER,
         },
       ]);
@@ -167,7 +167,7 @@ describe('RoomMentionsService', () => {
 
       expect(result).toEqual([
         {
-          actorId: 'user-uuid-1',
+          actorID: 'user-uuid-1',
           actorType: MentionedEntityType.USER,
         },
       ]);
@@ -233,7 +233,7 @@ describe('RoomMentionsService', () => {
     } as unknown as IRoom;
 
     const mockActorContext = {
-      actorId: 'user-1',
+      actorID: 'user-1',
     } as ActorContext;
 
     beforeEach(() => {
@@ -248,7 +248,7 @@ describe('RoomMentionsService', () => {
     it('should create VC interaction and invoke VC for first mention in thread', async () => {
       const vcMentions: Mention[] = [
         {
-          actorId: 'vc-entity-1',
+          actorID: 'vc-entity-1',
           actorType: MentionedEntityType.VIRTUAL,
         },
       ];
@@ -298,11 +298,11 @@ describe('RoomMentionsService', () => {
     it('should skip non-VC mentions', async () => {
       const mentions: Mention[] = [
         {
-          actorId: 'user-1',
+          actorID: 'user-1',
           actorType: MentionedEntityType.USER,
         },
         {
-          actorId: 'org-1',
+          actorID: 'org-1',
           actorType: MentionedEntityType.ORGANIZATION,
         },
       ];
@@ -329,7 +329,7 @@ describe('RoomMentionsService', () => {
     it('should reuse existing VC interaction for subsequent mentions in same thread', async () => {
       const vcMentions: Mention[] = [
         {
-          actorId: 'vc-entity-1',
+          actorID: 'vc-entity-1',
           actorType: MentionedEntityType.VIRTUAL,
         },
       ];
@@ -375,12 +375,12 @@ describe('RoomMentionsService', () => {
       timestamp: Date.now(),
       reactions: [],
     };
-    const mockActorContext = { actorId: 'user-1' } as ActorContext;
+    const mockActorContext = { actorID: 'user-1' } as ActorContext;
 
     it('should send user mention notification for USER type mentions', async () => {
       const mentions: Mention[] = [
         {
-          actorId: 'user-uuid-1',
+          actorID: 'user-uuid-1',
           actorType: MentionedEntityType.USER,
         },
       ];
@@ -403,7 +403,7 @@ describe('RoomMentionsService', () => {
     it('should send organization mention notification for ORGANIZATION type mentions', async () => {
       const mentions: Mention[] = [
         {
-          actorId: 'org-uuid-1',
+          actorID: 'org-uuid-1',
           actorType: MentionedEntityType.ORGANIZATION,
         },
       ];
@@ -428,11 +428,11 @@ describe('RoomMentionsService', () => {
     it('should handle mixed mention types', async () => {
       const mentions: Mention[] = [
         {
-          actorId: 'user-uuid-1',
+          actorID: 'user-uuid-1',
           actorType: MentionedEntityType.USER,
         },
         {
-          actorId: 'org-uuid-1',
+          actorID: 'org-uuid-1',
           actorType: MentionedEntityType.ORGANIZATION,
         },
       ];

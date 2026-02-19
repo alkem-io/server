@@ -57,7 +57,7 @@ export class AdminLicensingService {
         },
       }
     );
-    // Space IS the Actor - pass space.id as actorId
+    // Space IS the Actor - pass space.id as actorID
     await this.licenseIssuerService.assignLicensePlan(
       space.id,
       licensePlan,
@@ -96,7 +96,7 @@ export class AdminLicensingService {
         },
       }
     );
-    // Space IS the Actor - pass space.id as actorId
+    // Space IS the Actor - pass space.id as actorID
     await this.licenseIssuerService.revokeLicensePlan(
       space.id,
       licensePlan,
@@ -134,7 +134,7 @@ export class AdminLicensingService {
         },
       }
     );
-    // Account IS the Actor - pass account.id as actorId
+    // Account IS the Actor - pass account.id as actorID
     await this.licenseIssuerService.assignLicensePlan(
       account.id,
       licensePlan,
@@ -173,7 +173,7 @@ export class AdminLicensingService {
         },
       }
     );
-    // Account IS the Actor - pass account.id as actorId
+    // Account IS the Actor - pass account.id as actorID
     await this.licenseIssuerService.revokeLicensePlan(
       account.id,
       licensePlan,

@@ -50,16 +50,16 @@ export class ConversationMembershipsLoaderCreator
       where: { conversationId: In([...conversationIds]) },
       select: {
         conversationId: true,
-        actorId: true,
+        actorID: true,
       },
     });
 
-    // Collect all unique actorIds to batch-lookup their types
-    const actorIds = [...new Set(memberships.map(m => m.actorId))];
+    // Collect all unique actorIDs to batch-lookup their types
+    const actorIDs = [...new Set(memberships.map(m => m.actorID))];
     const actorTypeMap = new Map<string, ActorType>();
-    if (actorIds.length > 0) {
+    if (actorIDs.length > 0) {
       const actors = await this.manager.find(Actor, {
-        where: { id: In(actorIds) },
+        where: { id: In(actorIDs) },
         select: { id: true, type: true },
       });
       for (const actor of actors) {
@@ -71,7 +71,7 @@ export class ConversationMembershipsLoaderCreator
     const enrichedMemberships: IConversationMembershipWithActorType[] =
       memberships.map(m => ({
         ...m,
-        actorType: actorTypeMap.get(m.actorId),
+        actorType: actorTypeMap.get(m.actorID),
       }));
 
     // Group by conversation ID for O(1) lookup

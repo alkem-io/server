@@ -24,8 +24,8 @@ export class Credential extends BaseAlkemioEntity implements ICredential {
   @JoinColumn({ name: 'actorId' })
   actor?: Actor;
 
-  @Column('uuid', { nullable: true })
-  actorId?: string;
+  @Column('uuid', { nullable: true, name: 'actorId' })
+  actorID?: string;
 
   @Column('uuid', { nullable: true })
   issuer!: string;

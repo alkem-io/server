@@ -26,7 +26,7 @@ import { ITemplatesManager } from '@domain/template/templates-manager';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
-  AuthorizationActorPrivilege,
+  AuthorizationActorHasPrivilege,
   CurrentActor,
 } from '@src/common/decorators';
 import { IAccount } from '../account/account.interface';
@@ -145,7 +145,7 @@ export class SpaceResolverFields {
     return loader.load(space.id);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: false,
@@ -166,7 +166,7 @@ export class SpaceResolverFields {
     return await this.spaceService.getSubspaces(space, args);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('account', () => IAccount, {
     nullable: false,
@@ -176,7 +176,7 @@ export class SpaceResolverFields {
     return await this.spaceService.getAccountForLevelZeroSpaceOrFail(space);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('subspaceByNameID', () => ISpace, {
     nullable: false,
@@ -196,7 +196,7 @@ export class SpaceResolverFields {
       throw new EntityNotFoundException(
         `Unable to find subspace with ID: '${id}'`,
         LogContext.SPACES,
-        { subspaceId: id, spaceId: space.id, userId: actorContext.actorId }
+        { subspaceId: id, spaceId: space.id, userId: actorContext.actorID }
       );
     }
     return subspace;
@@ -211,7 +211,7 @@ export class SpaceResolverFields {
     return new Date(createdDate);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('settings', () => ISpaceSettings, {
     nullable: false,
@@ -221,7 +221,7 @@ export class SpaceResolverFields {
     return space.settings;
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('templatesManager', () => ITemplatesManager, {
     nullable: true,

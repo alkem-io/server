@@ -46,16 +46,16 @@ export class ActorContextService {
 
   /**
    * Populates the given ActorContext with credentials from the database.
-   * Used when actorId is already known (from JWT token or metadata_public).
+   * Used when actorID is already known (from JWT token or metadata_public).
    * Only loads credentials - no user lookup needed.
    */
-  public async populateFromActorId(
+  public async populateFromActorID(
     ctx: ActorContext,
-    actorId: string
+    actorID: string
   ): Promise<void> {
-    ctx.actorId = actorId;
+    ctx.actorID = actorID;
     ctx.credentials =
-      await this.actorLookupService.getActorCredentialsOrFail(actorId);
+      await this.actorLookupService.getActorCredentialsOrFail(actorID);
   }
 
   /**
@@ -96,7 +96,7 @@ export class ActorContextService {
 
     const ctx = new ActorContext();
     ctx.credentials = credentials;
-    ctx.actorId = userId;
+    ctx.actorID = userId;
     ctx.authenticationID = user.authenticationID ?? undefined;
     return ctx;
   }
@@ -106,9 +106,9 @@ export class ActorContextService {
    * Works for all actor types (User, Organization, VirtualContributor, Space, Account).
    * Credentials are loaded eagerly from the base actor table.
    */
-  public async buildForActor(actorId: string): Promise<ActorContext> {
+  public async buildForActor(actorID: string): Promise<ActorContext> {
     const actor = await this.entityManager.findOne(Actor, {
-      where: { id: actorId },
+      where: { id: actorID },
     });
 
     if (!actor) {
@@ -116,7 +116,7 @@ export class ActorContextService {
     }
 
     const ctx = new ActorContext();
-    ctx.actorId = actor.id;
+    ctx.actorID = actor.id;
     ctx.isAnonymous = false;
     ctx.credentials = (actor.credentials ?? []).map(
       (credential: ICredential): ICredentialDefinition => ({

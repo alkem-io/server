@@ -142,7 +142,7 @@ describe('RolesService', () => {
 
     it('Should get user roles', async () => {
       const roles = await rolesService.getRolesForUser({
-        actorId: testData.user.id,
+        actorID: testData.user.id,
       });
 
       const organizationRoles =
@@ -194,7 +194,7 @@ describe('RolesService', () => {
       ).mockResolvedValue(testData.organization as any);
 
       const roles = await rolesService.getRolesForOrganization({
-        actorId: testData.organization.id,
+        actorID: testData.organization.id,
       });
 
       const spaces = await rolesService.getSpaceRolesForContributor(

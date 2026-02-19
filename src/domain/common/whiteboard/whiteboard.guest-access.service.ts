@@ -114,7 +114,7 @@ export class WhiteboardGuestAccessService {
         {
           spaceId: space.id,
           whiteboardId,
-          userId: actorContext.actorId,
+          userId: actorContext.actorID,
         }
       );
     }
@@ -323,9 +323,9 @@ export class WhiteboardGuestAccessService {
     const metadata = {
       whiteboardId,
       userId:
-        actorContext.actorId ||
+        actorContext.actorID ||
         (actorContext.isAnonymous ? 'anonymous' : 'unknown'),
-      actorId: actorContext.actorId || actorContext.actorId || 'unknown',
+      actorID: actorContext.actorID || actorContext.actorID || 'unknown',
       context: LogContext.COLLABORATION,
     };
 

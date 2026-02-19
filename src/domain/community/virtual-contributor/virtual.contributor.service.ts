@@ -118,7 +118,7 @@ export class VirtualContributorService {
       await this.knowledgeBaseService.createKnowledgeBase(
         knowledgeBaseData,
         storageAggregator,
-        actorContext?.actorId
+        actorContext?.actorID
       );
 
     const kb = await this.knowledgeBaseService.save(
@@ -171,7 +171,7 @@ export class VirtualContributorService {
 
     virtualContributor = await this.save(virtualContributor);
 
-    const userID = actorContext?.actorId;
+    const userID = actorContext?.actorID;
     await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
       virtualContributor.profile.id,
       userID
@@ -449,11 +449,11 @@ export class VirtualContributorService {
     return virtualContributor;
   }
 
-  // Convenience method returning the VC along with its actorId and credentials.
-  // VirtualContributor extends Actor, so actorId === virtualContributor.id
+  // Convenience method returning the VC along with its actorID and credentials.
+  // VirtualContributor extends Actor, so actorID === virtualContributor.id
   async getVirtualContributorAndActor(virtualID: string): Promise<{
     virtualContributor: IVirtualContributor;
-    actorId: string;
+    actorID: string;
     credentials: ICredential[];
   }> {
     const virtualContributor =
@@ -461,7 +461,7 @@ export class VirtualContributorService {
 
     return {
       virtualContributor,
-      actorId: virtualContributor.id,
+      actorID: virtualContributor.id,
       credentials: virtualContributor.credentials || [],
     };
   }
@@ -494,7 +494,7 @@ export class VirtualContributorService {
     actorContext: ActorContext
   ): Promise<boolean> {
     this.logger.verbose?.(
-      `refreshing the body of knowledge ${virtualContributor.id}, by ${actorContext.actorId}`,
+      `refreshing the body of knowledge ${virtualContributor.id}, by ${actorContext.actorID}`,
       LogContext.VIRTUAL
     );
 
@@ -643,7 +643,7 @@ export class VirtualContributorService {
   //adding this to avoid circular dependency between VirtualContributor, Room, and Invitation
   private async deleteVCInvitations(actorID: string) {
     const invitations = await this.entityManager.find(Invitation, {
-      where: { invitedActorId: actorID },
+      where: { invitedActorID: actorID },
     });
     for (const invitation of invitations) {
       if (invitation.authorization) {

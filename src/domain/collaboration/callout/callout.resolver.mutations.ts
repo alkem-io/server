@@ -102,7 +102,7 @@ export class CalloutResolverMutations {
     const updatedCallout = await this.calloutService.updateCallout(
       callout,
       calloutData,
-      actorContext.actorId
+      actorContext.actorID
     );
 
     // Reset authorization policy for the callout and its child entities
@@ -161,14 +161,14 @@ export class CalloutResolverMutations {
         // Save published info
         await this.calloutService.updateCalloutPublishInfo(
           savedCallout,
-          actorContext.actorId,
+          actorContext.actorID,
           Date.now()
         );
 
         if (callout.calloutsSet?.type === CalloutsSetType.COLLABORATION) {
           if (calloutData.sendNotification) {
             const notificationInput: NotificationInputCalloutPublished = {
-              triggeredBy: actorContext.actorId,
+              triggeredBy: actorContext.actorID,
               callout: callout,
             };
             await this.notificationAdapterSpace.spaceCollaborationCalloutPublished(
@@ -177,7 +177,7 @@ export class CalloutResolverMutations {
           }
 
           const activityLogInput: ActivityInputCalloutPublished = {
-            triggeredBy: actorContext.actorId,
+            triggeredBy: actorContext.actorID,
             callout: callout,
           };
           this.activityAdapter.calloutPublished(activityLogInput);
@@ -288,7 +288,7 @@ export class CalloutResolverMutations {
 
     let contribution = await this.calloutService.createContributionOnCallout(
       contributionData,
-      actorContext.actorId
+      actorContext.actorID
     );
 
     const { roleSet, platformRolesAccess, spaceSettings } =
@@ -416,13 +416,13 @@ export class CalloutResolverMutations {
         contribution: contribution,
         callout: callout,
         contributionType: CalloutContributionType.LINK,
-        triggeredBy: actorContext.actorId,
+        triggeredBy: actorContext.actorID,
       };
     await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
     const activityLogInput: ActivityInputCalloutLinkCreated = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       link: link,
       callout: callout,
     };
@@ -435,8 +435,8 @@ export class CalloutResolverMutations {
         space: levelZeroSpaceID,
       },
       {
-        id: actorContext.actorId,
-        email: actorContext.actorId,
+        id: actorContext.actorID,
+        email: actorContext.actorID,
       }
     );
   }
@@ -453,14 +453,14 @@ export class CalloutResolverMutations {
         contribution: contribution,
         callout: callout,
         contributionType: CalloutContributionType.WHITEBOARD,
-        triggeredBy: actorContext.actorId,
+        triggeredBy: actorContext.actorID,
       };
     await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
 
     this.activityAdapter.calloutWhiteboardCreated({
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       whiteboard: whiteboard,
       callout: callout,
     });
@@ -472,8 +472,8 @@ export class CalloutResolverMutations {
         space: levelZeroSpaceID,
       },
       {
-        id: actorContext.actorId,
-        email: actorContext.actorId,
+        id: actorContext.actorID,
+        email: actorContext.actorID,
       }
     );
   }
@@ -490,14 +490,14 @@ export class CalloutResolverMutations {
         contribution: contribution,
         callout: callout,
         contributionType: CalloutContributionType.POST,
-        triggeredBy: actorContext.actorId,
+        triggeredBy: actorContext.actorID,
       };
     await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
 
     const activityLogInput: ActivityInputCalloutPostCreated = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       post: post,
       callout: callout,
     };
@@ -510,8 +510,8 @@ export class CalloutResolverMutations {
         space: levelZeroSpaceID,
       },
       {
-        id: actorContext.actorId,
-        email: actorContext.actorId,
+        id: actorContext.actorID,
+        email: actorContext.actorID,
       }
     );
   }
@@ -528,14 +528,14 @@ export class CalloutResolverMutations {
         contribution: contribution,
         callout: callout,
         contributionType: CalloutContributionType.MEMO,
-        triggeredBy: actorContext.actorId,
+        triggeredBy: actorContext.actorID,
       };
     await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
 
     const activityLogInput: ActivityInputCalloutMemoCreated = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       memo: memo,
       callout: callout,
     };
@@ -548,8 +548,8 @@ export class CalloutResolverMutations {
         space: levelZeroSpaceID,
       },
       {
-        id: actorContext.actorId,
-        email: actorContext.actorId,
+        id: actorContext.actorID,
+        email: actorContext.actorID,
       }
     );
   }

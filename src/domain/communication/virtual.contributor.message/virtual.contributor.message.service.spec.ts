@@ -35,7 +35,7 @@ describe('VirtualContributorMessageService', () => {
 
   describe('invokeVirtualContributor', () => {
     const mockRoom = { id: 'room-1' } as unknown as IRoom;
-    const mockActorContext = { actorId: 'user-1' } as ActorContext;
+    const mockActorContext = { actorID: 'user-1' } as ActorContext;
 
     it('should resolve VC by agent ID and call invoke with correct input', async () => {
       const mockVC = {
@@ -142,7 +142,7 @@ describe('VirtualContributorMessageService', () => {
           roomDetails: {
             roomID: 'room-1',
             threadID: 'thread-1',
-            actorId: 'vc-agent-1',
+            actorID: 'vc-agent-1',
           },
         },
       };
@@ -196,7 +196,7 @@ describe('VirtualContributorMessageService', () => {
           roomDetails: {
             roomID: 'room-1',
             threadID: 'thread-1',
-            actorId: 'vc-agent-1',
+            actorID: 'vc-agent-1',
           },
         },
       };

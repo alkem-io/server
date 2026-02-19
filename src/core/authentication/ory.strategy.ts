@@ -93,7 +93,7 @@ export class OryStrategy extends PassportStrategy(
 
     const session = verifyIdentityIfOidcAuth(payload.session);
 
-    // Build ActorContext using actorId directly from token (no user lookup needed)
+    // Build ActorContext using actorID directly from token (no user lookup needed)
     return this.authService.createActorContext(
       payload.alkemio_actor_id,
       session

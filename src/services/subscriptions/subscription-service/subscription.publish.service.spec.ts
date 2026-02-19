@@ -145,7 +145,7 @@ describe('SubscriptionPublishService', () => {
     it('should publish a receipt event with MutationType.UPDATE', async () => {
       const room = { id: 'room-1' } as any;
       const receiptData = {
-        actorId: 'user-1',
+        actorID: 'user-1',
         eventId: 'evt-1',
         timestamp: 1234567890,
       };

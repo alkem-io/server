@@ -185,7 +185,7 @@ export class OrganizationService {
       await this.roleSetService.assignActorToRole(
         organization.roleSet,
         RoleName.ASSOCIATE,
-        actorContext.actorId,
+        actorContext.actorID,
         actorContext,
         false
       );
@@ -193,13 +193,13 @@ export class OrganizationService {
       await this.roleSetService.assignActorToRole(
         organization.roleSet,
         RoleName.ADMIN,
-        actorContext.actorId,
+        actorContext.actorID,
         actorContext,
         false
       );
     }
 
-    const userID = actorContext?.actorId;
+    const userID = actorContext?.actorID;
     await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
       organization.profile.id,
       userID

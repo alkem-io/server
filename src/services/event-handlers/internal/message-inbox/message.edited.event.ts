@@ -8,7 +8,7 @@ export class MessageEditedEvent {
   constructor(
     public readonly payload: {
       roomId: string;
-      senderActorId: string;
+      senderActorID: string;
       originalMessageId: string;
       newMessageId: string;
       newContent: string;

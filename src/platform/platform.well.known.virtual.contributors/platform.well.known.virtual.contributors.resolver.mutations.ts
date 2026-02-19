@@ -33,7 +33,7 @@ export class PlatformWellKnownVirtualContributorsResolverMutations {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `set Platform well-known Virtual Contributor: ${actorContext.actorId}`
+      `set Platform well-known Virtual Contributor: ${actorContext.actorID}`
     );
 
     const mappingsRecord =

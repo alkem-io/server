@@ -8,7 +8,7 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationActorPrivilege } from '@src/common/decorators';
+import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
 import { InnovationPack } from './innovation.pack.entity';
 import { IInnovationPack } from './innovation.pack.interface';
 import { InnovationPackService } from './innovation.pack.service';
@@ -29,7 +29,7 @@ export class InnovationPackResolverFields {
     return loader.load(pack.id);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('templatesSet', () => ITemplatesSet, {
     nullable: true,

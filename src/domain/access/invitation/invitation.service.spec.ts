@@ -143,7 +143,7 @@ describe('InvitationService', () => {
   describe('createInvitation', () => {
     it('should create invitation with authorization policy and lifecycle', async () => {
       const invitationData = {
-        invitedActorId: 'contributor-1',
+        invitedActorID: 'contributor-1',
         createdBy: 'user-1',
         roleSetID: 'roleset-1',
         invitedToParent: false,
@@ -171,7 +171,7 @@ describe('InvitationService', () => {
         id: 'inv-1',
         lifecycle: { id: 'lifecycle-1' },
         authorization: { id: 'auth-1' },
-        invitedActorId: 'contributor-1',
+        invitedActorID: 'contributor-1',
         roleSet: { id: 'roleset-1' },
       } as any;
       vi.spyOn(service, 'getInvitationOrFail').mockResolvedValue(
@@ -217,7 +217,7 @@ describe('InvitationService', () => {
         id: 'inv-1',
         lifecycle: { id: 'lifecycle-1' },
         authorization: undefined,
-        invitedActorId: undefined,
+        invitedActorID: undefined,
         roleSet: undefined,
       } as any;
 
@@ -237,12 +237,12 @@ describe('InvitationService', () => {
       expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
     });
 
-    it('should skip cache invalidation when invitedActorId or roleSet is not present', async () => {
+    it('should skip cache invalidation when invitedActorID or roleSet is not present', async () => {
       const mockInvitation = {
         id: 'inv-1',
         lifecycle: { id: 'lifecycle-1' },
         authorization: undefined,
-        invitedActorId: undefined,
+        invitedActorID: undefined,
         roleSet: undefined,
       } as any;
 
@@ -269,7 +269,7 @@ describe('InvitationService', () => {
         id: 'inv-1',
         lifecycle: { id: 'lifecycle-1' },
         authorization: undefined,
-        invitedActorId: 'contributor-1',
+        invitedActorID: 'contributor-1',
         roleSet: { id: 'roleset-1' },
       } as any;
 
@@ -301,7 +301,7 @@ describe('InvitationService', () => {
       const mockContributor = { id: 'contributor-1' } as any;
       const mockInvitation = {
         id: 'inv-1',
-        invitedActorId: 'contributor-1',
+        invitedActorID: 'contributor-1',
       } as IInvitation;
 
       (actorLookupService.getFullActorByIdOrFail as Mock).mockResolvedValue(
@@ -316,7 +316,7 @@ describe('InvitationService', () => {
     it('should throw EntityNotFoundException when actor is not found', async () => {
       const mockInvitation = {
         id: 'inv-1',
-        invitedActorId: 'contributor-1',
+        invitedActorID: 'contributor-1',
       } as IInvitation;
 
       (actorLookupService.getFullActorByIdOrFail as Mock).mockRejectedValue(
@@ -399,7 +399,7 @@ describe('InvitationService', () => {
       expect(invitationRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({
           relations: { roleSet: true },
-          where: { invitedActorId: 'contributor-1' },
+          where: { invitedActorID: 'contributor-1' },
         })
       );
     });

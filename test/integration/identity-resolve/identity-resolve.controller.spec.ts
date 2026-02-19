@@ -101,7 +101,7 @@ describe('IdentityResolveController (REST)', () => {
       .post('/rest/internal/identity/resolve')
       .send({ authenticationId })
       .expect(200)
-      .expect({ userId: 'user-existing', actorId: 'user-existing' });
+      .expect({ userId: 'user-existing', actorID: 'user-existing' });
 
     expect(kratosService.getIdentityById).not.toHaveBeenCalled();
     expect(registrationService.registerNewUser).not.toHaveBeenCalled();
@@ -148,7 +148,7 @@ describe('IdentityResolveController (REST)', () => {
       .post('/rest/internal/identity/resolve')
       .send({ authenticationId })
       .expect(200)
-      .expect({ userId: 'user-new', actorId: 'user-new' });
+      .expect({ userId: 'user-new', actorID: 'user-new' });
 
     expect(registrationService.registerNewUser).toHaveBeenCalledWith(
       expect.objectContaining({

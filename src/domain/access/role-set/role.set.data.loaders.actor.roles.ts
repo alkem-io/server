@@ -21,7 +21,7 @@ export class RoleSetActorRolesDataLoader {
       {
         // Use a composite key string to avoid duplicate lookups in a single request.
         cacheKeyFn: (key: ActorRoleKey) =>
-          `${key.actorContext.actorId}-${key.roleSet.id}`,
+          `${key.actorContext.actorID}-${key.roleSet.id}`,
       }
     );
   }

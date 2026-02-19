@@ -65,7 +65,7 @@ export class RoomResolverMutations {
 
     const message = await this.roomLookupService.sendMessage(
       room,
-      actorContext.actorId,
+      actorContext.actorID,
       messageData
     );
 
@@ -103,7 +103,7 @@ export class RoomResolverMutations {
 
     // Find the other user (not the sender) - members contains agent IDs
     const otherMemberAgentIds = members.filter(
-      (memberId: string) => memberId !== actorContext.actorId
+      (memberId: string) => memberId !== actorContext.actorID
     );
 
     if (otherMemberAgentIds.length === 0) {
@@ -141,7 +141,7 @@ export class RoomResolverMutations {
         LogContext.COMMUNICATION,
         {
           receiverId: receivingUser.id,
-          senderId: actorContext.actorId,
+          senderId: actorContext.actorID,
         }
       );
     }
@@ -170,7 +170,7 @@ export class RoomResolverMutations {
 
     const reply = await this.roomLookupService.sendMessageReply(
       room,
-      actorContext.actorId,
+      actorContext.actorID,
       messageData
     );
 
@@ -197,7 +197,7 @@ export class RoomResolverMutations {
 
     const reaction = await this.roomService.addReactionToMessage(
       room,
-      actorContext.actorId,
+      actorContext.actorID,
       reactionData
     );
 
@@ -233,12 +233,12 @@ export class RoomResolverMutations {
       `room remove message: ${room.id}`
     );
 
-    // Pass actorContext.actorId for future use when Matrix admin reflection is implemented
+    // Pass actorContext.actorID for future use when Matrix admin reflection is implemented
     // See: docs/matrix-admin-reflection.md
     const messageID = await this.roomService.removeRoomMessage(
       room,
       messageData,
-      actorContext.actorId
+      actorContext.actorID
     );
 
     // All post-delete processing (notifications, activities, subscriptions)
@@ -272,12 +272,12 @@ export class RoomResolverMutations {
       `room remove reaction: ${room.id}`
     );
 
-    // Pass actorContext.actorId for future use when Matrix admin reflection is implemented
+    // Pass actorContext.actorID for future use when Matrix admin reflection is implemented
     // See: docs/matrix-admin-reflection.md
     const isDeleted = await this.roomService.removeReactionToMessage(
       room,
       reactionData,
-      actorContext.actorId
+      actorContext.actorID
     );
 
     // Subscription will be published by MessageInboxService when Matrix echoes the removal
@@ -304,7 +304,7 @@ export class RoomResolverMutations {
 
     return this.roomService.markMessageAsRead(
       room,
-      actorContext.actorId,
+      actorContext.actorID,
       messageData
     );
   }

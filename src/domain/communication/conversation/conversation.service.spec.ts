@@ -243,12 +243,12 @@ describe('ConversationService', () => {
       const memberships = [
         {
           conversationId: 'conv-1',
-          actorId: 'agent-1',
+          actorID: 'agent-1',
           actorType: ActorType.USER,
         },
         {
           conversationId: 'conv-1',
-          actorId: 'agent-2',
+          actorID: 'agent-2',
           actorType: ActorType.USER,
         },
       ] as any;
@@ -262,12 +262,12 @@ describe('ConversationService', () => {
       const memberships = [
         {
           conversationId: 'conv-1',
-          actorId: 'agent-1',
+          actorID: 'agent-1',
           actorType: ActorType.USER,
         },
         {
           conversationId: 'conv-1',
-          actorId: 'agent-2',
+          actorID: 'agent-2',
           actorType: ActorType.VIRTUAL,
         },
       ] as any;
@@ -281,17 +281,17 @@ describe('ConversationService', () => {
       const memberships = [
         {
           conversationId: 'conv-1',
-          actorId: 'agent-1',
+          actorID: 'agent-1',
           actorType: ActorType.USER,
         },
         {
           conversationId: 'conv-1',
-          actorId: 'agent-2',
+          actorID: 'agent-2',
           actorType: ActorType.USER,
         },
         {
           conversationId: 'conv-1',
-          actorId: 'agent-3',
+          actorID: 'agent-3',
           actorType: ActorType.USER,
         },
       ] as any;
@@ -316,7 +316,7 @@ describe('ConversationService', () => {
 
       expect(result).toBe(true);
       expect(membershipRepo.count).toHaveBeenCalledWith({
-        where: { conversationId: 'conv-1', actorId: 'agent-1' },
+        where: { conversationId: 'conv-1', actorID: 'agent-1' },
       });
     });
 
@@ -333,8 +333,8 @@ describe('ConversationService', () => {
     it('should return VC when conversation has a VC member', async () => {
       const mockVC = { id: 'agent-vc' } as any;
       membershipRepo.find.mockResolvedValue([
-        { conversationId: 'conv-1', actorId: 'agent-user' },
-        { conversationId: 'conv-1', actorId: 'agent-vc' },
+        { conversationId: 'conv-1', actorID: 'agent-user' },
+        { conversationId: 'conv-1', actorID: 'agent-vc' },
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-user', type: ActorType.USER },
@@ -354,8 +354,8 @@ describe('ConversationService', () => {
 
     it('should return null when conversation has no VC member', async () => {
       membershipRepo.find.mockResolvedValue([
-        { conversationId: 'conv-1', actorId: 'agent-1' },
-        { conversationId: 'conv-1', actorId: 'agent-2' },
+        { conversationId: 'conv-1', actorID: 'agent-1' },
+        { conversationId: 'conv-1', actorID: 'agent-2' },
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-1', type: ActorType.USER },
@@ -375,8 +375,8 @@ describe('ConversationService', () => {
     it('should return user when conversation has a user member', async () => {
       const mockUser = { id: 'user-1' } as any;
       membershipRepo.find.mockResolvedValue([
-        { conversationId: 'conv-1', actorId: 'agent-user' },
-        { conversationId: 'conv-1', actorId: 'agent-vc' },
+        { conversationId: 'conv-1', actorID: 'agent-user' },
+        { conversationId: 'conv-1', actorID: 'agent-vc' },
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-user', type: ActorType.USER },
@@ -392,8 +392,8 @@ describe('ConversationService', () => {
     it('should exclude specified agent when excludeAgentId is provided', async () => {
       const mockUser2 = { id: 'user-2' } as any;
       membershipRepo.find.mockResolvedValue([
-        { conversationId: 'conv-1', actorId: 'agent-1' },
-        { conversationId: 'conv-1', actorId: 'agent-2' },
+        { conversationId: 'conv-1', actorID: 'agent-1' },
+        { conversationId: 'conv-1', actorID: 'agent-2' },
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-1', type: ActorType.USER },
@@ -409,8 +409,8 @@ describe('ConversationService', () => {
 
     it('should return null when no user member found after exclusion', async () => {
       membershipRepo.find.mockResolvedValue([
-        { conversationId: 'conv-1', actorId: 'agent-1' },
-        { conversationId: 'conv-1', actorId: 'agent-vc' },
+        { conversationId: 'conv-1', actorID: 'agent-1' },
+        { conversationId: 'conv-1', actorID: 'agent-vc' },
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-1', type: ActorType.USER },
@@ -429,8 +429,8 @@ describe('ConversationService', () => {
       const mockVC = { id: 'vc-1' } as any;
 
       membershipRepo.find.mockResolvedValue([
-        { conversationId: 'conv-1', actorId: 'agent-user' },
-        { conversationId: 'conv-1', actorId: 'agent-vc' },
+        { conversationId: 'conv-1', actorID: 'agent-user' },
+        { conversationId: 'conv-1', actorID: 'agent-vc' },
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-user', type: ActorType.USER },
@@ -453,8 +453,8 @@ describe('ConversationService', () => {
       const mockUser2 = { id: 'user-2' } as any;
 
       membershipRepo.find.mockResolvedValue([
-        { conversationId: 'conv-1', actorId: 'agent-1' },
-        { conversationId: 'conv-1', actorId: 'agent-2' },
+        { conversationId: 'conv-1', actorID: 'agent-1' },
+        { conversationId: 'conv-1', actorID: 'agent-2' },
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-1', type: ActorType.USER },
@@ -473,7 +473,7 @@ describe('ConversationService', () => {
 
     it('should skip members that cannot be resolved', async () => {
       membershipRepo.find.mockResolvedValue([
-        { conversationId: 'conv-1', actorId: 'agent-user' },
+        { conversationId: 'conv-1', actorID: 'agent-user' },
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-user', type: ActorType.USER },
@@ -513,8 +513,8 @@ describe('ConversationService', () => {
       expect(roomService.createRoom).toHaveBeenCalledWith({
         displayName: 'conversation-sender-agent-receiver-agent',
         type: RoomType.CONVERSATION_DIRECT,
-        senderActorId: 'sender-agent',
-        receiverActorId: 'receiver-agent',
+        senderActorID: 'sender-agent',
+        receiverActorID: 'receiver-agent',
       });
     });
 
@@ -571,7 +571,7 @@ describe('ConversationService', () => {
       } as Conversation);
 
       membershipRepo.find.mockResolvedValue([
-        { conversationId: 'conv-1', actorId: 'agent-1' },
+        { conversationId: 'conv-1', actorID: 'agent-1' },
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-1', type: ActorType.USER },
@@ -595,8 +595,8 @@ describe('ConversationService', () => {
       } as unknown as Conversation);
 
       membershipRepo.find.mockResolvedValue([
-        { conversationId: 'conv-1', actorId: 'agent-1' },
-        { conversationId: 'conv-1', actorId: 'agent-2' },
+        { conversationId: 'conv-1', actorID: 'agent-1' },
+        { conversationId: 'conv-1', actorID: 'agent-2' },
       ] as any);
       mockManagerFind.mockResolvedValue([
         { id: 'agent-1', type: ActorType.USER },
@@ -634,8 +634,8 @@ describe('ConversationService', () => {
   describe('getConversationMemberAgentIds', () => {
     it('should return array of agent IDs from memberships', async () => {
       membershipRepo.find.mockResolvedValue([
-        { actorId: 'agent-1' },
-        { actorId: 'agent-2' },
+        { actorID: 'agent-1' },
+        { actorID: 'agent-2' },
       ] as any);
 
       const result = await service.getConversationMemberAgentIds('conv-1');
@@ -714,8 +714,8 @@ describe('ConversationService', () => {
       expect(roomService.createRoom).toHaveBeenCalledWith({
         displayName: 'conversation-agent-1-agent-2',
         type: RoomType.CONVERSATION_DIRECT,
-        senderActorId: 'agent-1',
-        receiverActorId: 'agent-2',
+        senderActorID: 'agent-1',
+        receiverActorID: 'agent-2',
       });
     });
 
@@ -766,11 +766,11 @@ describe('ConversationService', () => {
 
       expect(membershipRepo.create).toHaveBeenCalledWith({
         conversationId: 'conv-new',
-        actorId: 'agent-1',
+        actorID: 'agent-1',
       });
       expect(membershipRepo.create).toHaveBeenCalledWith({
         conversationId: 'conv-new',
-        actorId: 'agent-2',
+        actorID: 'agent-2',
       });
     });
   });

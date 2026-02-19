@@ -131,7 +131,7 @@ export class MeService {
       this.getSpaceMembershipCollaborationInfo(validSpaces);
     const latestActivitiesPerSpace =
       await this.activityService.getLatestActivitiesPerSpaceMembership(
-        actorContext.actorId,
+        actorContext.actorID,
         spaceMembershipCollaborationInfo
       );
     return sortSpacesByActivity(validSpaces, latestActivitiesPerSpace);
@@ -286,7 +286,7 @@ export class MeService {
     limit = 20
   ): Promise<MySpaceResults[]> {
     const rawActivities = await this.activityService.getMySpacesActivity(
-      actorContext.actorId,
+      actorContext.actorID,
       limit * 2 //magic number, should not be needed. toDo Fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/3626
     );
 

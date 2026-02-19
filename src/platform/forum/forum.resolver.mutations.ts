@@ -79,8 +79,8 @@ export class ForumResolverMutations {
 
     let discussion = await this.forumService.createDiscussion(
       createData,
-      actorContext.actorId,
-      actorContext.actorId
+      actorContext.actorID,
+      actorContext.actorID
     );
     discussion = await this.discussionService.save(discussion);
 
@@ -93,7 +93,7 @@ export class ForumResolverMutations {
 
     // Send the notification
     const notificationInput: NotificationInputPlatformForumDiscussionCreated = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       discussion: discussion,
     };
     await this.notificationPlatformAdapter.platformForumDiscussionCreated(

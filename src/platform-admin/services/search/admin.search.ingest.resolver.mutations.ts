@@ -36,7 +36,7 @@ export class AdminSearchIngestResolverMutations {
         actorContext,
         platformPolicy,
         AuthorizationPrivilege.PLATFORM_ADMIN,
-        `Ingest new data into Elasticsearch from scratch: ${actorContext.actorId}`
+        `Ingest new data into Elasticsearch from scratch: ${actorContext.actorID}`
       );
     } catch (e: any) {
       await this.taskService.updateTaskErrors(task.id, e?.message);

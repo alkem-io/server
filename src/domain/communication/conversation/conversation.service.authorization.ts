@@ -55,7 +55,7 @@ export class ConversationAuthorizationService {
     for (const membership of memberships) {
       if (membership.actorType === ActorType.USER) {
         const user = await this.userLookupService.getUserById(
-          membership.actorId
+          membership.actorID
         );
         if (user) {
           participantUserIDs.push(user.id);

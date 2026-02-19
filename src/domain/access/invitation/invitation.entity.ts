@@ -17,8 +17,8 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   @JoinColumn()
   lifecycle!: Lifecycle;
 
-  @Column('uuid', { nullable: false })
-  invitedActorId!: string;
+  @Column('uuid', { nullable: false, name: 'invitedActorId' })
+  invitedActorID!: string;
 
   @ManyToOne(() => Actor, { eager: false, cascade: false, onDelete: 'CASCADE' })
   @JoinColumn({ name: 'invitedActorId' })

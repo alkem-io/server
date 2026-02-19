@@ -5,7 +5,7 @@ import { UUID } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
-  AuthorizationActorPrivilege,
+  AuthorizationActorHasPrivilege,
   CurrentActor,
 } from '@src/common/decorators';
 import { IDocument } from '../document/document.interface';
@@ -18,7 +18,7 @@ import { StorageBucketService } from './storage.bucket.service';
 export class StorageBucketResolverFields {
   constructor(private storageBucketService: StorageBucketService) {}
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('document', () => IDocument, {
     nullable: true,
@@ -43,7 +43,7 @@ export class StorageBucketResolverFields {
     return results[0];
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('documents', () => [IDocument], {
     nullable: false,
@@ -61,7 +61,7 @@ export class StorageBucketResolverFields {
     );
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('size', () => Number, {
     nullable: false,
@@ -71,7 +71,7 @@ export class StorageBucketResolverFields {
     return await this.storageBucketService.size(storageBucket);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('parentEntity', () => IStorageBucketParent, {
     nullable: true,

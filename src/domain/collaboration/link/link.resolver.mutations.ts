@@ -115,7 +115,7 @@ export class LinkResolverMutations {
       readStream,
       filename,
       mimetype,
-      actorContext.actorId
+      actorContext.actorID
     );
     document = await this.documentService.saveDocument(document);
 

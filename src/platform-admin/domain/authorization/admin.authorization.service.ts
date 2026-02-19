@@ -8,7 +8,9 @@ import {
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IActorFull } from '@domain/actor/actor/actor.interface';
 import { ActorService } from '@domain/actor/actor/actor.service';
+import { CredentialType } from '@common/enums/credential.type';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IOrganization } from '@domain/community/organization';
@@ -34,6 +36,17 @@ export class AdminAuthorizationService {
     private organizationLookupService: OrganizationLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  async actorsWithCredential(
+    credentialType: CredentialType,
+    resourceID?: string
+  ): Promise<IActorFull[]> {
+    const actors = await this.actorService.findActorsWithMatchingCredentials({
+      type: credentialType,
+      resourceID,
+    });
+    return actors as IActorFull[];
+  }
 
   async usersWithCredentials(
     credentialCriteria: UsersWithAuthorizationCredentialInput
@@ -86,7 +99,7 @@ export class AdminAuthorizationService {
       grantCredentialData.userID
     );
 
-    // User IS an Actor - grant credential directly using user.id as actorId
+    // User IS an Actor - grant credential directly using user.id as actorID
     await this.actorService.grantCredentialOrFail(user.id, {
       type: grantCredentialData.type,
       resourceID: grantCredentialData.resourceID,
@@ -110,7 +123,7 @@ export class AdminAuthorizationService {
       revokeCredentialData.userID
     );
 
-    // User IS an Actor - revoke credential directly using user.id as actorId
+    // User IS an Actor - revoke credential directly using user.id as actorID
     await this.actorService.revokeCredential(user.id, {
       type: revokeCredentialData.type,
       resourceID: revokeCredentialData.resourceID,
@@ -135,7 +148,7 @@ export class AdminAuthorizationService {
         grantCredentialData.organizationID
       );
 
-    // Organization IS an Actor - grant credential directly using organization.id as actorId
+    // Organization IS an Actor - grant credential directly using organization.id as actorID
     await this.actorService.grantCredentialOrFail(organization.id, {
       type: grantCredentialData.type,
       resourceID: grantCredentialData.resourceID,
@@ -160,7 +173,7 @@ export class AdminAuthorizationService {
         revokeCredentialData.organizationID
       );
 
-    // Organization IS an Actor - revoke credential directly using organization.id as actorId
+    // Organization IS an Actor - revoke credential directly using organization.id as actorID
     await this.actorService.revokeCredential(organization.id, {
       type: revokeCredentialData.type,
       resourceID: revokeCredentialData.resourceID || '',

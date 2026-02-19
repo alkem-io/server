@@ -47,7 +47,7 @@ describe('CalloutTransferService', () => {
   });
 
   describe('transferCallout', () => {
-    const actorContext = { actorId: 'user-1' } as any;
+    const actorContext = { actorID: 'user-1' } as any;
     const targetCalloutsSet = { id: 'target-cs' } as any;
     const storageAggregator = { id: 'agg-1' } as any;
 

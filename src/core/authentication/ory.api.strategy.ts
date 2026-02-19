@@ -63,9 +63,9 @@ export class OryApiStrategy extends PassportStrategy(
     this.logger.debug?.(session.identity, LogContext.AUTH);
 
     const oryIdentity = session.identity as OryDefaultIdentitySchema;
-    const actorId = oryIdentity.metadata_public?.alkemio_actor_id;
+    const actorID = oryIdentity.metadata_public?.alkemio_actor_id;
 
-    if (!actorId) {
+    if (!actorID) {
       this.logger.warn?.(
         'API session identity missing alkemio_actor_id in metadata_public',
         LogContext.AUTH
@@ -73,6 +73,6 @@ export class OryApiStrategy extends PassportStrategy(
       return this.authActorInfoService.createAnonymous();
     }
 
-    return this.authService.createActorContext(actorId, session);
+    return this.authService.createActorContext(actorID, session);
   }
 }

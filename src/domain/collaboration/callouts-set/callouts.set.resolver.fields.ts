@@ -1,4 +1,4 @@
-import { AuthorizationActorPrivilege } from '@common/decorators/authorization.actor.privilege';
+import { AuthorizationActorHasPrivilege } from '@common/decorators/authorizationActorHasPrivilege';
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -16,7 +16,7 @@ import { CalloutsSetArgsTags } from './dto/callouts.set.args.tags';
 export class CalloutsSetResolverFields {
   constructor(private calloutsSetService: CalloutsSetService) {}
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('callouts', () => [ICallout], {
     nullable: false,
@@ -34,7 +34,7 @@ export class CalloutsSetResolverFields {
     );
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('tagsetTemplates', () => [ITagsetTemplate], {
     nullable: true,
@@ -48,7 +48,7 @@ export class CalloutsSetResolverFields {
     return tagsetTemplateSet.tagsetTemplates;
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('tags', () => [String], {
     nullable: false,

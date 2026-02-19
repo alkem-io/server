@@ -38,7 +38,7 @@ export class RoomEventResolverSubscription {
         context
       ) {
         const actorContext = context.req?.user;
-        const logMsgPrefix = `[User (${actorContext.actorId}) Room Msg] - `;
+        const logMsgPrefix = `[User (${actorContext.actorID}) Room Msg] - `;
         this.logger.verbose?.(
           `${logMsgPrefix} Sending out event: ${payload.roomID} `,
           LogContext.SUBSCRIPTIONS
@@ -55,7 +55,7 @@ export class RoomEventResolverSubscription {
         const isMatch = variables.roomID === payload.roomID;
 
         this.logger.verbose?.(
-          `[User (${actorContext.actorId}) Room Events] - Filtering event id '${payload.eventID}' - match=${isMatch}`,
+          `[User (${actorContext.actorID}) Room Events] - Filtering event id '${payload.eventID}' - match=${isMatch}`,
           LogContext.SUBSCRIPTIONS
         );
 
@@ -67,7 +67,7 @@ export class RoomEventResolverSubscription {
     @CurrentActor() actorContext: ActorContext,
     @Args({ nullable: false }) { roomID }: RoomEventSubscriptionArgs
   ) {
-    const logMsgPrefix = `[User (${actorContext.actorId}) Room Events] - `;
+    const logMsgPrefix = `[User (${actorContext.actorID}) Room Events] - `;
     this.logger.verbose?.(
       `${logMsgPrefix} Subscribing to the following room: ${roomID}`,
       LogContext.SUBSCRIPTIONS

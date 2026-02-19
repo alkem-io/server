@@ -12,12 +12,12 @@ export class LicenseIssuerService {
 
   /**
    * Assign a license plan credential to an actor.
-   * @param actorId - The ID of the actor (Space, Account, etc.)
+   * @param actorID - The ID of the actor (Space, Account, etc.)
    * @param licensePlan - The license plan to assign
    * @param resourceID - The resource ID for the credential
    */
   public async assignLicensePlan(
-    actorId: string,
+    actorID: string,
     licensePlan: ILicensePlan,
     resourceID: string
   ): Promise<void> {
@@ -35,30 +35,30 @@ export class LicenseIssuerService {
       expires = oneMonthFromNow;
     }
     try {
-      await this.actorService.grantCredentialOrFail(actorId, {
+      await this.actorService.grantCredentialOrFail(actorID, {
         type: licensePlan.licenseCredential,
         resourceID: resourceID,
         expires: expires,
       });
     } catch (error) {
       this.logger.warn(
-        `Failed to assign license credential ${licensePlan.licenseCredential} ${licensePlan.id} to actor ${actorId}: ${error}`
+        `Failed to assign license credential ${licensePlan.licenseCredential} ${licensePlan.id} to actor ${actorID}: ${error}`
       );
     }
   }
 
   /**
    * Revoke a license plan credential from an actor.
-   * @param actorId - The ID of the actor (Space, Account, etc.)
+   * @param actorID - The ID of the actor (Space, Account, etc.)
    * @param licensePlan - The license plan to revoke
    * @param resourceID - The resource ID for the credential
    */
   public async revokeLicensePlan(
-    actorId: string,
+    actorID: string,
     licensePlan: ILicensePlan,
     resourceID: string
   ): Promise<void> {
-    await this.actorService.revokeCredential(actorId, {
+    await this.actorService.revokeCredential(actorID, {
       type: licensePlan.licenseCredential,
       resourceID: resourceID,
     });

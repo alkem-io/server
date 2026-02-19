@@ -49,7 +49,7 @@ export class AdminWhiteboardService {
 
     const whiteboardResults = await this._uploadFilesFromContentToStorageBucket(
       whiteboards,
-      actorContext.actorId
+      actorContext.actorID
     );
 
     return {

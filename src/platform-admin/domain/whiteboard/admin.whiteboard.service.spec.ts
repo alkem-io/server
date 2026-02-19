@@ -29,7 +29,7 @@ describe('AdminWhiteboardService', () => {
   let documentAuthorizationService: { applyAuthorizationPolicy: Mock };
   let authorizationPolicyService: { saveAll: Mock };
 
-  const actorContext = { actorId: 'uploader-1' } as any;
+  const actorContext = { actorID: 'uploader-1' } as any;
 
   beforeEach(async () => {
     mockEntityManager = {

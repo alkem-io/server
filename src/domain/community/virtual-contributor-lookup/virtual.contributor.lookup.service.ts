@@ -32,11 +32,11 @@ export class VirtualContributorLookupService {
   ) {}
 
   // Note: VirtualContributor now extends Actor and has credentials directly.
-  // This method returns both the virtualContributor and the actorId/credentials.
+  // This method returns both the virtualContributor and the actorID/credentials.
   // Callers should prefer using virtualContributor.id and virtualContributor.credentials directly.
   public async getVirtualContributorAndActor(virtualID: string): Promise<{
     virtualContributor: IVirtualContributor;
-    actorId: string;
+    actorID: string;
     credentials: ICredential[];
   }> {
     const virtualContributor = await this.getVirtualContributorByIdOrFail(
@@ -48,7 +48,7 @@ export class VirtualContributorLookupService {
 
     return {
       virtualContributor,
-      actorId: virtualContributor.id,
+      actorID: virtualContributor.id,
       credentials: virtualContributor.credentials || [],
     };
   }
@@ -142,7 +142,7 @@ export class VirtualContributorLookupService {
     paginationArgs: PaginationArgs
   ): Promise<IPaginatedType<IVirtualContributor>> {
     const currentEntryRoleVCIds =
-      await this.actorLookupService.getActorIdsWithCredential(
+      await this.actorLookupService.getActorIDsWithCredential(
         entryRoleCredentials.role,
         [ActorType.VIRTUAL]
       );

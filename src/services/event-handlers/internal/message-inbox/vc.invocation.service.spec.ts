@@ -77,7 +77,7 @@ describe('VcInvocationService', () => {
         { id: 'vc-agent-2' } as Actor,
       ]);
       actorContextService.buildForActor.mockResolvedValue({
-        actorId: 'actor-sender',
+        actorID: 'actor-sender',
       } as any);
       virtualContributorMessageService.invokeVirtualContributor.mockResolvedValue(
         undefined as any
@@ -94,7 +94,7 @@ describe('VcInvocationService', () => {
         'vc-agent-1',
         'Hello VC',
         'msg-1', // threadID = message.id for direct conversations
-        expect.objectContaining({ actorId: 'actor-sender' }),
+        expect.objectContaining({ actorID: 'actor-sender' }),
         '',
         room
       );
@@ -141,7 +141,7 @@ describe('VcInvocationService', () => {
       };
 
       actorContextService.buildForActor.mockResolvedValue({
-        actorId: 'human-actor',
+        actorID: 'human-actor',
       } as any);
       virtualContributorMessageService.invokeVirtualContributor.mockResolvedValue(
         undefined as any
@@ -155,7 +155,7 @@ describe('VcInvocationService', () => {
         'vc-actor-1',
         'Hello VC',
         'thread-1',
-        expect.objectContaining({ actorId: 'human-actor' }),
+        expect.objectContaining({ actorID: 'human-actor' }),
         '',
         room
       );
@@ -184,19 +184,19 @@ describe('VcInvocationService', () => {
 
       const vcMentions = [
         {
-          actorId: 'vc-1',
+          actorID: 'vc-1',
           actorType: MentionedEntityType.VIRTUAL,
         },
       ];
       messageNotificationService.getMentionsFromText.mockResolvedValue([
         ...vcMentions,
         {
-          actorId: 'user-1',
+          actorID: 'user-1',
           actorType: MentionedEntityType.USER,
         },
       ]);
       actorContextService.buildForActor.mockResolvedValue({
-        actorId: 'actor-sender',
+        actorID: 'actor-sender',
       } as any);
       messageNotificationService.processVirtualContributorMentions.mockResolvedValue(
         undefined
@@ -210,7 +210,7 @@ describe('VcInvocationService', () => {
         vcMentions, // only VC mentions
         'Hello VC',
         'thread-1',
-        expect.objectContaining({ actorId: 'actor-sender' }),
+        expect.objectContaining({ actorID: 'actor-sender' }),
         room
       );
     });
@@ -221,7 +221,7 @@ describe('VcInvocationService', () => {
 
       messageNotificationService.getMentionsFromText.mockResolvedValue([
         {
-          actorId: 'user-1',
+          actorID: 'user-1',
           actorType: MentionedEntityType.USER,
         },
       ]);

@@ -52,7 +52,7 @@ export class RegistrationResolverMutations {
       actorContext,
       authorization,
       AuthorizationPrivilege.CREATE,
-      `create new User: ${actorContext.actorId}`
+      `create new User: ${actorContext.actorID}`
     );
 
     // Create the user entity
@@ -126,7 +126,7 @@ export class RegistrationResolverMutations {
       );
     // Send the notification
     const notificationInput: NotificationInputPlatformUserRemoved = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       user,
     };
     await this.notificationPlatformAdapter.platformUserRemoved(

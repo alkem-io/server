@@ -48,7 +48,7 @@ export class CalloutTransferService {
     // Move the callout
     callout.calloutsSet = targetCalloutsSet;
     // Update the user
-    callout.createdBy = actorContext.actorId;
+    callout.createdBy = actorContext.actorID;
     const updatedCallout = await this.calloutService.save(callout);
 
     // Fix the storage aggregator

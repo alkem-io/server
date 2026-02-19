@@ -9,7 +9,7 @@ import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationActorPrivilege } from '@src/common/decorators';
+import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
 import { TemplateContentSpace } from './template.content.space.entity';
 import { ITemplateContentSpace } from './template.content.space.interface';
 import { TemplateContentSpaceService } from './template.content.space.service';
@@ -20,7 +20,7 @@ export class TemplateContentSpaceResolverFields {
     private templateContentSpaceService: TemplateContentSpaceService
   ) {}
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('subspaces', () => [ITemplateContentSpace], {
     nullable: false,
@@ -34,7 +34,7 @@ export class TemplateContentSpaceResolverFields {
     );
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('about', () => ISpaceAbout, {
     nullable: false,
@@ -51,7 +51,7 @@ export class TemplateContentSpaceResolverFields {
     return about;
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: false,
@@ -67,7 +67,7 @@ export class TemplateContentSpaceResolverFields {
     return loader.load(templateContentSpace.id);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('settings', () => ISpaceSettings, {
     nullable: false,

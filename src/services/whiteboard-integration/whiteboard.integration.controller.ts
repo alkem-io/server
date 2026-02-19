@@ -73,9 +73,9 @@ export class WhiteboardIntegrationController {
         };
       }
       const user = await this.userLookupService.getUserByIdOrFail(
-        result.actorId
+        result.actorID
       );
-      return { id: result.actorId, email: user.email };
+      return { id: result.actorID, email: user.email };
     }
     return { id: '', email: '' };
   }

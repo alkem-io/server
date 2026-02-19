@@ -114,7 +114,7 @@ export class SubscriptionPublishService {
     };
 
     this.logger.verbose?.(
-      `Publishing room receipt event: roomID=${room.id}, eventID=${payload.eventID}, actorId=${data.actorId}`,
+      `Publishing room receipt event: roomID=${room.id}, eventID=${payload.eventID}, actorID=${data.actorID}`,
       LogContext.SUBSCRIPTIONS
     );
 

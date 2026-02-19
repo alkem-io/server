@@ -21,5 +21,5 @@ export abstract class ICredential extends IBaseAlkemio {
 
   // Actor relation is internal to TypeORM, not exposed in interface
   // to avoid circular type reference with IActor.credentials
-  actorId?: string;
+  actorID?: string;
 }

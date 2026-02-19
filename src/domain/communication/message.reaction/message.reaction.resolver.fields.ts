@@ -25,9 +25,9 @@ export class MessageReactionResolverFields {
     @Loader(ContributorByAgentIdLoaderCreator, { resolveToNull: true })
     loader: ILoader<IActor | null>
   ): Promise<IUser | null> {
-    // sender contains the agent ID (actorId from the communication adapter)
-    const senderActorId = messageReaction.sender;
-    if (!senderActorId) {
+    // sender contains the agent ID (actorID from the communication adapter)
+    const senderActorID = messageReaction.sender;
+    if (!senderActorID) {
       return null;
     }
 
@@ -39,7 +39,7 @@ export class MessageReactionResolverFields {
         {
           message:
             'Sender unable to be resolved when resolving message reaction.',
-          senderActorId,
+          senderActorID,
           messageReactionId: messageReaction.id,
         },
         LogContext.COMMUNICATION

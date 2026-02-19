@@ -8,7 +8,7 @@ export class RolesActorInput {
     nullable: false,
     description: 'The ID of the actor to retrieve the roles of.',
   })
-  actorId!: string;
+  actorID!: string;
 
   @Field(() => SpaceFilterInput, {
     nullable: true,

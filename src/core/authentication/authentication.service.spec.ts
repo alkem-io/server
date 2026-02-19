@@ -73,7 +73,7 @@ describe('AuthenticationService', () => {
 
   const mockActorContext: ActorContext = {
     isAnonymous: false,
-    actorId: 'user-id',
+    actorID: 'user-id',
     guestName: undefined,
     credentials: [],
     authenticationID: 'test-id',
@@ -90,16 +90,16 @@ describe('AuthenticationService', () => {
         }
         if (token === ActorContextCacheService) {
           return {
-            getByActorId: vi.fn(),
-            setByActorId: vi.fn(),
-            deleteByActorId: vi.fn(),
+            getByActorID: vi.fn(),
+            setByActorID: vi.fn(),
+            deleteByActorID: vi.fn(),
           };
         }
         if (token === ActorContextService) {
           return {
             createAnonymous: vi.fn(),
             createGuest: vi.fn(),
-            populateFromActorId: vi.fn(),
+            populateFromActorID: vi.fn(),
           };
         }
         if (token === KratosService) {
@@ -207,9 +207,9 @@ describe('AuthenticationService', () => {
 
     it('should create context when session has valid identity with metadata_public', async () => {
       kratosService.getSession.mockResolvedValue(mockSession);
-      actorContextCacheService.getByActorId.mockResolvedValue(undefined);
-      actorContextService.populateFromActorId.mockResolvedValue(undefined);
-      actorContextCacheService.setByActorId.mockImplementation(ctx =>
+      actorContextCacheService.getByActorID.mockResolvedValue(undefined);
+      actorContextService.populateFromActorID.mockResolvedValue(undefined);
+      actorContextCacheService.setByActorID.mockImplementation(ctx =>
         Promise.resolve(ctx)
       );
 
@@ -221,26 +221,26 @@ describe('AuthenticationService', () => {
         'Bearer token',
         undefined
       );
-      // Uses actorId from metadata_public.alkemio_actor_id
-      expect(actorContextCacheService.getByActorId).toHaveBeenCalledWith(
+      // Uses actorID from metadata_public.alkemio_actor_id
+      expect(actorContextCacheService.getByActorID).toHaveBeenCalledWith(
         'user-id'
       );
-      expect(actorContextService.populateFromActorId).toHaveBeenCalled();
+      expect(actorContextService.populateFromActorID).toHaveBeenCalled();
       expect(result.isAnonymous).toBe(false);
     });
 
     it('should return anonymous when identity has no alkemio_actor_id in metadata_public', async () => {
-      const identityWithoutActorId = {
+      const identityWithoutActorID = {
         ...mockOryIdentity,
         metadata_public: {},
       };
-      const sessionWithoutActorId = {
+      const sessionWithoutActorID = {
         ...mockSession,
-        identity: identityWithoutActorId,
+        identity: identityWithoutActorID,
       };
       const anonymousContext = { ...mockActorContext, isAnonymous: true };
 
-      kratosService.getSession.mockResolvedValue(sessionWithoutActorId);
+      kratosService.getSession.mockResolvedValue(sessionWithoutActorID);
       actorContextService.createAnonymous.mockReturnValue(anonymousContext);
 
       const result = await service.getActorContext({
@@ -253,7 +253,7 @@ describe('AuthenticationService', () => {
   });
 
   describe('createActorContext', () => {
-    it('should return anonymous context when no actorId provided', async () => {
+    it('should return anonymous context when no actorID provided', async () => {
       const anonymousContext = { ...mockActorContext, isAnonymous: true };
       actorContextService.createAnonymous.mockReturnValue(anonymousContext);
 
@@ -265,11 +265,11 @@ describe('AuthenticationService', () => {
 
     it('should return cached context if available', async () => {
       const cachedContext = { ...mockActorContext };
-      actorContextCacheService.getByActorId.mockResolvedValue(cachedContext);
+      actorContextCacheService.getByActorID.mockResolvedValue(cachedContext);
 
       const result = await service.createActorContext('user-id', mockSession);
 
-      expect(actorContextCacheService.getByActorId).toHaveBeenCalledWith(
+      expect(actorContextCacheService.getByActorID).toHaveBeenCalledWith(
         'user-id'
       );
       expect(result).toEqual(cachedContext);
@@ -278,27 +278,27 @@ describe('AuthenticationService', () => {
     });
 
     it('should create new context when not in cache and load credentials', async () => {
-      actorContextCacheService.getByActorId.mockResolvedValue(undefined);
-      actorContextService.populateFromActorId.mockResolvedValue(undefined);
-      actorContextCacheService.setByActorId.mockImplementation(ctx =>
+      actorContextCacheService.getByActorID.mockResolvedValue(undefined);
+      actorContextService.populateFromActorID.mockResolvedValue(undefined);
+      actorContextCacheService.setByActorID.mockImplementation(ctx =>
         Promise.resolve(ctx)
       );
 
       const result = await service.createActorContext('user-id', mockSession);
 
-      expect(actorContextCacheService.getByActorId).toHaveBeenCalledWith(
+      expect(actorContextCacheService.getByActorID).toHaveBeenCalledWith(
         'user-id'
       );
-      expect(actorContextService.populateFromActorId).toHaveBeenCalled();
-      expect(actorContextCacheService.setByActorId).toHaveBeenCalled();
+      expect(actorContextService.populateFromActorID).toHaveBeenCalled();
+      expect(actorContextCacheService.setByActorID).toHaveBeenCalled();
       expect(result.isAnonymous).toBe(false);
       expect(result.expiry).toEqual(new Date('2023-12-31T23:59:59Z').getTime());
     });
 
     it('should set expiry from session when creating context', async () => {
-      actorContextCacheService.getByActorId.mockResolvedValue(undefined);
-      actorContextService.populateFromActorId.mockResolvedValue(undefined);
-      actorContextCacheService.setByActorId.mockImplementation(ctx =>
+      actorContextCacheService.getByActorID.mockResolvedValue(undefined);
+      actorContextService.populateFromActorID.mockResolvedValue(undefined);
+      actorContextCacheService.setByActorID.mockImplementation(ctx =>
         Promise.resolve(ctx)
       );
 

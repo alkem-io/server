@@ -136,7 +136,7 @@ describe('AdminAuthorizationService', () => {
         resourceID: 'space-1',
       });
 
-      // User IS the Actor - user.id is the actorId
+      // User IS the Actor - user.id is the actorID
       expect(actorService.grantCredentialOrFail).toHaveBeenCalledWith(
         'user-1',
         {
@@ -186,7 +186,7 @@ describe('AdminAuthorizationService', () => {
         resourceID: 'space-1',
       });
 
-      // User IS the Actor - user.id is the actorId
+      // User IS the Actor - user.id is the actorID
       expect(actorService.revokeCredential).toHaveBeenCalledWith('user-1', {
         type: AuthorizationCredential.SPACE_MEMBER,
         resourceID: 'space-1',

@@ -41,7 +41,7 @@ export class AuthorizationRuleActorPrivilege {
         authorizationID = this.fieldParent.authorization.id;
       }
       const fieldParentType = this.fieldParent.__proto__.constructor.name;
-      const errorMsg = `User (${actorContext.actorId}) does not have credentials that grant '${this.privilege}' access to ${fieldParentType}.${this.fieldName} with id '${this.fieldParent.id}' with authorization: ${authorizationID}`;
+      const errorMsg = `User (${actorContext.actorID}) does not have credentials that grant '${this.privilege}' access to ${fieldParentType}.${this.fieldName} with id '${this.fieldParent.id}' with authorization: ${authorizationID}`;
       this.authorizationService.logCredentialCheckFailDetails(
         errorMsg,
         actorContext,
@@ -51,7 +51,7 @@ export class AuthorizationRuleActorPrivilege {
         errorMsg,
         this.privilege,
         this.fieldParent.authorization.id,
-        actorContext.actorId
+        actorContext.actorID
       );
     }
 

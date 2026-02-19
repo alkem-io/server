@@ -35,9 +35,9 @@ describe('CommunityCommunicationService', () => {
       );
 
       const communication = { id: 'comm-1' } as any;
-      const actorId = 'actor-1';
+      const actorID = 'actor-1';
 
-      await service.addMemberToCommunication(communication, actorId);
+      await service.addMemberToCommunication(communication, actorID);
 
       expect(
         communicationService.addContributorToCommunications
@@ -50,11 +50,11 @@ describe('CommunityCommunicationService', () => {
       );
 
       const communication = { id: 'comm-1' } as any;
-      const actorId = 'actor-1';
+      const actorID = 'actor-1';
 
       // The method uses .catch() on the promise - it should not throw
       await expect(
-        service.addMemberToCommunication(communication, actorId)
+        service.addMemberToCommunication(communication, actorID)
       ).resolves.toBeUndefined();
     });
   });
@@ -66,9 +66,9 @@ describe('CommunityCommunicationService', () => {
       );
 
       const communication = { id: 'comm-1' } as any;
-      const actorId = 'user-1';
+      const actorID = 'user-1';
 
-      await service.removeMemberFromCommunication(communication, actorId);
+      await service.removeMemberFromCommunication(communication, actorID);
 
       expect(
         communicationService.removeUserFromCommunications
@@ -81,11 +81,11 @@ describe('CommunityCommunicationService', () => {
       );
 
       const communication = { id: 'comm-1' } as any;
-      const actorId = 'user-1';
+      const actorID = 'user-1';
 
       // The method uses .catch() on the promise - it should not throw
       await expect(
-        service.removeMemberFromCommunication(communication, actorId)
+        service.removeMemberFromCommunication(communication, actorID)
       ).resolves.toBeUndefined();
     });
   });

@@ -129,7 +129,7 @@ export class AccountLicenseService {
       wingbackCustomerID
     );
     // grant ACCOUNT_LICENSE_PLUS entitlement to the account
-    // Account IS the Actor - use accountID directly as actorId
+    // Account IS the Actor - use accountID directly as actorID
     try {
       await this.actorService.grantCredentialOrFail(accountID, {
         type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,

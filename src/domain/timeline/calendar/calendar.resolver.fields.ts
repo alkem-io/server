@@ -6,7 +6,7 @@ import { SpaceSettingsService } from '@domain/space/space.settings/space.setting
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
-  AuthorizationActorPrivilege,
+  AuthorizationActorHasPrivilege,
   CurrentActor,
 } from '@src/common/decorators';
 import { ICalendarEvent } from '../event/event.interface';
@@ -20,7 +20,7 @@ export class CalendarResolverFields {
     private spaceSettingsService: SpaceSettingsService
   ) {}
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('event', () => ICalendarEvent, {
     nullable: true,
@@ -40,7 +40,7 @@ export class CalendarResolverFields {
     return this.calendarService.getCalendarEvent(calendar.id, idOrNameId);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('events', () => [ICalendarEvent], {
     nullable: false,

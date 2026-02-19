@@ -63,7 +63,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `grant credential: ${actorContext.actorId}`
+      `grant credential: ${actorContext.actorID}`
     );
 
     const user =
@@ -73,7 +73,7 @@ export class AdminAuthorizationResolverMutations {
 
     // Send the notification
     this.notifyPlatformGlobalRoleChange(
-      actorContext.actorId,
+      actorContext.actorID,
       user,
       RoleChangeType.ADDED,
       grantCredentialData.type
@@ -94,14 +94,14 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `revoke credential: ${actorContext.actorId}`
+      `revoke credential: ${actorContext.actorID}`
     );
     const user =
       await this.adminAuthorizationService.revokeCredentialFromUser(
         credentialRemoveData
       );
     this.notifyPlatformGlobalRoleChange(
-      actorContext.actorId,
+      actorContext.actorID,
       user,
       RoleChangeType.REMOVED,
       credentialRemoveData.type
@@ -122,7 +122,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `grant credential: ${actorContext.actorId}`
+      `grant credential: ${actorContext.actorID}`
     );
     return await this.adminAuthorizationService.grantCredentialToOrganization(
       grantCredentialData
@@ -142,7 +142,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `revoke credential: ${actorContext.actorId}`
+      `revoke credential: ${actorContext.actorID}`
     );
     return await this.adminAuthorizationService.revokeCredentialFromOrganization(
       credentialRemoveData
@@ -162,7 +162,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN, // todo: replace with AUTHORIZATION_RESET once that has been granted
-      `reset authorization on platform: ${actorContext.actorId}`
+      `reset authorization on platform: ${actorContext.actorID}`
     );
 
     return this.authResetService.publishResetAll();
@@ -182,7 +182,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN, // todo: replace with AUTHORIZATION_RESET once that has been granted
-      `reset platformRolesAccess on all Spaces: ${actorContext.actorId}`
+      `reset platformRolesAccess on all Spaces: ${actorContext.actorID}`
     );
 
     const spaces = await this.entityManager.find(Space, {
@@ -214,7 +214,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       platformPolicyUpdated,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization on a single authorization policy: ${actorContext.actorId}`
+      `reset authorization on a single authorization policy: ${actorContext.actorID}`
     );
 
     return this.adminAuthorizationService.resetAuthorizationPolicy(
@@ -235,7 +235,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `reset authorization on platform: ${actorContext.actorId}`
+      `reset authorization on platform: ${actorContext.actorID}`
     );
 
     return this.virtualContributorService.refreshAllBodiesOfKnowledge(

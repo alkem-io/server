@@ -571,7 +571,7 @@ export class NotificationSpaceAdapter {
       adminEvent,
       eventData,
       space.id,
-      eventData.actorId
+      eventData.actorID
     );
 
     const adminPayload =
@@ -580,7 +580,7 @@ export class NotificationSpaceAdapter {
         eventData.triggeredBy,
         adminRecipients.emailRecipients,
         space,
-        eventData.actorId
+        eventData.actorID
       );
     this.notificationExternalAdapter.sendExternalNotifications(
       adminEvent,
@@ -595,7 +595,7 @@ export class NotificationSpaceAdapter {
       const adminInAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
         type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
         spaceID: space.id,
-        actorId: eventData.actorId,
+        actorID: eventData.actorID,
         actorType: eventData.actorType,
       };
 
@@ -647,7 +647,7 @@ export class NotificationSpaceAdapter {
       const inAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
         type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
         spaceID: space.id,
-        actorId: eventData.virtualContributorID,
+        actorID: eventData.virtualContributorID,
         actorType: ActorType.VIRTUAL,
       };
 

@@ -22,7 +22,7 @@ export class MeConversationsResolverFields {
     @CurrentActor() actorContext: ActorContext,
     @Parent() _parent: MeConversationsResult
   ): Promise<IConversation[]> {
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       throw new ValidationException(
         'Unable to retrieve conversations as no userID provided.',
         LogContext.COMMUNICATION
@@ -30,7 +30,7 @@ export class MeConversationsResolverFields {
     }
 
     return await this.messagingService.getConversationsForUser(
-      actorContext.actorId,
+      actorContext.actorID,
       CommunicationConversationType.USER_USER
     );
   }
@@ -44,7 +44,7 @@ export class MeConversationsResolverFields {
     @CurrentActor() actorContext: ActorContext,
     @Parent() _parent: MeConversationsResult
   ): Promise<IConversation[]> {
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       throw new ValidationException(
         'Unable to retrieve conversations as no userID provided.',
         LogContext.COMMUNICATION
@@ -52,7 +52,7 @@ export class MeConversationsResolverFields {
     }
 
     return await this.messagingService.getConversationsForUser(
-      actorContext.actorId,
+      actorContext.actorID,
       CommunicationConversationType.USER_VC
     );
   }
@@ -68,7 +68,7 @@ export class MeConversationsResolverFields {
     @Args('wellKnown', { type: () => VirtualContributorWellKnown })
     wellKnown: VirtualContributorWellKnown
   ): Promise<IConversation | null> {
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       throw new ValidationException(
         'Unable to retrieve conversation as no userID provided.',
         LogContext.COMMUNICATION
@@ -76,7 +76,7 @@ export class MeConversationsResolverFields {
     }
 
     return await this.messagingService.getConversationWithWellKnownVC(
-      actorContext.actorId,
+      actorContext.actorID,
       wellKnown
     );
   }

@@ -87,18 +87,18 @@ export class ActorService {
    * Get an actor by ID or throw if not found.
    */
   async getActorOrFail(
-    actorId: string,
+    actorID: string,
     options?: FindOneOptions<Actor>
   ): Promise<IActor | never> {
     const actor = await this.actorRepository.findOne({
-      where: { id: actorId },
+      where: { id: actorID },
       ...options,
     });
     if (!actor) {
       throw new EntityNotFoundException(
         'No Actor found with the given id',
         LogContext.AUTH,
-        { actorId }
+        { actorID }
       );
     }
     return actor;
@@ -107,9 +107,9 @@ export class ActorService {
   /**
    * Get an actor by ID or return null if not found.
    */
-  async getActorOrNull(actorId: string): Promise<IActor | null> {
+  async getActorOrNull(actorID: string): Promise<IActor | null> {
     return await this.actorRepository.findOne({
-      where: { id: actorId },
+      where: { id: actorID },
     });
   }
 
@@ -124,8 +124,8 @@ export class ActorService {
   // Credential Management Methods (to be implemented in Phase 2, Task 2.3)
   // =========================================================================
 
-  private getActorCacheKey(actorId: string): string {
-    return `@actor:id:${actorId}`;
+  private getActorCacheKey(actorID: string): string {
+    return `@actor:id:${actorID}`;
   }
 
   private async getActorFromCache(id: string): Promise<IActor | undefined> {
@@ -143,11 +143,11 @@ export class ActorService {
    * Get actor credentials with caching.
    */
   async getActorCredentials(
-    actorId: string
+    actorID: string
   ): Promise<{ actor: IActor; credentials: ICredential[] }> {
-    let actor: IActor | undefined = await this.getActorFromCache(actorId);
+    let actor: IActor | undefined = await this.getActorFromCache(actorID);
     if (!actor || !actor.credentials) {
-      actor = await this.getActorOrFail(actorId, {
+      actor = await this.getActorOrFail(actorID, {
         relations: { credentials: true },
       });
 
@@ -158,7 +158,7 @@ export class ActorService {
         throw new EntityNotInitializedException(
           'Actor credentials not initialized',
           LogContext.AUTH,
-          { actorId }
+          { actorID }
         );
       }
     }
@@ -188,10 +188,10 @@ export class ActorService {
    * Check if an actor has a valid credential matching the criteria.
    */
   async hasValidCredential(
-    actorId: string,
+    actorID: string,
     credentialCriteria: CredentialsSearchInput
   ): Promise<boolean> {
-    const { credentials } = await this.getActorCredentials(actorId);
+    const { credentials } = await this.getActorCredentials(actorID);
 
     for (const credential of credentials) {
       if (credential.type === credentialCriteria.type) {
@@ -235,23 +235,23 @@ export class ActorService {
    * Grant a credential to an actor.
    */
   async grantCredentialOrFail(
-    actorId: string,
+    actorID: string,
     credentialData: CreateCredentialInput
   ): Promise<ICredential> {
     // Verify actor exists
-    await this.getActorOrFail(actorId);
+    await this.getActorOrFail(actorID);
 
-    // Create the credential with the actorId
+    // Create the credential with the actorID
     const credential = await this.credentialService.createCredentialForActor(
-      actorId,
+      actorID,
       credentialData
     );
 
     // Invalidate cache since credentials changed
-    await this.invalidateActorCache(actorId);
+    await this.invalidateActorCache(actorID);
 
     this.logger.verbose?.(
-      `Granted credential type=${credentialData.type} to actor=${actorId}`,
+      `Granted credential type=${credentialData.type} to actor=${actorID}`,
       LogContext.AUTH
     );
 
@@ -262,26 +262,26 @@ export class ActorService {
    * Revoke a credential from an actor.
    */
   async revokeCredential(
-    actorId: string,
+    actorID: string,
     credentialData: CredentialsSearchInput
   ): Promise<boolean> {
     // Verify actor exists
-    await this.getActorOrFail(actorId);
+    await this.getActorOrFail(actorID);
 
     const resourceID = credentialData.resourceID || '';
     const deleted =
       await this.credentialService.deleteCredentialByTypeAndResource(
-        actorId,
+        actorID,
         credentialData.type,
         resourceID
       );
 
     if (deleted) {
       // Invalidate cache since credentials changed
-      await this.invalidateActorCache(actorId);
+      await this.invalidateActorCache(actorID);
 
       this.logger.verbose?.(
-        `Revoked credential type=${credentialData.type} from actor=${actorId}`,
+        `Revoked credential type=${credentialData.type} from actor=${actorID}`,
         LogContext.AUTH
       );
     }
@@ -292,8 +292,8 @@ export class ActorService {
   /**
    * Invalidate the actor cache.
    */
-  private async invalidateActorCache(actorId: string): Promise<void> {
-    const cacheKey = this.getActorCacheKey(actorId);
+  private async invalidateActorCache(actorID: string): Promise<void> {
+    const cacheKey = this.getActorCacheKey(actorID);
     await this.cacheManager.del(cacheKey);
   }
 }

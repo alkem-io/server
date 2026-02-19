@@ -128,7 +128,7 @@ export class UserResolverFields {
     @CurrentActor() actorContext: ActorContext
   ): Promise<IAccount | undefined> {
     const accountVisible =
-      user.id === actorContext.actorId || // user can see their own account
+      user.id === actorContext.actorID || // user can see their own account
       (await this.isAccessGranted(
         user,
         actorContext,
@@ -195,7 +195,7 @@ export class UserResolverFields {
     @Parent() user: IUser,
     @CurrentActor() actorContext: ActorContext
   ): Promise<UserAuthenticationResult> {
-    const isCurrentActor = user.id === actorContext.actorId;
+    const isCurrentActor = user.id === actorContext.actorID;
     const platformAccessGranted = this.authorizationService.isAccessGranted(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
@@ -248,7 +248,7 @@ export class UserResolverFields {
       );
       if (hasGlobalAdminCredential) {
         this.logger.error(
-          `Agent: ${actorContext.actorId} is not authorized to access user: ${
+          `Agent: ${actorContext.actorID} is not authorized to access user: ${
             user.email
           }: authorization policy of user: ${JSON.stringify(authorization)}`
         );

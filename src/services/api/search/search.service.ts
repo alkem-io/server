@@ -58,7 +58,7 @@ export class SearchService {
       }
     }
     // search only in the public available data if the user is not authenticated
-    const onlyPublicResults = !actorContext.actorId;
+    const onlyPublicResults = !actorContext.actorID;
     const searchResults = await this.searchExtractService.search(
       searchData,
       onlyPublicResults

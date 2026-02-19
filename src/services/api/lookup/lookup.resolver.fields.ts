@@ -319,7 +319,7 @@ export class LookupResolverFields {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `user privileges field: ${actorContext.actorId}`
+      `user privileges field: ${actorContext.actorID}`
     );
     const authorization =
       await this.authorizationPolicyService.getAuthorizationPolicyOrFail(

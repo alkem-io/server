@@ -18,7 +18,7 @@ export class InAppNotificationPayloadSpaceCommunityActorResolverFields {
     @Loader(ActorLoaderCreator)
     loader: ILoader<IActor>
   ) {
-    return loader.load(payload.actorId);
+    return loader.load(payload.actorID);
   }
 
   @ResolveField(() => ISpace, {

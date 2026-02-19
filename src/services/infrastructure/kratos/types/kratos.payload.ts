@@ -11,7 +11,7 @@ export interface KratosPayload {
   /**
    * Alkemio actor ID from Kratos metadata_public.
    * Set by identity resolver webhook on registration/login.
-   * Used to skip user lookup - actorId is known directly from token.
+   * Used to skip user lookup - actorID is known directly from token.
    */
   alkemio_actor_id: string;
 }

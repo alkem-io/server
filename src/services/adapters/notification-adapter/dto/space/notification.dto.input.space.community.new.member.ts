@@ -4,7 +4,7 @@ import { NotificationInputBase } from '../notification.dto.input.base';
 
 export interface NotificationInputCommunityNewMember
   extends NotificationInputBase {
-  actorId: string;
+  actorID: string;
   actorType: ActorType;
   community: ICommunity;
 }

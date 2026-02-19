@@ -48,7 +48,7 @@ export class CommunicationResolverMutations {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `send user message from: ${actorContext.actorId}`
+      `send user message from: ${actorContext.actorID}`
     );
 
     for (const receiverId of messageData.receiverIds) {
@@ -69,13 +69,13 @@ export class CommunicationResolverMutations {
           LogContext.USER,
           {
             userId: receivingUser.id,
-            senderId: actorContext.actorId,
+            senderId: actorContext.actorID,
           }
         );
       }
 
       const notificationInput: NotificationInputUserMessage = {
-        triggeredBy: actorContext.actorId,
+        triggeredBy: actorContext.actorID,
         receiverID: receiverId,
         message: messageData.message,
       };
@@ -99,11 +99,11 @@ export class CommunicationResolverMutations {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `send message to organization ${messageData.organizationId} from: ${actorContext.actorId}`
+      `send message to organization ${messageData.organizationId} from: ${actorContext.actorID}`
     );
 
     const notificationInput: NotificationInputOrganizationMessage = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       message: messageData.message,
       organizationID: messageData.organizationId,
     };
@@ -126,11 +126,11 @@ export class CommunicationResolverMutations {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `send message to community ${messageData.communityId} from: ${actorContext.actorId}`
+      `send message to community ${messageData.communityId} from: ${actorContext.actorID}`
     );
 
     const notificationInput: NotificationInputCommunicationLeadsMessage = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       communityID: messageData.communityId,
       message: messageData.message,
     };

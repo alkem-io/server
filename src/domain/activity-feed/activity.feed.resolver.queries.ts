@@ -37,7 +37,7 @@ export class ActivityFeedResolverQueries {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Activity feed query: ${actorContext.actorId}`
+      `Activity feed query: ${actorContext.actorID}`
     );
 
     return this.feedService.getActivityFeed(actorContext, {
@@ -61,7 +61,7 @@ export class ActivityFeedResolverQueries {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Activity feed query: ${actorContext.actorId}`
+      `Activity feed query: ${actorContext.actorID}`
     );
 
     return this.feedService.getGroupedActivityFeed(actorContext, args);

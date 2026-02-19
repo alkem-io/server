@@ -38,7 +38,7 @@ export class AdminUsersMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `Remove Kratos account for User ${userID}: ${actorContext.actorId}`
+      `Remove Kratos account for User ${userID}: ${actorContext.actorID}`
     );
 
     const user = await this.userService.getUserByIdOrFail(userID);

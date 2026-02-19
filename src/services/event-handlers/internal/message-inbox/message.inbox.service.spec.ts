@@ -101,7 +101,7 @@ describe('MessageInboxService', () => {
         undefined as any
       );
       actorContextService.buildForActor.mockResolvedValue({
-        actorId: 'actor-1',
+        actorID: 'actor-1',
       } as any);
       messageNotificationService.processMessageNotifications.mockResolvedValue(
         undefined
@@ -117,7 +117,7 @@ describe('MessageInboxService', () => {
       ).toHaveBeenCalledWith(
         room,
         expect.objectContaining({ id: 'msg-1' }),
-        expect.objectContaining({ actorId: 'actor-1' }),
+        expect.objectContaining({ actorID: 'actor-1' }),
         undefined
       );
     });
@@ -255,7 +255,7 @@ describe('MessageInboxService', () => {
       await service.handleMessageEdited(
         new MessageEditedEvent({
           roomId: 'room-1',
-          senderActorId: 'actor-1',
+          senderActorID: 'actor-1',
           originalMessageId: 'orig-msg-1',
           newMessageId: 'new-msg-1',
           newContent: 'Updated content',
@@ -285,7 +285,7 @@ describe('MessageInboxService', () => {
       await service.handleMessageEdited(
         new MessageEditedEvent({
           roomId: 'room-1',
-          senderActorId: 'actor-1',
+          senderActorID: 'actor-1',
           originalMessageId: 'missing-msg',
           newMessageId: 'new-msg-1',
           newContent: 'Updated content',
@@ -317,7 +317,7 @@ describe('MessageInboxService', () => {
       await service.handleMessageRedacted(
         new MessageRedactedEvent({
           roomId: 'room-1',
-          redactorActorId: 'actor-1',
+          redactorActorID: 'actor-1',
           redactedMessageId: 'del-msg-1',
           redactionMessageId: 'redact-1',
           timestamp: 3000,
@@ -360,7 +360,7 @@ describe('MessageInboxService', () => {
       await service.handleMessageRedacted(
         new MessageRedactedEvent({
           roomId: 'room-1',
-          redactorActorId: 'actor-1',
+          redactorActorID: 'actor-1',
           redactedMessageId: 'del-msg-1',
           redactionMessageId: 'redact-1',
           timestamp: 3000,
@@ -389,7 +389,7 @@ describe('MessageInboxService', () => {
       await service.handleRoomReceiptUpdated(
         new RoomReceiptUpdatedEvent({
           roomId: 'room-1',
-          actorId: 'actor-1',
+          actorID: 'actor-1',
           eventId: 'evt-1',
           timestamp: 4000,
         })
@@ -399,7 +399,7 @@ describe('MessageInboxService', () => {
         subscriptionPublishService.publishRoomReceiptEvent
       ).toHaveBeenCalledWith(
         room,
-        expect.objectContaining({ actorId: 'actor-1' })
+        expect.objectContaining({ actorID: 'actor-1' })
       );
       expect(
         subscriptionPublishService.publishConversationEvent
@@ -421,7 +421,7 @@ describe('MessageInboxService', () => {
       await service.handleRoomReceiptUpdated(
         new RoomReceiptUpdatedEvent({
           roomId: 'room-1',
-          actorId: 'actor-1',
+          actorID: 'actor-1',
           eventId: 'evt-1',
           timestamp: 4000,
         })

@@ -107,7 +107,7 @@ interface RpcOptions<T extends CommandTopic> {
  * - Compatible with Watermill-based Go adapter via Direct Reply-To queue
  * - Uses Alkemio UUIDs exclusively (AlkemioActorID, AlkemioRoomID, AlkemioContextID)
  * - No Matrix ID management - adapter handles mapping internally
- * - Unified Actor Pattern: actorId = contributor.actor.id
+ * - Unified Actor Pattern: actorID = contributor.actor.id
  */
 @Injectable()
 export class CommunicationAdapter {
@@ -209,7 +209,7 @@ export class CommunicationAdapter {
    * Creates or updates the actor's profile in the Matrix adapter.
    */
   async syncActor(
-    actorId: AlkemioActorID,
+    actorID: AlkemioActorID,
     displayName: string,
     avatarUrl?: string
   ): Promise<boolean> {
@@ -219,11 +219,11 @@ export class CommunicationAdapter {
       operation: 'syncActor',
       topic: MatrixAdapterEventType.COMMUNICATION_ACTOR_SYNC,
       payload: {
-        actor_id: actorId,
+        actor_id: actorID,
         display_name: displayName,
         avatar_url: avatarUrl,
       } satisfies SyncActorRequest,
-      errorContext: { actorId },
+      errorContext: { actorID },
     });
 
     return response?.success ?? false;
@@ -374,7 +374,7 @@ export class CommunicationAdapter {
    */
   async getRoomAsUser(
     alkemioRoomId: AlkemioRoomID,
-    actorId: AlkemioActorID
+    actorID: AlkemioActorID
   ): Promise<IRoomWithReadState> {
     if (!this.enabled) {
       return {
@@ -388,7 +388,7 @@ export class CommunicationAdapter {
     }
 
     this.logger.verbose?.(
-      `Getting room as user: roomId=${alkemioRoomId}, actorId=${actorId}`,
+      `Getting room as user: roomId=${alkemioRoomId}, actorID=${actorID}`,
       LogContext.COMMUNICATION
     );
 
@@ -397,9 +397,9 @@ export class CommunicationAdapter {
       topic: MatrixAdapterEventType.COMMUNICATION_ROOM_GET_AS_USER,
       payload: {
         alkemio_room_id: alkemioRoomId,
-        actor_id: actorId,
+        actor_id: actorID,
       } satisfies GetRoomAsUserRequest,
-      errorContext: { alkemioRoomId, actorId },
+      errorContext: { alkemioRoomId, actorID },
       ensureSuccess: true,
     });
 
@@ -582,7 +582,7 @@ export class CommunicationAdapter {
    * Returns false on error (graceful handling for "already member" cases).
    */
   async batchAddMember(
-    actorId: AlkemioActorID,
+    actorID: AlkemioActorID,
     roomIds: AlkemioRoomID[]
   ): Promise<boolean> {
     if (!this.enabled || roomIds.length === 0) return true;
@@ -591,10 +591,10 @@ export class CommunicationAdapter {
       operation: 'batchAddMember',
       topic: MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_BATCH_ADD,
       payload: {
-        actor_id: actorId,
+        actor_id: actorID,
         alkemio_room_ids: roomIds,
       } satisfies BatchAddMemberRequest,
-      errorContext: { actorId, roomCount: roomIds.length },
+      errorContext: { actorID, roomCount: roomIds.length },
       onError: 'boolean',
     });
 
@@ -612,7 +612,7 @@ export class CommunicationAdapter {
    * Remove an actor from multiple rooms.
    */
   async batchRemoveMember(
-    actorId: AlkemioActorID,
+    actorID: AlkemioActorID,
     roomIds: AlkemioRoomID[],
     reason?: string
   ): Promise<boolean> {
@@ -622,11 +622,11 @@ export class CommunicationAdapter {
       operation: 'batchRemoveMember',
       topic: MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_BATCH_REMOVE,
       payload: {
-        actor_id: actorId,
+        actor_id: actorID,
         alkemio_room_ids: roomIds,
         reason,
       } satisfies BatchRemoveMemberRequest,
-      errorContext: { actorId, roomCount: roomIds.length },
+      errorContext: { actorID, roomCount: roomIds.length },
     });
 
     return response?.success ?? false;
@@ -655,7 +655,7 @@ export class CommunicationAdapter {
       topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_SEND,
       payload: {
         alkemio_room_id: sendMessageData.roomID,
-        sender_actor_id: sendMessageData.actorId,
+        sender_actor_id: sendMessageData.actorID,
         content: sendMessageData.message,
       } satisfies SendMessageRequest,
       errorContext: { roomID: sendMessageData.roomID },
@@ -670,7 +670,7 @@ export class CommunicationAdapter {
     return {
       id: response!.message_id,
       message: sendMessageData.message,
-      sender: sendMessageData.actorId,
+      sender: sendMessageData.actorID,
       timestamp: response!.timestamp,
       threadID: undefined,
       reactions: [],
@@ -689,7 +689,7 @@ export class CommunicationAdapter {
       topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_SEND,
       payload: {
         alkemio_room_id: sendMessageData.roomID,
-        sender_actor_id: sendMessageData.actorId,
+        sender_actor_id: sendMessageData.actorID,
         content: sendMessageData.message,
         parent_message_id: sendMessageData.threadID,
       } satisfies SendMessageRequest,
@@ -705,7 +705,7 @@ export class CommunicationAdapter {
     return {
       id: response!.message_id,
       message: sendMessageData.message,
-      sender: sendMessageData.actorId,
+      sender: sendMessageData.actorID,
       timestamp: response!.timestamp,
       threadID: sendMessageData.threadID,
       reactions: [],
@@ -725,7 +725,7 @@ export class CommunicationAdapter {
       payload: {
         alkemio_room_id: deleteMessageData.roomID,
         message_id: deleteMessageData.messageId,
-        sender_actor_id: deleteMessageData.actorId,
+        sender_actor_id: deleteMessageData.actorID,
       } satisfies DeleteMessageRequest,
       errorContext: {
         roomID: deleteMessageData.roomID,
@@ -754,7 +754,7 @@ export class CommunicationAdapter {
       payload: {
         alkemio_room_id: reactionData.alkemioRoomId,
         message_id: reactionData.messageId,
-        sender_actor_id: reactionData.actorId,
+        sender_actor_id: reactionData.actorID,
         emoji: reactionData.emoji,
       } satisfies AddReactionRequest,
       errorContext: {
@@ -772,7 +772,7 @@ export class CommunicationAdapter {
     return {
       id: response!.reaction_id,
       emoji: reactionData.emoji,
-      sender: reactionData.actorId,
+      sender: reactionData.actorID,
       timestamp: response!.timestamp,
     };
   }
@@ -790,7 +790,7 @@ export class CommunicationAdapter {
       payload: {
         alkemio_room_id: removeReactionData.alkemioRoomId,
         reaction_id: removeReactionData.reactionId,
-        sender_actor_id: removeReactionData.actorId,
+        sender_actor_id: removeReactionData.actorID,
       } satisfies RemoveReactionRequest,
       errorContext: {
         alkemioRoomId: removeReactionData.alkemioRoomId,
@@ -940,7 +940,7 @@ export class CommunicationAdapter {
    * Updates read receipts in Matrix.
    */
   async markMessageRead(
-    actorId: AlkemioActorID,
+    actorID: AlkemioActorID,
     alkemioRoomId: AlkemioRoomID,
     messageId: string,
     threadId?: string
@@ -951,12 +951,12 @@ export class CommunicationAdapter {
       operation: 'markMessageRead',
       topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_READ,
       payload: {
-        actor_id: actorId,
+        actor_id: actorID,
         alkemio_room_id: alkemioRoomId,
         message_id: messageId,
         thread_id: threadId,
       } satisfies MarkMessageReadRequest,
-      errorContext: { actorId, alkemioRoomId, messageId },
+      errorContext: { actorID, alkemioRoomId, messageId },
       ensureSuccess: true,
     });
 
@@ -971,7 +971,7 @@ export class CommunicationAdapter {
    * Returns room-level unread count and per-thread unread counts.
    */
   async getUnreadCounts(
-    actorId: AlkemioActorID,
+    actorID: AlkemioActorID,
     alkemioRoomId: AlkemioRoomID,
     threadIds?: string[]
   ): Promise<{
@@ -984,11 +984,11 @@ export class CommunicationAdapter {
       operation: 'getUnreadCounts',
       topic: MatrixAdapterEventType.COMMUNICATION_ROOM_UNREAD_COUNTS_GET,
       payload: {
-        actor_id: actorId,
+        actor_id: actorID,
         alkemio_room_id: alkemioRoomId,
         thread_ids: threadIds,
       } satisfies GetUnreadCountsRequest,
-      errorContext: { actorId, alkemioRoomId },
+      errorContext: { actorID, alkemioRoomId },
       ensureSuccess: true,
     });
 
@@ -1003,7 +1003,7 @@ export class CommunicationAdapter {
    * More efficient than calling getUnreadCounts for each room individually.
    */
   async batchGetUnreadCounts(
-    actorId: AlkemioActorID,
+    actorID: AlkemioActorID,
     alkemioRoomIds: AlkemioRoomID[]
   ): Promise<Record<string, number>> {
     if (!this.enabled || alkemioRoomIds.length === 0) return {};
@@ -1012,10 +1012,10 @@ export class CommunicationAdapter {
       operation: 'batchGetUnreadCounts',
       topic: MatrixAdapterEventType.COMMUNICATION_ROOM_BATCH_UNREAD_COUNTS_GET,
       payload: {
-        actor_id: actorId,
+        actor_id: actorID,
         alkemio_room_ids: alkemioRoomIds,
       } satisfies BatchGetUnreadCountsRequest,
-      errorContext: { actorId, roomCount: alkemioRoomIds.length },
+      errorContext: { actorID, roomCount: alkemioRoomIds.length },
       ensureSuccess: true,
     });
 
@@ -1085,7 +1085,7 @@ export class CommunicationAdapter {
     topic?: string;
     avatarUrl?: string;
     joinRule: string;
-    memberActorIds: string[];
+    memberActorIDs: string[];
     parentContextId?: string;
   } | null> {
     if (!this.enabled) return null;
@@ -1108,7 +1108,7 @@ export class CommunicationAdapter {
       topic: response.topic,
       avatarUrl: response.avatar_url,
       joinRule: response.join_rule,
-      memberActorIds: response.member_actor_ids,
+      memberActorIDs: response.member_actor_ids,
       parentContextId: response.parent_context_id,
     };
   }
@@ -1117,7 +1117,7 @@ export class CommunicationAdapter {
    * Add an actor to multiple Matrix spaces.
    */
   async batchAddSpaceMember(
-    actorId: AlkemioActorID,
+    actorID: AlkemioActorID,
     contextIds: AlkemioContextID[]
   ): Promise<boolean> {
     if (!this.enabled || contextIds.length === 0) return true;
@@ -1126,10 +1126,10 @@ export class CommunicationAdapter {
       operation: 'batchAddSpaceMember',
       topic: MatrixAdapterEventType.COMMUNICATION_SPACE_MEMBER_BATCH_ADD,
       payload: {
-        actor_id: actorId,
+        actor_id: actorID,
         alkemio_context_ids: contextIds,
       } satisfies BatchAddSpaceMemberRequest,
-      errorContext: { actorId, contextCount: contextIds.length },
+      errorContext: { actorID, contextCount: contextIds.length },
       onError: 'boolean',
     });
 
@@ -1147,7 +1147,7 @@ export class CommunicationAdapter {
    * Remove an actor from multiple Matrix spaces.
    */
   async batchRemoveSpaceMember(
-    actorId: AlkemioActorID,
+    actorID: AlkemioActorID,
     contextIds: AlkemioContextID[],
     reason?: string
   ): Promise<boolean> {
@@ -1157,11 +1157,11 @@ export class CommunicationAdapter {
       operation: 'batchRemoveSpaceMember',
       topic: MatrixAdapterEventType.COMMUNICATION_SPACE_MEMBER_BATCH_REMOVE,
       payload: {
-        actor_id: actorId,
+        actor_id: actorID,
         alkemio_context_ids: contextIds,
         reason,
       } satisfies BatchRemoveSpaceMemberRequest,
-      errorContext: { actorId, contextCount: contextIds.length },
+      errorContext: { actorID, contextCount: contextIds.length },
     });
 
     return response?.success ?? false;

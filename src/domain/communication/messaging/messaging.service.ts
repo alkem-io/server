@@ -380,13 +380,13 @@ export class MessagingService {
    * Uses the pivot table to find conversations where the agent is a member.
    * Optionally filters by conversation type.
    * @param messagingId - UUID of the messaging container (typically platform set)
-   * @param actorId - UUID of the agent
+   * @param actorID - UUID of the agent
    * @param typeFilter - Optional filter for conversation type (USER_USER or USER_VC)
    * @returns Array of conversations the agent is a member of
    */
   public async getConversationsForAgent(
     messagingId: string,
-    actorId: string,
+    actorID: string,
     typeFilter?: CommunicationConversationType
   ): Promise<IConversation[]> {
     const queryBuilder = this.conversationMembershipRepository
@@ -397,16 +397,16 @@ export class MessagingService {
       // just add the room relation to eliminate N queries
       .leftJoinAndSelect('conversation.room', 'room')
       .leftJoinAndSelect('room.authorization', 'roomAuthorization')
-      .where('membership.actorId = :actorId', { actorId })
+      .where('membership.actorID = :actorID', { actorID })
       .andWhere('conversation.messagingId = :messagingId', { messagingId });
 
     // Filter by type using subquery - O(1) instead of O(n)
     if (typeFilter) {
       // Subquery checks if conversation has a VC member
-      // ConversationMembership has actorId column; join to Actor table directly
+      // ConversationMembership has actorID column; join to Actor table directly
       const vcExistsSubquery = this.conversationMembershipRepository
         .createQueryBuilder('m2')
-        .innerJoin('actor', 'a', 'a.id = m2.actorId')
+        .innerJoin('actor', 'a', 'a.id = m2.actorID')
         .where('m2.conversationId = membership.conversationId')
         .andWhere('a.type = :vcType')
         .select('1');

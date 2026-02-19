@@ -101,14 +101,14 @@ export class CommunicationService {
 
   async addContributorToCommunications(
     communication: ICommunication,
-    contributorActorId: string
+    contributorActorID: string
   ): Promise<boolean> {
-    if (!contributorActorId) {
+    if (!contributorActorID) {
       // no actor ID to manage, just return
       return true;
     }
     const roomIds = this.getRoomIds(communication);
-    await this.communicationAdapter.batchAddMember(contributorActorId, roomIds);
+    await this.communicationAdapter.batchAddMember(contributorActorID, roomIds);
     return true;
   }
 
@@ -130,10 +130,10 @@ export class CommunicationService {
 
   async removeUserFromCommunications(
     communication: ICommunication,
-    actorId: string
+    actorID: string
   ): Promise<boolean> {
     const roomIds = this.getRoomIds(communication);
-    await this.communicationAdapter.batchRemoveMember(actorId, roomIds);
+    await this.communicationAdapter.batchRemoveMember(actorID, roomIds);
     return true;
   }
 }

@@ -24,7 +24,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationActorPrivilege } from '@src/common/decorators';
+import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { ISpace } from '../space/space.interface';
 import { IAccountSubscription } from './account.license.subscription.interface';
@@ -142,7 +142,7 @@ export class AccountResolverFields {
     return loader.load(account.id);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: false,

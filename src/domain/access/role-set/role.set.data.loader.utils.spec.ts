@@ -13,13 +13,13 @@ import { ActorRoleKey } from './types';
 /* ───────── helpers ───────── */
 
 function makeActorRoleKey(
-  actorId: string,
+  actorID: string,
   userID: string,
   roleSetId: string,
   roles?: any[]
 ): ActorRoleKey {
   return {
-    actorContext: { actorId, userID } as any,
+    actorContext: { actorID, userID } as any,
     roleSet: { id: roleSetId, roles } as unknown as IRoleSet,
   };
 }
@@ -39,8 +39,8 @@ describe('loadActorCredentials', () => {
     actorService = {
       getActorCredentials: vi
         .fn()
-        .mockImplementation(async (actorId: string) => ({
-          actor: { id: actorId },
+        .mockImplementation(async (actorID: string) => ({
+          actor: { id: actorID },
           credentials: [],
         })),
     };
@@ -107,8 +107,8 @@ describe('loadActorCredentials', () => {
   it('should return the map from actorService', async () => {
     const cred = makeCredential('space-member', 'space-123');
     actorService.getActorCredentials.mockImplementation(
-      async (actorId: string) => ({
-        actor: { id: actorId } as any,
+      async (actorID: string) => ({
+        actor: { id: actorID } as any,
         credentials: [cred],
       })
     );

@@ -5,14 +5,14 @@ import { IActor } from '@domain/actor/actor/actor.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationActorPrivilege, Profiling } from '@src/common/decorators';
+import { AuthorizationActorHasPrivilege, Profiling } from '@src/common/decorators';
 import { InvitationService } from './invitation.service';
 
 @Resolver(() => IInvitation)
 export class InvitationResolverFields {
   constructor(private invitationService: InvitationService) {}
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('contributor', () => IActor, {
     nullable: false,
@@ -23,7 +23,7 @@ export class InvitationResolverFields {
     return await this.invitationService.getInvitedActor(invitation);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('createdBy', () => IUser, {
     nullable: true,

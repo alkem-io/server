@@ -45,10 +45,10 @@ export class ConversationEventResolverSubscription {
         }
 
         // User must be a member of the conversation
-        const isMember = payload.memberAgentIds.includes(actorContext.actorId);
+        const isMember = payload.memberAgentIds.includes(actorContext.actorID);
 
         this.logger.verbose?.(
-          `[Conversation Events] Filtering event ${payload.eventID} for user ${actorContext.actorId}: member=${isMember}`,
+          `[Conversation Events] Filtering event ${payload.eventID} for user ${actorContext.actorID}: member=${isMember}`,
           LogContext.SUBSCRIPTIONS
         );
 
@@ -83,7 +83,7 @@ export class ConversationEventResolverSubscription {
     }
   )
   public async conversationEvents(@CurrentActor() actorContext: ActorContext) {
-    if (!actorContext.actorId) {
+    if (!actorContext.actorID) {
       throw new ForbiddenException(
         'User could not be resolved',
         LogContext.COMMUNICATION_CONVERSATION,
@@ -92,7 +92,7 @@ export class ConversationEventResolverSubscription {
     }
 
     this.logger.verbose?.(
-      `[Conversation Events] User ${actorContext.actorId} subscribed to conversation events`,
+      `[Conversation Events] User ${actorContext.actorID} subscribed to conversation events`,
       LogContext.SUBSCRIPTIONS
     );
 

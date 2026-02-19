@@ -1,4 +1,4 @@
-import { AuthorizationActorPrivilege } from '@common/decorators';
+import { AuthorizationActorHasPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -43,7 +43,7 @@ export class SpaceAboutResolverFields {
     return loader.load(space.id);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('metrics', () => [INVP], {
     nullable: true,
@@ -57,7 +57,7 @@ export class SpaceAboutResolverFields {
     return loader.load(spaceAbout.id);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('provider', () => IActor, {
     nullable: true,
@@ -71,7 +71,7 @@ export class SpaceAboutResolverFields {
     return loader.load(spaceAbout.id);
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('isContentPublic', () => Boolean, {
     nullable: false,
@@ -102,7 +102,7 @@ export class SpaceAboutResolverFields {
     );
   }
 
-  @AuthorizationActorPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('membership', () => SpaceAboutMembership, {
     nullable: false,

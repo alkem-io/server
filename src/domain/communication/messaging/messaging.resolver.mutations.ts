@@ -66,7 +66,7 @@ export class MessagingResolverMutations {
 
     // Resolve current user's agent ID
     const currentUser = await this.userLookupService.getUserByIdOrFail(
-      actorContext.actorId
+      actorContext.actorID
     );
     const callerAgentId = currentUser.id;
 
@@ -111,7 +111,7 @@ export class MessagingResolverMutations {
       actorContext,
       receivingUser.authorization,
       AuthorizationPrivilege.READ,
-      `user ${actorContext.actorId} starting conversation with: ${receivingUser.id}`
+      `user ${actorContext.actorID} starting conversation with: ${receivingUser.id}`
     );
 
     if (!receivingUser.settings) {
@@ -128,7 +128,7 @@ export class MessagingResolverMutations {
         LogContext.USER,
         {
           userId: receivingUser.id,
-          senderId: actorContext.actorId,
+          senderId: actorContext.actorID,
         }
       );
     }

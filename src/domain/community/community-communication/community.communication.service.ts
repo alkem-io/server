@@ -13,10 +13,10 @@ export class CommunityCommunicationService {
 
   public async addMemberToCommunication(
     communication: ICommunication,
-    actorId: string
+    actorID: string
   ): Promise<void> {
     this.communicationService
-      .addContributorToCommunications(communication, actorId)
+      .addContributorToCommunications(communication, actorID)
       .catch(error =>
         this.logger.error(
           {
@@ -32,10 +32,10 @@ export class CommunityCommunicationService {
 
   public async removeMemberFromCommunication(
     communication: ICommunication,
-    actorId: string
+    actorID: string
   ): Promise<void> {
     this.communicationService
-      .removeUserFromCommunications(communication, actorId)
+      .removeUserFromCommunications(communication, actorID)
       .catch(error =>
         this.logger.error(
           {

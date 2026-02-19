@@ -1,7 +1,7 @@
 import { RoleName } from '@common/enums/role.name';
 
 export class CreateInvitationInput {
-  invitedActorId!: string;
+  invitedActorID!: string;
 
   welcomeMessage?: string;
 

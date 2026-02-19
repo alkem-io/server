@@ -390,7 +390,7 @@ describe('CalendarService', () => {
       overrides?: Partial<ActorContext>
     ): ActorContext => {
       const actorContext = new ActorContext();
-      actorContext.actorId = 'user-1';
+      actorContext.actorID = 'user-1';
       Object.assign(actorContext, overrides);
       return actorContext;
     };
@@ -569,7 +569,7 @@ describe('CalendarService', () => {
     it('should emit activity event and report contribution when spaceID exists', async () => {
       // Arrange
       const actorContext = new ActorContext();
-      actorContext.actorId = 'user-1';
+      actorContext.actorID = 'user-1';
 
       const mockCalendar = { id: 'calendar-1' } as ICalendar;
       const mockEvent = {
@@ -612,7 +612,7 @@ describe('CalendarService', () => {
     it('should emit activity event but skip contribution report when spaceID is null', async () => {
       // Arrange
       const actorContext = new ActorContext();
-      actorContext.actorId = 'user-1';
+      actorContext.actorID = 'user-1';
 
       const mockCalendar = { id: 'calendar-1' } as ICalendar;
       const mockEvent = {

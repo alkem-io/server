@@ -517,15 +517,15 @@ export class KratosService {
       }
 
       const oryIdentity = session.identity as OryDefaultIdentitySchema;
-      const actorId = oryIdentity.metadata_public?.alkemio_actor_id;
-      if (!actorId) {
+      const actorID = oryIdentity.metadata_public?.alkemio_actor_id;
+      if (!actorID) {
         this.logger.warn?.(
           'Session identity missing alkemio_actor_id in metadata_public',
           LogContext.EXCALIDRAW_SERVER
         );
         return authActorInfoService.createAnonymous();
       }
-      return authService.createActorContext(actorId, session);
+      return authService.createActorContext(actorID, session);
     } catch (e: any) {
       throw new Error(e?.message);
     }

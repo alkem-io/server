@@ -72,7 +72,7 @@ describe('VirtualActorLookupService', () => {
   });
 
   describe('getVirtualContributorAndActor', () => {
-    it('should return virtual contributor and actorId when VC is found', async () => {
+    it('should return virtual contributor and actorID when VC is found', async () => {
       const validId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
       const mockCredentials = [{ id: 'cred-1' }];
       const mockVC = { id: validId, credentials: mockCredentials };
@@ -80,7 +80,7 @@ describe('VirtualActorLookupService', () => {
 
       const result = await service.getVirtualContributorAndActor(validId);
       expect(result.virtualContributor).toBe(mockVC);
-      expect(result.actorId).toBe(validId);
+      expect(result.actorID).toBe(validId);
       expect(result.credentials).toBe(mockCredentials);
     });
 

@@ -128,7 +128,7 @@ export class AccountResolverMutations {
     }
 
     const notificationInput: NotificationInputSpaceCreated = {
-      triggeredBy: actorContext.actorId,
+      triggeredBy: actorContext.actorID,
       space,
     };
     await this.notificationPlatformAdapter.platformSpaceCreated(
@@ -295,7 +295,7 @@ export class AccountResolverMutations {
       actorContext,
       account.authorization,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization definition on Space: ${actorContext.actorId}`
+      `reset authorization definition on Space: ${actorContext.actorID}`
     );
     const accountAuthorizations =
       await this.accountAuthorizationService.applyAuthorizationPolicy(account);
@@ -323,7 +323,7 @@ export class AccountResolverMutations {
       actorContext,
       account.authorization,
       AuthorizationPrivilege.LICENSE_RESET,
-      `reset license definition on Account: ${actorContext.actorId}`
+      `reset license definition on Account: ${actorContext.actorID}`
     );
     const accountLicenses = await this.accountLicenseService.applyLicensePolicy(
       account.id
@@ -347,7 +347,7 @@ export class AccountResolverMutations {
       actorContext,
       account.authorization,
       AuthorizationPrivilege.ACCOUNT_LICENSE_MANAGE,
-      `update baseline license plan on Account: ${actorContext.actorId}`
+      `update baseline license plan on Account: ${actorContext.actorID}`
     );
     account.baselineLicensePlan =
       this.accountLicensePlanService.updateLicensePlan(
@@ -568,13 +568,13 @@ export class AccountResolverMutations {
       actorContext,
       currentAccount.authorization,
       AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
-      `transfer ${resourceName} to another Account: ${actorContext.actorId}`
+      `transfer ${resourceName} to another Account: ${actorContext.actorID}`
     );
     this.authorizationService.grantAccessOrFail(
       actorContext,
       targetAccount.authorization,
       AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
-      `transfer ${resourceName} to target Account: ${actorContext.actorId}`
+      `transfer ${resourceName} to target Account: ${actorContext.actorID}`
     );
   }
 

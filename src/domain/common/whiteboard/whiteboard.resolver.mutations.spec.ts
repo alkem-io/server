@@ -77,7 +77,7 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
   it('returns success payload when toggle completes', async () => {
     const { resolver, whiteboardGuestAccessService } = createResolver();
     const actorContext = new ActorContext();
-    actorContext.actorId = 'user-1';
+    actorContext.actorID = 'user-1';
     const whiteboard = { id: 'wb-1' } as IWhiteboard;
     whiteboardGuestAccessService.updateGuestAccess.mockResolvedValueOnce(
       whiteboard
@@ -105,7 +105,7 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
   it('returns success payload when disabling guest access', async () => {
     const { resolver, whiteboardGuestAccessService } = createResolver();
     const actorContext = new ActorContext();
-    actorContext.actorId = 'user-1';
+    actorContext.actorID = 'user-1';
     const whiteboard = {
       id: 'wb-1',
       guestContributionsAllowed: false,
@@ -131,7 +131,7 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
   it('rethrows authorization failure so GraphQL surfaces the error', async () => {
     const { resolver, whiteboardGuestAccessService } = createResolver();
     const actorContext = new ActorContext();
-    actorContext.actorId = 'user-2';
+    actorContext.actorID = 'user-2';
     const exception = new ForbiddenAuthorizationPolicyException(
       'missing PUBLIC_SHARE',
       AuthorizationPrivilege.PUBLIC_SHARE,
@@ -155,7 +155,7 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
   it('rethrows forbidden errors for GraphQL handling', async () => {
     const { resolver, whiteboardGuestAccessService } = createResolver();
     const actorContext = new ActorContext();
-    actorContext.actorId = 'user-3';
+    actorContext.actorID = 'user-3';
     const exception = new ForbiddenException(
       'Guest contributions are disabled for the space',
       LogContext.COLLABORATION
@@ -175,7 +175,7 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
   it('rethrows not found exceptions', async () => {
     const { resolver, whiteboardGuestAccessService } = createResolver();
     const actorContext = new ActorContext();
-    actorContext.actorId = 'user-4';
+    actorContext.actorID = 'user-4';
     const exception = new EntityNotFoundException(
       'missing whiteboard',
       LogContext.COLLABORATION
@@ -195,7 +195,7 @@ describe('WhiteboardResolverMutations - updateWhiteboardGuestAccess', () => {
   it('propagates unexpected errors to preserve stack traces', async () => {
     const { resolver, whiteboardGuestAccessService } = createResolver();
     const actorContext = new ActorContext();
-    actorContext.actorId = 'user-5';
+    actorContext.actorID = 'user-5';
     const exception = new Error('boom');
     whiteboardGuestAccessService.updateGuestAccess.mockRejectedValueOnce(
       exception

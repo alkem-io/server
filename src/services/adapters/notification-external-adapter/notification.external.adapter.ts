@@ -456,7 +456,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     space: ISpace,
-    actorId: string
+    actorID: string
   ): Promise<NotificationEventPayloadSpaceCommunityContributor> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
@@ -464,7 +464,7 @@ export class NotificationExternalAdapter {
       recipients,
       space
     );
-    const memberPayload = await this.getContributorPayloadOrFail(actorId);
+    const memberPayload = await this.getContributorPayloadOrFail(actorID);
     const payload: NotificationEventPayloadSpaceCommunityContributor = {
       contributor: memberPayload,
       ...spacePayload,
@@ -958,10 +958,10 @@ export class NotificationExternalAdapter {
   }
 
   private async getContributorPayloadOrFail(
-    actorId: string
+    actorID: string
   ): Promise<ContributorPayload> {
     const contributor = await this.actorLookupService.getFullActorByIdOrFail(
-      actorId,
+      actorID,
       {
         relations: {
           profile: true,
@@ -971,7 +971,7 @@ export class NotificationExternalAdapter {
 
     if (!contributor || !contributor.profile) {
       throw new EntityNotFoundException(
-        `Unable to find Contributor with profile for id: ${actorId}`,
+        `Unable to find Contributor with profile for id: ${actorID}`,
         LogContext.COMMUNITY
       );
     }
@@ -992,10 +992,10 @@ export class NotificationExternalAdapter {
   }
 
   private async getContributorPayloadByAgentIdOrFail(
-    actorId: string
+    actorID: string
   ): Promise<ContributorPayload> {
     const contributor = await this.actorLookupService.getFullActorByIdOrFail(
-      actorId,
+      actorID,
       {
         relations: {
           profile: true,
@@ -1005,7 +1005,7 @@ export class NotificationExternalAdapter {
 
     if (!contributor || !contributor.profile) {
       throw new EntityNotFoundException(
-        `Unable to find Contributor with profile for agent id: ${actorId}`,
+        `Unable to find Contributor with profile for agent id: ${actorID}`,
         LogContext.COMMUNITY
       );
     }
@@ -1068,9 +1068,9 @@ export class NotificationExternalAdapter {
   }
 
   private async getContributorPayloadOrEmpty(
-    actorId: string | undefined
+    actorID: string | undefined
   ): Promise<ContributorPayload> {
-    if (!actorId) {
+    if (!actorID) {
       return {
         id: '',
         profile: {
@@ -1081,6 +1081,6 @@ export class NotificationExternalAdapter {
       };
     }
 
-    return await this.getContributorPayloadOrFail(actorId);
+    return await this.getContributorPayloadOrFail(actorID);
   }
 }

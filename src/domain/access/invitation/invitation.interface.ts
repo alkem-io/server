@@ -6,7 +6,7 @@ import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('Invitation')
 export class IInvitation extends IAuthorizable {
-  invitedActorId!: string;
+  invitedActorID!: string;
   createdBy!: string;
 
   roleSet?: IRoleSet;
