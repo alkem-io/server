@@ -6,6 +6,7 @@ import { CreateInAppNotificationInput } from '@platform/in-app-notification/dto/
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { NotificationPushAdapter } from '@services/adapters/notification-push-adapter/notification.push.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
@@ -18,7 +19,8 @@ export class NotificationInAppAdapter {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private subscriptionPublishService: SubscriptionPublishService,
-    private inAppNotificationService: InAppNotificationService
+    private inAppNotificationService: InAppNotificationService,
+    private notificationPushAdapter: NotificationPushAdapter
   ) {}
 
   public async sendInAppNotifications(
@@ -109,5 +111,20 @@ export class NotificationInAppAdapter {
         );
       }
     });
+
+    // Send push notifications (fire-and-forget, non-blocking)
+    try {
+      const pushPayload = this.notificationPushAdapter.buildPushPayload(type);
+      await this.notificationPushAdapter.sendPushNotifications(
+        type,
+        uniqueReceiverIDs,
+        pushPayload
+      );
+    } catch (pushError: any) {
+      this.logger.warn(
+        'Failed to send push notifications',
+        LogContext.IN_APP_NOTIFICATION
+      );
+    }
   }
 }

@@ -414,6 +414,11 @@ notifications:
   in_app:
     max_notifications_per_user: ${IN_APP_MAX_NOTIFICATIONS_PER_USER}:100
     max_retention_period_days: ${IN_APP_MAX_RETENTION_PERIOD_DAYS}:90
+  push:
+    enabled: ${NOTIFICATIONS_PUSH_ENABLED}:false
+    vapid_subject: ${NOTIFICATIONS_PUSH_VAPID_SUBJECT}:mailto:notifications@alkemio.org
+    vapid_public_key: ${NOTIFICATIONS_PUSH_VAPID_PUBLIC_KEY}:
+    vapid_private_key: ${NOTIFICATIONS_PUSH_VAPID_PRIVATE_KEY}:
 
 collaboration:
   membership:

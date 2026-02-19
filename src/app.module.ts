@@ -95,6 +95,7 @@ import { ApmApolloPlugin } from './apm/plugins';
 import { PlatformAdminModule } from './platform-admin/admin/platform.admin.module';
 import { InAppNotificationAdminModule } from './platform-admin/in-app-notification/in.app.notification.admin.module';
 import { AdminSearchIngestModule } from './platform-admin/services/search/admin.search.ingest.module';
+import { PushSubscriptionModule } from '@platform/push-subscription/push.subscription.module';
 
 @Module({
   imports: [
@@ -312,6 +313,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     PlatformHubModule,
     PlatformAdminModule,
     InAppNotificationAdminModule,
+    PushSubscriptionModule,
     ContributionMoveModule,
     GeoLocationModule,
     ContributionReporterModule,

@@ -202,6 +202,12 @@ export type AlkemioConfig = {
       max_notifications_per_user: number;
       max_retention_period_days: number;
     };
+    push: {
+      enabled: boolean;
+      vapid_subject: string;
+      vapid_public_key: string;
+      vapid_private_key: string;
+    };
   };
   collaboration: {
     membership: {
