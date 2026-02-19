@@ -95,35 +95,28 @@ export class OrganizationLookupService {
       },
     }));
 
+    // Spread options first so our critical values (where, relations, take) always win
+    const optionsRelations = options?.relations as
+      | Record<string, unknown>
+      | undefined;
+
     const findOptions: FindManyOptions<Organization> = {
+      ...options,
       where: whereConditions,
       relations: {
+        ...optionsRelations,
         agent: {
           credentials: true,
+          ...(optionsRelations?.agent as Record<string, unknown>),
         },
-        ...options?.relations,
       },
       take: limit,
-      ...options,
     };
 
-    if (options?.relations) {
-      findOptions.relations = {
-        ...findOptions.relations,
-        ...options.relations,
-        agent: {
-          credentials: true,
-          ...(options.relations as any)?.agent,
-        },
-      };
-    }
-
-    const organizations = await this.entityManager.find(
+    return this.entityManager.find(
       Organization,
       findOptions
-    );
-
-    return organizations;
+    );;
   }
 
   async countOrganizationsWithCredentials(

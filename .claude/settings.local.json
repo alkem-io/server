@@ -14,7 +14,6 @@
       "Bash(npx tsc:*)",
       "Bash(.specify/scripts/bash/check-prerequisites.sh:*)",
       "Bash(bash restore_latest_backup_set.sh acc)",
-      "Bash(npx tsc:*)",
       "mcp__ide__getDiagnostics"
     ]
   }

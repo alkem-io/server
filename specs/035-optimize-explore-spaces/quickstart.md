@@ -90,7 +90,7 @@ After deployment, compare `transaction.span_count.started` for the `ExploreAllSp
 
 | Stage | SQL queries | Notes |
 | --- | --- | --- |
-| Baseline (old) | 34 | N+1 credential lookups: 60 queries for 30 spaces |
+| Baseline (old) | 34 | Measured with local dev dataset (~7 spaces); N+1 credential lookups scale to ~60 queries for the default 30-space limit |
 | After Phases 1–4 | 14 | Credential lookups batched into 2 queries |
 | After Phase 5 | 13 | `SpaceCommunityWithRoleSetLoaderCreator` merged into `SpaceBySpaceAboutIdLoaderCreator` |
 | Theoretical minimum | 9 | Requires architectural changes (deferred) |
