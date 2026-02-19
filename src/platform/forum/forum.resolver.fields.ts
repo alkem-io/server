@@ -3,7 +3,10 @@ import { GraphqlGuard } from '@core/authorization';
 import { UUID } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationActorHasPrivilege, Profiling } from '@src/common/decorators';
+import {
+  AuthorizationActorHasPrivilege,
+  Profiling,
+} from '@src/common/decorators';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
 import { DiscussionsInput } from './dto/forum.dto.discussions.input';
 import { IForum } from './forum.interface';

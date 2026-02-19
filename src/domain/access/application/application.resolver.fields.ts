@@ -5,7 +5,10 @@ import { IActor } from '@domain/actor/actor/actor.interface';
 import { IQuestion } from '@domain/common/question/question.interface';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationActorHasPrivilege, Profiling } from '@src/common/decorators';
+import {
+  AuthorizationActorHasPrivilege,
+  Profiling,
+} from '@src/common/decorators';
 import { ApplicationService } from './application.service';
 
 @Resolver(() => IApplication)

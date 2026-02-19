@@ -5,12 +5,12 @@ import {
   AuthorizationRoleGlobal,
   LogContext,
 } from '@common/enums';
+import { CredentialType } from '@common/enums/credential.type';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IActorFull } from '@domain/actor/actor/actor.interface';
 import { ActorService } from '@domain/actor/actor/actor.service';
-import { CredentialType } from '@common/enums/credential.type';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IOrganization } from '@domain/community/organization';

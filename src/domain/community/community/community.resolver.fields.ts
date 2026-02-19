@@ -10,7 +10,10 @@ import { Community, ICommunity } from '@domain/community/community';
 import { IUserGroup } from '@domain/community/user-group';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationActorHasPrivilege, Profiling } from '@src/common/decorators';
+import {
+  AuthorizationActorHasPrivilege,
+  Profiling,
+} from '@src/common/decorators';
 import { CommunityService } from './community.service';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {

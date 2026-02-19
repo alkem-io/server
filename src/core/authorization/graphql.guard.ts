@@ -1,6 +1,5 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
-import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import {
   AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
@@ -166,5 +165,4 @@ export class GraphqlGuard extends AuthGuard([
     );
     rule.execute(resultActorContext);
   }
-
 }

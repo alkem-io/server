@@ -1,4 +1,7 @@
-import { AuthorizationActorHasPrivilege, CurrentActor } from '@common/decorators';
+import {
+  AuthorizationActorHasPrivilege,
+  CurrentActor,
+} from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { VirtualContributorStatus } from '@common/enums/virtual.contributor.status.enum';
