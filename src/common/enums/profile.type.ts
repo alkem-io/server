@@ -18,7 +18,7 @@ export enum ProfileType {
   INNOVATION_PACK = 'innovation-pack',
   TEMPLATE = 'template',
   COMMUNITY_GUIDELINES = 'community-guidelines',
-  VIRTUAL = 'virtual-contributor',
+  VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
   VIRTUAL_PERSONA = 'virtual-persona',
 }
 

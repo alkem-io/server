@@ -146,7 +146,7 @@ export class VirtualContributorService {
 
     virtualContributor.profile = await this.profileService.createProfile(
       virtualContributorData.profileData,
-      ProfileType.VIRTUAL,
+      ProfileType.VIRTUAL_CONTRIBUTOR,
       storageAggregator
     );
     await this.profileService.addOrUpdateTagsetOnProfile(

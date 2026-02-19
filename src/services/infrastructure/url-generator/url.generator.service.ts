@@ -111,7 +111,7 @@ export class UrlGeneratorService {
         );
         return this.createUrlForUserNameID(userEntityInfo.entityNameID);
       }
-      case ProfileType.VIRTUAL: {
+      case ProfileType.VIRTUAL_CONTRIBUTOR: {
         const vcEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
           'virtual_contributor',
           profile.id
