@@ -8,7 +8,7 @@ export const virtualContributorData: {
   virtualContributor: IVirtualContributor;
 } = {
   virtualContributor: {
-    type: ActorType.VIRTUAL,
+    type: ActorType.VIRTUAL_CONTRIBUTOR,
     rowId: 1,
     id: '08a43f9f-58e7-4c65-bf38-be283a548b3b',
     nameID: 'bridgeuniandbusiness',
