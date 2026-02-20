@@ -169,13 +169,14 @@ export class VirtualContributorService {
       virtualContributorData.profileData
     );
 
-    // Pre-save Actor before saving VirtualContributor.
+    // Save Actor and VirtualContributor in a single transaction.
     // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-    // reliably set FK columns for new cascaded entities on the parent.
-    await this.virtualContributorRepository.manager.save(
-      (virtualContributor as VirtualContributor).actor!
-    );
-    virtualContributor = await this.save(virtualContributor);
+    // reliably set FK columns, so we pre-save Actor explicitly.
+    virtualContributor =
+      await this.virtualContributorRepository.manager.transaction(async mgr => {
+        await mgr.save((virtualContributor as VirtualContributor).actor!);
+        return await mgr.save(virtualContributor as VirtualContributor);
+      });
 
     const userID = actorContext?.actorID;
     await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(

@@ -89,14 +89,14 @@ export class AccountHostService {
       ],
     });
 
-    // Pre-save Actor and License before saving Account.
+    // Save Actor, License, and Account in a single transaction.
     // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-    // reliably set FK columns for new cascaded entities on the parent.
-    const mgr = this.accountRepository.manager;
-    await mgr.save((account as Account).actor!);
-    account.license = await mgr.save(account.license);
-
-    return await this.accountRepository.save(account);
+    // reliably set FK columns, so we pre-save children explicitly.
+    return await this.accountRepository.manager.transaction(async mgr => {
+      await mgr.save((account as Account).actor!);
+      account.license = await mgr.save(account.license);
+      return await mgr.save(account);
+    });
   }
 
   private getBaselineAccountLicensePlan(): IAccountLicensePlan {

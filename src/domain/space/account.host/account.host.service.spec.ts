@@ -59,7 +59,12 @@ describe('AccountHostService', () => {
       const mgrSaveSpy = vi.fn().mockImplementation(entity => entity);
       service['accountRepository'] = {
         save: saveSpy,
-        manager: { save: mgrSaveSpy },
+        manager: {
+          save: mgrSaveSpy,
+          transaction: vi
+            .fn()
+            .mockImplementation(cb => cb({ save: mgrSaveSpy })),
+        },
       } as any;
 
       // Act
@@ -72,7 +77,7 @@ describe('AccountHostService', () => {
       );
       expect(result.storageAggregator).toBe(mockStorageAggregator);
       expect(result.license).toBe(mockLicense);
-      expect(saveSpy).toHaveBeenCalled();
+      expect(mgrSaveSpy).toHaveBeenCalled();
     });
 
     it('should create license with all entitlement types initialized to 0 and disabled', async () => {
@@ -82,9 +87,13 @@ describe('AccountHostService', () => {
         .mockResolvedValue({});
       const createLicenseSpy = vi.fn().mockReturnValue({});
       licenseService.createLicense = createLicenseSpy;
+      const mgrSave = vi.fn().mockImplementation(a => a);
       service['accountRepository'] = {
         save: vi.fn().mockImplementation(a => a),
-        manager: { save: vi.fn().mockImplementation(a => a) },
+        manager: {
+          save: mgrSave,
+          transaction: vi.fn().mockImplementation(cb => cb({ save: mgrSave })),
+        },
       } as any;
 
       // Act

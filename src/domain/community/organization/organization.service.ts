@@ -151,13 +151,15 @@ export class OrganizationService {
     // Cache some of the contents before saving
     const roleSetBeforeSave = organization.roleSet;
 
-    // Pre-save Actor before saving Organization.
+    // Save Actor and Organization in a single transaction.
     // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-    // reliably set FK columns for new cascaded entities on the parent.
-    await this.organizationRepository.manager.save(
-      (organization as Organization).actor!
+    // reliably set FK columns, so we pre-save Actor explicitly.
+    organization = await this.organizationRepository.manager.transaction(
+      async mgr => {
+        await mgr.save((organization as Organization).actor!);
+        return await mgr.save(organization as Organization);
+      }
     );
-    organization = await this.save(organization);
     this.logger.verbose?.(
       `Created new organization with id ${organization.id}`,
       LogContext.COMMUNITY

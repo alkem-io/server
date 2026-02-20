@@ -187,14 +187,14 @@ export class SpaceService {
     );
 
     space.levelZeroSpaceID = spaceData.levelZeroSpaceID;
-    // Pre-save Actor and License before saving Space.
+    // Save Actor, License, and Space in a single transaction.
     // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-    // reliably set FK columns for new cascaded entities on the parent.
-    const mgr = this.spaceRepository.manager;
-    await mgr.save((space as Space).actor!);
-    space.license = await mgr.save(space.license);
-    // save the space and all its relations
-    await this.save(space);
+    // reliably set FK columns, so we pre-save children explicitly.
+    await this.spaceRepository.manager.transaction(async mgr => {
+      await mgr.save((space as Space).actor!);
+      space.license = await mgr.save(space.license);
+      await mgr.save(space as Space);
+    });
 
     if (spaceData.level === SpaceLevel.L0) {
       space.levelZeroSpaceID = space.id;

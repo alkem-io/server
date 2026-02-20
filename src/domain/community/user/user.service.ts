@@ -172,11 +172,14 @@ export class UserService {
     );
     user.accountID = account.id;
 
-    // Pre-save Actor and Settings before saving User.
-    // TypeORM's cascade doesn't reliably set FK columns on the parent entity.
-    await this.userRepository.manager.save((user as User).actor!);
-    user.settings = await this.userRepository.manager.save(user.settings);
-    user = await this.save(user);
+    // Save Actor, Settings, and User in a single transaction.
+    // TypeORM's cascade doesn't reliably set FK columns on the parent entity,
+    // so we pre-save children explicitly within a transaction.
+    user = await this.userRepository.manager.transaction(async mgr => {
+      await mgr.save((user as User).actor!);
+      user.settings = await mgr.save(user.settings);
+      return await mgr.save(user as User);
+    });
 
     await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
       user.profile.id,
