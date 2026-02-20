@@ -147,29 +147,46 @@ export class StorageBucketService {
     userID: string,
     temporaryDocument = false
   ): Promise<IDocument> {
-    const buffer = await streamToBuffer(readStream);
+    try {
+      const buffer = await streamToBuffer(readStream);
 
-    // Process image: HEIC conversion + optimization
-    const conversionResult = await this.imageConversionService.convertIfNeeded(
-      buffer,
-      mimeType,
-      filename
-    );
-    const compressionResult =
-      await this.imageCompressionService.compressIfNeeded(
-        conversionResult.buffer,
-        conversionResult.mimeType,
-        conversionResult.fileName
+      // Process image: HEIC conversion + optimization
+      const conversionResult =
+        await this.imageConversionService.convertIfNeeded(
+          buffer,
+          mimeType,
+          filename
+        );
+      const compressionResult =
+        await this.imageCompressionService.compressIfNeeded(
+          conversionResult.buffer,
+          conversionResult.mimeType,
+          conversionResult.fileName
+        );
+
+      return await this.uploadFileAsDocumentFromBuffer(
+        storageBucketId,
+        compressionResult.buffer,
+        compressionResult.fileName,
+        compressionResult.mimeType,
+        userID,
+        temporaryDocument
       );
-
-    return await this.uploadFileAsDocumentFromBuffer(
-      storageBucketId,
-      compressionResult.buffer,
-      compressionResult.fileName,
-      compressionResult.mimeType,
-      userID,
-      temporaryDocument
-    );
+    } catch (error: any) {
+      if (error instanceof StorageUploadFailedException) {
+        throw error;
+      }
+      throw new StorageUploadFailedException(
+        'Upload failed!',
+        LogContext.STORAGE_BUCKET,
+        {
+          message: error.message,
+          fileName: filename,
+          storageBucketId,
+          originalException: error,
+        }
+      );
+    }
   }
 
   public async uploadFileAsDocumentFromBuffer(
