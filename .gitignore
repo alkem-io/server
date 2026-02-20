@@ -44,6 +44,13 @@ subscriptions.log
 
 # Claude Code
 .claude/settings.local.json
+.claude/pipeline/.session-token
+.claude/pipeline/.env
+.claude/pipeline/results/
+.claude/pipeline/live-results/
+.claude/pipeline/fixes/
+.claude/pipeline/reviews/
+.claude/pipeline/signals/
 
 # Overmind socket
 .overmind.sock
