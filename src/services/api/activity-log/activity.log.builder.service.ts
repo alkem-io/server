@@ -1,6 +1,8 @@
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { getContributorType } from '@domain/actor/actor/actor.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { PostService } from '@domain/collaboration/post/post.service';
@@ -8,7 +10,6 @@ import { MemoService } from '@domain/common/memo/memo.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { RoomService } from '@domain/communication/room/room.service';
 import { CommunityService } from '@domain/community/community/community.service';
-import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 import { SpaceService } from '@domain/space/space/space.service';
 import { CalendarService } from '@domain/timeline/calendar/calendar.service';
 import { CalendarEventService } from '@domain/timeline/event/event.service';
@@ -21,7 +22,6 @@ import { IActivityLogEntryCalloutPublished } from '@services/api/activity-log/dt
 import { IActivityLogEntryCalloutWhiteboardCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.callout.whiteboard.created';
 import { IActivityLogEntryMemberJoined } from '@services/api/activity-log/dto/activity.log.dto.entry.member.joined.interface';
 import { IActivityLogEntrySubspaceCreated } from '@services/api/activity-log/dto/activity.log.dto.entry.subspace.created';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { IActivityLogBuilder } from './activity.log.builder.interface';
 import { IActivityLogEntryCalendarEventCreated } from './dto/activity.log.dto.entry.calendar.event.created';
@@ -33,7 +33,7 @@ import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 export default class ActivityLogBuilderService implements IActivityLogBuilder {
   constructor(
     private readonly activityLogEntryBase: IActivityLogEntry,
-    private readonly contributorLookupService: ContributorLookupService,
+    private readonly actorLookupService: ActorLookupService,
     private readonly calloutService: CalloutService,
     private readonly postService: PostService,
     private readonly whiteboardService: WhiteboardService,
@@ -62,17 +62,16 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     const community = await this.communityService.getCommunityOrFail(
       rawActivity.parentID
     );
-    const contributorJoining =
-      await this.contributorLookupService.getContributorByUuidOrFail(
-        rawActivity.resourceID
-      );
+    const contributorJoining = await this.actorLookupService.getActorByIdOrFail(
+      rawActivity.resourceID
+    );
 
-    const contributorType = getContributorType(contributorJoining);
+    const actorType = getContributorType(contributorJoining);
     const activityMemberJoined: IActivityLogEntryMemberJoined = {
       ...this.activityLogEntryBase,
       community: community,
       contributor: contributorJoining,
-      contributorType: contributorType,
+      actorType: actorType,
     };
     return activityMemberJoined;
   }

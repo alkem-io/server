@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { LinkModule } from '@domain/collaboration/link/link.module';
@@ -15,7 +16,6 @@ import { CalendarModule } from '@domain/timeline/calendar/calendar.module';
 import { CalendarEventModule } from '@domain/timeline/event/event.module';
 import { Module } from '@nestjs/common';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
-import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
@@ -32,7 +32,7 @@ import { ActivityLogService } from './activity.log.service';
     CollaborationModule,
     UserModule,
     UserLookupModule,
-    ContributorLookupModule,
+    ActorLookupModule,
     CommunityModule,
     CalloutModule,
     PostModule,

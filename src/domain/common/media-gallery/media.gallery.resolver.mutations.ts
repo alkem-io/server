@@ -1,6 +1,6 @@
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IVisual } from '@domain/common/visual';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -26,7 +26,7 @@ export class MediaGalleryResolverMutations {
     description: 'Adds a new visual to the specified media gallery.',
   })
   async addVisualToMediaGallery(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('addData') addData: AddVisualToMediaGalleryInput
   ): Promise<IVisual> {
     const mediaGallery = await this.mediaGalleryService.getMediaGalleryOrFail(
@@ -37,7 +37,7 @@ export class MediaGalleryResolverMutations {
     );
 
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       mediaGallery.authorization,
       AuthorizationPrivilege.UPDATE,
       `add visual to media gallery: ${mediaGallery.id}`
@@ -67,7 +67,7 @@ export class MediaGalleryResolverMutations {
     description: 'Deletes a visual from the specified media gallery.',
   })
   async deleteVisualFromMediaGallery(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteVisualFromMediaGalleryInput
   ): Promise<IVisual> {
     const mediaGallery = await this.mediaGalleryService.getMediaGalleryOrFail(
@@ -78,7 +78,7 @@ export class MediaGalleryResolverMutations {
     );
 
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       mediaGallery.authorization,
       AuthorizationPrivilege.UPDATE,
       `delete visual from media gallery: ${mediaGallery.id}`

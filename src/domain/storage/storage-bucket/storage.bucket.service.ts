@@ -13,7 +13,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
 import { streamToBuffer } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -337,7 +337,7 @@ export class StorageBucketService {
   public async getFilteredDocuments(
     storage: IStorageBucket,
     args: StorageBucketArgsDocuments,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<IDocument[]> {
     const storageLoaded = await this.getStorageBucketOrFail(storage.id, {
       relations: { documents: true },
@@ -351,7 +351,7 @@ export class StorageBucketService {
 
     // First filter the documents the current user has READ privilege to
     const readableDocuments = allDocuments.filter(document =>
-      this.hasAgentAccessToDocument(document, agentInfo)
+      this.hasAgentAccessToDocument(document, actorContext)
     );
 
     // (a) by IDs, results in order specified by IDs
@@ -380,10 +380,10 @@ export class StorageBucketService {
 
   private hasAgentAccessToDocument(
     document: IDocument,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): boolean {
     return this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       document.authorization,
       AuthorizationPrivilege.READ
     );

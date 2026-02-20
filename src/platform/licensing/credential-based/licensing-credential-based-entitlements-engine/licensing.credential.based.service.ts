@@ -5,7 +5,7 @@ import {
   ForbiddenException,
 } from '@common/exceptions';
 import { ForbiddenLicensePolicyException } from '@common/exceptions/forbidden.license.policy.exception';
-import { IAgent, ICredential } from '@domain/agent';
+import { IActor, ICredential } from '@domain/actor';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ILicensePolicy } from '@platform/licensing/credential-based/license-policy/license.policy.interface';
 import { LicensingGrantedEntitlement } from '@platform/licensing/dto/licensing.dto.granted.entitlement';
@@ -23,7 +23,7 @@ export class LicensingCredentialBasedService {
 
   public async grantEntitlementOrFail(
     entitlementRequired: LicenseEntitlementType,
-    agent: IAgent,
+    agent: IActor,
     msg: string,
     licensePolicy: ILicensePolicy | undefined
   ) {
@@ -46,7 +46,7 @@ export class LicensingCredentialBasedService {
 
   public async isEntitlementGranted(
     entitlementRequired: LicenseEntitlementType,
-    agent: IAgent,
+    agent: IActor,
     licensePolicy?: ILicensePolicy | undefined
   ): Promise<boolean> {
     const policy =
@@ -75,7 +75,7 @@ export class LicensingCredentialBasedService {
 
   public async getEntitlementIfGranted(
     entitlementRequired: LicenseEntitlementType,
-    agent: IAgent,
+    agent: IActor,
     licensePolicy?: ILicensePolicy | undefined
   ): Promise<LicensingGrantedEntitlement | undefined> {
     const policy =
@@ -102,7 +102,7 @@ export class LicensingCredentialBasedService {
     return undefined;
   }
 
-  private async getCredentialsFromAgent(agent: IAgent): Promise<ICredential[]> {
+  private async getCredentialsFromAgent(agent: IActor): Promise<ICredential[]> {
     const credentials = agent.credentials;
     if (!credentials) {
       throw new EntityNotFoundException(
@@ -124,7 +124,7 @@ export class LicensingCredentialBasedService {
   }
 
   public async getGrantedEntitlements(
-    agent: IAgent,
+    agent: IActor,
     licensePolicy?: ILicensePolicy
   ): Promise<LicenseEntitlementType[]> {
     const policy =

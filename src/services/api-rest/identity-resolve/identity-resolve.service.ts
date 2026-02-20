@@ -1,4 +1,4 @@
-import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import {
   UserAlreadyRegisteredException,
   UserRegistrationInvalidEmail,
@@ -8,12 +8,12 @@ import {
   NotFoundHttpException,
 } from '@common/exceptions/http';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { RegistrationService } from '@services/api/registration/registration.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IdentityResolveRequestMeta } from './types/identity-resolve.request-meta';
 
@@ -23,7 +23,6 @@ export class IdentityResolveService {
     private readonly registrationService: RegistrationService,
     private readonly kratosService: KratosService,
     private readonly userLookupService: UserLookupService,
-    private readonly agentInfoService: AgentInfoService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -34,18 +33,14 @@ export class IdentityResolveService {
   ): Promise<IUser> {
     const existingUser = await this.userLookupService.getUserByAuthenticationID(
       authenticationId,
-      {
-        relations: {
-          agent: true,
-        },
-      }
+      {}
     );
     if (existingUser) {
       this.logger.log?.(
         `Identity resolve: returning existing user ${existingUser.id} for authenticationId=${authenticationId} (ip=${meta.ip ?? 'unknown'})`,
         LogContext.AUTH
       );
-      return this.ensureAgentOrFail(existingUser, authenticationId);
+      return existingUser;
     }
 
     const identity = await this.kratosService.getIdentityById(authenticationId);
@@ -60,13 +55,11 @@ export class IdentityResolveService {
       );
     }
 
-    const agentInfo = this.agentInfoService.buildAgentInfoFromOryIdentity(
-      identity,
-      { authenticationId }
-    );
+    const oryIdentity = identity as OryDefaultIdentitySchema;
+    const email = oryIdentity.traits?.email;
 
     // Validate email is present (required for registration)
-    if (!agentInfo.email) {
+    if (!email) {
       this.logger.warn?.(
         `Identity resolve: Kratos identity ${identity.id} missing email trait`,
         LogContext.AUTH
@@ -85,23 +78,26 @@ export class IdentityResolveService {
       );
     }
 
-    const existingUserByEmail = await this.userLookupService.getUserByEmail(
-      agentInfo.email
-    );
+    const existingUserByEmail =
+      await this.userLookupService.getUserByEmail(email);
 
     const outcome = existingUserByEmail ? 'link' : 'create';
 
     // FIXME: temporary ugly workaround to skip email verification for Kratos users,
     //  based on the fact that this EP is called only by OIDC controller, so we silently assume
     //  that this is OIDC session and don't care about email verification status from Kratos side.
-    // depending on future development and use of this EP we will need to either provide token/session
-    //  info here to verify that this is indeed OIDC session, or get list of sessions for user to deduct
-    //  that one of sessions is OIDC based, so we can skip email verification.
-    agentInfo.emailVerified = true;
+    const kratosSessionData = {
+      authenticationID: authenticationId,
+      email,
+      emailVerified: true,
+      firstName: oryIdentity.traits?.name?.first ?? '',
+      lastName: oryIdentity.traits?.name?.last ?? '',
+      avatarURL: oryIdentity.traits?.picture ?? '',
+    };
 
     let user: IUser;
     try {
-      user = await this.registrationService.registerNewUser(agentInfo);
+      user = await this.registrationService.registerNewUser(kratosSessionData);
     } catch (error) {
       if (error instanceof UserAlreadyRegisteredException) {
         throw new BadRequestHttpException(error.message, LogContext.AUTH);
@@ -139,25 +135,6 @@ export class IdentityResolveService {
       LogContext.AUTH
     );
 
-    const userWithAgent = await this.userLookupService.getUserOrFail(user.id, {
-      relations: { agent: true },
-    });
-    return this.ensureAgentOrFail(userWithAgent, authenticationId);
-  }
-
-  private ensureAgentOrFail(user: IUser, authenticationId: string): IUser {
-    if (!user.agent) {
-      this.logger.warn?.(
-        `Identity resolve: user ${user.id} has no agent linked for authenticationId=${authenticationId}`,
-        LogContext.AUTH
-      );
-      throw new NotFoundHttpException(
-        `Agent not found for user ${user.id}`,
-        LogContext.AUTH,
-        AlkemioErrorStatus.NO_AGENT_FOR_USER
-      );
-    }
-
-    return user;
+    return this.userLookupService.getUserByIdOrFail(user.id);
   }
 }

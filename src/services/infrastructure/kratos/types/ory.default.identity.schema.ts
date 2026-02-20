@@ -1,9 +1,14 @@
 import { Identity } from '@ory/kratos-client';
 import { OryTraits } from './ory.traits';
 
+export interface AlkemioMetadataPublic {
+  alkemio_actor_id?: string;
+}
+
 export interface OryDefaultIdentitySchema extends Identity {
   created_at: string; //UTC Zulu time
   id: string;
+  metadata_public?: AlkemioMetadataPublic | null;
   recovery_addresses: [
     {
       created_at: string; //UTC Zulu time

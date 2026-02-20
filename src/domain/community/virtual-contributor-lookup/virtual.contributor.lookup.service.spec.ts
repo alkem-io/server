@@ -10,10 +10,10 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { vi } from 'vitest';
-import { VirtualContributorLookupService } from './virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from './virtual.contributor.lookup.service';
 
-describe('VirtualContributorLookupService', () => {
-  let service: VirtualContributorLookupService;
+describe('VirtualActorLookupService', () => {
+  let service: VirtualActorLookupService;
   let entityManager: {
     findOne: ReturnType<typeof vi.fn>;
     find: ReturnType<typeof vi.fn>;
@@ -27,7 +27,7 @@ describe('VirtualContributorLookupService', () => {
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
-        VirtualContributorLookupService,
+        VirtualActorLookupService,
         repositoryProviderMockFactory(VirtualContributor),
         {
           provide: getEntityManagerToken('default'),
@@ -40,13 +40,13 @@ describe('VirtualContributorLookupService', () => {
       .useMocker(defaultMockerFactory)
       .compile();
 
-    service = module.get(VirtualContributorLookupService);
+    service = module.get(VirtualActorLookupService);
   });
 
   describe('getVirtualContributorOrFail', () => {
     it('should throw EntityNotFoundException when the ID is not a valid UUID', async () => {
       await expect(
-        service.getVirtualContributorOrFail('not-a-uuid')
+        service.getVirtualContributorByIdOrFail('not-a-uuid')
       ).rejects.toThrow(EntityNotFoundException);
 
       expect(entityManager.findOne).not.toHaveBeenCalled();
@@ -57,7 +57,7 @@ describe('VirtualContributorLookupService', () => {
       const mockVC = { id: validId, nameID: 'test-vc' };
       entityManager.findOne.mockResolvedValue(mockVC);
 
-      const result = await service.getVirtualContributorOrFail(validId);
+      const result = await service.getVirtualContributorByIdOrFail(validId);
       expect(result).toBe(mockVC);
     });
 
@@ -66,58 +66,63 @@ describe('VirtualContributorLookupService', () => {
       entityManager.findOne.mockResolvedValue(null);
 
       await expect(
-        service.getVirtualContributorOrFail(validId)
+        service.getVirtualContributorByIdOrFail(validId)
       ).rejects.toThrow(EntityNotFoundException);
     });
   });
 
-  describe('getVirtualContributorAndAgent', () => {
-    it('should return virtual contributor and agent when agent is initialized', async () => {
+  describe('getVirtualContributorAndActor', () => {
+    it('should return virtual contributor and actorID when VC is found', async () => {
       const validId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
-      const mockAgent = { id: 'agent-1' };
-      const mockVC = { id: validId, agent: mockAgent };
+      const mockCredentials = [{ id: 'cred-1' }];
+      const mockVC = { id: validId, credentials: mockCredentials };
       entityManager.findOne.mockResolvedValue(mockVC);
 
-      const result = await service.getVirtualContributorAndAgent(validId);
+      const result = await service.getVirtualContributorAndActor(validId);
       expect(result.virtualContributor).toBe(mockVC);
-      expect(result.agent).toBe(mockAgent);
+      expect(result.actorID).toBe(validId);
+      expect(result.credentials).toBe(mockCredentials);
     });
 
-    it('should throw EntityNotInitializedException when agent is not loaded', async () => {
+    it('should throw EntityNotFoundException when VC is not found', async () => {
       const validId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
-      const mockVC = { id: validId, agent: undefined };
-      entityManager.findOne.mockResolvedValue(mockVC);
+      entityManager.findOne.mockResolvedValue(null);
 
       await expect(
-        service.getVirtualContributorAndAgent(validId)
-      ).rejects.toThrow(EntityNotInitializedException);
+        service.getVirtualContributorAndActor(validId)
+      ).rejects.toThrow(EntityNotFoundException);
     });
   });
 
-  describe('getVirtualContributorByAgentId', () => {
-    it('should return the virtual contributor when found by agent ID', async () => {
-      const mockVC = { id: 'vc-1', agent: { id: 'agent-1' } };
+  describe('getVirtualContributorById', () => {
+    it('should return the virtual contributor when found by ID', async () => {
+      const mockVC = { id: 'vc-1' };
       entityManager.findOne.mockResolvedValue(mockVC);
 
-      const result = await service.getVirtualContributorByAgentId('agent-1');
+      const result = await service.getVirtualContributorById(
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+      );
       expect(result).toBe(mockVC);
     });
 
-    it('should return null when no virtual contributor matches the agent ID', async () => {
+    it('should return null when no virtual contributor matches the ID', async () => {
       entityManager.findOne.mockResolvedValue(null);
 
-      const result = await service.getVirtualContributorByAgentId('agent-999');
+      const result = await service.getVirtualContributorById(
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12'
+      );
       expect(result).toBeNull();
     });
   });
 
-  describe('getVirtualContributorByAgentIdOrFail', () => {
+  describe('getVirtualContributorByIdOrFail', () => {
     it('should return the virtual contributor when found', async () => {
-      const mockVC = { id: 'vc-1', agent: { id: 'agent-1' } };
+      const mockVC = { id: 'vc-1' };
       entityManager.findOne.mockResolvedValue(mockVC);
 
-      const result =
-        await service.getVirtualContributorByAgentIdOrFail('agent-1');
+      const result = await service.getVirtualContributorByIdOrFail(
+        'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11'
+      );
       expect(result).toBe(mockVC);
     });
 
@@ -125,7 +130,9 @@ describe('VirtualContributorLookupService', () => {
       entityManager.findOne.mockResolvedValue(null);
 
       await expect(
-        service.getVirtualContributorByAgentIdOrFail('agent-999')
+        service.getVirtualContributorByIdOrFail(
+          'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a12'
+        )
       ).rejects.toThrow(EntityNotFoundException);
     });
   });
@@ -161,7 +168,7 @@ describe('VirtualContributorLookupService', () => {
         expect.anything(),
         expect.objectContaining({
           where: {
-            agent: {
+            actor: {
               credentials: {
                 type: 'space-admin',
                 resourceID: '',

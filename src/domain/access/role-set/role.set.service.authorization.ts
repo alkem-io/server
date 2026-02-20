@@ -1,6 +1,6 @@
 import {
   CREDENTIAL_RULE_ROLESET_SELF_REMOVAL,
-  CREDENTIAL_RULE_ROLESET_VIRTUAL_CONTRIBUTOR_REMOVAL,
+  CREDENTIAL_RULE_ROLESET_VIRTUAL_REMOVAL,
   CREDENTIAL_RULE_TYPES_ROLESET_ENTRY_ROLE_ASSIGN,
   POLICY_RULE_COMMUNITY_INVITE_MEMBER,
 } from '@common/constants';
@@ -15,11 +15,11 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { ApplicationAuthorizationService } from '@domain/access/application/application.service.authorization';
 import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
 import { PlatformInvitationAuthorizationService } from '@domain/access/invitation.platform/platform.invitation.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Injectable } from '@nestjs/common';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
@@ -31,7 +31,7 @@ export class RoleSetAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private applicationAuthorizationService: ApplicationAuthorizationService,
     private invitationAuthorizationService: InvitationAuthorizationService,
-    private virtualContributorLookupService: VirtualContributorLookupService,
+    private virtualActorLookupService: VirtualActorLookupService,
     private platformInvitationAuthorizationService: PlatformInvitationAuthorizationService,
     private licenseAuthorizationService: LicenseAuthorizationService
   ) {}
@@ -223,10 +223,9 @@ export class RoleSetAuthorizationService {
   ): Promise<IAuthorizationPolicy> {
     const newRules: IAuthorizationPolicyRuleCredential[] = [];
 
-    const vcAccount =
-      await this.virtualContributorLookupService.getAccountOrFail(
-        virtualContributorToBeRemoved
-      );
+    const vcAccount = await this.virtualActorLookupService.getAccountOrFail(
+      virtualContributorToBeRemoved
+    );
     const accountAdminCredential: ICredentialDefinition = {
       type: AuthorizationCredential.ACCOUNT_ADMIN,
       resourceID: vcAccount.id,
@@ -236,7 +235,7 @@ export class RoleSetAuthorizationService {
       this.authorizationPolicyService.createCredentialRule(
         [AuthorizationPrivilege.GRANT],
         [accountAdminCredential],
-        CREDENTIAL_RULE_ROLESET_VIRTUAL_CONTRIBUTOR_REMOVAL
+        CREDENTIAL_RULE_ROLESET_VIRTUAL_REMOVAL
       );
     newRules.push(vcSelfRemovalRule);
 

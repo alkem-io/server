@@ -1,7 +1,7 @@
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { RoomType } from '@common/enums/room.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
@@ -9,7 +9,6 @@ import { RoomServiceEvents } from '@domain/communication/room/room.service.event
 import { RoomMentionsService } from '@domain/communication/room-mentions/room.mentions.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -21,7 +20,6 @@ describe('MessageNotificationService', () => {
   let roomMentionsService: Mocked<RoomMentionsService>;
   let roomServiceEvents: Mocked<RoomServiceEvents>;
   let roomResolverService: Mocked<RoomResolverService>;
-  let contributorLookupService: Mocked<ContributorLookupService>;
   let communicationAdapter: Mocked<CommunicationAdapter>;
 
   const mockRoom = (type: RoomType): IRoom =>
@@ -35,7 +33,8 @@ describe('MessageNotificationService', () => {
     reactions: [],
   });
 
-  const mockAgentInfo = (): AgentInfo => ({ agentID: 'actor-1' }) as AgentInfo;
+  const mockActorContext = (): ActorContext =>
+    ({ actorID: 'actor-1' }) as ActorContext;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -48,7 +47,6 @@ describe('MessageNotificationService', () => {
     roomMentionsService = module.get(RoomMentionsService);
     roomServiceEvents = module.get(RoomServiceEvents);
     roomResolverService = module.get(RoomResolverService);
-    contributorLookupService = module.get(ContributorLookupService);
     communicationAdapter = module.get(CommunicationAdapter);
   });
 
@@ -56,11 +54,11 @@ describe('MessageNotificationService', () => {
     it('should process mention notifications when mentions are found in the message', async () => {
       const room = mockRoom(RoomType.UPDATES);
       const message = mockMessage();
-      const agentInfo = mockAgentInfo();
+      const actorContext = mockActorContext();
       const mentions = [
         {
-          contributorID: 'user-1',
-          contributorType: MentionedEntityType.USER,
+          actorID: 'user-1',
+          actorType: MentionedEntityType.USER,
         },
       ];
 
@@ -75,17 +73,17 @@ describe('MessageNotificationService', () => {
         undefined as any
       );
 
-      await service.processMessageNotifications(room, message, agentInfo);
+      await service.processMessageNotifications(room, message, actorContext);
 
       expect(
         roomMentionsService.processNotificationMentions
-      ).toHaveBeenCalledWith(mentions, room, message, agentInfo);
+      ).toHaveBeenCalledWith(mentions, room, message, actorContext);
     });
 
     it('should skip mention notifications when no mentions are found', async () => {
       const room = mockRoom(RoomType.UPDATES);
       const message = mockMessage();
-      const agentInfo = mockAgentInfo();
+      const actorContext = mockActorContext();
 
       roomMentionsService.getMentionsFromText.mockResolvedValue([]);
       roomServiceEvents.processNotificationUpdateSent.mockResolvedValue(
@@ -95,7 +93,7 @@ describe('MessageNotificationService', () => {
         undefined as any
       );
 
-      await service.processMessageNotifications(room, message, agentInfo);
+      await service.processMessageNotifications(room, message, actorContext);
 
       expect(
         roomMentionsService.processNotificationMentions
@@ -105,14 +103,11 @@ describe('MessageNotificationService', () => {
     it('should process reply notification when threadID differs from message ID', async () => {
       const room = mockRoom(RoomType.UPDATES);
       const message = mockMessage();
-      const agentInfo = mockAgentInfo();
+      const actorContext = mockActorContext();
 
       roomMentionsService.getMentionsFromText.mockResolvedValue([]);
       communicationAdapter.getMessageSenderActor.mockResolvedValue(
         'parent-sender-actor'
-      );
-      contributorLookupService.getUserIdByAgentId.mockResolvedValue(
-        'parent-user-1'
       );
       roomServiceEvents.processNotificationCommentReply.mockResolvedValue(
         undefined as any
@@ -127,19 +122,24 @@ describe('MessageNotificationService', () => {
       await service.processMessageNotifications(
         room,
         message,
-        agentInfo,
+        actorContext,
         'parent-thread-1'
       );
 
       expect(
         roomServiceEvents.processNotificationCommentReply
-      ).toHaveBeenCalledWith(room, message, agentInfo, 'parent-user-1');
+      ).toHaveBeenCalledWith(
+        room,
+        message,
+        actorContext,
+        'parent-sender-actor'
+      );
     });
 
     it('should not process reply notification when threadID equals message ID', async () => {
       const room = mockRoom(RoomType.UPDATES);
       const message = mockMessage();
-      const agentInfo = mockAgentInfo();
+      const actorContext = mockActorContext();
 
       roomMentionsService.getMentionsFromText.mockResolvedValue([]);
       roomServiceEvents.processNotificationUpdateSent.mockResolvedValue(
@@ -152,7 +152,7 @@ describe('MessageNotificationService', () => {
       await service.processMessageNotifications(
         room,
         message,
-        agentInfo,
+        actorContext,
         'msg-1' // same as message.id
       );
 
@@ -164,7 +164,7 @@ describe('MessageNotificationService', () => {
     it('should process POST room type with post contribution notifications', async () => {
       const room = mockRoom(RoomType.POST);
       const message = mockMessage();
-      const agentInfo = mockAgentInfo();
+      const actorContext = mockActorContext();
 
       roomMentionsService.getMentionsFromText.mockResolvedValue([]);
       roomResolverService.getCalloutWithPostContributionForRoom.mockResolvedValue(
@@ -181,7 +181,7 @@ describe('MessageNotificationService', () => {
         undefined as any
       );
 
-      await service.processMessageNotifications(room, message, agentInfo);
+      await service.processMessageNotifications(room, message, actorContext);
 
       expect(
         roomServiceEvents.processNotificationPostContributionComment
@@ -192,7 +192,7 @@ describe('MessageNotificationService', () => {
     it('should process CALLOUT room type only when visibility is PUBLISHED and type is COLLABORATION', async () => {
       const room = mockRoom(RoomType.CALLOUT);
       const message = mockMessage();
-      const agentInfo = mockAgentInfo();
+      const actorContext = mockActorContext();
 
       roomMentionsService.getMentionsFromText.mockResolvedValue([]);
       roomResolverService.getCalloutForRoom.mockResolvedValue({
@@ -207,7 +207,7 @@ describe('MessageNotificationService', () => {
         undefined as any
       );
 
-      await service.processMessageNotifications(room, message, agentInfo);
+      await service.processMessageNotifications(room, message, actorContext);
 
       expect(
         roomServiceEvents.processActivityCalloutCommentCreated
@@ -220,7 +220,7 @@ describe('MessageNotificationService', () => {
     it('should skip CALLOUT notifications when visibility is DRAFT', async () => {
       const room = mockRoom(RoomType.CALLOUT);
       const message = mockMessage();
-      const agentInfo = mockAgentInfo();
+      const actorContext = mockActorContext();
 
       roomMentionsService.getMentionsFromText.mockResolvedValue([]);
       roomResolverService.getCalloutForRoom.mockResolvedValue({
@@ -229,7 +229,7 @@ describe('MessageNotificationService', () => {
         calloutsSet: { type: CalloutsSetType.COLLABORATION },
       } as any);
 
-      await service.processMessageNotifications(room, message, agentInfo);
+      await service.processMessageNotifications(room, message, actorContext);
 
       expect(
         roomServiceEvents.processActivityCalloutCommentCreated
@@ -242,7 +242,7 @@ describe('MessageNotificationService', () => {
     it('should skip CALLOUT notifications when calloutsSet type is KNOWLEDGE_BASE', async () => {
       const room = mockRoom(RoomType.CALLOUT);
       const message = mockMessage();
-      const agentInfo = mockAgentInfo();
+      const actorContext = mockActorContext();
 
       roomMentionsService.getMentionsFromText.mockResolvedValue([]);
       roomResolverService.getCalloutForRoom.mockResolvedValue({
@@ -251,7 +251,7 @@ describe('MessageNotificationService', () => {
         calloutsSet: { type: CalloutsSetType.KNOWLEDGE_BASE },
       } as any);
 
-      await service.processMessageNotifications(room, message, agentInfo);
+      await service.processMessageNotifications(room, message, actorContext);
 
       expect(
         roomServiceEvents.processActivityCalloutCommentCreated

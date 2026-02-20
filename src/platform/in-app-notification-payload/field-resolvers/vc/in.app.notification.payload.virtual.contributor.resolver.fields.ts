@@ -1,5 +1,5 @@
 import {
-  ContributorLoaderCreator,
+  ActorLoaderCreator,
   SpaceLoaderCreator,
 } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
@@ -16,7 +16,7 @@ export class InAppNotificationPayloadVirtualContributorFieldsResolver {
   })
   async contributor(
     @Parent() payload: InAppNotificationPayloadVirtualContributor,
-    @Loader(ContributorLoaderCreator)
+    @Loader(ActorLoaderCreator)
     loader: ILoader<IVirtualContributor>
   ): Promise<IVirtualContributor> {
     return loader.load(payload.virtualContributorID);

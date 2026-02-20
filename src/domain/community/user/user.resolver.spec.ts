@@ -1,6 +1,6 @@
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockEntityManagerProvider } from '@test/mocks';
-import { MockAgentService } from '@test/mocks/agent.service.mock';
+import { MockActorLookupService } from '@test/mocks/actor.lookup.service.mock';
 import { MockAuthorizationPolicyService } from '@test/mocks/authorization.policy.service.mock';
 import { MockAuthorizationService } from '@test/mocks/authorization.service.mock';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -25,7 +25,7 @@ describe('UserResolver', () => {
         MockCacheManager,
         MockWinstonProvider,
         MockUserService,
-        MockAgentService,
+        MockActorLookupService,
         MockAuthorizationService,
         MockAuthorizationPolicyService,
         MockPlatformAuthorizationService,

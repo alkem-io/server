@@ -8,7 +8,7 @@ export class RoomCreatedEvent {
   constructor(
     public readonly payload: {
       roomId: string;
-      creatorActorId: string;
+      creatorActorID: string;
       roomType: string;
       name?: string;
       topic?: string;

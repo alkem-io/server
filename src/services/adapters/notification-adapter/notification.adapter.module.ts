@@ -1,8 +1,8 @@
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { Module } from '@nestjs/common';
 import { NotificationRecipientsModule } from '@services/api/notification-recipients/notification.recipients.module';
-import { ContributorLookupModule } from '@services/infrastructure/contributor-lookup/contributor.lookup.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 import { ActivityModule } from '@src/platform/activity/activity.module';
@@ -19,7 +19,7 @@ import { NotificationVirtualContributorAdapter } from './notification.virtual.co
   imports: [
     ActivityModule,
     UrlGeneratorModule,
-    ContributorLookupModule,
+    ActorLookupModule,
     EntityResolverModule,
     MessageDetailsModule,
     NotificationRecipientsModule,

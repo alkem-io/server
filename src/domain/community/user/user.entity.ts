@@ -1,5 +1,16 @@
-import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { randomUUID } from 'node:crypto';
+import {
+  MID_TEXT_LENGTH,
+  NAMEID_MAX_LENGTH_SCHEMA,
+  SMALL_TEXT_LENGTH,
+} from '@common/constants';
+import { ActorType } from '@common/enums/actor.type';
 import { Application } from '@domain/access/application/application.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
+import { Credential } from '@domain/actor/credential/credential.entity';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 import { IUser } from '@domain/community/user/user.interface';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import {
@@ -11,11 +22,69 @@ import {
   OneToMany,
   OneToOne,
 } from 'typeorm';
-import { ContributorBase } from '../contributor/contributor.base.entity';
 import { UserSettings } from '../user-settings/user.settings.entity';
 
-@Entity()
-export class User extends ContributorBase implements IUser {
+@Entity('user')
+export class User extends BaseAlkemioEntity implements IUser {
+  constructor() {
+    super();
+    const id = randomUUID();
+    this.id = id;
+    // Always initialize actor so setters work without explicit actor assignment
+    const actor = new Actor();
+    actor.type = ActorType.USER;
+    actor.id = id;
+    this.actor = actor;
+  }
+
+  // Actor relation — shared primary key (user.id = actor.id)
+  @OneToOne(() => Actor, {
+    eager: true,
+    cascade: true,
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
+  @JoinColumn({ name: 'id', referencedColumnName: 'id' })
+  actor?: Actor;
+
+  // Transparent getters delegating to actor
+  get type(): ActorType {
+    return this.actor?.type as ActorType;
+  }
+
+  get authorization(): AuthorizationPolicy | undefined {
+    return this.actor?.authorization;
+  }
+
+  set authorization(auth: AuthorizationPolicy | undefined) {
+    if (!this.actor) this.actor = new Actor();
+    this.actor.authorization = auth;
+  }
+
+  get credentials(): Credential[] | undefined {
+    return this.actor?.credentials;
+  }
+
+  get profileId(): string | undefined {
+    return this.actor?.profileId;
+  }
+
+  get profile(): Profile {
+    return this.actor?.profile as Profile;
+  }
+
+  set profile(p: Profile | undefined) {
+    if (!this.actor) this.actor = new Actor();
+    this.actor.profile = p;
+  }
+
+  @Column('varchar', {
+    length: NAMEID_MAX_LENGTH_SCHEMA,
+    nullable: false,
+    unique: true,
+  })
+  nameID!: string;
+
   @Column('uuid', { nullable: false })
   accountID!: string;
 

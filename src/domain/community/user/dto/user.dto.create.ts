@@ -1,4 +1,4 @@
-import { CreateContributorInput } from '@domain/community/contributor/dto/contributor.dto.create';
+import { CreateContributorInput } from '@domain/actor/actor/dto/actor.dto.filter';
 import { Field, InputType } from '@nestjs/graphql';
 import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@src/common/constants';
 import { IsEmail, IsOptional, MaxLength } from 'class-validator';

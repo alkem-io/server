@@ -1,5 +1,4 @@
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
@@ -20,7 +19,6 @@ import { AccountService } from './account.service';
 describe('AccountService', () => {
   let service: AccountService;
   let accountRepository: Repository<Account>;
-  let agentService: AgentService;
   let storageAggregatorService: StorageAggregatorService;
   let spaceService: SpaceService;
   let virtualContributorService: VirtualContributorService;
@@ -43,7 +41,6 @@ describe('AccountService', () => {
     accountRepository = module.get<Repository<Account>>(
       getRepositoryToken(Account)
     );
-    agentService = module.get(AgentService);
     storageAggregatorService = module.get(StorageAggregatorService);
     spaceService = module.get(SpaceService);
     virtualContributorService = module.get(VirtualContributorService);
@@ -102,31 +99,16 @@ describe('AccountService', () => {
   });
 
   describe('getAgentOrFail', () => {
-    it('should return agent when account has one', async () => {
+    it('should return the account itself since Account IS the Actor', async () => {
       // Arrange
-      const mockAgent = { id: 'agent-1' };
-      const mockAccount = { id: 'account-1', agent: mockAgent } as Account;
+      const mockAccount = { id: 'account-1' } as Account;
       vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
 
       // Act
       const result = await service.getAgentOrFail('account-1');
 
       // Assert
-      expect(result).toBe(mockAgent);
-    });
-
-    it('should throw EntityNotInitializedException when agent not loaded', async () => {
-      // Arrange
-      const mockAccount = {
-        id: 'account-1',
-        agent: undefined,
-      } as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
-
-      // Act & Assert
-      await expect(service.getAgentOrFail('account-1')).rejects.toThrow(
-        'Unable to load Agent for Account'
-      );
+      expect(result).toBe(mockAccount);
     });
   });
 
@@ -165,31 +147,10 @@ describe('AccountService', () => {
   });
 
   describe('deleteAccountOrFail', () => {
-    it('should throw RelationshipNotFoundException when agent is missing', async () => {
-      // Arrange
-      const mockAccount = {
-        id: 'account-1',
-        agent: undefined,
-        spaces: [],
-        virtualContributors: [],
-        innovationPacks: [],
-        storageAggregator: { id: 'storage-1' },
-        innovationHubs: [],
-        license: { id: 'license-1' },
-      } as unknown as Account;
-      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
-
-      // Act & Assert
-      await expect(service.deleteAccountOrFail(mockAccount)).rejects.toThrow(
-        'Unable to load all entities for deletion of account account-1'
-      );
-    });
-
     it('should throw RelationshipNotFoundException when license is missing', async () => {
       // Arrange
       const mockAccount = {
         id: 'account-1',
-        agent: { id: 'agent-1' },
         spaces: [],
         virtualContributors: [],
         innovationPacks: [],
@@ -209,7 +170,6 @@ describe('AccountService', () => {
       // Arrange
       const mockAccount = {
         id: 'account-1',
-        agent: { id: 'agent-1' },
         spaces: [{ id: 'space-1' }, { id: 'space-2' }],
         virtualContributors: [{ id: 'vc-1' }],
         innovationPacks: [{ id: 'ip-1' }],
@@ -219,7 +179,6 @@ describe('AccountService', () => {
       } as unknown as Account;
 
       vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
-      agentService.deleteAgent = vi.fn().mockResolvedValue(undefined);
       storageAggregatorService.delete = vi.fn().mockResolvedValue(undefined);
       licenseService.removeLicenseOrFail = vi.fn().mockResolvedValue(undefined);
       virtualContributorService.deleteVirtualContributor = vi
@@ -238,7 +197,6 @@ describe('AccountService', () => {
       const result = await service.deleteAccountOrFail(mockAccount);
 
       // Assert
-      expect(agentService.deleteAgent).toHaveBeenCalledWith('agent-1');
       expect(storageAggregatorService.delete).toHaveBeenCalledWith('storage-1');
       expect(licenseService.removeLicenseOrFail).toHaveBeenCalledWith(
         'license-1'
@@ -364,18 +322,18 @@ describe('AccountService', () => {
   });
 
   describe('getSubscriptions', () => {
-    it('should throw when agent with credentials not found', async () => {
+    it('should throw when credentials not found', async () => {
       // Arrange
       const accountInput = { id: 'account-1' } as IAccount;
       const mockAccount = {
         id: 'account-1',
-        agent: undefined,
-      } as Account;
+        credentials: undefined,
+      } as unknown as Account;
       vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
 
       // Act & Assert
       await expect(service.getSubscriptions(accountInput)).rejects.toThrow(
-        'Unable to find agent with credentials for the account: account-1'
+        'Unable to find credentials for the account: account-1'
       );
     });
 
@@ -384,10 +342,7 @@ describe('AccountService', () => {
       const accountInput = { id: 'account-1' } as IAccount;
       const mockAccount = {
         id: 'account-1',
-        agent: {
-          id: 'agent-1',
-          credentials: [{ type: 'non-subscription-type', expires: undefined }],
-        },
+        credentials: [{ type: 'non-subscription-type', expires: undefined }],
       } as unknown as Account;
       vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
 
@@ -404,20 +359,17 @@ describe('AccountService', () => {
       const accountInput = { id: 'account-1' } as IAccount;
       const mockAccount = {
         id: 'account-1',
-        agent: {
-          id: 'agent-1',
-          credentials: [
-            {
-              type: LicensingCredentialBasedCredentialType.SPACE_LICENSE_FREE,
-              expires: expiryDate,
-            },
-            { type: 'non-matching-type', expires: undefined },
-            {
-              type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
-              expires: undefined,
-            },
-          ],
-        },
+        credentials: [
+          {
+            type: LicensingCredentialBasedCredentialType.SPACE_LICENSE_FREE,
+            expires: expiryDate,
+          },
+          { type: 'non-matching-type', expires: undefined },
+          {
+            type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
+            expires: undefined,
+          },
+        ],
       } as unknown as Account;
       vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
 

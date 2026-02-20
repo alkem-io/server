@@ -5,7 +5,7 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { RoleSetLicenseService } from '@domain/access/role-set/role.set.service.license';
-import { IAgent } from '@domain/agent/agent/agent.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { CollaborationLicenseService } from '@domain/collaboration/collaboration/collaboration.service.license';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
@@ -27,13 +27,11 @@ export class SpaceLicenseService {
 
   async applyLicensePolicy(
     spaceID: string,
-    level0SpaceAgent?: IAgent
+    level0SpaceAgent?: IActor
   ): Promise<ILicense[]> {
     const space = await this.spaceService.getSpaceOrFail(spaceID, {
       relations: {
-        agent: {
-          credentials: true,
-        },
+        actor: { credentials: true },
         subspaces: true,
         license: {
           entitlements: true,
@@ -46,7 +44,7 @@ export class SpaceLicenseService {
     });
     if (
       !space.subspaces ||
-      !space.agent ||
+      !space.credentials ||
       !space.license ||
       !space.license.entitlements ||
       !space.community ||
@@ -62,7 +60,7 @@ export class SpaceLicenseService {
 
     // Ensure always applying from a clean state
     space.license = this.licenseService.reset(space.license);
-    const rootLevelSpaceAgent = level0SpaceAgent ?? space.agent;
+    const rootLevelSpaceAgent = level0SpaceAgent ?? space;
 
     space.license = await this.extendLicensePolicy(
       space.license,
@@ -103,7 +101,7 @@ export class SpaceLicenseService {
 
   private async extendLicensePolicy(
     license: ILicense | undefined,
-    levelZeroSpaceAgent: IAgent
+    levelZeroSpaceAgent: IActor
   ): Promise<ILicense> {
     if (!license || !license.entitlements) {
       throw new EntityNotInitializedException(

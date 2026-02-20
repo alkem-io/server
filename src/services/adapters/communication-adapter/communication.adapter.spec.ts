@@ -88,17 +88,17 @@ describe('CommunicationAdapter', () => {
       const response = createSuccessResponse({});
       mockAmqpConnection.request.mockResolvedValue(response);
 
-      const actorId = 'actor-uuid-123';
+      const actorID = 'actor-uuid-123';
       const displayName = 'Test User';
       const avatarUrl = 'https://example.com/avatar.png';
 
-      const result = await adapter.syncActor(actorId, displayName, avatarUrl);
+      const result = await adapter.syncActor(actorID, displayName, avatarUrl);
 
       expect(mockAmqpConnection.request).toHaveBeenCalledWith({
         exchange: '',
         routingKey: MatrixAdapterEventType.COMMUNICATION_ACTOR_SYNC,
         payload: {
-          actor_id: actorId,
+          actor_id: actorID,
           display_name: displayName,
           avatar_url: avatarUrl,
         },
@@ -254,7 +254,7 @@ describe('CommunicationAdapter', () => {
   });
 
   describe('sendMessage (T039)', () => {
-    it('should pass actorId as sender_actor_id in payload', async () => {
+    it('should pass actorID as sender_actor_id in payload', async () => {
       const response = createSuccessResponse({
         message_id: 'msg-123',
         timestamp: 1234567890123,
@@ -263,7 +263,7 @@ describe('CommunicationAdapter', () => {
 
       const messageInput: CommunicationSendMessageInput = {
         roomID: 'room-uuid-123',
-        actorId: 'actor-uuid-456',
+        actorID: 'actor-uuid-456',
         message: 'Hello, world!',
       };
 
@@ -290,7 +290,7 @@ describe('CommunicationAdapter', () => {
 
       const messageInput: CommunicationSendMessageInput = {
         roomID: 'room-uuid-123',
-        actorId: 'actor-uuid-456',
+        actorID: 'actor-uuid-456',
         message: 'Test message',
       };
 
@@ -309,7 +309,7 @@ describe('CommunicationAdapter', () => {
     it('should throw when roomID is empty', async () => {
       const messageInput: CommunicationSendMessageInput = {
         roomID: '',
-        actorId: 'actor-uuid-456',
+        actorID: 'actor-uuid-456',
         message: 'Test message',
       };
 
@@ -324,7 +324,7 @@ describe('CommunicationAdapter', () => {
 
       const messageInput: CommunicationSendMessageInput = {
         roomID: 'room-uuid-123',
-        actorId: 'actor-uuid-456',
+        actorID: 'actor-uuid-456',
         message: 'Test message',
       };
 

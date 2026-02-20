@@ -1,4 +1,4 @@
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken, getRepositoryToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -253,7 +253,7 @@ describe('SpaceLookupService', () => {
 
     it('should skip DB query for L0 space with account already loaded', async () => {
       const space = makeSpace('space-1', 'space-1', { id: 'acc-1' });
-      const mockHost = { id: 'user-1' } as IContributor;
+      const mockHost = { id: 'user-1' } as IActor;
       accountLookupService.getHost = vi.fn().mockResolvedValue(mockHost);
 
       const result = await service.getProviderForSpace(space);
@@ -269,7 +269,7 @@ describe('SpaceLookupService', () => {
       vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(
         dbSpace as unknown as Space
       );
-      const mockHost = { id: 'user-1' } as IContributor;
+      const mockHost = { id: 'user-1' } as IActor;
       accountLookupService.getHost = vi.fn().mockResolvedValue(mockHost);
 
       const result = await service.getProviderForSpace(space);
@@ -287,7 +287,7 @@ describe('SpaceLookupService', () => {
       vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(
         l0Space as unknown as Space
       );
-      const mockHost = { id: 'org-1' } as IContributor;
+      const mockHost = { id: 'org-1' } as IActor;
       accountLookupService.getHost = vi.fn().mockResolvedValue(mockHost);
 
       const result = await service.getProviderForSpace(space);
@@ -330,7 +330,7 @@ describe('SpaceLookupService', () => {
       vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(
         l0Space as unknown as Space
       );
-      const expectedHost = { id: 'user-42' } as IContributor;
+      const expectedHost = { id: 'user-42' } as IActor;
       accountLookupService.getHost = vi.fn().mockResolvedValue(expectedHost);
 
       const result = await service.getProviderForSpace(space);

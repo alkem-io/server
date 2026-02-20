@@ -1,14 +1,14 @@
 import { LogContext } from '@common/enums';
-import { AgentType } from '@common/enums/agent.type';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { Agent } from '@domain/agent/agent/agent.entity';
+import { ActorType } from '@common/enums/actor.type';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import {
   Mention,
   MentionedEntityType,
 } from '@domain/communication/messaging/mention.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { VirtualContributorMessageService } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -50,10 +50,10 @@ export interface VcInteractionData {
 @Injectable()
 export class VcInvocationService {
   constructor(
-    private readonly virtualContributorLookupService: VirtualContributorLookupService,
+    private readonly virtualActorLookupService: VirtualActorLookupService,
     private readonly virtualContributorMessageService: VirtualContributorMessageService,
     private readonly communicationAdapter: CommunicationAdapter,
-    private readonly agentInfoService: AgentInfoService,
+    private readonly actorContextService: ActorContextService,
     private readonly messageNotificationService: MessageNotificationService,
     @InjectEntityManager()
     private readonly entityManager: EntityManager,
@@ -91,10 +91,10 @@ export class VcInvocationService {
     }
 
     // Find all VCs among other members (single query)
-    const vcAgents = await this.entityManager.find(Agent, {
+    const vcAgents = await this.entityManager.find(Actor, {
       where: {
         id: In(otherMembers),
-        type: AgentType.VIRTUAL_CONTRIBUTOR,
+        type: ActorType.VIRTUAL_CONTRIBUTOR,
       },
       select: ['id'],
     });
@@ -108,8 +108,8 @@ export class VcInvocationService {
       return;
     }
 
-    // Build AgentInfo from sender
-    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+    // Build ActorContext from sender
+    const actorContext = await this.actorContextService.buildForActor(
       payload.actorID
     );
 
@@ -128,7 +128,7 @@ export class VcInvocationService {
           vcActorID,
           payload.message.message,
           threadID,
-          agentInfo,
+          actorContext,
           '', // contextSpaceID out of scope
           room
         )
@@ -172,8 +172,8 @@ export class VcInvocationService {
       LogContext.COMMUNICATION
     );
 
-    // Build AgentInfo from sender
-    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+    // Build ActorContext from sender
+    const actorContext = await this.actorContextService.buildForActor(
       payload.actorID
     );
 
@@ -181,7 +181,7 @@ export class VcInvocationService {
       vcData.virtualContributorActorID,
       payload.message.message,
       threadID,
-      agentInfo,
+      actorContext,
       '', // contextSpaceID out of scope
       room
     );
@@ -206,8 +206,7 @@ export class VcInvocationService {
     );
 
     const vcMentions = mentions.filter(
-      (m: Mention) =>
-        m.contributorType === MentionedEntityType.VIRTUAL_CONTRIBUTOR
+      (m: Mention) => m.actorType === MentionedEntityType.VIRTUAL_CONTRIBUTOR
     );
 
     if (vcMentions.length === 0) {
@@ -218,8 +217,8 @@ export class VcInvocationService {
       return;
     }
 
-    // Build AgentInfo from sender
-    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+    // Build ActorContext from sender
+    const actorContext = await this.actorContextService.buildForActor(
       payload.actorID
     );
 
@@ -228,7 +227,7 @@ export class VcInvocationService {
       vcMentions,
       payload.message.message,
       threadID,
-      agentInfo,
+      actorContext,
       room
     );
   }

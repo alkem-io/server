@@ -1,6 +1,6 @@
 import { AuthorizationCredential } from '@common/enums';
 import { RoleName } from '@common/enums/role.name';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -9,7 +9,7 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
 import { vi } from 'vitest';
-import { IContributorRolePolicy } from './contributor.role.policy.interface';
+import { IActorRolePolicy } from './actor.role.policy.interface';
 import { CreateRoleInput } from './dto/role.dto.create';
 import { Role } from './role.entity';
 import { IRole } from './role.interface';
@@ -19,7 +19,7 @@ describe('RoleService', () => {
   let service: RoleService;
   let roleRepository: Repository<Role>;
 
-  const defaultPolicy: IContributorRolePolicy = {
+  const defaultPolicy: IActorRolePolicy = {
     minimum: 0,
     maximum: 100,
   };
@@ -103,7 +103,7 @@ describe('RoleService', () => {
     });
 
     it('should assign user policy from input', () => {
-      const userPolicy: IContributorRolePolicy = {
+      const userPolicy: IActorRolePolicy = {
         minimum: 1,
         maximum: 50,
       };
@@ -115,7 +115,7 @@ describe('RoleService', () => {
     });
 
     it('should assign organization policy from input', () => {
-      const orgPolicy: IContributorRolePolicy = {
+      const orgPolicy: IActorRolePolicy = {
         minimum: 0,
         maximum: 10,
       };
@@ -129,7 +129,7 @@ describe('RoleService', () => {
     });
 
     it('should assign virtual contributor policy from input', () => {
-      const vcPolicy: IContributorRolePolicy = {
+      const vcPolicy: IActorRolePolicy = {
         minimum: 0,
         maximum: 5,
       };

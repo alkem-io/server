@@ -1,6 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MemoService } from '@domain/common/memo';
 import { ConfigService } from '@nestjs/config';
@@ -22,7 +22,7 @@ import { FetchErrorCodes, SaveErrorCodes } from './types';
 describe('CollaborativeDocumentIntegrationService', () => {
   let service: CollaborativeDocumentIntegrationService;
   let authorizationService: { isAccessGranted: Mock };
-  let agentInfoService: { buildAgentInfoForUser: Mock };
+  let actorContextService: { buildForUser: Mock };
   let memoService: {
     getMemoOrFail: Mock;
     saveContent: Mock;
@@ -58,7 +58,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
     service = module.get(CollaborativeDocumentIntegrationService);
     authorizationService = module.get(AuthorizationService) as any;
-    agentInfoService = module.get(AgentInfoService) as any;
+    actorContextService = module.get(ActorContextService) as any;
     memoService = module.get(MemoService) as any;
     contributionReporter = module.get(ContributionReporterService) as any;
     communityResolver = module.get(CommunityResolverService) as any;
@@ -67,9 +67,9 @@ describe('CollaborativeDocumentIntegrationService', () => {
   describe('accessGranted', () => {
     it('should return true when user has the requested privilege', async () => {
       const memo = { id: 'memo-1', authorization: { id: 'auth-1' } };
-      const agentInfo = { credentials: [] };
+      const actorContext = { credentials: [] };
       memoService.getMemoOrFail.mockResolvedValue(memo);
-      agentInfoService.buildAgentInfoForUser.mockResolvedValue(agentInfo);
+      actorContextService.buildForUser.mockResolvedValue(actorContext);
       authorizationService.isAccessGranted.mockReturnValue(true);
 
       const result = await service.accessGranted({
@@ -80,7 +80,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
       expect(result).toBe(true);
       expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
-        agentInfo,
+        actorContext,
         memo.authorization,
         AuthorizationPrivilege.READ
       );
@@ -102,7 +102,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
   describe('info', () => {
     it('should return all-false when user has no read access', async () => {
       memoService.getMemoOrFail.mockResolvedValue({ authorization: {} });
-      agentInfoService.buildAgentInfoForUser.mockResolvedValue({});
+      actorContextService.buildForUser.mockResolvedValue({});
       authorizationService.isAccessGranted.mockReturnValue(false);
 
       const result = await service.info({
@@ -121,7 +121,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
     it('should return correct info with maxCollaborators based on isMultiUser', async () => {
       const memo = { authorization: { id: 'auth-1' } };
       memoService.getMemoOrFail.mockResolvedValue(memo);
-      agentInfoService.buildAgentInfoForUser.mockResolvedValue({});
+      actorContextService.buildForUser.mockResolvedValue({});
       // First call: READ -> true, Second call: UPDATE_CONTENT -> true
       authorizationService.isAccessGranted
         .mockReturnValueOnce(true) // READ check in first accessGranted call
@@ -141,7 +141,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
     it('should return maxCollaborators as 1 when not multi-user', async () => {
       memoService.getMemoOrFail.mockResolvedValue({ authorization: {} });
-      agentInfoService.buildAgentInfoForUser.mockResolvedValue({});
+      actorContextService.buildForUser.mockResolvedValue({});
       authorizationService.isAccessGranted.mockReturnValue(true);
       memoService.isMultiUser.mockResolvedValue(false);
 

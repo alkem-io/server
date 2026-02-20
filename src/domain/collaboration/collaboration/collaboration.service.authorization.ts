@@ -10,7 +10,7 @@ import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platf
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';

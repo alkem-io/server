@@ -10,14 +10,14 @@ import {
 } from '@common/exceptions';
 import { NotificationEventException } from '@common/exceptions/notification.event.exception';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
+import { CredentialsSearchInput } from '@domain/actor/credential/dto/credentials.dto.search';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IUserSettingsNotificationChannels } from '@domain/community/user-settings/user.settings.notification.channels.interface';
 import { IUserSettingsNotification } from '@domain/community/user-settings/user.settings.notification.interface';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -28,7 +28,7 @@ import { NotificationRecipientResult } from './dto/notification.recipients.dto.r
 export class NotificationRecipientsService {
   constructor(
     private userLookupService: UserLookupService,
-    private virtualContributorLookupService: VirtualContributorLookupService,
+    private virtualActorLookupService: VirtualActorLookupService,
     private spaceLookupService: SpaceLookupService,
     private organizationLookupService: OrganizationLookupService,
     private authorizationService: AuthorizationService,
@@ -129,7 +129,7 @@ export class NotificationRecipientsService {
     );
 
     const triggeredBy = eventData.triggeredBy
-      ? await this.userLookupService.getUserOrFail(eventData.triggeredBy)
+      ? await this.userLookupService.getUserByIdOrFail(eventData.triggeredBy)
       : undefined;
 
     if (!triggeredBy) {
@@ -164,15 +164,12 @@ export class NotificationRecipientsService {
       recipientsWithNotificationEnabled.map(recipient => recipient.id);
     // Need to reload the users to get the full set of credentials for use in authorization evaluation
     const recipientsWithNotificationEnabledWithCredentials =
-      await this.userLookupService.getUsersByUUID(
+      await this.userLookupService.getUsersByIds(
         recipientsWithNotificationEnabledIDs,
         {
           relations: {
             settings: true,
-            profile: true,
-            agent: {
-              credentials: true,
-            },
+            actor: { profile: true, credentials: true },
           },
         }
       );
@@ -195,10 +192,10 @@ export class NotificationRecipientsService {
       );
       recipientsWithPrivilege =
         recipientsWithNotificationEnabledWithCredentials.filter(recipient => {
-          const credentials = recipient.agent.credentials;
+          const credentials = recipient.credentials;
           if (!credentials) {
             throw new RelationshipNotFoundException(
-              `User ${recipient.id} does not have agent with credentials`,
+              `User ${recipient.id} does not have credentials loaded`,
               LogContext.NOTIFICATIONS
             );
           }
@@ -274,9 +271,9 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED:
       case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:
         return notificationSettings.space.communityCalendarEvents;
-      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED:
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
         return notificationSettings.space.admin.communityNewMember;
-      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION:
+      case NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION:
         return notificationSettings.virtualContributor
           .adminSpaceCommunityInvitation;
 
@@ -393,13 +390,13 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
-      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED: {
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED: {
         // Notify the space admin who sent the VC invitation
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
-      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION: {
+      case NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS;
         credentialCriteria =
           await this.getVirtualContributorCriteria(virtualContributorID);
@@ -440,7 +437,7 @@ export class NotificationRecipientsService {
           );
         }
         const organization =
-          await this.organizationLookupService.getOrganizationOrFail(
+          await this.organizationLookupService.getOrganizationByIdOrFail(
             organizationID
           );
         if (!organization.authorization) {
@@ -456,7 +453,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_APPLICATION:
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
-      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED:
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
@@ -498,7 +495,8 @@ export class NotificationRecipientsService {
             LogContext.NOTIFICATIONS
           );
         }
-        const user = await this.userLookupService.getUserOrFail(targetUserID);
+        const user =
+          await this.userLookupService.getUserByIdOrFail(targetUserID);
         if (!user.authorization) {
           throw new RelationshipNotFoundException(
             `User does not have an authorization policy: ${user.id}`,
@@ -508,7 +506,7 @@ export class NotificationRecipientsService {
         return user.authorization;
       }
 
-      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION: {
+      case NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION: {
         // get the Virtual Contributor authorization policy
         if (!virtualContributorID) {
           throw new ValidationException(
@@ -517,7 +515,7 @@ export class NotificationRecipientsService {
           );
         }
         const virtualContributor =
-          await this.virtualContributorLookupService.getVirtualContributorOrFail(
+          await this.virtualActorLookupService.getVirtualContributorByIdOrFail(
             virtualContributorID
           );
         if (!virtualContributor.authorization) {
@@ -637,7 +635,7 @@ export class NotificationRecipientsService {
       );
     }
     const virtual =
-      await this.virtualContributorLookupService.getVirtualContributorOrFail(
+      await this.virtualActorLookupService.getVirtualContributorByIdOrFail(
         virtualContributorID,
         {
           relations: {

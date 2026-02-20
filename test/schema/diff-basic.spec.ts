@@ -1,7 +1,7 @@
-import { writeFileSync, readFileSync, mkdtempSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { execSync } from 'node:child_process';
 
 // NOTE: Using CLI entry so we exercise the same path as CI script.
 

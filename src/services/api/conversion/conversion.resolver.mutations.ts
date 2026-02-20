@@ -7,7 +7,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutTransferService } from '@domain/collaboration/callout-transfer/callout.transfer.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
@@ -22,7 +22,7 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConversionService } from './conversion.service';
 import { ConversionVcSpaceToVcKnowledgeBaseInput } from './dto/conversion.dto.vc.space.to.vc.kb';
@@ -60,15 +60,15 @@ export class ConversionResolverMutations {
     description: 'Move an L1 Space up in the hierarchy, to be a L0 Space.',
   })
   async convertSpaceL1ToSpaceL0(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('convertData')
     conversionData: ConvertSpaceL1ToSpaceL0Input
   ): Promise<ISpace> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `convert challenge to space: ${agentInfo.email}`
+      `convert challenge to space: ${actorContext.actorID}`
     );
     let space =
       await this.conversionService.convertSpaceL1ToSpaceL0OrFail(
@@ -86,15 +86,15 @@ export class ConversionResolverMutations {
     description: 'Move an L2 Space up in the hierarchy, to be a L1 Space.',
   })
   async convertSpaceL2ToSpaceL1(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('convertData')
     conversionData: ConvertSpaceL2ToSpaceL1Input
   ): Promise<ISpace> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `convert space L2 to Space L1: ${agentInfo.email}`
+      `convert space L2 to Space L1: ${actorContext.actorID}`
     );
     let spaceL1 =
       await this.conversionService.convertSpaceL2ToSpaceL1OrFail(
@@ -122,15 +122,15 @@ export class ConversionResolverMutations {
       the exception of Admin role assignments for Users.',
   })
   async convertSpaceL1ToSpaceL2(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('convertData')
     conversionData: ConvertSpaceL1ToSpaceL2Input
   ): Promise<ISpace> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `convert space L1 to Space L2: ${agentInfo.email}`
+      `convert space L1 to Space L2: ${actorContext.actorID}`
     );
     let spaceL2 =
       await this.conversionService.convertSpaceL1ToSpaceL2OrFail(
@@ -155,18 +155,18 @@ export class ConversionResolverMutations {
       'Convert a VC of type ALKEMIO_SPACE to be of type KNOWLEDGE_BASE. All Callouts from the Space currently being used are moved to the Knowledge Base. Note: only allowed for VCs using a Space within the same Account.',
   })
   async convertVirtualContributorToUseKnowledgeBase(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('conversionData')
     conversionData: ConversionVcSpaceToVcKnowledgeBaseInput
   ): Promise<IVirtualContributor> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `convert VC of type Space to VC of type KnowledgeBase: ${agentInfo.email}`
+      `convert VC of type Space to VC of type KnowledgeBase: ${actorContext.actorID}`
     );
     const virtualContributor =
-      await this.virtualContributorService.getVirtualContributorOrFail(
+      await this.virtualContributorService.getVirtualContributorByIdOrFail(
         conversionData.virtualContributorID,
         {
           relations: {
@@ -259,7 +259,7 @@ export class ConversionResolverMutations {
       );
 
     await this.authorizationPolicyService.saveAll(authorizations);
-    return this.virtualContributorService.getVirtualContributorOrFail(
+    return this.virtualContributorService.getVirtualContributorByIdOrFail(
       virtualContributor.id
     );
   }
@@ -270,7 +270,7 @@ export class ConversionResolverMutations {
     const subspace = await this.spaceService.getSpaceOrFail(subspaceID, {
       relations: {
         parentSpace: {
-          authorization: true,
+          actor: true,
         },
       },
     });

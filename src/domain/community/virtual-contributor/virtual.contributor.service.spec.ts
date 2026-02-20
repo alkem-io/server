@@ -1,13 +1,12 @@
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import {
   EntityNotFoundException,
-  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.base.service';
+import { ProfileAvatarService } from '@domain/common/profile/profile.avatar.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -20,9 +19,8 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock, vi } from 'vitest';
-import { ContributorService } from '../contributor/contributor.service';
 import { VirtualContributorDefaultsService } from '../virtual-contributor-defaults/virtual.contributor.defaults.service';
-import { VirtualContributorLookupService } from '../virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from '../virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { VirtualContributorPlatformSettingsService } from '../virtual-contributor-platform-settings/virtual.contributor.platform.settings.service';
 import { VirtualContributorSettingsService } from '../virtual-contributor-settings/virtual.contributor.settings.service';
 import { VirtualContributor } from './virtual.contributor.entity';
@@ -43,7 +41,6 @@ describe('VirtualContributorService', () => {
     remove: Mock;
   };
   let authorizationPolicyService: { delete: Mock };
-  let agentService: { createAgent: Mock; deleteAgent: Mock };
   let profileService: {
     createProfile: Mock;
     addOrUpdateTagsetOnProfile: Mock;
@@ -66,7 +63,7 @@ describe('VirtualContributorService', () => {
     save: Mock;
     delete: Mock;
   };
-  let virtualContributorLookupService: { getAccountOrFail: Mock };
+  let virtualActorLookupService: { getAccountOrFail: Mock };
   let virtualContributorSettingsService: { updateSettings: Mock };
   let virtualContributorPlatformSettingsService: { updateSettings: Mock };
   let accountLookupService: { getHostOrFail: Mock };
@@ -99,16 +96,13 @@ describe('VirtualContributorService', () => {
     service = module.get(VirtualContributorService);
     repository = module.get(getRepositoryToken(VirtualContributor));
     authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
-    agentService = module.get(AgentService) as any;
     profileService = module.get(ProfileService) as any;
-    _contributorService = module.get(ContributorService) as any;
+    _contributorService = module.get(ProfileAvatarService) as any;
     _communicationAdapter = module.get(CommunicationAdapter) as any;
     aiPersonaService = module.get(AiPersonaService) as any;
     aiServerAdapter = module.get(AiServerAdapter) as any;
     knowledgeBaseService = module.get(KnowledgeBaseService) as any;
-    virtualContributorLookupService = module.get(
-      VirtualContributorLookupService
-    ) as any;
+    virtualActorLookupService = module.get(VirtualActorLookupService) as any;
     virtualContributorSettingsService = module.get(
       VirtualContributorSettingsService
     ) as any;
@@ -126,7 +120,7 @@ describe('VirtualContributorService', () => {
       const mockVC = { id: 'vc-1', nameID: 'test-vc' };
       repository.findOne.mockResolvedValue(mockVC);
 
-      const result = await service.getVirtualContributorOrFail('vc-1');
+      const result = await service.getVirtualContributorByIdOrFail('vc-1');
       expect(result).toBe(mockVC);
     });
 
@@ -134,30 +128,30 @@ describe('VirtualContributorService', () => {
       repository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.getVirtualContributorOrFail('nonexistent')
+        service.getVirtualContributorByIdOrFail('nonexistent')
       ).rejects.toThrow(EntityNotFoundException);
     });
   });
 
-  describe('getVirtualContributorAndAgent', () => {
-    it('should return virtual contributor and agent when agent is loaded', async () => {
-      const mockAgent = { id: 'agent-1' };
-      const mockVC = { id: 'vc-1', agent: mockAgent };
+  describe('getVirtualContributorAndActor', () => {
+    it('should return virtual contributor and actorID when VC is found', async () => {
+      const mockCredentials = [{ id: 'cred-1' }];
+      const mockVC = { id: 'vc-1', credentials: mockCredentials };
       repository.findOne.mockResolvedValue(mockVC);
 
-      const result = await service.getVirtualContributorAndAgent('vc-1');
+      const result = await service.getVirtualContributorAndActor('vc-1');
 
       expect(result.virtualContributor).toBe(mockVC);
-      expect(result.agent).toBe(mockAgent);
+      expect(result.actorID).toBe('vc-1');
+      expect(result.credentials).toBe(mockCredentials);
     });
 
-    it('should throw EntityNotInitializedException when agent is not loaded', async () => {
-      const mockVC = { id: 'vc-1', agent: undefined };
-      repository.findOne.mockResolvedValue(mockVC);
+    it('should throw EntityNotFoundException when VC is not found', async () => {
+      repository.findOne.mockResolvedValue(null);
 
       await expect(
-        service.getVirtualContributorAndAgent('vc-1')
-      ).rejects.toThrow(EntityNotInitializedException);
+        service.getVirtualContributorAndActor('vc-1')
+      ).rejects.toThrow(EntityNotFoundException);
     });
   });
 
@@ -186,24 +180,6 @@ describe('VirtualContributorService', () => {
 
       await expect(service.getStorageBucket('vc-1')).rejects.toThrow(
         RelationshipNotFoundException
-      );
-    });
-  });
-
-  describe('getAgent', () => {
-    it('should return the agent when loaded on the virtual contributor', async () => {
-      const mockAgent = { id: 'agent-1' };
-      repository.findOne.mockResolvedValue({ id: 'vc-1', agent: mockAgent });
-
-      const result = await service.getAgent({ id: 'vc-1' } as any);
-      expect(result).toBe(mockAgent);
-    });
-
-    it('should throw EntityNotInitializedException when agent is not loaded', async () => {
-      repository.findOne.mockResolvedValue({ id: 'vc-1', agent: undefined });
-
-      await expect(service.getAgent({ id: 'vc-1' } as any)).rejects.toThrow(
-        EntityNotInitializedException
       );
     });
   });
@@ -248,16 +224,14 @@ describe('VirtualContributorService', () => {
     it('should return the host contributor from the account', async () => {
       const mockAccount = { id: 'account-1' };
       const mockHost = { id: 'host-1' };
-      virtualContributorLookupService.getAccountOrFail.mockResolvedValue(
-        mockAccount
-      );
+      virtualActorLookupService.getAccountOrFail.mockResolvedValue(mockAccount);
       accountLookupService.getHostOrFail.mockResolvedValue(mockHost);
 
       const result = await service.getProvider({ id: 'vc-1' } as any);
 
-      expect(
-        virtualContributorLookupService.getAccountOrFail
-      ).toHaveBeenCalledWith('vc-1');
+      expect(virtualActorLookupService.getAccountOrFail).toHaveBeenCalledWith(
+        'vc-1'
+      );
       expect(accountLookupService.getHostOrFail).toHaveBeenCalledWith(
         mockAccount
       );
@@ -328,9 +302,9 @@ describe('VirtualContributorService', () => {
         id: 'vc-1',
         bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType.NONE,
       } as any;
-      const agentInfo = { userID: 'user-1' } as any;
+      const actorContext = { userID: 'user-1' } as any;
 
-      const result = await service.refreshBodyOfKnowledge(vc, agentInfo);
+      const result = await service.refreshBodyOfKnowledge(vc, actorContext);
 
       expect(result).toBe(false);
       expect(aiServerAdapter.refreshBodyOfKnowledge).not.toHaveBeenCalled();
@@ -341,9 +315,9 @@ describe('VirtualContributorService', () => {
         id: 'vc-1',
         bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType.OTHER,
       } as any;
-      const agentInfo = { userID: 'user-1' } as any;
+      const actorContext = { userID: 'user-1' } as any;
 
-      const result = await service.refreshBodyOfKnowledge(vc, agentInfo);
+      const result = await service.refreshBodyOfKnowledge(vc, actorContext);
 
       expect(result).toBe(false);
     });
@@ -358,9 +332,9 @@ describe('VirtualContributorService', () => {
         bodyOfKnowledgeID: 'bok-1',
         aiPersonaID: 'persona-1',
       } as any;
-      const agentInfo = { userID: 'user-1' } as any;
+      const actorContext = { userID: 'user-1' } as any;
 
-      const result = await service.refreshBodyOfKnowledge(vc, agentInfo);
+      const result = await service.refreshBodyOfKnowledge(vc, actorContext);
 
       expect(aiServerAdapter.refreshBodyOfKnowledge).toHaveBeenCalledWith(
         'bok-1',
@@ -380,9 +354,9 @@ describe('VirtualContributorService', () => {
         bodyOfKnowledgeID: undefined,
         aiPersonaID: 'persona-1',
       } as any;
-      const agentInfo = { userID: 'user-1' } as any;
+      const actorContext = { userID: 'user-1' } as any;
 
-      await service.refreshBodyOfKnowledge(vc, agentInfo);
+      await service.refreshBodyOfKnowledge(vc, actorContext);
 
       expect(aiServerAdapter.refreshBodyOfKnowledge).toHaveBeenCalledWith(
         '',
@@ -393,11 +367,10 @@ describe('VirtualContributorService', () => {
   });
 
   describe('deleteVirtualContributor', () => {
-    it('should delete profile, authorization, agent, AI persona, knowledge base, and invitations', async () => {
+    it('should delete profile, authorization, AI persona, knowledge base, and invitations', async () => {
       const mockVC = {
         id: 'vc-1',
         profile: { id: 'profile-1' },
-        agent: { id: 'agent-1' },
         knowledgeBase: { id: 'kb-1' },
         authorization: { id: 'auth-1' },
         aiPersonaID: 'persona-1',
@@ -405,7 +378,6 @@ describe('VirtualContributorService', () => {
       repository.findOne.mockResolvedValue(mockVC);
       profileService.deleteProfile.mockResolvedValue(undefined);
       authorizationPolicyService.delete.mockResolvedValue(undefined);
-      agentService.deleteAgent.mockResolvedValue(undefined);
       aiPersonaService.deleteAiPersona.mockResolvedValue(undefined);
       knowledgeBaseService.delete.mockResolvedValue(undefined);
       entityManager.find.mockResolvedValue([]); // No invitations
@@ -417,7 +389,7 @@ describe('VirtualContributorService', () => {
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         mockVC.authorization
       );
-      expect(agentService.deleteAgent).toHaveBeenCalledWith('agent-1');
+      // Credentials are on Actor (which VC extends), deleted via cascade
       expect(aiPersonaService.deleteAiPersona).toHaveBeenCalledWith({
         ID: 'persona-1',
       });
@@ -431,21 +403,6 @@ describe('VirtualContributorService', () => {
       const mockVC = {
         id: 'vc-1',
         profile: undefined,
-        agent: { id: 'agent-1' },
-        knowledgeBase: { id: 'kb-1' },
-      };
-      repository.findOne.mockResolvedValue(mockVC);
-
-      await expect(service.deleteVirtualContributor('vc-1')).rejects.toThrow(
-        RelationshipNotFoundException
-      );
-    });
-
-    it('should throw RelationshipNotFoundException when agent is missing', async () => {
-      const mockVC = {
-        id: 'vc-1',
-        profile: { id: 'profile-1' },
-        agent: undefined,
         knowledgeBase: { id: 'kb-1' },
       };
       repository.findOne.mockResolvedValue(mockVC);
@@ -459,7 +416,6 @@ describe('VirtualContributorService', () => {
       const mockVC = {
         id: 'vc-1',
         profile: { id: 'profile-1' },
-        agent: { id: 'agent-1' },
         knowledgeBase: undefined,
       };
       repository.findOne.mockResolvedValue(mockVC);
@@ -473,14 +429,12 @@ describe('VirtualContributorService', () => {
       const mockVC = {
         id: 'vc-1',
         profile: { id: 'profile-1' },
-        agent: { id: 'agent-1' },
         knowledgeBase: { id: 'kb-1' },
         authorization: undefined,
         aiPersonaID: undefined,
       };
       repository.findOne.mockResolvedValue(mockVC);
       profileService.deleteProfile.mockResolvedValue(undefined);
-      agentService.deleteAgent.mockResolvedValue(undefined);
       knowledgeBaseService.delete.mockResolvedValue(undefined);
       entityManager.find.mockResolvedValue([]);
       repository.remove.mockResolvedValue({ ...mockVC, id: undefined });
@@ -494,14 +448,12 @@ describe('VirtualContributorService', () => {
       const mockVC = {
         id: 'vc-1',
         profile: { id: 'profile-1' },
-        agent: { id: 'agent-1' },
         knowledgeBase: { id: 'kb-1' },
         authorization: undefined,
         aiPersonaID: 'persona-1',
       };
       repository.findOne.mockResolvedValue(mockVC);
       profileService.deleteProfile.mockResolvedValue(undefined);
-      agentService.deleteAgent.mockResolvedValue(undefined);
       aiPersonaService.deleteAiPersona.mockRejectedValue(
         new Error('External service error')
       );
@@ -522,14 +474,12 @@ describe('VirtualContributorService', () => {
       const mockVC = {
         id: 'vc-1',
         profile: { id: 'profile-1' },
-        agent: { id: 'agent-1' },
         knowledgeBase: { id: 'kb-1' },
         authorization: undefined,
         aiPersonaID: undefined,
       };
       repository.findOne.mockResolvedValue(mockVC);
       profileService.deleteProfile.mockResolvedValue(undefined);
-      agentService.deleteAgent.mockResolvedValue(undefined);
       knowledgeBaseService.delete.mockResolvedValue(undefined);
       entityManager.find.mockResolvedValue([mockInvitation]);
       entityManager.remove.mockResolvedValue(undefined);

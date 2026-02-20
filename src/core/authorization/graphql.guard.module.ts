@@ -1,4 +1,4 @@
-import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { Global, Module } from '@nestjs/common';
 import { AuthorizationModule } from './authorization.module';
 import { GraphqlGuard } from './graphql.guard';
@@ -10,8 +10,8 @@ import { GraphqlGuard } from './graphql.guard';
  */
 @Global()
 @Module({
-  imports: [AuthorizationModule, AuthenticationAgentInfoModule],
+  imports: [AuthorizationModule, ActorContextModule],
   providers: [GraphqlGuard],
-  exports: [GraphqlGuard, AuthorizationModule, AuthenticationAgentInfoModule],
+  exports: [GraphqlGuard, AuthorizationModule, ActorContextModule],
 })
 export class GraphqlGuardModule {}

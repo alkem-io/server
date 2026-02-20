@@ -1,0 +1,289 @@
+# GraphQL Schema Additions: Actor Transformation
+# Feature: 026-actor-transformation
+# Date: 2025-12-27
+# Status: Implemented (commit a899ef55 + follow-up fixes on 026-actor-transformation-v2)
+#
+# IMPLEMENTATION NOTES (divergences from original design):
+#
+# 1. TWO-TIER TYPE HIERARCHY (not single IActor interface):
+#    - `Actor`     – lightweight ObjectType for display contexts (no nameID, no credentials)
+#    - `ActorFull` – polymorphic InterfaceType for full actor data (resolves to concrete types)
+#    Types that need polymorphic resolution implement ActorFull, not Actor.
+#
+# 2. ActorType enum uses VIRTUAL_CONTRIBUTOR = 'virtual-contributor'.
+#    The DB enum value was initially 'virtual' and renamed to 'virtual-contributor'
+#    in migration 1771000020000-RenameVirtualToVirtualContributor.
+#
+# 3. actorsWithCredential is admin-only (AdminQuery, gated by READ_USERS privilege).
+#    It is NOT in the public Query type.
+#
+# 4. Credential mutations use flat args (not Input wrapper objects).
+#    grantCredentialToActor returns Credential (not ActorFull).
+#    revokeCredentialFromActor returns Boolean.
+#
+# 5. Per-type credential mutations (grantCredentialToUser, grantCredentialToOrganization,
+#    revokeCredentialFromUser, revokeCredentialFromOrganization) were NOT removed;
+#    they continue to exist alongside the new unified mutations.
+
+# =============================================================================
+# ENUMS
+# =============================================================================
+
+"""
+The type of Actor - determines which entity table the actor belongs to.
+Database ENUM: actor_type_enum ('user', 'organization', 'virtual', 'space', 'account').
+NOTE: VIRTUAL_CONTRIBUTOR was shortened to VIRTUAL to reduce verbosity.
+"""
+enum ActorType {
+  USER
+  ORGANIZATION
+  VIRTUAL_CONTRIBUTOR
+  SPACE
+  ACCOUNT
+}
+
+# =============================================================================
+# TYPES
+# =============================================================================
+
+"""
+Actor is a lightweight ObjectType exposing only base actor fields.
+Use for display contexts (activity feed, attribution on cards, member lists)
+where nameID and type-specific fields are not needed.
+
+This is NOT a polymorphic interface. For polymorphic queries that resolve
+to User / Organization / VirtualContributor / Space / Account, use ActorFull.
+"""
+type Actor {
+  """Unique identifier - same as the entity ID (userId, orgId, etc.)"""
+  id: UUID!
+
+  """Authorization policy for this actor"""
+  authorization: Authorization
+
+  """The type of actor"""
+  type: ActorType!
+
+  """
+  Profile associated with this actor.
+  Non-null for USER, ORGANIZATION, VIRTUAL.
+  Null for SPACE, ACCOUNT (Space uses SpaceAbout instead).
+  """
+  profile: Profile
+}
+
+"""
+ActorFull is the polymorphic interface for full actor data.
+Resolves to: User | Organization | VirtualContributor | Space | Account
+based on the actor.type discriminator field.
+
+Use this when you need nameID, credentials, or type-specific fields.
+"""
+interface ActorFull {
+  """Unique identifier - same as the entity ID (userId, orgId, etc.)"""
+  id: UUID!
+
+  """The type of actor"""
+  type: ActorType!
+
+  """A name identifier of the Actor, unique within a given scope."""
+  nameID: NameID!
+
+  """Authorization policy for this actor"""
+  authorization: Authorization
+
+  """Credentials held by this actor"""
+  credentials: [Credential!]
+
+  """
+  Profile associated with this actor.
+  Non-null for USER, ORGANIZATION, VIRTUAL.
+  Null for SPACE, ACCOUNT.
+  """
+  profile: Profile
+
+  """Date at which the entity was created."""
+  createdDate: DateTime!
+
+  """Date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+# =============================================================================
+# TYPE IMPLEMENTATIONS
+# =============================================================================
+
+"""
+User type implements ActorFull interface.
+User.id serves as the actor ID for credential operations.
+"""
+type User implements ActorFull {
+  id: UUID!
+  type: ActorType!
+  nameID: NameID!
+  authorization: Authorization
+  credentials: [Credential!]
+  profile: Profile
+  createdDate: DateTime!
+  updatedDate: DateTime!
+
+  # User-specific fields (existing)
+  firstName: String!
+  lastName: String!
+  email: String!
+  phone: String
+  # ... other existing User fields
+}
+
+"""
+Organization type implements ActorFull interface.
+Organization.id serves as the actor ID for credential operations.
+"""
+type Organization implements ActorFull {
+  id: UUID!
+  type: ActorType!
+  nameID: NameID!
+  authorization: Authorization
+  credentials: [Credential!]
+  profile: Profile
+  createdDate: DateTime!
+  updatedDate: DateTime!
+
+  # Organization-specific fields (existing)
+  legalEntityName: String
+  domain: String
+  website: String
+  contactEmail: String
+  # ... other existing Organization fields
+}
+
+"""
+VirtualContributor type implements ActorFull interface.
+VirtualContributor.id serves as the actor ID for credential operations.
+"""
+type VirtualContributor implements ActorFull {
+  id: UUID!
+  type: ActorType!
+  nameID: NameID!
+  authorization: Authorization
+  credentials: [Credential!]
+  profile: Profile
+  createdDate: DateTime!
+  updatedDate: DateTime!
+
+  # VirtualContributor-specific fields (existing)
+  account: Account
+  # ... other existing VirtualContributor fields
+}
+
+"""
+Space type implements ActorFull interface.
+Space.id serves as the actor ID for license credential operations.
+Profile is always null for Space (uses SpaceAbout instead).
+"""
+type Space implements ActorFull {
+  id: UUID!
+  type: ActorType!
+  nameID: NameID!
+  authorization: Authorization
+  credentials: [Credential!]
+  profile: Profile  # Always null for Space
+  createdDate: DateTime!
+  updatedDate: DateTime!
+
+  # Space-specific fields (existing)
+  account: Account
+  # ... other existing Space fields
+}
+
+"""
+Account type implements ActorFull interface.
+Account.id serves as the actor ID for license credential operations.
+Profile is always null for Account.
+"""
+type Account implements ActorFull {
+  id: UUID!
+  type: ActorType!
+  nameID: NameID!
+  authorization: Authorization
+  credentials: [Credential!]
+  profile: Profile  # Always null for Account
+  createdDate: DateTime!
+  updatedDate: DateTime!
+
+  # Account-specific fields (existing)
+  # ... existing Account fields
+}
+
+# =============================================================================
+# QUERIES
+# =============================================================================
+
+extend type Query {
+  """
+  Retrieve a lightweight Actor by ID.
+  Returns the Actor ObjectType (id, type, profile only – no nameID, no credentials).
+  Returns null if no actor exists with the given ID.
+  For full actor data with type resolution, use a type-specific query (user, organization, etc.)
+  """
+  actor(id: UUID!): Actor
+}
+
+# NOTE: actorsWithCredential is NOT in the public Query type.
+# It is exposed as an admin query (AdminAuthorizationResolverQueries) gated by
+# READ_USERS platform privilege:
+#
+#   adminQuery {
+#     actorsWithCredential(credentialType: CredentialType!, resourceID: UUID): [ActorFull!]!
+#   }
+
+# =============================================================================
+# MUTATIONS
+# =============================================================================
+
+extend type Mutation {
+  """
+  Grant a credential to any actor (User, Organization, VirtualContributor, Space, Account).
+  Requires PLATFORM_ADMIN privilege.
+  Returns the created Credential.
+  """
+  grantCredentialToActor(
+    actorID: UUID!
+    credentialType: CredentialType!
+    resourceID: UUID
+  ): Credential!
+
+  """
+  Revoke a credential from any actor.
+  Requires PLATFORM_ADMIN privilege.
+  Returns true if revoked, false if the credential was not found.
+  """
+  revokeCredentialFromActor(
+    actorID: UUID!
+    credentialType: CredentialType!
+    resourceID: UUID
+  ): Boolean!
+}
+
+# NOTE: Per-type mutations still exist alongside the unified ones:
+#   grantCredentialToUser / revokeCredentialFromUser
+#   grantCredentialToOrganization / revokeCredentialFromOrganization
+# These are in the Admin authorization resolver, not replaced by the unified mutations.
+
+# =============================================================================
+# REMOVED / DEPRECATED
+# =============================================================================
+
+# The following types were REMOVED (not deprecated) in commit a899ef55:
+#
+# - Agent type (removed; replaced by Actor/ActorFull)
+# - IContributor interface (removed; replaced by ActorFull)
+# - User.agent field (credentials now accessed via User.credentials directly)
+# - Organization.agent field
+# - VirtualContributor.agent field
+# - Space.agent field
+# - Account.agent field
+# - Invitation.contributorType field (redundant; use Actor.type via actorID lookup)
+# - InAppNotificationPayload.contributorType JSON field
+# - InAppNotification sparse columns (contributorUserID, contributorOrganizationID,
+#   contributorVcID) consolidated into single contributorActorID FK to Actor

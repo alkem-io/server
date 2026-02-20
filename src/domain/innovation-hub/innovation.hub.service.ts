@@ -8,10 +8,10 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -334,7 +334,7 @@ export class InnovationHubService {
     return true;
   }
 
-  public async getProvider(innovationHubID: string): Promise<IContributor> {
+  public async getProvider(innovationHubID: string): Promise<IActor> {
     const innovationHub = await this.innovationHubRepository.findOne({
       where: { id: innovationHubID },
       relations: {

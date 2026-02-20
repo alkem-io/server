@@ -220,8 +220,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oidc_service
-    image: docker.io/alkemio/oidc-service:v0.7.1
-    platform: linux/amd64
+    image: docker.io/alkemio/oidc-service:v0.7.2
     depends_on:
       - hydra
       - kratos
@@ -413,8 +412,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter-go:v0.8.4-mapping8
-    platform: linux/amd64
+    image: alkemio/matrix-adapter-go:v0.8.4.1-mapping
     depends_on:
       - rabbitmq
     environment:
@@ -439,7 +437,7 @@ services:
       - DATABASE_USERNAME
       - DATABASE_PASSWORD
       - DATABASE_NAME=alkemio
-      - ACTOR_ID_MAPPER_ENABLED=true
+      - ACTOR_ID_MAPPER_ENABLED=false
     restart: always
     networks:
       - alkemio_dev_net

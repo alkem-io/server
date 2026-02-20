@@ -1,8 +1,8 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
-import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { Module } from '@nestjs/common';
@@ -22,7 +22,7 @@ import { MeService } from './me.service';
     ApplicationModule,
     InvitationModule,
     UserLookupModule,
-    ContributorModule,
+    ActorModule,
     SpaceModule,
     RolesModule,
     ActivityLogModule,

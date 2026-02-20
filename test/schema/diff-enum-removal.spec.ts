@@ -1,7 +1,7 @@
-import { writeFileSync, readFileSync, mkdtempSync } from 'node:fs';
+import { execSync } from 'node:child_process';
+import { mkdtempSync, readFileSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
-import { execSync } from 'node:child_process';
 
 describe('schema diff enum removal lifecycle', () => {
   const tool = 'src/tools/schema/diff-schema.ts';

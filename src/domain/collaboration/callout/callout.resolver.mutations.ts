@@ -7,7 +7,7 @@ import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   CalloutPostCreatedPayload,
@@ -33,7 +33,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
@@ -71,12 +71,12 @@ export class CalloutResolverMutations {
     description: 'Delete a Callout.',
   })
   async deleteCallout(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteCalloutInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(deleteData.ID);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       callout.authorization,
       AuthorizationPrivilege.DELETE,
       `delete callout: ${callout.id}`
@@ -88,12 +88,12 @@ export class CalloutResolverMutations {
     description: 'Update a Callout.',
   })
   async updateCallout(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('calloutData') calloutData: UpdateCalloutEntityInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(calloutData.ID);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       callout.authorization,
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
@@ -102,7 +102,7 @@ export class CalloutResolverMutations {
     const updatedCallout = await this.calloutService.updateCallout(
       callout,
       calloutData,
-      agentInfo.userID
+      actorContext.actorID
     );
 
     // Reset authorization policy for the callout and its child entities
@@ -129,7 +129,7 @@ export class CalloutResolverMutations {
     description: 'Update the visibility of the specified Callout.',
   })
   async updateCalloutVisibility(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('calloutData') calloutData: UpdateCalloutVisibilityInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
@@ -143,7 +143,7 @@ export class CalloutResolverMutations {
       }
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       callout.authorization,
       AuthorizationPrivilege.UPDATE,
       `update visibility on callout: ${callout.id}`
@@ -161,14 +161,14 @@ export class CalloutResolverMutations {
         // Save published info
         await this.calloutService.updateCalloutPublishInfo(
           savedCallout,
-          agentInfo.userID,
+          actorContext.actorID,
           Date.now()
         );
 
         if (callout.calloutsSet?.type === CalloutsSetType.COLLABORATION) {
           if (calloutData.sendNotification) {
             const notificationInput: NotificationInputCalloutPublished = {
-              triggeredBy: agentInfo.userID,
+              triggeredBy: actorContext.actorID,
               callout: callout,
             };
             await this.notificationAdapterSpace.spaceCollaborationCalloutPublished(
@@ -177,7 +177,7 @@ export class CalloutResolverMutations {
           }
 
           const activityLogInput: ActivityInputCalloutPublished = {
-            triggeredBy: agentInfo.userID,
+            triggeredBy: actorContext.actorID,
             callout: callout,
           };
           this.activityAdapter.calloutPublished(activityLogInput);
@@ -211,14 +211,14 @@ export class CalloutResolverMutations {
       'Update the information describing the publishing of the specified Callout.',
   })
   async updateCalloutPublishInfo(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('calloutData') calloutData: UpdateCalloutPublishInfoInput
   ): Promise<ICallout> {
     const callout = await this.calloutService.getCalloutOrFail(
       calloutData.calloutID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       callout.authorization,
       AuthorizationPrivilege.UPDATE_CALLOUT_PUBLISHER,
       `update publisher information on callout: ${callout.id}`
@@ -234,7 +234,7 @@ export class CalloutResolverMutations {
     description: 'Create a new Contribution on the Callout.',
   })
   async createContributionOnCallout(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('contributionData') contributionData: CreateContributionOnCalloutInput
   ): Promise<ICalloutContribution> {
     const callout = await this.calloutService.getCalloutOrFail(
@@ -253,7 +253,7 @@ export class CalloutResolverMutations {
     }
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       callout.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
       `create contribution on callout: ${callout.id}`
@@ -275,7 +275,7 @@ export class CalloutResolverMutations {
     ) {
       if (
         !this.authorizationService.isAccessGranted(
-          agentInfo,
+          actorContext,
           callout.authorization,
           AuthorizationPrivilege.UPDATE
         )
@@ -288,7 +288,7 @@ export class CalloutResolverMutations {
 
     let contribution = await this.calloutService.createContributionOnCallout(
       contributionData,
-      agentInfo.userID
+      actorContext.actorID
     );
 
     const { roleSet, platformRolesAccess, spaceSettings } =
@@ -357,7 +357,7 @@ export class CalloutResolverMutations {
             contribution,
             contribution.post,
             levelZeroSpaceID,
-            agentInfo
+            actorContext
           );
         }
       }
@@ -369,7 +369,7 @@ export class CalloutResolverMutations {
             contribution,
             contribution.link,
             levelZeroSpaceID,
-            agentInfo
+            actorContext
           );
         }
       }
@@ -381,7 +381,7 @@ export class CalloutResolverMutations {
             contribution,
             contribution.whiteboard,
             levelZeroSpaceID,
-            agentInfo
+            actorContext
           );
         }
       }
@@ -393,7 +393,7 @@ export class CalloutResolverMutations {
             contribution,
             contribution.memo,
             levelZeroSpaceID,
-            agentInfo
+            actorContext
           );
         }
       }
@@ -409,20 +409,20 @@ export class CalloutResolverMutations {
     contribution: ICalloutContribution,
     link: ILink,
     levelZeroSpaceID: string,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
       {
         contribution: contribution,
         callout: callout,
         contributionType: CalloutContributionType.LINK,
-        triggeredBy: agentInfo.userID,
+        triggeredBy: actorContext.actorID,
       };
     await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
     const activityLogInput: ActivityInputCalloutLinkCreated = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorID,
       link: link,
       callout: callout,
     };
@@ -435,8 +435,8 @@ export class CalloutResolverMutations {
         space: levelZeroSpaceID,
       },
       {
-        id: agentInfo.userID,
-        email: agentInfo.email,
+        id: actorContext.actorID,
+        email: actorContext.actorID,
       }
     );
   }
@@ -446,21 +446,21 @@ export class CalloutResolverMutations {
     contribution: ICalloutContribution,
     whiteboard: IWhiteboard,
     levelZeroSpaceID: string,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
       {
         contribution: contribution,
         callout: callout,
         contributionType: CalloutContributionType.WHITEBOARD,
-        triggeredBy: agentInfo.userID,
+        triggeredBy: actorContext.actorID,
       };
     await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
 
     this.activityAdapter.calloutWhiteboardCreated({
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorID,
       whiteboard: whiteboard,
       callout: callout,
     });
@@ -472,8 +472,8 @@ export class CalloutResolverMutations {
         space: levelZeroSpaceID,
       },
       {
-        id: agentInfo.userID,
-        email: agentInfo.email,
+        id: actorContext.actorID,
+        email: actorContext.actorID,
       }
     );
   }
@@ -483,21 +483,21 @@ export class CalloutResolverMutations {
     contribution: ICalloutContribution,
     post: IPost,
     levelZeroSpaceID: string,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
       {
         contribution: contribution,
         callout: callout,
         contributionType: CalloutContributionType.POST,
-        triggeredBy: agentInfo.userID,
+        triggeredBy: actorContext.actorID,
       };
     await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
 
     const activityLogInput: ActivityInputCalloutPostCreated = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorID,
       post: post,
       callout: callout,
     };
@@ -510,8 +510,8 @@ export class CalloutResolverMutations {
         space: levelZeroSpaceID,
       },
       {
-        id: agentInfo.userID,
-        email: agentInfo.email,
+        id: actorContext.actorID,
+        email: actorContext.actorID,
       }
     );
   }
@@ -521,21 +521,21 @@ export class CalloutResolverMutations {
     contribution: ICalloutContribution,
     memo: IMemo,
     levelZeroSpaceID: string,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
       {
         contribution: contribution,
         callout: callout,
         contributionType: CalloutContributionType.MEMO,
-        triggeredBy: agentInfo.userID,
+        triggeredBy: actorContext.actorID,
       };
     await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
       notificationInput
     );
 
     const activityLogInput: ActivityInputCalloutMemoCreated = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorID,
       memo: memo,
       callout: callout,
     };
@@ -548,8 +548,8 @@ export class CalloutResolverMutations {
         space: levelZeroSpaceID,
       },
       {
-        id: agentInfo.userID,
-        email: agentInfo.email,
+        id: actorContext.actorID,
+        email: actorContext.actorID,
       }
     );
   }
@@ -559,7 +559,7 @@ export class CalloutResolverMutations {
       'Update the sortOrder field of the Contributions of s Callout.',
   })
   async updateContributionsSortOrder(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('sortOrderData')
     sortOrderData: UpdateContributionCalloutsSortOrderInput
   ): Promise<ICalloutContribution[]> {
@@ -568,7 +568,7 @@ export class CalloutResolverMutations {
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       callout.authorization,
       AuthorizationPrivilege.UPDATE,
       `update contribution sort order on callout: ${sortOrderData.calloutID}`

@@ -119,7 +119,7 @@ describe('ApplicationService', () => {
         questions: [],
       };
 
-      (userService.getUserOrFail as Mock).mockResolvedValue(mockUser);
+      (userService.getUserByIdOrFail as Mock).mockResolvedValue(mockUser);
       (lifecycleService.createLifecycle as Mock).mockResolvedValue(
         mockLifecycle
       );
@@ -129,7 +129,7 @@ describe('ApplicationService', () => {
 
       const result = await service.createApplication(applicationData);
 
-      expect(userService.getUserOrFail).toHaveBeenCalledWith('user-1');
+      expect(userService.getUserByIdOrFail).toHaveBeenCalledWith('user-1');
       expect(result.user).toBe(mockUser);
       expect(result.authorization).toBeDefined();
       expect(result.lifecycle).toBe(mockLifecycle);

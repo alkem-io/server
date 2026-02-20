@@ -7,8 +7,8 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
-import { IAgent } from '@domain/agent/agent/agent.interface';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { IActor } from '@domain/actor/actor/actor.interface';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { ILicenseEntitlement } from '@domain/common/license-entitlement/license.entitlement.interface';
@@ -26,7 +26,7 @@ export class AccountLicenseService {
   constructor(
     private licenseService: LicenseService,
     private accountService: AccountService,
-    private agentService: AgentService,
+    private actorService: ActorService,
     private spaceLicenseService: SpaceLicenseService,
     private licensingCredentialBasedService: LicensingCredentialBasedService,
     private licensingWingbackSubscriptionService: LicensingWingbackSubscriptionService,
@@ -36,9 +36,7 @@ export class AccountLicenseService {
   async applyLicensePolicy(accountID: string): Promise<ILicense[]> {
     const account = await this.accountService.getAccountOrFail(accountID, {
       relations: {
-        agent: {
-          credentials: true,
-        },
+        actor: { credentials: true },
         spaces: true,
         license: {
           entitlements: true,
@@ -47,7 +45,7 @@ export class AccountLicenseService {
     });
     if (
       !account.spaces ||
-      !account.agent ||
+      !account.credentials ||
       !account.license ||
       !account.license.entitlements ||
       !account.baselineLicensePlan
@@ -66,10 +64,10 @@ export class AccountLicenseService {
       account.license,
       account
     );
-    // extend the policy with the entitlements from credentials of the account agent
+    // extend the policy with the entitlements from credentials of the account (Account IS the Actor)
     account.license = await this.addEntitlementsFromCredentials(
       account.license,
-      account.agent
+      account
     );
     // Apply Wingback entitlements with the highest priority
     account.license = await this.applyWingbackEntitlements(
@@ -130,11 +128,10 @@ export class AccountLicenseService {
       accountID,
       wingbackCustomerID
     );
-    // grant ACCOUNT_LICENSE_PLUS entitlement to the account agent
-    const accountAgent = await this.accountService.getAgentOrFail(accountID);
+    // grant ACCOUNT_LICENSE_PLUS entitlement to the account
+    // Account IS the Actor - use accountID directly as actorID
     try {
-      await this.agentService.grantCredentialOrFail({
-        agentID: accountAgent.id,
+      await this.actorService.grantCredentialOrFail(accountID, {
         type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
         resourceID: accountID,
       });
@@ -146,7 +143,6 @@ export class AccountLicenseService {
         {
           message: 'Account already has ACCOUNT_LICENSE_PLUS credential',
           accountId: accountID,
-          agentId: accountAgent.id,
         },
         LogContext.ACCOUNT
       );
@@ -161,7 +157,7 @@ export class AccountLicenseService {
    */
   private async addEntitlementsFromCredentials(
     license: ILicense | undefined,
-    accountAgent: IAgent
+    accountAgent: IActor
   ): Promise<ILicense> {
     if (!license || !license.entitlements) {
       throw new EntityNotInitializedException(
@@ -171,7 +167,7 @@ export class AccountLicenseService {
       );
     }
 
-    // Adds any credential based licensing based on the Agent held credentials
+    // Adds any credential based licensing based on the Actor held credentials
     for (const entitlement of license.entitlements) {
       await this.checkAndAssignGrantedEntitlement(entitlement, accountAgent);
     }
@@ -259,7 +255,7 @@ export class AccountLicenseService {
 
   private async checkAndAssignGrantedEntitlement(
     entitlement: ILicenseEntitlement,
-    accountAgent: IAgent
+    accountAgent: IActor
   ): Promise<void> {
     const grantedEntitlement =
       await this.licensingCredentialBasedService.getEntitlementIfGranted(

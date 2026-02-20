@@ -1,8 +1,8 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
@@ -48,7 +48,7 @@ export class CalloutsSetResolverMutations {
     description: 'Create a new Callout on the CalloutsSet.',
   })
   async createCalloutOnCalloutsSet(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('calloutData') calloutData: CreateCalloutOnCalloutsSetInput
   ): Promise<ICallout> {
     const calloutsSet = await this.calloutsSetService.getCalloutsSetOrFail(
@@ -56,7 +56,7 @@ export class CalloutsSetResolverMutations {
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       calloutsSet.authorization,
       AuthorizationPrivilege.CREATE_CALLOUT,
       `create callout on callouts Set: ${calloutsSet.id}`
@@ -64,7 +64,7 @@ export class CalloutsSetResolverMutations {
 
     const callout = await this.calloutsSetService.createCalloutOnCalloutsSet(
       calloutData,
-      agentInfo.userID
+      actorContext.actorID
     );
 
     // callout needs to be saved to apply the authorization policy
@@ -109,7 +109,7 @@ export class CalloutsSetResolverMutations {
       if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
         if (calloutData.sendNotification) {
           const notificationInput: NotificationInputCalloutPublished = {
-            triggeredBy: agentInfo.userID,
+            triggeredBy: actorContext.actorID,
             callout: callout,
           };
           this.notificationAdapterSpace.spaceCollaborationCalloutPublished(
@@ -118,7 +118,7 @@ export class CalloutsSetResolverMutations {
         }
 
         const activityLogInput: ActivityInputCalloutPublished = {
-          triggeredBy: agentInfo.userID,
+          triggeredBy: actorContext.actorID,
           callout: callout,
         };
         this.activityAdapter.calloutPublished(activityLogInput);
@@ -136,8 +136,8 @@ export class CalloutsSetResolverMutations {
           space: levelZeroSpaceID,
         },
         {
-          id: agentInfo.userID,
-          email: agentInfo.email,
+          id: actorContext.actorID,
+          email: actorContext.actorID,
         }
       );
     }
@@ -150,7 +150,7 @@ export class CalloutsSetResolverMutations {
       'Update the sortOrder field of the supplied Callouts to increase as per the order that they are provided in.',
   })
   async updateCalloutsSortOrder(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('sortOrderData')
     sortOrderData: UpdateCalloutsSortOrderInput
   ): Promise<ICallout[]> {
@@ -159,7 +159,7 @@ export class CalloutsSetResolverMutations {
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       calloutsSet.authorization,
       AuthorizationPrivilege.UPDATE,
       `update callouts sort order on collaboration: ${calloutsSet.id}`

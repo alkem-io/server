@@ -1,7 +1,7 @@
-import { CurrentUser, Profiling } from '@common/decorators';
+import { CurrentActor, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { DeleteLinkInput } from '@domain/collaboration/link/dto/link.dto.delete';
 import { UpdateLinkInput } from '@domain/collaboration/link/dto/link.dto.update';
@@ -32,14 +32,14 @@ export class LinkResolverMutations {
     description: 'Deletes the specified Link.',
   })
   async deleteLink(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteLinkInput
   ): Promise<ILink> {
     const link = await this.linkService.getLinkOrFail(deleteData.ID, {
       relations: { profile: true },
     });
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       link.authorization,
       AuthorizationPrivilege.DELETE,
       `delete link: ${link.id}`
@@ -51,12 +51,12 @@ export class LinkResolverMutations {
     description: 'Updates the specified Link.',
   })
   async updateLink(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('linkData') linkData: UpdateLinkInput
   ): Promise<ILink> {
     const link = await this.linkService.getLinkOrFail(linkData.ID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       link.authorization,
       AuthorizationPrivilege.UPDATE,
       `update link: ${link.id}`
@@ -70,7 +70,7 @@ export class LinkResolverMutations {
   })
   @Profiling.api
   async uploadFileOnLink(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('uploadData') uploadData: StorageBucketUploadFileOnLinkInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
@@ -85,7 +85,7 @@ export class LinkResolverMutations {
       },
     });
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       link.authorization,
       AuthorizationPrivilege.UPDATE,
       `link file upload: ${link.id}`
@@ -100,7 +100,7 @@ export class LinkResolverMutations {
 
     const storageBucket = profile.storageBucket;
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       storageBucket.authorization,
       AuthorizationPrivilege.FILE_UPLOAD,
       `create document on storage: ${storageBucket.id}`
@@ -115,7 +115,7 @@ export class LinkResolverMutations {
       readStream,
       filename,
       mimetype,
-      agentInfo.userID
+      actorContext.actorID
     );
     document = await this.documentService.saveDocument(document);
 

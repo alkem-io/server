@@ -1,7 +1,7 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -41,7 +41,7 @@ export class WhiteboardIntegrationService {
     private readonly contributionReporter: ContributionReporterService,
     private readonly communityResolver: CommunityResolverService,
     private readonly activityAdapter: ActivityAdapter,
-    private readonly agentInfoService: AgentInfoService,
+    private readonly actorContextService: ActorContextService,
     private readonly configService: ConfigService<AlkemioConfig, true>
   ) {
     this.maxCollaboratorsInRoom = this.configService.get(
@@ -56,11 +56,11 @@ export class WhiteboardIntegrationService {
         data.whiteboardId
       );
 
-      const agentInfo = await this.resolveAgentInfo(data);
-      if (!agentInfo) {
+      const actorContext = await this.resolveActorContext(data);
+      if (!actorContext) {
         this.logger.warn?.(
           {
-            message: `Unable to build AgentInfo for userId: ${data.userId}`,
+            message: `Unable to build ActorContext for userId: ${data.userId}`,
             whiteboardId: data.whiteboardId,
             guestName: data.guestName,
           },
@@ -70,7 +70,7 @@ export class WhiteboardIntegrationService {
       }
 
       return this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         whiteboard.authorization,
         data.privilege
       );
@@ -120,8 +120,8 @@ export class WhiteboardIntegrationService {
     return { read, update, maxCollaborators };
   }
 
-  public who(data: WhoInputData): Promise<AgentInfo> {
-    return this.authenticationService.getAgentInfo(data.auth);
+  public who(data: WhoInputData): Promise<ActorContext> {
+    return this.authenticationService.getActorContext(data.auth);
   }
 
   public async save({
@@ -210,17 +210,17 @@ export class WhiteboardIntegrationService {
       });
   }
 
-  private async resolveAgentInfo(
+  private async resolveActorContext(
     data: AccessGrantedInputData
-  ): Promise<AgentInfo | null> {
+  ): Promise<ActorContext | null> {
     if (this.isGuestUserIdentifier(data.userId)) {
-      return this.agentInfoService.createGuestAgentInfo(
+      return this.actorContextService.createGuest(
         this.normalizeGuestName(data.guestName)
       );
     }
 
     try {
-      return await this.agentInfoService.buildAgentInfoForUser(data.userId);
+      return await this.actorContextService.buildForUser(data.userId);
     } catch (error) {
       if (data.guestName?.trim()) {
         this.logger.verbose?.(
@@ -232,9 +232,7 @@ export class WhiteboardIntegrationService {
           },
           LogContext.WHITEBOARD_INTEGRATION
         );
-        return this.agentInfoService.createGuestAgentInfo(
-          data.guestName.trim()
-        );
+        return this.actorContextService.createGuest(data.guestName.trim());
       }
 
       throw error;

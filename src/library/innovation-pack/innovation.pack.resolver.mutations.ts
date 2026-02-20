@@ -1,9 +1,9 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { UpdateInnovationPackInput } from './dto/innovation.pack.dto.update';
 import { DeleteInnovationPackInput } from './dto/innovationPack.dto.delete';
 import { IInnovationPack } from './innovation.pack.interface';
@@ -22,7 +22,7 @@ export class InnovationPackResolverMutations {
   })
   @Profiling.api
   async updateInnovationPack(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('innovationPackData') innovationPackData: UpdateInnovationPackInput
   ): Promise<IInnovationPack> {
     const innovationPack =
@@ -30,7 +30,7 @@ export class InnovationPackResolverMutations {
         innovationPackData.ID
       );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       innovationPack.authorization,
       AuthorizationPrivilege.UPDATE,
       `updateInnovationPack: ${innovationPack.id}`
@@ -46,13 +46,13 @@ export class InnovationPackResolverMutations {
     description: 'Deletes the specified InnovationPack.',
   })
   async deleteInnovationPack(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteInnovationPackInput
   ): Promise<IInnovationPack> {
     const innovationPack =
       await this.innovationPackService.getInnovationPackOrFail(deleteData.ID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       innovationPack.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteInnovationPack: ${innovationPack.id}`

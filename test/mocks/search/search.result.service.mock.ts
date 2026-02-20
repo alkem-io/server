@@ -1,7 +1,7 @@
-import { vi } from 'vitest';
 import { ValueProvider } from '@nestjs/common';
-import { PublicPart } from '@test/utils';
 import { SearchResultService } from '@services/api/search/result/search.result.service';
+import { PublicPart } from '@test/utils';
+import { vi } from 'vitest';
 
 export const MockSearchResultsService: ValueProvider<
   PublicPart<SearchResultService>

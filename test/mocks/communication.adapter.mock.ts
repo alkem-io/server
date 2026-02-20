@@ -1,6 +1,6 @@
-import { vi } from 'vitest';
 import { ValueProvider } from '@nestjs/common';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { vi } from 'vitest';
 import { PublicPart } from '../utils/public-part';
 
 export const MockCommunicationAdapter: ValueProvider<

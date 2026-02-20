@@ -1,5 +1,5 @@
-import { createDiffContext } from '../../../src/schema-contract/diff/diff-core';
 import { buildChangeReport } from '../../../src/schema-contract/classify/build-report';
+import { createDiffContext } from '../../../src/schema-contract/diff/diff-core';
 import { ChangeType } from '../../../src/schema-contract/model';
 
 // T047: Integration test intentional breaking change blocked scenario

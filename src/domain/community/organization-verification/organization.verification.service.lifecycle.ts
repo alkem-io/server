@@ -1,7 +1,7 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { InvalidStateTransitionException } from '@common/exceptions/invalid.state.tranistion.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { ILifecycle } from '@domain/common/lifecycle';
@@ -55,19 +55,19 @@ export class OrganizationVerificationLifecycleService {
       guards: {
         // To actually assign the verified status the GRANT privilege is needed on the verification
         hasGrantPrivilege: ({ event }) => {
-          const agentInfo: AgentInfo = event.agentInfo;
+          const actorContext: ActorContext = event.actorContext;
           const authorizationPolicy: IAuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(
-            agentInfo,
+            actorContext,
             authorizationPolicy,
             AuthorizationPrivilege.GRANT
           );
         },
         hasUpdatePrivilege: ({ event }) => {
-          const agentInfo: AgentInfo = event.agentInfo;
+          const actorContext: ActorContext = event.actorContext;
           const authorizationPolicy: IAuthorizationPolicy = event.authorization;
           return this.authorizationService.isAccessGranted(
-            agentInfo,
+            actorContext,
             authorizationPolicy,
             AuthorizationPrivilege.UPDATE
           );

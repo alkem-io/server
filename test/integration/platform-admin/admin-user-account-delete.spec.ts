@@ -1,14 +1,14 @@
-import { vi, Mock } from 'vitest';
-import { AdminUsersMutations } from '@src/platform-admin/domain/user/admin.users.resolver.mutations';
+import { AuthorizationPrivilege } from '@common/enums';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { UserService } from '@domain/community/user/user.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { LoggerService } from '@nestjs/common';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { UserService } from '@domain/community/user/user.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationPrivilege } from '@common/enums';
-import { LoggerService } from '@nestjs/common';
 import { AdminIdentityService } from '@src/platform-admin/core/identity/admin.identity.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { AdminUsersMutations } from '@src/platform-admin/domain/user/admin.users.resolver.mutations';
+import { Mock, vi } from 'vitest';
 
 const createLogger = () =>
   ({
@@ -35,7 +35,7 @@ describe('Platform-admin identity deletion flows', () => {
       deleteIdentityByEmail: vi.fn().mockResolvedValue(undefined),
     } as unknown as KratosService;
     const userService = {
-      getUserOrFail: vi.fn().mockResolvedValue({
+      getUserByIdOrFail: vi.fn().mockResolvedValue({
         id: 'user-1',
         email: 'user@example.com',
         authenticationID: 'kratos-1',
@@ -45,7 +45,7 @@ describe('Platform-admin identity deletion flows', () => {
         authenticationID: null,
       })),
     } as unknown as UserService & {
-      getUserOrFail: Mock;
+      getUserByIdOrFail: Mock;
       clearAuthenticationIDForUser: Mock;
     };
 
@@ -57,13 +57,16 @@ describe('Platform-admin identity deletion flows', () => {
       createLogger()
     );
 
-    const agentInfo = new AgentInfo();
-    agentInfo.email = 'admin@example.com';
+    const actorContext = new ActorContext();
+    actorContext.actorID = 'admin@example.com';
 
-    const result = await resolver.adminUserAccountDelete(agentInfo, 'user-1');
+    const result = await resolver.adminUserAccountDelete(
+      actorContext,
+      'user-1'
+    );
 
     expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
-      agentInfo,
+      actorContext,
       {},
       AuthorizationPrivilege.PLATFORM_ADMIN,
       expect.any(String)

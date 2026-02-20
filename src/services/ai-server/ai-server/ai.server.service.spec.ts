@@ -213,7 +213,7 @@ describe('AiServerService', () => {
         original: {
           resultHandler: {
             action: InvocationResultAction.POST_REPLY,
-            roomDetails: { roomID: 'room-1', actorId: 'actor-1' },
+            roomDetails: { roomID: 'room-1', actorID: 'actor-1' },
           },
         },
         response: new InvokeEngineResponse({ message: 'test' }),
@@ -229,7 +229,7 @@ describe('AiServerService', () => {
         original: {
           resultHandler: {
             action: InvocationResultAction.POST_MESSAGE,
-            roomDetails: { roomID: 'room-1', actorId: 'actor-1' },
+            roomDetails: { roomID: 'room-1', actorID: 'actor-1' },
           },
         },
         response: new InvokeEngineResponse({ message: 'test' }),
@@ -268,7 +268,7 @@ describe('AiServerService', () => {
       );
 
       const result = await service.getLastNInteractionMessages(
-        { roomID: 'room-1', threadID: 'thread-1', actorId: 'actor-1' },
+        { roomID: 'room-1', threadID: 'thread-1', actorID: 'actor-1' },
         100
       );
 
@@ -288,7 +288,7 @@ describe('AiServerService', () => {
       );
 
       const result = await service.getLastNInteractionMessages(
-        { roomID: 'room-1', actorId: 'actor-1' },
+        { roomID: 'room-1', actorID: 'actor-1' },
         100
       );
 
@@ -306,7 +306,7 @@ describe('AiServerService', () => {
       );
 
       const result = await service.getLastNInteractionMessages(
-        { roomID: 'room-1', actorId: 'actor-1' },
+        { roomID: 'room-1', actorID: 'actor-1' },
         3,
         false
       );
@@ -324,7 +324,7 @@ describe('AiServerService', () => {
       );
 
       const result = await service.getLastNInteractionMessages(
-        { roomID: 'room-1', actorId: 'actor-1' },
+        { roomID: 'room-1', actorID: 'actor-1' },
         100
       );
 
