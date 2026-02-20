@@ -49,6 +49,30 @@ export abstract class ICalendarEvent extends INameable {
   })
   durationDays?: number;
 
+  @Field(() => String, {
+    nullable: true,
+    description: 'Google Calendar add-event URL for this CalendarEvent.',
+  })
+  googleCalendarUrl?: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Outlook Calendar add-event URL for this CalendarEvent.',
+  })
+  outlookCalendarUrl?: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Apple Calendar data URL for this CalendarEvent.',
+  })
+  appleCalendarUrl?: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'ICS file download data URL for this CalendarEvent.',
+  })
+  icsDownloadUrl?: string;
+
   @Field(() => Boolean, {
     nullable: false,
     description: 'Is the event visible on the parent calendar.',

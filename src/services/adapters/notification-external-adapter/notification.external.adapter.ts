@@ -43,6 +43,15 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
+import {
+  CalendarEventCalendarData,
+  CalendarUrls,
+  calculateCalendarEventEndDate,
+  formatLocation,
+  generateCalendarUrls,
+  toIsoString,
+  validateCalendarDateRange,
+} from '../../../domain/timeline/event/calendar.event.calendar-links';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { ClientProxy } from '@nestjs/microservices';
@@ -63,6 +72,27 @@ interface CalloutContributionPayload {
   type: CalloutContributionType;
   url: string;
 }
+
+interface CalendarEventPayload {
+  id: string;
+  title: string;
+  type: string;
+  createdBy: UserPayload;
+  url: string;
+  startDate: string;
+  endDate: string;
+  description?: string;
+  location?: string;
+  googleCalendarUrl: string;
+  outlookCalendarUrl: string;
+  appleCalendarUrl: string;
+  icsDownloadUrl: string;
+}
+
+type NotificationEventPayloadSpaceCalendarEventExtended =
+  Omit<NotificationEventPayloadSpaceCalendarEvent, 'calendarEvent'> & {
+    calendarEvent: CalendarEventPayload;
+  };
 
 @Injectable()
 export class NotificationExternalAdapter {
@@ -519,7 +549,7 @@ export class NotificationExternalAdapter {
     recipients: IUser[],
     space: ISpace,
     calendarEvent: ICalendarEvent
-  ): Promise<NotificationEventPayloadSpaceCalendarEvent> {
+  ): Promise<NotificationEventPayloadSpaceCalendarEventExtended> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
@@ -536,6 +566,31 @@ export class NotificationExternalAdapter {
     const calendarEventUrl =
       await this.urlGeneratorService.getCalendarEventUrlPath(calendarEvent.id);
 
+    const startDateIso = toIsoString(calendarEvent.startDate, 'startDate');
+    const endDateIso = toIsoString(
+      calculateCalendarEventEndDate(calendarEvent).toISOString(),
+      'endDate'
+    );
+
+    validateCalendarDateRange(startDateIso, endDateIso, calendarEvent.id);
+
+    const description = calendarEvent.profile?.description ?? undefined;
+    const location = formatLocation(calendarEvent.profile?.location);
+
+    const calendarEventCalendarData: CalendarEventCalendarData = {
+      id: calendarEvent.id,
+      title: calendarEvent.profile.displayName,
+      url: calendarEventUrl,
+      startDate: startDateIso,
+      endDate: endDateIso,
+      description,
+      location,
+    };
+
+    const calendarUrls: CalendarUrls = generateCalendarUrls(
+      calendarEventCalendarData
+    );
+
     // Add calendar event details - will be properly typed once notifications-lib is updated
     return {
       ...spacePayload,
@@ -545,6 +600,11 @@ export class NotificationExternalAdapter {
         type: calendarEvent.type,
         createdBy: createdByUser,
         url: calendarEventUrl,
+        startDate: startDateIso,
+        endDate: endDateIso,
+        description,
+        location,
+        ...calendarUrls,
       },
     };
   }
