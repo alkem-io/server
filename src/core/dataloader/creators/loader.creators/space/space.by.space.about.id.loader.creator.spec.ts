@@ -76,7 +76,10 @@ describe('SpaceBySpaceAboutIdLoaderCreator', () => {
         where: {
           about: { id: expect.anything() },
         },
-        relations: { about: true },
+        relations: {
+          about: true,
+          community: { roleSet: { roles: true } },
+        },
       });
 
       expect((result1 as ISpace).id).toBe('space-1');
