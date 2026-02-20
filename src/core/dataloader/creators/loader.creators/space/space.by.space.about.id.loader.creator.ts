@@ -9,7 +9,9 @@ import { EntityManager, In } from 'typeorm';
 
 /**
  * DataLoader creator for batching Space lookups by SpaceAbout ID.
- * Prevents N+1 queries in resolvers that need to load a Space from its SpaceAbout.
+ * Loads Space with community → roleSet → roles to serve both
+ * `isContentPublic` (needs space.settings) and `membership`
+ * (needs community.roleSet) resolvers in a single query.
  */
 @Injectable()
 export class SpaceBySpaceAboutIdLoaderCreator
@@ -33,7 +35,7 @@ export class SpaceBySpaceAboutIdLoaderCreator
 
     const spaces = await this.manager.find(Space, {
       where: { about: { id: In([...spaceAboutIds]) } },
-      relations: { about: true },
+      relations: { about: true, community: { roleSet: { roles: true } } },
     });
 
     // Map by about.id for O(1) lookup

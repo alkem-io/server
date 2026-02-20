@@ -11,7 +11,13 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindManyOptions, FindOneOptions, In } from 'typeorm';
+import {
+  EntityManager,
+  FindManyOptions,
+  FindOneOptions,
+  FindOptionsRelations,
+  In,
+} from 'typeorm';
 import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
 
@@ -153,19 +159,28 @@ export class UserLookupService {
       },
     }));
 
+    const optionsRelations: FindOptionsRelations<User> | undefined =
+      options?.relations as FindOptionsRelations<User> | undefined;
+
+    const actorSubRelations =
+      typeof optionsRelations?.actor === 'object'
+        ? optionsRelations.actor
+        : undefined;
+
     const findOptions: FindManyOptions<User> = {
+      ...options,
       where: whereConditions,
       relations: {
-        actor: { credentials: true },
-        ...options?.relations,
+        ...optionsRelations,
+        actor: {
+          credentials: true,
+          ...actorSubRelations,
+        },
       },
-      take: limit,
-      ...options,
+      take: limit ?? options?.take,
     };
 
-    const users = await this.entityManager.find(User, findOptions);
-
-    return users;
+    return this.entityManager.find(User, findOptions);
   }
 
   /**

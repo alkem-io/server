@@ -64,34 +64,24 @@ export class OrganizationLookupService {
     );
   }
 
-  async getOrganizationByDomain(
+  getOrganizationByDomain(
     domain: string,
     options?: FindOneOptions<Organization>
   ): Promise<IOrganization | null> {
-    const organization: IOrganization | null = await this.entityManager.findOne(
-      Organization,
-      {
-        ...options,
-        where: { ...options?.where, domain: domain },
-      }
-    );
-
-    return organization;
+    return this.entityManager.findOne(Organization, {
+      ...options,
+      where: { ...options?.where, domain: domain },
+    });
   }
 
-  async getOrganizationByNameId(
+  getOrganizationByNameId(
     organizationNameID: string,
     options?: FindOneOptions<Organization>
   ): Promise<IOrganization | null> {
-    const organization: IOrganization | null = await this.entityManager.findOne(
-      Organization,
-      {
-        ...options,
-        where: { ...options?.where, nameID: organizationNameID },
-      }
-    );
-
-    return organization;
+    return this.entityManager.findOne(Organization, {
+      ...options,
+      where: { ...options?.where, nameID: organizationNameID },
+    });
   }
 
   async getOrganizationByNameIdOrFail(
