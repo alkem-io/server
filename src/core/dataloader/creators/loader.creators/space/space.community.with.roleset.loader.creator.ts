@@ -20,8 +20,7 @@ export class SpaceCommunityWithRoleSetLoaderCreator
 
   public create(): ILoader<ICommunity | null> {
     return new DataLoader<string, ICommunity | null>(
-      async spaceAboutIds =>
-        this.batchLoadBySpaceAboutIds(spaceAboutIds),
+      async spaceAboutIds => this.batchLoadBySpaceAboutIds(spaceAboutIds),
       { cache: true, name: 'SpaceCommunityWithRoleSetLoader' }
     );
   }

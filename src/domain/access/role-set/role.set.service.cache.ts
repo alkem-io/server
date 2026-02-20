@@ -78,7 +78,9 @@ export class RoleSetCacheService {
    */
   private async cacheSet<T>(key: string, value: T): Promise<T> {
     try {
-      return await this.cacheManager.set<T>(key, value, { ttl: this.cache_ttl });
+      return await this.cacheManager.set<T>(key, value, {
+        ttl: this.cache_ttl,
+      });
     } catch (error) {
       this.logger.warn?.(
         `RoleSet cache write failed for key ${key}: ${error}`,

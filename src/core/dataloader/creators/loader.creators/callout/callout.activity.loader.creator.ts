@@ -4,7 +4,7 @@ import { CalloutContribution } from '@domain/collaboration/callout-contribution/
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import DataLoader from 'dataloader';
-import { EntityManager, In } from 'typeorm';
+import { EntityManager } from 'typeorm';
 
 /**
  * DataLoader creator that batches callout contribution counts.
@@ -16,9 +16,7 @@ import { EntityManager, In } from 'typeorm';
  * before reaching this loader.
  */
 @Injectable()
-export class CalloutActivityLoaderCreator
-  implements DataLoaderCreator<number>
-{
+export class CalloutActivityLoaderCreator implements DataLoaderCreator<number> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
   public create(): ILoader<number> {
@@ -28,9 +26,7 @@ export class CalloutActivityLoaderCreator
     );
   }
 
-  private async batchLoad(
-    calloutIds: readonly string[]
-  ): Promise<number[]> {
+  private async batchLoad(calloutIds: readonly string[]): Promise<number[]> {
     if (calloutIds.length === 0) {
       return [];
     }

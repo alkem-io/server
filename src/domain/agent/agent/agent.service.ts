@@ -161,7 +161,9 @@ export class AgentService {
       const mget = this.cacheManager.store.mget;
       cached = mget
         ? await mget<IAgent>(...cacheKeys)
-        : await Promise.all(cacheKeys.map(k => this.cacheManager.get<IAgent>(k)));
+        : await Promise.all(
+            cacheKeys.map(k => this.cacheManager.get<IAgent>(k))
+          );
     } catch (error) {
       this.logger.warn?.(
         `Agent cache mget failed, treating as cache miss: ${error}`,

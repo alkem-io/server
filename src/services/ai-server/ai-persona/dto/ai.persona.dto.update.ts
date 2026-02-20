@@ -16,5 +16,5 @@ export class UpdateAiPersonaInput extends UpdateBaseAlkemioInput {
   externalConfig?: IExternalConfig;
 
   @Field(() => PromptGraph, { nullable: true })
-  promptGraph?: PromptGraph;
+  promptGraph?: PromptGraph | null;
 }

@@ -1,11 +1,14 @@
 import { AgentService } from '@domain/agent/agent/agent.service';
 import { ICredential } from '@domain/agent/credential/credential.interface';
-import { type Mocked, vi, describe, it, expect, beforeEach } from 'vitest';
-import { Repository, In } from 'typeorm';
+import { In, Repository } from 'typeorm';
+import { beforeEach, describe, expect, it, type Mocked, vi } from 'vitest';
+import {
+  ensureRolesLoaded,
+  loadAgentCredentials,
+} from './role.set.data.loader.utils';
 import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { AgentRoleKey } from './types';
-import { loadAgentCredentials, ensureRolesLoaded } from './role.set.data.loader.utils';
 
 /* ───────── helpers ───────── */
 
@@ -62,8 +65,7 @@ describe('loadAgentCredentials', () => {
 
     await loadAgentCredentials(keys, agentService as unknown as AgentService);
 
-    const passedIds =
-      agentService.getAgentCredentialsBatch.mock.calls[0][0];
+    const passedIds = agentService.getAgentCredentialsBatch.mock.calls[0][0];
     expect(passedIds).toHaveLength(2);
     expect(passedIds).toContain('agent-1');
     expect(passedIds).toContain('agent-2');
