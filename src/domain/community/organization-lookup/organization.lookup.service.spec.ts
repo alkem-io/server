@@ -59,13 +59,13 @@ describe('OrganizationLookupService', () => {
       entityManager.findOne.mockResolvedValue({ id: 'org-1' });
 
       await service.getOrganizationById('org-1', {
-        relations: { credentials: true },
+        relations: { actor: { credentials: true } },
       });
 
       expect(entityManager.findOne).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
-          relations: { credentials: true },
+          relations: { actor: { credentials: true } },
           where: { id: 'org-1' },
         })
       );
@@ -137,9 +137,11 @@ describe('OrganizationLookupService', () => {
         expect.anything(),
         expect.objectContaining({
           where: {
-            credentials: {
-              type: 'space-admin',
-              resourceID: '',
+            actor: {
+              credentials: {
+                type: 'space-admin',
+                resourceID: '',
+              },
             },
           },
         })

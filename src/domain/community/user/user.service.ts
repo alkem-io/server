@@ -172,6 +172,10 @@ export class UserService {
     );
     user.accountID = account.id;
 
+    // Pre-save Actor and Settings before saving User.
+    // TypeORM's cascade doesn't reliably set FK columns on the parent entity.
+    await this.userRepository.manager.save((user as User).actor!);
+    user.settings = await this.userRepository.manager.save(user.settings);
     user = await this.save(user);
 
     await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
@@ -397,7 +401,7 @@ export class UserService {
     const userID = deleteData.ID;
     const user = await this.getUserByIdOrFail(userID, {
       relations: {
-        profile: true,
+        actor: { profile: true },
         storageAggregator: true,
         settings: true,
       },
@@ -449,10 +453,9 @@ export class UserService {
 
     // Note: Should we unregister the user from communications?
 
-    return {
-      ...result,
-      id,
-    };
+    // TypeORM clears the id after remove; restore it so callers get the deleted entity's id
+    result.id = id;
+    return result;
   }
 
   public async getAccount(user: IUser): Promise<IAccount> {
@@ -516,7 +519,7 @@ export class UserService {
       // User extends Actor which has the credentials relationship
       users = await this.userRepository
         .createQueryBuilder('user')
-        .leftJoinAndSelect('user.credentials', 'credential')
+        .leftJoinAndSelect('user.actor.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -541,7 +544,7 @@ export class UserService {
     const qb = this.userRepository.createQueryBuilder('user');
 
     if (withTags !== undefined) {
-      qb.leftJoin('user.profile', 'profile')
+      qb.leftJoin('user.actor.profile', 'profile')
         .leftJoin('tagset', 'tagset', 'profile.id = tagset.profileId')
         // cannot use object or operators here
         // because typeorm cannot construct the query properly
@@ -568,8 +571,7 @@ export class UserService {
     const qb = this.userRepository.createQueryBuilder('user').select();
 
     if (entryRoleCredentials.parentRoleSetRole) {
-      // User extends Actor which has the credentials relationship
-      qb.leftJoin('user.credentials', 'credential')
+      qb.leftJoin('user.actor.credentials', 'credential')
         .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
@@ -607,11 +609,10 @@ export class UserService {
         roleSetCredentials.elevatedRole,
         [ActorType.USER]
       );
-    // User extends Actor which has the credentials relationship
     const qb = this.userRepository
       .createQueryBuilder('user')
       .select()
-      .leftJoin('user.credentials', 'credential')
+      .leftJoin('user.actor.credentials', 'credential')
       .addSelect(['credential.type', 'credential.resourceID'])
       .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')
@@ -635,7 +636,7 @@ export class UserService {
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
     const user = await this.getUserByIdOrFail(userInput.ID, {
-      relations: { profile: true },
+      relations: { actor: { profile: true } },
     });
 
     if (userInput.nameID) {
@@ -707,7 +708,7 @@ export class UserService {
 
   async getProfile(user: IUser): Promise<IProfile> {
     const userWithProfile = await this.getUserByIdOrFail(user.id, {
-      relations: { profile: true },
+      relations: { actor: { profile: true } },
     });
     const profile = userWithProfile.profile;
     if (!profile)

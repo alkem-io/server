@@ -187,7 +187,13 @@ export class SpaceService {
     );
 
     space.levelZeroSpaceID = spaceData.levelZeroSpaceID;
-    // save the collaboration and all it's template sets
+    // Pre-save Actor and License before saving Space.
+    // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+    // reliably set FK columns for new cascaded entities on the parent.
+    const mgr = this.spaceRepository.manager;
+    await mgr.save((space as Space).actor!);
+    space.license = await mgr.save(space.license);
+    // save the space and all its relations
     await this.save(space);
 
     if (spaceData.level === SpaceLevel.L0) {
@@ -544,7 +550,7 @@ export class SpaceService {
 
     const qb = this.spaceRepository.createQueryBuilder('space');
     if (visibilities) {
-      qb.leftJoinAndSelect('space.authorization', 'authorization');
+      qb.leftJoinAndSelect('space.actor.authorization', 'authorization');
       qb.where({
         level: SpaceLevel.L0,
         visibility: In(visibilities),
@@ -561,7 +567,7 @@ export class SpaceService {
     const qb = this.spaceRepository.createQueryBuilder('space');
 
     qb.leftJoinAndSelect('space.subspaces', 'subspace');
-    qb.leftJoinAndSelect('space.authorization', 'authorization_policy');
+    qb.leftJoinAndSelect('space.actor.authorization', 'authorization_policy');
     qb.leftJoinAndSelect('subspace.subspaces', 'subspaces');
     qb.where({
       level: SpaceLevel.L0,
@@ -677,10 +683,10 @@ export class SpaceService {
 
     const spaceIds = spaceIdsWithActivity.map(row => row.id);
 
-    // Then fetch the full space entities with authorization relation
+    // Then fetch the full space entities with actor relation (authorization eagerly loaded on actor)
     const spaces = await this.spaceRepository.find({
       where: { id: In(spaceIds) },
-      relations: { authorization: true },
+      relations: { actor: true },
     });
 
     // Preserve the activity-based ordering from the first query
@@ -705,7 +711,7 @@ export class SpaceService {
   }
 
   public async getAllSpaces(
-    options?: FindManyOptions<ISpace>
+    options?: FindManyOptions<Space>
   ): Promise<ISpace[]> {
     return this.spaceRepository.find(options);
   }
@@ -1053,7 +1059,7 @@ export class SpaceService {
   async getSubscriptions(spaceInput: ISpace): Promise<ISpaceSubscription[]> {
     const space = await this.getSpaceOrFail(spaceInput.id, {
       relations: {
-        credentials: true,
+        actor: { credentials: true },
       },
     });
     if (!space.credentials) {

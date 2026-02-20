@@ -26,7 +26,7 @@ export class OrganizationLicenseService {
         organizationID,
         {
           relations: {
-            credentials: true,
+            actor: { credentials: true },
             roleSet: true,
           },
         }

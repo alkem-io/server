@@ -1,5 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LicenseEntitlementModule } from '@domain/common/license-entitlement/license.entitlement.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
@@ -29,6 +30,7 @@ import { OrganizationLicenseService } from './organization.service.license';
     AccountLookupModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
+    ActorModule,
     RoleSetModule,
     LicenseEntitlementModule,
     OrganizationVerificationModule,

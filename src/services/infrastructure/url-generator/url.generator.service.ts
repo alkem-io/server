@@ -16,8 +16,6 @@ import { Memo } from '@domain/common/memo/memo.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
-import { Organization } from '@domain/community/organization/organization.entity';
-import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -251,11 +249,11 @@ export class UrlGeneratorService {
     return url;
   }
 
-  private getContributorType(contributor: { id: string }) {
-    if (contributor instanceof User) return ActorType.USER;
-    if (contributor instanceof Organization) return ActorType.ORGANIZATION;
-    if (contributor instanceof VirtualContributor)
-      return ActorType.VIRTUAL_CONTRIBUTOR;
+  private getContributorType(contributor: {
+    id: string;
+    type?: ActorType;
+  }): ActorType {
+    if (contributor.type) return contributor.type;
     throw new RelationshipNotFoundException(
       `Unable to determine contributor type for ${contributor.id}`,
       LogContext.COMMUNITY

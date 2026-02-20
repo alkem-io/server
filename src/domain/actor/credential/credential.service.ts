@@ -163,6 +163,7 @@ export class CredentialService {
   ): Promise<ICredential> {
     const credential = Credential.create({
       ...credentialInput,
+      resourceID: credentialInput.resourceID ?? '',
       actorID,
     });
     await this.credentialRepository.save(credential);

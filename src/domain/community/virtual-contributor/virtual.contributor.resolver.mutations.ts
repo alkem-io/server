@@ -82,7 +82,7 @@ export class VirtualContributorResolverMutations {
         {
           relations: {
             account: {
-              authorization: true,
+              actor: true,
             },
           },
         }

@@ -375,7 +375,7 @@ export class AccountResolverMutations {
       {
         relations: {
           account: {
-            authorization: true,
+            actor: true,
           },
         },
       }
@@ -423,7 +423,7 @@ export class AccountResolverMutations {
     let space = await this.spaceService.getSpaceOrFail(transferData.spaceID, {
       relations: {
         account: {
-          authorization: true,
+          actor: true,
         },
       },
     });
@@ -463,7 +463,7 @@ export class AccountResolverMutations {
         {
           relations: {
             account: {
-              authorization: true,
+              actor: true,
             },
           },
         }
@@ -513,7 +513,7 @@ export class AccountResolverMutations {
         {
           relations: {
             account: {
-              authorization: true,
+              actor: true,
             },
           },
         }

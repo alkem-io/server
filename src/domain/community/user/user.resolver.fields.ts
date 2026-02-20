@@ -230,7 +230,7 @@ export class UserResolverFields {
     const { authorization } = await this.userService.getUserByIdOrFail(
       user.id,
       {
-        relations: { authorization: true },
+        relations: { actor: true },
       }
     );
     const accessGranted = this.authorizationService.isAccessGranted(

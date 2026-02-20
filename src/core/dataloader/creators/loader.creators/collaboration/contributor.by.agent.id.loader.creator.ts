@@ -46,15 +46,15 @@ export class ContributorByAgentIdLoaderCreator
     const [users, orgs, vcs] = await Promise.all([
       this.manager.find(User, {
         where: { id: In(validIds) },
-        relations: { profile: true },
+        relations: { actor: { profile: true } },
       }),
       this.manager.find(Organization, {
         where: { id: In(validIds) },
-        relations: { profile: true },
+        relations: { actor: { profile: true } },
       }),
       this.manager.find(VirtualContributor, {
         where: { id: In(validIds) },
-        relations: { profile: true },
+        relations: { actor: { profile: true } },
       }),
     ]);
 

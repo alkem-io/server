@@ -8,6 +8,7 @@ import { Actor } from './actor.entity';
 import { ActorResolverMutations } from './actor.resolver.mutations';
 import { ActorResolverQueries } from './actor.resolver.queries';
 import { ActorService } from './actor.service';
+import { ActorAuthorizationService } from './actor.service.authorization';
 
 @Module({
   imports: [
@@ -17,7 +18,12 @@ import { ActorService } from './actor.service';
     CredentialModule,
     PlatformAuthorizationPolicyModule,
   ],
-  providers: [ActorService, ActorResolverQueries, ActorResolverMutations],
-  exports: [ActorService],
+  providers: [
+    ActorService,
+    ActorAuthorizationService,
+    ActorResolverQueries,
+    ActorResolverMutations,
+  ],
+  exports: [ActorService, ActorAuthorizationService],
 })
 export class ActorModule {}

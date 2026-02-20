@@ -169,6 +169,12 @@ export class VirtualContributorService {
       virtualContributorData.profileData
     );
 
+    // Pre-save Actor before saving VirtualContributor.
+    // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+    // reliably set FK columns for new cascaded entities on the parent.
+    await this.virtualContributorRepository.manager.save(
+      (virtualContributor as VirtualContributor).actor!
+    );
     virtualContributor = await this.save(virtualContributor);
 
     const userID = actorContext?.actorID;
@@ -277,7 +283,7 @@ export class VirtualContributorService {
       virtualContributorData.ID,
       {
         relations: {
-          profile: true,
+          actor: { profile: true },
           knowledgeBase: {
             profile: true,
           },
@@ -358,7 +364,7 @@ export class VirtualContributorService {
       virtualContributorID,
       {
         relations: {
-          profile: true,
+          actor: { profile: true },
           knowledgeBase: true,
         },
       }
@@ -435,14 +441,14 @@ export class VirtualContributorService {
     return virtual;
   }
 
-  // VirtualContributor extends Actor and has credentials directly.
+  // Credentials are loaded via the actor relation.
   async getVirtualContributorWithCredentials(
     virtualID: string
   ): Promise<IVirtualContributor> {
     const virtualContributor = await this.getVirtualContributorByIdOrFail(
       virtualID,
       {
-        relations: { credentials: true },
+        relations: { actor: { credentials: true } },
       }
     );
 
@@ -473,8 +479,10 @@ export class VirtualContributorService {
       virtualContributorID,
       {
         relations: {
-          profile: {
-            storageBucket: true,
+          actor: {
+            profile: {
+              storageBucket: true,
+            },
           },
         },
       }
@@ -550,10 +558,12 @@ export class VirtualContributorService {
     const credentialsFilter = args.filter?.credentials;
     let virtualContributors: IVirtualContributor[] = [];
     if (credentialsFilter) {
-      // VirtualContributor extends Actor - credentials are directly on virtual_contributor
       virtualContributors = await this.virtualContributorRepository
         .createQueryBuilder('virtual_contributor')
-        .leftJoinAndSelect('virtual_contributor.credentials', 'credential')
+        .leftJoinAndSelect(
+          'virtual_contributor.actor.credentials',
+          'credential'
+        )
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -619,11 +629,10 @@ export class VirtualContributorService {
     credentialCriteria: CredentialsSearchInput
   ): Promise<number> {
     const credResourceID = credentialCriteria.resourceID || '';
-    // VirtualContributor extends Actor - credentials are directly on virtual_contributor
     const virtualContributorMatchesCount =
       await this.virtualContributorRepository
         .createQueryBuilder('virtual')
-        .leftJoinAndSelect('virtual.credentials', 'credential')
+        .leftJoinAndSelect('virtual.actor.credentials', 'credential')
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
         .setParameters({

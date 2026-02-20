@@ -523,6 +523,10 @@ const getSubspacesMock = (
         spaces: [],
         externalSubscriptionID: '',
         type: ActorType.ORGANIZATION,
+        authorization: getAuthorizationPolicyMock(
+          `account-auth-${spaceId}.${i}`
+        ),
+        credentials: [],
         ...getEntityMock<Account>(),
         baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
       },
@@ -621,6 +625,8 @@ const getSubspacesMock = (
         `${spaceId}.${i}`,
         subsubspaceCount[i] ?? 0
       ),
+      authorization: getAuthorizationPolicyMock(`space-auth-${spaceId}.${i}`),
+      credentials: [],
       ...getEntityMock<Space>(),
     });
   }
@@ -651,6 +657,10 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
         spaces: [],
         externalSubscriptionID: '',
         type: ActorType.ORGANIZATION,
+        authorization: getAuthorizationPolicyMock(
+          `account-auth-${subsubspaceId}.${i}`
+        ),
+        credentials: [],
         ...getEntityMock<Account>(),
         baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
       },
@@ -745,6 +755,10 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
         },
         ...getEntityMock<SpaceAbout>(),
       },
+      authorization: getAuthorizationPolicyMock(
+        `space-auth-${subsubspaceId}.${i}`
+      ),
+      credentials: [],
       ...getEntityMock<Space>(),
     });
   }
@@ -799,10 +813,13 @@ const getSpaceMock = ({
       spaces: [],
       externalSubscriptionID: '',
       type: ActorType.ORGANIZATION,
+      authorization: getAuthorizationPolicyMock(`account-auth-${id}`),
+      credentials: [],
       ...getEntityMock<Account>(),
       baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
     },
     authorization: getAuthorizationPolicyMock(`auth-${id}`),
+    credentials: [],
     subspaces: getSubspacesMock(id, challengesCount, opportunitiesCounts),
     ...getEntityMock<Space>(),
   };

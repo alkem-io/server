@@ -280,35 +280,37 @@ export class RoleSetService {
 
       // Handle implicit role credentials (these are user-specific)
       if (roleSet.type === RoleSetType.SPACE) {
-        const invitees = await this.getUsersWithImplicitSpaceRole(
+        const inviteeIds = await this.getUserIDsWithImplicitSpaceRole(
           roleSet,
           AuthorizationCredential.SPACE_MEMBER_INVITEE
         );
-        for (const invitee of invitees) {
-          await this.removeActorFromRole(roleSet, roleName, invitee.id, false);
+        for (const inviteeId of inviteeIds) {
+          await this.removeActorFromRole(roleSet, roleName, inviteeId, false);
         }
-        const subspace_admins = await this.getUsersWithImplicitSpaceRole(
+        const subspaceAdminIds = await this.getUserIDsWithImplicitSpaceRole(
           roleSet,
           AuthorizationCredential.SPACE_SUBSPACE_ADMIN
         );
-        for (const subspaceAdmin of subspace_admins) {
+        for (const subspaceAdminId of subspaceAdminIds) {
           await this.removeActorFromRole(
             roleSet,
             roleName,
-            subspaceAdmin.id,
+            subspaceAdminId,
             false
           );
         }
       }
 
       if (roleSet.type === RoleSetType.ORGANIZATION) {
-        const accountAdmins =
-          await this.getUsersWithImplicitOrganizationAccountAdminRole(roleSet);
-        for (const accountAdmin of accountAdmins) {
+        const accountAdminIds =
+          await this.getUserIDsWithImplicitOrganizationAccountAdminRole(
+            roleSet
+          );
+        for (const accountAdminId of accountAdminIds) {
           await this.removeActorFromRole(
             roleSet,
             roleName,
-            accountAdmin.id,
+            accountAdminId,
             false
           );
         }
@@ -530,31 +532,37 @@ export class RoleSetService {
     ])) as IVirtualContributor[];
   }
 
-  private async getUsersWithImplicitSpaceRole(
+  private async getUserIDsWithImplicitSpaceRole(
     roleSet: IRoleSet,
     implicitCredential: AuthorizationCredential
-  ): Promise<IUser[]> {
+  ): Promise<string[]> {
     const inviteeCredential = await this.getCredentialSpaceImplicitRole(
       roleSet,
       implicitCredential
     );
 
-    return await this.userLookupService.usersWithCredential({
-      type: inviteeCredential.type,
-      resourceID: inviteeCredential.resourceID,
-    });
+    return await this.actorLookupService.getActorIDsWithCredential(
+      {
+        type: inviteeCredential.type,
+        resourceID: inviteeCredential.resourceID,
+      },
+      [ActorType.USER]
+    );
   }
 
-  private async getUsersWithImplicitOrganizationAccountAdminRole(
+  private async getUserIDsWithImplicitOrganizationAccountAdminRole(
     roleSet: IRoleSet
-  ): Promise<IUser[]> {
+  ): Promise<string[]> {
     const accountAdminCredential =
       await this.getCredentialForOrganizationImplicitRole(roleSet);
 
-    return await this.userLookupService.usersWithCredential({
-      type: accountAdminCredential.type,
-      resourceID: accountAdminCredential.resourceID,
-    });
+    return await this.actorLookupService.getActorIDsWithCredential(
+      {
+        type: accountAdminCredential.type,
+        resourceID: accountAdminCredential.resourceID,
+      },
+      [ActorType.USER]
+    );
   }
 
   public async getVirtualContributorsInRoleInHierarchy(
@@ -1482,19 +1490,17 @@ export class RoleSetService {
     roleSet: IRoleSet,
     userIDs: string[]
   ): Promise<{ [userID: string]: RoleName[] }> {
-    const users = await this.userLookupService.getUsersWithCredentials(userIDs);
     const roleNames = await this.getRoleNames(roleSet);
     const userRolesMap: { [userID: string]: RoleName[] } = {};
 
-    for (const user of users) {
+    for (const userID of userIDs) {
       const roles: RoleName[] = [];
       for (const roleName of roleNames) {
-        // User IS an Actor - user.id is the actorID
-        if (await this.isInRole(user.id, roleSet, roleName)) {
+        if (await this.isInRole(userID, roleSet, roleName)) {
           roles.push(roleName);
         }
       }
-      userRolesMap[user.id] = roles;
+      userRolesMap[userID] = roles;
     }
 
     return userRolesMap;

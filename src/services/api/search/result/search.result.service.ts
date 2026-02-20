@@ -4,21 +4,21 @@ import {
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { BaseException } from '@common/exceptions/base.exception';
 import { isDefined } from '@common/utils';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Post } from '@domain/collaboration/post';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { IOrganization, Organization } from '@domain/community/organization';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { User } from '@domain/community/user/user.entity';
 import { IUser } from '@domain/community/user/user.interface';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -73,8 +73,7 @@ export class SearchResultService {
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private authorizationService: AuthorizationService,
-    private userLookupService: UserLookupService,
-    private organizationLookupService: OrganizationLookupService
+    private actorLookupService: ActorLookupService
   ) {}
 
   /**
@@ -1247,48 +1246,33 @@ export class SearchResultService {
   }
 
   private async getUsersInSpace(spaceId: string): Promise<string[]> {
-    const usersFilter = [];
+    const memberIds = await this.actorLookupService.getActorIDsWithCredential(
+      { type: AuthorizationCredential.SPACE_MEMBER, resourceID: spaceId },
+      [ActorType.USER]
+    );
+    const adminIds = await this.actorLookupService.getActorIDsWithCredential(
+      { type: AuthorizationCredential.SPACE_ADMIN, resourceID: spaceId },
+      [ActorType.USER]
+    );
 
-    const membersInSpace = await this.userLookupService.usersWithCredential({
-      type: AuthorizationCredential.SPACE_MEMBER,
-      resourceID: spaceId,
-    });
-    usersFilter.push(...membersInSpace.map(user => user.id));
-
-    const adminsInSpace = await this.userLookupService.usersWithCredential({
-      type: AuthorizationCredential.SPACE_ADMIN,
-      resourceID: spaceId,
-    });
-    usersFilter.push(...adminsInSpace.map(user => user.id));
-
-    return usersFilter;
+    return [...memberIds, ...adminIds];
   }
 
   private async getOrganizationsInSpace(spaceId: string): Promise<string[]> {
-    const orgsInSpace = [];
+    const memberIds = await this.actorLookupService.getActorIDsWithCredential(
+      { type: AuthorizationCredential.SPACE_MEMBER, resourceID: spaceId },
+      [ActorType.ORGANIZATION]
+    );
+    const adminIds = await this.actorLookupService.getActorIDsWithCredential(
+      { type: AuthorizationCredential.SPACE_ADMIN, resourceID: spaceId },
+      [ActorType.ORGANIZATION]
+    );
+    const leadIds = await this.actorLookupService.getActorIDsWithCredential(
+      { type: AuthorizationCredential.SPACE_LEAD, resourceID: spaceId },
+      [ActorType.ORGANIZATION]
+    );
 
-    const membersInSpace =
-      await this.organizationLookupService.organizationsWithCredentials({
-        type: AuthorizationCredential.SPACE_MEMBER,
-        resourceID: spaceId,
-      });
-    orgsInSpace.push(...membersInSpace.map(org => org.id));
-
-    const adminsInSpace =
-      await this.organizationLookupService.organizationsWithCredentials({
-        type: AuthorizationCredential.SPACE_ADMIN,
-        resourceID: spaceId,
-      });
-    orgsInSpace.push(...adminsInSpace.map(org => org.id));
-
-    const leadsInSpace =
-      await this.organizationLookupService.organizationsWithCredentials({
-        type: AuthorizationCredential.SPACE_LEAD,
-        resourceID: spaceId,
-      });
-    orgsInSpace.push(...leadsInSpace.map(org => org.id));
-
-    return orgsInSpace;
+    return [...memberIds, ...adminIds, ...leadIds];
   }
 }
 

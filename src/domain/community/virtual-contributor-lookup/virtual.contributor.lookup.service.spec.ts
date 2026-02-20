@@ -164,14 +164,15 @@ describe('VirtualActorLookupService', () => {
         type: 'space-admin' as any,
       });
 
-      // VirtualContributor IS an Actor - credentials are directly on the entity
       expect(entityManager.find).toHaveBeenCalledWith(
         expect.anything(),
         expect.objectContaining({
           where: {
-            credentials: {
-              type: 'space-admin',
-              resourceID: '',
+            actor: {
+              credentials: {
+                type: 'space-admin',
+                resourceID: '',
+              },
             },
           },
         })

@@ -1,5 +1,4 @@
 import { AccountType } from '@common/enums/account.type';
-import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
@@ -36,8 +35,7 @@ export class AccountHostService {
   async createAccount(accountType: AccountType): Promise<IAccount> {
     const account: IAccount = new Account();
     account.accountType = accountType;
-    // Account extends Actor - set the actor type (credentials are managed through Actor)
-    account.type = ActorType.ACCOUNT;
+    // Actor type is set by Account constructor to ActorType.ACCOUNT
     // Generate a unique nameID for the account using first 8 chars of a UUID
     account.nameID = `account-${randomUUID().substring(0, 8)}`;
     account.authorization = new AuthorizationPolicy(
@@ -90,6 +88,13 @@ export class AccountHostService {
         },
       ],
     });
+
+    // Pre-save Actor and License before saving Account.
+    // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+    // reliably set FK columns for new cascaded entities on the parent.
+    const mgr = this.accountRepository.manager;
+    await mgr.save((account as Account).actor!);
+    account.license = await mgr.save(account.license);
 
     return await this.accountRepository.save(account);
   }

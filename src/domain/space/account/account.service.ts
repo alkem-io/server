@@ -445,7 +445,7 @@ export class AccountService {
   ): Promise<IAccountSubscription[]> {
     const account = await this.getAccountOrFail(accountInput.id, {
       relations: {
-        credentials: true,
+        actor: { credentials: true },
       },
     });
 

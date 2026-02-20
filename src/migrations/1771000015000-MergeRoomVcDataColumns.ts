@@ -11,6 +11,7 @@ export class MergeRoomVcDataColumns1771000015000 implements MigrationInterface {
     `);
 
     // Step 2: Migrate data from vcInteractionsByThread into vcData
+    // vcData shape: { interactionsByThread: VcInteractionsByThread }
     await queryRunner.query(`
       UPDATE room
       SET "vcData" = jsonb_build_object(
@@ -32,7 +33,7 @@ export class MergeRoomVcDataColumns1771000015000 implements MigrationInterface {
       ADD COLUMN IF NOT EXISTS "vcInteractionsByThread" jsonb DEFAULT NULL
     `);
 
-    // Step 2: Migrate data back from vcData
+    // Step 2: Migrate data back from vcData.interactionsByThread
     await queryRunner.query(`
       UPDATE room
       SET "vcInteractionsByThread" = "vcData"->'interactionsByThread'

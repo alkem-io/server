@@ -96,7 +96,7 @@ export class LookupMyPrivilegesResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const space = await this.spaceService.getSpace(id, {
-      relations: { authorization: true },
+      relations: { actor: true },
     });
     if (!space) return [];
 
@@ -112,7 +112,7 @@ export class LookupMyPrivilegesResolverFields {
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const account = await this.accountService.getAccountOrFail(id, {
-      relations: { authorization: true },
+      relations: { actor: true },
     });
 
     return this.getMyPrivilegesOnAuthorizable(actorContext, account);
@@ -158,7 +158,7 @@ export class LookupMyPrivilegesResolverFields {
   ): Promise<AuthorizationPrivilege[]> {
     const virtualContributor =
       await this.virtualContributorService.getVirtualContributorByIdOrFail(id, {
-        relations: { authorization: true },
+        relations: { actor: true },
       });
 
     return this.getMyPrivilegesOnAuthorizable(actorContext, virtualContributor);
@@ -173,7 +173,7 @@ export class LookupMyPrivilegesResolverFields {
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const user = await this.userLookupService.getUserByIdOrFail(id, {
-      relations: { authorization: true },
+      relations: { actor: true },
     });
 
     return this.getMyPrivilegesOnAuthorizable(actorContext, user);

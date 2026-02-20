@@ -57,6 +57,7 @@ export class AccountAuthorizationService {
       accountInput.id,
       {
         relations: {
+          actor: { authorization: true },
           spaces: {
             templatesManager: true,
           },

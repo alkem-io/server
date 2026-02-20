@@ -31,7 +31,7 @@ export class VirtualContributorLookupService {
     private actorLookupService: ActorLookupService
   ) {}
 
-  // Note: VirtualContributor now extends Actor and has credentials directly.
+  // Note: VirtualContributor has credentials via the actor relation.
   // This method returns both the virtualContributor and the actorID/credentials.
   // Callers should prefer using virtualContributor.id and virtualContributor.credentials directly.
   public async getVirtualContributorAndActor(virtualID: string): Promise<{
@@ -42,7 +42,7 @@ export class VirtualContributorLookupService {
     const virtualContributor = await this.getVirtualContributorByIdOrFail(
       virtualID,
       {
-        relations: { credentials: true },
+        relations: { actor: { credentials: true } },
       }
     );
 
@@ -102,7 +102,7 @@ export class VirtualContributorLookupService {
     return virtualContributor;
   }
 
-  // VirtualContributor IS an Actor - credentials are directly on the entity
+  // Credentials are accessed via the actor relation
   async virtualContributorsWithCredentials(
     credentialCriteria: CredentialsSearchInput,
     limit?: number
@@ -111,10 +111,15 @@ export class VirtualContributorLookupService {
 
     return this.entityManager.find(VirtualContributor, {
       where: {
-        credentials: {
-          type: credentialCriteria.type,
-          resourceID: credResourceID,
+        actor: {
+          credentials: {
+            type: credentialCriteria.type,
+            resourceID: credResourceID,
+          },
         },
+      },
+      relations: {
+        actor: { credentials: true },
       },
       take: limit,
     });
@@ -148,12 +153,13 @@ export class VirtualContributorLookupService {
       );
     const qb = this.virtualContributorRepository
       .createQueryBuilder('virtual_contributor')
-      .leftJoinAndSelect('virtual_contributor.authorization', 'authorization')
+      .leftJoinAndSelect('virtual_contributor.actor', 'actor')
+      .leftJoinAndSelect('actor.authorization', 'authorization')
       .select();
 
     if (entryRoleCredentials.parentRoleSetRole) {
-      // VirtualContributor IS an Actor - credentials are directly on the entity
-      qb.leftJoin('virtual_contributor.credentials', 'credential')
+      // Credentials are on the actor relation
+      qb.leftJoin('actor.credentials', 'credential')
         .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')

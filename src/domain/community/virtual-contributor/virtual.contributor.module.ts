@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
@@ -27,6 +28,7 @@ import { VirtualContributorAuthorizationService } from './virtual.contributor.se
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
+    ActorModule,
     ProfileModule,
     AiPersonaModule,
     KnowledgeBaseModule,

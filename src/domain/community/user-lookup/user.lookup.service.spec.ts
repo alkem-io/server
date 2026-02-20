@@ -240,9 +240,11 @@ describe('UserLookupService', () => {
         expect.objectContaining({
           where: [
             {
-              credentials: {
-                type: 'space-member',
-                resourceID: '',
+              actor: {
+                credentials: {
+                  type: 'space-member',
+                  resourceID: '',
+                },
               },
             },
           ],

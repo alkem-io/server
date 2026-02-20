@@ -143,18 +143,20 @@ export class UserLookupService {
     }
 
     // Build OR conditions for multiple credential criteria
-    // User IS an Actor - credentials are directly on the Actor entity
+    // User has credentials via actor relation
     const whereConditions = credentialCriteriaArray.map(criteria => ({
-      credentials: {
-        type: criteria.type,
-        resourceID: criteria.resourceID || '',
+      actor: {
+        credentials: {
+          type: criteria.type,
+          resourceID: criteria.resourceID || '',
+        },
       },
     }));
 
     const findOptions: FindManyOptions<User> = {
       where: whereConditions,
       relations: {
-        credentials: true,
+        actor: { credentials: true },
         ...options?.relations,
       },
       take: limit,
@@ -179,14 +181,14 @@ export class UserLookupService {
     );
   }
 
-  // User IS an Actor - credentials are eager loaded on Actor
+  // Credentials are loaded via the actor relation
   public async getUsersWithCredentials(ids: string[]): Promise<IUser[]> {
     const users = await this.entityManager.find(User, {
       where: {
         id: In(ids),
       },
       relations: {
-        credentials: true,
+        actor: { credentials: true },
       },
     });
     return users;
@@ -196,7 +198,7 @@ export class UserLookupService {
     userId: string
   ): Promise<{ user: IUser; credentials: ICredential[] }> {
     const user = await this.getUserByIdOrFail(userId, {
-      relations: { credentials: true },
+      relations: { actor: { credentials: true } },
     });
 
     if (!user.credentials) {

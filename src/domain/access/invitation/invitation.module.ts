@@ -2,6 +2,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Invitation } from '@domain/access/invitation';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { ActorModule } from '@domain/actor/actor/actor.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
@@ -22,6 +23,7 @@ import { InvitationLifecycleService } from './invitation.service.lifecycle';
     AuthorizationModule,
     LifecycleModule,
     ActorModule,
+    ActorLookupModule,
     VirtualActorLookupModule,
     UserLookupModule,
     AccountLookupModule,

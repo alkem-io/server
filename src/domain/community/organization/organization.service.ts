@@ -151,6 +151,12 @@ export class OrganizationService {
     // Cache some of the contents before saving
     const roleSetBeforeSave = organization.roleSet;
 
+    // Pre-save Actor before saving Organization.
+    // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+    // reliably set FK columns for new cascaded entities on the parent.
+    await this.organizationRepository.manager.save(
+      (organization as Organization).actor!
+    );
     organization = await this.save(organization);
     this.logger.verbose?.(
       `Created new organization with id ${organization.id}`,
@@ -170,7 +176,7 @@ export class OrganizationService {
     organization = await this.getOrganizationOrFail(organization.id, {
       relations: {
         roleSet: true,
-        profile: true,
+        actor: { profile: true },
       },
     });
     if (!organization.roleSet || !organization.profile) {
@@ -260,8 +266,10 @@ export class OrganizationService {
       return;
     }
     const organizationCount = await this.organizationRepository.countBy({
-      profile: {
-        displayName: newDisplayName,
+      actor: {
+        profile: {
+          displayName: newDisplayName,
+        },
       },
     });
     if (organizationCount >= 1)
@@ -286,7 +294,7 @@ export class OrganizationService {
     organizationData: UpdateOrganizationInput
   ): Promise<IOrganization> {
     const organization = await this.getOrganizationOrFail(organizationData.ID, {
-      relations: { profile: true },
+      relations: { actor: { profile: true } },
     });
 
     await this.checkDisplayNameOrFail(
@@ -327,7 +335,7 @@ export class OrganizationService {
     const orgID = deleteData.ID;
     const organization = await this.getOrganizationOrFail(orgID, {
       relations: {
-        profile: true,
+        actor: { profile: true },
         verification: true,
         groups: true,
         storageAggregator: true,
@@ -434,10 +442,9 @@ export class OrganizationService {
     const credentialsFilter = args.filter?.credentials;
     let organizations: IOrganization[] = [];
     if (credentialsFilter) {
-      // Organization extends Actor which has the credentials relationship
       organizations = await this.organizationRepository
         .createQueryBuilder('organization')
-        .leftJoinAndSelect('organization.credentials', 'credential')
+        .leftJoinAndSelect('organization.actor.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -456,7 +463,10 @@ export class OrganizationService {
     status?: OrganizationVerificationEnum
   ): Promise<IPaginatedType<IOrganization>> {
     const qb = this.organizationRepository.createQueryBuilder('organization');
-    qb.leftJoinAndSelect('organization.authorization', 'authorization_policy');
+    qb.leftJoinAndSelect(
+      'organization.actor.authorization',
+      'authorization_policy'
+    );
 
     if (status) {
       qb.leftJoin('organization.verification', 'verification').where(

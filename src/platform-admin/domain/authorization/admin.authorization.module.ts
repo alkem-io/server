@@ -1,5 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ActorModule } from '@domain/actor/actor/actor.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { CredentialModule } from '@domain/actor/credential/credential.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
@@ -18,6 +19,7 @@ import { AdminAuthorizationService } from './admin.authorization.service';
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    ActorLookupModule,
     ActorModule,
     UserLookupModule,
     OrganizationLookupModule,

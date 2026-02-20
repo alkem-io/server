@@ -28,7 +28,7 @@ export class OrganizationLookupService {
     });
   }
 
-  // Organization IS an Actor - credentials are directly on the entity
+  // Credentials are accessed via the actor relation
   async organizationsWithCredentials(
     credentialCriteria: CredentialsSearchInput,
     limit?: number
@@ -37,10 +37,15 @@ export class OrganizationLookupService {
 
     return this.entityManager.find(Organization, {
       where: {
-        credentials: {
-          type: credentialCriteria.type,
-          resourceID: credResourceID,
+        actor: {
+          credentials: {
+            type: credentialCriteria.type,
+            resourceID: credResourceID,
+          },
         },
+      },
+      relations: {
+        actor: { credentials: true },
       },
       take: limit,
     });

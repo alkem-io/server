@@ -40,9 +40,9 @@ export class ActorLookupService {
       return null;
     }
 
-    // Check cache first
+    // Check cache first (cache-manager returns null for missing keys)
     const cachedType = await this.actorTypeCacheService.getActorType(actorID);
-    if (cachedType !== undefined) {
+    if (cachedType != null) {
       return cachedType;
     }
 
@@ -50,6 +50,7 @@ export class ActorLookupService {
     const actor = await this.entityManager.findOne(Actor, {
       where: { id: actorID },
       select: { type: true },
+      loadEagerRelations: false,
     });
 
     if (!actor?.type) {
@@ -213,6 +214,7 @@ export class ActorLookupService {
     const actors = await this.entityManager.find(Actor, {
       where: { id: In(uncachedIds) },
       select: { id: true, type: true },
+      loadEagerRelations: false,
     });
 
     // Check if all uncached actors were found
@@ -335,6 +337,7 @@ export class ActorLookupService {
       where: { id: actorID },
       relations: { credentials: true },
       select: { id: true },
+      loadEagerRelations: false,
     });
 
     return actor?.credentials ?? [];
@@ -357,6 +360,7 @@ export class ActorLookupService {
       where: { id: actorID },
       relations: { credentials: true },
       select: { id: true },
+      loadEagerRelations: false,
     });
 
     if (!actor) {
@@ -408,6 +412,7 @@ export class ActorLookupService {
         },
       },
       select: { id: true },
+      loadEagerRelations: false,
       take: limit,
     });
     return actors.map(a => a.id);

@@ -22,32 +22,14 @@ import { Actor } from './actor.entity';
 import { IActor } from './actor.interface';
 
 /**
- * Determines the ActorType of a given actor based on its entity class.
- * Replacement for the old getContributorType function.
+ * Determines the ActorType of a given actor.
+ * Uses the type discriminator field on IActor.
  */
 export const getContributorType = (actor: IActor): ActorType => {
-  // Use lazy imports to avoid circular dependencies
-  /* eslint-disable @typescript-eslint/no-require-imports */
-  const { User } = require('@domain/community/user/user.entity');
-  const {
-    Organization,
-  } = require('@domain/community/organization/organization.entity');
-  const {
-    VirtualContributor,
-  } = require('@domain/community/virtual-contributor/virtual.contributor.entity');
-  /* eslint-enable @typescript-eslint/no-require-imports */
-
-  if (actor instanceof User) {
-    return ActorType.USER;
+  if (!actor.type) {
+    throw new Error(`Unable to determine contributor type for ${actor.id}`);
   }
-  if (actor instanceof Organization) {
-    return ActorType.ORGANIZATION;
-  }
-  if (actor instanceof VirtualContributor) {
-    return ActorType.VIRTUAL_CONTRIBUTOR;
-  }
-
-  throw new Error(`Unable to determine contributor type for ${actor.id}`);
+  return actor.type;
 };
 
 /** @deprecated Use ActorAuthorizationService instead */

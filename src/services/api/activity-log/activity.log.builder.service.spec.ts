@@ -91,7 +91,7 @@ describe('ActivityLogBuilderService', () => {
 
     it('should return member joined entry with community and contributor', async () => {
       const community = { id: 'community-1' };
-      const contributor = { id: 'contributor-1' };
+      const contributor = { id: 'contributor-1', type: ActorType.USER };
       communityService.getCommunityOrFail.mockResolvedValue(community);
       actorLookupService.getActorByIdOrFail.mockResolvedValue(contributor);
 

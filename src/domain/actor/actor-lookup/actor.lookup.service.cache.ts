@@ -71,7 +71,7 @@ export class ActorTypeCacheService {
     const result = new Map<string, ActorType>();
     const promises = actorIDs.map(async actorID => {
       const type = await this.getActorType(actorID);
-      if (type !== undefined) {
+      if (type != null) {
         result.set(actorID, type);
       }
     });

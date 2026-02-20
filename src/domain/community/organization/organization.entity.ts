@@ -1,14 +1,18 @@
+import { randomUUID } from 'node:crypto';
 import { NAMEID_MAX_LENGTH_SCHEMA } from '@common/constants';
 import { ActorType } from '@common/enums/actor.type';
 import { RoleSet } from '@domain/access/role-set/role.set.entity';
 import { Actor } from '@domain/actor/actor/actor.entity';
+import { Credential } from '@domain/actor/credential/credential.entity';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { UserGroup } from '@domain/community/user-group/user-group.entity';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import {
-  ChildEntity,
   Column,
+  Entity,
   Generated,
   JoinColumn,
   OneToMany,
@@ -18,10 +22,61 @@ import { IOrganizationSettings } from '../organization-settings/organization.set
 import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
 import { IOrganization } from './organization.interface';
 
-@ChildEntity(ActorType.ORGANIZATION)
-export class Organization extends Actor implements IOrganization, IGroupable {
-  // Override Actor.profile to be non-optional (required for IOrganization)
-  declare profile: Profile;
+@Entity('organization')
+export class Organization
+  extends BaseAlkemioEntity
+  implements IOrganization, IGroupable
+{
+  constructor() {
+    super();
+    const id = randomUUID();
+    this.id = id;
+    const actor = new Actor();
+    actor.type = ActorType.ORGANIZATION;
+    actor.id = id;
+    this.actor = actor;
+  }
+
+  // Actor relation — shared primary key (organization.id = actor.id)
+  @OneToOne(() => Actor, {
+    eager: true,
+    cascade: true,
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
+  @JoinColumn({ name: 'id', referencedColumnName: 'id' })
+  actor?: Actor;
+
+  // Transparent getters delegating to actor
+  get type(): ActorType {
+    return this.actor?.type as ActorType;
+  }
+
+  get authorization(): AuthorizationPolicy | undefined {
+    return this.actor?.authorization;
+  }
+
+  set authorization(auth: AuthorizationPolicy | undefined) {
+    if (!this.actor) this.actor = new Actor();
+    this.actor.authorization = auth;
+  }
+
+  get credentials(): Credential[] | undefined {
+    return this.actor?.credentials;
+  }
+
+  get profileId(): string | undefined {
+    return this.actor?.profileId;
+  }
+
+  get profile(): Profile {
+    return this.actor?.profile as Profile;
+  }
+
+  set profile(p: Profile | undefined) {
+    if (!this.actor) this.actor = new Actor();
+    this.actor.profile = p;
+  }
 
   @Column('varchar', {
     length: NAMEID_MAX_LENGTH_SCHEMA,

@@ -6,10 +6,9 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ApplicationService } from '@domain/access/application/application.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { Organization } from '@domain/community/organization';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Account } from '@domain/space/account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '@domain/space/account/constants';
 import { Space } from '@domain/space/space/space.entity';
@@ -27,12 +26,9 @@ import { MockApplicationService } from '@test/mocks/application.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
 import { MockCommunityService } from '@test/mocks/community.service.mock';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
-import { MockOrganizationLookupService } from '@test/mocks/organization.lookup.service.mock';
 import { MockOrganizationService } from '@test/mocks/organization.service.mock';
 import { MockSpaceFilterService } from '@test/mocks/space.filter.service.mock';
-import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
 import { MockUserService } from '@test/mocks/user.service.mock';
-import { MockVirtualActorLookupService } from '@test/mocks/virtual.contributor.lookup.service.mock';
 import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { testData } from '@test/utils';
@@ -47,8 +43,7 @@ describe('RolesService', () => {
   let rolesService: RolesService;
   let spaceFilterService: SpaceFilterService;
   let applicationService: ApplicationService;
-  let userLookupService: UserLookupService;
-  let organizationLookupService: OrganizationLookupService;
+  let actorLookupService: ActorLookupService;
   let communityResolverService: CommunityResolverService;
 
   beforeAll(async () => {
@@ -61,13 +56,10 @@ describe('RolesService', () => {
         MockSpaceFilterService,
         MockOrganizationService,
         MockCommunityResolverService,
-        MockVirtualActorLookupService,
-        MockOrganizationLookupService,
         MockAuthorizationService,
         MockWinstonProvider,
         MockEntityManagerProvider,
         MockSpaceService,
-        MockUserLookupService,
         MockVirtualContributorService,
         MockActorLookupService,
         RolesService,
@@ -75,9 +67,8 @@ describe('RolesService', () => {
     }).compile();
 
     rolesService = moduleRef.get(RolesService);
-    userLookupService = moduleRef.get(UserLookupService);
+    actorLookupService = moduleRef.get(ActorLookupService);
     applicationService = moduleRef.get(ApplicationService);
-    organizationLookupService = moduleRef.get(OrganizationLookupService);
     communityResolverService = moduleRef.get(CommunityResolverService);
     spaceFilterService = moduleRef.get(SpaceFilterService);
   });
@@ -106,7 +97,10 @@ describe('RolesService', () => {
       }
       spaceRolesMock.subspaces = subspaceRolesMocks;
       const spacesRolesMock: RolesResultSpace[] = [spaceRolesMock];
-      vi.spyOn(userLookupService, 'getUserByIdOrFail').mockResolvedValue(user);
+      vi.spyOn(
+        actorLookupService,
+        'getActorCredentialsOrFail'
+      ).mockResolvedValue(user.credentials ?? []);
 
       vi.spyOn(spaceFilterService, 'getAllowedVisibilities').mockReturnValue([
         SpaceVisibility.ACTIVE,
@@ -187,11 +181,10 @@ describe('RolesService', () => {
 
   describe('Organization Roles', () => {
     it('Should get organization roles', async () => {
-      // Organization IS the Actor - credentials are directly on the entity
       vi.spyOn(
-        organizationLookupService,
-        'getOrganizationByIdOrFail'
-      ).mockResolvedValue(testData.organization as any);
+        actorLookupService,
+        'getActorCredentialsOrFail'
+      ).mockResolvedValue((testData.organization as any).credentials ?? []);
 
       const roles = await rolesService.getRolesForOrganization({
         actorID: testData.organization.id,

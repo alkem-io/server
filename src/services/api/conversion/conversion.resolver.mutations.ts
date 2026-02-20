@@ -271,7 +271,7 @@ export class ConversionResolverMutations {
     const subspace = await this.spaceService.getSpaceOrFail(subspaceID, {
       relations: {
         parentSpace: {
-          authorization: true,
+          actor: true,
         },
       },
     });

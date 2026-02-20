@@ -11,6 +11,7 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IActorFull } from '@domain/actor/actor/actor.interface';
 import { ActorService } from '@domain/actor/actor/actor.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IOrganization } from '@domain/community/organization';
@@ -32,6 +33,7 @@ export class AdminAuthorizationService {
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private actorService: ActorService,
+    private actorLookupService: ActorLookupService,
     private userLookupService: UserLookupService,
     private organizationLookupService: OrganizationLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -67,8 +69,7 @@ export class AdminAuthorizationService {
     actorContext: ActorContext,
     userAuthorizationPrivilegesData: UserAuthorizationPrivilegesInput
   ): Promise<AuthorizationPrivilege[]> {
-    // get the user
-    const { credentials } = await this.userLookupService.getUserAndCredentials(
+    const credentials = await this.actorLookupService.getActorCredentialsOrFail(
       userAuthorizationPrivilegesData.userID
     );
 

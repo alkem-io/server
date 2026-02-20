@@ -23,6 +23,7 @@ import {
   ActorService,
   AgentAuthorizationService,
 } from '@domain/actor/actor/actor.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -44,6 +45,7 @@ export class UserAuthorizationService {
     private readonly storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private readonly userSettingsAuthorizationService: UserSettingsAuthorizationService,
     private readonly actorService: ActorService,
+    private readonly actorLookupService: ActorLookupService,
     private readonly userLookupService: UserLookupService
   ) {}
 
@@ -51,41 +53,17 @@ export class UserAuthorizationService {
     userID: string
   ): Promise<IAuthorizationPolicy[]> {
     const user = await this.userLookupService.getUserByIdOrFail(userID, {
-      loadEagerRelations: false,
       relations: {
-        authorization: true,
-        profile: { authorization: true },
+        actor: {
+          authorization: true,
+          profile: { authorization: true },
+        },
         storageAggregator: {
           authorization: true,
           directStorage: { authorization: true },
         },
         settings: {
           authorization: true,
-        },
-      },
-      select: {
-        id: true,
-        authorization:
-          this.authorizationPolicyService.authorizationSelectOptions,
-        profile: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-        storageAggregator: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-          directStorage: {
-            id: true,
-            authorization:
-              this.authorizationPolicyService.authorizationSelectOptions,
-          },
-        },
-        settings: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
         },
       },
     });
@@ -284,7 +262,7 @@ export class UserAuthorizationService {
     newRules.push(communityReader);
 
     // Determine who is able to see the PII designated fields for a User
-    const { credentials } = await this.userLookupService.getUserAndCredentials(
+    const credentials = await this.actorLookupService.getActorCredentialsOrFail(
       user.id
     );
     const readUserPiiCredentials: ICredentialDefinition[] = [

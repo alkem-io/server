@@ -56,7 +56,11 @@ describe('AccountHostService', () => {
         ...account,
         id: 'saved-account-1',
       }));
-      service['accountRepository'] = { save: saveSpy } as any;
+      const mgrSaveSpy = vi.fn().mockImplementation(entity => entity);
+      service['accountRepository'] = {
+        save: saveSpy,
+        manager: { save: mgrSaveSpy },
+      } as any;
 
       // Act
       const result = await service.createAccount(AccountType.USER);
@@ -80,6 +84,7 @@ describe('AccountHostService', () => {
       licenseService.createLicense = createLicenseSpy;
       service['accountRepository'] = {
         save: vi.fn().mockImplementation(a => a),
+        manager: { save: vi.fn().mockImplementation(a => a) },
       } as any;
 
       // Act

@@ -49,7 +49,7 @@ export class VirtualContributorAuthorizationService {
             account: {
               spaces: true,
             },
-            profile: true,
+            actor: { profile: true },
             knowledgeBase: true,
           },
         }
