@@ -138,6 +138,51 @@ describe('InheritedCredentialRuleSetService', () => {
       expect(parentAuth._childInheritedCredentialRuleSet).toBe(createdRow);
     });
 
+    it('produces empty credentialRules when parent has no cascading and no inherited rules', async () => {
+      const parentAuth = {
+        id: 'parent-policy-id',
+        credentialRules: [nonCascadeRule],
+        inheritedCredentialRuleSet: undefined,
+        _childInheritedCredentialRuleSet: undefined,
+      } as unknown as IAuthorizationPolicy;
+
+      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.create.mockImplementation(data => ({
+        id: 'new-row-id',
+        ...data,
+      }));
+      mockRepository.save.mockImplementation(row => Promise.resolve(row));
+
+      await service.resolveForParent(parentAuth);
+
+      const createCall = mockRepository.create.mock.calls[0][0];
+      expect(createCall.credentialRules).toEqual([]);
+    });
+
+    it('passes through inherited rules when parent has no local cascading rules', async () => {
+      const parentAuth = {
+        id: 'parent-policy-id',
+        credentialRules: [nonCascadeRule],
+        inheritedCredentialRuleSet: {
+          credentialRules: [inheritedRule],
+        },
+        _childInheritedCredentialRuleSet: undefined,
+      } as unknown as IAuthorizationPolicy;
+
+      mockRepository.findOne.mockResolvedValue(null);
+      mockRepository.create.mockImplementation(data => ({
+        id: 'new-row-id',
+        ...data,
+      }));
+      mockRepository.save.mockImplementation(row => Promise.resolve(row));
+
+      await service.resolveForParent(parentAuth);
+
+      const createCall = mockRepository.create.mock.calls[0][0];
+      expect(createCall.credentialRules).toHaveLength(1);
+      expect(createCall.credentialRules[0]).toBe(inheritedRule);
+    });
+
     it('correctly merges parent local cascading rules + parent inherited rules', async () => {
       const parentAuth = {
         id: 'parent-policy-id',

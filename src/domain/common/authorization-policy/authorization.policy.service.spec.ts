@@ -312,6 +312,46 @@ describe('AuthorizationPolicyService', () => {
       expect(result).toBeDefined();
       expect(result.credentialRules).toEqual([]);
     });
+
+    it('should assign parent _childInheritedCredentialRuleSet to child via FK when present', () => {
+      const child = new AuthorizationPolicy(AuthorizationPolicyType.PROFILE);
+      const parent = new AuthorizationPolicy(AuthorizationPolicyType.SPACE);
+      parent.credentialRules = [{ name: 'cascading', cascade: true } as any];
+
+      const inheritedRuleSet = {
+        id: 'inherited-rs-1',
+        credentialRules: [{ name: 'inherited-rule' }],
+      } as any;
+      parent._childInheritedCredentialRuleSet = inheritedRuleSet;
+
+      const result = service.inheritParentAuthorization(child, parent);
+
+      // FK path: inherited rule set assigned, credentialRules stays empty (reset)
+      expect(result.inheritedCredentialRuleSet).toBe(inheritedRuleSet);
+      expect(result.credentialRules).toEqual([]);
+    });
+
+    it('should reset child rules before FK assignment', () => {
+      const child = new AuthorizationPolicy(AuthorizationPolicyType.PROFILE);
+      child.credentialRules = [{ name: 'old-child-rule' } as any];
+      child.privilegeRules = [{ name: 'old-priv-rule' } as any];
+
+      const parent = new AuthorizationPolicy(AuthorizationPolicyType.SPACE);
+      parent.credentialRules = [];
+
+      const inheritedRuleSet = {
+        id: 'inherited-rs-2',
+        credentialRules: [{ name: 'inherited-rule' }],
+      } as any;
+      parent._childInheritedCredentialRuleSet = inheritedRuleSet;
+
+      const result = service.inheritParentAuthorization(child, parent);
+
+      // Child's pre-existing rules are cleared
+      expect(result.credentialRules).toEqual([]);
+      expect(result.privilegeRules).toEqual([]);
+      expect(result.inheritedCredentialRuleSet).toBe(inheritedRuleSet);
+    });
   });
 
   describe('saveAll', () => {

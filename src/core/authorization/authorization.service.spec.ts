@@ -1,4 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ForbiddenException } from '@common/exceptions';
+import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { AuthorizationService } from './authorization.service';
@@ -233,6 +235,206 @@ describe('AuthorizationService', () => {
       );
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('validateAuthorization', () => {
+    it('should not throw when policy has zero local rules but non-empty inherited rules', () => {
+      const authorization = {
+        id: 'auth-inherited-only',
+        type: 'SPACE',
+        credentialRules: [],
+        privilegeRules: [],
+        inheritedCredentialRuleSet: {
+          credentialRules: [
+            {
+              grantedPrivileges: [AuthorizationPrivilege.READ],
+              criterias: [{ type: 'global-admin', resourceID: '' }],
+              cascade: true,
+              name: 'inherited-admin',
+            },
+          ],
+        },
+      } as unknown as IAuthorizationPolicy;
+
+      const result = service.validateAuthorization(
+        authorization,
+        'test',
+        AuthorizationPrivilege.READ
+      );
+
+      expect(result).toBe(authorization);
+    });
+
+    it('should throw AuthorizationInvalidPolicyException when both local and inherited rules are empty', () => {
+      const authorization = {
+        id: 'auth-empty',
+        type: 'SPACE',
+        credentialRules: [],
+        privilegeRules: [],
+        inheritedCredentialRuleSet: { credentialRules: [] },
+      } as unknown as IAuthorizationPolicy;
+
+      expect(() =>
+        service.validateAuthorization(
+          authorization,
+          'test',
+          AuthorizationPrivilege.READ
+        )
+      ).toThrow(AuthorizationInvalidPolicyException);
+
+      // Also when inheritedCredentialRuleSet is undefined
+      const authNoInherited = {
+        id: 'auth-no-inherited',
+        type: 'SPACE',
+        credentialRules: [],
+        privilegeRules: [],
+        inheritedCredentialRuleSet: undefined,
+      } as unknown as IAuthorizationPolicy;
+
+      expect(() =>
+        service.validateAuthorization(
+          authNoInherited,
+          'test',
+          AuthorizationPrivilege.READ
+        )
+      ).toThrow(AuthorizationInvalidPolicyException);
+    });
+
+    it('should throw ForbiddenException when authorization is undefined', () => {
+      expect(() =>
+        service.validateAuthorization(
+          undefined,
+          'test',
+          AuthorizationPrivilege.READ
+        )
+      ).toThrow(ForbiddenException);
+    });
+  });
+
+  describe('getGrantedPrivileges', () => {
+    it('should collect privileges from inherited credential rules', () => {
+      const authorization = {
+        id: 'auth-gp-1',
+        type: 'SPACE',
+        credentialRules: [],
+        privilegeRules: [],
+        inheritedCredentialRuleSet: {
+          credentialRules: [
+            {
+              grantedPrivileges: [
+                AuthorizationPrivilege.READ,
+                AuthorizationPrivilege.UPDATE,
+              ],
+              criterias: [{ type: 'global-admin', resourceID: '' }],
+              cascade: true,
+              name: 'inherited-admin',
+            },
+          ],
+        },
+      } as unknown as IAuthorizationPolicy;
+
+      const credentials = [{ type: 'global-admin', resourceID: '' }];
+
+      const result = service.getGrantedPrivileges(credentials, authorization);
+
+      expect(result).toContain(AuthorizationPrivilege.READ);
+      expect(result).toContain(AuthorizationPrivilege.UPDATE);
+    });
+
+    it('should combine privileges from inherited and local rules', () => {
+      const authorization = {
+        id: 'auth-gp-2',
+        type: 'SPACE',
+        credentialRules: [
+          {
+            grantedPrivileges: [AuthorizationPrivilege.DELETE],
+            criterias: [{ type: 'space-admin', resourceID: 'space-1' }],
+            cascade: false,
+            name: 'local-admin-delete',
+          },
+        ],
+        privilegeRules: [],
+        inheritedCredentialRuleSet: {
+          credentialRules: [
+            {
+              grantedPrivileges: [AuthorizationPrivilege.READ],
+              criterias: [{ type: 'global-admin', resourceID: '' }],
+              cascade: true,
+              name: 'inherited-admin-read',
+            },
+          ],
+        },
+      } as unknown as IAuthorizationPolicy;
+
+      const credentials = [
+        { type: 'global-admin', resourceID: '' },
+        { type: 'space-admin', resourceID: 'space-1' },
+      ];
+
+      const result = service.getGrantedPrivileges(credentials, authorization);
+
+      expect(result).toContain(AuthorizationPrivilege.READ);
+      expect(result).toContain(AuthorizationPrivilege.DELETE);
+    });
+
+    it('should work when inheritedCredentialRuleSet is undefined', () => {
+      const authorization = {
+        id: 'auth-gp-3',
+        type: 'SPACE',
+        credentialRules: [
+          {
+            grantedPrivileges: [AuthorizationPrivilege.READ],
+            criterias: [{ type: 'space-member', resourceID: 'space-1' }],
+            cascade: false,
+            name: 'local-read',
+          },
+        ],
+        privilegeRules: [],
+        inheritedCredentialRuleSet: undefined,
+      } as unknown as IAuthorizationPolicy;
+
+      const credentials = [{ type: 'space-member', resourceID: 'space-1' }];
+
+      const result = service.getGrantedPrivileges(credentials, authorization);
+
+      expect(result).toContain(AuthorizationPrivilege.READ);
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('logCredentialCheckFailDetails', () => {
+    it('should include inherited rule count in debug log message', () => {
+      const agentInfo = {
+        email: 'test@example.com',
+        credentials: [{ type: 'space-member', resourceID: 'space-1' }],
+      } as any;
+
+      const authorization = {
+        id: 'auth-log-1',
+        type: 'SPACE',
+        credentialRules: [{ name: 'rule-1' }, { name: 'rule-2' }],
+        privilegeRules: [],
+        inheritedCredentialRuleSet: {
+          credentialRules: [
+            { name: 'inherited-1' },
+            { name: 'inherited-2' },
+            { name: 'inherited-3' },
+          ],
+        },
+      } as unknown as IAuthorizationPolicy;
+
+      service.logCredentialCheckFailDetails(
+        'access denied',
+        agentInfo,
+        authorization
+      );
+
+      expect(mockLogger.debug).toHaveBeenCalledTimes(1);
+      expect(mockLogger.debug).toHaveBeenCalledWith(
+        expect.stringContaining('inherited rules: 3'),
+        expect.any(String)
+      );
     });
   });
 });
