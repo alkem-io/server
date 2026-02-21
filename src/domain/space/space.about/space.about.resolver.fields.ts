@@ -11,7 +11,6 @@ import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { ICommunity } from '@domain/community/community/community.interface';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { TemplateContentSpaceLookupService } from '@domain/template/template-content-space/template-content-space.lookup/template-content-space.lookup.service';
