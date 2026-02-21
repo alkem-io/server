@@ -3,6 +3,7 @@ import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { LicensePolicyAuthorizationService } from '@platform/licensing/credential-based/license-policy/license.policy.service.authorization';
 import { type Mocked, vi } from 'vitest';
 import { ILicensingFramework } from './licensing.framework.interface';
@@ -12,6 +13,7 @@ import { LicensingFrameworkAuthorizationService } from './licensing.framework.se
 describe('LicensingFrameworkAuthorizationService', () => {
   let service: LicensingFrameworkAuthorizationService;
   let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
+  let inheritedCredentialRuleSetService: Mocked<InheritedCredentialRuleSetService>;
   let licensingFrameworkService: Mocked<LicensingFrameworkService>;
   let licensePolicyAuthorizationService: Mocked<LicensePolicyAuthorizationService>;
 
@@ -55,8 +57,13 @@ describe('LicensingFrameworkAuthorizationService', () => {
         .mockReturnValue(mockPolicyAuthorization),
     } as unknown as Mocked<LicensePolicyAuthorizationService>;
 
+    inheritedCredentialRuleSetService = {
+      resolveForParent: vi.fn().mockResolvedValue(undefined),
+    } as unknown as Mocked<InheritedCredentialRuleSetService>;
+
     service = new LicensingFrameworkAuthorizationService(
       authorizationPolicyService,
+      inheritedCredentialRuleSetService,
       licensingFrameworkService,
       licensePolicyAuthorizationService
     );

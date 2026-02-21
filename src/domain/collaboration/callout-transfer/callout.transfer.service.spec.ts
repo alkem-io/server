@@ -3,13 +3,11 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { ClassificationService } from '@domain/common/classification/classification.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -25,8 +23,6 @@ describe('CalloutTransferService', () => {
   let profileService: ProfileService;
   let tagsetService: TagsetService;
   let storageAggregatorResolverService: StorageAggregatorResolverService;
-  let classificationService: ClassificationService;
-  let urlGeneratorCacheService: UrlGeneratorCacheService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -48,8 +44,6 @@ describe('CalloutTransferService', () => {
     storageAggregatorResolverService = module.get(
       StorageAggregatorResolverService
     );
-    classificationService = module.get(ClassificationService);
-    urlGeneratorCacheService = module.get(UrlGeneratorCacheService);
   });
 
   describe('transferCallout', () => {
@@ -134,10 +128,7 @@ describe('CalloutTransferService', () => {
         profileService.convertTagsetTemplatesToCreateTagsetInput
       ).mockReturnValue([]);
 
-      const result = await service.transferCallout(
-        callout,
-        targetCalloutsSet
-      );
+      const result = await service.transferCallout(callout, targetCalloutsSet);
 
       expect(
         calloutsSetService.validateNameIDNotInUseOrFail
