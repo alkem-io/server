@@ -1,6 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { TagsetTemplateSetModule } from '@domain/common/tagset-template-set/tagset.template.set.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { Module } from '@nestjs/common';
@@ -24,7 +23,6 @@ import { CalloutsSetAuthorizationService } from './callouts.set.service.authoriz
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
-    InheritedCredentialRuleSetModule,
     CalloutModule,
     TemporaryStorageModule,
     TagsetTemplateSetModule,

@@ -46,7 +46,7 @@ export class PostAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
     post.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         post.authorization,
         parentAuthorization
       );
@@ -55,7 +55,7 @@ export class PostAuthorizationService {
     // have rights to delete comments
     if (post.comments) {
       let commentsAuthorization =
-        this.roomAuthorizationService.applyAuthorizationPolicy(
+        await this.roomAuthorizationService.applyAuthorizationPolicy(
           post.comments,
           post.authorization
         );

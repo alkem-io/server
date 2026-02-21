@@ -11,7 +11,6 @@ import {
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { Injectable } from '@nestjs/common';
 import { LicensePolicyAuthorizationService } from '@platform/licensing/credential-based/license-policy/license.policy.service.authorization';
 import { ILicensingFramework } from './licensing.framework.interface';
@@ -21,7 +20,6 @@ import { LicensingFrameworkService } from './licensing.framework.service';
 export class LicensingFrameworkAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     private licensingFrameworkService: LicensingFrameworkService,
     private licensePolicyAuthorizationService: LicensePolicyAuthorizationService
   ) {}
@@ -55,7 +53,7 @@ export class LicensingFrameworkAuthorizationService {
       licensing.authorization
     );
     licensing.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         licensing.authorization,
         parentAuthorization
       );
@@ -70,13 +68,9 @@ export class LicensingFrameworkAuthorizationService {
     );
     updatedAuthorizations.push(licensing.authorization);
 
-    await this.inheritedCredentialRuleSetService.resolveForParent(
-      licensing.authorization
-    );
-
     // Cascade down
     const policyAuthorization =
-      this.licensePolicyAuthorizationService.applyAuthorizationPolicy(
+      await this.licensePolicyAuthorizationService.applyAuthorizationPolicy(
         licensing.licensePolicy,
         licensing.authorization
       );

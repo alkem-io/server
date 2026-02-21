@@ -28,7 +28,6 @@ import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.se
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { CommunicationAuthorizationService } from '@domain/communication/communication/communication.service.authorization';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
@@ -45,8 +44,7 @@ export class CommunityAuthorizationService {
     private communicationAuthorizationService: CommunicationAuthorizationService,
     private roleSetAuthorizationService: RoleSetAuthorizationService,
     private roleSetService: RoleSetService,
-    private platformRolesAccessService: PlatformRolesAccessService,
-    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService
+    private platformRolesAccessService: PlatformRolesAccessService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -83,7 +81,7 @@ export class CommunityAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     community.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         community.authorization,
         parentAuthorization
       );
@@ -94,10 +92,6 @@ export class CommunityAuthorizationService {
     );
 
     updatedAuthorizations.push(community.authorization);
-
-    await this.inheritedCredentialRuleSetService.resolveForParent(
-      community.authorization
-    );
 
     const communicationAuthorizations =
       await this.communicationAuthorizationService.applyAuthorizationPolicy(

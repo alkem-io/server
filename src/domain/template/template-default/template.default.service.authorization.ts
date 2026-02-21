@@ -7,12 +7,12 @@ import { ITemplateDefault } from './template.default.interface';
 export class TemplateDefaultAuthorizationService {
   constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
-  applyAuthorizationPolicy(
+  async applyAuthorizationPolicy(
     templateDefault: ITemplateDefault,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     templateDefault.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         templateDefault.authorization,
         parentAuthorization
       );

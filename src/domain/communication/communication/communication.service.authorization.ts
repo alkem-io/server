@@ -2,7 +2,6 @@ import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { ICommunication } from '@domain/communication/communication';
 import { Injectable } from '@nestjs/common';
 import { RoomAuthorizationService } from '../room/room.service.authorization';
@@ -12,7 +11,6 @@ import { CommunicationService } from './communication.service';
 export class CommunicationAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     private communicationService: CommunicationService,
     private roomAuthorizationService: RoomAuthorizationService
   ) {}
@@ -42,18 +40,14 @@ export class CommunicationAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     communication.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         communication.authorization,
         parentAuthorization
       );
     updatedAuthorizations.push(communication.authorization);
 
-    await this.inheritedCredentialRuleSetService.resolveForParent(
-      communication.authorization
-    );
-
     let roomUpdatedAuthorization =
-      this.roomAuthorizationService.applyAuthorizationPolicy(
+      await this.roomAuthorizationService.applyAuthorizationPolicy(
         communication.updates,
         communication.authorization
       );

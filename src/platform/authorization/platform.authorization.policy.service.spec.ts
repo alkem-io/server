@@ -63,14 +63,14 @@ describe('PlatformAuthorizationPolicyService', () => {
   });
 
   describe('inheritRootAuthorizationPolicy', () => {
-    it('should delegate to authorizationPolicyService.inheritParentAuthorization with child auth', () => {
+    it('should delegate to authorizationPolicyService.inheritParentAuthorization with child auth', async () => {
       const childAuth = { id: 'child-1' } as IAuthorizationPolicy;
       const expectedResult = { id: 'inherited-1' } as IAuthorizationPolicy;
       vi.mocked(
         authorizationPolicyService.inheritParentAuthorization
-      ).mockReturnValue(expectedResult);
+      ).mockResolvedValue(expectedResult);
 
-      const result = service.inheritRootAuthorizationPolicy(childAuth);
+      const result = await service.inheritRootAuthorizationPolicy(childAuth);
 
       expect(
         authorizationPolicyService.inheritParentAuthorization
@@ -78,13 +78,13 @@ describe('PlatformAuthorizationPolicyService', () => {
       expect(result).toBe(expectedResult);
     });
 
-    it('should handle undefined child authorization', () => {
+    it('should handle undefined child authorization', async () => {
       const expectedResult = { id: 'inherited-2' } as IAuthorizationPolicy;
       vi.mocked(
         authorizationPolicyService.inheritParentAuthorization
-      ).mockReturnValue(expectedResult);
+      ).mockResolvedValue(expectedResult);
 
-      const result = service.inheritRootAuthorizationPolicy(undefined);
+      const result = await service.inheritRootAuthorizationPolicy(undefined);
 
       expect(
         authorizationPolicyService.inheritParentAuthorization

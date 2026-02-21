@@ -3,7 +3,6 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { MessagingAuthorizationService } from '@domain/communication/messaging/messaging.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
@@ -61,7 +60,7 @@ describe('PlatformAuthorizationService', () => {
     };
 
     const mockPlatformAuthorizationPolicyService = {
-      inheritRootAuthorizationPolicy: vi.fn(auth => auth),
+      inheritRootAuthorizationPolicy: vi.fn(async auth => auth),
     };
 
     const mockForumAuthorizationService = {
@@ -134,12 +133,6 @@ describe('PlatformAuthorizationService', () => {
         {
           provide: MessagingAuthorizationService,
           useValue: mockMessagingAuthorizationService,
-        },
-        {
-          provide: InheritedCredentialRuleSetService,
-          useValue: {
-            resolveForParent: vi.fn().mockResolvedValue(undefined),
-          },
         },
       ],
     }).compile();

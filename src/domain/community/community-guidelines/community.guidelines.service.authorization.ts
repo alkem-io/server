@@ -23,7 +23,7 @@ export class CommunityGuidelinesAuthorizationService {
       communityGuidelines.authorization
     );
     communityGuidelines.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         communityGuidelines.authorization,
         parentAuthorization
       );

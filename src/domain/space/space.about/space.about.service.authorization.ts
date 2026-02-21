@@ -3,7 +3,6 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { CommunityGuidelinesAuthorizationService } from '@domain/community/community-guidelines/community.guidelines.service.authorization';
 import { Injectable } from '@nestjs/common';
@@ -14,7 +13,6 @@ export class SpaceAboutAuthorizationService {
     private profileAuthorizationService: ProfileAuthorizationService,
     private spaceAboutService: SpaceAboutService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService
   ) {}
 
@@ -47,16 +45,12 @@ export class SpaceAboutAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     spaceAbout.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         spaceAbout.authorization,
         parentAuthorization
       );
     spaceAbout.authorization.credentialRules.push(...credentialRulesFromParent);
     updatedAuthorizations.push(spaceAbout.authorization);
-
-    await this.inheritedCredentialRuleSetService.resolveForParent(
-      spaceAbout.authorization
-    );
 
     // cascade
     const profileAuthorizations =

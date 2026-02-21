@@ -18,7 +18,7 @@ export class ApplicationAuthorizationService {
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy> {
     application.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         application.authorization,
         parentAuthorization
       );

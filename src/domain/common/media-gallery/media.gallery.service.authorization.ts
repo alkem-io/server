@@ -85,7 +85,7 @@ export class MediaGalleryAuthorizationService {
 
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
     mediaGallery.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         mediaGallery.authorization,
         parentAuthorization
       );
@@ -103,7 +103,7 @@ export class MediaGalleryAuthorizationService {
 
     for (const visual of mediaGallery.visuals ?? []) {
       visual.authorization =
-        this.visualAuthorizationService.applyAuthorizationPolicy(
+        await this.visualAuthorizationService.applyAuthorizationPolicy(
           visual,
           mediaGallery.authorization
         );

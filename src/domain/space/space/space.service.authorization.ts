@@ -29,7 +29,6 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
@@ -57,7 +56,6 @@ export class SpaceAuthorizationService {
     private spaceLookupService: SpaceLookupService,
     private licenseAuthorizationService: LicenseAuthorizationService,
     private platformRolesAccessService: PlatformRolesAccessService,
-    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -135,7 +133,7 @@ export class SpaceAuthorizationService {
     let parentSpaceRoleSet: IRoleSet | undefined;
     switch (space.level) {
       case SpaceLevel.L0: {
-        space.authorization = this.resetToPrivateLevelZeroSpaceAuthorization(
+        space.authorization = await this.resetToPrivateLevelZeroSpaceAuthorization(
           space,
           space.authorization
         );
@@ -145,7 +143,7 @@ export class SpaceAuthorizationService {
       case SpaceLevel.L2: {
         if (isPrivate) {
           // Key: private get the base space authorization setup, that is then extended
-          space.authorization = this.resetToPrivateLevelZeroSpaceAuthorization(
+          space.authorization = await this.resetToPrivateLevelZeroSpaceAuthorization(
             space,
             space.authorization
           );
@@ -154,7 +152,7 @@ export class SpaceAuthorizationService {
           const parentAuthorization =
             this.getParentAuthorizationPolicyOrFail(space);
           space.authorization =
-            this.authorizationPolicyService.inheritParentAuthorization(
+            await this.authorizationPolicyService.inheritParentAuthorization(
               space.authorization,
               parentAuthorization
             );
@@ -218,10 +216,6 @@ export class SpaceAuthorizationService {
       space.authorization
     );
     updatedAuthorizations.push(space.authorization);
-
-    await this.inheritedCredentialRuleSetService.resolveForParent(
-      space.authorization
-    );
 
     // Cascade down
     // propagate authorization rules for child entities
@@ -422,7 +416,7 @@ export class SpaceAuthorizationService {
     updatedAuthorizations.push(...communityAuthorizations);
 
     const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
+      await this.agentAuthorizationService.applyAuthorizationPolicy(
         space.agent,
         space.authorization
       );
@@ -446,7 +440,7 @@ export class SpaceAuthorizationService {
     updatedAuthorizations.push(...collaborationAuthorizations);
 
     const licenseAuthorizations =
-      this.licenseAuthorizationService.applyAuthorizationPolicy(
+      await this.licenseAuthorizationService.applyAuthorizationPolicy(
         space.license,
         space.authorization
       );
@@ -658,14 +652,14 @@ export class SpaceAuthorizationService {
     return memberCriteria;
   }
 
-  private resetToPrivateLevelZeroSpaceAuthorization(
+  private async resetToPrivateLevelZeroSpaceAuthorization(
     space: ISpace,
     authorizationPolicy: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     let updatedAuthorization =
       this.authorizationPolicyService.reset(authorizationPolicy);
     updatedAuthorization =
-      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
+      await this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         updatedAuthorization
       );
 

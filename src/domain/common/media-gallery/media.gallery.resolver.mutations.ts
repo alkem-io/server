@@ -51,7 +51,7 @@ export class MediaGalleryResolverMutations {
 
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
     visual.authorization =
-      this.visualAuthorizationService.applyAuthorizationPolicy(
+      await this.visualAuthorizationService.applyAuthorizationPolicy(
         visual,
         mediaGallery.authorization
       );

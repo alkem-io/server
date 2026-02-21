@@ -44,7 +44,7 @@ export class CalendarEventAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     calendarEvent.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         calendarEvent.authorization,
         parentAuthorization
       );
@@ -60,7 +60,7 @@ export class CalendarEventAuthorizationService {
     // have rights to delete comments
     if (calendarEvent.comments) {
       const commentsAuthorization =
-        this.roomAuthorizationService.applyAuthorizationPolicy(
+        await this.roomAuthorizationService.applyAuthorizationPolicy(
           calendarEvent.comments,
           clonedAuthorization
         );

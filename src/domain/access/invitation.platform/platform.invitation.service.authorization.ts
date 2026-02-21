@@ -12,7 +12,7 @@ export class PlatformInvitationAuthorizationService {
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy> {
     const updatedPlatformAuthorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         platformInvitation.authorization,
         parentAuthorization
       );

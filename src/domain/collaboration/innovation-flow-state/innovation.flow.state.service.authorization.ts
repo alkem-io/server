@@ -7,16 +7,16 @@ import { IInnovationFlowState } from './innovation.flow.state.interface';
 export class InnovationFlowStateAuthorizationService {
   constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
-  applyAuthorizationPolicy(
+  async applyAuthorizationPolicy(
     innovationFlowState: IInnovationFlowState,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     // Ensure always applying from a clean state
     innovationFlowState.authorization = this.authorizationPolicyService.reset(
       innovationFlowState.authorization
     );
     innovationFlowState.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         innovationFlowState.authorization,
         parentAuthorization
       );

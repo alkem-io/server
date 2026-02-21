@@ -67,7 +67,7 @@ export class RoleSetAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     roleSet.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         roleSet.authorization,
         parentAuthorization
       );
@@ -89,7 +89,7 @@ export class RoleSetAuthorizationService {
     updatedAuthorizations.push(...invitationAuthorizations);
 
     const licenseAuthorization =
-      this.licenseAuthorizationService.applyAuthorizationPolicy(
+      await this.licenseAuthorizationService.applyAuthorizationPolicy(
         roleSet.license,
         roleSet.authorization
       );

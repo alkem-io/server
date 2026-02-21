@@ -53,7 +53,7 @@ export class InnovationHubAuthorizationService {
       );
 
     hub.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         hub.authorization,
         clonedAuthorization
       );

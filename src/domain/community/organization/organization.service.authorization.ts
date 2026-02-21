@@ -81,7 +81,7 @@ export class OrganizationAuthorizationService {
       organization.authorization
     );
     organization.authorization =
-      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
+      await this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         organization.authorization
       );
 
@@ -140,7 +140,7 @@ export class OrganizationAuthorizationService {
     updatedAuthorizations.push(...roleSetAuthorizations);
 
     const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
+      await this.agentAuthorizationService.applyAuthorizationPolicy(
         organization.agent,
         organization.authorization
       );

@@ -20,12 +20,12 @@ export class RoomAuthorizationService {
     private roomService: RoomService
   ) {}
 
-  applyAuthorizationPolicy(
+  async applyAuthorizationPolicy(
     room: IRoom,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     let updatedAuthorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         room.authorization,
         parentAuthorization
       );

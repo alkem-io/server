@@ -52,7 +52,7 @@ export class TemplateContentSpaceAuthorizationService {
 
     // Cascade to templateContentSpace.authorization
     templateContentSpace.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         templateContentSpace.authorization,
         providedParentAuthorization
       );

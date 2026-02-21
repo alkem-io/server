@@ -268,7 +268,7 @@ export class ConversationService {
 
     // Apply authorization to the new room
     if (conversationWithAuth.authorization) {
-      let roomAuth = this.roomAuthorizationService.applyAuthorizationPolicy(
+      let roomAuth = await this.roomAuthorizationService.applyAuthorizationPolicy(
         createdRoom,
         conversationWithAuth.authorization
       );

@@ -123,7 +123,7 @@ export class CalloutContributionAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     contribution.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         contribution.authorization,
         parentAuthorization
       );

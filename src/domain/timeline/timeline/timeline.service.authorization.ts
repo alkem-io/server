@@ -2,7 +2,6 @@ import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { Injectable } from '@nestjs/common';
 import { CalendarAuthorizationService } from '../calendar/calendar.service.authorization';
 import { ITimeline } from './timeline.interface';
@@ -12,7 +11,6 @@ import { TimelineService } from './timeline.service';
 export class TimelineAuthorizationService {
   constructor(
     private calendarAuthorizationService: CalendarAuthorizationService,
-    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     private timelineService: TimelineService,
     private authorizationPolicyService: AuthorizationPolicyService
   ) {}
@@ -36,15 +34,11 @@ export class TimelineAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     timeline.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         timeline.authorization,
         parentAuthorization
       );
     updatedAuthorizations.push(timeline.authorization);
-
-    await this.inheritedCredentialRuleSetService.resolveForParent(
-      timeline.authorization
-    );
 
     // Cascade down
     const calendarAuthorizations =

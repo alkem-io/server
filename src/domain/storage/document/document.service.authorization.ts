@@ -28,7 +28,7 @@ export class DocumentAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     document.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         document.authorization,
         parentAuthorization
       );
@@ -38,7 +38,7 @@ export class DocumentAuthorizationService {
     updatedAuthorizations.push(document.authorization);
 
     document.tagset.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         document.tagset.authorization,
         document.authorization
       );

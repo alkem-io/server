@@ -44,9 +44,9 @@ export class PlatformAuthorizationPolicyService {
     return platform.authorization;
   }
 
-  public inheritRootAuthorizationPolicy(
+  public async inheritRootAuthorizationPolicy(
     childAuthorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     return this.authorizationPolicyService.inheritParentAuthorization(
       childAuthorization,
       this.rootAuthorizationPolicy

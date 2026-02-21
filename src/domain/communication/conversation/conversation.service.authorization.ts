@@ -78,7 +78,7 @@ export class ConversationAuthorizationService {
     // Cascade to the room, if it exists
     if (conversation.room) {
       let roomAuthorization =
-        this.roomAuthorizationService.applyAuthorizationPolicy(
+        await this.roomAuthorizationService.applyAuthorizationPolicy(
           conversation.room,
           conversation.authorization
         );

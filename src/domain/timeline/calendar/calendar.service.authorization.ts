@@ -40,7 +40,7 @@ export class CalendarAuthorizationService {
       calendar.authorization
     );
     calendar.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         calendar.authorization,
         parentAuthorization
       );

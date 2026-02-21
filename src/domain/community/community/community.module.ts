@@ -2,7 +2,6 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { UserGroupModule } from '@domain/community/user-group/user-group.module';
 import { Module } from '@nestjs/common';
@@ -20,7 +19,6 @@ import { CommunityAuthorizationService } from './community.service.authorization
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    InheritedCredentialRuleSetModule,
     EntityResolverModule,
     UserGroupModule,
     RoleSetModule,

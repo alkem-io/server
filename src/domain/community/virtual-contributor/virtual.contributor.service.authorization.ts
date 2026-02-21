@@ -78,7 +78,7 @@ export class VirtualContributorAuthorizationService {
       );
 
     virtualContributor.authorization =
-      this.resetToBaseVirtualContributorAuthorization(
+      await this.resetToBaseVirtualContributorAuthorization(
         virtualContributor.authorization,
         accountAdminCredential
       );
@@ -127,7 +127,7 @@ export class VirtualContributorAuthorizationService {
     updatedAuthorizations.push(...profileAuthorizations);
 
     const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
+      await this.agentAuthorizationService.applyAuthorizationPolicy(
         virtualContributor.agent,
         virtualContributor.authorization
       );
@@ -188,14 +188,14 @@ export class VirtualContributorAuthorizationService {
     return credentialCriteriasWithAccess;
   }
 
-  private resetToBaseVirtualContributorAuthorization(
+  private async resetToBaseVirtualContributorAuthorization(
     authorizationPolicy: IAuthorizationPolicy | undefined,
     accountAdminCredential: ICredentialDefinition
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     let updatedAuthorization =
       this.authorizationPolicyService.reset(authorizationPolicy);
     updatedAuthorization =
-      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
+      await this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         updatedAuthorization
       );
 

@@ -111,7 +111,7 @@ export class UserAuthorizationService {
       user.authorization
     );
     user.authorization =
-      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
+      await this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         user.authorization
       );
 
@@ -144,14 +144,14 @@ export class UserAuthorizationService {
     updatedAuthorizations.push(...profileAuthorizations);
 
     const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
+      await this.agentAuthorizationService.applyAuthorizationPolicy(
         user.agent,
         user.authorization
       );
     updatedAuthorizations.push(agentAuthorization);
 
     const settingsAuthorization =
-      this.userSettingsAuthorizationService.applyAuthorizationPolicy(
+      await this.userSettingsAuthorizationService.applyAuthorizationPolicy(
         user.settings,
         user.authorization
       );

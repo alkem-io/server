@@ -31,7 +31,7 @@ export class UserGroupAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
     userGroup.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         userGroup.authorization,
         parentAuthorization
       );

@@ -1,6 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { InnovationPackModule } from '@library/innovation-pack/innovation.pack.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -13,7 +12,6 @@ import { LibraryAuthorizationService } from './library.service.authorization';
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    InheritedCredentialRuleSetModule,
     InnovationPackModule,
     TypeOrmModule.forFeature([Library]),
   ],

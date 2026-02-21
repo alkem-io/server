@@ -48,7 +48,7 @@ export class InnovationPackAuthorizationService {
       innovationPack.authorization
     );
     innovationPack.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         innovationPack.authorization,
         parentAuthorization
       );

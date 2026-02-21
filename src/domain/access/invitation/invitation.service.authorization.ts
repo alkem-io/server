@@ -34,7 +34,7 @@ export class InvitationAuthorizationService {
     parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy> {
     invitation.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         invitation.authorization,
         parentAuthorization
       );

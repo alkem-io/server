@@ -49,7 +49,7 @@ export class ClassificationAuthorizationService {
 
     // Inherit from the parent
     classification.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         classification.authorization,
         parentAuthorization
       );
@@ -62,7 +62,7 @@ export class ClassificationAuthorizationService {
 
     for (const tagset of classification.tagsets) {
       tagset.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
+        await this.authorizationPolicyService.inheritParentAuthorization(
           tagset.authorization,
           classification.authorization
         );

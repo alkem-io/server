@@ -33,7 +33,7 @@ export class MessagingAuthorizationService {
 
     // Inherit from the parent
     messaging.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         messaging.authorization,
         parentAuthorization
       );

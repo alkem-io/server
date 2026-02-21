@@ -1,6 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { CalendarModule } from '../calendar/calendar.module';
@@ -13,7 +12,6 @@ import { TimelineAuthorizationService } from './timeline.service.authorization';
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    InheritedCredentialRuleSetModule,
     CalendarModule,
     TypeOrmModule.forFeature([Timeline]),
   ],

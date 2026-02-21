@@ -15,7 +15,6 @@ import { ICollaboration } from '@domain/collaboration/collaboration/collaboratio
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { TimelineAuthorizationService } from '@domain/timeline/timeline/timeline.service.authorization';
@@ -33,8 +32,7 @@ export class CollaborationAuthorizationService {
     private calloutsSetAuthorizationService: CalloutsSetAuthorizationService,
     private innovationFlowAuthorizationService: InnovationFlowAuthorizationService,
     private licenseAuthorizationService: LicenseAuthorizationService,
-    private platformRolesAccessService: PlatformRolesAccessService,
-    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService
+    private platformRolesAccessService: PlatformRolesAccessService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -70,7 +68,7 @@ export class CollaborationAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     collaboration.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         collaboration.authorization,
         parentAuthorization
       );
@@ -93,10 +91,6 @@ export class CollaborationAuthorizationService {
       ...credentialRulesFromParent
     );
     updatedAuthorizations.push(collaboration.authorization);
-
-    await this.inheritedCredentialRuleSetService.resolveForParent(
-      collaboration.authorization
-    );
 
     const childUpdatedAuthorizations =
       await this.propagateAuthorizationToChildEntities(
@@ -143,7 +137,7 @@ export class CollaborationAuthorizationService {
     updatedAuthorizations.push(...updatedCalloutsSetAuthorizations);
 
     const licenseAuthorization =
-      this.licenseAuthorizationService.applyAuthorizationPolicy(
+      await this.licenseAuthorizationService.applyAuthorizationPolicy(
         collaboration.license,
         collaboration.authorization
       );

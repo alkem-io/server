@@ -58,7 +58,7 @@ export class MemoAuthorizationService {
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
     memo.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         memo.authorization,
         parentAuthorization
       );

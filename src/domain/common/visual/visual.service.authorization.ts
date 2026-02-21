@@ -10,12 +10,12 @@ import { IVisual } from './visual.interface';
 export class VisualAuthorizationService {
   constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
-  applyAuthorizationPolicy(
+  async applyAuthorizationPolicy(
     visual: IVisual,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     visual.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         visual.authorization,
         parentAuthorization
       );

@@ -50,7 +50,7 @@ export class DiscussionAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     discussion.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         discussion.authorization,
         parentAuthorization
       );
@@ -88,7 +88,7 @@ export class DiscussionAuthorizationService {
     updatedAuthorizations.push(...profileAuthorizations);
 
     let commentsAuthorization =
-      this.roomAuthorizationService.applyAuthorizationPolicy(
+      await this.roomAuthorizationService.applyAuthorizationPolicy(
         discussion.comments,
         clonedAuthorization
       );

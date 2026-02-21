@@ -1,6 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { LicensePlanModule } from '@platform/licensing/credential-based/license-plan/license.plan.module';
@@ -17,7 +16,6 @@ import { LicensingFrameworkAuthorizationService } from './licensing.framework.se
     LicensePolicyModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
-    InheritedCredentialRuleSetModule,
     TypeOrmModule.forFeature([LicensingFramework]),
   ],
   providers: [

@@ -24,7 +24,6 @@ import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.aut
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
@@ -50,7 +49,6 @@ export class AccountAuthorizationService {
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private accountService: AccountService,
     private licenseAuthorizationService: LicenseAuthorizationService,
-    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -96,7 +94,7 @@ export class AccountAuthorizationService {
         AuthorizationPrivilege.READ
       );
     account.authorization =
-      this.platformAuthorizationService.inheritRootAuthorizationPolicy(
+      await this.platformAuthorizationService.inheritRootAuthorizationPolicy(
         account.authorization
       );
 
@@ -106,10 +104,6 @@ export class AccountAuthorizationService {
     );
 
     account.authorization = await this.authorizationPolicyService.save(
-      account.authorization
-    );
-
-    await this.inheritedCredentialRuleSetService.resolveForParent(
       account.authorization
     );
 
@@ -170,14 +164,14 @@ export class AccountAuthorizationService {
     }
 
     const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
+      await this.agentAuthorizationService.applyAuthorizationPolicy(
         account.agent,
         account.authorization
       );
     updatedAuthorizations.push(agentAuthorization);
 
     const licenseAuthorizations =
-      this.licenseAuthorizationService.applyAuthorizationPolicy(
+      await this.licenseAuthorizationService.applyAuthorizationPolicy(
         account.license,
         account.authorization
       );

@@ -33,7 +33,7 @@ export class AiPersonaAuthorizationService {
     );
 
     aiPersona.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         aiPersona.authorization,
         parentAuthorization
       );

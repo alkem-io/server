@@ -8,15 +8,15 @@ import { ILicense } from './license.interface';
 export class LicenseAuthorizationService {
   constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
-  applyAuthorizationPolicy(
+  async applyAuthorizationPolicy(
     license: ILicense,
     parentAuthorization: IAuthorizationPolicy | undefined,
     credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = []
-  ): IAuthorizationPolicy[] {
+  ): Promise<IAuthorizationPolicy[]> {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     license.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         license.authorization,
         parentAuthorization
       );

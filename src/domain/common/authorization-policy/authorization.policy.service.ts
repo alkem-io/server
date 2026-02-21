@@ -25,6 +25,7 @@ import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOptionsSelect, Repository } from 'typeorm';
 import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/authorization.policy.rule.credential.interface';
+import { InheritedCredentialRuleSetService } from '../inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 
 @Injectable()
@@ -34,6 +35,7 @@ export class AuthorizationPolicyService {
     @InjectRepository(AuthorizationPolicy)
     private authorizationPolicyRepository: Repository<AuthorizationPolicy>,
     private authorizationService: AuthorizationService,
+    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     private readonly configService: ConfigService<AlkemioConfig, true>
@@ -364,10 +366,10 @@ export class AuthorizationPolicyService {
     return auth;
   }
 
-  inheritParentAuthorization(
+  async inheritParentAuthorization(
     childAuthorization: IAuthorizationPolicy | undefined,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     // TODO: remove this
     // create a new child definition if one is not provided, a temporary fix
     let child = childAuthorization;
@@ -383,25 +385,27 @@ export class AuthorizationPolicyService {
     const parent = this.validateAuthorization(parentAuthorization);
     const resetAuthPolicy = this.reset(child);
 
-    // If the parent has a pre-resolved InheritedCredentialRuleSet (via resolveForParent()),
-    // assign it to the child via FK — child's credentialRules stays empty (local rules added later by callers).
-    if (parent._childInheritedCredentialRuleSet) {
-      resetAuthPolicy.inheritedCredentialRuleSet =
-        parent._childInheritedCredentialRuleSet;
-      return resetAuthPolicy;
-    }
-
-    // Fallback: copy cascading rules directly (backward compat during transition)
-    const inheritedRules = parent.credentialRules;
-
-    const newRules: IAuthorizationPolicyRuleCredential[] = [];
-    for (const inheritedRule of inheritedRules) {
-      if (inheritedRule.cascade) {
-        newRules.push(inheritedRule);
+    // Auto-resolve InheritedCredentialRuleSet for persisted parent policies.
+    // First child per parent triggers the DB call; subsequent siblings reuse the cached result.
+    if (!parent._childInheritedCredentialRuleSet) {
+      if (parent.id) {
+        // Persisted parent: resolve via DB (creates/updates InheritedCredentialRuleSet row)
+        await this.inheritedCredentialRuleSetService.resolveForParent(parent);
+      } else {
+        // In-memory parent (e.g., platform root policy): copy cascading rules directly
+        const newRules: IAuthorizationPolicyRuleCredential[] = [];
+        for (const rule of parent.credentialRules) {
+          if (rule.cascade) {
+            newRules.push(rule);
+          }
+        }
+        resetAuthPolicy.credentialRules = newRules;
+        return resetAuthPolicy;
       }
     }
-    resetAuthPolicy.credentialRules = newRules;
 
+    resetAuthPolicy.inheritedCredentialRuleSet =
+      parent._childInheritedCredentialRuleSet;
     return resetAuthPolicy;
   }
 

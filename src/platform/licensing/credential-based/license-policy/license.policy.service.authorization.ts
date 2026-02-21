@@ -7,12 +7,12 @@ import { ILicensePolicy } from './license.policy.interface';
 export class LicensePolicyAuthorizationService {
   constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
 
-  applyAuthorizationPolicy(
+  async applyAuthorizationPolicy(
     licensePolicy: ILicensePolicy,
     parentAuthorization: IAuthorizationPolicy | undefined
-  ): IAuthorizationPolicy {
+  ): Promise<IAuthorizationPolicy> {
     licensePolicy.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         licensePolicy.authorization,
         parentAuthorization
       );

@@ -1,7 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { LicenseEntitlementModule } from '@domain/common/license-entitlement/license.entitlement.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
@@ -28,7 +27,6 @@ import { PlatformLicenseService } from './platform.service.license';
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    InheritedCredentialRuleSetModule,
     PlatformAuthorizationPolicyModule,
     PlatformSettingsModule,
     LibraryModule,

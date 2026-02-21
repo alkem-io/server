@@ -31,7 +31,7 @@ export class LinkAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     link.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         link.authorization,
         parentAuthorization
       );

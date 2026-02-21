@@ -5,7 +5,6 @@ import { Collaboration } from '@domain/collaboration/collaboration/collaboration
 import { CollaborationResolverFields } from '@domain/collaboration/collaboration/collaboration.resolver.fields';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { TimelineModule } from '@domain/timeline/timeline/timeline.module';
 import { Module } from '@nestjs/common';
@@ -20,7 +19,6 @@ import { CollaborationLicenseService } from './collaboration.service.license';
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
-    InheritedCredentialRuleSetModule,
     RoleSetModule,
     TimelineModule,
     InnovationFlowModule,

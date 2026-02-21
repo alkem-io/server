@@ -62,7 +62,7 @@ export class ProfileResolverMutations {
       tagsetData
     );
     tagset.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         tagset.authorization,
         profile.authorization
       );
@@ -91,7 +91,7 @@ export class ProfileResolverMutations {
     );
     const reference = await this.profileService.createReference(referenceInput);
     reference.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         reference.authorization,
         profile.authorization
       );

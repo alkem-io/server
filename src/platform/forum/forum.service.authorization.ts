@@ -12,7 +12,6 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { Injectable } from '@nestjs/common';
 import { DiscussionAuthorizationService } from '../forum-discussion/discussion.service.authorization';
 import { IForum } from './forum.interface';
@@ -22,7 +21,6 @@ import { ForumService } from './forum.service';
 export class ForumAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     private forumService: ForumService,
     private discussionAuthorizationService: DiscussionAuthorizationService
   ) {}
@@ -48,7 +46,7 @@ export class ForumAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     forum.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         forum.authorization,
         parentAuthorization
       );
@@ -86,10 +84,6 @@ export class ForumAuthorizationService {
 
     forum.authorization = this.appendPrivilegeRules(forum.authorization);
     updatedAuthorizations.push(forum.authorization);
-
-    await this.inheritedCredentialRuleSetService.resolveForParent(
-      forum.authorization
-    );
 
     for (const discussion of forum.discussions) {
       const updatedDiscussionAuthorizations =

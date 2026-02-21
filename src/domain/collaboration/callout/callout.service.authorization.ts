@@ -23,7 +23,6 @@ import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ClassificationAuthorizationService } from '@domain/common/classification/classification.service.authorization';
-import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { Injectable } from '@nestjs/common';
@@ -40,8 +39,7 @@ export class CalloutAuthorizationService {
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
     private calloutFramingAuthorizationService: CalloutFramingAuthorizationService,
     private roomAuthorizationService: RoomAuthorizationService,
-    private roleSetService: RoleSetService,
-    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService
+    private roleSetService: RoleSetService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -103,7 +101,7 @@ export class CalloutAuthorizationService {
       );
 
     callout.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         callout.authorization,
         parentAuthorizationAdjusted
       );
@@ -115,10 +113,6 @@ export class CalloutAuthorizationService {
 
     callout.authorization = this.appendCredentialRules(callout);
     updatedAuthorizations.push(callout.authorization);
-
-    await this.inheritedCredentialRuleSetService.resolveForParent(
-      callout.authorization
-    );
 
     for (const contribution of callout.contributions) {
       const updatedContributionAuthorizations =
@@ -142,7 +136,7 @@ export class CalloutAuthorizationService {
 
     if (callout.comments) {
       let commentsAuthorization =
-        this.roomAuthorizationService.applyAuthorizationPolicy(
+        await this.roomAuthorizationService.applyAuthorizationPolicy(
           callout.comments,
           callout.authorization
         );

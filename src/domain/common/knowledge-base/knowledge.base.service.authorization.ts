@@ -7,7 +7,6 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { CalloutsSetAuthorizationService } from '@domain/collaboration/callouts-set/callouts.set.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { Injectable } from '@nestjs/common';
 import { IKnowledgeBase } from './knowledge.base.interface';
@@ -18,7 +17,6 @@ export class KnowledgeBaseAuthorizationService {
   constructor(
     private knowledgeBaseService: KnowledgeBaseService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private calloutsSetAuthorizationService: CalloutsSetAuthorizationService
   ) {}
@@ -50,7 +48,7 @@ export class KnowledgeBaseAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     knowledgeBase.authorization =
-      this.authorizationPolicyService.inheritParentAuthorization(
+      await this.authorizationPolicyService.inheritParentAuthorization(
         knowledgeBase.authorization,
         parentAuthorization
       );
@@ -74,10 +72,6 @@ export class KnowledgeBaseAuthorizationService {
       }
     }
     updatedAuthorizations.push(knowledgeBase.authorization);
-
-    await this.inheritedCredentialRuleSetService.resolveForParent(
-      knowledgeBase.authorization
-    );
 
     const calloutsSetAuthorizations =
       await this.calloutsSetAuthorizationService.applyAuthorizationPolicy(

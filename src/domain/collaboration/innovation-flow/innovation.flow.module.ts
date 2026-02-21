@@ -1,6 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { TagsetTemplateModule } from '@domain/common/tagset-template/tagset.template.module';
@@ -18,7 +17,6 @@ import { InnovationFlowAuthorizationService } from './innovation.flow.service.au
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    InheritedCredentialRuleSetModule,
     CalloutsSetModule,
     InnovationFlowStateModule,
     ProfileModule,

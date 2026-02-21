@@ -2,7 +2,6 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ClassificationModule } from '@domain/common/classification/classification.module';
-import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
@@ -33,7 +32,6 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
     NotificationAdapterModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
-    InheritedCredentialRuleSetModule,
     RoomModule,
     EntityResolverModule,
     UserLookupModule,
