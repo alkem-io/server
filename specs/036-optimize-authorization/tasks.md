@@ -144,6 +144,43 @@ _Note: T027c-T027g require implementation-time verification that the service act
 
 ---
 
+## Phase 3a: Centralize Inherited Rule Resolution (Plan Phase 1, Refactoring)
+
+**Goal**: Eliminate the distributed `resolveForParent()` pattern (20 manual call sites) by centralizing it inside `inheritParentAuthorization()`. This makes the optimization automatic for all ~55 callers — including the ~35 leaf services that were never individually updated — and ensures new entity types automatically participate without risk of forgetting.
+
+**Rationale**: Phase 3 required adding `resolveForParent()` + `InheritedCredentialRuleSetService` injection to each parent service individually. This is repetitive, error-prone (easy to miss a service), and doesn't cover leaf services. Centralizing the call inside the one method all services already use eliminates both problems.
+
+**Pattern**:
+1. `inheritParentAuthorization()` becomes `async` → returns `Promise<IAuthorizationPolicy>`
+2. Internally checks `parent._childInheritedCredentialRuleSet` cache → if absent, calls `resolveForParent(parent)` which resolves and caches
+3. First child per parent triggers the DB call; subsequent siblings reuse the cached result
+4. Fallback path (copy cascading rules into JSONB) removed entirely
+5. All callers add `await` — mechanical, all are already in async methods
+
+### Centralize
+
+- [ ] T060 [US2] Inject `InheritedCredentialRuleSetService` into `AuthorizationPolicyService` constructor. File: `src/domain/common/authorization-policy/authorization.policy.service.ts`
+- [ ] T061 [US2] Make `inheritParentAuthorization()` async with internal auto-resolve: (1) change return type to `Promise<IAuthorizationPolicy>`, (2) after validation and reset, check `parent._childInheritedCredentialRuleSet` — if absent, call `await this.inheritedCredentialRuleSetService.resolveForParent(parent)`, (3) set `child.inheritedCredentialRuleSet = parent._childInheritedCredentialRuleSet`, (4) remove the fallback path (lines that copy cascading rules into `credentialRules` JSONB). File: `src/domain/common/authorization-policy/authorization.policy.service.ts`
+- [ ] T062 [US2] Update interface: change `inheritParentAuthorization()` return type to `Promise<IAuthorizationPolicy>` in `IAuthorizationPolicyService` (if interface exists) or in type references. File: `src/domain/common/authorization-policy/authorization.policy.interface.ts` (if applicable)
+
+### Add await to all callers (~55 files)
+
+- [ ] T063 [P] [US2] Add `await` to all `inheritParentAuthorization()` call sites across the codebase. These are all in `*.service.authorization.ts` files and `profile.resolver.mutations.ts`. All callers are already inside `async` methods, so this is mechanical. Use search: `grep -r "inheritParentAuthorization(" src/` to enumerate all sites. Verify each caller is in an async context. (~55 files, see Phase 3 file list for full enumeration)
+
+### Remove manual resolveForParent() calls (~20 parent services)
+
+- [ ] T064 [P] [US2] Remove manual `resolveForParent()` calls and `InheritedCredentialRuleSetService` injection from all parent authorization services that were updated in T011-T027g. For each service: (1) remove `await this.inheritedCredentialRuleSetService.resolveForParent(...)` call, (2) remove `InheritedCredentialRuleSetService` from constructor injection, (3) remove `InheritedCredentialRuleSetModule` from the service's NestJS module imports (only if no other service in that module uses it). Files: all services listed in T011-T027g (~20 files + their modules)
+
+### Validation
+
+- [ ] T065 [US2] Verify build succeeds with no type errors — `pnpm build`
+- [ ] T066 [US2] Run full test suite (`pnpm test:ci:no:coverage`) to verify all existing authorization tests pass (SC-003, FR-001)
+- [ ] T067 [US2] Update unit tests for `AuthorizationPolicyService.inheritParentAuthorization()` to reflect async signature and internal `resolveForParent()` call. Verify: (1) auto-resolves when `_childInheritedCredentialRuleSet` is absent, (2) uses cached value when present (no duplicate DB call), (3) sets `child.inheritedCredentialRuleSet` correctly. File: `src/domain/common/authorization-policy/authorization.policy.service.spec.ts`
+
+**Checkpoint**: Phase 3a complete. `inheritParentAuthorization()` is the single centralized path for inherited rule resolution. No manual `resolveForParent()` calls anywhere. All ~55 callers use `await`. Fallback path removed. New entity types automatically participate. Storage and correctness unchanged from Phase 3.
+
+---
+
 ## Phase 4: US1 — Faster Authorization Reset for Platform Administrators (Plan Phase 2)
 
 **Goal**: Achieve 5x+ reset speed improvement via batch entity loading (eliminate N+1), parallel subspace processing, intermediate save elimination, and APM instrumentation (SC-001, SC-005).
@@ -215,8 +252,9 @@ _Note: T027c-T027g require implementation-time verification that the service act
 - **Setup (Phase 1 / Plan Phase 1, Step 1)**: Depends on Phase 0 — start after baseline captured
 - **Foundational (Phase 2 / Plan Phase 1, Step 2)**: Depends on Phase 1 completion — BLOCKS all user stories
 - **US2 (Phase 3 / Plan Phase 1, Step 3)**: Depends on Phase 2 completion — delivers standalone value (80%+ storage reduction)
-- **US1 (Phase 4 / Plan Phase 2)**: Depends on Phase 3 completion — builds on shared inherited rule sets
-- **Polish (Phase 5)**: Depends on Phase 3 + Phase 4 completion
+- **Centralize (Phase 3a / Plan Phase 1, Refactoring)**: Depends on Phase 3 completion — refactors distributed resolveForParent() into centralized async inheritParentAuthorization(). Covers remaining ~35 leaf services automatically.
+- **US1 (Phase 4 / Plan Phase 2)**: Depends on Phase 3a completion — builds on centralized inherited rule sets
+- **Polish (Phase 5)**: Depends on Phase 3a + Phase 4 completion
 
 ### Within Phase 0 (Baseline)
 
@@ -322,26 +360,27 @@ Phase 5 (Polish):
 
 ## Implementation Strategy
 
-### MVP First (US2 Only — Plan Phase 1)
+### MVP First (US2 + Centralize — Plan Phase 1)
 
 1. Complete Phase 0: Baseline (T000)
 2. Complete Phase 1: Setup (T001-T004)
 3. Complete Phase 2: Foundational (T005-T010)
 4. Complete Phase 3: US2 parent service updates + tests (T011-T029b)
-5. **STOP and VALIDATE**: Run full test suite, trigger full authorization reset, measure storage, validate migration sequence
-6. Deploy Plan Phase 1 independently — delivers 80%+ storage reduction with identical authorization behavior
-7. No new infrastructure dependencies, no GraphQL schema changes, zero-downtime migration
+5. Complete Phase 3a: Centralize resolveForParent into inheritParentAuthorization (T060-T067)
+6. **STOP and VALIDATE**: Run full test suite, trigger full authorization reset, measure storage, validate migration sequence
+7. Deploy Plan Phase 1 independently — delivers 80%+ storage reduction with identical authorization behavior, centralized inherited rule resolution covering all entity types
+8. No new infrastructure dependencies, no GraphQL schema changes, zero-downtime migration
 
 ### Full Delivery (US2 + US1)
 
-1. Complete US2 → validate → deploy (Plan Phase 1)
+1. Complete US2 + Centralize → validate → deploy (Plan Phase 1)
 2. Complete US1 (T030-T045) → validate reset performance and correctness
 3. Deploy Plan Phase 2 — delivers 5x+ reset speedup on top of storage reduction
 4. Complete Polish (T046-T053) → validate all six success criteria + edge cases
 
 ### Suggested MVP Scope
 
-**US2 only (T000-T029b)**: ~39 tasks delivering 80%+ storage reduction. The `authorization_policy` table currently consumes ~99% of DB storage with ~80% duplicated data. Storage reduction improves backup times, vacuum performance, and reduces I/O. US1 (reset optimization) builds on top and can follow in a subsequent release.
+**US2 + centralize (T000-T029b + T060-T067)**: ~48 tasks delivering 80%+ storage reduction with centralized inherited rule resolution. The `authorization_policy` table currently consumes ~99% of DB storage with ~80% duplicated data. Centralization ensures all ~55 entity types participate automatically — no risk of missed services. US1 (reset optimization) builds on top and can follow in a subsequent release.
 
 ---
 
@@ -349,16 +388,17 @@ Phase 5 (Polish):
 
 | Metric | Value |
 |---|---|
-| Total tasks | 64 |
+| Total tasks | 72 |
 | Phase 0 (Baseline) | 1 task (T000) |
 | Phase 1 (Setup) | 4 tasks (T001-T004) |
 | Phase 2 (Foundational) | 6 tasks (T005-T010) |
 | Phase 3 / US2 (Storage) | 29 tasks (T011-T029b): 16 parent services + 7 remaining audit + 2 unit tests + 4 validation |
+| Phase 3a (Centralize) | 8 tasks (T060-T067): centralize resolveForParent, add await to callers, cleanup, validation |
 | Phase 4 / US1 (Reset Speed) | 16 tasks (T030-T045) |
 | Phase 5 (Polish) | 8 tasks (T046-T053) |
-| Parallel opportunities | 34 tasks marked [P] across phases 1-4 |
+| Parallel opportunities | 36 tasks marked [P] across phases 1-4 |
 | Files created | 7 new files (entity, interface, service, module, migration, 2 test files) |
-| Files modified | ~25 files (20+ parent services + 5 core authorization files) |
-| MVP scope (US2) | 40 tasks (T000-T029b) — standalone Plan Phase 1 delivery |
-| Cross-cutting stories | US3 (correctness) validated at T029/T045/T046; US4 (runtime) at T010/T029a/T050 |
+| Files modified | ~60 files (55 callers + 5 core authorization files; ~20 parent services also get cleanup) |
+| MVP scope (US2 + centralize) | 48 tasks (T000-T029b + T060-T067) — standalone Plan Phase 1 delivery |
+| Cross-cutting stories | US3 (correctness) validated at T029/T045/T046/T066; US4 (runtime) at T010/T029a/T050 |
 | Independent test per story | US2: storage comparison vs T000 baseline; US1: reset duration vs T000 baseline |

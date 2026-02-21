@@ -36,7 +36,9 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | **9. Container & Deployment Determinism** | PASS | Online migration (FR-010). No new environment variables. Config via existing `authorization.chunk` setting. |
 | **10. Simplicity & Incremental Hardening** | PASS | Simplest viable approach: one new entity, one new service method, one FK column. No caching layers, no CQRS, no complex indexing. Phase 2 adds parallelism only where independent subtrees exist. |
 
-**Post-Phase 1 Design Re-check**: All principles still satisfied. The `InheritedCredentialRuleSet` entity is minimal (5 columns, ~64 rows). The eager-loaded FK adds negligible query cost. The transient `_childInheritedCredentialRuleSet` pattern keeps `inheritParentAuthorization()` synchronous for ~50 leaf callers.
+**Post-Phase 1 Design Re-check**: All principles still satisfied. The `InheritedCredentialRuleSet` entity is minimal (5 columns, ~64 rows). The eager-loaded FK adds negligible query cost. The `_childInheritedCredentialRuleSet` transient field caches the resolved set per parent object in memory, so the DB call happens once per parent regardless of child count.
+
+**Post-Phase 3a Re-check (Centralization)**: `inheritParentAuthorization()` becomes async with internal `resolveForParent()` call. All callers are already in async contexts, so adding `await` is mechanical and safe. This eliminates the distributed `resolveForParent()` pattern (15-20 call sites) in favor of a single centralized call site — simpler, impossible to forget for new entity types.
 
 ## Project Structure
 
@@ -76,7 +78,8 @@ src/
 │       └── authorization.service.ts                  # MODIFIED: isAccessGrantedForCredentials() evaluates inherited + local
 ├── migrations/
 │   └── <timestamp>-sharedInheritedRuleSets.ts        # NEW: schema migration
-└── [~15-20 parent authorization service files]       # MODIFIED: add resolveForParent() call
+└── [~55 authorization service files]                  # MODIFIED: add await to inheritParentAuthorization() calls
+                                                       # ~20 parent services: remove manual resolveForParent() calls (cleanup)
 ```
 
 **Structure Decision**: Existing NestJS project structure. New module placed under `src/domain/common/` alongside the existing `authorization-policy/` module, following the domain-centric principle. No new top-level directories.
@@ -109,12 +112,16 @@ See [service-contracts.md](./contracts/service-contracts.md) for full contract.
 
 ### 1.3 Modified: inheritParentAuthorization()
 
-Changes from copy-all-cascading-rules to read-from-transient-field:
-- Reads `parentAuthorization._childInheritedCredentialRuleSet` (pre-resolved by `resolveForParent()`)
+**Phase 3 (current)**: Reads pre-resolved transient field `_childInheritedCredentialRuleSet`, falls back to copy behavior if absent. Signature stays synchronous. Requires each parent service to call `resolveForParent()` manually.
+
+**Phase 3a (centralized refactoring)**: Becomes `async`, internally calls `resolveForParent()` when `_childInheritedCredentialRuleSet` is not already cached on the parent object:
+- Checks `parentAuthorization._childInheritedCredentialRuleSet` — if present, uses cached value (no DB call)
+- If absent, calls `resolveForParent(parentAuthorization)` which resolves and caches the result
 - Sets `child.inheritedCredentialRuleSet = resolvedRow`
 - Child's `credentialRules` left empty (local rules added later by callers)
-- Falls back to current copy behavior if transient field absent (backward compat)
-- Signature stays synchronous — zero DB calls in this method
+- Fallback path removed — all callers go through the centralized path
+- All ~55 callers add `await` (mechanical — all are already in async methods)
+- Manual `resolveForParent()` calls removed from ~20 parent services (cleanup)
 
 ### 1.4 Modified: isAccessGrantedForCredentials()
 
@@ -124,14 +131,18 @@ Two-phase evaluation with inherited-first ordering:
 3. If `inheritedCredentialRuleSet` is null → evaluate `credentialRules` alone (backward compat)
 4. Privilege rules unchanged
 
-### 1.5 Parent Service Updates (~15-20 files)
+### 1.5 Caller Updates (~55 files) and Parent Service Cleanup (~20 files)
 
-Each parent authorization service that calls `inheritParentAuthorization()` for children must:
-1. Inject `InheritedCredentialRuleSetService`
-2. Call `resolveForParent(parentAuthorization)` once before child propagation
-3. No changes to child/leaf services — they receive the resolved set via `inheritParentAuthorization()`
+**Phase 3 (current)**: ~20 parent services individually inject `InheritedCredentialRuleSetService` and call `resolveForParent()` before child propagation. ~35 leaf services not yet updated (use fallback path).
 
-Key parent services: `AccountAuthorizationService`, `SpaceAuthorizationService`, `CollaborationAuthorizationService`, `CommunityAuthorizationService`, `CalloutsSetAuthorizationService`, `TemplatesManagerAuthorizationService`, `ProfileAuthorizationService`, `WhiteboardAuthorizationService`, and ~8 more (see tasks.md T011-T027g for definitive enumeration).
+**Phase 3a (centralized refactoring)**:
+1. `AuthorizationPolicyService` injects `InheritedCredentialRuleSetService` — single injection point
+2. `inheritParentAuthorization()` becomes async with internal auto-resolve
+3. All ~55 callers add `await` — mechanical change, all are in async contexts
+4. ~20 parent services that currently call `resolveForParent()` manually: remove those calls and the `InheritedCredentialRuleSetService` injection + module import (cleanup)
+5. ~35 leaf services that were never updated: automatically covered — no changes needed
+6. Fallback path in `inheritParentAuthorization()` removed entirely
+7. **New entity types automatically participate** — no possibility of forgetting `resolveForParent()`
 
 ### 1.6 Schema Migration
 

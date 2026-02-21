@@ -34,32 +34,38 @@ async resolveForParent(
 5. Attach: `parentAuthorization._childInheritedCredentialRuleSet = resolvedRow`
 6. Return resolved row
 
-**Called once per parent node** (~64 total for a full reset), NOT per child. Each parent auth service calls this before propagating to children.
+**Called once per parent node** (~64 total for a full reset), NOT per child. After Phase 3a centralization, this is called internally by `inheritParentAuthorization()` — no manual calls needed.
 
-### Phase 1: Modified Method — AuthorizationPolicyService.inheritParentAuthorization()
+### Phase 1 → Phase 3a: Modified Method — AuthorizationPolicyService.inheritParentAuthorization()
 
+**Phase 3 (transitional — current state)**:
 ```typescript
-// Signature UNCHANGED — stays synchronous
+// Synchronous, reads pre-resolved transient field, falls back to copy behavior
 inheritParentAuthorization(
   childAuthorization: IAuthorizationPolicy | undefined,
   parentAuthorization: IAuthorizationPolicy | undefined
 ): IAuthorizationPolicy
 ```
 
-**Behavioral change**:
+**Phase 3a (centralized — target state)**:
+```typescript
+// Async, auto-resolves inherited rules internally
+async inheritParentAuthorization(
+  childAuthorization: IAuthorizationPolicy | undefined,
+  parentAuthorization: IAuthorizationPolicy | undefined
+): Promise<IAuthorizationPolicy>
+```
+
+**Behavioral change (Phase 3a)**:
 - Before: copies `cascade: true` rules from parent into child's `credentialRules`
-- After: reads `parentAuthorization._childInheritedCredentialRuleSet` (transient field, pre-resolved by `resolveForParent()`), then sets `child.inheritedCredentialRuleSet = resolvedRow`. Child's `credentialRules` remains empty (local rules added later by callers). Falls back to current copy behavior if transient field is absent (backward compat during transition).
-- Method stays synchronous — zero DB calls.
+- After: checks `parentAuthorization._childInheritedCredentialRuleSet` cache. If absent, calls `resolveForParent(parentAuthorization)` internally to resolve and cache the inherited rule set. Sets `child.inheritedCredentialRuleSet = resolvedRow`. Child's `credentialRules` remains empty (local rules added later by callers).
+- The `_childInheritedCredentialRuleSet` transient field acts as a per-parent-object cache: first child triggers the DB call, subsequent siblings reuse the cached result.
+- Fallback path removed — no backward compat needed after centralization.
+- `InheritedCredentialRuleSetService` injected into `AuthorizationPolicyService` (single injection point).
 
-**~50 leaf callers**: No changes needed (signature unchanged, still synchronous).
+**All ~55 callers**: Add `await` (mechanical — all are already in async methods).
 
-**~15-20 parent propagation sites**: Must add one `resolveForParent()` call before child propagation and inject `InheritedCredentialRuleSetService`. Key parent sites:
-- `AccountAuthorizationService` — before propagating to spaces, agent, license, etc.
-- `SpaceAuthorizationService` — before propagating to community, collaboration, etc.
-- `CollaborationAuthorizationService` — before propagating to callouts-set, innovation-flow, timeline
-- `CommunityAuthorizationService` — before propagating to role-set, user-groups, etc.
-- `CalloutsSetAuthorizationService` — before propagating to callouts
-- And ~10 more parent services
+**~20 parent services (cleanup)**: Remove manual `resolveForParent()` calls and `InheritedCredentialRuleSetService` injection/module imports.
 
 ### Phase 1: Modified Method — AuthorizationService.isAccessGrantedForCredentials()
 
