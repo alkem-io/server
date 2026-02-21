@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class SharedInheritedRuleSets1771709520797 implements MigrationInterface {
-    name = 'SharedInheritedRuleSets1771709520797'
+export class SharedInheritedRuleSets1771709986886 implements MigrationInterface {
+    name = 'SharedInheritedRuleSets1771709986886'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`CREATE TABLE "inherited_credential_rule_set" ("id" uuid NOT NULL DEFAULT uuid_generate_v4(), "createdDate" TIMESTAMP NOT NULL DEFAULT now(), "updatedDate" TIMESTAMP NOT NULL DEFAULT now(), "version" integer NOT NULL, "credentialRules" jsonb NOT NULL, "parentAuthorizationPolicyId" character varying(36) NOT NULL, CONSTRAINT "UQ_dd36dd4daae9fbbef701b980e6b" UNIQUE ("parentAuthorizationPolicyId"), CONSTRAINT "PK_102104397c9526af7229a4e897a" PRIMARY KEY ("id"))`);
