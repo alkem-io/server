@@ -1,5 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { LocationModule } from '@domain/common/location';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
@@ -21,6 +22,7 @@ import { ProfileAuthorizationService } from './profile.service.authorization';
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    InheritedCredentialRuleSetModule,
     TagsetModule,
     TagsetTemplateModule,
     ReferenceModule,

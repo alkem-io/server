@@ -8,6 +8,7 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { Injectable } from '@nestjs/common';
 import { DocumentAuthorizationService } from '../document/document.service.authorization';
 import { IStorageBucket } from './storage.bucket.interface';
@@ -16,6 +17,7 @@ import { IStorageBucket } from './storage.bucket.interface';
 export class StorageBucketAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
@@ -46,6 +48,10 @@ export class StorageBucketAuthorizationService {
     );
 
     updatedAuthorizations.push(storageBucket.authorization);
+
+    await this.inheritedCredentialRuleSetService.resolveForParent(
+      storageBucket.authorization
+    );
 
     // Cascade down
     for (const document of storageBucket.documents) {

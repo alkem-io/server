@@ -1,5 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { ImageCompressionService } from '@domain/common/visual/image.compression.service';
 import { ImageConversionService } from '@domain/common/visual/image.conversion.service';
@@ -21,6 +22,7 @@ import { StorageBucketAuthorizationService } from './storage.bucket.service.auth
     DocumentModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
+    InheritedCredentialRuleSetModule,
     UrlGeneratorModule,
     TypeOrmModule.forFeature([StorageBucket]),
     TypeOrmModule.forFeature([Document]),

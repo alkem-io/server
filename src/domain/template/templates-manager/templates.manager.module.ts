@@ -1,5 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TemplateModule } from '../template/template.module';
@@ -15,6 +16,7 @@ import { TemplatesManagerAuthorizationService } from './templates.manager.servic
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
+    InheritedCredentialRuleSetModule,
     TemplatesSetModule,
     TemplateDefaultModule,
     TemplateModule,

@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
@@ -23,6 +24,7 @@ import { WhiteboardAuthorizationService } from './whiteboard.service.authorizati
     EntityResolverModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
+    InheritedCredentialRuleSetModule,
     LicenseModule,
     VisualModule,
     ProfileModule,

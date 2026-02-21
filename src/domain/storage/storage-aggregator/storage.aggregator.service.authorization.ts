@@ -2,6 +2,7 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { Injectable } from '@nestjs/common';
 import { StorageBucketAuthorizationService } from '../storage-bucket/storage.bucket.service.authorization';
 import { IStorageAggregator } from './storage.aggregator.interface';
@@ -11,6 +12,7 @@ import { StorageAggregatorService } from './storage.aggregator.service';
 export class StorageAggregatorAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     private storageAggregatorService: StorageAggregatorService,
     private storageBucketAuthorizationService: StorageBucketAuthorizationService
   ) {}
@@ -54,6 +56,10 @@ export class StorageAggregatorAuthorizationService {
         AuthorizationPrivilege.READ
       );
     updatedAuthorizations.push(storageAggregator.authorization);
+
+    await this.inheritedCredentialRuleSetService.resolveForParent(
+      storageAggregator.authorization
+    );
 
     const bucketAuthorizations =
       await this.storageBucketAuthorizationService.applyAuthorizationPolicy(

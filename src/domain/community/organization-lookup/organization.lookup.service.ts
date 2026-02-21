@@ -1,5 +1,8 @@
 import { LogContext } from '@common/enums';
-import { EntityNotFoundException, EntityNotInitializedException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '@common/exceptions';
 import { IAgent } from '@domain/agent/agent/agent.interface';
 import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
 import { Inject, LoggerService } from '@nestjs/common';
@@ -21,13 +24,10 @@ export class OrganizationLookupService {
     organizationID: string,
     options?: FindOneOptions<Organization>
   ): Promise<IOrganization | null> {
-    return this.entityManager.findOne(
-      Organization,
-      {
-        ...options,
-        where: { ...options?.where, id: organizationID },
-      }
-    );
+    return this.entityManager.findOne(Organization, {
+      ...options,
+      where: { ...options?.where, id: organizationID },
+    });
   }
 
   async getOrganizationAndAgent(
@@ -91,26 +91,20 @@ export class OrganizationLookupService {
     domain: string,
     options?: FindOneOptions<Organization>
   ): Promise<IOrganization | null> {
-    return this.entityManager.findOne(
-      Organization,
-      {
-        ...options,
-        where: { ...options?.where, domain: domain },
-      }
-    );
+    return this.entityManager.findOne(Organization, {
+      ...options,
+      where: { ...options?.where, domain: domain },
+    });
   }
 
   getOrganizationByNameId(
     organizationNameID: string,
     options?: FindOneOptions<Organization>
   ): Promise<IOrganization | null> {
-    return this.entityManager.findOne(
-      Organization,
-      {
-        ...options,
-        where: { ...options?.where, nameID: organizationNameID },
-      }
-    );
+    return this.entityManager.findOne(Organization, {
+      ...options,
+      where: { ...options?.where, nameID: organizationNameID },
+    });
   }
 
   async getOrganizationByNameIdOrFail(

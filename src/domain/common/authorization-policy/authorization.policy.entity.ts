@@ -3,6 +3,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
+import { InheritedCredentialRuleSet } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.entity';
 import { Column, Entity, Index, ManyToOne } from 'typeorm';
 import { IAuthorizationPolicy } from './authorization.policy.interface';
 
@@ -23,6 +24,14 @@ export class AuthorizationPolicy
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: false })
   type!: AuthorizationPolicyType;
+
+  @ManyToOne(() => InheritedCredentialRuleSet, {
+    eager: true,
+    cascade: false,
+    onDelete: 'SET NULL',
+    nullable: true,
+  })
+  inheritedCredentialRuleSet?: InheritedCredentialRuleSet;
 
   // An authorization can optionally choose to store a reference to the parent authorization from which it inherits
   // This is useful for when the entity wants to adjust its settings + may no longer have access without hacky code

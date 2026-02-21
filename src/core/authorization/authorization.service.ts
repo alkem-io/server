@@ -61,7 +61,7 @@ export class AuthorizationService {
     } has credentials '${JSON.stringify(
       agentInfo.credentials,
       this.replacer
-    )}'; authorization definition: rules: ${authorization?.credentialRules}`;
+    )}'; authorization definition: local rules: ${authorization?.credentialRules?.length ?? 0}, inherited rules: ${authorization?.inheritedCredentialRuleSet?.credentialRules?.length ?? 0}`;
     this.logger.debug?.(msg, LogContext.AUTH_POLICY);
   }
 
@@ -94,7 +94,11 @@ export class AuthorizationService {
         'Authorization: no definition provided',
         LogContext.AUTH_POLICY
       );
-    if (authorization.credentialRules.length === 0) {
+    const hasLocalRules = authorization.credentialRules.length > 0;
+    const hasInheritedRules =
+      (authorization.inheritedCredentialRuleSet?.credentialRules?.length ?? 0) >
+      0;
+    if (!hasLocalRules && !hasInheritedRules) {
       throw new AuthorizationInvalidPolicyException(
         `AuthorizationPolicy without credential rules provided: ${authorization.id}, type: ${authorization.type}, privilege: ${privilegeRequired}, message: ${msg}`,
         LogContext.AUTH
@@ -130,6 +134,29 @@ export class AuthorizationService {
     // Keep track of all the granted privileges via Credential rules so can use with Privilege rules
     const grantedPrivileges: AuthorizationPrivilege[] = [];
 
+    // Phase 1: Evaluate inherited rules first (larger pool, higher match probability for early exit)
+    const inheritedRules =
+      authorization.inheritedCredentialRuleSet?.credentialRules;
+    if (inheritedRules) {
+      for (const rule of inheritedRules) {
+        for (const credential of credentials) {
+          if (this.isCredentialMatch(credential, rule)) {
+            for (const privilege of rule.grantedPrivileges) {
+              if (privilege === privilegeRequired) {
+                this.logger.verbose?.(
+                  `[CredentialRule] Granted privilege '${privilegeRequired}' using inherited rule '${rule.name}' on authorization ${authorization.id} on type: ${authorization.type}`,
+                  LogContext.AUTH_POLICY
+                );
+                return true;
+              }
+              grantedPrivileges.push(privilege);
+            }
+          }
+        }
+      }
+    }
+
+    // Phase 2: Evaluate local credential rules
     const credentialRules = authorization.credentialRules;
     for (const rule of credentialRules) {
       for (const credential of credentials) {
@@ -169,8 +196,21 @@ export class AuthorizationService {
   ): AuthorizationPrivilege[] {
     const grantedPrivileges = new Set<AuthorizationPrivilege>();
 
-    const credentialRules = authorization.credentialRules || [];
+    // Evaluate inherited rules first
+    const inheritedRules =
+      authorization.inheritedCredentialRuleSet?.credentialRules || [];
+    inheritedRules.forEach(rule => {
+      credentials.forEach(credential => {
+        if (this.isCredentialMatch(credential, rule)) {
+          rule.grantedPrivileges.forEach(privilege =>
+            grantedPrivileges.add(privilege)
+          );
+        }
+      });
+    });
 
+    // Then evaluate local rules
+    const credentialRules = authorization.credentialRules || [];
     credentialRules.forEach(rule => {
       credentials.forEach(credential => {
         if (this.isCredentialMatch(credential, rule)) {

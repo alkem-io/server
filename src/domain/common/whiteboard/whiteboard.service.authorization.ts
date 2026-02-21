@@ -18,6 +18,7 @@ import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -35,6 +36,7 @@ const CREDENTIAL_RULE_SPACE_ADMIN_PUBLIC_SHARE = 'space-admin-public-share';
 export class WhiteboardAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
+    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private whiteboardService: WhiteboardService,
     private roleSetService: RoleSetService,
@@ -102,6 +104,10 @@ export class WhiteboardAuthorizationService {
       spaceSettings
     );
     updatedAuthorizations.push(whiteboard.authorization);
+
+    await this.inheritedCredentialRuleSetService.resolveForParent(
+      whiteboard.authorization
+    );
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(

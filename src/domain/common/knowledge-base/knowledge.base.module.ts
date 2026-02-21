@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -14,6 +15,7 @@ import { KnowledgeBaseAuthorizationService } from './knowledge.base.service.auth
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    InheritedCredentialRuleSetModule,
     ProfileModule,
     TagsetModule,
     CalloutsSetModule,

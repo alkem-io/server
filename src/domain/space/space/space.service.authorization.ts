@@ -29,6 +29,7 @@ import { ICredentialDefinition } from '@domain/agent/credential/credential.defin
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
@@ -56,6 +57,7 @@ export class SpaceAuthorizationService {
     private spaceLookupService: SpaceLookupService,
     private licenseAuthorizationService: LicenseAuthorizationService,
     private platformRolesAccessService: PlatformRolesAccessService,
+    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -216,6 +218,10 @@ export class SpaceAuthorizationService {
       space.authorization
     );
     updatedAuthorizations.push(space.authorization);
+
+    await this.inheritedCredentialRuleSetService.resolveForParent(
+      space.authorization
+    );
 
     // Cascade down
     // propagate authorization rules for child entities

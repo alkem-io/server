@@ -1,5 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -22,6 +23,7 @@ import { ForumAuthorizationService } from './forum.service.authorization';
     AuthorizationModule,
     NotificationAdapterModule,
     AuthorizationPolicyModule,
+    InheritedCredentialRuleSetModule,
     DiscussionModule,
     EntityResolverModule,
     NamingModule,

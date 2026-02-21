@@ -1,5 +1,6 @@
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { Injectable } from '@nestjs/common';
 import { TemplateAuthorizationService } from '../template/template.service.authorization';
 import { ITemplatesSet } from '.';
@@ -10,7 +11,8 @@ export class TemplatesSetAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private templatesSetService: TemplatesSetService,
-    private templateAuthorizationService: TemplateAuthorizationService
+    private templateAuthorizationService: TemplateAuthorizationService,
+    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -35,6 +37,10 @@ export class TemplatesSetAuthorizationService {
         parentAuthorization
       );
     updatedAuthorizations.push(templatesSet.authorization);
+
+    await this.inheritedCredentialRuleSetService.resolveForParent(
+      templatesSet.authorization
+    );
 
     if (templatesSet.templates) {
       for (const template of templatesSet.templates) {

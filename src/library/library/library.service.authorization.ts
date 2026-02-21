@@ -1,12 +1,16 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { Injectable } from '@nestjs/common';
 import { ILibrary } from './library.interface';
 
 @Injectable()
 export class LibraryAuthorizationService {
-  constructor(private authorizationPolicyService: AuthorizationPolicyService) {}
+  constructor(
+    private authorizationPolicyService: AuthorizationPolicyService,
+    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService
+  ) {}
 
   async applyAuthorizationPolicy(
     library: ILibrary,
@@ -27,6 +31,10 @@ export class LibraryAuthorizationService {
         library.authorization,
         AuthorizationPrivilege.READ
       );
+
+    await this.inheritedCredentialRuleSetService.resolveForParent(
+      library.authorization
+    );
 
     return library.authorization;
   }

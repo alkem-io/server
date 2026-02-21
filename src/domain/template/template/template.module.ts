@@ -3,6 +3,7 @@ import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
@@ -22,6 +23,7 @@ import { TemplateAuthorizationService } from './template.service.authorization';
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    InheritedCredentialRuleSetModule,
     ProfileModule,
     CommunityGuidelinesModule,
     CalloutModule,

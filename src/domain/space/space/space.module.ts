@@ -4,6 +4,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { CommunityModule } from '@domain/community/community/community.module';
@@ -43,6 +44,7 @@ import { SpacePlatformRolesAccessService } from './space.service.platform.roles.
     AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
+    InheritedCredentialRuleSetModule,
     SpaceAboutModule,
     CommunityModule,
     ProfileModule,

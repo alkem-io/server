@@ -2,6 +2,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { MediaGalleryAuthorizationService } from '@domain/common/media-gallery/media.gallery.service.authorization';
 import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
@@ -16,6 +17,7 @@ export class CalloutFramingAuthorizationService {
   constructor(
     private calloutFramingService: CalloutFramingService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private memoAuthorizationService: MemoAuthorizationService,
@@ -76,6 +78,10 @@ export class CalloutFramingAuthorizationService {
         parentAuthorization
       );
     updatedAuthorizations.push(calloutFraming.authorization);
+
+    await this.inheritedCredentialRuleSetService.resolveForParent(
+      calloutFraming.authorization
+    );
 
     const framingAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(

@@ -31,10 +31,10 @@
 
 **CRITICAL**: No user story work can begin until this phase and Phase 2 are complete.
 
-- [ ] T001 [P] Create InheritedCredentialRuleSet entity extending BaseAlkemioEntity with `credentialRules` (JSONB, NOT NULL) and `parentAuthorizationPolicyId` (UUID, UNIQUE, NOT NULL, FK → authorization_policy.id, ON DELETE CASCADE) in `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.entity.ts` (NEW)
-- [ ] T002 [P] Create IInheritedCredentialRuleSet interface extending IBaseAlkemio with `credentialRules: AuthorizationPolicyRuleCredential[]` and `parentAuthorizationPolicyId: string` in `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.interface.ts` (NEW)
-- [ ] T003 Create InheritedCredentialRuleSetService with `resolveForParent(parentAuthorization: IAuthorizationPolicy): Promise<InheritedCredentialRuleSet>` — (1) compute cascading rules: `parent.credentialRules.filter(r => r.cascade)` + `parent.inheritedCredentialRuleSet?.credentialRules ?? []`, (2) `findOne({ where: { parentAuthorizationPolicyId: parent.id } })`, (3) if found → update `credentialRules` and save, (4) if not found → create with `parentAuthorizationPolicyId = parent.id` and save, (5) attach: `parent._childInheritedCredentialRuleSet = resolvedRow`, (6) return resolved row. File: `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service.ts` (NEW)
-- [ ] T004 Create InheritedCredentialRuleSetModule with `TypeOrmModule.forFeature([InheritedCredentialRuleSet])`, exports `InheritedCredentialRuleSetService` in `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module.ts` (NEW)
+- [x] T001 [P] Create InheritedCredentialRuleSet entity extending BaseAlkemioEntity with `credentialRules` (JSONB, NOT NULL) and `parentAuthorizationPolicyId` (UUID, UNIQUE, NOT NULL, FK → authorization_policy.id, ON DELETE CASCADE) in `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.entity.ts` (NEW)
+- [x] T002 [P] Create IInheritedCredentialRuleSet interface extending IBaseAlkemio with `credentialRules: AuthorizationPolicyRuleCredential[]` and `parentAuthorizationPolicyId: string` in `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.interface.ts` (NEW)
+- [x] T003 Create InheritedCredentialRuleSetService with `resolveForParent(parentAuthorization: IAuthorizationPolicy): Promise<InheritedCredentialRuleSet>` — (1) compute cascading rules: `parent.credentialRules.filter(r => r.cascade)` + `parent.inheritedCredentialRuleSet?.credentialRules ?? []`, (2) `findOne({ where: { parentAuthorizationPolicyId: parent.id } })`, (3) if found → update `credentialRules` and save, (4) if not found → create with `parentAuthorizationPolicyId = parent.id` and save, (5) attach: `parent._childInheritedCredentialRuleSet = resolvedRow`, (6) return resolved row. File: `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service.ts` (NEW)
+- [x] T004 Create InheritedCredentialRuleSetModule with `TypeOrmModule.forFeature([InheritedCredentialRuleSet])`, exports `InheritedCredentialRuleSetService` in `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module.ts` (NEW)
 
 **Checkpoint**: New module compiles (`pnpm build`). No behavioral changes.
 
@@ -46,12 +46,12 @@
 
 **CRITICAL**: No Phase 3 work can begin until this phase is complete.
 
-- [ ] T005 Add ManyToOne relation to InheritedCredentialRuleSet on AuthorizationPolicy entity (`eager: true`, `cascade: false`, `onDelete: 'SET NULL'`, nullable) in `src/domain/common/authorization-policy/authorization.policy.entity.ts`
-- [ ] T006 [P] Add `inheritedCredentialRuleSet?: IInheritedCredentialRuleSet` field and `_childInheritedCredentialRuleSet?: InheritedCredentialRuleSet` transient field (not persisted, not GraphQL-exposed — used to pass resolved set from `resolveForParent()` to `inheritParentAuthorization()` synchronously) to IAuthorizationPolicy in `src/domain/common/authorization-policy/authorization.policy.interface.ts`
-- [ ] T007 Import InheritedCredentialRuleSetModule in AuthorizationPolicyModule imports array in `src/domain/common/authorization-policy/authorization.policy.module.ts`
+- [x] T005 Add ManyToOne relation to InheritedCredentialRuleSet on AuthorizationPolicy entity (`eager: true`, `cascade: false`, `onDelete: 'SET NULL'`, nullable) in `src/domain/common/authorization-policy/authorization.policy.entity.ts`
+- [x] T006 [P] Add `inheritedCredentialRuleSet?: IInheritedCredentialRuleSet` field and `_childInheritedCredentialRuleSet?: InheritedCredentialRuleSet` transient field (not persisted, not GraphQL-exposed — used to pass resolved set from `resolveForParent()` to `inheritParentAuthorization()` synchronously) to IAuthorizationPolicy in `src/domain/common/authorization-policy/authorization.policy.interface.ts`
+- [x] T007 Import InheritedCredentialRuleSetModule in AuthorizationPolicyModule imports array in `src/domain/common/authorization-policy/authorization.policy.module.ts`
 - [ ] T008 Generate TypeORM migration via `pnpm run migration:generate -n SharedInheritedRuleSets` — verify it creates `inherited_credential_rule_set` table (PK, createdDate, updatedDate, version, credentialRules JSONB NOT NULL, parentAuthorizationPolicyId UUID UNIQUE NOT NULL FK with ON DELETE CASCADE) and adds nullable `inheritedCredentialRuleSetId` FK column (ON DELETE SET NULL) to `authorization_policy`. Verify down migration drops in reverse order. File: `src/migrations/<timestamp>-sharedInheritedRuleSets.ts` (NEW)
-- [ ] T009 Modify `AuthorizationPolicyService.inheritParentAuthorization()` — signature stays synchronous and unchanged. New behavior: read `parentAuthorization._childInheritedCredentialRuleSet` (pre-resolved transient field), set `child.inheritedCredentialRuleSet = resolvedRow`, leave child's `credentialRules` empty (local rules added later by callers). Fallback: if transient field is absent (null/undefined), use current copy-all-cascading-rules behavior for backward compatibility. File: `src/domain/common/authorization-policy/authorization.policy.service.ts`
-- [ ] T010 [P] Modify `AuthorizationService.isAccessGrantedForCredentials()` to evaluate two rule sources in order: (1) `authorization.inheritedCredentialRuleSet?.credentialRules` first (inherited — larger pool, higher match probability for early exit), (2) `authorization.credentialRules` second (local only, typically 0-3 rules). Backward compat: if `inheritedCredentialRuleSet` is null, evaluate `credentialRules` alone. Privilege rules evaluation unchanged. File: `src/core/authorization/authorization.service.ts`
+- [x] T009 Modify `AuthorizationPolicyService.inheritParentAuthorization()` — signature stays synchronous and unchanged. New behavior: read `parentAuthorization._childInheritedCredentialRuleSet` (pre-resolved transient field), set `child.inheritedCredentialRuleSet = resolvedRow`, leave child's `credentialRules` empty (local rules added later by callers). Fallback: if transient field is absent (null/undefined), use current copy-all-cascading-rules behavior for backward compatibility. File: `src/domain/common/authorization-policy/authorization.policy.service.ts`
+- [x] T010 [P] Modify `AuthorizationService.isAccessGrantedForCredentials()` to evaluate two rule sources in order: (1) `authorization.inheritedCredentialRuleSet?.credentialRules` first (inherited — larger pool, higher match probability for early exit), (2) `authorization.credentialRules` second (local only, typically 0-3 rules). Backward compat: if `inheritedCredentialRuleSet` is null, evaluate `credentialRules` alone. Privilege rules evaluation unchanged. File: `src/core/authorization/authorization.service.ts`
 
 **Checkpoint**: Core changes compile. Migration runs successfully (`pnpm run migration:run`). No behavioral changes until parent services call `resolveForParent()`.
 
@@ -72,67 +72,67 @@
 
 ### Account & Space Tree (critical path)
 
-- [ ] T011 [US2] Add `resolveForParent()` call in AccountAuthorizationService — call after account's own authorization is configured, before propagating to spaces, agent, license, and other account children. Update AccountModule imports. File: `src/domain/space/account/account.service.authorization.ts`
-- [ ] T012 [US2] Add `resolveForParent()` call in SpaceAuthorizationService — call after space's own authorization is configured (reset + local space rules), before propagating to community, collaboration, storageAggregator, agent, license, templatesManager, communication, knowledgeBase, spaceAbout, and subspaces. Update SpaceModule imports. File: `src/domain/space/space/space.service.authorization.ts`
+- [x] T011 [US2] Add `resolveForParent()` call in AccountAuthorizationService — call after account's own authorization is configured, before propagating to spaces, agent, license, and other account children. Update AccountModule imports. File: `src/domain/space/account/account.service.authorization.ts`
+- [x] T012 [US2] Add `resolveForParent()` call in SpaceAuthorizationService — call after space's own authorization is configured (reset + local space rules), before propagating to community, collaboration, storageAggregator, agent, license, templatesManager, communication, knowledgeBase, spaceAbout, and subspaces. Update SpaceModule imports. File: `src/domain/space/space/space.service.authorization.ts`
 
 ### Collaboration Subtree
 
-- [ ] T013 [P] [US2] Add `resolveForParent()` call in CollaborationAuthorizationService — call before propagating to calloutsSet, innovationFlow, timeline, license, and links children. Update CollaborationModule imports. File: `src/domain/collaboration/collaboration/collaboration.service.authorization.ts`
-- [ ] T014 [P] [US2] Add `resolveForParent()` call in CalloutsSetAuthorizationService — call before propagating to individual callouts. Update CalloutsSetModule imports. File: `src/domain/collaboration/callouts-set/callouts.set.service.authorization.ts`
-- [ ] T015 [P] [US2] Add `resolveForParent()` call in CalloutAuthorizationService — call before propagating to contributions, framing, room (comments), and classification children. Update CalloutModule imports. File: `src/domain/collaboration/callout/callout.service.authorization.ts`
-- [ ] T016 [P] [US2] Add `resolveForParent()` call in InnovationFlowAuthorizationService — call before propagating to InnovationFlowState children. Update InnovationFlowModule imports. File: `src/domain/collaboration/innovation-flow/innovation.flow.service.authorization.ts`
+- [x] T013 [P] [US2] Add `resolveForParent()` call in CollaborationAuthorizationService — call before propagating to calloutsSet, innovationFlow, timeline, license, and links children. Update CollaborationModule imports. File: `src/domain/collaboration/collaboration/collaboration.service.authorization.ts`
+- [x] T014 [P] [US2] Add `resolveForParent()` call in CalloutsSetAuthorizationService — call before propagating to individual callouts. Update CalloutsSetModule imports. File: `src/domain/collaboration/callouts-set/callouts.set.service.authorization.ts`
+- [x] T015 [P] [US2] Add `resolveForParent()` call in CalloutAuthorizationService — call before propagating to contributions, framing, room (comments), and classification children. Update CalloutModule imports. File: `src/domain/collaboration/callout/callout.service.authorization.ts`
+- [x] T016 [P] [US2] Add `resolveForParent()` call in InnovationFlowAuthorizationService — call before propagating to InnovationFlowState children. Update InnovationFlowModule imports. File: `src/domain/collaboration/innovation-flow/innovation.flow.service.authorization.ts`
 
 ### Community Subtree
 
-- [ ] T017 [P] [US2] Add `resolveForParent()` call in CommunityAuthorizationService — call before propagating to roleSet, userGroups, communityGuidelines, userSettings, invitations, and applications children. Update CommunityModule imports. File: `src/domain/community/community/community.service.authorization.ts`
+- [x] T017 [P] [US2] Add `resolveForParent()` call in CommunityAuthorizationService — call before propagating to roleSet, userGroups, communityGuidelines, userSettings, invitations, and applications children. Update CommunityModule imports. File: `src/domain/community/community/community.service.authorization.ts`
 
 ### Template Subtree
 
-- [ ] T018 [P] [US2] Add `resolveForParent()` call in TemplatesManagerAuthorizationService — call before propagating to templatesSet child. Update TemplatesManagerModule imports. File: `src/domain/template/templates-manager/templates.manager.service.authorization.ts`
-- [ ] T019 [P] [US2] Add `resolveForParent()` call in TemplatesSetAuthorizationService — call before propagating to individual template children. Update TemplatesSetModule imports. File: `src/domain/template/templates-set/templates.set.service.authorization.ts`
+- [x] T018 [P] [US2] Add `resolveForParent()` call in TemplatesManagerAuthorizationService — call before propagating to templatesSet child. Update TemplatesManagerModule imports. File: `src/domain/template/templates-manager/templates.manager.service.authorization.ts`
+- [x] T019 [P] [US2] Add `resolveForParent()` call in TemplatesSetAuthorizationService — call before propagating to individual template children. Update TemplatesSetModule imports. File: `src/domain/template/templates-set/templates.set.service.authorization.ts`
 
 ### Storage Subtree
 
-- [ ] T020 [P] [US2] Add `resolveForParent()` call in StorageAggregatorAuthorizationService — call before propagating to storageBucket children. Update StorageAggregatorModule imports. File: `src/domain/storage/storage-aggregator/storage.aggregator.service.authorization.ts`
-- [ ] T021 [P] [US2] Add `resolveForParent()` call in StorageBucketAuthorizationService — call before propagating to document children. Update StorageBucketModule imports. File: `src/domain/storage/storage-bucket/storage.bucket.service.authorization.ts`
+- [x] T020 [P] [US2] Add `resolveForParent()` call in StorageAggregatorAuthorizationService — call before propagating to storageBucket children. Update StorageAggregatorModule imports. File: `src/domain/storage/storage-aggregator/storage.aggregator.service.authorization.ts`
+- [x] T021 [P] [US2] Add `resolveForParent()` call in StorageBucketAuthorizationService — call before propagating to document children. Update StorageBucketModule imports. File: `src/domain/storage/storage-bucket/storage.bucket.service.authorization.ts`
 
 ### Timeline Subtree
 
-- [ ] T022 [P] [US2] Add `resolveForParent()` call in TimelineAuthorizationService — call before propagating to calendar and event children. Update TimelineModule imports. File: `src/domain/timeline/timeline/timeline.service.authorization.ts`
+- [x] T022 [P] [US2] Add `resolveForParent()` call in TimelineAuthorizationService — call before propagating to calendar and event children. Update TimelineModule imports. File: `src/domain/timeline/timeline/timeline.service.authorization.ts`
 
 ### Communication Subtree
 
-- [ ] T023 [P] [US2] Add `resolveForParent()` call in CommunicationAuthorizationService — call before propagating to room children. Update CommunicationModule imports. File: `src/domain/communication/communication/communication.service.authorization.ts`
+- [x] T023 [P] [US2] Add `resolveForParent()` call in CommunicationAuthorizationService — call before propagating to room children. Update CommunicationModule imports. File: `src/domain/communication/communication/communication.service.authorization.ts`
 
 ### Platform Tree
 
-- [ ] T024 [P] [US2] Add `resolveForParent()` call in PlatformAuthorizationPolicyService — this is the root-level service using `inheritRootAuthorizationPolicy()`. Call `resolveForParent()` on the platform authorization before any child service inherits from it. Update PlatformAuthorizationModule imports. File: `src/platform/authorization/platform.authorization.policy.service.ts`
-- [ ] T025 [P] [US2] Add `resolveForParent()` call in ForumAuthorizationService — call before propagating to discussion children. Update ForumModule imports. File: `src/platform/forum/forum.service.authorization.ts`
-- [ ] T026 [P] [US2] Add `resolveForParent()` call in LibraryAuthorizationService — call before propagating to innovationPack children. Update LibraryModule imports. File: `src/library/library/library.service.authorization.ts`
+- [x] T024 [P] [US2] Add `resolveForParent()` call in PlatformAuthorizationPolicyService — this is the root-level service using `inheritRootAuthorizationPolicy()`. Call `resolveForParent()` on the platform authorization before any child service inherits from it. Update PlatformAuthorizationModule imports. File: `src/platform/authorization/platform.authorization.policy.service.ts`
+- [x] T025 [P] [US2] Add `resolveForParent()` call in ForumAuthorizationService — call before propagating to discussion children. Update ForumModule imports. File: `src/platform/forum/forum.service.authorization.ts`
+- [x] T026 [P] [US2] Add `resolveForParent()` call in LibraryAuthorizationService — call before propagating to innovationPack children. Update LibraryModule imports. File: `src/library/library/library.service.authorization.ts`
 
 ### Remaining Parent Propagation Sites
 
 _Definitive enumeration (audited via `grep -r "inheritParentAuthorization(" src/` cross-referenced with services passing their own authorization to children):_
 
-- [ ] T027a [P] [US2] Add `resolveForParent()` call in ProfileAuthorizationService — call before propagating to References, Tagsets, Visuals, and StorageBucket children. Update ProfileModule imports. File: `src/domain/common/profile/profile.service.authorization.ts`
-- [ ] T027b [P] [US2] Add `resolveForParent()` call in WhiteboardAuthorizationService — call before propagating to Profile child. Update WhiteboardModule imports. File: `src/domain/common/whiteboard/whiteboard.service.authorization.ts`
-- [ ] T027c [P] [US2] Add `resolveForParent()` call in SpaceAboutAuthorizationService — call before propagating to Profile child (if SpaceAbout passes its own authorization to children). Update SpaceAboutModule imports. File: `src/domain/space/space.about/space.about.service.authorization.ts`
-- [ ] T027d [P] [US2] Add `resolveForParent()` call in CalloutFramingAuthorizationService — call before propagating to Whiteboard and Profile children (if CalloutFraming passes its own authorization to children). Update CalloutFramingModule imports. File: `src/domain/collaboration/callout-framing/callout.framing.service.authorization.ts`
-- [ ] T027e [P] [US2] Add `resolveForParent()` call in TemplateAuthorizationService — call before propagating to child entities (if Template passes its own authorization to children). Update TemplateModule imports. File: `src/domain/template/template/template.service.authorization.ts`
-- [ ] T027f [P] [US2] Add `resolveForParent()` call in KnowledgeBaseAuthorizationService — call before propagating to child entities (if KnowledgeBase passes its own authorization to children). Update KnowledgeBaseModule imports. File: `src/domain/common/knowledge-base/knowledge.base.service.authorization.ts`
-- [ ] T027g [P] [US2] Add `resolveForParent()` call in LicensingFrameworkAuthorizationService — call before propagating to LicensePolicy children (if LicensingFramework passes its own authorization to children). Update LicensingFrameworkModule imports. File: `src/platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization.ts`
+- [x] T027a [P] [US2] Add `resolveForParent()` call in ProfileAuthorizationService — call before propagating to References, Tagsets, Visuals, and StorageBucket children. Update ProfileModule imports. File: `src/domain/common/profile/profile.service.authorization.ts`
+- [x] T027b [P] [US2] Add `resolveForParent()` call in WhiteboardAuthorizationService — call before propagating to Profile child. Update WhiteboardModule imports. File: `src/domain/common/whiteboard/whiteboard.service.authorization.ts`
+- [x] T027c [P] [US2] Add `resolveForParent()` call in SpaceAboutAuthorizationService — call before propagating to Profile child (if SpaceAbout passes its own authorization to children). Update SpaceAboutModule imports. File: `src/domain/space/space.about/space.about.service.authorization.ts`
+- [x] T027d [P] [US2] Add `resolveForParent()` call in CalloutFramingAuthorizationService — call before propagating to Whiteboard and Profile children (if CalloutFraming passes its own authorization to children). Update CalloutFramingModule imports. File: `src/domain/collaboration/callout-framing/callout.framing.service.authorization.ts`
+- [x] T027e [P] [US2] Add `resolveForParent()` call in TemplateAuthorizationService — call before propagating to child entities (if Template passes its own authorization to children). Update TemplateModule imports. File: `src/domain/template/template/template.service.authorization.ts`
+- [x] T027f [P] [US2] Add `resolveForParent()` call in KnowledgeBaseAuthorizationService — call before propagating to child entities (if KnowledgeBase passes its own authorization to children). Update KnowledgeBaseModule imports. File: `src/domain/common/knowledge-base/knowledge.base.service.authorization.ts`
+- [x] T027g [P] [US2] Add `resolveForParent()` call in LicensingFrameworkAuthorizationService — call before propagating to LicensePolicy children (if LicensingFramework passes its own authorization to children). Update LicensingFrameworkModule imports. File: `src/platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization.ts`
 
 _Note: T027c-T027g require implementation-time verification that the service actually passes its OWN authorization (not the parent's) to children. If a service merely forwards the received parent authorization without adding local rules first, it does not need `resolveForParent()`. Skip and mark as N/A in that case._
 
 ### Unit Tests (Principle 6 — signal-delivering tests for core behavioral changes)
 
-- [ ] T028a [P] [US2] Write unit tests for `InheritedCredentialRuleSetService.resolveForParent()`: (1) creates new row when none exists for parent, (2) updates existing row in place on re-reset, (3) attaches resolved row to `_childInheritedCredentialRuleSet` transient field, (4) correctly merges parent's local cascading rules + parent's inherited rules. File: `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service.spec.ts` (NEW)
-- [ ] T028b [P] [US2] Write unit tests for modified `AuthorizationService.isAccessGrantedForCredentials()`: (1) evaluates inherited rules first, then local rules, (2) returns on first match (early exit from inherited pool), (3) backward compat — null `inheritedCredentialRuleSet` evaluates `credentialRules` alone, (4) privilege rules unchanged. File: `src/core/authorization/authorization.service.spec.ts` (NEW or extend existing)
+- [x] T028a [P] [US2] Write unit tests for `InheritedCredentialRuleSetService.resolveForParent()`: (1) creates new row when none exists for parent, (2) updates existing row in place on re-reset, (3) attaches resolved row to `_childInheritedCredentialRuleSet` transient field, (4) correctly merges parent's local cascading rules + parent's inherited rules. File: `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service.spec.ts` (NEW)
+- [x] T028b [P] [US2] Write unit tests for modified `AuthorizationService.isAccessGrantedForCredentials()`: (1) evaluates inherited rules first, then local rules, (2) returns on first match (early exit from inherited pool), (3) backward compat — null `inheritedCredentialRuleSet` evaluates `credentialRules` alone, (4) privilege rules unchanged. File: `src/core/authorization/authorization.service.spec.ts` (NEW or extend existing)
 
 ### Validation
 
-- [ ] T028c [US2] Verify build succeeds with no type errors — `pnpm build`
-- [ ] T029 [US2] Run full test suite (`pnpm test:ci:no:coverage`) to verify all existing authorization tests pass without modification (SC-003, FR-001)
+- [x] T028c [US2] Verify build succeeds with no type errors — `pnpm build`
+- [x] T029 [US2] Run full test suite (`pnpm test:ci:no:coverage`) to verify all existing authorization tests pass without modification (SC-003, FR-001)
 - [ ] T029a [US2] Spot-check runtime authorization check latency on a representative entity set against T000 baseline to verify within 10% (SC-004). This catches regressions before Phase 4 begins.
 - [ ] T029b [US2] Validate FR-010 zero-downtime migration sequence on a test environment: (1) deploy schema migration only — verify null FK backward compatibility (authorization checks work with full `credentialRules`), (2) deploy code changes — verify backward compat still holds, (3) trigger full authorization reset — verify `inheritedCredentialRuleSetId` FKs populated and `credentialRules` contains only local rules. Reference the three states from data-model.md backward compatibility table.
 

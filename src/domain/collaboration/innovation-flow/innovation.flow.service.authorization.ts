@@ -5,6 +5,7 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { Injectable } from '@nestjs/common';
 import { InnovationFlowStateAuthorizationService } from '../innovation-flow-state/innovation.flow.state.service.authorization';
@@ -17,7 +18,8 @@ export class InnovationFlowAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private innovationFlowService: InnovationFlowService,
-    private innovationFlowStateAuthorizationService: InnovationFlowStateAuthorizationService
+    private innovationFlowStateAuthorizationService: InnovationFlowStateAuthorizationService,
+    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -61,6 +63,10 @@ export class InnovationFlowAuthorizationService {
         PRIVILEGE_RULE_TYPES_INNOVATION_FLOW_UPDATE
       );
     updatedAuthorizations.push(innovationFlow.authorization);
+
+    await this.inheritedCredentialRuleSetService.resolveForParent(
+      innovationFlow.authorization
+    );
 
     const profileAuthorizations =
       await this.profileAuthorizationService.applyAuthorizationPolicy(

@@ -21,6 +21,7 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { MessagingAuthorizationService } from '@domain/communication/messaging/messaging.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
@@ -43,7 +44,8 @@ export class PlatformAuthorizationService {
     private readonly licensingFrameworkAuthorizationService: LicensingFrameworkAuthorizationService,
     private readonly templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private readonly roleSetAuthorizationService: RoleSetAuthorizationService,
-    private readonly messagingAuthorizationService: MessagingAuthorizationService
+    private readonly messagingAuthorizationService: MessagingAuthorizationService,
+    private readonly inheritedCredentialRuleSetService: InheritedCredentialRuleSetService
   ) {}
 
   async applyAuthorizationPolicy(): Promise<IAuthorizationPolicy[]> {
@@ -87,6 +89,10 @@ export class PlatformAuthorizationService {
       platform.authorization
     );
     updatedAuthorizations.push(platform.authorization);
+
+    await this.inheritedCredentialRuleSetService.resolveForParent(
+      platform.authorization
+    );
 
     const libraryUpdatedAuthorization =
       await this.libraryAuthorizationService.applyAuthorizationPolicy(

@@ -2,6 +2,7 @@ import { LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { Injectable } from '@nestjs/common';
 import { TemplateDefaultAuthorizationService } from '../template-default/template.default.service.authorization';
 import { TemplatesSetAuthorizationService } from '../templates-set/templates.set.service.authorization';
@@ -14,7 +15,8 @@ export class TemplatesManagerAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private templatesManagerService: TemplatesManagerService,
     private templateDefaultAuthorizationService: TemplateDefaultAuthorizationService,
-    private templatesSetAuthorizationService: TemplatesSetAuthorizationService
+    private templatesSetAuthorizationService: TemplatesSetAuthorizationService,
+    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -56,6 +58,10 @@ export class TemplatesManagerAuthorizationService {
         parentAuthorization
       );
     updatedAuthorizations.push(templatesManager.authorization);
+
+    await this.inheritedCredentialRuleSetService.resolveForParent(
+      templatesManager.authorization
+    );
 
     for (const templateDefault of templatesManager.templateDefaults) {
       const templateDefaultAuthorization =

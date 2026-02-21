@@ -5,6 +5,7 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { CalloutAuthorizationService } from '@domain/collaboration/callout/callout.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
 import { CommunityGuidelinesAuthorizationService } from '@domain/community/community-guidelines/community.guidelines.service.authorization';
@@ -18,6 +19,7 @@ export class TemplateAuthorizationService {
   constructor(
     private templateService: TemplateService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService,
     private calloutAuthorizationService: CalloutAuthorizationService,
@@ -69,6 +71,10 @@ export class TemplateAuthorizationService {
         parentAuthorization
       );
     updatedAuthorizations.push(template.authorization);
+
+    await this.inheritedCredentialRuleSetService.resolveForParent(
+      template.authorization
+    );
 
     // Cascade
     const profileAuthorizations =

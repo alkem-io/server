@@ -383,7 +383,15 @@ export class AuthorizationPolicyService {
     const parent = this.validateAuthorization(parentAuthorization);
     const resetAuthPolicy = this.reset(child);
 
-    // (a) Inherit the credential rules
+    // If the parent has a pre-resolved InheritedCredentialRuleSet (via resolveForParent()),
+    // assign it to the child via FK — child's credentialRules stays empty (local rules added later by callers).
+    if (parent._childInheritedCredentialRuleSet) {
+      resetAuthPolicy.inheritedCredentialRuleSet =
+        parent._childInheritedCredentialRuleSet;
+      return resetAuthPolicy;
+    }
+
+    // Fallback: copy cascading rules directly (backward compat during transition)
     const inheritedRules = parent.credentialRules;
 
     const newRules: IAuthorizationPolicyRuleCredential[] = [];

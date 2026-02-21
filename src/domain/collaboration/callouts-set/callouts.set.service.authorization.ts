@@ -12,6 +12,7 @@ import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platf
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { InheritedCredentialRuleSetService } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { Injectable } from '@nestjs/common';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
@@ -23,7 +24,8 @@ export class CalloutsSetAuthorizationService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private calloutsSetService: CalloutsSetService,
-    private calloutAuthorizationService: CalloutAuthorizationService
+    private calloutAuthorizationService: CalloutAuthorizationService,
+    private inheritedCredentialRuleSetService: InheritedCredentialRuleSetService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -63,6 +65,10 @@ export class CalloutsSetAuthorizationService {
     );
 
     updatedAuthorizations.push(calloutsSet.authorization);
+
+    await this.inheritedCredentialRuleSetService.resolveForParent(
+      calloutsSet.authorization
+    );
 
     if (calloutsSet.callouts) {
       for (const callout of calloutsSet.callouts) {

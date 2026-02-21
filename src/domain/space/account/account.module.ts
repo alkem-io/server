@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AgentModule } from '@domain/agent/agent/agent.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
@@ -38,6 +39,7 @@ import { AccountLicenseService } from './account.service.license';
     AgentModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
+    InheritedCredentialRuleSetModule,
     ContributorModule,
     StorageAggregatorModule,
     TemporaryStorageModule,

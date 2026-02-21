@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { InheritedCredentialRuleSetModule } from '@domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
 import { TemplateContentSpaceLookupModule } from '@domain/template/template-content-space/template-content-space.lookup/template-content-space.lookup.module';
@@ -18,6 +19,7 @@ import { SpaceAboutAuthorizationService } from './space.about.service.authorizat
   imports: [
     AuthorizationPolicyModule,
     AuthorizationModule,
+    InheritedCredentialRuleSetModule,
     CommunityGuidelinesModule,
     ProfileModule,
     SpaceLookupModule,
