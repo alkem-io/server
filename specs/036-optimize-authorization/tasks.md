@@ -349,16 +349,16 @@ Phase 5 (Polish):
 
 | Metric | Value |
 |---|---|
-| Total tasks | 62 |
+| Total tasks | 64 |
 | Phase 0 (Baseline) | 1 task (T000) |
 | Phase 1 (Setup) | 4 tasks (T001-T004) |
 | Phase 2 (Foundational) | 6 tasks (T005-T010) |
-| Phase 3 / US2 (Storage) | 28 tasks (T011-T029b): 17 parent services + 7 remaining audit + 2 unit tests + 2 validation |
+| Phase 3 / US2 (Storage) | 29 tasks (T011-T029b): 16 parent services + 7 remaining audit + 2 unit tests + 4 validation |
 | Phase 4 / US1 (Reset Speed) | 16 tasks (T030-T045) |
 | Phase 5 (Polish) | 8 tasks (T046-T053) |
 | Parallel opportunities | 34 tasks marked [P] across phases 1-4 |
 | Files created | 7 new files (entity, interface, service, module, migration, 2 test files) |
 | Files modified | ~25 files (20+ parent services + 5 core authorization files) |
-| MVP scope (US2) | ~39 tasks (T000-T029b) — standalone Plan Phase 1 delivery |
+| MVP scope (US2) | 40 tasks (T000-T029b) — standalone Plan Phase 1 delivery |
 | Cross-cutting stories | US3 (correctness) validated at T029/T045/T046; US4 (runtime) at T010/T029a/T050 |
 | Independent test per story | US2: storage comparison vs T000 baseline; US1: reset duration vs T000 baseline |
