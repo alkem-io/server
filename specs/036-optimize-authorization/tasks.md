@@ -3,7 +3,7 @@
 **Input**: Design documents from `/specs/036-optimize-authorization/`
 **Prerequisites**: plan.md, spec.md, data-model.md, contracts/service-contracts.md, research.md, quickstart.md
 
-**Tests**: Not explicitly requested. Behavioral equivalence is validated via the existing authorization test suite (SC-003). No new test tasks are generated.
+**Tests**: Behavioral equivalence is validated via the existing authorization test suite (SC-003). New unit tests are added for the two core behavioral changes: `InheritedCredentialRuleSetService.resolveForParent()` and the modified two-phase evaluation in `AuthorizationService.isAccessGrantedForCredentials()` (per plan.md Constitution Check, Principle 6).
 
 **Organization**: Tasks follow the spec's two-phase delivery model. **Plan Phase 1** (storage reduction via Shared Inherited Rule Sets) maps to US2 (primary). **Plan Phase 2** (reset optimization) maps to US1 (primary). US3 (Correctness) and US4 (Runtime Performance) are cross-cutting quality constraints validated at checkpoints — they do not have standalone implementation phases.
 
@@ -15,7 +15,17 @@
 
 ---
 
-## Phase 1: Setup — InheritedCredentialRuleSet Module
+## Phase 0: Baseline Capture
+
+**Purpose**: Record pre-optimization metrics so that SC-001, SC-002, SC-004, SC-005, and SC-006 benchmarks have a reference point. Must run before any code changes.
+
+- [ ] T000 Capture and persist pre-optimization baseline measurements: (1) `SELECT pg_total_relation_size('authorization_policy')` for storage baseline (SC-002, SC-006), (2) trigger a full authorization reset on a test account with a 3-level space hierarchy and record wall-clock duration (SC-001), (3) benchmark authorization check latency on a representative entity set (SC-004). Store results in `specs/036-optimize-authorization/baseline-metrics.md` for later comparison.
+
+**Checkpoint**: Baseline metrics recorded. All subsequent benchmarks reference these values.
+
+---
+
+## Phase 1: Setup — InheritedCredentialRuleSet Module (Plan Phase 1, Step 1)
 
 **Purpose**: Create the new shared entity module. No behavioral changes yet.
 
@@ -30,11 +40,11 @@
 
 ---
 
-## Phase 2: Foundational — Core Authorization Changes
+## Phase 2: Foundational — Core Authorization Changes (Plan Phase 1, Step 2)
 
 **Purpose**: Schema migration + core service modifications that all parent service updates depend on.
 
-**CRITICAL**: No Phase 3 (US2) work can begin until this phase is complete.
+**CRITICAL**: No Phase 3 work can begin until this phase is complete.
 
 - [ ] T005 Add ManyToOne relation to InheritedCredentialRuleSet on AuthorizationPolicy entity (`eager: true`, `cascade: false`, `onDelete: 'SET NULL'`, nullable) in `src/domain/common/authorization-policy/authorization.policy.entity.ts`
 - [ ] T006 [P] Add `inheritedCredentialRuleSet?: IInheritedCredentialRuleSet` field and `_childInheritedCredentialRuleSet?: InheritedCredentialRuleSet` transient field (not persisted, not GraphQL-exposed — used to pass resolved set from `resolveForParent()` to `inheritParentAuthorization()` synchronously) to IAuthorizationPolicy in `src/domain/common/authorization-policy/authorization.policy.interface.ts`
@@ -47,7 +57,7 @@
 
 ---
 
-## Phase 3: US2 — Reduced Database Storage Footprint (Priority: P1, Plan Phase 1) MVP
+## Phase 3: US2 — Reduced Database Storage Footprint (Plan Phase 1, Step 3) MVP
 
 **Goal**: Reduce authorization_policy storage by 80%+ by having each parent service call `resolveForParent()` before propagating authorization to children. After a full authorization reset, policies contain only local rules with a shared FK to inherited rules.
 
@@ -102,20 +112,39 @@
 
 ### Remaining Parent Propagation Sites
 
-- [ ] T027 [P] [US2] Audit and update remaining parent services that propagate authorization to children. Use `grep -r "inheritParentAuthorization(" src/` cross-referenced with services that pass their own authorization as parent to children. Likely candidates: SpaceAboutAuthorizationService (`src/domain/space/space.about/space.about.service.authorization.ts`), CalloutFramingAuthorizationService (`src/domain/collaboration/callout-framing/callout.framing.service.authorization.ts`), ProfileAuthorizationService (`src/domain/common/profile/profile.service.authorization.ts`), TemplateAuthorizationService (`src/domain/template/template/template.service.authorization.ts`), KnowledgeBaseAuthorizationService (`src/domain/common/knowledge-base/knowledge.base.service.authorization.ts`), LicensingFrameworkAuthorizationService (`src/platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization.ts`). For each confirmed parent: inject service, add `resolveForParent()` call, update module imports.
+_Definitive enumeration (audited via `grep -r "inheritParentAuthorization(" src/` cross-referenced with services passing their own authorization to children):_
+
+- [ ] T027a [P] [US2] Add `resolveForParent()` call in ProfileAuthorizationService — call before propagating to References, Tagsets, Visuals, and StorageBucket children. Update ProfileModule imports. File: `src/domain/common/profile/profile.service.authorization.ts`
+- [ ] T027b [P] [US2] Add `resolveForParent()` call in WhiteboardAuthorizationService — call before propagating to Profile child. Update WhiteboardModule imports. File: `src/domain/common/whiteboard/whiteboard.service.authorization.ts`
+- [ ] T027c [P] [US2] Add `resolveForParent()` call in SpaceAboutAuthorizationService — call before propagating to Profile child (if SpaceAbout passes its own authorization to children). Update SpaceAboutModule imports. File: `src/domain/space/space.about/space.about.service.authorization.ts`
+- [ ] T027d [P] [US2] Add `resolveForParent()` call in CalloutFramingAuthorizationService — call before propagating to Whiteboard and Profile children (if CalloutFraming passes its own authorization to children). Update CalloutFramingModule imports. File: `src/domain/collaboration/callout-framing/callout.framing.service.authorization.ts`
+- [ ] T027e [P] [US2] Add `resolveForParent()` call in TemplateAuthorizationService — call before propagating to child entities (if Template passes its own authorization to children). Update TemplateModule imports. File: `src/domain/template/template/template.service.authorization.ts`
+- [ ] T027f [P] [US2] Add `resolveForParent()` call in KnowledgeBaseAuthorizationService — call before propagating to child entities (if KnowledgeBase passes its own authorization to children). Update KnowledgeBaseModule imports. File: `src/domain/common/knowledge-base/knowledge.base.service.authorization.ts`
+- [ ] T027g [P] [US2] Add `resolveForParent()` call in LicensingFrameworkAuthorizationService — call before propagating to LicensePolicy children (if LicensingFramework passes its own authorization to children). Update LicensingFrameworkModule imports. File: `src/platform/licensing/credential-based/licensing-framework/licensing.framework.service.authorization.ts`
+
+_Note: T027c-T027g require implementation-time verification that the service actually passes its OWN authorization (not the parent's) to children. If a service merely forwards the received parent authorization without adding local rules first, it does not need `resolveForParent()`. Skip and mark as N/A in that case._
+
+### Unit Tests (Principle 6 — signal-delivering tests for core behavioral changes)
+
+- [ ] T028a [P] [US2] Write unit tests for `InheritedCredentialRuleSetService.resolveForParent()`: (1) creates new row when none exists for parent, (2) updates existing row in place on re-reset, (3) attaches resolved row to `_childInheritedCredentialRuleSet` transient field, (4) correctly merges parent's local cascading rules + parent's inherited rules. File: `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service.spec.ts` (NEW)
+- [ ] T028b [P] [US2] Write unit tests for modified `AuthorizationService.isAccessGrantedForCredentials()`: (1) evaluates inherited rules first, then local rules, (2) returns on first match (early exit from inherited pool), (3) backward compat — null `inheritedCredentialRuleSet` evaluates `credentialRules` alone, (4) privilege rules unchanged. File: `src/core/authorization/authorization.service.spec.ts` (NEW or extend existing)
 
 ### Validation
 
-- [ ] T028 [US2] Verify build succeeds with no type errors — `pnpm build`
+- [ ] T028c [US2] Verify build succeeds with no type errors — `pnpm build`
 - [ ] T029 [US2] Run full test suite (`pnpm test:ci:no:coverage`) to verify all existing authorization tests pass without modification (SC-003, FR-001)
+- [ ] T029a [US2] Spot-check runtime authorization check latency on a representative entity set against T000 baseline to verify within 10% (SC-004). This catches regressions before Phase 4 begins.
+- [ ] T029b [US2] Validate FR-010 zero-downtime migration sequence on a test environment: (1) deploy schema migration only — verify null FK backward compatibility (authorization checks work with full `credentialRules`), (2) deploy code changes — verify backward compat still holds, (3) trigger full authorization reset — verify `inheritedCredentialRuleSetId` FKs populated and `credentialRules` contains only local rules. Reference the three states from data-model.md backward compatibility table.
 
 **Checkpoint**: US2 complete — Plan Phase 1 can ship independently. After a full authorization reset (`reset all`), policies have `inheritedCredentialRuleSet` FK populated and `credentialRules` contains only local rules. Storage reduced by ~80% (SC-002). Runtime check behavior unchanged (SC-003). Runtime latency unchanged or improved (SC-004).
 
 **Deployment sequence (FR-010)**: (1) Deploy schema migration — adds table + FK column, zero behavioral change. (2) Deploy code changes — backward compat: null FK falls back to existing full `credentialRules`. (3) Trigger full authorization reset — populates all `inheritedCredentialRuleSet` FKs, strips inherited rules from local `credentialRules`. Server remains operational throughout.
 
+**Implicit FR coverage note**: FR-004 (reset triggers per account/org/user/platform/global), FR-005 (concurrent reset serialization via RabbitMQ single-consumer queues), and FR-007 (visibility layer READ_ABOUT filtering) are maintained via existing unchanged behavior. These are validated implicitly by the existing test suite at T029 — no dedicated tasks required.
+
 ---
 
-## Phase 4: US1 — Faster Authorization Reset for Platform Administrators (Priority: P1, Plan Phase 2)
+## Phase 4: US1 — Faster Authorization Reset for Platform Administrators (Plan Phase 2)
 
 **Goal**: Achieve 5x+ reset speed improvement via batch entity loading (eliminate N+1), parallel subspace processing, intermediate save elimination, and APM instrumentation (SC-001, SC-005).
 
@@ -125,7 +154,7 @@
 
 ### Batch Entity Loading (Eliminate N+1)
 
-- [ ] T030 [US1] Create batch space tree loading method that pre-loads a full space entity tree with all authorization-relevant relations in a single deep query (or 2-3 targeted queries if JOIN is too large). Key relations: authorization, agent.authorization, community (roleSet, userGroups, communityGuidelines, userSettings), collaboration (calloutsSet with callouts and all callout children), about (profile), storageAggregator (storageBuckets with documents), templatesManager, subspaces (recursive for L1/L2), license, communication. File: `src/domain/space/space/space.service.lookup.ts` (new method or dedicated loader)
+- [ ] T030 [US1] Create batch space tree loading method that pre-loads a full space entity tree with all authorization-relevant relations in a single deep query (or 2-3 targeted queries if the single query exceeds 15 JOINs or returns >50 columns — profile both approaches and pick the faster one). Key relations: authorization, agent.authorization, community (roleSet, userGroups, communityGuidelines, userSettings), collaboration (calloutsSet with callouts and all callout children), about (profile), storageAggregator (storageBuckets with documents), templatesManager, subspaces (recursive for L1/L2), license, communication. File: `src/domain/space/space/space.service.lookup.ts` (new method or dedicated loader)
 - [ ] T031 [US1] Modify `SpaceAuthorizationService.applyAuthorizationPolicy()` to accept optional `preloadedSpace?: ISpace` parameter — when provided, skip the individual DB load and use the pre-loaded entity tree. Pass pre-loaded child entities down to child authorization services. File: `src/domain/space/space/space.service.authorization.ts`
 - [ ] T032 [P] [US1] Modify `CollaborationAuthorizationService.applyAuthorizationPolicy()` to skip re-loading collaboration entity when it already has all required relations loaded (calloutsSet, innovationFlow, timeline, license). File: `src/domain/collaboration/collaboration/collaboration.service.authorization.ts`
 - [ ] T033 [P] [US1] Modify `CalloutsSetAuthorizationService.applyAuthorizationPolicy()` to skip re-loading callouts when the calloutsSet already has the callouts relation loaded. File: `src/domain/collaboration/callouts-set/callouts.set.service.authorization.ts`
@@ -167,13 +196,14 @@
 
 **Edge case coverage**: Concurrent read during reset (eventual consistency via last persisted state), orphaned InheritedCredentialRuleSet rows (none — parent FK ownership, ~64 rows, updated in place per R13), partial reset failure (failed branches retain pre-reset policies, re-trigger is idempotent), hierarchy depth (validated for 3-level per spec), concurrent privacy change during reset (serialized via RabbitMQ single-consumer queue per FR-005).
 
-- [ ] T046 Run full test suite (`pnpm test:ci:no:coverage`) to confirm behavioral equivalence across both plan phases (SC-003, FR-001)
-- [ ] T047 Measure `authorization_policy` table storage before/after full authorization reset to verify 80%+ reduction (SC-002). SQL: `SELECT pg_total_relation_size('authorization_policy'), pg_total_relation_size('inherited_credential_rule_set')`
-- [ ] T048 Create new entities (space, callout, community member) post-optimization and measure incremental `authorization_policy` storage per entity to verify 80%+ reduction vs pre-optimization baseline (SC-006)
-- [ ] T049 Perform authorization reset benchmark on account with 3-level space hierarchy (3 L0 spaces, 5 L1 each, 3 L2 each) to verify 5x+ speedup vs baseline (SC-001)
-- [ ] T050 Benchmark runtime authorization check latency on representative entity set to verify within 10% of baseline (SC-004)
+- [ ] T046 Run full test suite (`pnpm test:ci:no:coverage`) to confirm behavioral equivalence across both plan phases (SC-003, FR-001). _Note: confirmatory gate — if no code changed between Phase 4 validation (T045) and this task, a pass is expected. The value is catching any Phase 5 polish regressions._
+- [ ] T047 Measure `authorization_policy` table storage against T000 baseline to verify 80%+ reduction (SC-002). SQL: `SELECT pg_total_relation_size('authorization_policy'), pg_total_relation_size('inherited_credential_rule_set')`. Compare with baseline from `specs/036-optimize-authorization/baseline-metrics.md`.
+- [ ] T048 Create new entities (space, callout, community member) post-optimization and measure incremental `authorization_policy` storage per entity to verify 80%+ reduction vs T000 pre-optimization baseline (SC-006)
+- [ ] T049 Perform authorization reset benchmark on account with 3-level space hierarchy (3 L0 spaces, 5 L1 each, 3 L2 each) to verify 5x+ speedup vs T000 baseline (SC-001)
+- [ ] T050 Benchmark runtime authorization check latency on representative entity set to verify within 10% of T000 baseline (SC-004)
 - [ ] T051 Validate global "reset all" completes within 30 minutes for production-scale platform (~1500 users) without DB connection exhaustion or timeout errors (SC-005)
 - [ ] T052 Run quickstart.md manual verification per `specs/036-optimize-authorization/quickstart.md`
+- [ ] T053 Validate partial reset failure recovery (edge case from spec): trigger authorization reset, simulate mid-traversal failure (e.g., kill the consumer process mid-reset), verify failed branches retain pre-reset policies, re-trigger the same reset, verify idempotent completion with correct final state
 
 ---
 
@@ -181,15 +211,20 @@
 
 ### Phase Dependencies
 
-- **Setup (Phase 1)**: No dependencies — start immediately
-- **Foundational (Phase 2)**: Depends on Phase 1 completion — BLOCKS all user stories
-- **US2 (Phase 3 / Plan Phase 1)**: Depends on Phase 2 completion — delivers standalone value (80%+ storage reduction)
+- **Baseline (Phase 0)**: No dependencies — run first, before any code changes
+- **Setup (Phase 1 / Plan Phase 1, Step 1)**: Depends on Phase 0 — start after baseline captured
+- **Foundational (Phase 2 / Plan Phase 1, Step 2)**: Depends on Phase 1 completion — BLOCKS all user stories
+- **US2 (Phase 3 / Plan Phase 1, Step 3)**: Depends on Phase 2 completion — delivers standalone value (80%+ storage reduction)
 - **US1 (Phase 4 / Plan Phase 2)**: Depends on Phase 3 completion — builds on shared inherited rule sets
 - **Polish (Phase 5)**: Depends on Phase 3 + Phase 4 completion
 
+### Within Phase 0 (Baseline)
+
+- **T000** — run first, no dependencies
+
 ### Within Phase 1 (Setup)
 
-- **T001** [P] (entity) — start immediately
+- **T001** [P] (entity) — start immediately after T000
 - **T002** [P] (interface) — start immediately, parallel with T001
 - **T003** (service) — depends on T001 + T002 (uses entity and interface types)
 - **T004** (module) — depends on T001 + T003 (registers entity and provides service)
@@ -207,9 +242,12 @@
 
 - **T011** (AccountAuth) — depends on T009 (core method must be modified first)
 - **T012** (SpaceAuth) — depends on T009
-- **T013-T027** [P] — can run in parallel after T009 (different files, same pattern)
-- **T028** (build) — depends on all T011-T027
-- **T029** (tests) — depends on T028
+- **T013-T027g** [P] — can run in parallel after T009 (different files, same pattern)
+- **T028a-T028b** [P] (unit tests) — can run in parallel with T013-T027g (different files)
+- **T028c** (build) — depends on all T011-T027g + T028a-T028b
+- **T029** (tests) — depends on T028c
+- **T029a** (latency spot-check) — depends on T029 (needs working build + passing tests)
+- **T029b** (migration validation) — depends on T029 (needs working build)
 
 ### Within Phase 4 (US1)
 
@@ -226,6 +264,9 @@
 ### Parallel Opportunities
 
 ```
+Phase 0 (Baseline):
+  T000 (capture metrics)
+
 Phase 1 (Setup):
   T001 (entity) ────────── T002 (interface)
     │                         │
@@ -245,12 +286,14 @@ Phase 3 (US2) — after T009:
   T012 (Space)    │
   T013 (Collab)   │
   T014 (CallSet)  │
-  T015 (Callout)  ├── all [P] except T011/T012 (different files, same pattern)
+  T015 (Callout)  ├── all [P] (different files, same pattern)
   T016 (InnoFlow)  │
   T017 (Community) │
-  T018-T027 (rest)┘
+  T018-T027g (rest)┘
+  T028a (resolveForParent tests) ─┐  [P] (independent test files)
+  T028b (isAccessGranted tests)  ─┘
          │
-    T028 (build) → T029 (tests)
+    T028c (build) → T029 (tests) → T029a (latency) → T029b (migration)
 
 Phase 4 (US1):
   T030 (batch loader) ──────────────────────────────┐
@@ -270,6 +313,9 @@ Phase 4 (US1):
   T044 (ResetSvc APM)   ─┘
                 │
            T045 (validation)
+
+Phase 5 (Polish):
+  T046-T053 — sequential validation gates
 ```
 
 ---
@@ -278,23 +324,24 @@ Phase 4 (US1):
 
 ### MVP First (US2 Only — Plan Phase 1)
 
-1. Complete Phase 1: Setup (T001-T004)
-2. Complete Phase 2: Foundational (T005-T010)
-3. Complete Phase 3: US2 parent service updates (T011-T029)
-4. **STOP and VALIDATE**: Run full test suite, trigger full authorization reset, measure storage
-5. Deploy Plan Phase 1 independently — delivers 80%+ storage reduction with identical authorization behavior
-6. No new infrastructure dependencies, no GraphQL schema changes, zero-downtime migration
+1. Complete Phase 0: Baseline (T000)
+2. Complete Phase 1: Setup (T001-T004)
+3. Complete Phase 2: Foundational (T005-T010)
+4. Complete Phase 3: US2 parent service updates + tests (T011-T029b)
+5. **STOP and VALIDATE**: Run full test suite, trigger full authorization reset, measure storage, validate migration sequence
+6. Deploy Plan Phase 1 independently — delivers 80%+ storage reduction with identical authorization behavior
+7. No new infrastructure dependencies, no GraphQL schema changes, zero-downtime migration
 
 ### Full Delivery (US2 + US1)
 
 1. Complete US2 → validate → deploy (Plan Phase 1)
 2. Complete US1 (T030-T045) → validate reset performance and correctness
 3. Deploy Plan Phase 2 — delivers 5x+ reset speedup on top of storage reduction
-4. Complete Polish (T046-T052) → validate all six success criteria
+4. Complete Polish (T046-T053) → validate all six success criteria + edge cases
 
 ### Suggested MVP Scope
 
-**US2 only (T001-T029)**: 29 tasks delivering 80%+ storage reduction. The `authorization_policy` table currently consumes ~99% of DB storage with ~80% duplicated data. Storage reduction improves backup times, vacuum performance, and reduces I/O. US1 (reset optimization) builds on top and can follow in a subsequent release.
+**US2 only (T000-T029b)**: ~39 tasks delivering 80%+ storage reduction. The `authorization_policy` table currently consumes ~99% of DB storage with ~80% duplicated data. Storage reduction improves backup times, vacuum performance, and reduces I/O. US1 (reset optimization) builds on top and can follow in a subsequent release.
 
 ---
 
@@ -302,15 +349,16 @@ Phase 4 (US1):
 
 | Metric | Value |
 |---|---|
-| Total tasks | 52 |
+| Total tasks | 62 |
+| Phase 0 (Baseline) | 1 task (T000) |
 | Phase 1 (Setup) | 4 tasks (T001-T004) |
 | Phase 2 (Foundational) | 6 tasks (T005-T010) |
-| Phase 3 / US2 (Storage) | 19 tasks (T011-T029) |
+| Phase 3 / US2 (Storage) | 28 tasks (T011-T029b): 17 parent services + 7 remaining audit + 2 unit tests + 2 validation |
 | Phase 4 / US1 (Reset Speed) | 16 tasks (T030-T045) |
-| Phase 5 (Polish) | 7 tasks (T046-T052) |
-| Parallel opportunities | 28 tasks marked [P] across phases 1-4 |
-| Files created | 5 new files (entity, interface, service, module, migration) |
-| Files modified | ~25 files (20 parent services + 5 core authorization files) |
-| MVP scope (US2) | 29 tasks (T001-T029) — standalone Plan Phase 1 delivery |
-| Cross-cutting stories | US3 (correctness) validated at T029/T045/T046; US4 (runtime) delivered by T010 |
-| Independent test per story | US2: storage comparison before/after reset; US1: reset duration benchmark |
+| Phase 5 (Polish) | 8 tasks (T046-T053) |
+| Parallel opportunities | 34 tasks marked [P] across phases 1-4 |
+| Files created | 7 new files (entity, interface, service, module, migration, 2 test files) |
+| Files modified | ~25 files (20+ parent services + 5 core authorization files) |
+| MVP scope (US2) | ~39 tasks (T000-T029b) — standalone Plan Phase 1 delivery |
+| Cross-cutting stories | US3 (correctness) validated at T029/T045/T046; US4 (runtime) at T010/T029a/T050 |
+| Independent test per story | US2: storage comparison vs T000 baseline; US1: reset duration vs T000 baseline |

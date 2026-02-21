@@ -30,7 +30,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | **3. GraphQL Schema as Stable Contract** | PASS | No GraphQL schema changes (FR-012). `InheritedCredentialRuleSet` is internal-only, not exposed via GraphQL. |
 | **4. Explicit Data & Event Flow** | PASS | Reset flow unchanged: event → consumer → tree traversal → persistence. `resolveForParent()` is called within the existing traversal flow. No new side effects. |
 | **5. Observability & Operational Readiness** | PASS | Phase 2 adds Elastic APM spans for reset duration and policy count (FR-012). Uses existing `elastic-apm-node` infrastructure. Reset logging enhanced with timing and counts (FR-011). |
-| **6. Code Quality with Pragmatic Testing** | PASS | Risk-based approach: existing authorization test suite validates behavioral equivalence. New unit tests for `InheritedCredentialRuleSetService.resolveForParent()` and `isAccessGrantedForCredentials()` modified logic. No 100% coverage mandate. |
+| **6. Code Quality with Pragmatic Testing** | PASS | Risk-based approach: existing authorization test suite validates behavioral equivalence. New unit tests for `InheritedCredentialRuleSetService.resolveForParent()` and `isAccessGrantedForCredentials()` modified logic (T028a, T028b in tasks.md). No 100% coverage mandate. |
 | **7. API Consistency & Evolution** | PASS | No GraphQL surface changes. Internal method signatures change minimally (`inheritParentAuthorization()` gains async transient-field pattern). |
 | **8. Secure-by-Design** | PASS | No new external inputs. Authorization correctness is the primary invariant (FR-001, SC-003). No secrets handling changes. |
 | **9. Container & Deployment Determinism** | PASS | Online migration (FR-010). No new environment variables. Config via existing `authorization.chunk` setting. |
@@ -83,6 +83,8 @@ src/
 
 ## Phase 1: Shared Inherited Rule Sets (Storage Reduction)
 
+_Tasks.md maps this to Phase 1 (Setup, Step 1) + Phase 2 (Foundational, Step 2) + Phase 3 (US2 parent updates, Step 3)._
+
 **Scope**: US2 (primary), US3 (correctness), US4 (runtime performance)
 **FRs**: FR-001 through FR-008, FR-010
 **SCs**: SC-002, SC-003, SC-004, SC-006
@@ -129,7 +131,7 @@ Each parent authorization service that calls `inheritParentAuthorization()` for 
 2. Call `resolveForParent(parentAuthorization)` once before child propagation
 3. No changes to child/leaf services — they receive the resolved set via `inheritParentAuthorization()`
 
-Key parent services: `AccountAuthorizationService`, `SpaceAuthorizationService`, `CollaborationAuthorizationService`, `CommunityAuthorizationService`, `CalloutsSetAuthorizationService`, `TemplatesManagerAuthorizationService`, and ~10 more.
+Key parent services: `AccountAuthorizationService`, `SpaceAuthorizationService`, `CollaborationAuthorizationService`, `CommunityAuthorizationService`, `CalloutsSetAuthorizationService`, `TemplatesManagerAuthorizationService`, `ProfileAuthorizationService`, `WhiteboardAuthorizationService`, and ~8 more (see tasks.md T011-T027g for definitive enumeration).
 
 ### 1.6 Schema Migration
 
@@ -146,6 +148,8 @@ Key parent services: `AccountAuthorizationService`, `SpaceAuthorizationService`,
 4. No maintenance window required
 
 ## Phase 2: Reset Optimization (Performance)
+
+_Tasks.md maps this to Phase 4 (US1). Phase 5 (Polish) provides cross-cutting validation of both plan phases._
 
 **Scope**: US1 (primary), US3 (correctness), US4 (runtime performance)
 **FRs**: FR-001 through FR-007, FR-009, FR-011, FR-012
