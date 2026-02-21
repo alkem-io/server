@@ -1,40 +1,42 @@
 # Implementation Plan: Optimize Credential-Based Authorization
 
-**Branch**: `036-optimize-authorization` | **Date**: 2026-02-21 | **Spec**: `specs/036-optimize-authorization/spec.md`
+**Branch**: `036-optimize-authorization` | **Date**: 2026-02-21 | **Spec**: [spec.md](./spec.md)
 **Input**: Feature specification from `/specs/036-optimize-authorization/spec.md`
 
 ## Summary
 
-Reduce authorization storage by ~80% and authorization reset time by 5x through two independent phases. Phase 1 splits each policy's credential rules into local (entity-specific) and inherited (shared via parent-owned FK), eliminating massive JSONB duplication. Phase 2 optimizes the reset traversal with batch loading, parallel subspace processing, and consolidated saves.
+Optimize the Alkemio server's credential-based authorization system to reduce database storage by 80%+ and improve authorization reset performance by 5x+. The approach splits each policy's credential rules into **local** (entity-specific) and **inherited** (cascading from ancestors), deduplicating inherited rules into a shared lookup table (`InheritedCredentialRuleSet`) referenced via an eager-loaded FK. Phase 1 targets storage reduction; Phase 2 targets reset speed via batch loading, parallel subspace traversal, and intermediate save elimination.
 
 ## Technical Context
 
 **Language/Version**: TypeScript 5.3, Node.js 22 LTS (Volta 22.21.1)
-**Primary Dependencies**: NestJS 10, TypeORM 0.3, Apollo Server 4, RabbitMQ (amqplib), elastic-apm-node
-**Storage**: PostgreSQL 17.5 — `authorization_policy` table with JSONB columns (`credentialRules`, `privilegeRules`)
-**Testing**: Vitest 4.x
-**Target Platform**: Linux server (Docker containers)
-**Project Type**: Single NestJS monolith
-**Performance Goals**: 80%+ storage reduction (SC-002), 5x reset speedup (SC-001), <10% runtime latency increase (SC-004)
-**Constraints**: Zero-downtime migration (FR-010), behavioral equivalence (FR-001), 30min global reset (SC-005)
-**Scale/Scope**: ~1500 users, 51 authorizable entity types, ~64 parent nodes, ~1000+ authorization policies
+**Primary Dependencies**: NestJS 10, TypeORM 0.3, Apollo Server 4, GraphQL 16, RabbitMQ (amqplib), elastic-apm-node
+**Storage**: PostgreSQL 17.5 — `authorization_policy` table with JSONB columns (`credentialRules`, `privilegeRules`); new `inherited_credential_rule_set` table
+**Testing**: Vitest 4.x — existing authorization test suite validates behavioral equivalence (SC-003)
+**Target Platform**: Linux server (Docker containers on Kubernetes)
+**Project Type**: Single NestJS server project
+**Performance Goals**: 5x faster authorization reset (SC-001), 80%+ storage reduction (SC-002), <10% runtime check latency increase (SC-004), global reset <30 min for ~1500 users (SC-005)
+**Constraints**: Zero-downtime migration (FR-010), backward compatibility during transition (null FK fallback), no new GraphQL schema surface (FR-012)
+**Scale/Scope**: ~50 entity types extending AuthorizableEntity, ~1000+ policies per medium deployment, 5 authorization forest roots, 3-level space hierarchy (L0/L1/L2)
 
 ## Constitution Check
 
 _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
-| # | Principle | Status | Notes |
-|---|-----------|--------|-------|
-| 1. Domain-Centric Design First | PASS | All changes in `src/domain/common/` (authorization policy, inherited rule set) and `src/core/authorization/`. No business logic in resolvers. |
-| 2. Modular NestJS Boundaries | PASS | One new module (`InheritedCredentialRuleSetModule`) in `src/domain/common/` — purpose: shared storage for parent-owned inherited rules. No circular dependencies. |
-| 3. GraphQL Schema as Stable Contract | PASS | No GraphQL schema changes (FR-012). Authorization is internal infrastructure. |
-| 4. Explicit Data & Event Flow | PASS | Reset flow preserved: event → consumer → tree traversal → bulk save. No new direct repository calls from resolvers. |
-| 5. Observability & Operational Readiness | PASS | Phase 2 adds APM spans for reset operations using existing elastic-apm-node agent. Winston logging for reset duration/policy count. No orphaned metrics. |
-| 6. Code Quality with Pragmatic Testing | PASS | Risk-based testing: unit tests for rule splitting logic and runtime check. Existing authorization tests validate behavioral equivalence (SC-003). |
-| 7. API Consistency & Evolution | PASS | No API changes. |
-| 8. Secure-by-Design Integration | PASS | Authorization correctness preserved (FR-001). No new external inputs. |
-| 9. Container & Deployment Determinism | PASS | Online migration via standard TypeORM migration + authorization reset. No new env vars. |
-| 10. Simplicity & Incremental Hardening | PASS | Simplest viable approach: parent-owned FK for deduplication (no content hashing), eager-loaded JOIN (no cache layer). |
+| Principle | Status | Notes |
+|---|---|---|
+| **1. Domain-Centric Design** | PASS | All changes are in domain services (`src/domain/common/authorization-policy/`, `src/domain/common/inherited-credential-rule-set/`). No business logic in resolvers. |
+| **2. Modular NestJS Boundaries** | PASS | New `InheritedCredentialRuleSetModule` is a single-purpose module under `src/domain/common/`. Exports only `InheritedCredentialRuleSetService`. No circular dependencies. |
+| **3. GraphQL Schema as Stable Contract** | PASS | No GraphQL schema changes (FR-012). `InheritedCredentialRuleSet` is internal-only, not exposed via GraphQL. |
+| **4. Explicit Data & Event Flow** | PASS | Reset flow unchanged: event → consumer → tree traversal → persistence. `resolveForParent()` is called within the existing traversal flow. No new side effects. |
+| **5. Observability & Operational Readiness** | PASS | Phase 2 adds Elastic APM spans for reset duration and policy count (FR-012). Uses existing `elastic-apm-node` infrastructure. Reset logging enhanced with timing and counts (FR-011). |
+| **6. Code Quality with Pragmatic Testing** | PASS | Risk-based approach: existing authorization test suite validates behavioral equivalence. New unit tests for `InheritedCredentialRuleSetService.resolveForParent()` and `isAccessGrantedForCredentials()` modified logic. No 100% coverage mandate. |
+| **7. API Consistency & Evolution** | PASS | No GraphQL surface changes. Internal method signatures change minimally (`inheritParentAuthorization()` gains async transient-field pattern). |
+| **8. Secure-by-Design** | PASS | No new external inputs. Authorization correctness is the primary invariant (FR-001, SC-003). No secrets handling changes. |
+| **9. Container & Deployment Determinism** | PASS | Online migration (FR-010). No new environment variables. Config via existing `authorization.chunk` setting. |
+| **10. Simplicity & Incremental Hardening** | PASS | Simplest viable approach: one new entity, one new service method, one FK column. No caching layers, no CQRS, no complex indexing. Phase 2 adds parallelism only where independent subtrees exist. |
+
+**Post-Phase 1 Design Re-check**: All principles still satisfied. The `InheritedCredentialRuleSet` entity is minimal (5 columns, ~64 rows). The eager-loaded FK adds negligible query cost. The transient `_childInheritedCredentialRuleSet` pattern keeps `inheritParentAuthorization()` synchronous for ~50 leaf callers.
 
 ## Project Structure
 
@@ -43,368 +45,159 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 ```text
 specs/036-optimize-authorization/
 ├── plan.md              # This file
-├── spec.md              # Feature specification
-├── research.md          # Phase 0 research findings
-├── data-model.md        # Phase 1 data model changes
-├── quickstart.md        # Developer setup guide
+├── research.md          # Phase 0: research findings (13 topics)
+├── data-model.md        # Phase 1: entity model changes
+├── quickstart.md        # Phase 1: setup and testing guide
 ├── contracts/
-│   └── service-contracts.md  # Internal service API changes
+│   └── service-contracts.md  # Phase 1: internal service API changes
 ├── checklists/
-│   └── requirements.md       # Requirements checklist
-└── tasks.md             # Implementation tasks
+│   └── requirements.md  # Requirements checklist
+└── tasks.md             # Implementation tasks (from /speckit.tasks)
 ```
 
 ### Source Code (repository root)
 
 ```text
 src/
-├── domain/common/
-│   ├── inherited-credential-rule-set/           # NEW module (Phase 1)
-│   │   ├── inherited.credential.rule.set.entity.ts
-│   │   ├── inherited.credential.rule.set.interface.ts
-│   │   ├── inherited.credential.rule.set.service.ts
-│   │   └── inherited.credential.rule.set.module.ts
-│   ├── authorization-policy/
-│   │   ├── authorization.policy.entity.ts       # MODIFIED: add inheritedCredentialRuleSet FK
-│   │   ├── authorization.policy.interface.ts    # MODIFIED: add interface field
-│   │   ├── authorization.policy.service.ts      # MODIFIED: inheritParentAuthorization() reads transient field
-│   │   └── authorization.policy.module.ts       # MODIFIED: import InheritedCredentialRuleSetModule
-│   └── entity/authorizable-entity/              # Unchanged
-├── core/authorization/
-│   └── authorization.service.ts                 # MODIFIED: isAccessGrantedForCredentials()
-├── domain/space/
-│   ├── account/account.service.authorization.ts # Phase 2: batch loading
-│   └── space/space.service.authorization.ts     # Phase 2: parallel subspaces
-├── services/auth-reset/
-│   ├── subscriber/auth-reset.controller.ts      # Phase 2: APM spans
-│   └── publisher/auth-reset.service.ts          # Phase 2: APM spans
-└── migrations/
-    └── <timestamp>-sharedInheritedRuleSets.ts   # Phase 1: schema migration
+├── domain/
+│   └── common/
+│       ├── authorization-policy/
+│       │   ├── authorization.policy.entity.ts       # MODIFIED: add ManyToOne FK to InheritedCredentialRuleSet
+│       │   ├── authorization.policy.interface.ts     # MODIFIED: add inheritedCredentialRuleSet + transient field
+│       │   ├── authorization.policy.service.ts       # MODIFIED: inheritParentAuthorization() uses transient field
+│       │   └── authorization.policy.module.ts        # MODIFIED: import InheritedCredentialRuleSetModule
+│       └── inherited-credential-rule-set/            # NEW MODULE
+│           ├── inherited.credential.rule.set.entity.ts
+│           ├── inherited.credential.rule.set.interface.ts
+│           ├── inherited.credential.rule.set.service.ts
+│           └── inherited.credential.rule.set.module.ts
+├── core/
+│   └── authorization/
+│       └── authorization.service.ts                  # MODIFIED: isAccessGrantedForCredentials() evaluates inherited + local
+├── migrations/
+│   └── <timestamp>-sharedInheritedRuleSets.ts        # NEW: schema migration
+└── [~15-20 parent authorization service files]       # MODIFIED: add resolveForParent() call
 ```
 
-**Structure Decision**: This is an optimization of existing code within the existing NestJS monolith structure. One new module (`InheritedCredentialRuleSetModule`) is added under `src/domain/common/` following the established pattern for shared domain entities (see `authorization-policy/`, `visual/`, `media-gallery/`). All other changes are modifications to existing service files within established module boundaries.
+**Structure Decision**: Existing NestJS project structure. New module placed under `src/domain/common/` alongside the existing `authorization-policy/` module, following the domain-centric principle. No new top-level directories.
 
 ## Phase 1: Shared Inherited Rule Sets (Storage Reduction)
 
-**Scope**: US2, US3, US4 | FR-001–FR-008, FR-010 | SC-002, SC-003, SC-004, SC-006
-
-Split each authorization policy's credential rules into **local** (entity-specific) and **inherited** (cascading from ancestors). Each parent node owns exactly one `InheritedCredentialRuleSet` row, referenced by all its children via an eager-loaded FK. This eliminates ~80% of JSONB storage duplication while maintaining O(1) authorization checks.
+**Scope**: US2 (primary), US3 (correctness), US4 (runtime performance)
+**FRs**: FR-001 through FR-008, FR-010
+**SCs**: SC-002, SC-003, SC-004, SC-006
 
 ### 1.1 New Entity: InheritedCredentialRuleSet
 
-**File**: `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.entity.ts` (NEW)
+A lightweight entity extending `BaseAlkemioEntity` with:
+- `credentialRules` (JSONB, NOT NULL) — pre-merged cascading rules from the ancestor chain
+- `parentAuthorizationPolicyId` (UUID, UNIQUE, NOT NULL, FK → `authorization_policy.id`, ON DELETE CASCADE)
 
-```typescript
-@Entity()
-@Index(['parentAuthorizationPolicyId'], { unique: true })
-class InheritedCredentialRuleSet extends BaseAlkemioEntity {
-  @Column('jsonb', { nullable: false })
-  credentialRules: IAuthorizationPolicyRuleCredential[];
-
-  @OneToOne(() => AuthorizationPolicy, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'parentAuthorizationPolicyId' })
-  parentAuthorizationPolicy!: AuthorizationPolicy;
-
-  @Column('uuid')
-  parentAuthorizationPolicyId!: string;
-}
-```
-
-Key decisions:
-- Extends `BaseAlkemioEntity` (gets `id`, `createdDate`, `updatedDate`, `version`)
-- `parentAuthorizationPolicyId` is UNIQUE + NOT NULL — each parent owns exactly one row
-- `ON DELETE CASCADE` from authorization_policy — when parent entity is deleted, the shared row is automatically cleaned up
-- `eager: false` on the reverse relation — we never need to load the parent from the shared row
-
-**Interface**: `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.interface.ts` (NEW)
-
-```typescript
-abstract class IInheritedCredentialRuleSet extends IBaseAlkemio {
-  credentialRules!: IAuthorizationPolicyRuleCredential[];
-}
-```
+See [data-model.md](./data-model.md) for full schema and examples.
 
 ### 1.2 New Service: InheritedCredentialRuleSetService
 
-**File**: `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.service.ts` (NEW)
-
-```typescript
-@Injectable()
-class InheritedCredentialRuleSetService {
-  constructor(
-    @InjectRepository(InheritedCredentialRuleSet)
-    private repository: Repository<InheritedCredentialRuleSet>,
-  ) {}
-
-  /**
-   * Find or create the InheritedCredentialRuleSet owned by the given parent policy.
-   * Computes cascading rules from the parent's local + inherited rules.
-   * If the row exists, updates credentialRules in place.
-   * If not, creates a new row.
-   * Also attaches the resolved set to parentAuthorization._childInheritedCredentialRuleSet
-   * so that inheritParentAuthorization() can read it without a DB call.
-   */
-  async resolveForParent(
-    parentAuthorization: IAuthorizationPolicy
-  ): Promise<InheritedCredentialRuleSet>
-}
-```
-
-**`resolveForParent()` logic**:
-1. Compute cascading rules for children:
-   - `parentAuthorization.credentialRules.filter(r => r.cascade)` (parent's own local cascade rules)
-   - `+ parentAuthorization.inheritedCredentialRuleSet?.credentialRules ?? []` (parent's inherited rules — all cascade by definition)
-2. `findOne({ where: { parentAuthorizationPolicyId: parentAuthorization.id } })`
-3. If found → update `credentialRules`, save
-4. If not found → create new row with `parentAuthorizationPolicyId` and computed `credentialRules`, save
-5. Attach to parent: `parentAuthorization._childInheritedCredentialRuleSet = resolvedRow`
-6. Return resolved row
-
-**Called once per parent node** (~64 calls total for a full reset). Each parent auth service calls `resolveForParent()` before propagating to children. Children read the pre-resolved set from the parent via `inheritParentAuthorization()` — zero DB hits per child.
-
-### 1.3 New Module: InheritedCredentialRuleSetModule
-
-**File**: `src/domain/common/inherited-credential-rule-set/inherited.credential.rule.set.module.ts` (NEW)
-
-```typescript
-@Module({
-  imports: [TypeOrmModule.forFeature([InheritedCredentialRuleSet])],
-  providers: [InheritedCredentialRuleSetService],
-  exports: [InheritedCredentialRuleSetService],
-})
-export class InheritedCredentialRuleSetModule {}
-```
-
-### 1.4 Modified Entity: AuthorizationPolicy
-
-**File**: `src/domain/common/authorization-policy/authorization.policy.entity.ts`
-
-Add new relation:
-
-```typescript
-@ManyToOne(() => InheritedCredentialRuleSet, {
-  eager: true,       // Loaded alongside the policy — zero extra queries
-  cascade: false,    // Shared row, must not cascade
-  onDelete: 'SET NULL',
-})
-inheritedCredentialRuleSet?: InheritedCredentialRuleSet;
-```
-
-**Why `eager: true`**: The `AuthorizableEntity.authorization` relation is already `eager: true`, so loading any entity automatically JOINs `authorization_policy`. Adding `eager: true` on `inheritedCredentialRuleSet` chains one more LEFT JOIN. With ~64 rows in the lookup table, the cost is negligible.
-
-**Why `onDelete: 'SET NULL'`**: If an `InheritedCredentialRuleSet` row is deleted (e.g., parent entity deleted), the child policies fall back to evaluating `credentialRules` alone (backward compat behavior).
-
-**Interface change**: Add to `IAuthorizationPolicy`:
-- `inheritedCredentialRuleSet?: IInheritedCredentialRuleSet` — persisted FK (eager-loaded from DB)
-- `_childInheritedCredentialRuleSet?: InheritedCredentialRuleSet` — **transient** (not a DB column, not decorated). Set by `resolveForParent()` on the parent policy before propagation. Read by `inheritParentAuthorization()` to assign to children without a DB call.
-
-**Module change**: `AuthorizationPolicyModule` imports `InheritedCredentialRuleSetModule`.
-
-### 1.5 Modified: AuthorizationPolicyService.inheritParentAuthorization()
-
-**File**: `src/domain/common/authorization-policy/authorization.policy.service.ts`
-
-```typescript
-// Signature UNCHANGED — stays synchronous
-inheritParentAuthorization(
-  childAuthorization: IAuthorizationPolicy | undefined,
-  parentAuthorization: IAuthorizationPolicy | undefined
-): IAuthorizationPolicy
-```
-
-**New behavior**:
-1. Validate/create child authorization (unchanged)
-2. Reset child authorization (unchanged — clears all rules)
-3. Read pre-resolved set from parent: `parentAuthorization._childInheritedCredentialRuleSet`
-4. If present → set `child.inheritedCredentialRuleSet = resolvedRow` (no DB call, no rule copying)
-5. If absent → fall back to current behavior (copy cascade rules from parent into child's `credentialRules`) for backward compatibility during transition
-6. Return child (with empty `credentialRules` — local rules are added later by callers via `appendCredentialRules()`)
-
-**Key difference**: No longer copies cascade rules into child's `credentialRules`. Instead, reads the pre-resolved shared row from the parent's transient field and assigns the FK reference. The method stays synchronous — all async work (resolving the shared row) happens once per parent in `resolveForParent()` before children are processed.
-
-**No signature change means no changes to the ~50 callers.** The `resolveForParent()` call is added at the ~15-20 parent propagation sites instead (see section 1.7).
-
-### 1.6 Modified: AuthorizationService.isAccessGrantedForCredentials()
-
-**File**: `src/core/authorization/authorization.service.ts`
-
-Signature unchanged. Behavioral change:
-
-```typescript
-// BEFORE: iterate one array
-for (const rule of authorization.credentialRules) { ... }
-
-// AFTER: iterate inherited first (larger pool, faster early exit), then local
-if (authorization.inheritedCredentialRuleSet) {
-  for (const rule of authorization.inheritedCredentialRuleSet.credentialRules) { ... }
-}
-for (const rule of authorization.credentialRules) { ... }
-// Fallback: if inheritedCredentialRuleSet is null, credentialRules contains full rules (backward compat)
-```
-
-### 1.7 Parent Propagation Sites (~15-20 authorization services)
-
-Since `inheritParentAuthorization()` stays synchronous, the ~50 leaf callers need **zero changes**. The only changes are at the **parent propagation sites** — services that have children and call `propagateAuthorizationToChildEntities()` or equivalent. These need one `resolveForParent()` call before propagating:
-
-```typescript
-// BEFORE (in parent auth service, before propagating to children)
-// ... set up own rules ...
-// propagate to children
-
-// AFTER (add one line before propagation)
-await this.inheritedCredentialRuleSetService.resolveForParent(entity.authorization);
-// ... propagate to children (inheritParentAuthorization() reads the transient field)
-```
-
-Each parent auth service needs:
-1. Inject `InheritedCredentialRuleSetService` via constructor
-2. Call `resolveForParent()` once before child propagation
-3. Its module must import `InheritedCredentialRuleSetModule`
-
-**Parent propagation sites** (services that propagate authorization to children):
+Single method: `resolveForParent(parentAuthorization)`:
+1. Compute cascading rules from parent's local rules (cascade=true) + parent's inherited rule set
+2. Find existing row by `parentAuthorizationPolicyId`
+3. Update in place if found, create new if not
+4. Attach to transient field on parent authorization for synchronous consumption
 
-| Service | Children propagated to |
-|---------|----------------------|
-| `PlatformAuthorizationPolicyService` | forum, licensing-framework, license-policy |
-| `AccountAuthorizationService` | spaces, agent, license, storage-aggregator, VCs, innovation packs/hubs |
-| `SpaceAuthorizationService` | community, agent, storage-aggregator, collaboration, license, templates-manager, space-about, subspaces (recursive) |
-| `CollaborationAuthorizationService` | callouts-set, innovation-flow, timeline |
-| `CalloutsSetAuthorizationService` | callouts (loop) |
-| `CalloutAuthorizationService` | callout-framing, callout-contributions (loop) |
-| `CommunityAuthorizationService` | role-set, user-groups, community-guidelines |
-| `StorageAggregatorAuthorizationService` | storage-buckets (loop) |
-| `StorageBucketAuthorizationService` | documents (loop) |
-| `TemplatesManagerAuthorizationService` | templates-set |
-| `TemplatesSetAuthorizationService` | templates (loop) |
-| `TimelineAuthorizationService` | calendar |
-| `CalendarAuthorizationService` | events (loop) |
-| `ProfileAuthorizationService` | references, visuals, tagsets |
-| `UserAuthorizationService` | agent, user-settings, profile |
-| `OrganizationAuthorizationService` | agent, profile, groups |
-| `AiServerAuthorizationService` | ai-personas |
-| `ForumAuthorizationService` | discussions |
+See [service-contracts.md](./contracts/service-contracts.md) for full contract.
 
-**~50 leaf callers** (callout-framing, link, post, memo, visual, document, etc.) need **no changes** — they call `inheritParentAuthorization()` which reads the already-resolved transient field from the parent policy.
+### 1.3 Modified: inheritParentAuthorization()
 
-### 1.8 Migration
+Changes from copy-all-cascading-rules to read-from-transient-field:
+- Reads `parentAuthorization._childInheritedCredentialRuleSet` (pre-resolved by `resolveForParent()`)
+- Sets `child.inheritedCredentialRuleSet = resolvedRow`
+- Child's `credentialRules` left empty (local rules added later by callers)
+- Falls back to current copy behavior if transient field absent (backward compat)
+- Signature stays synchronous — zero DB calls in this method
 
-**File**: `src/migrations/<timestamp>-sharedInheritedRuleSets.ts` (NEW)
+### 1.4 Modified: isAccessGrantedForCredentials()
 
-```sql
--- Up migration
-CREATE TABLE "inherited_credential_rule_set" (
-  "id" uuid NOT NULL DEFAULT uuid_generate_v4(),
-  "createdDate" TIMESTAMP NOT NULL DEFAULT now(),
-  "updatedDate" TIMESTAMP NOT NULL DEFAULT now(),
-  "version" integer NOT NULL,
-  "credentialRules" jsonb NOT NULL,
-  "parentAuthorizationPolicyId" uuid NOT NULL,
-  CONSTRAINT "PK_inherited_credential_rule_set" PRIMARY KEY ("id"),
-  CONSTRAINT "UQ_inherited_credential_rule_set_parent" UNIQUE ("parentAuthorizationPolicyId"),
-  CONSTRAINT "FK_inherited_credential_rule_set_parent" FOREIGN KEY ("parentAuthorizationPolicyId")
-    REFERENCES "authorization_policy"("id") ON DELETE CASCADE
-);
+Two-phase evaluation with inherited-first ordering:
+1. Evaluate `authorization.inheritedCredentialRuleSet?.credentialRules` (larger pool, higher match probability)
+2. Evaluate `authorization.credentialRules` (local rules, typically 0-3)
+3. If `inheritedCredentialRuleSet` is null → evaluate `credentialRules` alone (backward compat)
+4. Privilege rules unchanged
 
-CREATE INDEX "IDX_inherited_credential_rule_set_parent"
-  ON "inherited_credential_rule_set" ("parentAuthorizationPolicyId");
+### 1.5 Parent Service Updates (~15-20 files)
 
-ALTER TABLE "authorization_policy"
-  ADD "inheritedCredentialRuleSetId" uuid;
+Each parent authorization service that calls `inheritParentAuthorization()` for children must:
+1. Inject `InheritedCredentialRuleSetService`
+2. Call `resolveForParent(parentAuthorization)` once before child propagation
+3. No changes to child/leaf services — they receive the resolved set via `inheritParentAuthorization()`
 
-ALTER TABLE "authorization_policy"
-  ADD CONSTRAINT "FK_authorization_policy_inherited_rule_set"
-  FOREIGN KEY ("inheritedCredentialRuleSetId")
-  REFERENCES "inherited_credential_rule_set"("id") ON DELETE SET NULL;
-```
+Key parent services: `AccountAuthorizationService`, `SpaceAuthorizationService`, `CollaborationAuthorizationService`, `CommunityAuthorizationService`, `CalloutsSetAuthorizationService`, `TemplatesManagerAuthorizationService`, and ~10 more.
 
-```sql
--- Down migration
-ALTER TABLE "authorization_policy" DROP CONSTRAINT "FK_authorization_policy_inherited_rule_set";
-ALTER TABLE "authorization_policy" DROP COLUMN "inheritedCredentialRuleSetId";
-DROP TABLE "inherited_credential_rule_set";
-```
+### 1.6 Schema Migration
 
-**Deployment sequence**:
-1. Run schema migration (adds table + FK column, no data changes)
-2. Deploy updated code (with null fallback in `isAccessGrantedForCredentials()`)
-3. Trigger full authorization reset (populates `InheritedCredentialRuleSet` rows, strips inherited rules from policies)
-4. Verify storage reduction and correctness
+- Create `inherited_credential_rule_set` table
+- Add `inheritedCredentialRuleSetId` FK column (nullable, SET NULL) to `authorization_policy`
+- Add index on `parentAuthorizationPolicyId` (UNIQUE constraint provides this)
+- Down migration: drop FK constraint, column, table in reverse order
 
-### 1.9 Testing Strategy
+### 1.7 Migration Strategy (FR-010)
 
-**Risk-based approach** per Constitution principle 6:
+1. Deploy code with schema migration → new table + FK column created
+2. Null FK = backward compatible (old credentialRules still work)
+3. Trigger full authorization reset → populates all InheritedCredentialRuleSet rows, strips inherited rules from policies
+4. No maintenance window required
 
-1. **Unit tests for rule splitting logic**: Verify that `resolveForParent()` correctly computes cascading rules from parent's local + inherited rules
-2. **Unit tests for runtime check**: Verify that `isAccessGrantedForCredentials()` evaluates inherited + local rules correctly, including null fallback
-3. **Existing authorization test suite**: All existing tests must pass (SC-003) — this validates behavioral equivalence without needing new tests for every entity type
-4. **Storage verification**: Manual SQL check confirming ≥80% reduction (SC-002)
+## Phase 2: Reset Optimization (Performance)
 
-## Phase 2: Reset Optimization
+**Scope**: US1 (primary), US3 (correctness), US4 (runtime performance)
+**FRs**: FR-001 through FR-007, FR-009, FR-011, FR-012
+**SCs**: SC-001, SC-003, SC-004, SC-005
 
-**Scope**: US1, US3, US4 | FR-001–FR-007, FR-009, FR-011, FR-012 | SC-001, SC-003, SC-004, SC-005
+### 2.1 Batch Entity Loading
 
-Optimize the authorization reset traversal with batch loading, parallel subspace processing, consolidated saves, and APM instrumentation. No data model changes — builds on Phase 1 infrastructure.
+Pre-load entire space sub-trees with single deep-relation queries. Modify `applyAuthorizationPolicy()` methods to accept pre-loaded entities via optional parameters, eliminating N+1 query patterns.
 
-### 2.1 Batch Loading
+### 2.2 Intermediate Save Elimination
 
-**Target**: Eliminate N+1 query patterns by pre-loading entire entity sub-trees.
+Remove all intermediate `save()` calls during tree traversal. Collect all modified `AuthorizationPolicy` objects and `InheritedCredentialRuleSet` rows, perform single `saveAll()` at the end.
 
-**File**: `src/domain/space/space/space.service.authorization.ts`
+### 2.3 Parallel Subspace Processing
 
-Currently, `applyAuthorizationPolicy()` loads the space with relations, then each child auth service re-loads its entity individually. Change to: load the space with ALL nested relations needed for the full sub-tree in a single query (or 2-3 targeted queries). Pass pre-loaded entities down through the traversal.
+Replace sequential `for...of await` with bounded `Promise.all()` for independent subspace traversals. Bounded concurrency prevents connection pool exhaustion.
 
-**Approach**: Add optional `preloadedSpace?: ISpace` parameter to `SpaceAuthorizationService.applyAuthorizationPolicy()`. When provided, skip the initial `spaceService.getSpaceOrFail()` call. The caller (AccountAuthorizationService or recursive self-call) provides the pre-loaded entity.
+### 2.4 APM Instrumentation (FR-012)
 
-Similarly for child services: `CalloutAuthorizationService`, `CommunityAuthorizationService`, etc. — add optional pre-loaded entity parameters.
+Add Elastic APM spans at:
+- `AuthResetController` event handlers (transaction-level)
+- `AccountAuthorizationService.applyAuthorizationPolicy()` (span for full account reset)
+- `SpaceAuthorizationService.applyAuthorizationPolicy()` (span per space)
+- `AuthorizationPolicyService.saveAll()` (span for bulk save)
 
-### 2.2 Parallel Subspace Processing
+Custom labels: `policyCount`, `treeRootType`, `entityId`, `durationMs`.
 
-**Target**: Process independent subspace trees concurrently.
+### 2.5 Enhanced Logging (FR-011)
 
-**File**: `src/domain/space/space/space.service.authorization.ts`
+Log at reset boundaries:
+- Start/end of each tree root reset with timing
+- Number of policies updated per tree
+- Warnings for large batches (>500 policies)
 
-Currently: `for (const subspace of space.subspaces) { await this.applyAuthorizationPolicy(...) }`
+## Behavioral Invariants
 
-Change to: `await Promise.all(space.subspaces.map(subspace => this.applyAuthorizationPolicy(...)))` with bounded concurrency (max 5 concurrent subspaces) to avoid connection pool exhaustion.
+These MUST hold across both phases (see [service-contracts.md](./contracts/service-contracts.md)):
 
-### 2.3 Eliminate Intermediate Saves
+1. **Access Decision Equivalence**: `isAccessGranted()` returns identical booleans for all `(credentials, entity, privilege)` triples
+2. **Reset Idempotency**: Double-reset produces identical policies
+3. **Cascade Correctness**: `cascade: true` rules visible on all descendants
+4. **Non-Cascade Isolation**: `cascade: false` rules visible only on the entity itself
+5. **Privilege Rule Locality**: `privilegeRules` never cascaded (unchanged)
+6. **Root Independence**: Resetting one tree root doesn't affect others
+7. **Backward Compatibility**: Null `inheritedCredentialRuleSet` = pre-optimization behavior
 
-**Target**: Remove per-entity `save()` calls during traversal. Collect all modified policies and save once at the end.
+## Complexity Tracking
 
-Currently:
-- `AccountAuthorizationService.applyAuthorizationPolicy()` saves account policy individually (line 106)
-- `SpaceAuthorizationService.applyAuthorizationPolicy()` saves space policy individually (line 215)
-- `SpaceAuthorizationService` saves subspace authorizations per subspace (line 240)
-- `AuthResetController` does final `saveAll()` with the returned array
-
-Change to:
-- No individual saves during traversal
-- All policies collected in a single array
-- One `saveAll()` call at the end in `AuthResetController`
-
-### 2.4 APM Instrumentation
-
-**Files**:
-- `src/services/auth-reset/subscriber/auth-reset.controller.ts`
-- `src/domain/space/account/account.service.authorization.ts`
-- `src/domain/space/space/space.service.authorization.ts`
-- `src/domain/common/authorization-policy/authorization.policy.service.ts`
-
-Add APM spans at:
-- `authResetAccount()` handler (transaction-level, labels: `policyCount`, `treeRootType`, `entityId`)
-- `applyAuthorizationPolicy()` per space (span with `spaceId`, `level`)
-- `saveAll()` (span with `policyCount`)
-
-Add Winston logging:
-- Reset start/end with duration and policy count (FR-011)
-- Warning threshold for resets exceeding expected duration
-
-### 2.5 Testing Strategy
-
-1. **Existing test suite**: Must pass (SC-003)
-2. **Performance benchmark**: Manual measurement comparing reset duration before and after (SC-001)
-3. **Load test**: Global reset on production-scale data — verify completion within 30 minutes (SC-005)
+No constitution violations to justify. The approach is the simplest viable:
+- One new entity (5 columns, ~64 rows)
+- One new service with one method
+- One new FK column on existing table
+- No new GraphQL surface
+- No new infrastructure dependencies
+- No caching layers, no materialized views, no computed columns
