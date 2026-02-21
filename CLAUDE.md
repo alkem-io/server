@@ -184,6 +184,8 @@ Key rules:
 - TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, TypeORM 0.3, Apollo Server 4, GraphQL 16 (034-unit-tests)
 - N/A (no data model changes — test-only feature) (034-unit-tests)
 - PostgreSQL 17.5
+- TypeScript 5.3, Node.js 22 LTS (Volta 22.21.1) + NestJS 10, TypeORM 0.3, Apollo Server 4, RabbitMQ (amqplib), elastic-apm-node (036-optimize-authorization)
+- PostgreSQL 17.5 — `authorization_policy` table with JSONB columns (`credentialRules`, `privilegeRules`) (036-optimize-authorization)
 
 ## Recent Changes
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting
