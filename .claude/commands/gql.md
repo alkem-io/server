@@ -44,11 +44,10 @@ query SpaceById($id: UUID!) {
     space(ID: $id) {
       id
       nameID
-      profile { displayName }
+      about { profile { displayName } }
     }
   }
 }
-```
 Variables: `{"id": "some-uuid-here"}`
 
 ### Mutation — update profile
