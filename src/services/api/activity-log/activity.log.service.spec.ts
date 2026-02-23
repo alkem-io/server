@@ -102,7 +102,7 @@ describe('ActivityLogService', () => {
 
       expect(result).toEqual([]);
       expect(entityManager.find).not.toHaveBeenCalled();
-      expect(userLookupService.getUsersByUUID).not.toHaveBeenCalled();
+      expect(userLookupService.getUsersByIds).not.toHaveBeenCalled();
     });
 
     it('should batch-load spaces and users with single queries each', async () => {
@@ -120,7 +120,7 @@ describe('ActivityLogService', () => {
       // Batch space load
       entityManager.find.mockResolvedValueOnce([space1, space2]);
       // Batch user load
-      userLookupService.getUsersByUUID.mockResolvedValueOnce([user1, user2]);
+      userLookupService.getUsersByIds.mockResolvedValueOnce([user1, user2]);
 
       await service.convertRawActivityToResults(rawActivities);
 
@@ -136,14 +136,14 @@ describe('ActivityLogService', () => {
       });
 
       // 1 batch query for users
-      expect(userLookupService.getUsersByUUID).toHaveBeenCalledTimes(1);
+      expect(userLookupService.getUsersByIds).toHaveBeenCalledTimes(1);
       // Should deduplicate user IDs
-      expect(userLookupService.getUsersByUUID).toHaveBeenCalledWith(
+      expect(userLookupService.getUsersByIds).toHaveBeenCalledWith(
         expect.arrayContaining(['user-1', 'user-2'])
       );
 
       // Should NOT call individual user/space lookups
-      expect(userService.getUserOrFail).not.toHaveBeenCalled();
+      expect(userService.getUserByIdOrFail).not.toHaveBeenCalled();
       expect(
         communityResolverService.getSpaceForCollaborationOrFail
       ).not.toHaveBeenCalled();
@@ -161,14 +161,14 @@ describe('ActivityLogService', () => {
       ];
 
       entityManager.find.mockResolvedValueOnce([space1]);
-      userLookupService.getUsersByUUID.mockResolvedValueOnce([user1]);
+      userLookupService.getUsersByIds.mockResolvedValueOnce([user1]);
 
       await service.convertRawActivityToResults(rawActivities);
 
       // Still just 1 query each, not 3
       expect(entityManager.find).toHaveBeenCalledTimes(1);
-      expect(userLookupService.getUsersByUUID).toHaveBeenCalledTimes(1);
-      expect(userLookupService.getUsersByUUID).toHaveBeenCalledWith(['user-1']);
+      expect(userLookupService.getUsersByIds).toHaveBeenCalledTimes(1);
+      expect(userLookupService.getUsersByIds).toHaveBeenCalledWith(['user-1']);
     });
 
     it('should skip MEMBER_JOINED activities without parentID', async () => {
@@ -188,7 +188,7 @@ describe('ActivityLogService', () => {
       ];
 
       entityManager.find.mockResolvedValueOnce([space1]);
-      userLookupService.getUsersByUUID.mockResolvedValueOnce([user1]);
+      userLookupService.getUsersByIds.mockResolvedValueOnce([user1]);
 
       const result = await service.convertRawActivityToResults(
         rawActivities as IActivity[]
@@ -215,7 +215,7 @@ describe('ActivityLogService', () => {
       await service.convertRawActivityToResult(rawActivity, spaceMap, userMap);
 
       // Should NOT call individual lookups when maps are provided
-      expect(userService.getUserOrFail).not.toHaveBeenCalled();
+      expect(userService.getUserByIdOrFail).not.toHaveBeenCalled();
       expect(
         communityResolverService.getSpaceForCollaborationOrFail
       ).not.toHaveBeenCalled();
@@ -225,7 +225,7 @@ describe('ActivityLogService', () => {
       const user = makeUser('user-1');
       const space = makeSpace('collab-1', 'Space One');
 
-      userService.getUserOrFail.mockResolvedValueOnce(user);
+      userService.getUserByIdOrFail.mockResolvedValueOnce(user);
       communityResolverService.getSpaceForCollaborationOrFail.mockResolvedValueOnce(
         space as unknown as ISpace
       );
@@ -235,7 +235,7 @@ describe('ActivityLogService', () => {
       await service.convertRawActivityToResult(rawActivity);
 
       // Should use individual lookups as fallback
-      expect(userService.getUserOrFail).toHaveBeenCalledWith('user-1');
+      expect(userService.getUserByIdOrFail).toHaveBeenCalledWith('user-1');
       expect(
         communityResolverService.getSpaceForCollaborationOrFail
       ).toHaveBeenCalledWith('collab-1', expect.anything());
@@ -251,14 +251,14 @@ describe('ActivityLogService', () => {
       // Empty user map — user not pre-loaded
       const userMap = new Map<string, IUser>();
 
-      userService.getUserOrFail.mockResolvedValueOnce(user);
+      userService.getUserByIdOrFail.mockResolvedValueOnce(user);
 
       const rawActivity = makeRawActivity('act-1', 'collab-1', 'user-1');
 
       await service.convertRawActivityToResult(rawActivity, spaceMap, userMap);
 
       // User should be loaded individually since not in map
-      expect(userService.getUserOrFail).toHaveBeenCalledWith('user-1');
+      expect(userService.getUserByIdOrFail).toHaveBeenCalledWith('user-1');
       // Space should come from map
       expect(
         communityResolverService.getSpaceForCollaborationOrFail
@@ -286,7 +286,7 @@ describe('ActivityLogService', () => {
         communityResolverService.getSpaceForCollaborationOrFail
       ).toHaveBeenCalledWith('collab-1', expect.anything());
       // User should come from map
-      expect(userService.getUserOrFail).not.toHaveBeenCalled();
+      expect(userService.getUserByIdOrFail).not.toHaveBeenCalled();
     });
 
     it('should extract parentDisplayName from the pre-loaded space', async () => {
@@ -521,7 +521,7 @@ describe('ActivityLogService', () => {
       ];
 
       entityManager.find.mockResolvedValueOnce([space1]);
-      userLookupService.getUsersByUUID.mockResolvedValueOnce([user1]);
+      userLookupService.getUsersByIds.mockResolvedValueOnce([user1]);
 
       // First activity fails in builder, second succeeds
       calloutService.getCalloutOrFail
@@ -546,7 +546,7 @@ describe('ActivityLogService', () => {
       const rawActivities = [makeRawActivity('act-1', 'collab-1', 'user-1')];
 
       entityManager.find.mockResolvedValueOnce([space1]);
-      userLookupService.getUsersByUUID.mockResolvedValueOnce([user1]);
+      userLookupService.getUsersByIds.mockResolvedValueOnce([user1]);
       calloutService.getCalloutOrFail.mockResolvedValueOnce({
         id: 'callout-1',
       } as any);
@@ -570,12 +570,12 @@ describe('ActivityLogService', () => {
       const rawActivities = [makeRawActivity('act-1', 'collab-1', '')];
 
       entityManager.find.mockResolvedValueOnce([space1]);
-      userLookupService.getUsersByUUID.mockResolvedValueOnce([]);
+      userLookupService.getUsersByIds.mockResolvedValueOnce([]);
 
       await service.convertRawActivityToResults(rawActivities);
 
       // Empty triggeredBy should be filtered from batch user load
-      expect(userLookupService.getUsersByUUID).toHaveBeenCalledWith([]);
+      expect(userLookupService.getUsersByIds).toHaveBeenCalledWith([]);
     });
   });
 });

@@ -1,6 +1,6 @@
 import { AuthorizationCredential } from '@common/enums';
 import { ValidationException } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -30,18 +30,18 @@ describe('UserSettingsHomeSpaceValidationService', () => {
     spaceLookupService = module.get(SpaceLookupService) as any;
   });
 
-  const buildAgentInfo = (
+  const buildActorContext = (
     credentialOverrides: Array<{
       type: AuthorizationCredential;
       resourceID: string;
     }> = []
-  ): AgentInfo => {
-    const agentInfo = new AgentInfo();
-    agentInfo.credentials = credentialOverrides.map(c => ({
+  ): ActorContext => {
+    const actorContext = new ActorContext();
+    actorContext.credentials = credentialOverrides.map(c => ({
       type: c.type,
       resourceID: c.resourceID,
     }));
-    return agentInfo;
+    return actorContext;
   };
 
   describe('validateSpaceAccess', () => {
@@ -49,12 +49,12 @@ describe('UserSettingsHomeSpaceValidationService', () => {
       const spaceID = 'space-1';
       spaceLookupService.getSpaceOrFail.mockResolvedValue({ id: spaceID });
 
-      const agentInfo = buildAgentInfo([
+      const actorContext = buildActorContext([
         { type: AuthorizationCredential.SPACE_MEMBER, resourceID: spaceID },
       ]);
 
       await expect(
-        service.validateSpaceAccess(spaceID, agentInfo)
+        service.validateSpaceAccess(spaceID, actorContext)
       ).resolves.toBeUndefined();
     });
 
@@ -62,7 +62,7 @@ describe('UserSettingsHomeSpaceValidationService', () => {
       const spaceID = 'space-1';
       spaceLookupService.getSpaceOrFail.mockResolvedValue({ id: spaceID });
 
-      const agentInfo = buildAgentInfo([
+      const actorContext = buildActorContext([
         {
           type: AuthorizationCredential.SPACE_MEMBER,
           resourceID: 'other-space',
@@ -70,7 +70,7 @@ describe('UserSettingsHomeSpaceValidationService', () => {
       ]);
 
       await expect(
-        service.validateSpaceAccess(spaceID, agentInfo)
+        service.validateSpaceAccess(spaceID, actorContext)
       ).rejects.toThrow(ValidationException);
     });
 
@@ -78,10 +78,10 @@ describe('UserSettingsHomeSpaceValidationService', () => {
       const spaceID = 'space-1';
       spaceLookupService.getSpaceOrFail.mockResolvedValue({ id: spaceID });
 
-      const agentInfo = buildAgentInfo([]);
+      const actorContext = buildActorContext([]);
 
       await expect(
-        service.validateSpaceAccess(spaceID, agentInfo)
+        service.validateSpaceAccess(spaceID, actorContext)
       ).rejects.toThrow(ValidationException);
     });
 
@@ -91,12 +91,12 @@ describe('UserSettingsHomeSpaceValidationService', () => {
         new Error('Space not found')
       );
 
-      const agentInfo = buildAgentInfo([
+      const actorContext = buildActorContext([
         { type: AuthorizationCredential.SPACE_MEMBER, resourceID: spaceID },
       ]);
 
       await expect(
-        service.validateSpaceAccess(spaceID, agentInfo)
+        service.validateSpaceAccess(spaceID, actorContext)
       ).rejects.toThrow('Space not found');
     });
 
@@ -104,37 +104,37 @@ describe('UserSettingsHomeSpaceValidationService', () => {
       const spaceID = 'space-1';
       spaceLookupService.getSpaceOrFail.mockResolvedValue({ id: spaceID });
 
-      const agentInfo = buildAgentInfo([
+      const actorContext = buildActorContext([
         { type: AuthorizationCredential.SPACE_ADMIN, resourceID: spaceID },
       ]);
 
       await expect(
-        service.validateSpaceAccess(spaceID, agentInfo)
+        service.validateSpaceAccess(spaceID, actorContext)
       ).resolves.toBeUndefined();
     });
   });
 
   describe('isHomeSpaceValid', () => {
     it('should return false when spaceID is null', async () => {
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
 
-      const result = await service.isHomeSpaceValid(null, agentInfo);
+      const result = await service.isHomeSpaceValid(null, actorContext);
 
       expect(result).toBe(false);
     });
 
     it('should return false when spaceID is undefined', async () => {
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
 
-      const result = await service.isHomeSpaceValid(undefined, agentInfo);
+      const result = await service.isHomeSpaceValid(undefined, actorContext);
 
       expect(result).toBe(false);
     });
 
     it('should return false when spaceID is empty string', async () => {
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
 
-      const result = await service.isHomeSpaceValid('', agentInfo);
+      const result = await service.isHomeSpaceValid('', actorContext);
 
       expect(result).toBe(false);
     });
@@ -143,11 +143,11 @@ describe('UserSettingsHomeSpaceValidationService', () => {
       const spaceID = 'space-1';
       spaceLookupService.getSpaceOrFail.mockResolvedValue({ id: spaceID });
 
-      const agentInfo = buildAgentInfo([
+      const actorContext = buildActorContext([
         { type: AuthorizationCredential.SPACE_MEMBER, resourceID: spaceID },
       ]);
 
-      const result = await service.isHomeSpaceValid(spaceID, agentInfo);
+      const result = await service.isHomeSpaceValid(spaceID, actorContext);
 
       expect(result).toBe(true);
     });
@@ -157,11 +157,11 @@ describe('UserSettingsHomeSpaceValidationService', () => {
         new Error('Space not found')
       );
 
-      const agentInfo = buildAgentInfo([
+      const actorContext = buildActorContext([
         { type: AuthorizationCredential.SPACE_MEMBER, resourceID: 'space-1' },
       ]);
 
-      const result = await service.isHomeSpaceValid('space-1', agentInfo);
+      const result = await service.isHomeSpaceValid('space-1', actorContext);
 
       expect(result).toBe(false);
     });
@@ -170,14 +170,14 @@ describe('UserSettingsHomeSpaceValidationService', () => {
       const spaceID = 'space-1';
       spaceLookupService.getSpaceOrFail.mockResolvedValue({ id: spaceID });
 
-      const agentInfo = buildAgentInfo([
+      const actorContext = buildActorContext([
         {
           type: AuthorizationCredential.SPACE_MEMBER,
           resourceID: 'other-space',
         },
       ]);
 
-      const result = await service.isHomeSpaceValid(spaceID, agentInfo);
+      const result = await service.isHomeSpaceValid(spaceID, actorContext);
 
       expect(result).toBe(false);
     });

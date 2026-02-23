@@ -1,8 +1,8 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
-import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
@@ -20,8 +20,8 @@ import { MessagingAuthorizationService } from './messaging.service.authorization
     AuthorizationModule,
     ConversationModule,
     UserLookupModule,
-    VirtualContributorLookupModule,
-    AgentModule,
+    VirtualActorLookupModule,
+    ActorModule,
     PlatformWellKnownVirtualContributorsModule,
     ConversationMembershipModule,
     SubscriptionServiceModule,

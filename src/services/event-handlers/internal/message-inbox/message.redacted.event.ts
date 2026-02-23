@@ -8,7 +8,7 @@ export class MessageRedactedEvent {
   constructor(
     public readonly payload: {
       roomId: string;
-      redactorActorId: string;
+      redactorActorID: string;
       redactedMessageId: string;
       redactionMessageId: string;
       reason?: string;

@@ -1,10 +1,10 @@
 import { LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import {
   AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
   AUTH_STRATEGY_OATHKEEPER_JWT,
 } from '@core/authentication';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import {
   CallHandler,
   ContextType,
@@ -68,7 +68,7 @@ const getRequest = (context: ExecutionContext) => {
 
 // Promisified passport.authenticate
 const passportAuthenticate = async (req: IncomingMessage) => {
-  return new Promise<AgentInfo>((resolve, reject) => {
+  return new Promise<ActorContext>((resolve, reject) => {
     // Use the same passport strategy ('jwt') and options
     passport.authenticate(
       [AUTH_STRATEGY_OATHKEEPER_JWT, AUTH_STRATEGY_OATHKEEPER_API_TOKEN],
@@ -76,7 +76,7 @@ const passportAuthenticate = async (req: IncomingMessage) => {
       { session: false },
       (
         err: Error | string | null,
-        user: AgentInfo,
+        user: ActorContext,
         info?: object | string | Array<string | undefined>,
         status?: number | Array<number | undefined>
       ) => {

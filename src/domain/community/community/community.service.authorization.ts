@@ -25,7 +25,7 @@ import { PlatformRolesAccessService } from '@domain/access/platform-roles-access
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';

@@ -1,6 +1,6 @@
+import * as fs from 'node:fs';
 import { vi } from 'vitest';
 import { performOverrideEvaluationAsync } from '../../src/tools/schema/override';
-import * as fs from 'node:fs';
 
 // Simulates GitHub review fetch fallback by mocking global fetch.
 

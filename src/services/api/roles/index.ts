@@ -1,1 +1,1 @@
-export * from './dto/roles.dto.input.user';
+export * from './dto/roles.dto.input.actor';

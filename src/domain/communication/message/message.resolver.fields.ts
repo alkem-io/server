@@ -2,7 +2,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { ContributorByAgentIdLoaderCreator } from '@core/dataloader/creators/loader.creators';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { Inject } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
@@ -15,18 +15,18 @@ export class MessageResolverFields {
     private readonly logger: WinstonLogger
   ) {}
 
-  @ResolveField('sender', () => IContributor, {
+  @ResolveField('sender', () => IActor, {
     nullable: true,
     description: 'The User or Virtual Contributor that created this Message',
   })
   async sender(
     @Parent() message: IMessage,
     @Loader(ContributorByAgentIdLoaderCreator, { resolveToNull: true })
-    loader: ILoader<IContributor | null>
-  ): Promise<IContributor | null> {
-    // sender contains the agent ID (actorId from the communication adapter)
-    const senderAgentId = message.sender;
-    if (!senderAgentId) {
+    loader: ILoader<IActor | null>
+  ): Promise<IActor | null> {
+    // sender contains the agent ID (actorID from the communication adapter)
+    const senderActorID = message.sender;
+    if (!senderActorID) {
       return null;
     }
 
@@ -36,7 +36,7 @@ export class MessageResolverFields {
       this.logger?.warn(
         {
           message: 'Sender unable to be resolved when resolving message.',
-          senderAgentId,
+          senderActorID,
           messageId: message.id,
         },
         LogContext.COMMUNICATION

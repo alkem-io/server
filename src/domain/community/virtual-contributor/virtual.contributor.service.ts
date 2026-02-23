@@ -1,26 +1,26 @@
 import { LogContext, ProfileType } from '@common/enums';
-import { AgentType } from '@common/enums/agent.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import {
   EntityNotFoundException,
-  EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { Invitation } from '@domain/access/invitation/invitation.entity';
-import { IAgent } from '@domain/agent/agent';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
+import { IActor } from '@domain/actor/actor/actor.interface';
+import { ActorQueryArgs } from '@domain/actor/actor/dto';
+import { ICredential } from '@domain/actor/credential/credential.interface';
+import { CredentialsSearchInput } from '@domain/actor/credential/dto/credentials.dto.search';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
 import { KnowledgeBaseService } from '@domain/common/knowledge-base/knowledge.base.service';
+import { ProfileAvatarService } from '@domain/common/profile/profile.avatar.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -34,9 +34,6 @@ import { AiPersonaService } from '@services/ai-server/ai-persona/ai.persona.serv
 import { CreateAiPersonaInput } from '@services/ai-server/ai-persona/dto';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
-import { IContributor } from '../contributor/contributor.interface';
-import { ContributorService } from '../contributor/contributor.service';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { VirtualContributorDefaultsService } from '../virtual-contributor-defaults/virtual.contributor.defaults.service';
 import { VirtualContributorLookupService } from '../virtual-contributor-lookup/virtual.contributor.lookup.service';
 import {
@@ -55,9 +52,8 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 export class VirtualContributorService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
-    private agentService: AgentService,
     private profileService: ProfileService,
-    private contributorService: ContributorService,
+    private profileAvatarService: ProfileAvatarService,
     private communicationAdapter: CommunicationAdapter,
     private aiPersonaService: AiPersonaService,
     private aiServerAdapter: AiServerAdapter,
@@ -79,7 +75,7 @@ export class VirtualContributorService {
     virtualContributorData: CreateVirtualContributorInput,
     knowledgeBaseDefaultCallouts: CreateCalloutInput[],
     storageAggregator: IStorageAggregator,
-    agentInfo?: AgentInfo
+    actorContext?: ActorContext
   ): Promise<IVirtualContributor> {
     if (virtualContributorData.nameID) {
       // Convert nameID to lower case
@@ -122,7 +118,7 @@ export class VirtualContributorService {
       await this.knowledgeBaseService.createKnowledgeBase(
         knowledgeBaseData,
         storageAggregator,
-        agentInfo?.userID
+        actorContext?.actorID
       );
 
     const kb = await this.knowledgeBaseService.save(
@@ -168,45 +164,47 @@ export class VirtualContributorService {
       }
     );
 
-    this.contributorService.addAvatarVisualToContributorProfile(
+    await this.profileAvatarService.addAvatarVisualToProfile(
       virtualContributor.profile,
       virtualContributorData.profileData
     );
 
-    virtualContributor.agent = await this.agentService.createAgent({
-      type: AgentType.VIRTUAL_CONTRIBUTOR,
-    });
+    // Save Actor and VirtualContributor in a single transaction.
+    // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+    // reliably set FK columns, so we pre-save Actor explicitly.
+    virtualContributor =
+      await this.virtualContributorRepository.manager.transaction(async mgr => {
+        await mgr.save((virtualContributor as VirtualContributor).actor!);
+        return await mgr.save(virtualContributor as VirtualContributor);
+      });
 
-    virtualContributor = await this.save(virtualContributor);
-
-    const userID = agentInfo?.userID;
-    await this.contributorService.ensureAvatarIsStoredInLocalStorageBucket(
+    const userID = actorContext?.actorID;
+    await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
       virtualContributor.profile.id,
       userID
     );
 
     // Reload to ensure have the updated avatar URL
-    virtualContributor = await this.getVirtualContributorOrFail(
-      virtualContributor.id,
-      { relations: { agent: true } }
+    virtualContributor = await this.getVirtualContributorByIdOrFail(
+      virtualContributor.id
     );
 
-    // Sync the VC's agent to the communication adapter
-    // The agent.id is used as the AlkemioActorID for all communication operations
+    // Sync the VC to the communication adapter
+    // VirtualContributor.id (which is Actor.id) is used as the AlkemioActorID
     const displayName =
       virtualContributor.profile?.displayName || virtualContributor.nameID;
     try {
       await this.communicationAdapter.syncActor(
-        virtualContributor.agent.id,
+        virtualContributor.id,
         displayName
       );
       this.logger.verbose?.(
-        `Synced VC actor to communication adapter: ${virtualContributor.agent.id}`,
+        `Synced VC actor to communication adapter: ${virtualContributor.id}`,
         LogContext.COMMUNITY
       );
     } catch (e: any) {
       this.logger.error(
-        `Failed to sync VC actor to communication adapter: ${virtualContributor.agent.id}`,
+        `Failed to sync VC actor to communication adapter: ${virtualContributor.id}`,
         e?.stack,
         LogContext.COMMUNITY
       );
@@ -282,11 +280,11 @@ export class VirtualContributorService {
   public async updateVirtualContributor(
     virtualContributorData: UpdateVirtualContributorInput
   ): Promise<IVirtualContributor> {
-    const virtual = await this.getVirtualContributorOrFail(
+    const virtual = await this.getVirtualContributorByIdOrFail(
       virtualContributorData.ID,
       {
         relations: {
-          profile: true,
+          actor: { profile: true },
           knowledgeBase: {
             profile: true,
           },
@@ -363,22 +361,17 @@ export class VirtualContributorService {
   async deleteVirtualContributor(
     virtualContributorID: string
   ): Promise<IVirtualContributor> {
-    const virtualContributor = await this.getVirtualContributorOrFail(
+    const virtualContributor = await this.getVirtualContributorByIdOrFail(
       virtualContributorID,
       {
         relations: {
-          profile: true,
-          agent: true,
+          actor: { profile: true },
           knowledgeBase: true,
         },
       }
     );
 
-    if (
-      !virtualContributor.profile ||
-      !virtualContributor.agent ||
-      !virtualContributor.knowledgeBase
-    ) {
+    if (!virtualContributor.profile || !virtualContributor.knowledgeBase) {
       throw new RelationshipNotFoundException(
         `Unable to load entities for virtual: ${virtualContributor.id} `,
         LogContext.COMMUNITY
@@ -393,7 +386,7 @@ export class VirtualContributorService {
       );
     }
 
-    await this.agentService.deleteAgent(virtualContributor.agent.id);
+    // Note: Credentials are on Actor (which VirtualContributor extends), will be deleted via cascade
 
     const result = await this.virtualContributorRepository.remove(
       virtualContributor as VirtualContributor
@@ -436,7 +429,7 @@ export class VirtualContributorService {
     return virtualContributor;
   }
 
-  async getVirtualContributorOrFail(
+  async getVirtualContributorByIdOrFail(
     virtualID: string,
     options?: FindOneOptions<VirtualContributor>
   ): Promise<IVirtualContributor | never> {
@@ -449,37 +442,48 @@ export class VirtualContributorService {
     return virtual;
   }
 
-  async getVirtualContributorAndAgent(
+  // Credentials are loaded via the actor relation.
+  async getVirtualContributorWithCredentials(
     virtualID: string
-  ): Promise<{ virtualContributor: IVirtualContributor; agent: IAgent }> {
-    const virtualContributor = await this.getVirtualContributorOrFail(
+  ): Promise<IVirtualContributor> {
+    const virtualContributor = await this.getVirtualContributorByIdOrFail(
       virtualID,
       {
-        relations: { agent: true },
+        relations: { actor: { credentials: true } },
       }
     );
 
-    if (!virtualContributor.agent) {
-      throw new EntityNotInitializedException(
-        `Virtual Contributor Agent not initialized: ${virtualID}`,
-        LogContext.AUTH
-      );
-    }
+    return virtualContributor;
+  }
+
+  // Convenience method returning the VC along with its actorID and credentials.
+  // VirtualContributor extends Actor, so actorID === virtualContributor.id
+  async getVirtualContributorAndActor(virtualID: string): Promise<{
+    virtualContributor: IVirtualContributor;
+    actorID: string;
+    credentials: ICredential[];
+  }> {
+    const virtualContributor =
+      await this.getVirtualContributorWithCredentials(virtualID);
+
     return {
-      virtualContributor: virtualContributor,
-      agent: virtualContributor.agent,
+      virtualContributor,
+      actorID: virtualContributor.id,
+      credentials: virtualContributor.credentials || [],
     };
   }
 
   public async getStorageBucket(
     virtualContributorID: string
   ): Promise<IStorageBucket> {
-    const virtualContributor = await this.getVirtualContributorOrFail(
+    const virtualContributor = await this.getVirtualContributorByIdOrFail(
       virtualContributorID,
       {
         relations: {
-          profile: {
-            storageBucket: true,
+          actor: {
+            profile: {
+              storageBucket: true,
+            },
           },
         },
       }
@@ -496,10 +500,10 @@ export class VirtualContributorService {
 
   public async refreshBodyOfKnowledge(
     virtualContributor: IVirtualContributor,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<boolean> {
     this.logger.verbose?.(
-      `refreshing the body of knowledge ${virtualContributor.id}, by ${agentInfo.userID}`,
+      `refreshing the body of knowledge ${virtualContributor.id}, by ${actorContext.actorID}`,
       LogContext.VIRTUAL_CONTRIBUTOR
     );
 
@@ -522,11 +526,11 @@ export class VirtualContributorService {
     );
   }
 
-  public async refreshAllBodiesOfKnowledge(agentInfo: AgentInfo) {
+  public async refreshAllBodiesOfKnowledge(actorContext: ActorContext) {
     const virtualContributors = await this.getVirtualContributors();
     for (const vc of virtualContributors) {
       try {
-        await this.refreshBodyOfKnowledge(vc, agentInfo);
+        await this.refreshBodyOfKnowledge(vc, actorContext);
       } catch (error: any) {
         this.logger.error(
           {
@@ -543,7 +547,7 @@ export class VirtualContributorService {
 
   // TODO: move to store
   async getVirtualContributors(
-    args: ContributorQueryArgs = {}
+    args: ActorQueryArgs = {}
   ): Promise<IVirtualContributor[]> {
     const limit = args.limit;
     const shuffle = args.shuffle || false;
@@ -557,8 +561,10 @@ export class VirtualContributorService {
     if (credentialsFilter) {
       virtualContributors = await this.virtualContributorRepository
         .createQueryBuilder('virtual_contributor')
-        .leftJoinAndSelect('virtual_contributor.agent', 'agent')
-        .leftJoinAndSelect('agent.credentials', 'credential')
+        .leftJoinAndSelect(
+          'virtual_contributor.actor.credentials',
+          'credential'
+        )
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -577,28 +583,9 @@ export class VirtualContributorService {
     return this.virtualContributorRepository.save(virtualContributor);
   }
 
-  public async getAgent(
-    virtualContributor: IVirtualContributor
-  ): Promise<IAgent> {
-    const virtualContributorWithAgent = await this.getVirtualContributorOrFail(
-      virtualContributor.id,
-      {
-        relations: { agent: true },
-      }
-    );
-    const agent = virtualContributorWithAgent.agent;
-    if (!agent)
-      throw new EntityNotInitializedException(
-        `Virtual Contributor Agent not initialized: ${virtualContributor.id}`,
-        LogContext.AUTH
-      );
-
-    return agent;
-  }
-
   public async getProvider(
     virtualContributor: IVirtualContributor
-  ): Promise<IContributor> {
+  ): Promise<IActor> {
     const account = await this.virtualContributorLookupService.getAccountOrFail(
       virtualContributor.id
     );
@@ -614,7 +601,7 @@ export class VirtualContributorService {
       return virtualContributor.knowledgeBase;
     }
     const virtualContributorWithKnowledgeBase =
-      await this.getVirtualContributorOrFail(virtualContributor.id, {
+      await this.getVirtualContributorByIdOrFail(virtualContributor.id, {
         relations: {
           knowledgeBase: true,
         },
@@ -646,8 +633,7 @@ export class VirtualContributorService {
     const virtualContributorMatchesCount =
       await this.virtualContributorRepository
         .createQueryBuilder('virtual')
-        .leftJoinAndSelect('virtual.agent', 'agent')
-        .leftJoinAndSelect('agent.credentials', 'credential')
+        .leftJoinAndSelect('virtual.actor.credentials', 'credential')
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
         .setParameters({
@@ -665,9 +651,9 @@ export class VirtualContributorService {
   }
 
   //adding this to avoid circular dependency between VirtualContributor, Room, and Invitation
-  private async deleteVCInvitations(contributorID: string) {
+  private async deleteVCInvitations(actorID: string) {
     const invitations = await this.entityManager.find(Invitation, {
-      where: { invitedContributorID: contributorID },
+      where: { invitedActorID: actorID },
     });
     for (const invitation of invitations) {
       if (invitation.authorization) {

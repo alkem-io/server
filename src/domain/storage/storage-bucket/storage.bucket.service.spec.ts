@@ -7,7 +7,7 @@ import { MimeTypeDocument } from '@common/enums/mime.file.type.document';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
@@ -407,7 +407,7 @@ describe('StorageBucketService', () => {
   // ── getFilteredDocuments ────────────────────────────────────────
 
   describe('getFilteredDocuments', () => {
-    const agentInfo = new AgentInfo();
+    const actorContext = new ActorContext();
 
     beforeEach(() => {
       // Default: grant READ access to all documents
@@ -423,7 +423,11 @@ describe('StorageBucketService', () => {
       });
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
 
-      const result = await service.getFilteredDocuments(bucket, {}, agentInfo);
+      const result = await service.getFilteredDocuments(
+        bucket,
+        {},
+        actorContext
+      );
 
       expect(result).toEqual([doc1, doc2]);
     });
@@ -443,7 +447,11 @@ describe('StorageBucketService', () => {
         }
       );
 
-      const result = await service.getFilteredDocuments(bucket, {}, agentInfo);
+      const result = await service.getFilteredDocuments(
+        bucket,
+        {},
+        actorContext
+      );
 
       expect(result).toEqual([doc1]);
     });
@@ -461,7 +469,7 @@ describe('StorageBucketService', () => {
       const result = await service.getFilteredDocuments(
         bucket,
         { IDs: ['doc-c', 'doc-a'] },
-        agentInfo
+        actorContext
       );
 
       expect(result).toEqual([doc3, doc1]);
@@ -479,7 +487,7 @@ describe('StorageBucketService', () => {
         service.getFilteredDocuments(
           bucket,
           { IDs: ['doc-not-here'] },
-          agentInfo
+          actorContext
         )
       ).rejects.toThrow(EntityNotFoundException);
     });
@@ -497,7 +505,7 @@ describe('StorageBucketService', () => {
       const result = await service.getFilteredDocuments(
         bucket,
         { limit: 2 },
-        agentInfo
+        actorContext
       );
 
       expect(result).toHaveLength(2);
@@ -512,7 +520,7 @@ describe('StorageBucketService', () => {
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
 
       await expect(
-        service.getFilteredDocuments(bucket, {}, agentInfo)
+        service.getFilteredDocuments(bucket, {}, actorContext)
       ).rejects.toThrow(EntityNotFoundException);
     });
   });

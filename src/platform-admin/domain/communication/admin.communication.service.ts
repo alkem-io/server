@@ -79,24 +79,21 @@ export class AdminCommunicationService {
     result.roomID = room.id;
     // Use getRoomMembers for efficient membership-only lookup (no message history)
     result.members = await this.communicationAdapter.getRoomMembers(room.id);
-    // check which ones are missing - compare using agent.id (actorId)
+    // check which ones are missing - compare using agent.id (actorID)
     for (const communityMember of communityMembers) {
-      const memberActorId = communityMember.agent?.id;
-      if (!memberActorId) {
-        continue; // skip members without agent
-      }
+      const memberActorID = communityMember.id;
       const inCommunicationRoom = result.members.find(
-        roomMember => roomMember === memberActorId
+        roomMember => roomMember === memberActorID
       );
       if (!inCommunicationRoom) {
-        result.missingMembers.push(memberActorId);
+        result.missingMembers.push(memberActorID);
       }
     }
 
-    // check which ones are extra - compare using agent.id (actorId)
+    // check which ones are extra - compare using entity id (which IS the actorID)
     for (const roomMember of result.members) {
       const inCommunity = communityMembers.find(
-        communityMember => communityMember.agent?.id === roomMember
+        communityMember => communityMember.id === roomMember
       );
       if (!inCommunity) {
         result.extraMembers.push(roomMember);
@@ -129,13 +126,9 @@ export class AdminCommunicationService {
       RoleName.MEMBER
     );
     for (const communityMember of communityMembers) {
-      const memberActorId = communityMember.agent?.id;
-      if (!memberActorId) {
-        continue; // skip members without agent
-      }
       await this.communicationService.addContributorToCommunications(
         communication,
-        memberActorId
+        communityMember.id
       );
     }
     return true;

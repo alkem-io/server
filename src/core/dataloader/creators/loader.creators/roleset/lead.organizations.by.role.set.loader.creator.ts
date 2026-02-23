@@ -38,7 +38,7 @@ export class LeadOrganizationsByRoleSetLoaderCreator
     const whereConditions = keys.map(key => {
       const [type, resourceID] = key.split('|');
       return {
-        agent: {
+        actor: {
           credentials: { type, resourceID: resourceID || '' },
         },
       };
@@ -46,14 +46,14 @@ export class LeadOrganizationsByRoleSetLoaderCreator
 
     const organizations = await this.manager.find(Organization, {
       where: whereConditions,
-      relations: { agent: { credentials: true } },
+      relations: { actor: { credentials: true } },
     });
 
     // Group organizations back by their matching composite key
     return keys.map(key => {
       const [type, resourceID] = key.split('|');
       return organizations.filter(org =>
-        org.agent?.credentials?.some(
+        org.actor?.credentials?.some(
           cred => cred.type === type && cred.resourceID === resourceID
         )
       );

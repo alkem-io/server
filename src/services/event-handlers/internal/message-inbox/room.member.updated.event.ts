@@ -8,8 +8,8 @@ export class RoomMemberUpdatedEvent {
   constructor(
     public readonly payload: {
       roomId: string;
-      memberActorId: string;
-      senderActorId: string;
+      memberActorID: string;
+      senderActorID: string;
       membership: string;
       timestamp: number;
     }

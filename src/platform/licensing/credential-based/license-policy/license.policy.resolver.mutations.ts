@@ -1,9 +1,9 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { ILicensingCredentialBasedPolicyCredentialRule } from '../licensing-credential-based-entitlements-engine';
 import { CreateLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.create';
 import { DeleteLicensePolicyCredentialRuleInput } from './dto/license.policy.dto.credential.rule.delete';
@@ -22,14 +22,14 @@ export class LicensePolicyResolverMutations {
     description: 'Deletes the specified LicensePolicy.',
   })
   async adminLicensePolicyDeleteCredentialRule(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteLicensePolicyCredentialRuleInput
   ): Promise<ILicensingCredentialBasedPolicyCredentialRule> {
     const licensePolicy =
       await this.licensePolicyService.getDefaultLicensePolicyOrFail();
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       licensePolicy.authorization,
       AuthorizationPrivilege.DELETE,
       `delete LicensePolicy CredentialRule: ${licensePolicy.id}`
@@ -44,14 +44,14 @@ export class LicensePolicyResolverMutations {
     description: 'Updates a CredentialRule on the LicensePolicy.',
   })
   async adminLicensePolicyUpdateCredentialRule(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateLicensePolicyCredentialRuleInput
   ): Promise<ILicensingCredentialBasedPolicyCredentialRule> {
     const licensePolicy =
       await this.licensePolicyService.getDefaultLicensePolicyOrFail();
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       licensePolicy.authorization,
       AuthorizationPrivilege.UPDATE,
       `update LicensePolicy credential rule: ${licensePolicy.id}`
@@ -64,14 +64,14 @@ export class LicensePolicyResolverMutations {
     description: 'Creates a CredentialRule on the LicensePolicy.',
   })
   async adminLicensePolicyCreateCredentialRule(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('createData') createData: CreateLicensePolicyCredentialRuleInput
   ): Promise<ILicensingCredentialBasedPolicyCredentialRule> {
     const licensePolicy =
       await this.licensePolicyService.getDefaultLicensePolicyOrFail();
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       licensePolicy.authorization,
       AuthorizationPrivilege.CREATE,
       `create LicensePolicy credential rule: ${licensePolicy.id}`
