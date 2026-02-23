@@ -20,7 +20,12 @@ import { Readable } from 'stream';
 import { FindOneOptions, Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { DeleteVisualInput } from './dto/visual.dto.delete';
-import { DEFAULT_VISUAL_CONSTRAINTS } from './visual.constraints';
+import { ImageCompressionService } from './image.compression.service';
+import { ImageConversionService } from './image.conversion.service';
+import {
+  DEFAULT_VISUAL_CONSTRAINTS,
+  VISUAL_ALLOWED_TYPES,
+} from './visual.constraints';
 import { Visual } from './visual.entity';
 import { IVisual } from './visual.interface';
 
@@ -30,6 +35,8 @@ export class VisualService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
+    private imageConversionService: ImageConversionService,
+    private imageCompressionService: ImageCompressionService,
     @InjectRepository(Visual)
     private visualRepository: Repository<Visual>
   ) {}
@@ -38,6 +45,12 @@ export class VisualService {
     visualInput: CreateVisualInput,
     initialUri?: string
   ): IVisual {
+    if (!visualInput.name) {
+      throw new ValidationException(
+        'Visual type (name) must be provided when creating a visual.',
+        LogContext.COMMUNITY
+      );
+    }
     const visual: IVisual = Visual.create({
       ...visualInput,
       uri: initialUri ?? '',
@@ -95,22 +108,43 @@ export class VisualService {
         LogContext.DOCUMENT
       );
 
-    const buffer = await streamToBuffer(readStream);
-
-    const { imageHeight, imageWidth } = await this.getImageDimensions(buffer);
-    this.validateImageWidth(visual, imageWidth);
-    this.validateImageHeight(visual, imageHeight);
-    const documentForVisual = await this.documentService.getDocumentFromURL(
-      visual.uri
-    );
-
     try {
+      const buffer = await streamToBuffer(readStream);
+
+      // Stage 1: HEIC/HEIF → JPEG conversion
+      const conversionResult =
+        await this.imageConversionService.convertIfNeeded(
+          buffer,
+          mimetype,
+          fileName
+        );
+
+      // Stage 2: Optimize compressible images (JPEG, WebP)
+      const compressionResult =
+        await this.imageCompressionService.compressIfNeeded(
+          conversionResult.buffer,
+          conversionResult.mimeType,
+          conversionResult.fileName
+        );
+
+      const processedBuffer = compressionResult.buffer;
+      const processedMimeType = compressionResult.mimeType;
+      const processedFileName = compressionResult.fileName;
+
+      const { imageHeight, imageWidth } =
+        await this.getImageDimensions(processedBuffer);
+      this.validateImageWidth(visual, imageWidth);
+      this.validateImageHeight(visual, imageHeight);
+      const documentForVisual = await this.documentService.getDocumentFromURL(
+        visual.uri
+      );
+
       const newDocument =
         await this.storageBucketService.uploadFileAsDocumentFromBuffer(
           storageBucket.id,
-          buffer,
-          fileName,
-          mimetype,
+          processedBuffer,
+          processedFileName,
+          processedMimeType,
           userID
         );
       // Delete the old document
@@ -124,6 +158,9 @@ export class VisualService {
       }
       return newDocument;
     } catch (error: any) {
+      if (error instanceof StorageUploadFailedException) {
+        throw error;
+      }
       throw new StorageUploadFailedException(
         'Upload on visual failed!',
         LogContext.STORAGE_BUCKET,
@@ -162,10 +199,29 @@ export class VisualService {
   }
 
   public validateMimeType(visual: IVisual, mimeType: string) {
-    if (!visual.allowedTypes.includes(mimeType)) {
+    // Check both the stored allowedTypes on the entity AND the current
+    // DEFAULT_VISUAL_CONSTRAINTS. This ensures existing Visual entities
+    // with stale allowedTypes (missing HEIC/HEIF) still accept new formats
+    // without requiring a database migration.
+    const currentDefaults =
+      DEFAULT_VISUAL_CONSTRAINTS[
+        visual.name as keyof typeof DEFAULT_VISUAL_CONSTRAINTS
+      ];
+    const allowedByDefaults = currentDefaults
+      ? (currentDefaults.allowedTypes as readonly string[])
+      : VISUAL_ALLOWED_TYPES;
+
+    if (
+      !visual.allowedTypes.includes(mimeType) &&
+      !allowedByDefaults.includes(mimeType)
+    ) {
       throw new ValidationException(
-        `Image upload type (${mimeType}) not in allowed mime types: ${visual.allowedTypes}`,
-        LogContext.COMMUNITY
+        'Image upload type not in allowed mime types',
+        LogContext.COMMUNITY,
+        {
+          mimeType,
+          allowedTypes: [...visual.allowedTypes],
+        }
       );
     }
   }
@@ -231,6 +287,26 @@ export class VisualService {
       {
         name: VisualType.AVATAR,
         ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR],
+      },
+      uri
+    );
+  }
+
+  public createVisualMediaGalleryImage(uri?: string): IVisual {
+    return this.createVisual(
+      {
+        name: VisualType.MEDIA_GALLERY_IMAGE,
+        ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.MEDIA_GALLERY_IMAGE],
+      },
+      uri
+    );
+  }
+
+  public createVisualMediaGalleryVideo(uri?: string): IVisual {
+    return this.createVisual(
+      {
+        name: VisualType.MEDIA_GALLERY_VIDEO,
+        ...DEFAULT_VISUAL_CONSTRAINTS[VisualType.MEDIA_GALLERY_VIDEO],
       },
       uri
     );

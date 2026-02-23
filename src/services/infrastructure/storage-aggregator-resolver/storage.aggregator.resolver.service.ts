@@ -128,7 +128,7 @@ export class StorageAggregatorResolverService {
         },
       },
       relations: {
-        profile: true,
+        actor: { profile: true },
       },
     });
     if (!organization) {
@@ -150,7 +150,7 @@ export class StorageAggregatorResolverService {
         },
       },
       relations: {
-        profile: true,
+        actor: { profile: true },
       },
     });
     if (!user) {

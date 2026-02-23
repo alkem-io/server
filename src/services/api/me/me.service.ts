@@ -1,7 +1,7 @@
 import { LogContext } from '@common/enums';
 import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotFoundException } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceService } from '@domain/space/space/space.service';
@@ -119,10 +119,10 @@ export class MeService {
     return results;
   }
 
-  private async getSpaceMembershipsForAgentInfo(
-    agentInfo: AgentInfo
+  private async getSpaceMembershipsForActorContext(
+    actorContext: ActorContext
   ): Promise<ISpace[]> {
-    const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
+    const credentialMap = groupCredentialsByEntity(actorContext.credentials);
     const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
 
     const allSpaces = await this.spaceService.getSpacesInList(spaceIds);
@@ -131,7 +131,7 @@ export class MeService {
       this.getSpaceMembershipCollaborationInfo(validSpaces);
     const latestActivitiesPerSpace =
       await this.activityService.getLatestActivitiesPerSpaceMembership(
-        agentInfo.userID,
+        actorContext.actorID,
         spaceMembershipCollaborationInfo
       );
     return sortSpacesByActivity(validSpaces, latestActivitiesPerSpace);
@@ -163,10 +163,10 @@ export class MeService {
   }
 
   public async getSpaceMembershipsFlat(
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<CommunityMembershipResult[]> {
     const sortedFlatListSpacesWithMembership =
-      await this.getSpaceMembershipsForAgentInfo(agentInfo);
+      await this.getSpaceMembershipsForActorContext(actorContext);
     const spaceMemberships: CommunityMembershipResult[] = [];
 
     for (const space of sortedFlatListSpacesWithMembership) {
@@ -181,11 +181,11 @@ export class MeService {
   }
 
   public async getSpaceMembershipsHierarchical(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     limit?: number
   ): Promise<CommunityMembershipResult[]> {
     const sortedFlatListSpacesWithMembership =
-      await this.getSpaceMembershipsForAgentInfo(agentInfo);
+      await this.getSpaceMembershipsForActorContext(actorContext);
 
     const levelZeroSpacesRaw = this.filterSpacesByLevel(
       sortedFlatListSpacesWithMembership,
@@ -282,29 +282,29 @@ export class MeService {
   }
 
   public async getMySpaces(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     limit = 20
   ): Promise<MySpaceResults[]> {
     const rawActivities = await this.activityService.getMySpacesActivity(
-      agentInfo.userID,
+      actorContext.actorID,
       limit * 2 //magic number, should not be needed. toDo Fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/3626
     );
 
     // Get the user's actual space memberships to filter activities
-    const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
+    const credentialMap = groupCredentialsByEntity(actorContext.credentials);
     const userSpaceIds = new Set(
       Array.from(credentialMap.get('spaces')?.keys() ?? [])
     );
 
+    const activityLogs =
+      await this.activityLogService.convertRawActivityToResults(rawActivities);
+
     const mySpaceResults: MySpaceResults[] = [];
-
-    for (const rawActivity of rawActivities) {
-      const activityLog =
-        await this.activityLogService.convertRawActivityToResult(rawActivity);
-
+    for (let i = 0; i < rawActivities.length; i++) {
+      const activityLog = activityLogs[i];
       if (!activityLog?.space) {
         this.logger.warn(
-          `Unable to process activity entry ${rawActivity.id} because it does not have a journey.`,
+          `Unable to process activity entry ${rawActivities[i].id} because it does not have a journey.`,
           LogContext.ACTIVITY
         );
         continue;

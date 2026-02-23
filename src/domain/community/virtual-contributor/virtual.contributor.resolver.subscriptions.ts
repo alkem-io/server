@@ -1,12 +1,12 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver } from '@nestjs/graphql';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
 import { VirtualContributorUpdatedSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser, TypedSubscription } from '@src/common/decorators';
+import { CurrentActor, TypedSubscription } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { VirtualContributorUpdatedSubscriptionArgs } from './dto/virtual.contributor.updated.subscription.args';
 import { VirtualContributorUpdatedSubscriptionResult } from './dto/virtual.contributor.updated.subscription.result';
@@ -47,17 +47,17 @@ export class VirtualContributorResolverSubscriptions {
     },
   })
   async virtualContributorUpdated(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args({ nullable: false })
     { virtualContributorID }: VirtualContributorUpdatedSubscriptionArgs
   ) {
     const vc =
-      await this.virtualContributorService.getVirtualContributorOrFail(
+      await this.virtualContributorService.getVirtualContributorByIdOrFail(
         virtualContributorID
       );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       vc.authorization,
       AuthorizationPrivilege.READ,
       `subscription to Virtual Contributor updates on: ${vc.id}`

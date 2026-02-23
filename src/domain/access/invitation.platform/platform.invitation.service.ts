@@ -52,6 +52,9 @@ export class PlatformInvitationService {
         }
       }
     }
+    platformInvitationData.email = platformInvitationData.email
+      .trim()
+      .toLowerCase();
     const platformInvitation: IPlatformInvitation = PlatformInvitation.create(
       platformInvitationData
     );
@@ -115,7 +118,7 @@ export class PlatformInvitationService {
   }
 
   async getCreatedBy(platformInvitation: IPlatformInvitation): Promise<IUser> {
-    const user = await this.userLookupService.getUserOrFail(
+    const user = await this.userLookupService.getUserByIdOrFail(
       platformInvitation.createdBy
     );
     return user;
@@ -126,7 +129,7 @@ export class PlatformInvitationService {
   ): Promise<IPlatformInvitation[]> {
     const existingPlatformInvitations =
       await this.platformInvitationRepository.find({
-        where: { email: email },
+        where: { email: email.toLowerCase() },
         relations: { roleSet: true },
       });
 
@@ -142,7 +145,7 @@ export class PlatformInvitationService {
     const existingPlatformInvitations =
       await this.platformInvitationRepository.find({
         where: {
-          email: email,
+          email: email.toLowerCase(),
           roleSet: {
             id: roleSetID,
           },

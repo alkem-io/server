@@ -2,17 +2,17 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ApplicationModule } from '@domain/access/application/application.module';
 import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { PlatformInvitationModule } from '@domain/access/invitation.platform/platform.invitation.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { FormModule } from '@domain/common/form/form.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { LifecycleModule } from '@domain/common/lifecycle/lifecycle.module';
 import { CommunityCommunicationModule } from '@domain/community/community-communication/community.communication.module';
-import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
-import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { Module } from '@nestjs/common';
@@ -25,7 +25,7 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { RoleModule } from '../role/role.module';
 import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
-import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
+import { RoleSetActorRolesDataLoader } from './role.set.data.loaders.actor.roles';
 import { RoleSet } from './role.set.entity';
 import { RoleSetResolverFields } from './role.set.resolver.fields';
 import { RoleSetResolverFieldsPublic } from './role.set.resolver.fields.public';
@@ -45,13 +45,13 @@ import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.
     AuthorizationPolicyModule,
     LicenseModule,
     FormModule,
-    AgentModule,
+    ActorModule,
     UserLookupModule,
     UserModule,
     OrganizationLookupModule,
     SpaceLookupModule,
-    VirtualContributorLookupModule,
-    ContributorModule,
+    VirtualActorLookupModule,
+    ActorLookupModule,
     RoleModule,
     InvitationModule,
     EntityResolverModule,
@@ -79,9 +79,15 @@ import { RoleSetServiceLifecycleInvitation } from './role.set.service.lifecycle.
     RoleSetEventsService,
     RoleSetServiceLifecycleApplication,
     RoleSetServiceLifecycleInvitation,
-    RoleSetAgentRolesDataLoader,
+    RoleSetActorRolesDataLoader,
     RoleSetMembershipStatusDataLoader,
   ],
-  exports: [RoleSetService, RoleSetAuthorizationService, RoleSetLicenseService],
+  exports: [
+    RoleSetService,
+    RoleSetAuthorizationService,
+    RoleSetLicenseService,
+    RoleSetActorRolesDataLoader,
+    RoleSetMembershipStatusDataLoader,
+  ],
 })
 export class RoleSetModule {}

@@ -2,7 +2,7 @@ import {
   CREDENTIAL_RULE_ACCOUNT_ADMIN_MANAGE,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
-  CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_PLATFORM_SETTINGS,
+  CREDENTIAL_RULE_VIRTUAL_PLATFORM_SETTINGS,
   POLICY_RULE_READ_ABOUT,
 } from '@common/constants';
 import {
@@ -13,8 +13,8 @@ import {
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { AgentAuthorizationService } from '@domain/actor/actor/actor.service';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { KnowledgeBaseAuthorizationService } from '@domain/common/knowledge-base/knowledge.base.service.authorization';
@@ -42,21 +42,22 @@ export class VirtualContributorAuthorizationService {
     virtualInput: IVirtualContributor
   ): Promise<IAuthorizationPolicy[]> {
     const virtualContributor =
-      await this.virtualService.getVirtualContributorOrFail(virtualInput.id, {
-        relations: {
-          account: {
-            spaces: true,
+      await this.virtualService.getVirtualContributorByIdOrFail(
+        virtualInput.id,
+        {
+          relations: {
+            account: {
+              spaces: true,
+            },
+            actor: { profile: true },
+            knowledgeBase: true,
           },
-          profile: true,
-          agent: true,
-          knowledgeBase: true,
-        },
-      });
+        }
+      );
     if (
       !virtualContributor.account ||
       !virtualContributor.account.spaces ||
       !virtualContributor.profile ||
-      !virtualContributor.agent ||
       !virtualContributor.knowledgeBase
     )
       throw new RelationshipNotFoundException(
@@ -128,7 +129,7 @@ export class VirtualContributorAuthorizationService {
 
     const agentAuthorization =
       this.agentAuthorizationService.applyAuthorizationPolicy(
-        virtualContributor.agent,
+        virtualContributor,
         virtualContributor.authorization
       );
     updatedAuthorizations.push(agentAuthorization);
@@ -209,7 +210,7 @@ export class VirtualContributorAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
         ],
-        CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_PLATFORM_SETTINGS
+        CREDENTIAL_RULE_VIRTUAL_PLATFORM_SETTINGS
       );
     platformSettings.cascade = false;
     newRules.push(platformSettings);

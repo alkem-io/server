@@ -1,10 +1,10 @@
-import { createDiffContext } from '../../../src/schema-contract/diff/diff-core';
-import { buildChangeReport } from '../../../src/schema-contract/classify/build-report';
-import { applyOverrides } from '../../../src/schema-contract/governance/apply-overrides';
-import { ChangeType } from '../../../src/schema-contract/model';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { buildChangeReport } from '../../../src/schema-contract/classify/build-report';
+import { createDiffContext } from '../../../src/schema-contract/diff/diff-core';
+import { applyOverrides } from '../../../src/schema-contract/governance/apply-overrides';
+import { ChangeType } from '../../../src/schema-contract/model';
 
 /**
  * T048: Integration test override approved scenario.

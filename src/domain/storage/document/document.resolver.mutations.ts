@@ -1,6 +1,6 @@
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
@@ -21,14 +21,14 @@ export class DocumentResolverMutations {
     description: 'Deletes the specified Document.',
   })
   async deleteDocument(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteDocumentInput
   ): Promise<IDocument> {
     const document = await this.documentService.getDocumentOrFail(
       deleteData.ID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       document.authorization,
       AuthorizationPrivilege.DELETE,
       `delete document: ${document.displayName}`
@@ -41,14 +41,14 @@ export class DocumentResolverMutations {
     description: 'Updates the specified Document.',
   })
   async updateDocument(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('documentData') documentData: UpdateDocumentInput
   ): Promise<IDocument> {
     const document = await this.documentService.getDocumentOrFail(
       documentData.ID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       document.authorization,
       AuthorizationPrivilege.UPDATE,
       `update document: ${document.displayName}`

@@ -1,5 +1,8 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
+import { CommunityRoleSetLoaderCreator } from '@core/dataloader/creators/loader.creators';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
 import { IRoleSet } from '@domain/access/role-set';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { ICommunication } from '@domain/communication/communication/communication.interface';
@@ -7,13 +10,16 @@ import { Community, ICommunity } from '@domain/community/community';
 import { IUserGroup } from '@domain/community/user-group';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import {
+  AuthorizationActorHasPrivilege,
+  Profiling,
+} from '@src/common/decorators';
 import { CommunityService } from './community.service';
 @Resolver(() => ICommunity)
 export class CommunityResolverFields {
   constructor(private communityService: CommunityService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('groups', () => [IUserGroup], {
     nullable: false,
@@ -24,7 +30,7 @@ export class CommunityResolverFields {
     return await this.communityService.getUserGroups(community);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('group', () => IUserGroup, {
     nullable: false,
@@ -37,7 +43,7 @@ export class CommunityResolverFields {
     return await this.communityService.getUserGroup(community, groupID);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('communication', () => ICommunication, {
     nullable: false,
@@ -55,7 +61,11 @@ export class CommunityResolverFields {
     nullable: false,
     description: 'The RoleSet for this Community.',
   })
-  async roleSet(@Parent() community: Community): Promise<IRoleSet> {
-    return this.communityService.getRoleSet(community);
+  async roleSet(
+    @Parent() community: Community,
+    @Loader(CommunityRoleSetLoaderCreator, { parentClassRef: Community })
+    loader: ILoader<IRoleSet>
+  ): Promise<IRoleSet> {
+    return loader.load(community.id);
   }
 }

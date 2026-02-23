@@ -13,7 +13,7 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -52,7 +52,7 @@ export class CollaborationService {
   async createCollaboration(
     collaborationData: CreateCollaborationInput,
     storageAggregator: IStorageAggregator,
-    agentInfo?: AgentInfo
+    actorContext?: ActorContext
   ): Promise<ICollaboration> {
     if (
       !collaborationData.calloutsSetData ||
@@ -145,7 +145,7 @@ export class CollaborationService {
           collaboration.calloutsSet,
           collaborationData.calloutsSetData.calloutsData,
           storageAggregator,
-          agentInfo?.userID
+          actorContext?.actorID
         );
     }
 
@@ -163,7 +163,7 @@ export class CollaborationService {
     this.innovationFlowService.validateInnovationFlowDefinition(
       innovationFlowData.states
     );
-    const allowedValues = innovationFlowData.states
+    const allowedValues = [...innovationFlowData.states]
       .sort(sortBySortOrder)
       .map(state => state.displayName);
     let defaultSelectedValue = innovationFlowData.currentStateDisplayName;
@@ -339,7 +339,7 @@ export class CollaborationService {
   async getInnovationFlow(collaborationID: string): Promise<IInnovationFlow> {
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
       relations: {
-        innovationFlow: true,
+        innovationFlow: { states: { defaultCalloutTemplate: true } },
       },
     });
 

@@ -8,7 +8,7 @@ import {
   SUBSCRIPTION_DISCUSSION_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_SUBSPACE_CREATED,
-  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+  SUBSCRIPTION_VIRTUAL_UPDATED,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import { Global, Inject, Module, OnModuleDestroy } from '@nestjs/common';
@@ -38,8 +38,8 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
     queueName: MessagingQueue.SUBSCRIPTION_ROOM_EVENT,
   },
   {
-    provide: SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
-    queueName: MessagingQueue.SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+    provide: SUBSCRIPTION_VIRTUAL_UPDATED,
+    queueName: MessagingQueue.SUBSCRIPTION_VIRTUAL_UPDATED,
   },
 ];
 
@@ -97,7 +97,7 @@ export class MicroservicesModule implements OnModuleDestroy {
     private readonly subspaceCreated: PubSubEngine,
     @Inject(SUBSCRIPTION_ROOM_EVENT)
     private readonly roomEvent: PubSubEngine,
-    @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
+    @Inject(SUBSCRIPTION_VIRTUAL_UPDATED)
     private readonly virtualContributorUpdated: PubSubEngine
   ) {}
 

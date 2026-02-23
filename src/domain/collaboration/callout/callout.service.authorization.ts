@@ -18,10 +18,11 @@ import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorizat
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ClassificationAuthorizationService } from '@domain/common/classification/classification.service.authorization';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { Injectable } from '@nestjs/common';
@@ -34,6 +35,7 @@ export class CalloutAuthorizationService {
   constructor(
     private calloutService: CalloutService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private classificationAuthorizationService: ClassificationAuthorizationService,
     private contributionAuthorizationService: CalloutContributionAuthorizationService,
     private calloutFramingAuthorizationService: CalloutFramingAuthorizationService,
     private roomAuthorizationService: RoomAuthorizationService,
@@ -53,6 +55,7 @@ export class CalloutAuthorizationService {
         comments: true,
         contributions: true,
         contributionDefaults: true,
+        classification: true,
         calloutsSet: {
           collaboration: {
             space: {
@@ -146,6 +149,15 @@ export class CalloutAuthorizationService {
           commentsAuthorization
         );
       updatedAuthorizations.push(commentsAuthorization);
+    }
+
+    if (callout.classification) {
+      const classificationAuthorizations =
+        await this.classificationAuthorizationService.applyAuthorizationPolicy(
+          callout.classification.id,
+          callout.authorization
+        );
+      updatedAuthorizations.push(...classificationAuthorizations);
     }
 
     return updatedAuthorizations;

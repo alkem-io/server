@@ -38,7 +38,7 @@ export class HttpExceptionFilter implements ExceptionFilter {
     const status = exception.getStatus();
     let userID = 'unknown';
     if (req.user) {
-      userID = req.user.userID;
+      userID = req.user.actorID;
     }
 
     exception.details = {
@@ -54,6 +54,8 @@ export class HttpExceptionFilter implements ExceptionFilter {
     response.status(status).json({
       statusCode: status,
       code: exception.code,
+      numericCode: exception.numericCode,
+      userMessage: exception.userMessage,
       timestamp: new Date().toISOString(),
       message: exception.message,
       errorId: exception.errorId,

@@ -1,14 +1,14 @@
 import { AccountType } from '@common/enums/account.type';
+import { ActorType } from '@common/enums/actor.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { ProfileType } from '@common/enums/profile.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ApplicationService } from '@domain/access/application/application.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { Organization } from '@domain/community/organization';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Account } from '@domain/space/account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '@domain/space/account/constants';
 import { Space } from '@domain/space/space/space.entity';
@@ -21,17 +21,14 @@ import {
   MockEntityManagerProvider,
   MockSpaceService,
 } from '@test/mocks';
+import { MockActorLookupService } from '@test/mocks/actor.lookup.service.mock';
 import { MockApplicationService } from '@test/mocks/application.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
 import { MockCommunityService } from '@test/mocks/community.service.mock';
-import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
-import { MockOrganizationLookupService } from '@test/mocks/organization.lookup.service.mock';
 import { MockOrganizationService } from '@test/mocks/organization.service.mock';
 import { MockSpaceFilterService } from '@test/mocks/space.filter.service.mock';
-import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
 import { MockUserService } from '@test/mocks/user.service.mock';
-import { MockVirtualContributorLookupService } from '@test/mocks/virtual.contributor.lookup.service.mock';
 import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { testData } from '@test/utils';
@@ -46,8 +43,7 @@ describe('RolesService', () => {
   let rolesService: RolesService;
   let spaceFilterService: SpaceFilterService;
   let applicationService: ApplicationService;
-  let userLookupService: UserLookupService;
-  let organizationLookupService: OrganizationLookupService;
+  let actorLookupService: ActorLookupService;
   let communityResolverService: CommunityResolverService;
 
   beforeAll(async () => {
@@ -60,23 +56,19 @@ describe('RolesService', () => {
         MockSpaceFilterService,
         MockOrganizationService,
         MockCommunityResolverService,
-        MockVirtualContributorLookupService,
-        MockOrganizationLookupService,
         MockAuthorizationService,
         MockWinstonProvider,
         MockEntityManagerProvider,
         MockSpaceService,
-        MockUserLookupService,
         MockVirtualContributorService,
-        MockContributorLookupService,
+        MockActorLookupService,
         RolesService,
       ],
     }).compile();
 
     rolesService = moduleRef.get(RolesService);
-    userLookupService = moduleRef.get(UserLookupService);
+    actorLookupService = moduleRef.get(ActorLookupService);
     applicationService = moduleRef.get(ApplicationService);
-    organizationLookupService = moduleRef.get(OrganizationLookupService);
     communityResolverService = moduleRef.get(CommunityResolverService);
     spaceFilterService = moduleRef.get(SpaceFilterService);
   });
@@ -105,7 +97,10 @@ describe('RolesService', () => {
       }
       spaceRolesMock.subspaces = subspaceRolesMocks;
       const spacesRolesMock: RolesResultSpace[] = [spaceRolesMock];
-      vi.spyOn(userLookupService, 'getUserWithAgent').mockResolvedValue(user);
+      vi.spyOn(
+        actorLookupService,
+        'getActorCredentialsOrFail'
+      ).mockResolvedValue(user.credentials ?? []);
 
       vi.spyOn(spaceFilterService, 'getAllowedVisibilities').mockReturnValue([
         SpaceVisibility.ACTIVE,
@@ -141,14 +136,14 @@ describe('RolesService', () => {
 
     it('Should get user roles', async () => {
       const roles = await rolesService.getRolesForUser({
-        userID: testData.user.id,
+        actorID: testData.user.id,
       });
 
       const organizationRoles =
         await rolesService.getOrganizationRolesForUser(roles);
       const spaceRoles = await rolesService.getSpaceRolesForContributor(
         roles,
-        testData.agentInfo
+        testData.actorContext
       );
 
       expect(organizationRoles).toEqual(
@@ -187,20 +182,17 @@ describe('RolesService', () => {
   describe('Organization Roles', () => {
     it('Should get organization roles', async () => {
       vi.spyOn(
-        organizationLookupService,
-        'getOrganizationAndAgent'
-      ).mockResolvedValue({
-        organization: testData.organization,
-        agent: testData.agent,
-      } as any);
+        actorLookupService,
+        'getActorCredentialsOrFail'
+      ).mockResolvedValue((testData.organization as any).credentials ?? []);
 
       const roles = await rolesService.getRolesForOrganization({
-        organizationID: testData.organization.id,
+        actorID: testData.organization.id,
       });
 
       const spaces = await rolesService.getSpaceRolesForContributor(
         roles,
-        testData.agentInfo
+        testData.actorContext
       );
 
       expect(spaces).toEqual(
@@ -252,6 +244,7 @@ const getSpaceRoleResultMock = ({
     visibility: SpaceVisibility.ACTIVE,
     roles,
     space: {
+      type: ActorType.SPACE,
       id,
       platformRolesAccess: {
         roles: [],
@@ -277,12 +270,14 @@ const getSpaceRoleResultMock = ({
       visibility: SpaceVisibility.ACTIVE,
       account: {
         id: `account-${id}`,
+        nameID: `account-nameid-${id}`,
+        accountType: AccountType.ORGANIZATION,
         virtualContributors: [],
         innovationHubs: [],
         innovationPacks: [],
         externalSubscriptionID: '',
         spaces: [],
-        type: AccountType.ORGANIZATION,
+        type: ActorType.ORGANIZATION,
         ...getEntityMock<Account>(),
         baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
       },

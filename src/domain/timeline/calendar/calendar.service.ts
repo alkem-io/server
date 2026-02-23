@@ -5,7 +5,7 @@ import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { convertToEntity } from '@common/utils/convert-to-entity';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Collaboration } from '@domain/collaboration/collaboration';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -168,7 +168,7 @@ export class CalendarService {
 
   public async getCalendarEvents(
     calendar: ICalendar,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     rootSpaceId?: string
   ): Promise<ICalendarEvent[]> {
     const calendarLoaded = await this.getCalendarOrFail(calendar.id, {
@@ -189,7 +189,9 @@ export class CalendarService {
     }
 
     // First filter the events the current user has READ privilege to
-    return events.filter(event => this.hasAgentAccessToEvent(event, agentInfo));
+    return events.filter(event =>
+      this.hasAgentAccessToEvent(event, actorContext)
+    );
   }
 
   public async getCalendarEvent(
@@ -213,10 +215,10 @@ export class CalendarService {
 
   private hasAgentAccessToEvent(
     event: ICalendarEvent,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): boolean {
     return this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       event.authorization,
       AuthorizationPrivilege.READ
     );
@@ -254,10 +256,10 @@ export class CalendarService {
   public async processActivityCalendarEventCreated(
     calendar: ICalendar,
     calendarEvent: ICalendarEvent,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const activityLogInput: ActivityInputCalendarEventCreated = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorID,
       calendar: calendar,
       calendarEvent: calendarEvent,
     };
@@ -275,8 +277,8 @@ export class CalendarService {
           space: spaceID,
         },
         {
-          id: agentInfo.userID,
-          email: agentInfo.email,
+          id: actorContext.actorID,
+          email: actorContext.actorID,
         }
       );
     }

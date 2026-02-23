@@ -1,6 +1,6 @@
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { RoleName } from '@common/enums/role.name';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import {
   Inject,
   Injectable,

@@ -8,6 +8,7 @@ export enum UrlPathBase {
   INNOVATION_LIBRARY = 'innovation-library',
   INNOVATION_PACKS = 'innovation-packs',
   INNOVATION_HUBS = 'innovation-hubs',
+  HUB = 'hub',
   FORUM = 'forum',
   SPACE_EXPLORER = 'spaces',
   CONTRIBUTORS_EXPLORER = 'contributors',

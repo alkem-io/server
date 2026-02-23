@@ -1,0 +1,26 @@
+import { IVisual } from '@domain/common/visual/visual.interface';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { IMediaGallery } from './media.gallery.interface';
+import { MediaGalleryService } from './media.gallery.service';
+
+@Resolver(() => IMediaGallery)
+export class MediaGalleryResolverFields {
+  constructor(private readonly mediaGalleryService: MediaGalleryService) {}
+
+  @ResolveField('visuals', () => [IVisual], {
+    nullable: false,
+    description: 'The visuals contained in this media gallery.',
+  })
+  async visuals(@Parent() mediaGallery: IMediaGallery): Promise<IVisual[]> {
+    if (mediaGallery.visuals) {
+      return mediaGallery.visuals;
+    }
+
+    const hydratedGallery =
+      await this.mediaGalleryService.getMediaGalleryOrFail(mediaGallery.id, {
+        relations: { visuals: true },
+      });
+
+    return hydratedGallery.visuals ?? [];
+  }
+}

@@ -1,5 +1,5 @@
 import { LogContext } from '@common/enums';
-import { AgentType } from '@common/enums/agent.type';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
@@ -8,12 +8,12 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CreateConversationData } from '@domain/communication/conversation/dto';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -44,8 +44,8 @@ export class MessagingService {
     private readonly conversationService: ConversationService,
     private readonly platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
     private readonly userLookupService: UserLookupService,
-    private readonly virtualContributorLookupService: VirtualContributorLookupService,
-    private readonly agentService: AgentService,
+    private readonly virtualActorLookupService: VirtualActorLookupService,
+    private readonly actorService: ActorService,
     private readonly subscriptionPublishService: SubscriptionPublishService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -143,19 +143,18 @@ export class MessagingService {
         );
       }
       const vc =
-        await this.virtualContributorLookupService.getVirtualContributorOrFail(
-          vcId,
-          { relations: { agent: true } }
+        await this.virtualActorLookupService.getVirtualContributorByIdOrFail(
+          vcId
         );
-      invitedAgentId = vc.agent.id;
+      invitedAgentId = vc.id;
       isUserVc = true;
     } else if (conversationData.invitedAgentId) {
       invitedAgentId = conversationData.invitedAgentId;
       // Determine if invited agent is a VC by checking agent type
-      const agent = await this.agentService.getAgentOrFail(
+      const actor = await this.actorService.getActorOrFail(
         conversationData.invitedAgentId
       );
-      isUserVc = agent.type === AgentType.VIRTUAL_CONTRIBUTOR;
+      isUserVc = actor.type === ActorType.VIRTUAL_CONTRIBUTOR;
     } else {
       throw new ValidationException(
         'Either invitedAgentId or wellKnownVirtualContributor must be provided',
@@ -237,7 +236,7 @@ export class MessagingService {
     if (isUserVc) {
       // USER_VC: Notify human user with VC pre-resolved
       const vc =
-        await this.virtualContributorLookupService.getVirtualContributorByAgentId(
+        await this.virtualActorLookupService.getVirtualContributorById(
           invitedAgentId
         );
 
@@ -269,8 +268,8 @@ export class MessagingService {
     } else {
       // USER_USER: Notify both users, each with the OTHER user pre-resolved
       const [callerUser, invitedUser] = await Promise.all([
-        this.userLookupService.getUserByAgentId(callerAgentId),
-        this.userLookupService.getUserByAgentId(invitedAgentId),
+        this.userLookupService.getUserById(callerAgentId),
+        this.userLookupService.getUserById(invitedAgentId),
       ]);
 
       if (!callerUser) {
@@ -381,28 +380,33 @@ export class MessagingService {
    * Uses the pivot table to find conversations where the agent is a member.
    * Optionally filters by conversation type.
    * @param messagingId - UUID of the messaging container (typically platform set)
-   * @param agentId - UUID of the agent
+   * @param actorID - UUID of the agent
    * @param typeFilter - Optional filter for conversation type (USER_USER or USER_VC)
    * @returns Array of conversations the agent is a member of
    */
   public async getConversationsForAgent(
     messagingId: string,
-    agentId: string,
+    actorID: string,
     typeFilter?: CommunicationConversationType
   ): Promise<IConversation[]> {
     const queryBuilder = this.conversationMembershipRepository
       .createQueryBuilder('membership')
       .innerJoinAndSelect('membership.conversation', 'conversation')
       .leftJoinAndSelect('conversation.authorization', 'authorization')
-      .where('membership.agentId = :agentId', { agentId })
+      // Eager-load room — the query already joins conversations,
+      // just add the room relation to eliminate N queries
+      .leftJoinAndSelect('conversation.room', 'room')
+      .leftJoinAndSelect('room.authorization', 'roomAuthorization')
+      .where('membership.actorID = :actorID', { actorID })
       .andWhere('conversation.messagingId = :messagingId', { messagingId });
 
     // Filter by type using subquery - O(1) instead of O(n)
     if (typeFilter) {
       // Subquery checks if conversation has a VC member
+      // ConversationMembership has actorID column; join to Actor table directly
       const vcExistsSubquery = this.conversationMembershipRepository
         .createQueryBuilder('m2')
-        .innerJoin('m2.agent', 'a')
+        .innerJoin('actor', 'a', 'a.id = m2.actorID')
         .where('m2.conversationId = membership.conversationId')
         .andWhere('a.type = :vcType')
         .select('1');
@@ -413,7 +417,7 @@ export class MessagingService {
         // USER_USER: No VC members
         queryBuilder.andWhere(`NOT EXISTS (${vcExistsSubquery.getQuery()})`);
       }
-      queryBuilder.setParameter('vcType', AgentType.VIRTUAL_CONTRIBUTOR);
+      queryBuilder.setParameter('vcType', ActorType.VIRTUAL_CONTRIBUTOR);
     }
 
     const memberships = await queryBuilder.getMany();
@@ -431,26 +435,17 @@ export class MessagingService {
     userID: string,
     typeFilter?: CommunicationConversationType
   ): Promise<IConversation[]> {
-    const user = await this.userLookupService.getUserOrFail(userID, {
-      relations: { agent: true },
-    });
-
-    if (!user.agent) {
-      throw new EntityNotInitializedException(
-        `User (${userID}) does not have an agent, cannot query conversations`,
-        LogContext.COMMUNICATION
-      );
-    }
+    const user = await this.userLookupService.getUserByIdOrFail(userID);
 
     const platformMessaging = await this.getPlatformMessaging();
     const conversations = await this.getConversationsForAgent(
       platformMessaging.id,
-      user.agent.id,
+      user.id,
       typeFilter
     );
 
     this.logger.verbose?.(
-      `Platform messaging query: found ${conversations.length} conversations for agent ${user.agent.id}`,
+      `Platform messaging query: found ${conversations.length} conversations for agent ${user.id}`,
       LogContext.COMMUNICATION
     );
 

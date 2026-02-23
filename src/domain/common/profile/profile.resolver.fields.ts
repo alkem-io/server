@@ -1,17 +1,15 @@
-import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
 import { EntityNotFoundException } from '@common/exceptions';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   ProfileLocationLoaderCreator,
   ProfileReferencesLoaderCreator,
+  ProfileStorageBucketLoaderCreator,
   ProfileTagsetsLoaderCreator,
   VisualLoaderCreator,
 } from '@core/dataloader/creators';
-import { ProfileStorageBucketLoaderCreator } from '@core/dataloader/creators/loader.creators/profile/profile.storage.bucket.loader.creator';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ILocation } from '@domain/common/location/location.interface';
@@ -29,7 +27,6 @@ import { IProfile } from './profile.interface';
 export class ProfileResolverFields {
   constructor(
     private profileService: ProfileService,
-    private authorizationService: AuthorizationService,
     private urlGeneratorService: UrlGeneratorService
   ) {}
 
@@ -37,12 +34,14 @@ export class ProfileResolverFields {
     nullable: true,
     description: 'A particular type of visual for this Profile.',
   })
-  @Profiling.api
   async visual(
     @Parent() profile: IProfile,
-    @Args('type', { type: () => VisualType }) type: VisualType
+    @Args('type', { type: () => VisualType }) type: VisualType,
+    @Loader(VisualLoaderCreator, { parentClassRef: Profile })
+    loader: ILoader<IVisual[]>
   ): Promise<IVisual | undefined> {
-    return this.profileService.getVisual(profile, type);
+    const visuals = await loader.load(profile.id);
+    return visuals.find(v => v.name === type);
   }
 
   @ResolveField('visuals', () => [IVisual], {

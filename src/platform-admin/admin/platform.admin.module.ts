@@ -1,7 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { UserModule } from '@domain/community/user/user.module';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { LibraryModule } from '@library/library/library.module';
 import { Module } from '@nestjs/common';
@@ -18,7 +18,7 @@ import { PlatformAdminService } from './platform.admin.service';
     AuthorizationModule,
     UserModule,
     OrganizationModule,
-    VirtualContributorModule,
+    VirtualActorModule,
     PlatformAuthorizationPolicyModule,
     LibraryModule,
     SpaceModule,

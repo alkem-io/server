@@ -8,16 +8,17 @@ import { IS_SCHEMA_BOOTSTRAP } from '@common/constants';
 import configuration from '@config/configuration';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 import { ActivityFeedModule } from '@domain/activity-feed';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 // Domain/API modules that define GraphQL types (initial pass; extend incrementally if parity test reveals gaps)
 import { SpaceModule } from '@domain/space/space/space.module';
@@ -186,7 +187,7 @@ class SchemaBootstrapStubModule {}
     // Core schema-contributing modules
     ScalarsModule,
     SpaceModule,
-    AgentModule,
+    ActorModule,
     RolesModule,
     PlatformModule,
     PlatformHubModule,
@@ -201,6 +202,7 @@ class SchemaBootstrapStubModule {}
     BootstrapModule,
     AuthenticationModule,
     AuthorizationModule,
+    GraphqlGuardModule,
     ActivityLogModule,
     AdminContributorsModule,
     AdminUsersModule,
@@ -220,7 +222,7 @@ class SchemaBootstrapStubModule {}
     RegistrationModule,
     ConversionModule,
     LibraryModule,
-    VirtualContributorModule,
+    VirtualActorModule,
     InputCreatorModule,
     LookupModule,
     LookupByNameModule,

@@ -1,5 +1,3 @@
-/* eslint-disable quotes */
-
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';

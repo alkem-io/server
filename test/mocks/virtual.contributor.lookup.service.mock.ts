@@ -1,10 +1,10 @@
-import { vi } from 'vitest';
+import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { MockValueProvider } from '@test/utils/mock.value.provider';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { vi } from 'vitest';
 
-export const MockVirtualContributorLookupService: MockValueProvider<VirtualContributorLookupService> =
+export const MockVirtualActorLookupService: MockValueProvider<VirtualActorLookupService> =
   {
-    provide: VirtualContributorLookupService,
+    provide: VirtualActorLookupService,
     useValue: {
       getVirtualContributorByNameIdOrFail: vi.fn(),
     },

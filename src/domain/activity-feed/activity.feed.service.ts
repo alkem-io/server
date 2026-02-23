@@ -1,14 +1,15 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ActivityEventType } from '@common/enums/activity.event.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { SpaceLevel } from '@common/enums/space.level';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { PaginationArgs } from '@core/pagination';
 import { ActivityFeed } from '@domain/activity-feed/activity.feed.interface';
 import { ActivityFeedRoles } from '@domain/activity-feed/activity.feed.roles.enum';
-import { ICollaboration } from '@domain/collaboration/collaboration';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { Space } from '@domain/space/space/space.entity';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
 import { IActivity } from '@platform/activity';
 import { ActivityService } from '@platform/activity/activity.service';
 import { ActivityLogService } from '@services/api/activity-log';
@@ -19,6 +20,7 @@ import {
 } from '@services/api/roles/util/group.credentials.by.entity';
 import { intersection } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, In } from 'typeorm';
 
 type ActivityFeedFilters = {
   types?: Array<ActivityEventType>;
@@ -38,15 +40,16 @@ export class ActivityFeedService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private collaborationService: CollaborationService,
     private spaceLookupService: SpaceLookupService,
     private authorizationService: AuthorizationService,
     private activityService: ActivityService,
-    private activityLogService: ActivityLogService
+    private activityLogService: ActivityLogService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager
   ) {}
 
   public async getActivityFeed(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     filters?: ActivityFeedFilters
   ): Promise<ActivityFeed> {
     const {
@@ -58,18 +61,18 @@ export class ActivityFeedService {
     } = filters ?? {};
     // get all Spaces the user has credentials for
     const spaceIds = await this.getQualifyingSpaces(
-      agentInfo,
+      actorContext,
       qualifyingSpacesOptions
     );
     // get the collaborations with read access based on the filtered Spaces
     const collaborationIds = await this.getAllAuthorizedCollaborations(
-      agentInfo,
+      actorContext,
       spaceIds
     );
 
     return this.getPaginatedActivity(collaborationIds, {
       types,
-      userID: myActivity ? agentInfo.userID : undefined,
+      userID: myActivity ? actorContext.actorID : undefined,
       visibility: true,
       paginationArgs,
       sort: 'DESC', // the most recent first
@@ -78,7 +81,7 @@ export class ActivityFeedService {
   }
 
   public async getGroupedActivityFeed(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     filters?: ActivityFeedGroupedFilters
   ): Promise<IActivityLogEntry[]> {
     const {
@@ -89,18 +92,18 @@ export class ActivityFeedService {
     } = filters ?? {};
     // get all Spaces the user has credentials for
     const spaceIds = await this.getQualifyingSpaces(
-      agentInfo,
+      actorContext,
       qualifyingSpacesOptions
     );
     // get the collaborations with read access based on the filtered Spaces
     const collaborationIds = await this.getAllAuthorizedCollaborations(
-      agentInfo,
+      actorContext,
       spaceIds
     );
 
     return this.getGroupedActivity(collaborationIds, {
       types,
-      userID: myActivity ? agentInfo.userID : undefined,
+      userID: myActivity ? actorContext.actorID : undefined,
       visibility: true,
       limit: limit ? limit : undefined,
       sort: 'DESC', // the most recent first
@@ -108,12 +111,12 @@ export class ActivityFeedService {
   }
 
   private async getQualifyingSpaces(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     options?: Pick<ActivityFeedFilters, 'spaceIds' | 'roles'>
   ) {
     const { spaceIds: spaceIdsFilter, roles: rolesFilter = [] } = options ?? {};
     // get all Spaces the user has credentials for
-    const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
+    const credentialMap = groupCredentialsByEntity(actorContext.credentials);
     const spacesWithCredentials = Array.from(
       credentialMap.get('spaces')?.keys() ?? []
     );
@@ -245,66 +248,82 @@ export class ActivityFeedService {
   }
 
   private async getAllAuthorizedCollaborations(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     spaceIds: string[]
   ): Promise<string[]> {
+    if (spaceIds.length === 0) {
+      return [];
+    }
+
+    // Step A: Batch-load all spaces with their collaboration (1 query instead of N)
+    const spaces = await this.entityManager.find(Space, {
+      where: { id: In(spaceIds) },
+      relations: { collaboration: true },
+    });
+
     const readableCollaborationIds: string[] = [];
-    for (const spaceId of spaceIds) {
-      // filter the collaborations by read access
-      const collaboration =
-        await this.spaceLookupService.getCollaborationOrFail(spaceId);
-      let childCollaborations: ICollaboration[] = [];
-      try {
-        this.authorizationService.grantAccessOrFail(
-          agentInfo,
-          collaboration.authorization,
-          AuthorizationPrivilege.READ,
-          `Collaboration activity query: ${agentInfo.email}`
-        );
-        readableCollaborationIds.push(collaboration.id);
-      } catch {
-        // User is not able to read collaboration - this is not uncommon
+
+    // Check read access on each space's collaboration (in-memory, no DB)
+    for (const space of spaces) {
+      if (!space.collaboration) {
+        continue;
       }
-
-      try {
-        // get all child collaborations
-        childCollaborations =
-          await this.collaborationService.getChildCollaborationsOrFail(
-            collaboration.id
-          );
-      } catch {
-        this.logger?.warn(
-          {
-            message:
-              'User is not able to read childCollaborations for collaboration',
-            userID: agentInfo.userID,
-            collaborationID: collaboration.id,
-          },
-          LogContext.ACTIVITY_FEED
-        );
+      if (
+        this.authorizationService.isAccessGranted(
+          actorContext,
+          space.collaboration.authorization,
+          AuthorizationPrivilege.READ
+        )
+      ) {
+        readableCollaborationIds.push(space.collaboration.id);
       }
+    }
 
-      // Filter the child collaborations by read access
-      const readableChildCollaborations = childCollaborations.filter(
-        childCollaboration => {
-          try {
-            return this.authorizationService.grantAccessOrFail(
-              agentInfo,
-              childCollaboration.authorization,
-              AuthorizationPrivilege.READ,
-              `Collaboration activity query: ${agentInfo.email} `
-            );
-          } catch {
-            return false;
-          }
-        }
-      );
+    // Step B: Batch-load child spaces based on level
+    const l0SpaceIds = spaces
+      .filter(s => s.level === SpaceLevel.L0)
+      .map(s => s.id);
+    const l1SpaceIds = spaces
+      .filter(s => s.level === SpaceLevel.L1)
+      .map(s => s.id);
 
-      const readableChildCollaborationIds = readableChildCollaborations.map(
-        childCollaboration => childCollaboration.id
-      );
+    // For L0 spaces: load all spaces in the account (1 query)
+    const childSpaces: Space[] = [];
+    if (l0SpaceIds.length > 0) {
+      const accountChildren = await this.entityManager.find(Space, {
+        where: { levelZeroSpaceID: In(l0SpaceIds) },
+        relations: { collaboration: true },
+      });
+      childSpaces.push(...accountChildren);
+    }
 
-      readableCollaborationIds.push(...readableChildCollaborationIds);
+    // For L1 spaces: load all L2 subspaces (1 query)
+    if (l1SpaceIds.length > 0) {
+      const subspaces = await this.entityManager.find(Space, {
+        where: { parentSpace: { id: In(l1SpaceIds) } },
+        relations: { collaboration: true },
+      });
+      childSpaces.push(...subspaces);
+    }
+
+    // Filter child collaborations by read access (in-memory)
+    for (const childSpace of childSpaces) {
+      if (!childSpace.collaboration) {
+        continue;
+      }
+      // Avoid duplicates (L0 query may include the L0 space itself)
+      if (readableCollaborationIds.includes(childSpace.collaboration.id)) {
+        continue;
+      }
+      if (
+        this.authorizationService.isAccessGranted(
+          actorContext,
+          childSpace.collaboration.authorization,
+          AuthorizationPrivilege.READ
+        )
+      ) {
+        readableCollaborationIds.push(childSpace.collaboration.id);
+      }
     }
 
     return readableCollaborationIds;

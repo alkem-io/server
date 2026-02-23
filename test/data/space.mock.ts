@@ -1,34 +1,25 @@
 // This file is a TypeScript version of space.json, exporting the same mock data as a typed object.
 // Update the import path and types as needed for your project.
-import { ISpace } from '@domain/space/space/space.interface';
-import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { IAgent } from '@domain/agent/agent/agent.interface';
-import { ICommunity } from '@domain/community/community/community.interface';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
-import { SpaceVisibility } from '@common/enums/space.visibility';
-import { SpaceLevel } from '@common/enums/space.level';
-import { ProfileType } from '@common/enums/profile.type';
+
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { AgentType } from '@common/enums/agent.type';
-import { TagsetType } from '@common/enums/tagset.type';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
+import { ProfileType } from '@common/enums/profile.type';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
+import { SpaceLevel } from '@common/enums/space.level';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { TagsetType } from '@common/enums/tagset.type';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { ICommunity } from '@domain/community/community/community.interface';
+import { ISpace } from '@domain/space/space/space.interface';
+import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
 
 const now = new Date('2024-01-01T00:00:00.000Z');
-
-const mockAgent: IAgent = {
-  id: 'agent-space-00655835-4d15-4546-801e-1ab80ac3078a',
-  did: 'did:alkemio:space:00655835-4d15-4546-801e-1ab80ac3078a',
-  password: '',
-  type: AgentType.SPACE, // or AgentType.SPACE if required by your codebase
-  createdDate: now,
-  updatedDate: now,
-} as IAgent;
 
 const mockTagset: ITagset = {
   tags: [
@@ -115,11 +106,11 @@ const mockAuthorization: IAuthorizationPolicy = {
 
 export const spaceData: { space: ISpace } = {
   space: {
+    type: ActorType.SPACE,
     id: '00655835-4d15-4546-801e-1ab80ac3078a',
     nameID: 'un-sdgs',
     rowId: 1,
     about: mockAbout,
-    agent: mockAgent,
     platformRolesAccess: {
       roles: [],
     },

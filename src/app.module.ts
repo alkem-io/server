@@ -10,6 +10,7 @@ import {
 } from '@config/graphql';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
 import { BootstrapModule } from '@core/bootstrap/bootstrap.module';
 import { LoaderCreatorModule } from '@core/dataloader/creators/loader.creator.module';
 import { DataLoaderInterceptor } from '@core/dataloader/interceptors';
@@ -21,13 +22,13 @@ import {
 import { AuthInterceptor } from '@core/interceptors';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { ActivityFeedModule } from '@domain/activity-feed';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor.module';
 import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { TaskGraphqlModule } from '@domain/task/task.module';
@@ -285,6 +286,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     ScalarsModule,
     AuthenticationModule,
     AuthorizationModule,
+    GraphqlGuardModule,
     SpaceModule,
     MetadataModule,
     BootstrapModule,
@@ -299,7 +301,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     AdminGeoLocationModule,
     LicensingWingbackSubscriptionModule,
     WingbackManagerModule,
-    AgentModule,
+    ActorModule,
     MessageModule,
     MessageReactionModule,
     NotificationRecipientsModule,
@@ -316,7 +318,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     InnovationHubModule,
     IdentityResolveModule,
     MeModule,
-    VirtualContributorModule,
+    VirtualActorModule,
     InputCreatorModule,
     LookupModule,
     LookupByNameModule,

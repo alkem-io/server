@@ -218,7 +218,7 @@ export class CalloutService {
     publishedTimestamp?: number
   ): Promise<ICallout> {
     if (publisherID) {
-      const publisher = await this.userLookupService.getUserByUUID(publisherID);
+      const publisher = await this.userLookupService.getUserById(publisherID);
       callout.publishedBy = publisher?.id || '';
     }
 
@@ -243,6 +243,7 @@ export class CalloutService {
           whiteboard: true,
           link: true,
           memo: true,
+          mediaGallery: true,
         },
         classification: {
           tagsets: true,
@@ -370,6 +371,47 @@ export class CalloutService {
       );
     } else {
       return this.getCommentsCount(callout.id);
+    }
+  }
+
+  /**
+   * Batch-computes activity counts for multiple callouts, setting the `activity`
+   * property on each callout in-place. Contribution-type callouts are batched
+   * into a single DB query; comment-type callouts use the already eagerly-loaded
+   * `comments` relation and parallelize the RPC calls.
+   */
+  public async getActivityCountBatch(callouts: ICallout[]): Promise<void> {
+    const contributionCallouts = callouts.filter(
+      c => c.settings.contribution.allowedTypes.length > 0
+    );
+    const commentCallouts = callouts.filter(
+      c => c.settings.contribution.allowedTypes.length === 0
+    );
+
+    // Batch contribution counts in a single query
+    if (contributionCallouts.length > 0) {
+      const contributionCounts =
+        await this.contributionService.getContributionsCountBatch(
+          contributionCallouts.map(c => c.id)
+        );
+      for (const callout of contributionCallouts) {
+        callout.activity = contributionCounts.get(callout.id) ?? 0;
+      }
+    }
+
+    // Comment-type callouts: use already eagerly-loaded comments, parallelize RPC calls
+    if (commentCallouts.length > 0) {
+      const commentCounts = await Promise.all(
+        commentCallouts.map(async callout => {
+          // comments is an eager relation, so it's already loaded on the callout
+          if (!callout.comments) return 0;
+          const messages = await this.roomService.getMessages(callout.comments);
+          return messages.length;
+        })
+      );
+      for (let i = 0; i < commentCallouts.length; i++) {
+        commentCallouts[i].activity = commentCounts[i];
+      }
     }
   }
 

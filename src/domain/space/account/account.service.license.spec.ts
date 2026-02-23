@@ -1,7 +1,7 @@
 import { LogContext } from '@common/enums';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -37,7 +37,7 @@ describe('AccountLicenseService', () => {
         AccountLicenseService,
         { provide: LicenseService, useValue: mockLicenseService },
         { provide: AccountService, useValue: {} },
-        { provide: AgentService, useValue: {} },
+        { provide: ActorService, useValue: {} },
         { provide: SpaceLicenseService, useValue: {} },
         { provide: LicensingCredentialBasedService, useValue: {} },
         { provide: LicensingWingbackSubscriptionService, useValue: {} },

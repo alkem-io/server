@@ -4,8 +4,8 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -210,9 +210,7 @@ export class SpaceLookupService {
     return collaboration;
   }
 
-  public async getProvider(
-    spaceAbout: ISpaceAbout
-  ): Promise<IContributor | null> {
+  public async getProvider(spaceAbout: ISpaceAbout): Promise<IActor | null> {
     const space = await this.spaceRepository.findOne({
       where: {
         about: {
@@ -227,17 +225,36 @@ export class SpaceLookupService {
       );
       return null;
     }
-    const l0Space = await this.spaceRepository.findOne({
-      where: {
-        id: space.levelZeroSpaceID,
-      },
-      relations: {
-        account: true,
-      },
-    });
+    return this.getProviderForSpace(space);
+  }
+
+  /**
+   * Gets the provider for a space that has already been loaded.
+   * For L0 spaces (levelZeroSpaceID === space.id), skips the redundant L0 lookup.
+   */
+  public async getProviderForSpace(space: ISpace): Promise<IActor | null> {
+    let l0Space: ISpace | null;
+
+    if (space.levelZeroSpaceID === space.id) {
+      // This is already the L0 space; just need to load account if not present
+      if (space.account) {
+        l0Space = space;
+      } else {
+        l0Space = await this.spaceRepository.findOne({
+          where: { id: space.id },
+          relations: { account: true },
+        });
+      }
+    } else {
+      l0Space = await this.spaceRepository.findOne({
+        where: { id: space.levelZeroSpaceID },
+        relations: { account: true },
+      });
+    }
+
     if (!l0Space || !l0Space.account) {
       this.logger.warn(
-        `Unable to load Space with account to get Provider for SpaceAbout: ${spaceAbout.id}`,
+        `Unable to load Space with account to get Provider for Space: ${space.id}`,
         LogContext.SPACES
       );
       return null;

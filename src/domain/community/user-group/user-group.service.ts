@@ -9,7 +9,7 @@ import {
   EntityNotInitializedException,
   NotSupportedException,
 } from '@common/exceptions';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IProfile } from '@domain/common/profile';
@@ -37,7 +37,7 @@ export class UserGroupService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private userLookupService: UserLookupService,
     private profileService: ProfileService,
-    private agentService: AgentService,
+    private actorService: ActorService,
     @InjectRepository(UserGroup)
     private userGroupRepository: Repository<UserGroup>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -163,12 +163,12 @@ export class UserGroupService {
   async assignUser(
     membershipData: AssignUserGroupMemberInput
   ): Promise<IUserGroup> {
-    const { user, agent } = await this.userLookupService.getUserAndAgent(
+    const user = await this.userLookupService.getUserByIdOrFail(
       membershipData.userID
     );
 
-    user.agent = await this.agentService.grantCredentialOrFail({
-      agentID: agent.id,
+    // User IS an Actor - use user.id as actorID
+    await this.actorService.grantCredentialOrFail(user.id, {
       type: AuthorizationCredential.USER_GROUP_MEMBER,
       resourceID: membershipData.groupID,
     });
@@ -181,12 +181,12 @@ export class UserGroupService {
   async removeUser(
     membershipData: RemoveUserGroupMemberInput
   ): Promise<IUserGroup> {
-    const { user, agent } = await this.userLookupService.getUserAndAgent(
+    const user = await this.userLookupService.getUserByIdOrFail(
       membershipData.userID
     );
 
-    user.agent = await this.agentService.revokeCredential({
-      agentID: agent.id,
+    // User IS an Actor - use user.id as actorID
+    await this.actorService.revokeCredential(user.id, {
       type: AuthorizationCredential.USER_GROUP_MEMBER,
       resourceID: membershipData.groupID,
     });
@@ -239,7 +239,7 @@ export class UserGroupService {
       },
       storageAggregator
     );
-    await groupable.groups?.push(newGroup);
+    groupable.groups?.push(newGroup);
     return newGroup;
   }
 
