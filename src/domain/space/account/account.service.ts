@@ -281,7 +281,8 @@ export class AccountService {
         FROM "account"
         LEFT JOIN "user" on "account"."id" = "user"."accountID"
         LEFT JOIN "organization" on "account"."id" = "organization"."accountID"
-        LEFT JOIN "profile" on "organization"."profileId" = "profile"."id"
+        LEFT JOIN "actor" on "organization"."id" = "actor"."id"
+        LEFT JOIN "profile" on "actor"."profileId" = "profile"."id"
         WHERE "account"."id" = $1
     `,
       [accountID]
