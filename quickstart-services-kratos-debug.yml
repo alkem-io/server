@@ -400,7 +400,7 @@ services:
       - SERVICE_ACCOUNT_USERNAME
       - SERVICE_ACCOUNT_PASSWORD
       - WAIT_HOSTS=host.docker.internal:3000
-      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
       - WAIT_HOST_CONNECT_TIMEOUT=30
       - EMAIL_FROM
@@ -435,9 +435,10 @@ services:
       - LOGGING_LEVEL_CONSOLE=debug
       - ENVIRONMENT=dev
       - WAIT_HOSTS=host.docker.internal:3000
-      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
       - WAIT_HOST_CONNECT_TIMEOUT=30
+      - WAIT_COMMAND=/app/matrix-adapter
       - DATABASE_HOST
       - DATABASE_PORT
       - DATABASE_USERNAME
@@ -449,7 +450,7 @@ services:
       - alkemio_dev_net
     ports:
       - 8280
-    command: sh -c "/wait && /app/matrix-adapter"
+    entrypoint: ["/wait"]
 
   redis:
     extra_hosts:
