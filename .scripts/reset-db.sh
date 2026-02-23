@@ -17,11 +17,21 @@ SERVER_LOG="/tmp/alkemio-dev-server.log"
 fail() { echo "FAIL: $1" >&2; exit 1; }
 info() { echo "==> $1"; }
 
+kill_tree() {
+  local pid=$1
+  local children
+  children=$(pgrep -P "$pid" 2>/dev/null) || true
+  for child in $children; do
+    kill_tree "$child"
+  done
+  kill "$pid" 2>/dev/null || true
+}
+
 DEV_SERVER_PID=""
 cleanup() {
   if [ -n "$DEV_SERVER_PID" ]; then
     info "Stopping dev server (PID $DEV_SERVER_PID)"
-    kill -- -"$DEV_SERVER_PID" 2>/dev/null || kill "$DEV_SERVER_PID" 2>/dev/null || true
+    kill_tree "$DEV_SERVER_PID"
     wait "$DEV_SERVER_PID" 2>/dev/null || true
   fi
 }
@@ -57,7 +67,7 @@ pnpm run migration:run
 # ---------- Step 5: Start dev server in background ----------
 info "Step 5/6: Starting dev server"
 : > "$SERVER_LOG"
-setsid pnpm start:dev >> "$SERVER_LOG" 2>&1 &
+pnpm start:dev >> "$SERVER_LOG" 2>&1 &
 DEV_SERVER_PID=$!
 echo "  PID: $DEV_SERVER_PID | log: $SERVER_LOG"
 
