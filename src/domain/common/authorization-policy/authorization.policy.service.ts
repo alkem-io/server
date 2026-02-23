@@ -49,6 +49,10 @@ export class AuthorizationPolicyService {
     id: true,
     credentialRules: true,
     privilegeRules: true,
+    inheritedCredentialRuleSet: {
+      id: true,
+      credentialRules: true,
+    },
   };
 
   createCredentialRule(
