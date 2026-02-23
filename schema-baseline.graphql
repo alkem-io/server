@@ -5,10 +5,12 @@ type APM {
   rumEnabled: Boolean!
 }
 
-type Account {
-  """The Agent representing this Account."""
-  agent: Agent!
-  """The authorization rules for the entity"""
+type Account implements ActorFull {
+  """The type of Account (user or organization hosted)."""
+  accountType: AccountType
+  """The Actor representing this Account."""
+  actor: Actor!
+  """The authorization rules for the Actor"""
   authorization: Authorization
   """
   The base license plan assigned to this Account. Additional entitlements may be added via other means.
@@ -16,11 +18,13 @@ type Account {
   baselineLicensePlan: AccountLicensePlan!
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The credentials held by this Actor"""
+  credentials: [Credential!]
   """The external subscription ID for this Account."""
   externalSubscriptionID: String
   """The Account host."""
-  host: Contributor
-  """The ID of the entity"""
+  host: Actor
+  """The ID of the Actor"""
   id: UUID!
   """The InnovationHubs for this Account."""
   innovationHubs: [InnovationHub!]!
@@ -28,14 +32,18 @@ type Account {
   innovationPacks: [InnovationPack!]!
   """The License operating on this Account."""
   license: License!
+  """A name identifier of the Account, unique within the platform."""
+  nameID: NameID!
+  """The profile for this Actor. Note: Not all actor types have profiles."""
+  profile: Profile
   """The Spaces within this Account."""
   spaces: [Space!]!
   """The StorageAggregator in use by this Account"""
   storageAggregator: StorageAggregator!
   """The subscriptions active for this Account."""
   subscriptions: [AccountSubscription!]!
-  """A type of entity that this Account is being used with."""
-  type: AccountType
+  """The type of Actor"""
+  type: ActorType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """The virtual contributors for this Account."""
@@ -431,6 +439,8 @@ type ActivityLogEntryCalloutWhiteboardCreated implements ActivityLogEntry {
 }
 
 type ActivityLogEntryMemberJoined implements ActivityLogEntry {
+  """The type of the Contributor that joined the Community."""
+  actorType: ActorType!
   """
   Indicates if this Activity happened on a child Collaboration. Child results can be included via the "includeChild" parameter.
   """
@@ -442,9 +452,7 @@ type ActivityLogEntryMemberJoined implements ActivityLogEntry {
   """The community that was joined."""
   community: Community!
   """The Contributor that joined the Community."""
-  contributor: Contributor!
-  """The type of the Contributor that joined the Community."""
-  contributorType: RoleSetContributorType!
+  contributor: Actor!
   """The timestamp for the Activity."""
   createdDate: DateTime!
   """The text details for this Activity."""
@@ -529,6 +537,90 @@ input ActivityLogInput {
   types: [ActivityEventType!]
 }
 
+"""
+Lightweight actor data containing only base fields. Use for displays where nameID and child-specific fields are not needed.
+"""
+type Actor {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The profile for this Actor."""
+  profile: Profile
+  """The type of Actor"""
+  type: ActorType!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+input ActorFilterInput {
+  """Return actors with credentials in the provided list"""
+  credentials: [AuthorizationCredential!]
+}
+
+interface ActorFull {
+  """The authorization rules for the Actor"""
+  authorization: Authorization
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The credentials held by this Actor"""
+  credentials: [Credential!]
+  """The ID of the Actor"""
+  id: UUID!
+  """A name identifier of the Actor, unique within a given scope."""
+  nameID: NameID!
+  """The profile for this Actor. Note: Not all actor types have profiles."""
+  profile: Profile
+  """The type of Actor"""
+  type: ActorType!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+type ActorRolePolicy {
+  """Maximum number of Actors in this role"""
+  maximum: Float!
+  """Minimum number of Actors in this role"""
+  minimum: Float!
+}
+
+type ActorRoles {
+  """
+  The applications for the specified user; only accessible for platform admins
+  """
+  applications(
+    """The state names you want to filter on"""
+    states: [String!]
+  ): [CommunityApplicationForRoleResult!]!
+  id: UUID!
+  """
+  The invitations for the specified user; only accessible for platform admins
+  """
+  invitations(
+    """The state names you want to filter on"""
+    states: [String!]
+  ): [CommunityInvitationForRoleResult!]!
+  """Details of the roles the contributor has in Organizations"""
+  organizations: [RolesResultOrganization!]!
+  """
+  Details of Spaces the User or Organization is a member of, with child memberships - if Space is accessible for the current user.
+  """
+  spaces: [RolesResultSpace!]!
+}
+
+"""
+The type of Actor - determines which entity table the actor belongs to.
+"""
+enum ActorType {
+  ACCOUNT
+  ORGANIZATION
+  SPACE
+  USER
+  VIRTUAL_CONTRIBUTOR
+}
+
 input AddVisualToMediaGalleryInput {
   """The ID of the media gallery."""
   mediaGalleryID: String!
@@ -538,44 +630,6 @@ input AddVisualToMediaGalleryInput {
   The type of visual to add (e.g. MEDIA_GALLERY_IMAGE, MEDIA_GALLERY_VIDEO).
   """
   visualType: VisualType!
-}
-
-type AdminAuthenticationIDBackfillResult {
-  """Total users examined during the backfill run"""
-  processed: Int!
-  """
-  Batches that initially failed but succeeded after a retry during the run
-  """
-  retriedBatches: Int!
-  """
-  Users skipped because they already had authenticationID or no Kratos identity was found
-  """
-  skipped: Int!
-  """Users whose authenticationID was updated during the run"""
-  updated: Int!
-}
-
-type Agent {
-  """The authorization rules for the entity"""
-  authorization: Authorization
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The Credentials held by this Agent."""
-  credentials: [Credential!]
-  """The ID of the entity"""
-  id: UUID!
-  """A type of entity that this Agent is being used with."""
-  type: AgentType!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-}
-
-enum AgentType {
-  ACCOUNT
-  ORGANIZATION
-  SPACE
-  USER
-  VIRTUAL_CONTRIBUTOR
 }
 
 type AiPersona {
@@ -629,7 +683,7 @@ type Application {
   """The authorization rules for the entity"""
   authorization: Authorization
   """The User for this Application."""
-  contributor: Contributor!
+  contributor: Actor!
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
@@ -676,24 +730,12 @@ input AssignLicensePlanToSpace {
 }
 
 input AssignPlatformRoleInput {
-  contributorID: UUID!
+  actorID: UUID!
   role: RoleName!
 }
 
-input AssignRoleOnRoleSetToOrganizationInput {
-  contributorID: UUID!
-  role: RoleName!
-  roleSetID: UUID!
-}
-
-input AssignRoleOnRoleSetToUserInput {
-  contributorID: UUID!
-  role: RoleName!
-  roleSetID: UUID!
-}
-
-input AssignRoleOnRoleSetToVirtualContributorInput {
-  contributorID: UUID!
+input AssignRoleOnRoleSetInput {
+  actorID: UUID!
   role: RoleName!
   roleSetID: UUID!
 }
@@ -879,7 +921,7 @@ enum AuthorizationPrivilege {
   CREATE_POST
   CREATE_SPACE
   CREATE_SUBSPACE
-  CREATE_VIRTUAL_CONTRIBUTOR
+  CREATE_VIRTUAL
   CREATE_WHITEBOARD
   DELETE
   FILE_DELETE
@@ -1430,12 +1472,10 @@ type CommunityGuidelines {
 }
 
 type CommunityInvitationForRoleResult {
+  """ID for Actor that is being invited to a community"""
+  actorID: UUID!
   """ID for the community"""
   communityID: UUID!
-  """ID for Contrbutor that is being invited to a community"""
-  contributorID: UUID!
-  """The Type of the Contrbutor that is being invited to a community"""
-  contributorType: RoleSetContributorType!
   """ID for the user that created the invitation."""
   createdBy: UUID!
   """Date of creation"""
@@ -1519,59 +1559,6 @@ input ContributionsFilterInput {
   IDs: [UUID!]
   """The contributions types to return. If omitted return all."""
   types: [CalloutContributionType!]
-}
-
-interface Contributor {
-  """The Agent for the Contributor."""
-  agent: Agent!
-  """The authorization rules for the Contributor"""
-  authorization: Authorization
-  """The date at which the entity was created."""
-  createdDate: DateTime!
-  """The ID of the Contributor"""
-  id: UUID!
-  """A name identifier of the Contributor, unique within a given scope."""
-  nameID: NameID!
-  """The profile for the Contributor."""
-  profile: Profile!
-  """The date at which the entity was last updated."""
-  updatedDate: DateTime!
-}
-
-input ContributorFilterInput {
-  """Return contributors with credentials in the provided list"""
-  credentials: [AuthorizationCredential!]
-}
-
-type ContributorRolePolicy {
-  """Maximum number of Contributors in this role"""
-  maximum: Float!
-  """Minimum number of Contributors in this role"""
-  minimum: Float!
-}
-
-type ContributorRoles {
-  """
-  The applications for the specified user; only accessible for platform admins
-  """
-  applications(
-    """The state names you want to filter on"""
-    states: [String!]
-  ): [CommunityApplicationForRoleResult!]!
-  id: UUID!
-  """
-  The invitations for the specified user; only accessible for platform admins
-  """
-  invitations(
-    """The state names you want to filter on"""
-    states: [String!]
-  ): [CommunityInvitationForRoleResult!]!
-  """Details of the roles the contributor has in Organizations"""
-  organizations: [RolesResultOrganization!]!
-  """
-  Details of Spaces the User or Organization is a member of, with child memberships - if Space is accessible for the current user.
-  """
-  spaces: [RolesResultSpace!]!
 }
 
 type Conversation {
@@ -2866,13 +2853,13 @@ type InAppNotification {
   """The payload of the notification."""
   payload: InAppNotificationPayload!
   """The receiver of the notification."""
-  receiver: Contributor!
+  receiver: Actor!
   """The state of the notification event."""
   state: NotificationEventInAppState!
   """The triggered date of the notification event."""
   triggeredAt: DateTime!
   """The Contributor who triggered the notification."""
-  triggeredBy: Contributor
+  triggeredBy: Actor
   """The type of the notification event."""
   type: NotificationEvent!
   """The date at which the entity was last updated."""
@@ -3002,6 +2989,15 @@ type InAppNotificationPayloadSpaceCommunicationUpdate implements InAppNotificati
   update: String!
 }
 
+type InAppNotificationPayloadSpaceCommunityActor implements InAppNotificationPayload {
+  """The Actor that joined."""
+  actor: Actor!
+  """The Space that was joined."""
+  space: Space!
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
 type InAppNotificationPayloadSpaceCommunityApplication implements InAppNotificationPayload {
   """The Application that the notification is related to."""
   application: Application!
@@ -3026,15 +3022,6 @@ type InAppNotificationPayloadSpaceCommunityCalendarEventComment implements InApp
   """Preview text of the comment"""
   commentText: String!
   """The space details."""
-  space: Space!
-  """The payload type."""
-  type: NotificationEventPayload!
-}
-
-type InAppNotificationPayloadSpaceCommunityContributor implements InAppNotificationPayload {
-  """The Contributor that joined."""
-  contributor: Contributor!
-  """The Space that was joined."""
   space: Space!
   """The payload type."""
   type: NotificationEventPayload!
@@ -3141,7 +3128,7 @@ type InnovationHub {
   """The Innovation Hub profile."""
   profile: Profile!
   """The InnovationHub provider."""
-  provider: Contributor!
+  provider: Actor!
   """Visibility of the InnovationHub in searches."""
   searchVisibility: SearchVisibility!
   spaceListFilter: [Space!]
@@ -3178,7 +3165,7 @@ type InnovationPack {
   """The Profile for this InnovationPack."""
   profile: Profile!
   """The InnovationPack provider."""
-  provider: Contributor!
+  provider: Actor!
   """Visibility of the InnovationPack in searches."""
   searchVisibility: SearchVisibility!
   """The templatesSet in use by this InnovationPack"""
@@ -3220,10 +3207,8 @@ type InputCreatorQueryResults {
 type Invitation {
   """The authorization rules for the entity"""
   authorization: Authorization
-  """The Contributor who is invited."""
-  contributor: Contributor!
-  """The type of contributor that is invited."""
-  contributorType: RoleSetContributorType!
+  """The Actor who is invited."""
+  contributor: Actor!
   """The User who triggered the invitation."""
   createdBy: User
   """The date at which the entity was created."""
@@ -3839,7 +3824,7 @@ type Message {
   """Reactions on this message"""
   reactions: [Reaction!]!
   """The User or Virtual Contributor that created this Message"""
-  sender: Contributor
+  sender: Actor
   """The message being replied to"""
   threadID: MessageID
   """The server timestamp in UTC"""
@@ -3974,10 +3959,6 @@ type Mutation {
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
   """Adds a new visual to the specified media gallery."""
   addVisualToMediaGallery(addData: AddVisualToMediaGalleryInput!): Visual!
-  """
-  Populate authenticationID for existing users by querying Kratos Admin API
-  """
-  adminBackfillAuthenticationIDs: AdminAuthenticationIDBackfillResult!
   """Ensure all community members are registered for communications."""
   adminCommunicationEnsureAccessToCommunications(communicationData: CommunicationAdminEnsureAccessInput!): Boolean!
   """
@@ -4034,12 +4015,16 @@ type Mutation {
   assignLicensePlanToSpace(planData: AssignLicensePlanToSpace!): Space!
   """Assigns a User to a role on the Platform."""
   assignPlatformRoleToUser(roleData: AssignPlatformRoleInput!): User!
+  """
+  Assigns a Contributor (User, Organization, or Virtual Contributor) to a role in the specified RoleSet.
+  """
+  assignRole(roleData: AssignRoleOnRoleSetInput!): Actor!
   """Assigns an Organization a Role in the specified Community."""
-  assignRoleToOrganization(roleData: AssignRoleOnRoleSetToOrganizationInput!): Organization!
+  assignRoleToOrganization(roleData: AssignRoleOnRoleSetInput!): Organization!
   """Assigns a User to a role in the specified Community."""
-  assignRoleToUser(roleData: AssignRoleOnRoleSetToUserInput!): User!
+  assignRoleToUser(roleData: AssignRoleOnRoleSetInput!): User!
   """Assigns a Virtual Contributor to a role in the specified Community."""
-  assignRoleToVirtualContributor(roleData: AssignRoleOnRoleSetToVirtualContributorInput!): VirtualContributor!
+  assignRoleToVirtualContributor(roleData: AssignRoleOnRoleSetInput!): VirtualContributor!
   """Assigns a User as a member of the specified User Group."""
   assignUserToGroup(membershipData: AssignUserGroupMemberInput!): UserGroup!
   """Ensure all access privileges for the platform roles are re-calculated"""
@@ -4114,14 +4099,12 @@ type Mutation {
   createTemplateFromSpace(templateData: CreateTemplateFromSpaceOnTemplatesSetInput!): Template!
   """Creates a new User on the platform."""
   createUser(userData: CreateUserInput!): User!
-  """
-  Creates a new User profile on the platform for a user that has a valid Authentication session.
-  """
-  createUserNewRegistration: User!
   """Creates a new VirtualContributor on an Account."""
   createVirtualContributor(virtualContributorData: CreateVirtualContributorOnAccountInput!): VirtualContributor!
   """Creates an account in Wingback"""
   createWingbackAccount(accountID: UUID!): String!
+  """Removes the specified Application."""
+  deleteApplication(deleteData: DeleteApplicationInput!): Application!
   """Deletes the specified CalendarEvent."""
   deleteCalendarEvent(deleteData: DeleteCalendarEventInput!): CalendarEvent!
   """Delete a Callout."""
@@ -4166,8 +4149,6 @@ type Mutation {
   deleteTemplate(deleteData: DeleteTemplateInput!): Template!
   """Deletes the specified User."""
   deleteUser(deleteData: DeleteUserInput!): User!
-  """Removes the specified User Application."""
-  deleteUserApplication(deleteData: DeleteApplicationInput!): Application!
   """Deletes the specified User Group."""
   deleteUserGroup(deleteData: DeleteUserGroupInput!): UserGroup!
   """Deletes the specified VirtualContributor."""
@@ -4182,6 +4163,8 @@ type Mutation {
   eventOnInvitation(eventData: InvitationEventInput!): Invitation!
   """Trigger an event on the Organization Verification."""
   eventOnOrganizationVerification(eventData: OrganizationVerificationEventInput!): OrganizationVerification!
+  """Grant a credential to an Actor."""
+  grantCredentialToActor(actorID: UUID!, credentialType: CredentialType!, resourceID: UUID): Credential!
   """Grants an authorization credential to an Organization."""
   grantCredentialToOrganization(grantCredentialData: GrantOrganizationAuthorizationCredentialInput!): Organization!
   """Grants an authorization credential to a User."""
@@ -4228,18 +4211,24 @@ type Mutation {
   removePlatformRoleFromUser(roleData: RemovePlatformRoleInput!): User!
   """Remove a reaction on a message from the specified Room."""
   removeReactionToMessageInRoom(reactionData: RoomRemoveReactionToMessageInput!): Boolean!
+  """
+  Removes a Contributor (User, Organization, or Virtual Contributor) from a role in the specified RoleSet.
+  """
+  removeRole(roleData: RemoveRoleOnRoleSetInput!): Actor!
   """Removes an Organization from a Role in the specified Community."""
-  removeRoleFromOrganization(roleData: RemoveRoleOnRoleSetFromOrganizationInput!): Organization!
+  removeRoleFromOrganization(roleData: RemoveRoleOnRoleSetInput!): Organization!
   """Removes a User from a Role in the specified Community."""
-  removeRoleFromUser(roleData: RemoveRoleOnRoleSetFromUserInput!): User!
+  removeRoleFromUser(roleData: RemoveRoleOnRoleSetInput!): User!
   """Removes a Virtual from a Role in the specified Community."""
-  removeRoleFromVirtualContributor(roleData: RemoveRoleOnRoleSetFromVirtualContributorInput!): VirtualContributor!
+  removeRoleFromVirtualContributor(roleData: RemoveRoleOnRoleSetInput!): VirtualContributor!
   """Removes the specified User from specified user group"""
   removeUserFromGroup(membershipData: RemoveUserGroupMemberInput!): UserGroup!
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
   resetLicenseOnAccounts: Space!
+  """Revoke a credential from an Actor."""
+  revokeCredentialFromActor(actorID: UUID!, credentialType: CredentialType!, resourceID: UUID): Boolean!
   """Removes an authorization credential from an Organization."""
   revokeCredentialFromOrganization(revokeCredentialData: RevokeOrganizationAuthorizationCredentialInput!): Organization!
   """Removes an authorization credential from a User."""
@@ -4449,7 +4438,7 @@ enum NotificationEvent {
   SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_ADMIN_COMMUNITY_APPLICATION
   SPACE_ADMIN_COMMUNITY_NEW_MEMBER
-  SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED
+  SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED
   SPACE_COLLABORATION_CALLOUT_COMMENT
   SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT
@@ -4466,7 +4455,7 @@ enum NotificationEvent {
   USER_SPACE_COMMUNITY_APPLICATION_DECLINED
   USER_SPACE_COMMUNITY_INVITATION
   USER_SPACE_COMMUNITY_JOINED
-  VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION
+  VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION
 }
 
 """A categorization of notification type."""
@@ -4497,10 +4486,10 @@ enum NotificationEventPayload {
   SPACE_COLLABORATION_CALLOUT_POST_COMMENT
   SPACE_COMMUNICATION_MESSAGE_DIRECT
   SPACE_COMMUNICATION_UPDATE
+  SPACE_COMMUNITY_ACTOR
   SPACE_COMMUNITY_APPLICATION
   SPACE_COMMUNITY_CALENDAR_EVENT
   SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT
-  SPACE_COMMUNITY_CONTRIBUTOR
   SPACE_COMMUNITY_INVITATION
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
   USER
@@ -4575,33 +4564,35 @@ enum OpenAIModel {
   WHISPER_1
 }
 
-type Organization implements Contributor & Groupable {
+type Organization implements ActorFull & Groupable {
   """The account hosted by this Organization."""
   account: Account
-  """The Agent representing this User."""
-  agent: Agent!
-  """The authorization rules for the Contributor"""
+  """The Actor representing this User."""
+  actor: Actor!
+  """The authorization rules for the Actor"""
   authorization: Authorization
   """Organization contact email"""
   contactEmail: String
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The credentials held by this Actor"""
+  credentials: [Credential!]
   """Domain name; what is verified, eg. alkem.io"""
   domain: String
   """Group defined on this organization."""
   group(ID: UUID!): UserGroup
   """Groups defined on this organization."""
   groups: [UserGroup!]
-  """The ID of the Contributor"""
+  """The ID of the Actor"""
   id: UUID!
   """Legal name - required if hosting an Space"""
   legalEntityName: String
   """Metrics about the activity within this Organization."""
   metrics: [NVP!]
-  """A name identifier of the Contributor, unique within a given scope."""
+  """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
-  """The profile for this Organization."""
-  profile: Profile!
+  """The profile for this Actor. Note: Not all actor types have profiles."""
+  profile: Profile
   """The RoleSet for this Organization."""
   roleSet: RoleSet!
   """The settings for this Organization."""
@@ -4610,6 +4601,8 @@ type Organization implements Contributor & Groupable {
   The StorageAggregator for managing storage buckets in use by this Organization
   """
   storageAggregator: StorageAggregator
+  """The type of Actor"""
+  type: ActorType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   verification: OrganizationVerification!
@@ -4862,7 +4855,7 @@ type PlatformAdminQueryResults {
   """
   virtualContributors(
     """Filtering criteria for returning results."""
-    filter: ContributorFilterInput
+    filter: ActorFilterInput
     """The number of contributors to return; if omitted return all Entities."""
     limit: Float
     """
@@ -5220,6 +5213,10 @@ type Query {
   activityFeedGrouped(args: ActivityFeedGroupedQueryArgs): [ActivityLogEntry!]!
   """Retrieve the ActivityLog for the specified Collaboration"""
   activityLogOnCollaboration(queryData: ActivityLogInput!): [ActivityLogEntry!]!
+  """Get an Actor by ID. Returns null if not found."""
+  actor(id: UUID!): ActorFull
+  """All Actors that hold credentials matching the supplied criteria."""
+  actorsWithCredential(credentialType: CredentialType!, resourceID: UUID): [ActorFull!]!
   """Get all unverified identities from Kratos."""
   adminIdentitiesUnverified: [KratosIdentity!]!
   """Alkemio AiServer"""
@@ -5243,7 +5240,7 @@ type Query {
   """The Organizations on this platform"""
   organizations(
     """Filtering criteria for returning results."""
-    filter: ContributorFilterInput
+    filter: ActorFilterInput
     """The number of contributors to return; if omitted return all Entities."""
     limit: Float
     """
@@ -5272,11 +5269,11 @@ type Query {
   """Get the list of restricted space names."""
   restrictedSpaceNames: [String!]!
   """The roles that the specified Organization has."""
-  rolesOrganization(rolesData: RolesOrganizationInput!): ContributorRoles!
+  rolesOrganization(rolesData: RolesActorInput!): ActorRoles!
   """The roles that that the specified User has."""
-  rolesUser(rolesData: RolesUserInput!): ContributorRoles!
+  rolesUser(rolesData: RolesActorInput!): ActorRoles!
   """The roles that the specified VirtualContributor has."""
-  rolesVirtualContributor(rolesData: RolesVirtualContributorInput!): ContributorRoles!
+  rolesVirtualContributor(rolesData: RolesActorInput!): ActorRoles!
   """Search the platform for terms supplied"""
   search(searchData: SearchInput!): ISearchResults!
   """
@@ -5313,7 +5310,7 @@ type Query {
     """Retrieve the specified users by ID."""
     IDs: [UUID!]
     """Filtering criteria for returning results."""
-    filter: ContributorFilterInput
+    filter: ActorFilterInput
     """The number of contributors to return; if omitted return all Entities."""
     limit: Float
     """
@@ -5344,7 +5341,7 @@ type Query {
   """
   virtualContributors(
     """Filtering criteria for returning results."""
-    filter: ContributorFilterInput
+    filter: ActorFilterInput
     """The number of contributors to return; if omitted return all Entities."""
     limit: Float
     """
@@ -5399,16 +5396,16 @@ input RefreshVirtualContributorBodyOfKnowledgeInput {
   virtualContributorID: UUID!
 }
 
-type RelayPaginatedSpace {
+type RelayPaginatedSpace implements ActorFull {
   """About this space."""
   about: SpaceAbout!
   """The Account that this Space is part of."""
   account: Account!
   """The "highest" subscription active for this Space."""
   activeSubscription: SpaceSubscription
-  """The Agent representing this Space."""
-  agent: Agent!
-  """The authorization rules for the entity"""
+  """The Actor representing this Space."""
+  actor: Actor!
+  """The authorization rules for the Actor"""
   authorization: Authorization
   """The collaboration for the Space."""
   collaboration: Collaboration!
@@ -5416,7 +5413,9 @@ type RelayPaginatedSpace {
   community: Community!
   """The date at which the entity was created."""
   createdDate: DateTime!
-  """The ID of the entity"""
+  """The credentials held by this Actor"""
+  credentials: [Credential!]
+  """The ID of the Actor"""
   id: UUID!
   """
   The level of this Space, representing the number of Spaces above this one.
@@ -5430,6 +5429,8 @@ type RelayPaginatedSpace {
   nameID: NameID!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
+  """The profile for this Actor. Note: Not all actor types have profiles."""
+  profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
   """The sorting order for this Space within its parent."""
@@ -5453,6 +5454,8 @@ type RelayPaginatedSpace {
   ): [Space!]!
   """The TemplatesManager in use by this Space"""
   templatesManager: TemplatesManager
+  """The type of Actor"""
+  type: ActorType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """Visibility of the Space."""
@@ -5484,24 +5487,12 @@ input RemoveDefaultCalloutTemplateOnInnovationFlowStateInput {
 }
 
 input RemovePlatformRoleInput {
-  contributorID: UUID!
+  actorID: UUID!
   role: RoleName!
 }
 
-input RemoveRoleOnRoleSetFromOrganizationInput {
-  contributorID: UUID!
-  role: RoleName!
-  roleSetID: UUID!
-}
-
-input RemoveRoleOnRoleSetFromUserInput {
-  contributorID: UUID!
-  role: RoleName!
-  roleSetID: UUID!
-}
-
-input RemoveRoleOnRoleSetFromVirtualContributorInput {
-  contributorID: UUID!
+input RemoveRoleOnRoleSetInput {
+  actorID: UUID!
   role: RoleName!
   roleSetID: UUID!
 }
@@ -5555,7 +5546,7 @@ type Role {
   """The CommunityRole that this role definition is for."""
   name: RoleName!
   """The role policy that applies for Organizations in this Role."""
-  organizationPolicy: ContributorRolePolicy!
+  organizationPolicy: ActorRolePolicy!
   """The Credential associated with this Role."""
   parentCredentials: [CredentialDefinition!]!
   """
@@ -5569,9 +5560,9 @@ type Role {
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """The role policy that applies for Users in this Role."""
-  userPolicy: ContributorRolePolicy!
+  userPolicy: ActorRolePolicy!
   """The role policy that applies for VirtualContributors in this Role."""
-  virtualContributorPolicy: ContributorRolePolicy!
+  virtualContributorPolicy: ActorRolePolicy!
 }
 
 enum RoleName {
@@ -5713,12 +5704,6 @@ type RoleSet {
   virtualContributorsInRoles(roles: [RoleName!]!): [VirtualContributorsInRolesResponse!]!
 }
 
-enum RoleSetContributorType {
-  ORGANIZATION
-  USER
-  VIRTUAL
-}
-
 type RoleSetInvitationResult {
   invitation: Invitation
   platformInvitation: PlatformInvitation
@@ -5744,11 +5729,11 @@ enum RoleSetType {
   SPACE
 }
 
-input RolesOrganizationInput {
+input RolesActorInput {
+  """The ID of the actor to retrieve the roles of."""
+  actorID: UUID!
   """Return membership in Spaces matching the provided filter."""
   filter: SpaceFilterInput
-  """The ID of the organization to retrieve the roles of."""
-  organizationID: UUID!
 }
 
 type RolesResult {
@@ -5807,18 +5792,6 @@ type RolesResultSpace {
   subspaces: [RolesResultCommunity!]!
   """Visibility of the Space."""
   visibility: SpaceVisibility!
-}
-
-input RolesUserInput {
-  """Return membership in Spaces matching the provided filter."""
-  filter: SpaceFilterInput
-  """The ID of the user to retrieve the roles of."""
-  userID: UUID!
-}
-
-input RolesVirtualContributorInput {
-  """The ID or nameID of the VC to retrieve the roles of."""
-  virtualContributorID: UUID!
 }
 
 type Room {
@@ -6177,16 +6150,16 @@ input SetPlatformWellKnownVirtualContributorInput {
   wellKnown: VirtualContributorWellKnown!
 }
 
-type Space {
+type Space implements ActorFull {
   """About this space."""
   about: SpaceAbout!
   """The Account that this Space is part of."""
   account: Account!
   """The "highest" subscription active for this Space."""
   activeSubscription: SpaceSubscription
-  """The Agent representing this Space."""
-  agent: Agent!
-  """The authorization rules for the entity"""
+  """The Actor representing this Space."""
+  actor: Actor!
+  """The authorization rules for the Actor"""
   authorization: Authorization
   """The collaboration for the Space."""
   collaboration: Collaboration!
@@ -6194,7 +6167,9 @@ type Space {
   community: Community!
   """The date at which the entity was created."""
   createdDate: DateTime!
-  """The ID of the entity"""
+  """The credentials held by this Actor"""
+  credentials: [Credential!]
+  """The ID of the Actor"""
   id: UUID!
   """
   The level of this Space, representing the number of Spaces above this one.
@@ -6208,6 +6183,8 @@ type Space {
   nameID: NameID!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
+  """The profile for this Actor. Note: Not all actor types have profiles."""
+  profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
   """The sorting order for this Space within its parent."""
@@ -6231,6 +6208,8 @@ type Space {
   ): [Space!]!
   """The TemplatesManager in use by this Space"""
   templatesManager: TemplatesManager
+  """The type of Actor"""
+  type: ActorType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """Visibility of the Space."""
@@ -6255,7 +6234,7 @@ type SpaceAbout {
   """The Profile for the Space."""
   profile: Profile!
   """The Space provider (host)."""
-  provider: Contributor
+  provider: Actor
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """Who should get involved in this challenge"""
@@ -7770,35 +7749,39 @@ enum UrlType {
   VIRTUAL_CONTRIBUTOR
 }
 
-type User implements Contributor {
+type User implements ActorFull {
   """The account hosted by this User."""
   account: Account
-  """The Agent representing this User."""
-  agent: Agent!
+  """The Actor representing this User."""
+  actor: Actor!
   """Details about the authentication used for this User."""
   authentication: UserAuthenticationResult
-  """The authorization rules for the Contributor"""
+  """The authorization rules for the Actor"""
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The credentials held by this Actor"""
+  credentials: [Credential!]
   """The email address for this User."""
   email: String!
   firstName: String!
-  """The ID of the Contributor"""
+  """The ID of the Actor"""
   id: UUID!
   """Can a message be sent to this User."""
   isContactable: Boolean!
   lastName: String!
-  """A name identifier of the Contributor, unique within a given scope."""
+  """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
   """The phone number for this User."""
   phone: String
-  """The Profile for this User."""
-  profile: Profile!
+  """The profile for this Actor. Note: Not all actor types have profiles."""
+  profile: Profile
   """The settings for this User."""
   settings: UserSettings!
   """The StorageAggregator for managing storage buckets in use by this User"""
   storageAggregator: StorageAggregator
+  """The type of Actor"""
+  type: ActorType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
@@ -8012,14 +7995,14 @@ type VcInteraction {
   virtualContributorID: String!
 }
 
-type VirtualContributor implements Contributor {
+type VirtualContributor implements ActorFull {
   """The Account of the Virtual Contributor."""
   account: Account
-  """The Agent representing this User."""
-  agent: Agent!
+  """The Actor representing this User."""
+  actor: Actor!
   """The AI persona associated with this Virtual Contributor."""
   aiPersona: AiPersona
-  """The authorization rules for the Contributor"""
+  """The authorization rules for the Actor"""
   authorization: Authorization
   """Description of the body of knowledge for this VC."""
   bodyOfKnowledgeDescription: Markdown
@@ -8029,13 +8012,15 @@ type VirtualContributor implements Contributor {
   bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType!
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The credentials held by this Actor"""
+  credentials: [Credential!]
   """
   The data access mode defining what data this Virtual Contributor can access.
   """
   dataAccessMode: VirtualContributorDataAccessMode!
   """The engine powering this Virtual Contributor"""
   engine: AiPersonaEngine!
-  """The ID of the Contributor"""
+  """The ID of the Actor"""
   id: UUID!
   """Interaction modes supported by this Virtual Contributor."""
   interactionModes: VirtualContributorInteractionMode!
@@ -8049,24 +8034,26 @@ type VirtualContributor implements Contributor {
   listedInStore: Boolean!
   """The model card information about this Virtual Contributor"""
   modelCard: VirtualContributorModelCard!
-  """A name identifier of the Contributor, unique within a given scope."""
+  """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
   """
   Platform-level settings of this Virtual Contributor, modifiable only by platform admins.
   """
   platformSettings: VirtualContributorPlatformSettings!
-  """The profile for this Virtual."""
-  profile: Profile!
+  """The profile for this Actor. Note: Not all actor types have profiles."""
+  profile: Profile
   """Prompt graph definition for this Virtual Contributor."""
   promptGraphDefinition: PromptGraphDefinition
   """The Virtual Contributor provider."""
-  provider: Contributor!
+  provider: Actor!
   """Visibility of the VC in searches."""
   searchVisibility: SearchVisibility!
   """The settings of this Virtual Contributor."""
   settings: VirtualContributorSettings!
   """The status of the virtual contributor"""
   status: VirtualContributorStatus!
+  """The type of Actor"""
+  type: ActorType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """
