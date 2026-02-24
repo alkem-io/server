@@ -1,0 +1,17 @@
+# PVC for shared pnpm store cache across ephemeral ARC runner pods.
+# Pre-provision this in the same namespace as the ARC AutoScalingRunnerSet.
+# Access mode: RWO — all runner pods must be pinned to the same node via nodeSelector.
+apiVersion: v1
+kind: PersistentVolumeClaim
+metadata:
+  name: arc-pnpm-store
+  labels:
+    app.kubernetes.io/component: runner-cache
+    app.kubernetes.io/part-of: arc-runner-set
+spec:
+  accessModes:
+    - ReadWriteOnce
+  resources:
+    requests:
+      storage: 5Gi
+  # storageClassName: <your-storage-class>  # Uncomment and set if not using default
