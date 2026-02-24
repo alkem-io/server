@@ -275,20 +275,39 @@ export class UrlGeneratorService {
     return result;
   }
 
+  // Actor-based entity tables where profileId lives on the actor table, not the entity table
+  private static readonly ACTOR_BASED_TABLES = new Set([
+    'user',
+    'organization',
+    'virtual_contributor',
+  ]);
+
   public async getNameableEntityInfo(
     entityTableName: string,
     profileID: string
   ): Promise<{ entityNameID: string; entityID: string } | null> {
+    let query: string;
+
+    if (UrlGeneratorService.ACTOR_BASED_TABLES.has(entityTableName)) {
+      // For actor-based entities, profileId is on the actor table (shared PK with entity)
+      query = `
+        SELECT "${entityTableName}"."id" as "entityID", "${entityTableName}"."nameID" as "entityNameID"
+        FROM "${entityTableName}"
+        INNER JOIN "actor" ON "actor"."id" = "${entityTableName}"."id"
+        WHERE "actor"."profileId" = $1
+      `;
+    } else {
+      query = `
+        SELECT "${entityTableName}"."id" as "entityID", "${entityTableName}"."nameID" as "entityNameID"
+        FROM "${entityTableName}"
+        WHERE "${entityTableName}"."profileId" = $1
+      `;
+    }
+
     const [result]: {
       entityID: string;
       entityNameID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT "${entityTableName}"."id" as "entityID", "${entityTableName}"."nameID" as "entityNameID" FROM "${entityTableName}"
-        WHERE "${entityTableName}"."profileId" = $1
-      `,
-      [profileID]
-    );
+    }[] = await this.entityManager.connection.query(query, [profileID]);
 
     if (!result) {
       return null;

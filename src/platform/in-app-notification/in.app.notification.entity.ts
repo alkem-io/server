@@ -6,9 +6,9 @@ import { Invitation } from '@domain/access/invitation/invitation.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { Room } from '@domain/communication/room/room.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { User } from '@domain/community/user/user.entity';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { CalendarEvent } from '@domain/timeline/event';
 import { Column, Entity, Generated, JoinColumn, ManyToOne } from 'typeorm';
@@ -202,47 +202,17 @@ export class InAppNotification
   @Column('uuid', {
     nullable: true,
     comment:
-      'FK to Organization - cascade deletes notification when organization contributor is deleted',
+      'FK to Actor - cascade deletes notification when contributor is deleted',
   })
-  contributorOrganizationID?: string;
+  contributorActorId?: string;
 
-  @ManyToOne(() => Organization, {
+  @ManyToOne(() => Actor, {
     eager: false,
     cascade: false,
-    onDelete: 'CASCADE',
+    onDelete: 'SET NULL',
   })
-  @JoinColumn({ name: 'contributorOrganizationID' })
-  contributorOrganization?: Organization;
-
-  @Column('uuid', {
-    nullable: true,
-    comment:
-      'FK to User - cascade deletes notification when user contributor is deleted',
-  })
-  contributorUserID?: string;
-
-  @ManyToOne(() => User, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'contributorUserID' })
-  contributorUser?: User;
-
-  @Column('uuid', {
-    nullable: true,
-    comment:
-      'FK to VC - cascade deletes notification when VC contributor is deleted',
-  })
-  contributorVcID?: string;
-
-  @ManyToOne(() => VirtualContributor, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  @JoinColumn({ name: 'contributorVcID' })
-  contributorVc?: VirtualContributor;
+  @JoinColumn({ name: 'contributorActorId' })
+  contributorActor?: Actor;
 
   @Column('uuid', {
     nullable: true,

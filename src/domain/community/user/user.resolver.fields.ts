@@ -225,14 +225,16 @@ export class UserResolverFields {
     actorContext: ActorContext,
     privilege: AuthorizationPrivilege
   ): Promise<boolean> {
-    // needs to be loaded if you are not going through the orm layer
-    // e.g. pagination is going around the orm layer
-    const { authorization } = await this.userService.getUserByIdOrFail(
-      user.id,
-      {
+    // Use the already-loaded authorization when available (eager actor relation).
+    // Only reload when the entity came from a path that skipped eager loading
+    // (e.g. QueryBuilder-based pagination).
+    let authorization = user.authorization;
+    if (!authorization) {
+      const loaded = await this.userService.getUserByIdOrFail(user.id, {
         relations: { actor: true },
-      }
-    );
+      });
+      authorization = loaded.authorization;
+    }
     const accessGranted = this.authorizationService.isAccessGranted(
       actorContext,
       authorization,
