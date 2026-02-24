@@ -8,10 +8,10 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
@@ -270,7 +270,7 @@ export class InnovationPackService {
     return await this.templatesSetService.getTemplatesCount(templatesSetId);
   }
 
-  public async getProvider(innovationPackID: string): Promise<IContributor> {
+  public async getProvider(innovationPackID: string): Promise<IActor> {
     const innovationPack = await this.innovationPackRepository.findOne({
       where: { id: innovationPackID },
       relations: {

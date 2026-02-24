@@ -10,13 +10,13 @@ import {
   ForbiddenException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
+import { CredentialsSearchInput } from '@domain/actor/credential/dto/credentials.dto.search';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -410,13 +410,13 @@ export class AuthorizationPolicyService {
   }
 
   getAgentPrivileges(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     authorizationPolicy: IAuthorizationPolicy
   ): AuthorizationPrivilege[] {
-    if (!agentInfo || !agentInfo.credentials) return [];
+    if (!actorContext || !actorContext.credentials) return [];
 
     return this.authorizationService.getGrantedPrivileges(
-      agentInfo.credentials,
+      actorContext.credentials,
       authorizationPolicy
     );
   }

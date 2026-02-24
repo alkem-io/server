@@ -1,11 +1,11 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, LoggerService } from '@nestjs/common';
@@ -39,7 +39,7 @@ export class CalloutTransferResolverMutations {
       'Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet. Note: this is experimental, and only for GlobalAdmins. The user that executes the transfer becomes the creator of the Callout.',
   })
   async transferCallout(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('transferData')
     transferData: TransferCalloutInput
   ): Promise<ICallout> {
@@ -69,13 +69,13 @@ export class CalloutTransferResolverMutations {
         transferData.targetCalloutsSetID
       );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       sourceCalloutsSet.authorization,
       AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
       `callouts set transfer callout: ${callout.id}`
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       targetCalloutsSet.authorization,
       AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
       `callouts set transfer callout: ${callout.id}`

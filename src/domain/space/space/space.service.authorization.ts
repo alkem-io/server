@@ -24,8 +24,7 @@ import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platf
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { IRoleSet } from '@domain/access/role-set';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -46,7 +45,6 @@ export class SpaceAuthorizationService {
   constructor(
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
-    private agentAuthorizationService: AgentAuthorizationService,
     private roleSetService: RoleSetService,
     private storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private communityAuthorizationService: CommunityAuthorizationService,
@@ -65,8 +63,10 @@ export class SpaceAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
       relations: {
-        authorization: {
-          parentAuthorizationPolicy: true,
+        actor: {
+          authorization: {
+            parentAuthorizationPolicy: true,
+          },
         },
         parentSpace: {
           community: {
@@ -74,7 +74,6 @@ export class SpaceAuthorizationService {
           },
           parentSpace: true,
         },
-        agent: true,
         community: {
           roleSet: true,
         },
@@ -385,7 +384,6 @@ export class SpaceAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     if (
       !space.authorization ||
-      !space.agent ||
       !space.collaboration ||
       !space.community ||
       !space.community.roleSet ||
@@ -414,13 +412,6 @@ export class SpaceAuthorizationService {
         isSubspaceCommunity
       );
     updatedAuthorizations.push(...communityAuthorizations);
-
-    const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
-        space.agent,
-        space.authorization
-      );
-    updatedAuthorizations.push(agentAuthorization);
 
     const storageAuthorizations =
       await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
@@ -607,10 +598,7 @@ export class SpaceAuthorizationService {
 
     const collaborationSettings = spaceSettings.collaboration;
     if (collaborationSettings.allowMembersToCreateSubspaces) {
-      const criteria = await this.getContributorCriteria(
-        roleSet,
-        spaceSettings
-      );
+      const criteria = await this.getActorCriteria(roleSet, spaceSettings);
       const createSubspacePrivilegeRule =
         this.authorizationPolicyService.createCredentialRule(
           [AuthorizationPrivilege.CREATE_SUBSPACE],
@@ -629,7 +617,7 @@ export class SpaceAuthorizationService {
     return authorization;
   }
 
-  private async getContributorCriteria(
+  private async getActorCriteria(
     roleSet: IRoleSet,
     spaceSettings: ISpaceSettings
   ): Promise<ICredentialDefinition[]> {

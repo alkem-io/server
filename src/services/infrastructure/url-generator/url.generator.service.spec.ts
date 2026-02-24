@@ -1,3 +1,4 @@
+import { ActorType } from '@common/enums/actor.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { UrlPathBase } from '@common/enums/url.path.base';
 import { UrlPathElement } from '@common/enums/url.path.element';
@@ -118,6 +119,7 @@ describe('UrlGeneratorService', () => {
       const userContributor = Object.create(User.prototype);
       userContributor.nameID = 'john-doe';
       userContributor.id = 'user-1';
+      userContributor.actor = { type: ActorType.USER };
 
       const result = service.createUrlForContributor(userContributor);
 
@@ -128,6 +130,7 @@ describe('UrlGeneratorService', () => {
       const orgContributor = Object.create(Organization.prototype);
       orgContributor.nameID = 'acme-corp';
       orgContributor.id = 'org-1';
+      orgContributor.actor = { type: ActorType.ORGANIZATION };
 
       const result = service.createUrlForContributor(orgContributor);
 
@@ -138,6 +141,7 @@ describe('UrlGeneratorService', () => {
       const vcContributor = Object.create(VirtualContributor.prototype);
       vcContributor.nameID = 'my-vc';
       vcContributor.id = 'vc-1';
+      vcContributor.actor = { type: ActorType.VIRTUAL_CONTRIBUTOR };
 
       const result = service.createUrlForContributor(vcContributor);
 

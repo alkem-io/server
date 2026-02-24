@@ -1,6 +1,5 @@
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -12,8 +11,7 @@ import { SearchResultService } from './search.result.service';
 describe('SearchResultService', () => {
   let service: SearchResultService;
   let authorizationService: { isAccessGranted: Mock };
-  let userLookupService: { usersWithCredential: Mock };
-  let _organizationLookupService: { organizationsWithCredentials: Mock };
+  let actorLookupService: { getActorIDsWithCredential: Mock };
   let entityManager: {
     findBy: Mock;
     find: Mock;
@@ -21,7 +19,7 @@ describe('SearchResultService', () => {
     findOne: Mock;
   };
 
-  const agentInfo = { credentials: [] } as any;
+  const actorContext = { credentials: [] } as any;
 
   beforeEach(async () => {
     entityManager = {
@@ -46,8 +44,7 @@ describe('SearchResultService', () => {
 
     service = module.get(SearchResultService);
     authorizationService = module.get(AuthorizationService) as any;
-    userLookupService = module.get(UserLookupService) as any;
-    _organizationLookupService = module.get(OrganizationLookupService) as any;
+    actorLookupService = module.get(ActorLookupService) as any;
   });
 
   describe('getSpaceSearchResults', () => {
@@ -119,7 +116,7 @@ describe('SearchResultService', () => {
 
   describe('getSubspaceSearchResults', () => {
     it('should return empty array when no raw results are provided', async () => {
-      const result = await service.getSubspaceSearchResults([], agentInfo);
+      const result = await service.getSubspaceSearchResults([], actorContext);
 
       expect(result).toEqual([]);
     });
@@ -144,7 +141,7 @@ describe('SearchResultService', () => {
 
       const result = await service.getSubspaceSearchResults(
         rawResults,
-        agentInfo
+        actorContext
       );
 
       expect(result).toHaveLength(0);
@@ -170,7 +167,7 @@ describe('SearchResultService', () => {
 
       const result = await service.getSubspaceSearchResults(
         rawResults,
-        agentInfo
+        actorContext
       );
 
       expect(result).toHaveLength(0);
@@ -193,7 +190,7 @@ describe('SearchResultService', () => {
 
       const result = await service.getSubspaceSearchResults(
         rawResults,
-        agentInfo
+        actorContext
       );
 
       expect(result).toHaveLength(1);
@@ -225,8 +222,8 @@ describe('SearchResultService', () => {
       ] as any[];
 
       // Only user-1 is a member of the space
-      userLookupService.usersWithCredential
-        .mockResolvedValueOnce([{ id: 'user-1' }]) // SPACE_MEMBER
+      actorLookupService.getActorIDsWithCredential
+        .mockResolvedValueOnce(['user-1']) // SPACE_MEMBER
         .mockResolvedValueOnce([]); // SPACE_ADMIN
 
       entityManager.findBy.mockResolvedValue([{ id: 'user-1' }]);
@@ -240,7 +237,10 @@ describe('SearchResultService', () => {
 
   describe('getOrganizationSearchResults', () => {
     it('should return empty array when no raw results are provided', async () => {
-      const result = await service.getOrganizationSearchResults([], agentInfo);
+      const result = await service.getOrganizationSearchResults(
+        [],
+        actorContext
+      );
 
       expect(result).toEqual([]);
     });
@@ -261,7 +261,7 @@ describe('SearchResultService', () => {
 
       const result = await service.getOrganizationSearchResults(
         rawResults,
-        agentInfo
+        actorContext
       );
 
       expect(result).toHaveLength(0);

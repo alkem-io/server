@@ -58,13 +58,13 @@ describe('AccountLookupService', () => {
         .spyOn(entityManager, 'findOne')
         .mockResolvedValue(mockAccount);
       const options = {
-        relations: { agent: true },
+        relations: { actor: { credentials: true } },
       };
 
       await service.getAccountOrFail('account-1', options as any);
 
       expect(findOneSpy).toHaveBeenCalledWith(Account, {
-        relations: { agent: true },
+        relations: { actor: { credentials: true } },
         where: { id: 'account-1' },
       });
     });
@@ -77,35 +77,6 @@ describe('AccountLookupService', () => {
       const result = await service.getAccount('nonexistent');
 
       expect(result).toBeNull();
-    });
-  });
-
-  describe('getAgent', () => {
-    it('should return agent when account and agent exist', async () => {
-      const mockAgent = { id: 'agent-1' };
-      const mockAccount = { id: 'account-1', agent: mockAgent } as IAccount;
-      vi.spyOn(entityManager, 'findOne').mockResolvedValue(mockAccount);
-
-      const result = await service.getAgent('account-1');
-
-      expect(result).toBe(mockAgent);
-    });
-
-    it('should throw RelationshipNotFoundException when agent is not loaded', async () => {
-      const mockAccount = { id: 'account-1', agent: undefined } as IAccount;
-      vi.spyOn(entityManager, 'findOne').mockResolvedValue(mockAccount);
-
-      await expect(service.getAgent('account-1')).rejects.toThrow(
-        'Unable to retrieve Agent for Account: account-1'
-      );
-    });
-
-    it('should throw EntityNotFoundException when account not found', async () => {
-      vi.spyOn(entityManager, 'findOne').mockResolvedValue(null);
-
-      await expect(service.getAgent('missing-id')).rejects.toThrow(
-        'Unable to find Account on Host with ID: missing-id'
-      );
     });
   });
 
@@ -170,8 +141,8 @@ describe('AccountLookupService', () => {
       const result = await service.getHost(mockAccount);
 
       expect(result).toBe(mockUser);
-      // getHost now uses Promise.all, so both User and Organization lookups run
-      expect(entityManager.findOne).toHaveBeenCalledTimes(2);
+      // getHost checks user first; when found, it returns immediately without checking organization
+      expect(entityManager.findOne).toHaveBeenCalledTimes(1);
     });
   });
 

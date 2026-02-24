@@ -1,7 +1,7 @@
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleName } from '@common/enums/role.name';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { ICredential } from '@domain/agent/credential/credential.interface';
+import { ActorService } from '@domain/actor/actor/actor.service';
+import { ICredential } from '@domain/actor/credential/credential.interface';
 import { Injectable, Scope } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import DataLoader from 'dataloader';
@@ -9,24 +9,24 @@ import { Repository } from 'typeorm';
 import { InvitationService } from '../invitation/invitation.service';
 import {
   ensureRolesLoaded,
-  loadAgentCredentials,
+  loadActorCredentials,
 } from './role.set.data.loader.utils';
 import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
 import { RoleSetCacheService } from './role.set.service.cache';
-import { AgentRoleKey } from './types';
+import { ActorRoleKey } from './types';
 
 @Injectable({ scope: Scope.REQUEST })
 export class RoleSetMembershipStatusDataLoader {
   public readonly loader: DataLoader<
-    AgentRoleKey,
+    ActorRoleKey,
     CommunityMembershipStatus,
     string
   >;
 
   constructor(
-    private readonly agentService: AgentService,
+    private readonly actorService: ActorService,
     private readonly roleSetCacheService: RoleSetCacheService,
     private readonly roleSetService: RoleSetService,
     private readonly invitationService: InvitationService,
@@ -34,36 +34,36 @@ export class RoleSetMembershipStatusDataLoader {
     private readonly roleSetRepository: Repository<RoleSet>
   ) {
     this.loader = new DataLoader<
-      AgentRoleKey,
+      ActorRoleKey,
       CommunityMembershipStatus,
       string
-    >(async (keys: readonly AgentRoleKey[]) => this.batchLoad(keys), {
-      cacheKeyFn: (key: AgentRoleKey) =>
-        `${key.agentInfo.agentID}-${key.roleSet.id}`,
+    >(async (keys: readonly ActorRoleKey[]) => this.batchLoad(keys), {
+      cacheKeyFn: (key: ActorRoleKey) =>
+        `${key.actorContext.actorID}-${key.roleSet.id}`,
     });
   }
 
   private async batchLoad(
-    keys: readonly AgentRoleKey[]
+    keys: readonly ActorRoleKey[]
   ): Promise<CommunityMembershipStatus[]> {
     const results: CommunityMembershipStatus[] = new Array(keys.length);
 
     // 1. Load agent credentials ONCE for the unique agent(s) in this batch.
-    const credentialsByAgent = await loadAgentCredentials(
+    const credentialsByAgent = await loadActorCredentials(
       keys,
-      this.agentService
+      this.actorService
     );
 
     // 2. Check Redis cache via single mget; collect indices that still need computation.
-    const cacheEntries: Array<{ agentId: string; roleSetId: string }> = [];
+    const cacheEntries: Array<{ actorID: string; roleSetId: string }> = [];
     const cacheIndexMap: number[] = []; // cacheEntries[j] corresponds to keys[cacheIndexMap[j]]
     for (let i = 0; i < keys.length; i++) {
-      const { agentInfo, roleSet } = keys[i];
-      if (!agentInfo.agentID) {
+      const { actorContext, roleSet } = keys[i];
+      if (!actorContext.actorID) {
         results[i] = CommunityMembershipStatus.NOT_MEMBER;
       } else {
         cacheEntries.push({
-          agentId: agentInfo.agentID,
+          actorID: actorContext.actorID,
           roleSetId: roleSet.id,
         });
         cacheIndexMap.push(i);
@@ -95,14 +95,14 @@ export class RoleSetMembershipStatusDataLoader {
     const cacheWrites: Promise<unknown>[] = [];
 
     for (const i of uncachedIndices) {
-      const { agentInfo, roleSet } = keys[i];
-      const credentials = credentialsByAgent.get(agentInfo.agentID);
+      const { actorContext, roleSet } = keys[i];
+      const credentials = credentialsByAgent.get(actorContext.actorID);
 
       if (credentials && this.isMemberInMemory(roleSet, credentials)) {
         results[i] = CommunityMembershipStatus.MEMBER;
         cacheWrites.push(
           this.roleSetCacheService.setMembershipStatusCache(
-            agentInfo.agentID,
+            actorContext.actorID,
             roleSet.id,
             CommunityMembershipStatus.MEMBER
           )
@@ -115,12 +115,12 @@ export class RoleSetMembershipStatusDataLoader {
     // 5. Resolve non-member statuses in parallel (application + invitation checks).
     await Promise.all(
       nonMemberIndices.map(async i => {
-        const { agentInfo, roleSet } = keys[i];
-        const status = await this.resolveNonMemberStatus(agentInfo, roleSet);
+        const { actorContext, roleSet } = keys[i];
+        const status = await this.resolveNonMemberStatus(actorContext, roleSet);
         results[i] = status;
         cacheWrites.push(
           this.roleSetCacheService.setMembershipStatusCache(
-            agentInfo.agentID,
+            actorContext.actorID,
             roleSet.id,
             status
           )
@@ -154,13 +154,13 @@ export class RoleSetMembershipStatusDataLoader {
 
   /** For non-members, check pending applications and invitations in parallel. */
   private async resolveNonMemberStatus(
-    agentInfo: { userID: string },
+    actorContext: { actorID: string },
     roleSet: IRoleSet
   ): Promise<CommunityMembershipStatus> {
     // Fetch application and invitation concurrently
     const [openApplication, openInvitation] = await Promise.all([
-      this.roleSetService.findOpenApplication(agentInfo.userID, roleSet.id),
-      this.roleSetService.findOpenInvitation(agentInfo.userID, roleSet.id),
+      this.roleSetService.findOpenApplication(actorContext.actorID, roleSet.id),
+      this.roleSetService.findOpenInvitation(actorContext.actorID, roleSet.id),
     ]);
 
     if (openApplication) {

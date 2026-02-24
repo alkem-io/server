@@ -333,7 +333,7 @@ describe('AuthorizationPolicyService', () => {
   });
 
   describe('getAgentPrivileges', () => {
-    it('should return empty array when agentInfo is falsy', () => {
+    it('should return empty array when actorContext is falsy', () => {
       const auth = new AuthorizationPolicy(AuthorizationPolicyType.PROFILE);
 
       const result = service.getAgentPrivileges(null as any, auth);
@@ -341,7 +341,7 @@ describe('AuthorizationPolicyService', () => {
       expect(result).toEqual([]);
     });
 
-    it('should return empty array when agentInfo has no credentials', () => {
+    it('should return empty array when actorContext has no credentials', () => {
       const auth = new AuthorizationPolicy(AuthorizationPolicyType.PROFILE);
 
       const result = service.getAgentPrivileges(

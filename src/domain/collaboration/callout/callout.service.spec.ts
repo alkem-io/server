@@ -296,7 +296,7 @@ describe('CalloutService', () => {
       const callout = { id: 'callout-1' } as any;
       const publisher = { id: 'real-user-id' };
 
-      vi.mocked(userLookupService.getUserByUUID).mockResolvedValue(
+      vi.mocked(userLookupService.getUserById).mockResolvedValue(
         publisher as any
       );
       vi.mocked(repository.save).mockResolvedValue(callout);
@@ -309,7 +309,7 @@ describe('CalloutService', () => {
     it('should set publishedBy to empty string when publisher not found', async () => {
       const callout = { id: 'callout-1' } as any;
 
-      vi.mocked(userLookupService.getUserByUUID).mockResolvedValue(
+      vi.mocked(userLookupService.getUserById).mockResolvedValue(
         undefined as any
       );
       vi.mocked(repository.save).mockResolvedValue(callout);

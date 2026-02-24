@@ -1,6 +1,6 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -35,7 +35,7 @@ export class TemplatesSetResolverMutations {
     description: 'Creates a new Template on the specified TemplatesSet.',
   })
   async createTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('templateData')
     templateData: CreateTemplateOnTemplatesSetInput
   ): Promise<ITemplate> {
@@ -43,7 +43,7 @@ export class TemplatesSetResolverMutations {
       templateData.templatesSetID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
       `templates set create template: ${templatesSet.id}`
@@ -67,7 +67,7 @@ export class TemplatesSetResolverMutations {
       'Creates a new Template on the specified TemplatesSet using the provided Space as content.',
   })
   async createTemplateFromSpace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('templateData')
     templateData: CreateTemplateFromSpaceOnTemplatesSetInput
   ): Promise<ITemplate> {
@@ -75,7 +75,7 @@ export class TemplatesSetResolverMutations {
       templateData.templatesSetID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
       `templatesSet create template from Collaboration, templatesSetId: ${templatesSet.id}`
@@ -85,7 +85,7 @@ export class TemplatesSetResolverMutations {
       templateData.spaceID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.READ,
       `templatesSet create template from Space, read access, collaborationId:${space.id} templatesSetId:${templatesSet.id}`
@@ -109,7 +109,7 @@ export class TemplatesSetResolverMutations {
       'Creates a new Template on the specified TemplatesSet using the provided ContentSpace as content.',
   })
   async createTemplateFromContentSpace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('templateData')
     templateData: CreateTemplateFromContentSpaceOnTemplatesSetInput
   ): Promise<ITemplate> {
@@ -117,7 +117,7 @@ export class TemplatesSetResolverMutations {
       templateData.templatesSetID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       templatesSet.authorization,
       AuthorizationPrivilege.CREATE,
       `templatesSet create template from ContentSpace, templatesSetId: ${templatesSet.id}`
@@ -128,7 +128,7 @@ export class TemplatesSetResolverMutations {
         templateData.contentSpaceID
       );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       contentSpace.authorization,
       AuthorizationPrivilege.READ,
       `templatesSet create template from ContentSpace, read access, contentSpaceId:${contentSpace.id} templatesSetId:${templatesSet.id}`

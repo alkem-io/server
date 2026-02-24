@@ -1,7 +1,7 @@
-import { ValueProvider } from '@nestjs/common';
-import { Client } from '@elastic/elasticsearch';
-import { PublicPart } from '../utils/public-part';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
+import { Client } from '@elastic/elasticsearch';
+import { ValueProvider } from '@nestjs/common';
+import { PublicPart } from '../utils/public-part';
 
 export const MockElasticsearchClientProvider: ValueProvider<
   PublicPart<Client>

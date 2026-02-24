@@ -1,31 +1,28 @@
 import { AccountType } from '@common/enums/account.type';
-import { AgentType } from '@common/enums/agent.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseType } from '@common/enums/license.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
-import { IAgent } from '@domain/agent/agent/agent.interface';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { LicenseService } from '@domain/common/license/license.service';
+import { IAccountLicensePlan } from '@domain/space/account.license.plan';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { LicenseIssuerService } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.service';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
+import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { Account } from '../account/account.entity';
 import { IAccount } from '../account/account.interface';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
-import { IAccountLicensePlan } from '../account.license.plan/account.license.plan.interface';
 
 @Injectable()
 export class AccountHostService {
   constructor(
-    private agentService: AgentService,
     private licenseIssuerService: LicenseIssuerService,
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseService: LicenseService,
@@ -37,7 +34,10 @@ export class AccountHostService {
 
   async createAccount(accountType: AccountType): Promise<IAccount> {
     const account: IAccount = new Account();
-    account.type = accountType;
+    account.accountType = accountType;
+    // Actor type is set by Account constructor to ActorType.ACCOUNT
+    // Generate a unique nameID for the account using first 8 chars of a UUID
+    account.nameID = `account-${randomUUID().substring(0, 8)}`;
     account.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ACCOUNT
     );
@@ -46,10 +46,6 @@ export class AccountHostService {
       await this.storageAggregatorService.createStorageAggregator(
         StorageAggregatorType.ACCOUNT
       );
-
-    account.agent = await this.agentService.createAgent({
-      type: AgentType.ACCOUNT,
-    });
 
     account.license = this.licenseService.createLicense({
       type: LicenseType.ACCOUNT,
@@ -93,19 +89,29 @@ export class AccountHostService {
       ],
     });
 
-    return await this.accountRepository.save(account);
+    // Save Actor, License, and Account in a single transaction.
+    // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+    // reliably set FK columns, so we pre-save children explicitly.
+    return await this.accountRepository.manager.transaction(async mgr => {
+      await mgr.save((account as Account).actor!);
+      account.license = await mgr.save(account.license);
+      return await mgr.save(account);
+    });
   }
 
   private getBaselineAccountLicensePlan(): IAccountLicensePlan {
     return DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN;
   }
 
+  /**
+   * Assign license plans to a Space.
+   * Space IS an Actor - credentials are granted directly to the Space using its ID as actorID.
+   */
   public async assignLicensePlansToSpace(
-    spaceAgent: IAgent,
-    spaceID: string,
+    spaceId: string,
     type: AccountType,
     licensePlanID?: string
-  ): Promise<IAgent> {
+  ): Promise<void> {
     const licensingFramework =
       await this.licensingFrameworkService.getDefaultLicensingOrFail();
     const licensePlansToAssign: ILicensePlan[] = [];
@@ -139,12 +145,12 @@ export class AccountHostService {
     }
 
     for (const licensePlan of licensePlansToAssign) {
+      // Space IS an Actor - grant credentials directly using spaceId as actorID
       await this.licenseIssuerService.assignLicensePlan(
-        spaceAgent,
+        spaceId,
         licensePlan,
-        spaceID
+        spaceId
       );
     }
-    return await this.agentService.getAgentOrFail(spaceAgent.id);
   }
 }

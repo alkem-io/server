@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums';
 import { ActivityEventType } from '@common/enums/activity.event.type';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { PostService } from '@domain/collaboration/post/post.service';
@@ -18,7 +19,6 @@ import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { IActivity } from '@platform/activity/activity.interface';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { ActivityService } from '@src/platform/activity/activity.service';
@@ -34,7 +34,7 @@ export class ActivityLogService {
     private activityService: ActivityService,
     private userService: UserService,
     private userLookupService: UserLookupService,
-    private contributorLookupService: ContributorLookupService,
+    private actorLookupService: ActorLookupService,
     private communityResolverService: CommunityResolverService,
     private calloutService: CalloutService,
     private postService: PostService,
@@ -115,7 +115,7 @@ export class ActivityLogService {
     );
 
     // Batch-load all users (1 query instead of P)
-    const users = await this.userLookupService.getUsersByUUID(userIds);
+    const users = await this.userLookupService.getUsersByIds(userIds);
     const userById = new Map<string, IUser>(users.map(u => [u.id, u]));
 
     // Convert each item using pre-loaded maps
@@ -143,7 +143,7 @@ export class ActivityLogService {
       // Use pre-loaded user or fall back to individual query
       const userTriggeringActivity =
         userById?.get(rawActivity.triggeredBy) ??
-        (await this.userService.getUserOrFail(rawActivity.triggeredBy));
+        (await this.userService.getUserByIdOrFail(rawActivity.triggeredBy));
 
       // Use pre-loaded space or fall back to individual query
       const space =
@@ -174,7 +174,7 @@ export class ActivityLogService {
       const activityBuilder: IActivityLogBuilder =
         new ActivityLogBuilderService(
           activityLogEntryBase,
-          this.contributorLookupService,
+          this.actorLookupService,
           this.calloutService,
           this.postService,
           this.whiteboardService,

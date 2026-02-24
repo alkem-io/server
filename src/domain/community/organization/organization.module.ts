@@ -1,6 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LicenseEntitlementModule } from '@domain/common/license-entitlement/license.entitlement.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
@@ -15,7 +15,6 @@ import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.cr
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
-import { ContributorModule } from '../contributor/contributor.module';
 import { OrganizationLookupModule } from '../organization-lookup/organization.lookup.module';
 import { OrganizationSettingsModule } from '../organization-settings/organization.settings.module';
 import { OrganizationVerificationModule } from '../organization-verification/organization.verification.module';
@@ -25,17 +24,15 @@ import { OrganizationResolverQueries } from './organization.resolver.queries';
 import { OrganizationService } from './organization.service';
 import { OrganizationAuthorizationService } from './organization.service.authorization';
 import { OrganizationLicenseService } from './organization.service.license';
-
 @Module({
   imports: [
     AccountHostModule,
     AccountLookupModule,
-    AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
+    ActorModule,
     RoleSetModule,
     LicenseEntitlementModule,
-    ContributorModule,
     OrganizationVerificationModule,
     OrganizationLookupModule,
     OrganizationSettingsModule,

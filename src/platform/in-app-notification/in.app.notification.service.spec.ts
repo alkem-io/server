@@ -1,6 +1,6 @@
+import { ActorType } from '@common/enums/actor.type';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -88,8 +88,8 @@ describe('InAppNotificationService', () => {
     it('should extract contributorUserID for SPACE_ADMIN_COMMUNITY_NEW_MEMBER with USER type', () => {
       const payload = {
         spaceID: 'space-1',
-        contributorType: RoleSetContributorType.USER,
-        contributorID: 'user-contributor',
+        actorType: ActorType.USER,
+        actorID: 'user-contributor',
       };
       notificationRepo.create!.mockImplementation((input: any) => input);
 
@@ -111,8 +111,8 @@ describe('InAppNotificationService', () => {
     it('should extract contributorOrganizationID for SPACE_ADMIN_COMMUNITY_NEW_MEMBER with ORGANIZATION type', () => {
       const payload = {
         spaceID: 'space-1',
-        contributorType: RoleSetContributorType.ORGANIZATION,
-        contributorID: 'org-contributor',
+        actorType: ActorType.ORGANIZATION,
+        actorID: 'org-contributor',
       };
       notificationRepo.create!.mockImplementation((input: any) => input);
 
@@ -133,8 +133,8 @@ describe('InAppNotificationService', () => {
     it('should extract contributorVcID for SPACE_ADMIN_COMMUNITY_NEW_MEMBER with VIRTUAL type', () => {
       const payload = {
         spaceID: 'space-1',
-        contributorType: RoleSetContributorType.VIRTUAL,
-        contributorID: 'vc-contributor',
+        actorType: ActorType.VIRTUAL_CONTRIBUTOR,
+        actorID: 'vc-contributor',
       };
       notificationRepo.create!.mockImplementation((input: any) => input);
 

@@ -273,12 +273,14 @@ describe('PlatformInvitationService', () => {
         createdBy: 'user-1',
       } as any;
 
-      (userLookupService.getUserOrFail as Mock).mockResolvedValue(mockUser);
+      (userLookupService.getUserByIdOrFail as Mock).mockResolvedValue(mockUser);
 
       const result = await service.getCreatedBy(mockInvitation);
 
       expect(result).toBe(mockUser);
-      expect(userLookupService.getUserOrFail).toHaveBeenCalledWith('user-1');
+      expect(userLookupService.getUserByIdOrFail).toHaveBeenCalledWith(
+        'user-1'
+      );
     });
   });
 

@@ -1,7 +1,7 @@
 import { LogContext } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import {
   getPaginationResults,
@@ -34,10 +34,10 @@ import {
   InAppNotificationPayloadSpaceCollaborationCalloutPostComment,
   InAppNotificationPayloadSpaceCommunicationMessageDirect,
   InAppNotificationPayloadSpaceCommunicationUpdate,
+  InAppNotificationPayloadSpaceCommunityActor,
   InAppNotificationPayloadSpaceCommunityApplication,
   InAppNotificationPayloadSpaceCommunityCalendarEvent,
   InAppNotificationPayloadSpaceCommunityCalendarEventComment,
-  InAppNotificationPayloadSpaceCommunityContributor,
   InAppNotificationPayloadSpaceCommunityInvitation,
   InAppNotificationPayloadSpaceCommunityInvitationPlatform,
 } from '../in-app-notification-payload/dto/space';
@@ -492,20 +492,20 @@ export class InAppNotificationService {
 
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER: {
         const typedPayload =
-          payload as InAppNotificationPayloadSpaceCommunityContributor;
+          payload as InAppNotificationPayloadSpaceCommunityActor;
         result.spaceID = typedPayload.spaceID;
         // contributor FKs
         result.contributorOrganizationID =
-          typedPayload.contributorType === RoleSetContributorType.ORGANIZATION
-            ? typedPayload.contributorID
+          typedPayload.actorType === ActorType.ORGANIZATION
+            ? typedPayload.actorID
             : undefined;
         result.contributorUserID =
-          typedPayload.contributorType === RoleSetContributorType.USER
-            ? typedPayload.contributorID
+          typedPayload.actorType === ActorType.USER
+            ? typedPayload.actorID
             : undefined;
         result.contributorVcID =
-          typedPayload.contributorType === RoleSetContributorType.VIRTUAL
-            ? typedPayload.contributorID
+          typedPayload.actorType === ActorType.VIRTUAL_CONTRIBUTOR
+            ? typedPayload.actorID
             : undefined;
 
         break;
@@ -520,13 +520,13 @@ export class InAppNotificationService {
         break;
       }
 
-      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED:
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
         result.spaceID = (
-          payload as InAppNotificationPayloadSpaceCommunityContributor
+          payload as InAppNotificationPayloadSpaceCommunityActor
         ).spaceID;
         result.contributorVcID = (
-          payload as InAppNotificationPayloadSpaceCommunityContributor
-        ).contributorID;
+          payload as InAppNotificationPayloadSpaceCommunityActor
+        ).actorID;
         break;
 
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
@@ -630,11 +630,11 @@ export class InAppNotificationService {
 
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
         result.spaceID = (
-          payload as InAppNotificationPayloadSpaceCommunityContributor
+          payload as InAppNotificationPayloadSpaceCommunityActor
         ).spaceID;
         result.userID = (
-          payload as InAppNotificationPayloadSpaceCommunityContributor
-        ).contributorID;
+          payload as InAppNotificationPayloadSpaceCommunityActor
+        ).actorID;
         break;
 
       case NotificationEvent.USER_MESSAGE:
@@ -656,7 +656,7 @@ export class InAppNotificationService {
       // VIRTUAL CONTRIBUTOR NOTIFICATIONS
       // ========================================
 
-      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION:
+      case NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION:
         result.spaceID = (
           payload as InAppNotificationPayloadVirtualContributor
         ).space.id;

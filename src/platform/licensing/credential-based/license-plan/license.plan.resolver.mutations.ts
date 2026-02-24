@@ -1,13 +1,13 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { DeleteLicensePlanInput } from './dto/license.plan.dto.delete';
 import { UpdateLicensePlanInput } from './dto/license.plan.dto.update';
 
@@ -23,7 +23,7 @@ export class LicensePlanResolverMutations {
     description: 'Deletes the specified LicensePlan.',
   })
   async deleteLicensePlan(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteLicensePlanInput
   ): Promise<ILicensePlan> {
     const licensePlan = await this.licensePlanService.getLicensePlanOrFail(
@@ -43,7 +43,7 @@ export class LicensePlanResolverMutations {
       );
     }
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       licensePlan.licensingFramework.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteLicensePlan: ${licensePlan.id}`
@@ -55,7 +55,7 @@ export class LicensePlanResolverMutations {
     description: 'Updates the LicensePlan.',
   })
   async updateLicensePlan(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateLicensePlanInput
   ): Promise<ILicensePlan> {
     const licensePlan = await this.licensePlanService.getLicensePlanOrFail(
@@ -75,7 +75,7 @@ export class LicensePlanResolverMutations {
       );
     }
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       licensePlan.licensingFramework.authorization,
       AuthorizationPrivilege.UPDATE,
       `update LicensePlan: ${licensePlan.id}`

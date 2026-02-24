@@ -1,8 +1,8 @@
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import { SpaceLevel } from '@common/enums/space.level';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { Space } from '@domain/space/space/space.entity';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -72,19 +72,19 @@ describe('ActivityFeedService', () => {
 
   describe('getAllAuthorizedCollaborations (via getActivityFeed)', () => {
     it('should not query DB when no qualifying spaces', async () => {
-      const agentInfo = Object.assign(new AgentInfo(), {
+      const actorContext = Object.assign(new ActorContext(), {
         userID: 'user-1',
         credentials: [],
       });
       spaceLookupService.spacesExist.mockResolvedValue(true);
 
-      await service.getActivityFeed(agentInfo, { spaceIds: [] });
+      await service.getActivityFeed(actorContext, { spaceIds: [] });
 
       expect(entityManager.find).not.toHaveBeenCalled();
     });
 
     it('should batch-load spaces with collaborations in a single query for L2 spaces', async () => {
-      const agentInfo = Object.assign(new AgentInfo(), {
+      const actorContext = Object.assign(new ActorContext(), {
         userID: 'user-1',
         credentials: [makeCredential('space-1'), makeCredential('space-2')],
       });
@@ -96,7 +96,7 @@ describe('ActivityFeedService', () => {
       entityManager.find.mockResolvedValueOnce([space1, space2]);
       authorizationService.isAccessGranted.mockReturnValue(true);
 
-      await service.getActivityFeed(agentInfo, {
+      await service.getActivityFeed(actorContext, {
         spaceIds: ['space-1', 'space-2'],
       });
 
@@ -109,7 +109,7 @@ describe('ActivityFeedService', () => {
     });
 
     it('should batch-load L0 child spaces in a single additional query', async () => {
-      const agentInfo = Object.assign(new AgentInfo(), {
+      const actorContext = Object.assign(new ActorContext(), {
         userID: 'user-1',
         credentials: [makeCredential('space-l0')],
       });
@@ -129,7 +129,7 @@ describe('ActivityFeedService', () => {
 
       authorizationService.isAccessGranted.mockReturnValue(true);
 
-      await service.getActivityFeed(agentInfo, {
+      await service.getActivityFeed(actorContext, {
         spaceIds: ['space-l0'],
       });
 
@@ -138,7 +138,7 @@ describe('ActivityFeedService', () => {
     });
 
     it('should batch-load L1 subspaces in a single additional query', async () => {
-      const agentInfo = Object.assign(new AgentInfo(), {
+      const actorContext = Object.assign(new ActorContext(), {
         userID: 'user-1',
         credentials: [makeCredential('space-l1')],
       });
@@ -153,7 +153,7 @@ describe('ActivityFeedService', () => {
 
       authorizationService.isAccessGranted.mockReturnValue(true);
 
-      await service.getActivityFeed(agentInfo, {
+      await service.getActivityFeed(actorContext, {
         spaceIds: ['space-l1'],
       });
 
@@ -162,7 +162,7 @@ describe('ActivityFeedService', () => {
     });
 
     it('should use isAccessGranted to filter collaborations', async () => {
-      const agentInfo = Object.assign(new AgentInfo(), {
+      const actorContext = Object.assign(new ActorContext(), {
         userID: 'user-1',
         credentials: [makeCredential('space-1'), makeCredential('space-2')],
       });
@@ -176,20 +176,20 @@ describe('ActivityFeedService', () => {
         .mockReturnValueOnce(true)
         .mockReturnValueOnce(false);
 
-      await service.getActivityFeed(agentInfo, {
+      await service.getActivityFeed(actorContext, {
         spaceIds: ['space-1', 'space-2'],
       });
 
       expect(authorizationService.isAccessGranted).toHaveBeenCalledTimes(2);
       expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
-        agentInfo,
+        actorContext,
         space1.collaboration!.authorization,
         AuthorizationPrivilege.READ
       );
     });
 
     it('should skip spaces without collaboration', async () => {
-      const agentInfo = Object.assign(new AgentInfo(), {
+      const actorContext = Object.assign(new ActorContext(), {
         userID: 'user-1',
         credentials: [makeCredential('space-no-collab')],
       });
@@ -203,7 +203,7 @@ describe('ActivityFeedService', () => {
 
       entityManager.find.mockResolvedValueOnce([spaceNoCollab]);
 
-      await service.getActivityFeed(agentInfo, {
+      await service.getActivityFeed(actorContext, {
         spaceIds: ['space-no-collab'],
       });
 
@@ -211,7 +211,7 @@ describe('ActivityFeedService', () => {
     });
 
     it('should deduplicate child collaboration IDs that overlap with parent', async () => {
-      const agentInfo = Object.assign(new AgentInfo(), {
+      const actorContext = Object.assign(new ActorContext(), {
         userID: 'user-1',
         credentials: [makeCredential('space-l0')],
       });
@@ -238,7 +238,7 @@ describe('ActivityFeedService', () => {
 
       authorizationService.isAccessGranted.mockReturnValue(true);
 
-      await service.getActivityFeed(agentInfo, {
+      await service.getActivityFeed(actorContext, {
         spaceIds: ['space-l0'],
       });
 
@@ -247,7 +247,7 @@ describe('ActivityFeedService', () => {
     });
 
     it('should handle mixed L0 and L1 spaces with 3 batch queries', async () => {
-      const agentInfo = Object.assign(new AgentInfo(), {
+      const actorContext = Object.assign(new ActorContext(), {
         userID: 'user-1',
         credentials: [makeCredential('space-l0'), makeCredential('space-l1')],
       });
@@ -270,7 +270,7 @@ describe('ActivityFeedService', () => {
 
       authorizationService.isAccessGranted.mockReturnValue(true);
 
-      await service.getActivityFeed(agentInfo, {
+      await service.getActivityFeed(actorContext, {
         spaceIds: ['space-l0', 'space-l1'],
       });
 

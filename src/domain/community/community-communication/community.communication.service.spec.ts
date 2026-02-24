@@ -1,4 +1,3 @@
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -11,7 +10,7 @@ describe('CommunityCommunicationService', () => {
   let service: CommunityCommunicationService;
   let communicationService: {
     addContributorToCommunications: Mock;
-    removeUserFromCommunications: Mock;
+    removeActorFromCommunications: Mock;
   };
 
   beforeEach(async () => {
@@ -30,43 +29,19 @@ describe('CommunityCommunicationService', () => {
   });
 
   describe('addMemberToCommunication', () => {
-    it('should throw EntityNotInitializedException when contributor has no agent', async () => {
-      const communication = { id: 'comm-1' } as any;
-      const contributor = { id: 'contributor-1', agent: undefined } as any;
-
-      await expect(
-        service.addMemberToCommunication(communication, contributor)
-      ).rejects.toThrow(EntityNotInitializedException);
-    });
-
-    it('should throw EntityNotInitializedException when contributor agent has no id', async () => {
-      const communication = { id: 'comm-1' } as any;
-      const contributor = {
-        id: 'contributor-1',
-        agent: { id: undefined },
-      } as any;
-
-      await expect(
-        service.addMemberToCommunication(communication, contributor)
-      ).rejects.toThrow(EntityNotInitializedException);
-    });
-
-    it('should call addContributorToCommunications with agent id when contributor has valid agent', async () => {
+    it('should call addContributorToCommunications with the actor id', async () => {
       communicationService.addContributorToCommunications.mockResolvedValue(
         undefined
       );
 
       const communication = { id: 'comm-1' } as any;
-      const contributor = {
-        id: 'contributor-1',
-        agent: { id: 'agent-1' },
-      } as any;
+      const actorID = 'actor-1';
 
-      await service.addMemberToCommunication(communication, contributor);
+      await service.addMemberToCommunication(communication, actorID);
 
       expect(
         communicationService.addContributorToCommunications
-      ).toHaveBeenCalledWith(communication, 'agent-1');
+      ).toHaveBeenCalledWith(communication, 'actor-1');
     });
 
     it('should not throw when the underlying communication service call fails (error is caught)', async () => {
@@ -75,45 +50,42 @@ describe('CommunityCommunicationService', () => {
       );
 
       const communication = { id: 'comm-1' } as any;
-      const contributor = {
-        id: 'contributor-1',
-        agent: { id: 'agent-1' },
-      } as any;
+      const actorID = 'actor-1';
 
       // The method uses .catch() on the promise - it should not throw
       await expect(
-        service.addMemberToCommunication(communication, contributor)
+        service.addMemberToCommunication(communication, actorID)
       ).resolves.toBeUndefined();
     });
   });
 
   describe('removeMemberFromCommunication', () => {
-    it('should call removeUserFromCommunications with communication and user', async () => {
-      communicationService.removeUserFromCommunications.mockResolvedValue(
+    it('should call removeActorFromCommunications with communication and actor id', async () => {
+      communicationService.removeActorFromCommunications.mockResolvedValue(
         undefined
       );
 
       const communication = { id: 'comm-1' } as any;
-      const user = { id: 'user-1' } as any;
+      const actorID = 'user-1';
 
-      await service.removeMemberFromCommunication(communication, user);
+      await service.removeMemberFromCommunication(communication, actorID);
 
       expect(
-        communicationService.removeUserFromCommunications
-      ).toHaveBeenCalledWith(communication, user);
+        communicationService.removeActorFromCommunications
+      ).toHaveBeenCalledWith(communication, 'user-1');
     });
 
     it('should not throw when the underlying communication service call fails (error is caught)', async () => {
-      communicationService.removeUserFromCommunications.mockRejectedValue(
+      communicationService.removeActorFromCommunications.mockRejectedValue(
         new Error('Communication error')
       );
 
       const communication = { id: 'comm-1' } as any;
-      const user = { id: 'user-1' } as any;
+      const actorID = 'user-1';
 
       // The method uses .catch() on the promise - it should not throw
       await expect(
-        service.removeMemberFromCommunication(communication, user)
+        service.removeMemberFromCommunication(communication, actorID)
       ).resolves.toBeUndefined();
     });
   });

@@ -1,7 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LicenseModule } from '@domain/common/license/license.module';
@@ -40,7 +40,7 @@ import { SpacePlatformRolesAccessService } from './space.service.platform.roles.
 @Module({
   imports: [
     AccountLookupModule,
-    AgentModule,
+    ActorModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     SpaceAboutModule,

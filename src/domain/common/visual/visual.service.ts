@@ -108,36 +108,37 @@ export class VisualService {
         LogContext.DOCUMENT
       );
 
-    const buffer = await streamToBuffer(readStream);
+    try {
+      const buffer = await streamToBuffer(readStream);
 
-    // Stage 1: HEIC/HEIF → JPEG conversion
-    const conversionResult = await this.imageConversionService.convertIfNeeded(
-      buffer,
-      mimetype,
-      fileName
-    );
+      // Stage 1: HEIC/HEIF → JPEG conversion
+      const conversionResult =
+        await this.imageConversionService.convertIfNeeded(
+          buffer,
+          mimetype,
+          fileName
+        );
 
-    // Stage 2: Optimize compressible images (JPEG, WebP)
-    const compressionResult =
-      await this.imageCompressionService.compressIfNeeded(
-        conversionResult.buffer,
-        conversionResult.mimeType,
-        conversionResult.fileName
+      // Stage 2: Optimize compressible images (JPEG, WebP)
+      const compressionResult =
+        await this.imageCompressionService.compressIfNeeded(
+          conversionResult.buffer,
+          conversionResult.mimeType,
+          conversionResult.fileName
+        );
+
+      const processedBuffer = compressionResult.buffer;
+      const processedMimeType = compressionResult.mimeType;
+      const processedFileName = compressionResult.fileName;
+
+      const { imageHeight, imageWidth } =
+        await this.getImageDimensions(processedBuffer);
+      this.validateImageWidth(visual, imageWidth);
+      this.validateImageHeight(visual, imageHeight);
+      const documentForVisual = await this.documentService.getDocumentFromURL(
+        visual.uri
       );
 
-    const processedBuffer = compressionResult.buffer;
-    const processedMimeType = compressionResult.mimeType;
-    const processedFileName = compressionResult.fileName;
-
-    const { imageHeight, imageWidth } =
-      await this.getImageDimensions(processedBuffer);
-    this.validateImageWidth(visual, imageWidth);
-    this.validateImageHeight(visual, imageHeight);
-    const documentForVisual = await this.documentService.getDocumentFromURL(
-      visual.uri
-    );
-
-    try {
       const newDocument =
         await this.storageBucketService.uploadFileAsDocumentFromBuffer(
           storageBucket.id,
@@ -157,13 +158,15 @@ export class VisualService {
       }
       return newDocument;
     } catch (error: any) {
+      if (error instanceof StorageUploadFailedException) {
+        throw error;
+      }
       throw new StorageUploadFailedException(
         'Upload on visual failed!',
         LogContext.STORAGE_BUCKET,
         {
           message: error.message,
-          fileName: processedFileName,
-          originalFileName: fileName,
+          fileName,
           visualID: visual.id,
           originalException: error,
         }

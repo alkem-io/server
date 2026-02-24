@@ -8,7 +8,7 @@ export class RoomReceiptUpdatedEvent {
   constructor(
     public readonly payload: {
       roomId: string;
-      actorId: string;
+      actorID: string;
       eventId: string;
       threadId?: string;
       timestamp: number;
