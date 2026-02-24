@@ -76,8 +76,15 @@ kubectl --kubeconfig=<dev-config> get pods -n <namespace> | grep server
 gh release create v99.0.0-test --prerelease --notes "Test ARC migration"
 # 2. Verify Docker Hub image
 docker manifest inspect alkemio/server:v99.0.0-test
-# 3. Clean up test release
+# 3. Clean up test release from GitHub
 gh release delete v99.0.0-test --yes
+# 4. Clean up test tag from Docker Hub (prevents public artifact leak)
+DOCKER_HUB_TOKEN=$(curl -s -H "Content-Type: application/json" \
+  -X POST -d '{"username":"'$DOCKERHUB_USERNAME'","password":"'$DOCKERHUB_TOKEN'"}' \
+  https://hub.docker.com/v2/users/login/ | jq -r .token)
+curl -s -X DELETE \
+  -H "Authorization: JWT $DOCKER_HUB_TOKEN" \
+  "https://hub.docker.com/v2/repositories/alkemio/server/tags/v99.0.0-test/"
 ```
 
 **What to check**:
@@ -90,7 +97,13 @@ gh release delete v99.0.0-test --yes
 
 All PRs can be reverted to restore `ubuntu-latest`:
 ```bash
+# 1. Revert the merge commit on develop
+git checkout develop && git pull
+git revert -m 1 <merge-commit-sha>
+git push origin develop
+
+# 2. Open a PR for the revert (for audit trail)
 gh pr create --title "revert: restore ubuntu-latest for <workflow>" --body "Reverts PR #N"
 ```
 
-For High/Highest tiers, also re-trigger the deployment/release workflow from the reverted state.
+For High/Highest tiers, also re-trigger the deployment/release workflow from the reverted state to restore the last known-good deployment or image.

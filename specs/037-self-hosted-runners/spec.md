@@ -162,7 +162,7 @@ As a DevOps engineer, I want a dedicated workflow to build and publish the custo
 - **FR-008**: Workflows MUST continue to have access to all required GitHub secrets (Docker Hub credentials, Azure ACR credentials, kubeconfig, GPG keys, SonarQube token, Travis token).
 - **FR-009**: The `trigger-e2e-tests.yml` workflow MUST be removed. E2E tests will be triggered manually until the `alkem-io/test-suites` repository is migrated off Travis CI in a separate effort.
 - **FR-010**: The old Docker Hub release workflow (`build-release-docker-hub.yml`) MUST be removed. All Docker Hub release functionality is consolidated into `build-release-docker-hub-new.yml`, which is migrated to `arc-runner-set` with DinD + QEMU/Buildx.
-- **FR-011**: Ephemeral ARC runners MUST have local caching for the **pnpm store** (via a ReadWriteOnce PVC mounted to all runner pods on the same node) and **Docker build layers** (via registry-backed cache with `--cache-to=type=registry` targeting GHCR). All runner pods MUST be pinned to a single node via `nodeSelector` or `nodeAffinity` to allow RWO PVC sharing without requiring RWX storage.
+- **FR-011**: Ephemeral ARC runners MUST have local caching for the **pnpm store** (via a ReadWriteOnce PVC mounted to all runner pods on the same node) and **Docker build layers** (via registry-backed cache with `--cache-to=type=registry` targeting GHCR). All runner pods MUST be pinned to a single node via `nodeSelector` or `nodeAffinity` to allow RWO PVC sharing without requiring RWX storage. **Availability risk**: The single-node RWO PVC creates a single point of failure — if the pinned node goes down, all runner pods lose cache access and cannot schedule until the node recovers. Mitigation: (1) pnpm falls back to network install (slower but functional), (2) Docker builds proceed without cache, (3) node health should be monitored via cluster alerting, (4) if prolonged outage, update `nodeSelector` to a healthy node and re-provision PVC data.
 
 ## Success Criteria _(mandatory)_
 
@@ -174,6 +174,9 @@ As a DevOps engineer, I want a dedicated workflow to build and publish the custo
 - **SC-004**: (Post-MVP) Custom runner image reduces average workflow setup time (tool installation steps) by at least 50% compared to the MVP runner-swap configuration.
 - **SC-005**: (Post-MVP) Runner image updates are automated — a change to the image definition triggers a build and publish within the CI system.
 - **SC-006**: No workflow regressions are introduced — all workflows that passed before migration continue to pass after migration.
+- **SC-007**: The `trigger-e2e-tests.yml` workflow file is deleted from the repository (FR-009).
+- **SC-008**: The old `build-release-docker-hub.yml` workflow file is deleted and all Docker Hub release functionality is served by `build-release-docker-hub-new.yml` (FR-010).
+- **SC-009**: pnpm store PVC cache is functional — `pnpm install` on a warm cache completes in under 30 seconds; Docker registry cache is populated in GHCR after first build (FR-011).
 
 ## Assumptions
 
@@ -181,7 +184,7 @@ As a DevOps engineer, I want a dedicated workflow to build and publish the custo
 - The self-hosted runners have network access to all required external services (Docker Hub, Azure ACR, Hetzner clusters, SonarQube, GitHub API).
 - GitHub secrets are accessible from self-hosted runners (standard GitHub Actions behavior).
 - Migrating the `alkem-io/test-suites` repository off Travis CI is out of scope for this feature. The E2E trigger workflow will be removed, and E2E tests will be run manually until that separate migration is completed.
-- The ARC runner pods have sufficient resources (CPU, memory, disk) to handle Docker builds and test suites with `NODE_OPTIONS=--max-old-space-size=4196`.
+- The ARC runner pods have sufficient resources (CPU, memory, disk) to handle Docker builds and test suites with `NODE_OPTIONS=--max-old-space-size=4096`.
 - DinD is enabled via a **full pod template** in the ARC `AutoScalingRunnerSet` Helm values (not `containerMode.type: "dind"`, which does not support custom volume mounts — see [ARC issue #3281](https://github.com/actions/actions-runner-controller/issues/3281)). The pod template defines an init container, runner container, and DinD sidecar with `--privileged` mode. All workflows needing Docker (K8s deploy + Docker Hub release) use this DinD sidecar. Docker Hub release workflows additionally require QEMU + Buildx setup inside the DinD environment for multiplatform builds.
 - ARC runners are configured in ephemeral mode (one pod per job, destroyed after completion). GitHub Actions cache service (`actions/cache`) remains functional since ARC runners connect to GitHub — existing caching steps are preserved as-is.
 - ARC Helm values (`AutoScalingRunnerSet`) are managed in a separate infra/GitOps repository. This spec provides the required DinD configuration as reference; the operator applies it out-of-band before PR 3/PR 4 workflows can be tested.
@@ -251,7 +254,7 @@ Create a custom container image with all tools pre-installed. Update workflows t
 - kubectl 1.27.6
 - Python 3.x + pip
 - GPG, git, curl, jq, corepack
-- GitHub Actions runner (if required by ARC image contract)
+- GitHub Actions runner binary (required — either base the image on `ghcr.io/actions/actions-runner` or install the runner binary standalone)
 
 ### Reference: Required ARC Helm Values
 
@@ -260,7 +263,7 @@ The following `AutoScalingRunnerSet` Helm values must be applied in the infra/Gi
 **Summary of Helm values**:
 - Full pod template with init container (`init-dind-externals`), runner container, and DinD sidecar
 - Runner container: `npm_config_store_dir=/opt/cache/pnpm-store` env var, PVC mount at `/opt/cache/pnpm-store`, `DOCKER_HOST=unix:///var/run/docker.sock`
-- DinD sidecar: `docker:dind` with `privileged: true`, shared volumes for socket and work directory
+- DinD sidecar: `docker:27.5.1-dind` with `privileged: true`, shared volumes for socket and work directory
 - Node pinning via `nodeSelector` for RWO PVC sharing
 - Pre-provisioned RWO PVC (`arc-pnpm-store`, 5 GB) — see `contracts/arc-pnpm-store-pvc.yaml`
 - Docker build cache uses registry-backed caching (`--cache-to=type=registry,ref=ghcr.io/<org>/buildcache`) — no PVC needed

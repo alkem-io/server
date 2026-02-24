@@ -26,7 +26,11 @@ spec:
                 claimName: arc-pnpm-store
           containers:
             - name: prune
-              image: node:22-bookworm-slim
+              image: node:22.14.0-bookworm-slim
+              securityContext:
+                allowPrivilegeEscalation: false
+                runAsNonRoot: true
+                runAsUser: 1000
               command:
                 - sh
                 - -c

@@ -53,9 +53,9 @@
 ### Implementation for PR 1
 
 - [x] T007 [P] [US1] Swap `runs-on: ubuntu-latest` to `runs-on: arc-runner-set` in `.github/workflows/review-router.yml` (single job: `pr_metrics`)
-- [ ] T008 [P] [US2] Delete `.github/workflows/trigger-e2e-tests.yml` entirely (E2E tests will be triggered manually per spec FR-009)
+- [x] T008 [P] [US2] Delete `.github/workflows/trigger-e2e-tests.yml` entirely (E2E tests will be triggered manually per spec FR-009)
 - [x] T009 [P] [US2] Delete `.travis.yml` from repository root and disable Travis CI integration in GitHub repository settings (Travis CI retirement per spec FR-005, US2 acceptance scenario 2)
-- [x] T010 [P] [US2] Create new `.github/workflows/ci-tests.yml` replacing Travis CI — runs `pnpm run test:ci:no:coverage` on `arc-runner-set` with Node.js 22, pnpm 10.17.1, `NODE_OPTIONS=--max-old-space-size=4196`. Triggered on `pull_request` to `[develop, main]`. See plan.md section "1.3" for exact YAML.
+- [x] T010 [P] [US2] Create new `.github/workflows/ci-tests.yml` replacing Travis CI — runs `pnpm run test:ci:no:coverage` on `arc-runner-set` with Node.js 22, pnpm 10.17.1, `NODE_OPTIONS=--max-old-space-size=4096`. Triggered on `pull_request` to `[develop, main]`. See plan.md section "1.3" for exact YAML.
 
 **Checkpoint**: PR 1 merged. `review-router.yml` confirmed running on `arc-runner-set` post-merge. Travis + E2E files removed. `ci-tests.yml` passes on PRs.
 
@@ -147,7 +147,7 @@
 
 - [ ] T026 Hand off `contracts/arc-pnpm-store-prune-cronjob.yaml` to infra repo operator — weekly pnpm store prune CronJob
 - [ ] T027 Verify pinned container image tags in `contracts/arc-runner-set-values.yaml` are current per Constitution Principle 9 (Container Determinism): runner image pinned to `ghcr.io/actions/actions-runner:2.321.0` and DinD sidecar pinned to `docker:27-dind` — confirm these are the latest stable versions at time of deployment
-- [x] T028 Final audit: `grep -r 'ubuntu-latest' .github/workflows/` returns zero matches. All workflow files reference `arc-runner-set`.
+- [ ] T028 Final audit: `grep -r 'ubuntu-latest' .github/workflows/` returns zero matches. All workflow files reference `arc-runner-set`. (Deferred until T016–T021 complete — K8s deploy and Docker Hub release workflows still pending migration)
 - [ ] T029 Run `specs/037-self-hosted-runners/quickstart.md` full validation checklist across all PRs
 - [ ] T030 Update `docs/Developing.md` to note that CI runs on self-hosted ARC runners (if CI setup is documented there)
 
@@ -157,7 +157,7 @@
 
 ### Phase Dependencies
 
-```
+```text
 Phase 1 (Setup)
   │
   ▼

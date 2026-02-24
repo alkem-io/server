@@ -65,7 +65,7 @@ template:
 
       # --- DinD sidecar (enable before PR 3 — comment out this entire block for PR 1/PR 2) ---
       - name: dind
-        image: docker:27-dind  # Pin per Constitution P9
+        image: docker:27.5.1-dind  # Pin per Constitution P9
         args:
           - dockerd
           - --host=unix:///var/run/docker.sock

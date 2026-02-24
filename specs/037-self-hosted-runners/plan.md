@@ -33,10 +33,10 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | 6. Code Quality with Pragmatic Testing | PASS | No automated tests added — verification is manual workflow execution per PR tier, which is appropriate for CI/CD infrastructure changes where automated testing of CI itself is impractical |
 | 7. API Consistency & Evolution | N/A | No API changes |
 | 8. Secure-by-Design Integration | PASS | DinD runs `--privileged` (inherent to Docker-in-Docker); secrets access unchanged; PVC is cluster-local only |
-| 9. Container & Deployment Determinism | PASS | ARC runner image uses explicit tag (`ghcr.io/actions/actions-runner:latest` for Phase 1 — should be pinned, see Complexity Tracking). DinD sidecar uses `docker:dind` (pin to `docker:27-dind` in production). Phase 2 custom image will use pinned semver tags |
+| 9. Container & Deployment Determinism | PASS | ARC runner image pinned to `ghcr.io/actions/actions-runner:2.321.0`. DinD sidecar pinned to `docker:27.5.1-dind`. CronJob prune container pinned to `node:22.14.0-bookworm-slim`. Phase 2 custom image will use pinned semver tags. Tag currency tracked as T027 |
 | 10. Simplicity & Incremental Hardening | PASS | Simplest viable approach: swap `runs-on`, add PVC cache, use registry cache. No over-engineering |
 
-**Post-design re-check**: Principle 9 has a minor concern — both `docker:dind` and `ghcr.io/actions/actions-runner:latest` should be pinned to specific tags in the Helm values. Added to implementation notes and tracked as T027.
+**Post-design re-check**: Principle 9 satisfied — runner image pinned to `2.321.0`, DinD sidecar pinned to `27.5.1-dind`, prune container pinned to `22.14.0-bookworm-slim`. Tag currency verification tracked as T027.
 
 ## Project Structure
 
@@ -137,7 +137,7 @@ jobs:
   test:
     runs-on: arc-runner-set
     env:
-      NODE_OPTIONS: "--max-old-space-size=4196"
+      NODE_OPTIONS: "--max-old-space-size=4096"
     steps:
       - uses: actions/checkout@v4
 
@@ -301,27 +301,29 @@ Remove entirely. Consolidated into the new workflow above.
 
 ## Dependency Graph
 
-```
+```text
 [Infra: Basic ARC runner (no PVC, no DinD)]
          │
          ▼
     ┌─ PR 1 (Low — no PVC/DinD needed) ────────────┐
     │  review-router.yml → swap runner              │
-    │  schema-contract.yml → swap runner            │
-    │  trigger-sonarqube.yml → swap runner          │
-    │  schema-baseline.yml → swap runner            │
+    │  trigger-e2e-tests.yml → DELETE               │
     │  .travis.yml → DELETE + ci-tests.yml (NEW)    │
     └───────────────────┬───────────────────────────┘
-                        │ Gate: all 5 workflows pass on arc-runner-set
-                        │       PR reporting works (schema diff, sonarqube)
+                        │ Gate: 2 workflows pass on arc-runner-set
+                        │       (review-router + ci-tests)
                         │       Branch protection updated (Travis → CI Tests)
                         ▼
     [Infra: Add PVC for pnpm cache (performance)]
                         │
                         ▼
-    ┌─ PR 2 (Medium — legacy cleanup) ─────────────┐
-    │  trigger-e2e-tests.yml → DELETE               │
+    ┌─ PR 2 (Medium — Node.js/pnpm workflows) ─────┐
+    │  schema-contract.yml → swap runner            │
+    │  trigger-sonarqube.yml → swap runner          │
+    │  schema-baseline.yml → swap runner            │
     └───────────────────┬──────────────────────────┘
+                        │ Gate: all 3 workflows pass on arc-runner-set
+                        │       PR reporting works (schema diff, sonarqube)
                         │
     [Infra: Update Helm values with DinD sidecar]
                         │
@@ -348,6 +350,6 @@ Remove entirely. Consolidated into the new workflow above.
 |---------|------------|
 | DinD `--privileged` security | Inherent to Docker-in-Docker. Mitigated by ephemeral pods (no persistent state), single-tenant cluster, and pod isolation via node pinning |
 | Full pod template vs `containerMode.type: "dind"` | Required due to ARC issue #3281 (custom volumes not visible to runner in simplified mode). Adds Helm complexity but enables PVC caching |
-| `docker:dind` tag pinning | Must pin to `docker:27-dind` in production Helm values (per Constitution Principle 9). Tracked as T027 |
-| `ghcr.io/actions/actions-runner:latest` tag pinning | Must pin to specific version (e.g., `ghcr.io/actions/actions-runner:2.321.0`) in Helm values (per Constitution Principle 9). Tracked as T027 extension |
+| DinD sidecar tag pinning | Pinned to `docker:27.5.1-dind` in Helm values (per Constitution Principle 9). Tracked as T027 for currency verification |
+| ARC runner image tag pinning | Pinned to `ghcr.io/actions/actions-runner:2.321.0` in Helm values (per Constitution Principle 9). Tracked as T027 for currency verification |
 | Multiplatform builds in DinD | QEMU emulation inside DinD with `--privileged` mode. Performance hit on arm64 acceptable for infrequent release builds. Platforms: `linux/amd64,linux/arm64` |
