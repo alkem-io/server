@@ -13,7 +13,7 @@ concurrency:
 jobs:
   regenerate:
     name: Regenerate Baseline
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     permissions:
       actions: read
       contents: write

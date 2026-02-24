@@ -12,7 +12,7 @@ on:
 
 jobs:
   diff-and-validate:
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     permissions:
       contents: read
       pull-requests: write

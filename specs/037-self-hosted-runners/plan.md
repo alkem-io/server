@@ -99,7 +99,7 @@ The following manifests must be applied in the **infra/GitOps repository** befor
 
 ### PR 1 — Low Risk: Runner Swap + Legacy CI Cleanup
 
-**Infra prerequisites**: PVC applied, basic Helm values applied (no DinD needed).
+**Infra prerequisites**: Basic ARC runner pods registered with GitHub. No PVC or DinD required — pnpm installs from network (slower but functional). PVC optimization deferred to later phase.
 
 #### 1.1 `review-router.yml` — Swap runner
 
@@ -126,6 +126,10 @@ Delete `.travis.yml`. Create new `.github/workflows/ci-tests.yml`:
 name: CI Tests
 
 on:
+  # covers push / force push to these branches
+  push:
+    branches: [develop, main]
+  # covers PRs opened against these branches
   pull_request:
     branches: [develop, main]
 
@@ -154,9 +158,9 @@ jobs:
         run: pnpm run test:ci:no:coverage
 ```
 
-**Note**: `actions/cache` for pnpm is intentionally omitted — the local PVC at `/opt/cache/pnpm-store` (via `npm_config_store_dir` env in pod template) is the primary cache, and `pnpm install` automatically uses it.
+**Note**: `actions/cache` for pnpm is intentionally omitted — when the PVC is provisioned, the local store at `/opt/cache/pnpm-store` (via `npm_config_store_dir` env in pod template) will be the primary cache. Without PVC, pnpm installs from network (functional but slower).
 
-**Trigger scope change**: Travis CI ran on all pushes and PRs (no branch filter). This replacement workflow triggers only on `pull_request` to `[develop, main]`. Push-triggered test runs are intentionally dropped — the `trigger-sonarqube.yml` workflow already covers push-triggered testing with coverage on `develop` and `main`.
+**Trigger parity**: Matches Travis CI's original behavior — runs on both pushes and PRs to `develop`/`main`. Branch protection rules must be updated: remove `continuous-integration/travis-ci/pr` required check, add `CI Tests` as required check.
 
 ### PR 2 — Medium Risk: Node.js/pnpm Workflows
 
@@ -298,29 +302,31 @@ Remove entirely. Consolidated into the new workflow above.
 ## Dependency Graph
 
 ```
-[Infra: PVC + basic Helm values]
+[Infra: Basic ARC runner (no PVC, no DinD)]
          │
          ▼
-    ┌─ PR 1 (Low) ─────────────────────────────────┐
+    ┌─ PR 1 (Low — no PVC/DinD needed) ────────────┐
     │  review-router.yml → swap runner              │
-    │  trigger-e2e-tests.yml → DELETE               │
-    │  .travis.yml → DELETE + ci-tests.yml (NEW)    │
-    └───────────────────┬───────────────────────────┘
-                        │ Gate: review-router passes on arc-runner-set
-                        ▼
-    ┌─ PR 2 (Medium) ──────────────────────────────┐
     │  schema-contract.yml → swap runner            │
     │  trigger-sonarqube.yml → swap runner          │
     │  schema-baseline.yml → swap runner            │
+    │  .travis.yml → DELETE + ci-tests.yml (NEW)    │
+    └───────────────────┬───────────────────────────┘
+                        │ Gate: all 5 workflows pass on arc-runner-set
+                        │       PR reporting works (schema diff, sonarqube)
+                        │       Branch protection updated (Travis → CI Tests)
+                        ▼
+    [Infra: Add PVC for pnpm cache (performance)]
+                        │
+                        ▼
+    ┌─ PR 2 (Medium — legacy cleanup) ─────────────┐
+    │  trigger-e2e-tests.yml → DELETE               │
     └───────────────────┬──────────────────────────┘
-                        │ Gate: schema-contract posts comment,
-                        │       sonarqube reports gate,
-                        │       schema-baseline creates PR
                         │
     [Infra: Update Helm values with DinD sidecar]
                         │
                         ▼
-    ┌─ PR 3 (High) ────────────────────────────────┐
+    ┌─ PR 3 (High — DinD required) ────────────────┐
     │  build-deploy-k8s-dev-hetzner.yml             │
     │    → swap runner + Buildx + registry cache    │
     │  build-deploy-k8s-test-hetzner.yml (same)     │
@@ -328,7 +334,7 @@ Remove entirely. Consolidated into the new workflow above.
     └───────────────────┬──────────────────────────┘
                         │ Gate: dev deploy succeeds via DinD
                         ▼
-    ┌─ PR 4 (Highest) ─────────────────────────────┐
+    ┌─ PR 4 (Highest — DinD + QEMU) ───────────────┐
     │  build-release-docker-hub-new.yml             │
     │    → swap runner + QEMU/Buildx + cache        │
     │    → multiplatform: linux/amd64,linux/arm64   │

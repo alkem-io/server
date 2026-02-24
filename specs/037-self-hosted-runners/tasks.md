@@ -24,9 +24,9 @@
 
 **Purpose**: Finalize Kubernetes manifests that the operator must apply in the infra/GitOps repository before workflow PRs can be tested.
 
-- [ ] T001 Review and finalize PVC manifest in `specs/037-self-hosted-runners/contracts/arc-pnpm-store-pvc.yaml` — confirm storage class, namespace, and 5 GB size are correct for the target cluster
-- [ ] T002 [P] Review and finalize ARC Helm values in `specs/037-self-hosted-runners/contracts/arc-runner-set-values.yaml` — replace `<runner-node-name>` placeholder with actual hostname, confirm runner image tag, set `githubConfigSecret` name
-- [ ] T003 [P] Review and finalize CronJob manifest in `specs/037-self-hosted-runners/contracts/arc-pnpm-store-prune-cronjob.yaml` — replace `<runner-node-name>` placeholder, confirm namespace matches ARC installation
+- [x] T001 Review and finalize PVC manifest in `specs/037-self-hosted-runners/contracts/arc-pnpm-store-pvc.yaml` — confirm storage class, namespace, and 5 GB size are correct for the target cluster
+- [x] T002 [P] Review and finalize ARC Helm values in `specs/037-self-hosted-runners/contracts/arc-runner-set-values.yaml` — replace `<runner-node-name>` placeholder with actual hostname, confirm runner image tag, set `githubConfigSecret` name
+- [x] T003 [P] Review and finalize CronJob manifest in `specs/037-self-hosted-runners/contracts/arc-pnpm-store-prune-cronjob.yaml` — replace `<runner-node-name>` placeholder, confirm namespace matches ARC installation
 
 ---
 
@@ -52,10 +52,10 @@
 
 ### Implementation for PR 1
 
-- [ ] T007 [P] [US1] Swap `runs-on: ubuntu-latest` to `runs-on: arc-runner-set` in `.github/workflows/review-router.yml` (single job: `pr_metrics`)
+- [x] T007 [P] [US1] Swap `runs-on: ubuntu-latest` to `runs-on: arc-runner-set` in `.github/workflows/review-router.yml` (single job: `pr_metrics`)
 - [ ] T008 [P] [US2] Delete `.github/workflows/trigger-e2e-tests.yml` entirely (E2E tests will be triggered manually per spec FR-009)
-- [ ] T009 [P] [US2] Delete `.travis.yml` from repository root and disable Travis CI integration in GitHub repository settings (Travis CI retirement per spec FR-005, US2 acceptance scenario 2)
-- [ ] T010 [P] [US2] Create new `.github/workflows/ci-tests.yml` replacing Travis CI — runs `pnpm run test:ci:no:coverage` on `arc-runner-set` with Node.js 22, pnpm 10.17.1, `NODE_OPTIONS=--max-old-space-size=4196`. Triggered on `pull_request` to `[develop, main]`. See plan.md section "1.3" for exact YAML.
+- [x] T009 [P] [US2] Delete `.travis.yml` from repository root and disable Travis CI integration in GitHub repository settings (Travis CI retirement per spec FR-005, US2 acceptance scenario 2)
+- [x] T010 [P] [US2] Create new `.github/workflows/ci-tests.yml` replacing Travis CI — runs `pnpm run test:ci:no:coverage` on `arc-runner-set` with Node.js 22, pnpm 10.17.1, `NODE_OPTIONS=--max-old-space-size=4196`. Triggered on `pull_request` to `[develop, main]`. See plan.md section "1.3" for exact YAML.
 
 **Checkpoint**: PR 1 merged. `review-router.yml` confirmed running on `arc-runner-set` post-merge. Travis + E2E files removed. `ci-tests.yml` passes on PRs.
 
@@ -71,9 +71,9 @@
 
 ### Implementation for PR 2
 
-- [ ] T011 [P] [US1] Swap `runs-on: ubuntu-latest` to `runs-on: arc-runner-set` in `.github/workflows/schema-contract.yml` (single job: `diff-and-validate`)
-- [ ] T012 [P] [US1] Swap `runs-on: ubuntu-latest` to `runs-on: arc-runner-set` in `.github/workflows/trigger-sonarqube.yml` (single job: `sonarqube`)
-- [ ] T013 [P] [US1] Swap `runs-on: ubuntu-latest` to `runs-on: arc-runner-set` in `.github/workflows/schema-baseline.yml` (single job: `regenerate`)
+- [x] T011 [P] [US1] Swap `runs-on: ubuntu-latest` to `runs-on: arc-runner-set` in `.github/workflows/schema-contract.yml` (single job: `diff-and-validate`)
+- [x] T012 [P] [US1] Swap `runs-on: ubuntu-latest` to `runs-on: arc-runner-set` in `.github/workflows/trigger-sonarqube.yml` (single job: `sonarqube`)
+- [x] T013 [P] [US1] Swap `runs-on: ubuntu-latest` to `runs-on: arc-runner-set` in `.github/workflows/schema-baseline.yml` (single job: `regenerate`)
 
 **Checkpoint**: PR 2 merged. All three workflows confirmed running on `arc-runner-set` post-merge.
 
@@ -147,7 +147,7 @@
 
 - [ ] T026 Hand off `contracts/arc-pnpm-store-prune-cronjob.yaml` to infra repo operator — weekly pnpm store prune CronJob
 - [ ] T027 Verify pinned container image tags in `contracts/arc-runner-set-values.yaml` are current per Constitution Principle 9 (Container Determinism): runner image pinned to `ghcr.io/actions/actions-runner:2.321.0` and DinD sidecar pinned to `docker:27-dind` — confirm these are the latest stable versions at time of deployment
-- [ ] T028 Final audit: `grep -r 'ubuntu-latest' .github/workflows/` returns zero matches. All workflow files reference `arc-runner-set`.
+- [x] T028 Final audit: `grep -r 'ubuntu-latest' .github/workflows/` returns zero matches. All workflow files reference `arc-runner-set`.
 - [ ] T029 Run `specs/037-self-hosted-runners/quickstart.md` full validation checklist across all PRs
 - [ ] T030 Update `docs/Developing.md` to note that CI runs on self-hosted ARC runners (if CI setup is documented there)
 
