@@ -500,36 +500,45 @@ export class RoleSetService {
     );
   }
 
-  // Convenience methods for GraphQL resolvers that need specific types
+  // Convenience methods for GraphQL resolvers that need specific entity types.
+  // These query the actual entity tables (User, Organization, VirtualContributor)
+  // instead of casting Actor[], which would lack entity-specific fields like nameID.
   public async getUsersWithRole(
     roleSet: IRoleSet,
     roleType: RoleName,
     limit?: number
   ): Promise<IUser[]> {
-    return (await this.getActorsWithRole(
+    const credential = await this.getCredentialDefinitionForRole(
       roleSet,
-      roleType,
-      [ActorType.USER],
-      limit
-    )) as IUser[];
+      roleType
+    );
+    return this.userLookupService.usersWithCredential(credential, limit);
   }
 
   public async getOrganizationsWithRole(
     roleSet: IRoleSet,
     roleType: RoleName
   ): Promise<IOrganization[]> {
-    return (await this.getActorsWithRole(roleSet, roleType, [
-      ActorType.ORGANIZATION,
-    ])) as IOrganization[];
+    const credential = await this.getCredentialDefinitionForRole(
+      roleSet,
+      roleType
+    );
+    return this.organizationLookupService.organizationsWithCredentials(
+      credential
+    );
   }
 
   public async getVirtualContributorsWithRole(
     roleSet: IRoleSet,
     roleType: RoleName
   ): Promise<IVirtualContributor[]> {
-    return (await this.getActorsWithRole(roleSet, roleType, [
-      ActorType.VIRTUAL_CONTRIBUTOR,
-    ])) as IVirtualContributor[];
+    const credential = await this.getCredentialDefinitionForRole(
+      roleSet,
+      roleType
+    );
+    return this.virtualContributorLookupService.virtualContributorsWithCredentials(
+      credential
+    );
   }
 
   private async getUserIDsWithImplicitSpaceRole(
