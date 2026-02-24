@@ -3,28 +3,44 @@ set -euo pipefail
 
 # Register and verify a new user via Kratos + MailSlurper, then create Alkemio profile
 #
-# Usage: ./register-user.sh <email> <password> [firstName] [lastName]
+# Usage: ./register-user.sh <email> [firstName] [lastName]
+#
+# The password MUST be provided via a file at /tmp/.register-password
+# to avoid shell escaping issues with special characters (!, \, etc.)
+# when invoked through tools that process command strings.
+#
+# Example:
+#   echo -n 'my!password' > /tmp/.register-password
+#   ./register-user.sh user@example.com John Doe
 
-EMAIL="${1:?Usage: $0 <email> <password> [firstName] [lastName]}"
-PASSWORD="${2:?Usage: $0 <email> <password> [firstName] [lastName]}"
-FIRST_NAME="${3:-Test}"
-LAST_NAME="${4:-User}"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/lib/kratos.sh"
+source "$SCRIPT_DIR/lib/graphql.sh"
 
-KRATOS_PUBLIC="http://localhost:3000/ory/kratos/public"
+EMAIL="${1:?Usage: $0 <email> [firstName] [lastName]}"
+FIRST_NAME="${2:-Test}"
+LAST_NAME="${3:-User}"
+
+PASSWORD_FILE="/tmp/.register-password"
+if [ ! -f "$PASSWORD_FILE" ]; then
+  echo "ERROR: Password file not found at $PASSWORD_FILE" >&2
+  echo "Write the password to that file before running this script." >&2
+  exit 1
+fi
+PASSWORD=$(tr -d '\n' < "$PASSWORD_FILE")
+rm -f "$PASSWORD_FILE"
+[ -n "$PASSWORD" ] || fail "Password file is empty"
+
 MAILSLURPER_API="http://localhost:4437"
-GRAPHQL_NI="http://localhost:3000/api/private/non-interactive/graphql"
 
-fail() { echo "ERROR: $1" >&2; exit 1; }
+# ─── Health check ─────────────────────────────────────────────
+kratos_health_check
 
-# Step 1 — Health check
-curl -sf "$KRATOS_PUBLIC/health/alive" >/dev/null 2>&1 \
-  || fail "Kratos not reachable. Run: pnpm run start:services"
-
-# Step 2+3 — Register
-FLOW_ID=$(curl -s -X GET "$KRATOS_PUBLIC/self-service/registration/api" | jq -r '.id')
+# ─── Register ─────────────────────────────────────────────────
+FLOW_ID=$(curl -s -X GET "$KRATOS_PUBLIC_URL/self-service/registration/api" | jq -r '.id')
 [ "$FLOW_ID" != "null" ] && [ -n "$FLOW_ID" ] || fail "Could not create registration flow"
 
-REG_RESPONSE=$(curl -s -X POST "$KRATOS_PUBLIC/self-service/registration?flow=$FLOW_ID" \
+REG_RESPONSE=$(curl -s -X POST "$KRATOS_PUBLIC_URL/self-service/registration?flow=$FLOW_ID" \
   -H 'Content-Type: application/json' \
   -H 'Accept: application/json' \
   -d "$(jq -n \
@@ -38,7 +54,6 @@ IDENTITY_ID=$(echo "$REG_RESPONSE" | jq -r '.identity.id // empty')
 ALREADY_EXISTS=false
 
 if [ -z "$IDENTITY_ID" ]; then
-  # Check if identity already exists
   ERR_MSG=$(echo "$REG_RESPONSE" | jq -r '.ui.messages[]?.text // empty' 2>/dev/null)
   if echo "$ERR_MSG" | grep -qi "exists"; then
     ALREADY_EXISTS=true
@@ -48,7 +63,7 @@ if [ -z "$IDENTITY_ID" ]; then
   fi
 fi
 
-# Step 4+5 — Verify email (skip if already exists and can login)
+# ─── Verify email ─────────────────────────────────────────────
 if [ "$ALREADY_EXISTS" = false ]; then
   echo "Waiting for verification email..."
   sleep 3
@@ -68,7 +83,7 @@ if [ "$ALREADY_EXISTS" = false ]; then
   VFLOW=$(echo "$EMAIL_BODY" | grep -oP 'flow=\K[a-f0-9-]+' | head -1)
   [ -n "$CODE" ] && [ -n "$VFLOW" ] || fail "Could not extract verification code/flow from email"
 
-  VERIFY_RESULT=$(curl -s -X POST "$KRATOS_PUBLIC/self-service/verification?flow=$VFLOW" \
+  VERIFY_RESULT=$(curl -s -X POST "$KRATOS_PUBLIC_URL/self-service/verification?flow=$VFLOW" \
     -H 'Content-Type: application/json' \
     -H 'Accept: application/json' \
     -d "$(jq -n --arg code "$CODE" '{method:"code", code:$code}')")
@@ -78,42 +93,25 @@ if [ "$ALREADY_EXISTS" = false ]; then
   echo "Email verified."
 fi
 
-# Step 6 — Login
-LOGIN_FLOW=$(curl -s -X GET "$KRATOS_PUBLIC/self-service/login/api" | jq -r '.id')
-[ "$LOGIN_FLOW" != "null" ] && [ -n "$LOGIN_FLOW" ] || fail "Could not create login flow"
-
-LOGIN_RESPONSE=$(curl -s -X POST "$KRATOS_PUBLIC/self-service/login?flow=$LOGIN_FLOW" \
-  -H 'Content-Type: application/json' \
-  -H 'Accept: application/json' \
-  -d "$(jq -n \
-    --arg id "$EMAIL" \
-    --arg pw "$PASSWORD" \
-    '{method:"password", identifier:$id, password:$pw}')")
-
-SESSION_TOKEN=$(echo "$LOGIN_RESPONSE" | jq -r '.session_token // empty')
-[ -n "$SESSION_TOKEN" ] || fail "Login failed: $(echo "$LOGIN_RESPONSE" | jq -c '.ui.messages // .error // .')"
+# ─── Login ────────────────────────────────────────────────────
+kratos_login "$EMAIL" "$PASSWORD"
 
 # Backfill identity ID if we skipped registration
-if [ -z "$IDENTITY_ID" ]; then
-  IDENTITY_ID=$(echo "$LOGIN_RESPONSE" | jq -r '.session.identity.id // empty')
+if [ -z "${IDENTITY_ID:-}" ]; then
+  : # IDENTITY_ID already set by kratos_login
 fi
 
-# Step 7 — Create Alkemio user profile
-GQL_RESPONSE=$(curl -s -X POST "$GRAPHQL_NI" \
-  -H 'Content-Type: application/json' \
-  -H "Authorization: Bearer $SESSION_TOKEN" \
-  -d '{"query":"mutation { createUserNewRegistration { id nameID profile { displayName } } }"}')
+# ─── Create Alkemio user profile ──────────────────────────────
+GQL_RESPONSE=$(gql_request 'mutation { createUserNewRegistration { id nameID profile { displayName } } }') \
+  || fail "GraphQL mutation failed"
 
 ALKEMIO_ID=$(echo "$GQL_RESPONSE" | jq -r '.data.createUserNewRegistration.id // empty')
 ALKEMIO_NAMEID=$(echo "$GQL_RESPONSE" | jq -r '.data.createUserNewRegistration.nameID // empty')
 ALKEMIO_DISPLAY=$(echo "$GQL_RESPONSE" | jq -r '.data.createUserNewRegistration.profile.displayName // empty')
 
-if [ -z "$ALKEMIO_ID" ]; then
-  GQL_ERROR=$(echo "$GQL_RESPONSE" | jq -c '.errors // .')
-  fail "GraphQL mutation failed: $GQL_ERROR"
-fi
+[ -n "$ALKEMIO_ID" ] || fail "GraphQL mutation returned no data: $(echo "$GQL_RESPONSE" | jq -c '.errors // .')"
 
-# Step 8 — Summary
+# ─── Summary ──────────────────────────────────────────────────
 cat <<EOF
 
 Registration & Verification Complete
