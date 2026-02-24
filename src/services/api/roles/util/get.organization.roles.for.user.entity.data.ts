@@ -9,10 +9,14 @@ export const getOrganizationRolesForUserEntityData = (
     where: {
       id: In(organizationIds),
     },
-    relations: { profile: true },
+    relations: { actor: { profile: true } },
     select: {
-      profile: {
-        displayName: true,
+      id: true,
+      actor: {
+        id: true,
+        profile: {
+          displayName: true,
+        },
       },
     },
   } as FindManyOptions);

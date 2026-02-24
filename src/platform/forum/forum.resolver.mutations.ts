@@ -3,7 +3,7 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, LoggerService } from '@nestjs/common';
@@ -12,7 +12,7 @@ import { NotificationInputPlatformForumDiscussionCreated } from '@services/adapt
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -44,12 +44,12 @@ export class ForumResolverMutations {
     description: 'Creates a new Discussion as part of this Forum.',
   })
   async createDiscussion(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('createData') createData: ForumCreateDiscussionInput
   ): Promise<IDiscussion> {
     const forum = await this.forumService.getForumOrFail(createData.forumID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       forum.authorization,
       AuthorizationPrivilege.CREATE_DISCUSSION,
       `create discussion on forum: ${forum.id}`
@@ -59,7 +59,7 @@ export class ForumResolverMutations {
       const platformAuthorization =
         await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
       await this.authorizationService.grantAccessOrFail(
-        agentInfo,
+        actorContext,
         platformAuthorization,
         AuthorizationPrivilege.PLATFORM_ADMIN,
         `User not authorized to create discussion with ${ForumDiscussionCategory.RELEASES} category.`
@@ -79,8 +79,8 @@ export class ForumResolverMutations {
 
     let discussion = await this.forumService.createDiscussion(
       createData,
-      agentInfo.userID,
-      agentInfo.agentID
+      actorContext.actorID,
+      actorContext.actorID
     );
     discussion = await this.discussionService.save(discussion);
 
@@ -93,7 +93,7 @@ export class ForumResolverMutations {
 
     // Send the notification
     const notificationInput: NotificationInputPlatformForumDiscussionCreated = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorID,
       discussion: discussion,
     };
     await this.notificationPlatformAdapter.platformForumDiscussionCreated(

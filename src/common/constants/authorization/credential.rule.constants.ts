@@ -46,7 +46,7 @@ export const CREDENTIAL_RULE_ROLESET_INVITATION =
   'credentialRule-roleSetInvitation';
 export const CREDENTIAL_RULE_ROLESET_SELF_REMOVAL =
   'credentialRule-roleSetSelfRemoval';
-export const CREDENTIAL_RULE_ROLESET_VIRTUAL_CONTRIBUTOR_REMOVAL =
+export const CREDENTIAL_RULE_ROLESET_VIRTUAL_REMOVAL =
   'credentialRule-roleSetVirtualContributorRemoval';
 export const CREDENTIAL_RULE_ROLESET_ASSIGN = 'credentialRule-roleSetAssign';
 export const CREDENTIAL_RULE_ORGANIZATION_VERIFICATION_ADMIN =

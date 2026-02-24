@@ -43,7 +43,7 @@ export class IdentityResolveController {
 
     return {
       userId: user.id,
-      agentId: user.agent.id,
+      actorID: user.id,
     };
   }
 }

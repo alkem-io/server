@@ -22,7 +22,7 @@ export const applyOrganizationFilter = <T extends ObjectLiteral>(
 
       if (displayName) {
         const hasRest = Object.keys(rest).length > 0;
-        query.leftJoin('organization.profile', 'profile');
+        query.leftJoin('organization.actor.profile', 'profile');
         // Use parameterized query to prevent SQL injection
         if (hasRest) {
           wqb.orWhere('profile.displayName ILIKE :orgDisplayName', {

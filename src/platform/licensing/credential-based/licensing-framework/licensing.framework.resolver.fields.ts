@@ -4,7 +4,7 @@ import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { ILicensePolicy } from '@platform/licensing/credential-based/license-policy';
-import { AuthorizationAgentPrivilege } from '@src/common/decorators';
+import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
 import { ILicensingFramework } from './licensing.framework.interface';
 import { LicensingFrameworkService } from './licensing.framework.service';
 
@@ -12,7 +12,7 @@ import { LicensingFrameworkService } from './licensing.framework.service';
 export class LicensingFrameworkResolverFields {
   constructor(private licensingFrameworkService: LicensingFrameworkService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('plans', () => [ILicensePlan], {
     nullable: false,

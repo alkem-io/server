@@ -1,8 +1,8 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutsSetAuthorizationService } from '@domain/collaboration/callouts-set/callouts.set.service.authorization';
 import { ICollaboration } from '@domain/collaboration/collaboration';
@@ -41,7 +41,7 @@ export class TemplateApplierResolverMutations {
       'Execution order: delete (if requested) → update flow states (always) → add (if requested).',
   })
   async updateCollaborationFromSpaceTemplate(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData')
     updateData: UpdateCollaborationFromSpaceTemplateInput
   ): Promise<ICollaboration> {
@@ -67,7 +67,7 @@ export class TemplateApplierResolverMutations {
       );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       targetCollaboration.authorization,
       AuthorizationPrivilege.UPDATE,
       `update InnovationFlow states from template: ${targetCollaboration.id}`
@@ -77,7 +77,7 @@ export class TemplateApplierResolverMutations {
       await this.templateApplierService.updateCollaborationFromSpaceTemplate(
         updateData,
         targetCollaboration,
-        agentInfo.userID
+        actorContext.actorID
       );
     // Reset the authorization policy to re-evaluate the access control rules.
     targetCollaboration =

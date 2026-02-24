@@ -1,3 +1,4 @@
+export * from './actor.type';
 export * from './alkemio.error.status';
 export * from './authentication.provider';
 export * from './authorization.credential';

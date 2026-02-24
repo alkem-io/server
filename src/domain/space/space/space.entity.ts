@@ -1,10 +1,14 @@
+import { randomUUID } from 'node:crypto';
 import { ENUM_LENGTH, NAMEID_MAX_LENGTH_SCHEMA } from '@common/constants';
+import { ActorType } from '@common/enums/actor.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
-import { Agent } from '@domain/agent/agent/agent.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
+import { Credential } from '@domain/actor/credential/credential.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { License } from '@domain/common/license/license.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -22,8 +26,39 @@ import {
 import { Account } from '../account/account.entity';
 import { SpaceAbout } from '../space.about';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
-@Entity()
-export class Space extends AuthorizableEntity implements ISpace {
+
+@Entity('space')
+export class Space extends BaseAlkemioEntity implements ISpace {
+  // Actor relation — shared primary key (space.id = actor.id)
+  @OneToOne(() => Actor, {
+    eager: true,
+    cascade: true,
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
+  @JoinColumn({ name: 'id', referencedColumnName: 'id' })
+  actor?: Actor;
+
+  // Transparent getters delegating to actor
+  get type(): ActorType {
+    return this.actor?.type as ActorType;
+  }
+
+  get authorization(): AuthorizationPolicy | undefined {
+    return this.actor?.authorization;
+  }
+
+  set authorization(auth: AuthorizationPolicy | undefined) {
+    if (!this.actor) this.actor = new Actor();
+    this.actor.authorization = auth;
+  }
+
+  get credentials(): Credential[] | undefined {
+    return this.actor?.credentials;
+  }
+
+  // Space uses SpaceAbout instead of Profile, so profileId/profile are not applicable
+
   @Column('varchar', { length: NAMEID_MAX_LENGTH_SCHEMA, nullable: false })
   nameID!: string;
 
@@ -88,10 +123,6 @@ export class Space extends AuthorizableEntity implements ISpace {
   @JoinColumn()
   community?: Community;
 
-  @OneToOne(() => Agent, { eager: false, cascade: true, onDelete: 'SET NULL' })
-  @JoinColumn()
-  agent?: Agent;
-
   @Column('jsonb', { nullable: false })
   settings: ISpaceSettings;
 
@@ -140,6 +171,12 @@ export class Space extends AuthorizableEntity implements ISpace {
 
   constructor() {
     super();
+    const id = randomUUID();
+    this.id = id;
+    const actor = new Actor();
+    actor.type = ActorType.SPACE;
+    actor.id = id;
+    this.actor = actor;
     this.nameID = '';
     this.settings = {} as ISpaceSettings;
     this.platformRolesAccess = { roles: [] } as IPlatformRolesAccess;

@@ -11,12 +11,11 @@ import {
   IInvitation,
   Invitation,
 } from '@domain/access/invitation';
+import { IActor } from '@domain/actor/actor/actor.interface';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
-import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -39,7 +38,7 @@ export class InvitationService {
     @InjectRepository(Invitation)
     private invitationRepository: Repository<Invitation>,
     private userLookupService: UserLookupService,
-    private contributorService: ContributorService,
+    private actorLookupService: ActorLookupService,
     private lifecycleService: LifecycleService,
     private invitationLifecycleService: InvitationLifecycleService,
     private roleSetCacheService: RoleSetCacheService,
@@ -47,17 +46,15 @@ export class InvitationService {
   ) {}
 
   async createInvitation(
-    invitationData: CreateInvitationInput,
-    contributor: IContributor
+    invitationData: CreateInvitationInput
   ): Promise<IInvitation> {
     const invitation: IInvitation = Invitation.create(invitationData);
-    invitation.contributorType = getContributorType(contributor);
 
     invitation.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.INVITATION
     );
 
-    // save the user to get the id assigned
+    // save the invitation to get the id assigned
     await this.invitationRepository.save(invitation);
 
     invitation.lifecycle = await this.lifecycleService.createLifecycle();
@@ -84,33 +81,29 @@ export class InvitationService {
     );
     result.id = invitationID;
 
-    if (invitation.invitedContributorID && invitation.roleSet) {
+    if (invitation.invitedActorID && invitation.roleSet) {
       await this.roleSetCacheService.deleteOpenInvitationFromCache(
-        invitation.invitedContributorID,
+        invitation.invitedActorID,
         invitation.roleSet.id
       );
-      const contributor = await this.contributorService.getContributor(
-        invitation.invitedContributorID,
-        {
-          relations: { agent: true },
-        }
+      const actorExists = await this.actorLookupService.actorExists(
+        invitation.invitedActorID
       );
 
-      if (!contributor || !contributor.agent) {
+      if (!actorExists) {
         this.logger.error(
           {
-            message:
-              'Unable to invalidate membership status cache for Contributor',
-            cause: 'Contributor or associated Agent not found',
+            message: 'Unable to invalidate membership status cache for Actor',
+            cause: 'Actor not found',
             invitationId: invitation.id,
-            contributorId: invitation.invitedContributorID,
+            actorID: invitation.invitedActorID,
           },
           undefined,
           LogContext.COMMUNITY
         );
       } else {
         await this.roleSetCacheService.deleteMembershipStatusCache(
-          contributor.agent.id,
+          invitation.invitedActorID,
           invitation.roleSet.id
         );
       }
@@ -166,21 +159,14 @@ export class InvitationService {
     return this.invitationLifecycleService.getState(lifecycle);
   }
 
-  async getInvitedContributor(invitation: IInvitation): Promise<IContributor> {
-    const contributor =
-      await this.contributorService.getContributorByUuidOrFail(
-        invitation.invitedContributorID
-      );
-    if (!contributor)
-      throw new RelationshipNotFoundException(
-        `Unable to load contributor for invitation ${invitation.id} `,
-        LogContext.COMMUNITY
-      );
-    return contributor;
+  async getInvitedActor(invitation: IInvitation): Promise<IActor> {
+    return this.actorLookupService.getFullActorByIdOrFail(
+      invitation.invitedActorID
+    );
   }
 
   async getCreatedByOrFail(invitation: IInvitation): Promise<IUser | never> {
-    const user = await this.userLookupService.getUserOrFail(
+    const user = await this.userLookupService.getUserByIdOrFail(
       invitation.createdBy
     );
     if (!user)
@@ -192,12 +178,12 @@ export class InvitationService {
   }
 
   async findExistingInvitations(
-    contributorID: string,
+    actorID: string,
     roleSetID: string
   ): Promise<IInvitation[]> {
     const existingInvitations = await this.invitationRepository.find({
       where: {
-        invitedContributorID: contributorID,
+        invitedActorID: actorID,
         roleSet: { id: roleSetID },
       },
       relations: { roleSet: true },
@@ -207,13 +193,13 @@ export class InvitationService {
     return [];
   }
 
-  async findInvitationsForContributor(
-    contributorID: string,
+  async findInvitationsForActor(
+    actorID: string,
     states: string[] = []
   ): Promise<IInvitation[]> {
     const findOpts: FindManyOptions<Invitation> = {
       relations: { roleSet: true },
-      where: { invitedContributorID: contributorID },
+      where: { invitedActorID: actorID },
     };
 
     if (states.length) {

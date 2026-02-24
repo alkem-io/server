@@ -10,6 +10,7 @@ import {
   DeleteApplicationInput,
   IApplication,
 } from '@domain/access/application';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
@@ -20,7 +21,6 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
-import { IContributor } from '../../community/contributor/contributor.interface';
 import { RoleSetCacheService } from '../role-set/role.set.service.cache';
 import { ApplicationLifecycleService } from './application.service.lifecycle';
 
@@ -42,7 +42,7 @@ export class ApplicationService {
     applicationData: CreateApplicationInput
   ): Promise<IApplication> {
     const application: IApplication = Application.create(applicationData);
-    application.user = await this.userService.getUserOrFail(
+    application.user = await this.userService.getUserByIdOrFail(
       applicationData.userID
     );
 
@@ -112,7 +112,7 @@ export class ApplicationService {
     return await this.applicationRepository.save(application);
   }
 
-  async getContributor(applicationID: string): Promise<IContributor> {
+  async getContributor(applicationID: string): Promise<IActor> {
     const application = await this.getApplicationOrFail(applicationID, {
       relations: { user: true },
     });

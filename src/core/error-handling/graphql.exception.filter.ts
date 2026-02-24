@@ -15,7 +15,7 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
     const httpArguments = host.switchToHttp();
     const ctx = httpArguments.getNext<IGraphQLContext>();
     const userID =
-      exception.details?.userId ?? ctx.req.user.userID ?? 'unknown';
+      exception.details?.userId ?? ctx.req.user.actorID ?? 'unknown';
     exception.details = {
       ...exception.details,
       userId: userID,

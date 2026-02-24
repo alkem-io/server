@@ -1,11 +1,11 @@
+import { LogContext } from '@common/enums/logging.context';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { ContributorService } from '@domain/community/contributor/contributor.service';
-import { User } from '@domain/community/user/user.entity';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -27,7 +27,7 @@ describe('InvitationService', () => {
   let lifecycleService: LifecycleService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let invitationLifecycleService: InvitationLifecycleService;
-  let contributorService: ContributorService;
+  let actorLookupService: ActorLookupService;
   let userLookupService: UserLookupService;
   let roleSetCacheService: RoleSetCacheService;
 
@@ -61,7 +61,7 @@ describe('InvitationService', () => {
     invitationLifecycleService = module.get<InvitationLifecycleService>(
       InvitationLifecycleService
     );
-    contributorService = module.get<ContributorService>(ContributorService);
+    actorLookupService = module.get<ActorLookupService>(ActorLookupService);
     userLookupService = module.get<UserLookupService>(UserLookupService);
     roleSetCacheService = module.get<RoleSetCacheService>(RoleSetCacheService);
   });
@@ -143,15 +143,11 @@ describe('InvitationService', () => {
   describe('createInvitation', () => {
     it('should create invitation with authorization policy and lifecycle', async () => {
       const invitationData = {
-        invitedContributorID: 'contributor-1',
+        invitedActorID: 'contributor-1',
         createdBy: 'user-1',
         roleSetID: 'roleset-1',
         invitedToParent: false,
       };
-      // Use a real User instance so getContributorType()'s instanceof check works
-      const mockContributor = Object.assign(new User(), {
-        id: 'contributor-1',
-      }) as any;
       const mockLifecycle = { id: 'lifecycle-1' } as any;
 
       (lifecycleService.createLifecycle as Mock).mockResolvedValue(
@@ -161,10 +157,7 @@ describe('InvitationService', () => {
         async (entity: any) => entity
       );
 
-      const result = await service.createInvitation(
-        invitationData,
-        mockContributor
-      );
+      const result = await service.createInvitation(invitationData);
 
       expect(result.authorization).toBeDefined();
       expect(result.lifecycle).toBe(mockLifecycle);
@@ -178,14 +171,9 @@ describe('InvitationService', () => {
         id: 'inv-1',
         lifecycle: { id: 'lifecycle-1' },
         authorization: { id: 'auth-1' },
-        invitedContributorID: 'contributor-1',
+        invitedActorID: 'contributor-1',
         roleSet: { id: 'roleset-1' },
       } as any;
-      const mockContributor = {
-        id: 'contributor-1',
-        agent: { id: 'agent-1' },
-      } as any;
-
       vi.spyOn(service, 'getInvitationOrFail').mockResolvedValue(
         mockInvitation
       );
@@ -202,9 +190,7 @@ describe('InvitationService', () => {
       (
         roleSetCacheService.deleteOpenInvitationFromCache as Mock
       ).mockResolvedValue(undefined);
-      (contributorService.getContributor as Mock).mockResolvedValue(
-        mockContributor
-      );
+      (actorLookupService.actorExists as Mock).mockResolvedValue(true);
       (
         roleSetCacheService.deleteMembershipStatusCache as Mock
       ).mockResolvedValue(undefined);
@@ -222,7 +208,7 @@ describe('InvitationService', () => {
       ).toHaveBeenCalledWith('contributor-1', 'roleset-1');
       expect(
         roleSetCacheService.deleteMembershipStatusCache
-      ).toHaveBeenCalledWith('agent-1', 'roleset-1');
+      ).toHaveBeenCalledWith('contributor-1', 'roleset-1');
       expect(result.id).toBe('inv-1');
     });
 
@@ -231,7 +217,7 @@ describe('InvitationService', () => {
         id: 'inv-1',
         lifecycle: { id: 'lifecycle-1' },
         authorization: undefined,
-        invitedContributorID: undefined,
+        invitedActorID: undefined,
         roleSet: undefined,
       } as any;
 
@@ -251,12 +237,12 @@ describe('InvitationService', () => {
       expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
     });
 
-    it('should skip cache invalidation when invitedContributorID or roleSet is not present', async () => {
+    it('should skip cache invalidation when invitedActorID or roleSet is not present', async () => {
       const mockInvitation = {
         id: 'inv-1',
         lifecycle: { id: 'lifecycle-1' },
         authorization: undefined,
-        invitedContributorID: undefined,
+        invitedActorID: undefined,
         roleSet: undefined,
       } as any;
 
@@ -283,7 +269,7 @@ describe('InvitationService', () => {
         id: 'inv-1',
         lifecycle: { id: 'lifecycle-1' },
         authorization: undefined,
-        invitedContributorID: 'contributor-1',
+        invitedActorID: 'contributor-1',
         roleSet: { id: 'roleset-1' },
       } as any;
 
@@ -300,9 +286,7 @@ describe('InvitationService', () => {
       (
         roleSetCacheService.deleteOpenInvitationFromCache as Mock
       ).mockResolvedValue(undefined);
-      (contributorService.getContributor as Mock).mockResolvedValue(
-        null as any
-      );
+      (actorLookupService.actorExists as Mock).mockResolvedValue(false);
 
       await service.deleteInvitation({ ID: 'inv-1' });
 
@@ -312,36 +296,36 @@ describe('InvitationService', () => {
     });
   });
 
-  describe('getInvitedContributor', () => {
+  describe('getInvitedActor', () => {
     it('should return the contributor for the invitation', async () => {
       const mockContributor = { id: 'contributor-1' } as any;
       const mockInvitation = {
         id: 'inv-1',
-        invitedContributorID: 'contributor-1',
+        invitedActorID: 'contributor-1',
       } as IInvitation;
 
-      (contributorService.getContributorByUuidOrFail as Mock).mockResolvedValue(
+      (actorLookupService.getFullActorByIdOrFail as Mock).mockResolvedValue(
         mockContributor
       );
 
-      const result = await service.getInvitedContributor(mockInvitation);
+      const result = await service.getInvitedActor(mockInvitation);
 
       expect(result).toBe(mockContributor);
     });
 
-    it('should throw RelationshipNotFoundException when contributor is not found', async () => {
+    it('should throw EntityNotFoundException when actor is not found', async () => {
       const mockInvitation = {
         id: 'inv-1',
-        invitedContributorID: 'contributor-1',
+        invitedActorID: 'contributor-1',
       } as IInvitation;
 
-      (contributorService.getContributorByUuidOrFail as Mock).mockResolvedValue(
-        null as any
+      (actorLookupService.getFullActorByIdOrFail as Mock).mockRejectedValue(
+        new EntityNotFoundException('Actor not found', LogContext.COMMUNITY)
       );
 
-      await expect(
-        service.getInvitedContributor(mockInvitation)
-      ).rejects.toThrow(RelationshipNotFoundException);
+      await expect(service.getInvitedActor(mockInvitation)).rejects.toThrow(
+        EntityNotFoundException
+      );
     });
   });
 
@@ -353,7 +337,7 @@ describe('InvitationService', () => {
         createdBy: 'user-1',
       } as IInvitation;
 
-      (userLookupService.getUserOrFail as Mock).mockResolvedValue(mockUser);
+      (userLookupService.getUserByIdOrFail as Mock).mockResolvedValue(mockUser);
 
       const result = await service.getCreatedByOrFail(mockInvitation);
 
@@ -366,7 +350,9 @@ describe('InvitationService', () => {
         createdBy: 'user-1',
       } as IInvitation;
 
-      (userLookupService.getUserOrFail as Mock).mockResolvedValue(null as any);
+      (userLookupService.getUserByIdOrFail as Mock).mockResolvedValue(
+        null as any
+      );
 
       await expect(service.getCreatedByOrFail(mockInvitation)).rejects.toThrow(
         RelationshipNotFoundException
@@ -399,7 +385,7 @@ describe('InvitationService', () => {
     });
   });
 
-  describe('findInvitationsForContributor', () => {
+  describe('findInvitationsForActor', () => {
     it('should return all invitations when no states filter is provided', async () => {
       const mockInvitations = [
         { id: 'inv-1' },
@@ -407,14 +393,13 @@ describe('InvitationService', () => {
       ] as Invitation[];
       vi.spyOn(invitationRepository, 'find').mockResolvedValue(mockInvitations);
 
-      const result =
-        await service.findInvitationsForContributor('contributor-1');
+      const result = await service.findInvitationsForActor('contributor-1');
 
       expect(result).toEqual(mockInvitations);
       expect(invitationRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({
           relations: { roleSet: true },
-          where: { invitedContributorID: 'contributor-1' },
+          where: { invitedActorID: 'contributor-1' },
         })
       );
     });
@@ -422,7 +407,7 @@ describe('InvitationService', () => {
     it('should include lifecycle relation when states filter is provided', async () => {
       vi.spyOn(invitationRepository, 'find').mockResolvedValue([]);
 
-      await service.findInvitationsForContributor('contributor-1', ['invited']);
+      await service.findInvitationsForActor('contributor-1', ['invited']);
 
       expect(invitationRepository.find).toHaveBeenCalledWith(
         expect.objectContaining({

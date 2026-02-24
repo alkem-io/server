@@ -1,5 +1,5 @@
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { AuthorizationPrivilege } from '@common/enums';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CreateOrganizationInput } from '@domain/community/organization/dto/organization.dto.create';
@@ -18,7 +18,7 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { NotificationInputPlatformUserRemoved } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.removed';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RegistrationService } from './registration.service';
 
@@ -40,32 +40,19 @@ export class RegistrationResolverMutations {
   ) {}
 
   @Mutation(() => IUser, {
-    description:
-      'Creates a new User profile on the platform for a user that has a valid Authentication session.',
-  })
-  async createUserNewRegistration(
-    @CurrentUser() agentInfo: AgentInfo
-  ): Promise<IUser> {
-    // registerNewUser handles: creation + org assignment + authorization + invitations + notification
-    const user = await this.registrationService.registerNewUser(agentInfo);
-
-    return await this.userService.getUserOrFail(user.id);
-  }
-
-  @Mutation(() => IUser, {
     description: 'Creates a new User on the platform.',
   })
   async createUser(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('userData') userData: CreateUserInput
   ): Promise<IUser> {
     const authorization =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       authorization,
       AuthorizationPrivilege.CREATE,
-      `create new User: ${agentInfo.email}`
+      `create new User: ${actorContext.actorID}`
     );
 
     // Create the user entity
@@ -74,28 +61,28 @@ export class RegistrationResolverMutations {
     // Finalize: authorization + invitations + notification (same path as registerNewUser)
     await this.registrationService.finalizeUserRegistration(user);
 
-    return await this.userService.getUserOrFail(user.id);
+    return await this.userService.getUserByIdOrFail(user.id);
   }
 
   @Mutation(() => IOrganization, {
     description: 'Creates a new Organization on the platform.',
   })
   async createOrganization(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('organizationData') organizationData: CreateOrganizationInput
   ): Promise<IOrganization> {
     const authorizationPolicy =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
 
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       authorizationPolicy,
       AuthorizationPrivilege.CREATE_ORGANIZATION,
       `create Organization: ${organizationData.nameID}`
     );
     const organization = await this.organizationService.createOrganization(
       organizationData,
-      agentInfo
+      actorContext
     );
     const organizationAuthorizations =
       await this.organizationAuthorizationService.applyAuthorizationPolicy(
@@ -121,14 +108,14 @@ export class RegistrationResolverMutations {
   })
   @Profiling.api
   async deleteUser(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteUserInput
   ): Promise<IUser> {
-    const user = await this.userService.getUserOrFail(deleteData.ID, {
-      relations: { profile: true },
+    const user = await this.userService.getUserByIdOrFail(deleteData.ID, {
+      relations: { actor: { profile: true } },
     });
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       user.authorization,
       AuthorizationPrivilege.DELETE,
       `user delete: ${user.id}`
@@ -139,7 +126,7 @@ export class RegistrationResolverMutations {
       );
     // Send the notification
     const notificationInput: NotificationInputPlatformUserRemoved = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorID,
       user,
     };
     await this.notificationPlatformAdapter.platformUserRemoved(
@@ -152,14 +139,14 @@ export class RegistrationResolverMutations {
     description: 'Deletes the specified Organization.',
   })
   async deleteOrganization(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteOrganizationInput
   ): Promise<IOrganization> {
     const organization = await this.organizationService.getOrganizationOrFail(
       deleteData.ID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteOrg: ${organization.id}`

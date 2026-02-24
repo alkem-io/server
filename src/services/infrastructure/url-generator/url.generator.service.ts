@@ -1,5 +1,5 @@
 import { LogContext, ProfileType } from '@common/enums';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { ActorType } from '@common/enums/actor.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { UrlPathBase } from '@common/enums/url.path.base';
 import { UrlPathElement } from '@common/enums/url.path.element';
@@ -16,9 +16,6 @@ import { Memo } from '@domain/common/memo/memo.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { Organization } from '@domain/community/organization/organization.entity';
-import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -182,17 +179,20 @@ export class UrlGeneratorService {
     return '';
   }
 
-  public createUrlForContributor(contributor: IContributor): string {
+  public createUrlForContributor(contributor: {
+    id: string;
+    nameID: string;
+  }): string {
     const type = this.getContributorType(contributor);
     let path: string = UrlPathBase.VIRTUAL_CONTRIBUTOR;
     switch (type) {
-      case RoleSetContributorType.USER:
+      case ActorType.USER:
         path = UrlPathBase.USER;
         break;
-      case RoleSetContributorType.ORGANIZATION:
+      case ActorType.ORGANIZATION:
         path = UrlPathBase.ORGANIZATION;
         break;
-      case RoleSetContributorType.VIRTUAL:
+      case ActorType.VIRTUAL_CONTRIBUTOR:
         path = UrlPathBase.VIRTUAL_CONTRIBUTOR;
         break;
     }
@@ -249,12 +249,11 @@ export class UrlGeneratorService {
     return url;
   }
 
-  private getContributorType(contributor: IContributor) {
-    if (contributor instanceof User) return RoleSetContributorType.USER;
-    if (contributor instanceof Organization)
-      return RoleSetContributorType.ORGANIZATION;
-    if (contributor instanceof VirtualContributor)
-      return RoleSetContributorType.VIRTUAL;
+  private getContributorType(contributor: {
+    id: string;
+    type?: ActorType;
+  }): ActorType {
+    if (contributor.type) return contributor.type;
     throw new RelationshipNotFoundException(
       `Unable to determine contributor type for ${contributor.id}`,
       LogContext.COMMUNITY

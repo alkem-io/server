@@ -226,8 +226,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oidc_service
-    image: docker.io/alkemio/oidc-service:v0.7.1
-    platform: linux/amd64
+    image: docker.io/alkemio/oidc-service:v0.7.2
     depends_on:
       - hydra
       - kratos
@@ -401,7 +400,7 @@ services:
       - SERVICE_ACCOUNT_USERNAME
       - SERVICE_ACCOUNT_PASSWORD
       - WAIT_HOSTS=host.docker.internal:3000
-      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
       - WAIT_HOST_CONNECT_TIMEOUT=30
       - EMAIL_FROM
@@ -419,8 +418,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter-go:v0.8.4-mapping8
-    platform: linux/amd64
+    image: alkemio/matrix-adapter-go:v0.8.4.1-mapping
     depends_on:
       - rabbitmq
     environment:
@@ -437,21 +435,22 @@ services:
       - LOGGING_LEVEL_CONSOLE=debug
       - ENVIRONMENT=dev
       - WAIT_HOSTS=host.docker.internal:3000
-      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
       - WAIT_HOST_CONNECT_TIMEOUT=30
+      - WAIT_COMMAND=/app/matrix-adapter
       - DATABASE_HOST
       - DATABASE_PORT
       - DATABASE_USERNAME
       - DATABASE_PASSWORD
       - DATABASE_NAME=alkemio
-      - ACTOR_ID_MAPPER_ENABLED=true
+      - ACTOR_ID_MAPPER_ENABLED=false
     restart: always
     networks:
       - alkemio_dev_net
     ports:
       - 8280
-    command: sh -c "/wait && /app/matrix-adapter"
+    entrypoint: ["/wait"]
 
   redis:
     extra_hosts:

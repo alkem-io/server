@@ -22,7 +22,7 @@ export const applyUserFilter = <T extends ObjectLiteral>(
 
       if (displayName) {
         const hasRest = Object.keys(rest).length > 0;
-        query.leftJoin('user.profile', 'profile');
+        query.leftJoin('user.actor.profile', 'profile');
         // Use parameterized query to prevent SQL injection
         if (hasRest) {
           wqb.orWhere('profile.displayName ILIKE :userDisplayName', {
