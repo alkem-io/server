@@ -1167,8 +1167,8 @@ export class RoleSetService {
     const policy = this.getPolicyForActorType(roleDefinition, actorType);
 
     if (action === RoleSetUpdateType.ASSIGN) {
-      // Skip validation if no actors yet (first assignment always allowed)
-      if (actorCount === 0) {
+      // -1 means unlimited; skip validation
+      if (policy.maximum < 0) {
         return;
       }
       if (actorCount >= policy.maximum) {
@@ -1180,6 +1180,10 @@ export class RoleSetService {
     }
 
     if (action === RoleSetUpdateType.REMOVE) {
+      // -1 means no minimum; skip validation
+      if (policy.minimum < 0) {
+        return;
+      }
       if (actorCount <= policy.minimum) {
         throw new RoleSetPolicyRoleLimitsException(
           `Min limit of ${actorType} reached for role '${roleType}': ${policy.minimum}`,
