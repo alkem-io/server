@@ -39,12 +39,17 @@ export class MoveNameIdToActorAddSpaceAccountProfiles1771000022000
     );
 
     // --- Step 5: Add 'space' and 'account' to profile_type_enum ---
+    // PostgreSQL requires new enum values to be committed before they can be
+    // used in the same session. Commit the current transaction, add the values,
+    // then start a new transaction for the remaining steps.
+    await queryRunner.commitTransaction();
     await queryRunner.query(
       `ALTER TYPE "public"."profile_type_enum" ADD VALUE IF NOT EXISTS 'space'`
     );
     await queryRunner.query(
       `ALTER TYPE "public"."profile_type_enum" ADD VALUE IF NOT EXISTS 'account'`
     );
+    await queryRunner.startTransaction();
 
     // --- Step 6: Create minimal profiles for Space actors without profiles ---
     // Use DO block to handle the INSERT + UPDATE atomically
