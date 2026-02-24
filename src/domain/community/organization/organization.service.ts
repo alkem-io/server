@@ -449,7 +449,8 @@ export class OrganizationService {
     if (credentialsFilter) {
       organizations = await this.organizationRepository
         .createQueryBuilder('organization')
-        .leftJoinAndSelect('organization.actor.credentials', 'credential')
+        .leftJoin('organization.actor', 'actor')
+        .leftJoinAndSelect('actor.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,

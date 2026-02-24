@@ -525,7 +525,8 @@ export class UserService {
       // User extends Actor which has the credentials relationship
       users = await this.userRepository
         .createQueryBuilder('user')
-        .leftJoinAndSelect('user.actor.credentials', 'credential')
+        .leftJoin('user.actor', 'actor')
+        .leftJoinAndSelect('actor.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -577,7 +578,8 @@ export class UserService {
     const qb = this.userRepository.createQueryBuilder('user').select();
 
     if (entryRoleCredentials.parentRoleSetRole) {
-      qb.leftJoin('user.actor.credentials', 'credential')
+      qb.leftJoin('user.actor', 'actor')
+        .leftJoin('actor.credentials', 'credential')
         .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
@@ -618,7 +620,8 @@ export class UserService {
     const qb = this.userRepository
       .createQueryBuilder('user')
       .select()
-      .leftJoin('user.actor.credentials', 'credential')
+      .leftJoin('user.actor', 'actor')
+      .leftJoin('actor.credentials', 'credential')
       .addSelect(['credential.type', 'credential.resourceID'])
       .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')

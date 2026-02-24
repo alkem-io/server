@@ -564,10 +564,8 @@ export class VirtualContributorService {
     if (credentialsFilter) {
       virtualContributors = await this.virtualContributorRepository
         .createQueryBuilder('virtual_contributor')
-        .leftJoinAndSelect(
-          'virtual_contributor.actor.credentials',
-          'credential'
-        )
+        .leftJoin('virtual_contributor.actor', 'actor')
+        .leftJoinAndSelect('actor.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -636,7 +634,8 @@ export class VirtualContributorService {
     const virtualContributorMatchesCount =
       await this.virtualContributorRepository
         .createQueryBuilder('virtual')
-        .leftJoinAndSelect('virtual.actor.credentials', 'credential')
+        .leftJoin('virtual.actor', 'actor')
+        .leftJoinAndSelect('actor.credentials', 'credential')
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
         .setParameters({
