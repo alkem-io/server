@@ -1,5 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import { ENUM_LENGTH, NAMEID_MAX_LENGTH_SCHEMA } from '@common/constants';
+import { ENUM_LENGTH } from '@common/constants';
 import { ActorType } from '@common/enums/actor.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpaceVisibility } from '@common/enums/space.visibility';
@@ -10,6 +10,7 @@ import { Collaboration } from '@domain/collaboration/collaboration/collaboration
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { License } from '@domain/common/license/license.entity';
+import { Profile } from '@domain/common/profile/profile.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
@@ -57,10 +58,23 @@ export class Space extends BaseAlkemioEntity implements ISpace {
     return this.actor?.credentials;
   }
 
-  // Space uses SpaceAbout instead of Profile, so profileId/profile are not applicable
+  get profile(): Profile {
+    return this.actor?.profile as Profile;
+  }
 
-  @Column('varchar', { length: NAMEID_MAX_LENGTH_SCHEMA, nullable: false })
-  nameID!: string;
+  set profile(p: Profile) {
+    if (!this.actor) this.actor = new Actor();
+    this.actor.profile = p;
+  }
+
+  get nameID(): string {
+    return this.actor?.nameID as string;
+  }
+
+  set nameID(val: string) {
+    if (!this.actor) this.actor = new Actor();
+    this.actor.nameID = val;
+  }
 
   @OneToMany(
     () => Space,
@@ -177,7 +191,7 @@ export class Space extends BaseAlkemioEntity implements ISpace {
     actor.type = ActorType.SPACE;
     actor.id = id;
     this.actor = actor;
-    this.nameID = '';
+    actor.nameID = '';
     this.settings = {} as ISpaceSettings;
     this.platformRolesAccess = { roles: [] } as IPlatformRolesAccess;
   }

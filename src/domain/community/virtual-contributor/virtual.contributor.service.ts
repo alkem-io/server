@@ -92,6 +92,9 @@ export class VirtualContributorService {
     let virtualContributor: IVirtualContributor = VirtualContributor.create(
       virtualContributorData
     );
+    // nameID is a getter/setter delegating to actor, not a @Column on VirtualContributor,
+    // so TypeORM's create() won't copy it from the input — set it explicitly.
+    virtualContributor.nameID = virtualContributorData.nameID!;
 
     virtualContributor.listedInStore = true;
     virtualContributor.searchVisibility = SearchVisibility.ACCOUNT;
@@ -245,8 +248,8 @@ export class VirtualContributorService {
   }
 
   private async checkNameIdOrFail(nameID: string) {
-    const virtualCount = await this.virtualContributorRepository.countBy({
-      nameID: nameID,
+    const virtualCount = await this.virtualContributorRepository.count({
+      where: { actor: { nameID: nameID } },
     });
     if (virtualCount >= 1)
       throw new ValidationException(

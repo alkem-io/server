@@ -3,9 +3,11 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseType } from '@common/enums/license.type';
+import { ProfileType } from '@common/enums/profile.type';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { LicenseService } from '@domain/common/license/license.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
 import { IAccountLicensePlan } from '@domain/space/account.license.plan';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -26,6 +28,7 @@ export class AccountHostService {
     private licenseIssuerService: LicenseIssuerService,
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseService: LicenseService,
+    private profileService: ProfileService,
     private storageAggregatorService: StorageAggregatorService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
@@ -46,6 +49,13 @@ export class AccountHostService {
       await this.storageAggregatorService.createStorageAggregator(
         StorageAggregatorType.ACCOUNT
       );
+
+    // Create a minimal profile for the Account actor
+    account.profile = await this.profileService.createProfile(
+      { displayName: account.nameID },
+      ProfileType.ACCOUNT,
+      account.storageAggregator
+    );
 
     account.license = this.licenseService.createLicense({
       type: LicenseType.ACCOUNT,

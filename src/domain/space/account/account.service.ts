@@ -275,14 +275,14 @@ export class AccountService {
       `
         SELECT
           "account"."id" as "accountId", "account"."externalSubscriptionID" as "externalSubscriptionID",
-          "organization"."id" as "orgId", "organization"."contactEmail" as "orgContactEmail", "organization"."legalEntityName" as "orgLegalName", "organization"."nameID" as "orgNameID",
+          "organization"."id" as "orgId", "organization"."contactEmail" as "orgContactEmail", "organization"."legalEntityName" as "orgLegalName", "org_actor"."nameID" as "orgNameID",
           "profile"."displayName" as "orgDisplayName",
           "user"."id" as "userId", "user"."email" as "userEmail", CONCAT("user"."firstName", ' ', "user"."lastName") as "userName"
         FROM "account"
         LEFT JOIN "user" on "account"."id" = "user"."accountID"
         LEFT JOIN "organization" on "account"."id" = "organization"."accountID"
-        LEFT JOIN "actor" on "organization"."id" = "actor"."id"
-        LEFT JOIN "profile" on "actor"."profileId" = "profile"."id"
+        LEFT JOIN "actor" as "org_actor" on "organization"."id" = "org_actor"."id"
+        LEFT JOIN "profile" on "org_actor"."profileId" = "profile"."id"
         WHERE "account"."id" = $1
     `,
       [accountID]

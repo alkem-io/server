@@ -97,7 +97,7 @@ export class UserLookupService {
   ): Promise<IUser> {
     const user: IUser | null = await this.entityManager.findOne(User, {
       where: {
-        nameID: userNameID,
+        actor: { nameID: userNameID },
       },
       ...options,
     });

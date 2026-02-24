@@ -6,6 +6,7 @@ import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseType } from '@common/enums/license.type';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
+import { ProfileType } from '@common/enums/profile.type';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -39,6 +40,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
@@ -112,6 +114,7 @@ export class SpaceService {
     private licenseService: LicenseService,
     private urlGeneratorCacheService: UrlGeneratorCacheService,
     private spacePlatformRolesAccessService: SpacePlatformRolesAccessService,
+    private profileService: ProfileService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -131,6 +134,11 @@ export class SpaceService {
     parentPlatformRolesAccess?: IPlatformRolesAccess
   ): Promise<ISpace> {
     const space: ISpace = Space.create(spaceData);
+    // nameID is a getter/setter delegating to actor, not a @Column on Space,
+    // so TypeORM's create() won't copy it from the input — set it explicitly.
+    if (spaceData.nameID) {
+      space.nameID = spaceData.nameID;
+    }
     // default to demo space
     space.visibility = SpaceVisibility.ACTIVE;
     space.sortOrder = 0;
@@ -153,6 +161,13 @@ export class SpaceService {
         spaceData.storageAggregatorParent
       );
     space.storageAggregator = storageAggregator;
+
+    // Create a minimal profile for the Space actor
+    space.profile = await this.profileService.createProfile(
+      { displayName: spaceData.about.profileData.displayName },
+      ProfileType.SPACE,
+      storageAggregator
+    );
 
     space.license = this.createLicenseForSpaceL0();
 

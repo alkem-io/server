@@ -77,10 +77,8 @@ export class UrlGeneratorService {
       where: {
         id: id,
       },
-      select: {
-        id: true,
-        nameID: true,
-      },
+      relations: { actor: true },
+      select: { id: true, actor: { id: true, nameID: true } },
     });
     if (!vc) {
       throw new EntityNotFoundException(
@@ -102,6 +100,15 @@ export class UrlGeneratorService {
     switch (profile.type) {
       case ProfileType.SPACE_ABOUT:
         return await this.getUrlPathByAboutProfileID(profile.id);
+      case ProfileType.SPACE: {
+        // Space actor profile — look up via actor table
+        const spaceEntityInfo =
+          await this.getNameableEntityInfoForProfileOrFail('space', profile.id);
+        return this.getSpaceUrlPathByID(spaceEntityInfo.entityID);
+      }
+      case ProfileType.ACCOUNT:
+        // Account actor profile — no dedicated page, link to platform
+        return `${this.endpoint_cluster}/admin`;
       case ProfileType.USER: {
         const userEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
           'user',
@@ -275,11 +282,13 @@ export class UrlGeneratorService {
     return result;
   }
 
-  // Actor-based entity tables where profileId lives on the actor table, not the entity table
+  // Actor-based entity tables where both nameID and profileId live on the actor table
   private static readonly ACTOR_BASED_TABLES = new Set([
     'user',
     'organization',
     'virtual_contributor',
+    'space',
+    'account',
   ]);
 
   public async getNameableEntityInfo(
@@ -289,11 +298,10 @@ export class UrlGeneratorService {
     let query: string;
 
     if (UrlGeneratorService.ACTOR_BASED_TABLES.has(entityTableName)) {
-      // For actor-based entities, profileId is on the actor table (shared PK with entity)
+      // For actor-based entities, both nameID and profileId are on the actor table
       query = `
-        SELECT "${entityTableName}"."id" as "entityID", "${entityTableName}"."nameID" as "entityNameID"
-        FROM "${entityTableName}"
-        INNER JOIN "actor" ON "actor"."id" = "${entityTableName}"."id"
+        SELECT "actor"."id" as "entityID", "actor"."nameID" as "entityNameID"
+        FROM "actor"
         WHERE "actor"."profileId" = $1
       `;
     } else {

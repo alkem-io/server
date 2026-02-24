@@ -254,6 +254,12 @@ const getSpaceRoleResultMock = ({
       nameID: `space-${id}`,
       levelZeroSpaceID: '',
       sortOrder: 0,
+      profile: {
+        id: `profile-space-${id}`,
+        displayName: `Space ${id}`,
+        type: ProfileType.SPACE,
+        ...getEntityMock<Profile>(),
+      },
       about: {
         id,
         profile: {
@@ -280,6 +286,12 @@ const getSpaceRoleResultMock = ({
         type: ActorType.ORGANIZATION,
         ...getEntityMock<Account>(),
         baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
+        profile: {
+          id: `profile-account-${id}`,
+          displayName: `Account ${id}`,
+          type: ProfileType.ACCOUNT,
+          ...getEntityMock<Profile>(),
+        },
       },
       ...getEntityMock<Space>(),
     },

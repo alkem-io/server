@@ -98,6 +98,9 @@ export class OrganizationService {
     );
 
     let organization: IOrganization = Organization.create(organizationData);
+    // nameID is a getter/setter delegating to actor, not a @Column on Organization,
+    // so TypeORM's create() won't copy it from the input — set it explicitly.
+    organization.nameID = organizationData.nameID!;
     organization.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ORGANIZATION
     );
@@ -247,8 +250,8 @@ export class OrganizationService {
   }
 
   async checkNameIdOrFail(nameID: string) {
-    const organizationCount = await this.organizationRepository.countBy({
-      nameID: nameID,
+    const organizationCount = await this.organizationRepository.count({
+      where: { actor: { nameID: nameID } },
     });
     if (organizationCount >= 1)
       throw new ValidationException(

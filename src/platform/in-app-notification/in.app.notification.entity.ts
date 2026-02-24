@@ -3,10 +3,10 @@ import { NotificationEventCategory } from '@common/enums/notification.event.cate
 import { ENUM_LENGTH } from '@constants/index';
 import { Application } from '@domain/access/application/application.entity';
 import { Invitation } from '@domain/access/invitation/invitation.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { Room } from '@domain/communication/room/room.entity';
-import { Actor } from '@domain/actor/actor/actor.entity';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Space } from '@domain/space/space/space.entity';

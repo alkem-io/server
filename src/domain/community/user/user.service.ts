@@ -104,6 +104,9 @@ export class UserService {
     let user: IUser = User.create({
       ...userData,
     });
+    // nameID is a getter/setter delegating to actor, not a @Column on User,
+    // so TypeORM's create() won't copy it from the input — set it explicitly.
+    user.nameID = userData.nameID!;
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
     user.settings = this.userSettingsService.createUserSettings(
       this.getDefaultUserSettings()
@@ -390,8 +393,8 @@ export class UserService {
   }
 
   private async isUserNameIdAvailableOrFail(nameID: string) {
-    const userCount = await this.userRepository.countBy({
-      nameID: nameID,
+    const userCount = await this.userRepository.count({
+      where: { actor: { nameID: nameID } },
     });
     if (userCount != 0)
       throw new ValidationException(

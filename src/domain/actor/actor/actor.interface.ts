@@ -3,10 +3,12 @@ import { ActorType } from '@common/enums/actor.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { ICredential } from '@domain/actor/credential/credential.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
+import { INameable } from '@domain/common/entity/nameable-entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { NameID, UUID } from '@domain/common/scalars';
 import { Field, InterfaceType, ObjectType } from '@nestjs/graphql';
+
+// Note: INameable provides nameID! and profile! (inherited from IAuthorizable which provides authorization?)
 
 /**
  * IActor - Base interface for Actor entities + lightweight GraphQL type.
@@ -24,21 +26,12 @@ import { Field, InterfaceType, ObjectType } from '@nestjs/graphql';
   description:
     'Lightweight actor data containing only base fields. Use for displays where nameID and child-specific fields are not needed.',
 })
-export abstract class IActor extends IAuthorizable {
+export abstract class IActor extends INameable {
   @Field(() => ActorType, {
     nullable: false,
     description: 'The type of Actor',
   })
   type!: ActorType;
-
-  @Field(() => IProfile, {
-    nullable: true,
-    description: 'The profile for this Actor.',
-  })
-  profile?: IProfile;
-
-  // Not exposed in GraphQL - internal reference
-  profileId?: string;
 
   // Credentials - exposed via IActorFull, not in lightweight IActor
   credentials?: ICredential[];
@@ -124,10 +117,9 @@ export abstract class IActorFull {
 
   @Field(() => IProfile, {
     nullable: true,
-    description:
-      'The profile for this Actor. Note: Not all actor types have profiles.',
+    description: 'The profile for this Actor.',
   })
-  profile?: IProfile;
+  profile!: IProfile;
 
   @Field(() => Date, {
     description: 'The date at which the entity was created.',

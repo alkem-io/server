@@ -206,7 +206,9 @@ describe('InAppNotificationService', () => {
     it('should call delete when spaceIDs are provided', async () => {
       notificationRepo.delete!.mockResolvedValue({ affected: 1 });
 
-      await service.deleteAllForContributorActorInSpaces('actor-1', ['space-1']);
+      await service.deleteAllForContributorActorInSpaces('actor-1', [
+        'space-1',
+      ]);
 
       expect(notificationRepo.delete).toHaveBeenCalled();
     });
