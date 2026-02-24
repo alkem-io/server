@@ -67,8 +67,8 @@ export class MoveNameIdToActorAddSpaceAccountProfiles1771000022000
           new_profile_id := gen_random_uuid();
           new_auth_id := gen_random_uuid();
 
-          INSERT INTO "authorization_policy" ("id", "createdDate", "updatedDate", "version", "type")
-          VALUES (new_auth_id, NOW(), NOW(), 1, 'profile');
+          INSERT INTO "authorization_policy" ("id", "createdDate", "updatedDate", "version", "credentialRules", "privilegeRules", "type")
+          VALUES (new_auth_id, NOW(), NOW(), 1, '[]'::jsonb, '[]'::jsonb, 'profile');
 
           INSERT INTO "profile" ("id", "createdDate", "updatedDate", "version", "displayName", "type", "authorizationId")
           VALUES (new_profile_id, NOW(), NOW(), 1, rec.display_name, 'space', new_auth_id);
@@ -95,8 +95,8 @@ export class MoveNameIdToActorAddSpaceAccountProfiles1771000022000
           new_profile_id := gen_random_uuid();
           new_auth_id := gen_random_uuid();
 
-          INSERT INTO "authorization_policy" ("id", "createdDate", "updatedDate", "version", "type")
-          VALUES (new_auth_id, NOW(), NOW(), 1, 'profile');
+          INSERT INTO "authorization_policy" ("id", "createdDate", "updatedDate", "version", "credentialRules", "privilegeRules", "type")
+          VALUES (new_auth_id, NOW(), NOW(), 1, '[]'::jsonb, '[]'::jsonb, 'profile');
 
           INSERT INTO "profile" ("id", "createdDate", "updatedDate", "version", "displayName", "type", "authorizationId")
           VALUES (new_profile_id, NOW(), NOW(), 1, rec.display_name, 'account', new_auth_id);
