@@ -33,6 +33,14 @@ export abstract class IActor extends INameable {
   })
   type!: ActorType;
 
+  // INameable declares profile without @Field (uses field resolver on child types).
+  // Re-declare here with @Field so the lightweight Actor GraphQL type exposes it.
+  @Field(() => IProfile, {
+    nullable: true,
+    description: 'The profile for this Actor.',
+  })
+  declare profile: IProfile;
+
   // Credentials - exposed via IActorFull, not in lightweight IActor
   credentials?: ICredential[];
 }
