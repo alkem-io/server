@@ -2,7 +2,6 @@ import { ActorType, LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
-  UserAlreadyRegisteredException,
 } from '@common/exceptions';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICredential } from '@domain/actor/credential/credential.interface';
@@ -246,33 +245,5 @@ export class UserLookupService {
     userId: string
   ): Promise<IAuthorizationPolicy> {
     return this.actorLookupService.getActorAuthorizationOrFail(userId);
-  }
-
-  /**
-   * Links a Kratos authenticationID to an existing user.
-   * Used when a new Kratos identity is created for an email that already has
-   * an Alkemio user profile (e.g. seeded admin accounts).
-   */
-  public async linkAuthenticationID(
-    user: IUser,
-    authenticationID: string
-  ): Promise<IUser> {
-    // Ensure the authenticationID is not already linked to another user
-    const existingUser = await this.getUserByAuthenticationID(authenticationID);
-    if (existingUser && existingUser.id !== user.id) {
-      throw new UserAlreadyRegisteredException(
-        'Kratos identity already linked to another user'
-      );
-    }
-
-    user.authenticationID = authenticationID;
-    const saved = await this.entityManager.save(User, user as User);
-
-    this.logger.verbose?.(
-      `Linked authenticationID ${authenticationID} to existing user ${user.id}`,
-      LogContext.AUTH
-    );
-
-    return saved;
   }
 }

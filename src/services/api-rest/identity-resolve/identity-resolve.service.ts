@@ -81,6 +81,8 @@ export class IdentityResolveService {
     const existingUserByEmail =
       await this.userLookupService.getUserByEmail(email);
 
+    const outcome = existingUserByEmail ? 'link' : 'create';
+
     // FIXME: temporary ugly workaround to skip email verification for Kratos users,
     //  based on the fact that this EP is called only by OIDC controller, so we silently assume
     //  that this is OIDC session and don't care about email verification status from Kratos side.
@@ -94,52 +96,27 @@ export class IdentityResolveService {
     };
 
     let user: IUser;
-    let outcome: 'link' | 'create';
-
-    if (existingUserByEmail) {
-      // User profile already exists (e.g. seeded admin) — link the new Kratos identity
-      outcome = 'link';
-      try {
-        user = await this.userLookupService.linkAuthenticationID(
-          existingUserByEmail,
-          authenticationId
-        );
-        // Finalize registration in case it was never done (seeded users)
-        user = await this.registrationService.finalizeUserRegistration(user);
-      } catch (error) {
-        this.logger.error?.(
-          `Identity resolve: failed to link authenticationId=${authenticationId} to existing user ${existingUserByEmail.id}: ${(error as Error)?.message}`,
-          (error as Error)?.stack,
+    try {
+      user = await this.registrationService.registerNewUser(kratosSessionData);
+    } catch (error) {
+      if (error instanceof UserAlreadyRegisteredException) {
+        throw new BadRequestHttpException(error.message, LogContext.AUTH);
+      }
+      if (error instanceof UserNotVerifiedException) {
+        throw new BadRequestHttpException(
+          'Kratos identity email is not verified',
           LogContext.AUTH
         );
-        throw error;
       }
-    } else {
-      // No existing user — create a new one
-      outcome = 'create';
-      try {
-        user =
-          await this.registrationService.registerNewUser(kratosSessionData);
-      } catch (error) {
-        if (error instanceof UserAlreadyRegisteredException) {
-          throw new BadRequestHttpException(error.message, LogContext.AUTH);
-        }
-        if (error instanceof UserNotVerifiedException) {
-          throw new BadRequestHttpException(
-            'Kratos identity email is not verified',
-            LogContext.AUTH
-          );
-        }
-        if (error instanceof UserRegistrationInvalidEmail) {
-          throw new BadRequestHttpException(error.message, LogContext.AUTH);
-        }
-        this.logger.error?.(
-          `Identity resolve: failed to resolve authenticationId=${authenticationId}: ${(error as Error)?.message}`,
-          (error as Error)?.stack,
-          LogContext.AUTH
-        );
-        throw error;
+      if (error instanceof UserRegistrationInvalidEmail) {
+        throw new BadRequestHttpException(error.message, LogContext.AUTH);
       }
+      this.logger.error?.(
+        `Identity resolve: failed to resolve authenticationId=${authenticationId}: ${(error as Error)?.message}`,
+        (error as Error)?.stack,
+        LogContext.AUTH
+      );
+      throw error;
     }
 
     if (!user.authenticationID) {
