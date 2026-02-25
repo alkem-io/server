@@ -27,12 +27,12 @@ export default defineConfig({
     dedupe: ['graphql'],
   },
   test: {
-    // Use 'threads' pool for shared module cache across tests in the same worker
-    // This reduces import time vs 'forks' which does cold imports per file
-    pool: 'threads',
+    // Pool strategy: 'threads' for local dev (shared module cache, faster),
+    // 'forks' for CI/constrained runners (independent processes, more resilient).
+    // GitHub Actions sets CI=true automatically.
+    pool: process.env.CI ? 'forks' : 'threads',
     // Vitest 4: pool options are now top-level (poolOptions was removed)
     maxWorkers: 4,
-    minWorkers: 2,
     // Reuse module cache across tests - avoids re-importing per test file
     // Requires tests to not leak state (clearMocks: true handles mock call data)
     isolate: false,

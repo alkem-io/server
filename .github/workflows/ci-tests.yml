@@ -30,4 +30,5 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run tests
+        timeout-minutes: 10
         run: pnpm run test:ci:no:coverage
