@@ -31,8 +31,7 @@ export default defineConfig({
     // giving better memory efficiency and clean process exit.
     pool: 'threads',
     // Match the number of workers to available CPU cores
-    // Adjust for CI if needed
-    maxWorkers: process.env.CI ? 4 : 4,
+    maxWorkers: 4,
     // Reuse module cache across tests - avoids re-importing per test file
     // Requires tests to not leak state (clearMocks: true handles mock call data)
     isolate: false,
