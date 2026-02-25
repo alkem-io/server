@@ -300,9 +300,6 @@ export class NotificationPlatformAdapter {
         adminInAppPayload
       );
     }
-
-    // Send the new user welcome
-    await this.notificationUserAdapter.userSignUpWelcome(eventData);
   }
 
   public async platformUserRemoved(

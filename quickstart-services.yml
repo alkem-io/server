@@ -534,3 +534,26 @@ services:
       - alkemio_dev_net
     ports:
       - 4004
+
+  webhook-gateway:
+    container_name: alkemio_dev_webhook_gateway
+    hostname: webhook-gateway
+    image: alkemio/webhook-gateway:v0.1.0
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - PORT=8080
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+      - PLATFORM_URL=http://host.docker.internal:4000
+      - MAINTENANCE_MODE=false
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 8080
