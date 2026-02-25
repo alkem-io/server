@@ -11,13 +11,13 @@ Migrate all 10 GitHub Actions workflows and 1 Travis CI configuration from GitHu
 
 **Language/Version**: GitHub Actions YAML, Bash, Dockerfile (no application code changes)
 **Primary Dependencies**: ARC `gha-runner-scale-set` Helm chart, Docker DinD sidecar, `docker/build-push-action@v5`, `docker/setup-buildx-action@v3`, `docker/setup-qemu-action@v3`
-**Storage**: RWO PVC (5 GB) for pnpm store cache; GHCR registry for Docker build cache
+**Storage**: NFS server pod backed by RWO PVC (25 GB) for shared pnpm store cache; GHCR registry for Docker build cache
 **Testing**: Manual verification per PR — workflow runs on `arc-runner-set` produce identical outcomes to `ubuntu-latest`
 **Target Platform**: Kubernetes cluster (Hetzner) running ARC controller
 **Project Type**: CI/CD infrastructure (no `src/` changes)
 **Performance Goals**: pnpm install from local PVC cache < 30s (vs ~2 min from network); Docker builds with registry cache < 50% of uncached time
-**Constraints**: Ephemeral runners (pod destroyed per job); all pods pinned to single node (RWO PVC); DinD sidecar requires `--privileged` mode
-**Runner Pod Resources**: `requests: {cpu: "4", memory: "3Gi"}`, `limits: {cpu: "5", memory: "6Gi"}`. CPU limit at 5 gives 25% burst headroom (4 workers + 1 main thread) without CFS throttling, while capping runaway pods. Cluster: 2 nodes × 32 CPU × 60 GiB, max 10 concurrent pods.
+**Constraints**: Ephemeral runners (pod destroyed per job); pnpm cache shared via NFS server pod (no nodeSelector — pods schedule freely on any node); DinD sidecar requires `--privileged` mode
+**Runner Pod Resources**: `requests: {cpu: "4", memory: "3Gi"}`, `limits: {cpu: "5", memory: "6Gi"}`. CPU limit at 5 gives 25% burst headroom (4 workers + 1 main thread) without CFS throttling, while capping runaway pods. Cluster: 2 nodes × 32 CPU × 60 GiB (ephemeral storage: 17 GB / 15.3 GB), max 10 concurrent pods.
 **Vitest Configuration**: `pool: 'threads'`, `maxWorkers: 4`, `isolate: false`. Threads pool avoids the process-hang-on-exit issue seen with `forks` pool; the 4 Gi heap (`--max-old-space-size=4096`) provides enough room for the full module graph in a single process.
 **Scale/Scope**: 10 workflow files modified/created/deleted, 3 infra manifests produced, 2 test config files updated (`vitest.config.ts`, `ci-tests.yml`)
 
@@ -51,8 +51,8 @@ specs/037-self-hosted-runners/
 ├── research.md                                      # Phase 0: research findings
 ├── quickstart.md                                    # Verification guide per PR tier
 ├── contracts/
-│   ├── arc-pnpm-store-pvc.yaml                      # RWO PVC for pnpm store (5 GB)
-│   └── arc-pnpm-store-prune-cronjob.yaml            # Weekly pnpm store prune CronJob
+│   ├── arc-nfs-cache-server.yaml                    # NFS cache server (PVC + Deployment + Service)
+│   └── arc-pnpm-store-prune-cronjob.yaml            # Daily pnpm store prune CronJob (NFS mount)
 └── tasks.md                                         # Phase 2 output (/speckit.tasks)
 ```
 
@@ -87,20 +87,22 @@ The following manifests must be applied in the **infra/GitOps repository** befor
 
 | Manifest | Target | Required Before | Purpose |
 |----------|--------|-----------------|---------|
-| `arc-pnpm-store-pvc.yaml` | Infra repo | PR 1 | 5 GB RWO PVC for pnpm store cache |
-| ARC Helm values (managed in infra repo) | Infra repo | PR 1 (basic), PR 3 (DinD) | Full pod template with DinD sidecar, PVC mount, env vars |
-| `arc-pnpm-store-prune-cronjob.yaml` | Infra repo | After PR 1 | Weekly pnpm store prune maintenance |
+| `arc-nfs-cache-server.yaml` | Infra repo | PR 1 | NFS cache server stack (25 Gi PVC + Deployment + Service) for shared pnpm store |
+| ARC Helm values (managed in infra repo) | Infra repo | PR 1 (basic), PR 3 (DinD) | Full pod template with DinD sidecar, NFS volume mount, env vars |
+| `arc-pnpm-store-prune-cronjob.yaml` | Infra repo | After PR 1 | Daily pnpm store prune maintenance (mounts via NFS) |
 
 **Handoff protocol**:
-1. Before PR 1: Apply PVC + basic Helm values (runner + pnpm PVC, no DinD yet). Verify runner pod spawns and `npm_config_store_dir` resolves to `/opt/cache/pnpm-store`.
+1. Before PR 1: Deploy NFS cache server (`arc-nfs-cache-server.yaml`) + basic Helm values (runner with NFS mount, no DinD yet). Verify: NFS Service reachable at `pnpm-cache-nfs:2049`, runner pod mounts successfully, `npm_config_store_dir` resolves to `/opt/cache/pnpm-store`. No `nodeSelector` needed — pods schedule freely on any node.
 2. Before PR 3: Update Helm values to include DinD sidecar with `--privileged`. Verify `docker info` works from runner container.
-3. After PR 1 stabilizes: Apply CronJob for weekly prune.
+3. After PR 1 stabilizes: Apply CronJob for daily prune.
 
-**Key research finding (R1)**: The Helm values use a **full pod template** instead of `containerMode.type: "dind"` because the simplified mode does not support custom volume mounts visible to the runner container. See `research.md#R1`.
+**Key research findings**:
+- **(R1)**: The Helm values use a **full pod template** instead of `containerMode.type: "dind"` because the simplified mode does not support custom volume mounts visible to the runner container. See `research.md#R1`.
+- **(R7)**: An NFS server pod provides shared cache access across multiple nodes without requiring an RWX storage class or `nodeSelector` pinning. See `research.md#R7`.
 
 ### PR 1 — Low Risk: Runner Swap + Legacy CI Cleanup
 
-**Infra prerequisites**: Basic ARC runner pods registered with GitHub with pnpm store PVC (`arc-pnpm-store`, RWO) mounted at `/opt/cache/pnpm-store` and `npm_config_store_dir` env var set. No DinD required for PR 1. See T004+T005 in tasks.md.
+**Infra prerequisites**: NFS cache server deployed (`arc-nfs-cache-server.yaml`). Basic ARC runner pods registered with GitHub with NFS volume mounted at `/opt/cache/pnpm-store` (server: `pnpm-cache-nfs`, path: `/`) and `npm_config_store_dir` env var set. No DinD or `nodeSelector` required for PR 1. See T004+T005 in tasks.md.
 
 #### 1.1 `review-router.yml` — Swap runner
 
@@ -164,7 +166,7 @@ jobs:
 
 **Vitest configuration** (`vitest.config.ts`): Updated alongside this workflow — `pool: 'threads'` (was `forks` in CI), `maxWorkers: 4` (was 2 in CI). The threads pool shares the process and module cache (`isolate: false`), giving better memory efficiency and clean process exit. The `forks` pool was previously used for CI but caused the Vitest process to hang after tests completed due to open handles in forked worker processes.
 
-**Note**: `actions/cache` for pnpm is intentionally omitted — when the PVC is provisioned, the local store at `/opt/cache/pnpm-store` (via `npm_config_store_dir` env in pod template) will be the primary cache. Without PVC, pnpm installs from network (functional but slower).
+**Note**: `actions/cache` for pnpm is intentionally omitted — the NFS-mounted pnpm store at `/opt/cache/pnpm-store` (via `npm_config_store_dir` env in pod template) is the primary cache. Without NFS, pnpm installs from network (functional but slower).
 
 **Trigger parity**: Matches Travis CI's original behavior — runs on both pushes and PRs to `develop`/`main`. Branch protection rules must be updated: remove `continuous-integration/travis-ci/pr` required check, add `CI Tests` as required check.
 
@@ -174,11 +176,11 @@ jobs:
 
 #### 2.1 `schema-contract.yml` — Swap runner
 
-Change `runs-on: ubuntu-latest` to `runs-on: arc-runner-set` for the single job. No other changes needed — Node.js 22, pnpm, git are set up via actions and the local pnpm PVC cache accelerates install.
+Change `runs-on: ubuntu-latest` to `runs-on: arc-runner-set` for the single job. No other changes needed — Node.js 22, pnpm, git are set up via actions and the NFS-mounted pnpm cache accelerates install.
 
 #### 2.2 `trigger-sonarqube.yml` — Swap runner
 
-Change `runs-on: ubuntu-latest` to `runs-on: arc-runner-set`. The existing `actions/cache` step for pnpm can remain as a fallback (it works on ARC runners via GitHub's remote cache service), but the primary cache is the local PVC.
+Change `runs-on: ubuntu-latest` to `runs-on: arc-runner-set`. The existing `actions/cache` step for pnpm can remain as a fallback (it works on ARC runners via GitHub's remote cache service), but the primary cache is the NFS-mounted store.
 
 #### 2.3 `schema-baseline.yml` — Swap runner
 
@@ -310,10 +312,10 @@ Remove entirely. Consolidated into the new workflow above.
 ```text
 [Infra: Basic ARC runner (no DinD)]
          │
-[Infra: Apply PVC arc-pnpm-store + basic Helm values]
+[Infra: Deploy NFS cache server + basic Helm values (NFS mount)]
          │
          ▼
-    ┌─ PR 1 (Low — PVC required, no DinD) ─────────┐
+    ┌─ PR 1 (Low — NFS cache required, no DinD) ───┐
     │  review-router.yml → swap runner              │
     │  trigger-e2e-tests.yml → DELETE               │
     │  .travis.yml → DELETE + ci-tests.yml (NEW)    │
@@ -353,7 +355,7 @@ Remove entirely. Consolidated into the new workflow above.
 
 | Concern | Resolution |
 |---------|------------|
-| DinD `--privileged` security | Inherent to Docker-in-Docker. Mitigated by ephemeral pods (no persistent state), single-tenant cluster, and pod isolation via node pinning |
+| DinD `--privileged` security | Inherent to Docker-in-Docker. Mitigated by ephemeral pods (no persistent state) and single-tenant cluster. NFS server also runs privileged (kernel nfsd) |
 | Full pod template vs `containerMode.type: "dind"` | Required due to ARC issue #3281 (custom volumes not visible to runner in simplified mode). Adds Helm complexity but enables PVC caching |
 | DinD sidecar tag pinning | Pinned to `docker:27.5.1-dind` in Helm values (per Constitution Principle 9). Tracked as T027 for currency verification |
 | ARC runner image tag pinning | Pinned to `ghcr.io/actions/actions-runner:2.321.0` in Helm values (per Constitution Principle 9). Tracked as T027 for currency verification |

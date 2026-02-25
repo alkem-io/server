@@ -24,9 +24,9 @@
 
 **Purpose**: Finalize Kubernetes manifests that the operator must apply in the infra/GitOps repository before workflow PRs can be tested.
 
-- [x] T001 Review and finalize PVC manifest in `specs/037-self-hosted-runners/contracts/arc-pnpm-store-pvc.yaml` — confirm storage class, namespace, and 5 GB size are correct for the target cluster
+- [x] T001 Review and finalize NFS cache server manifest in `specs/037-self-hosted-runners/contracts/arc-nfs-cache-server.yaml` — confirm storage class, namespace, and 25 Gi PVC size are correct for the target cluster
 - [x] T002 [P] Review and finalize ARC Helm values in infra/GitOps repo — set runner node hostname, confirm runner image tag, set `githubConfigSecret` name, set `maxRunners: 10`, set runner container resources: `requests: {cpu: "4", memory: "3Gi"}`, `limits: {cpu: "5", memory: "6Gi"}`
-- [x] T003 [P] Review and finalize CronJob manifest in `specs/037-self-hosted-runners/contracts/arc-pnpm-store-prune-cronjob.yaml` — replace `<runner-node-name>` placeholder, confirm namespace matches ARC installation
+- [x] T003 [P] Review and finalize CronJob manifest in `specs/037-self-hosted-runners/contracts/arc-pnpm-store-prune-cronjob.yaml` — confirm namespace matches ARC installation, verify atime-based cleanup thresholds (30d/7d/22Gi)
 
 ---
 
@@ -36,11 +36,11 @@
 
 **CRITICAL**: No workflow PRs can proceed until the runner is validated.
 
-- [ ] T004 Hand off `contracts/arc-pnpm-store-pvc.yaml` to infra repo operator — PVC must be created in the ARC runner namespace before PR 1
+- [ ] T004 Hand off `contracts/arc-nfs-cache-server.yaml` to infra repo operator — NFS cache server (PVC + Deployment + Service) must be deployed in the ARC runner namespace before PR 1
 - [ ] T005 Configure ARC Helm values in infra repo (basic mode — no DinD sidecar yet) — runner pods must spawn and register with GitHub
-- [ ] T006 Validate runner pod is functional: trigger a test workflow on `arc-runner-set` that runs `echo "hello"`, `pnpm store path`, `which git && which curl && which jq && which gpg && which python3` (FR-003 tool validation), and accesses a non-sensitive GitHub secret to confirm pod spawns, pnpm PVC is mounted at `/opt/cache/pnpm-store`, `npm_config_store_dir` resolves correctly, required system tools are available, and secrets injection works (FR-003, FR-008)
+- [ ] T006 Validate runner pod is functional: trigger a test workflow on `arc-runner-set` that runs `echo "hello"`, `pnpm store path`, `which git && which curl && which jq && which gpg && which python3` (FR-003 tool validation), and accesses a non-sensitive GitHub secret to confirm pod spawns, NFS pnpm cache is mounted at `/opt/cache/pnpm-store`, `npm_config_store_dir` resolves correctly, required system tools are available, and secrets injection works (FR-003, FR-008)
 
-**Checkpoint**: ARC runner pods spawn, register with GitHub, have pnpm PVC mounted, and can access secrets. PR 1 can begin.
+**Checkpoint**: ARC runner pods spawn, register with GitHub, have NFS pnpm cache mounted, and can access secrets. PR 1 can begin.
 
 ---
 
@@ -145,7 +145,7 @@
 
 **Purpose**: Final maintenance, validation, and Constitution compliance.
 
-- [ ] T026 Hand off `contracts/arc-pnpm-store-prune-cronjob.yaml` to infra repo operator — weekly pnpm store prune CronJob
+- [ ] T026 Hand off `contracts/arc-pnpm-store-prune-cronjob.yaml` to infra repo operator — daily atime-based pnpm store maintenance CronJob
 - [ ] T027 Verify pinned container image tags in infra repo ARC Helm values are current per Constitution Principle 9 (Container Determinism): runner image pinned to `ghcr.io/actions/actions-runner:2.321.0` and DinD sidecar pinned to `docker:27.5.1-dind` — confirm these are the latest stable versions at time of deployment
 - [ ] T028 Final audit: `grep -r 'ubuntu-latest' .github/workflows/` returns zero matches. All workflow files reference `arc-runner-set`. (Deferred until T016–T021 complete — K8s deploy and Docker Hub release workflows still pending migration)
 - [ ] T029 Run `specs/037-self-hosted-runners/quickstart.md` full validation checklist across all PRs

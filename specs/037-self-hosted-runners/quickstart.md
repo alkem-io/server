@@ -4,16 +4,17 @@
 
 1. ARC controller installed on the Kubernetes cluster
 2. Infra manifests applied:
-   - `contracts/arc-pnpm-store-pvc.yaml` — PVC for pnpm store cache
-   - ARC Helm values configured in infra repo (full pod template with DinD + PVC)
-   - `contracts/arc-pnpm-store-prune-cronjob.yaml` — Weekly cache maintenance
-3. Runner pods spawning and registering with GitHub (check `gh api repos/alkem-io/server/actions/runners`)
+   - `contracts/arc-nfs-cache-server.yaml` — NFS cache server (PVC + Deployment + Service)
+   - ARC Helm values configured in infra repo (full pod template with DinD + NFS mount)
+   - `contracts/arc-pnpm-store-prune-cronjob.yaml` — Daily atime-based cache maintenance
+3. NFS server running: `kubectl get pods -l app.kubernetes.io/name=pnpm-cache-nfs`
+4. Runner pods spawning and registering with GitHub (check `gh api repos/alkem-io/server/actions/runners`)
 
 ## Verification Per PR
 
 ### PR 1 — Low Risk (Runner Swap + Legacy CI Cleanup)
 
-**Infra prerequisite**: Basic ARC runner with pnpm PVC mounted.
+**Infra prerequisite**: NFS cache server deployed, ARC runner with NFS mount.
 
 ```bash
 # 1. Push PR branch, verify review-router.yml runs on arc-runner-set
@@ -46,7 +47,7 @@ gh run list --branch develop --workflow schema-baseline.yml
 - Schema contract posts diff comment on PR
 - SonarQube scan completes and reports quality gate
 - Schema baseline creates/updates baseline PR after merge to develop
-- pnpm install uses the PVC cache (check "Install dependencies" step timing)
+- pnpm install uses the NFS cache (check "Install dependencies" step timing)
 
 ### PR 3 — High Risk (K8s Deploy with DinD)
 

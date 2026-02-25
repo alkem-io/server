@@ -80,11 +80,38 @@
 
 ## R6: Infra Repository Manifests
 
-**Decision**: This repo produces reference Kubernetes manifests (PVC, CronJob, Helm values) as handoff artifacts. The operator applies them in the infra/GitOps repo out-of-band.
+**Decision**: This repo produces reference Kubernetes manifests (NFS server stack, CronJob, Helm values) as handoff artifacts. The operator applies them in the infra/GitOps repo out-of-band.
 
 **Rationale**: ARC Helm values are managed in a separate repository. This repo cannot directly apply infra changes, but it must provide the exact manifests needed, with clear dependency documentation linking PRs to infra prerequisites.
 
 **Manifests to produce**:
-1. `arc-pnpm-store-pvc.yaml` — RWO PVC (5 GB) for pnpm store
-2. `arc-pnpm-store-prune-cronjob.yaml` — Weekly CronJob for `pnpm store prune`
-3. ARC Helm values — managed directly in the infra/GitOps repo (not checked into this public repo). Requirements: full pod template with DinD sidecar, PVC mounts, env vars, resource limits.
+1. `arc-nfs-cache-server.yaml` — NFS cache server stack (PVC + Deployment + Service) for shared pnpm store
+2. `arc-pnpm-store-prune-cronjob.yaml` — Daily CronJob for `pnpm store prune` (mounts via NFS)
+3. ARC Helm values — managed directly in the infra/GitOps repo (not checked into this public repo). Requirements: full pod template with DinD sidecar, NFS volume mount, env vars, resource limits.
+
+## R7: Multi-Node pnpm Cache via NFS Server Pod
+
+**Decision**: Use a lightweight NFS server pod (backed by RWO PVC) instead of a direct RWO PVC mount to share the pnpm cache across runner pods on multiple nodes.
+
+**Rationale**: The cluster has 2 worker nodes but does not support RWX storage classes. A single RWO PVC forces all runner pods to the same node (Kubernetes volume scheduling constraint), creating a resource bottleneck. Node ephemeral storage is limited (17 GB / 15.3 GB), ruling out `hostPath` volumes for a cache serving ~15 repositories (estimated 8–20 GB with deduplication).
+
+An NFS server pod provides RWX-like shared access without requiring a cluster-wide RWX storage class:
+- A Deployment runs a single NFS server container (`itsthenetwork/nfs-server-alpine:12`) backed by a 25 Gi RWO PVC
+- A ClusterIP Service exposes port 2049
+- Runner pods mount the share via `nfs` volume type — this is not PVC-bound, so the scheduler is free to place pods on any node
+- pnpm's content-addressable store is concurrent-write-safe (atomic writes, hard links), making it NFS-compatible
+
+**Key details**:
+- NFS server requires `privileged: true` (kernel NFS — nfsd/mountd)
+- Minimal resources: 50m CPU / 64 Mi memory (requests), 200m CPU / 128 Mi memory (limits)
+- If NFS server is down, runner pods fail to mount and stay in `ContainerCreating` — but the Deployment auto-restarts the server pod
+- Performance: NFS adds ~5–10ms per file operation. Cached `pnpm install` takes ~10–15s over NFS vs ~5s on local PVC. Both are a major improvement over ~2 min from network
+- PVC sized at 25 Gi for ~15 repos with pnpm deduplication (shared dependencies stored once)
+- Prune CronJob runs daily (increased from weekly due to higher churn from 15 repos)
+
+**Alternatives considered**:
+- Single RWO PVC with `nodeSelector` — forces all pods to one node, wastes second node
+- `hostPath` volumes — nodes have insufficient ephemeral storage (17 GB / 15.3 GB)
+- Two RunnerScaleSets (one per node) — doubles Helm management overhead
+- Install RWX CSI driver (Longhorn, NFS provisioner) — disproportionate infra investment for a cache
+- `actions/cache` only (GitHub network cache) — functional but slow (~30–60s overhead vs ~10–15s NFS)

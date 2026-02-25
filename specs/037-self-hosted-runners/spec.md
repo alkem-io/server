@@ -28,10 +28,10 @@
 - Q: Should the Travis CI replacement (new test workflow) stay in PR 1 (Low) or move to PR 2 (Medium)? → A: Stay in PR 1 (Low) — the test workflow is simple (`pnpm run test:ci:no:coverage`), failure is PR-scoped, and it logically groups with Travis/E2E removal as a "legacy CI cleanup" unit.
 - Q: Should the PR 2→PR 3 gate explicitly require ARC DinD Helm values to be applied in the infra repo? → A: Yes — add an explicit infra prerequisite: "ARC DinD Helm values applied and verified (runner pod spawns with DinD sidecar)" before PR 3 can proceed.
 - Q: What types of local cache should persist between jobs on ephemeral ARC runners? → A: pnpm store + Docker build layers. These are the two highest-impact caches: pnpm store avoids re-downloading ~800MB+ of dependencies; Docker layer cache avoids rebuilding unchanged layers in K8s deploy and Docker Hub release workflows.
-- Q: How should local cache be persisted on the cluster for ephemeral runners? → A: RWO (ReadWriteOnce) PVC for pnpm store (all runner pods pinned to same node via nodeSelector/nodeAffinity) + registry-backed Docker build cache (`--cache-to=type=registry` in GHCR). RWO is universally supported — no RWX/NFS dependency. Multiple pods on the same node can mount an RWO PVC concurrently; pnpm's content-addressable store is safe for concurrent writes.
+- Q: How should local cache be persisted on the cluster for ephemeral runners? → A: ~~Originally: RWO PVC pinned to single node via nodeSelector.~~ **Revised**: NFS server pod backed by RWO PVC (25 Gi) + registry-backed Docker build cache (`--cache-to=type=registry` in GHCR). The NFS server provides shared cache access across multiple nodes without requiring an RWX storage class or nodeSelector pinning. Runner pods mount via `nfs` volume type, which is not PVC-bound — the scheduler places pods freely on any node. See `contracts/arc-nfs-cache-server.yaml`.
 - Q: Where should the pnpm store PVC be mounted in the runner pod, and how should pnpm find it? → A: Mount at `/opt/cache/pnpm-store` with `npm_config_store_dir` env var set in the ARC pod template. Keeps cache separate from ephemeral workspace, avoids home dir coupling, requires zero workflow changes. (Note: `npm_config_store_dir` controls the pnpm content-addressable store path; `PNPM_HOME` is a different variable that controls the pnpm binary location.)
 - Q: Which migration phase should local caching be introduced in? → A: Phase 1 MVP — include from the first PR. pnpm store PVC is an infra-level Helm prerequisite (active for all PRs). Docker registry-backed cache flags (`--cache-to`/`--cache-from`) are added to Docker build workflows in PR 3 (K8s deploy) and PR 4 (Docker Hub release).
-- Q: Should the pnpm store cache have a size limit or eviction policy? → A: Fixed 5 GB RWO PVC + weekly CronJob running `pnpm store prune` for automated maintenance. Growth is slow (~50-100 MB per new dependency version) so 5 GB is ample; the CronJob prevents unbounded accumulation of orphaned packages.
+- Q: Should the pnpm store cache have a size limit or eviction policy? → A: ~~Originally: 5 GB PVC + weekly `pnpm store prune`.~~ **Revised**: 25 Gi NFS-backed PVC + daily access-time-based cleanup CronJob. `pnpm store prune` would wipe everything on ephemeral runners (no persistent `node_modules` to track references). Instead, the CronJob uses `find -atime +30` to remove only files not accessed by any runner in 30+ days — surgically removing stale packages while keeping the active cache intact. A 22 Gi safety cap triggers aggressive cleanup (7-day threshold) if atime tracking is disabled. PVC sized at 25 Gi for ~15 repos with pnpm deduplication. See `contracts/arc-pnpm-store-prune-cronjob.yaml`.
 
 ## Current State Analysis
 
@@ -144,9 +144,9 @@ As a DevOps engineer, I want a dedicated workflow to build and publish the custo
 - What happens when QEMU emulation fails during multiplatform Docker builds? The `docker/setup-qemu-action` step should fail explicitly. This is a DinD `--privileged` mode requirement — if privileged mode is not enabled, QEMU registration will fail.
 - What happens when GPG signing is needed (schema baseline)? GPG must be available in the runner environment and secrets must be accessible.
 - What happens when full git history is needed? `fetch-depth: 0` must work correctly with the self-hosted runner's git configuration.
-- What happens when the pnpm store PVC is full? pnpm falls back to downloading packages directly (slower but functional). The weekly CronJob prune should prevent this; if it recurs, increase PVC size.
+- What happens when the NFS cache server is down? pnpm falls back to downloading packages from the npm registry (slower but functional). The NFS Deployment auto-restarts the server pod. Runner pods will be in `ContainerCreating` until the NFS server recovers or the mount times out.
 - What happens when the Docker registry cache is unavailable? Builds proceed without cache (full rebuild) — `--cache-from` is a best-effort hint, not a hard dependency.
-- What happens when two concurrent runner pods write to the pnpm store simultaneously? pnpm's content-addressable store uses atomic writes and hard links; concurrent access on the same RWO volume is safe.
+- What happens when two concurrent runner pods write to the pnpm store simultaneously? pnpm's content-addressable store uses atomic writes; concurrent access over NFS is safe. On NFS, pnpm uses copy mode (not hard links) since `node_modules` and the store are on different filesystems.
 
 ## Requirements _(mandatory)_
 
@@ -162,7 +162,7 @@ As a DevOps engineer, I want a dedicated workflow to build and publish the custo
 - **FR-008**: Workflows MUST continue to have access to all required GitHub secrets (Docker Hub credentials, Azure ACR credentials, kubeconfig, GPG keys, SonarQube token, Travis token).
 - **FR-009**: The `trigger-e2e-tests.yml` workflow MUST be removed. E2E tests will be triggered manually until the `alkem-io/test-suites` repository is migrated off Travis CI in a separate effort.
 - **FR-010**: The old Docker Hub release workflow (`build-release-docker-hub.yml`) MUST be removed. All Docker Hub release functionality is consolidated into `build-release-docker-hub-new.yml`, which is migrated to `arc-runner-set` with DinD + QEMU/Buildx.
-- **FR-011**: Ephemeral ARC runners MUST have local caching for the **pnpm store** (via a ReadWriteOnce PVC mounted to all runner pods on the same node) and **Docker build layers** (via registry-backed cache with `--cache-to=type=registry` targeting GHCR). All runner pods MUST be pinned to a single node via `nodeSelector` or `nodeAffinity` to allow RWO PVC sharing without requiring RWX storage. **Availability risk**: The single-node RWO PVC creates a single point of failure — if the pinned node goes down, all runner pods lose cache access and cannot schedule until the node recovers. Mitigation: (1) pnpm falls back to network install (slower but functional), (2) Docker builds proceed without cache, (3) node health should be monitored via cluster alerting, (4) if prolonged outage, update `nodeSelector` to a healthy node and re-provision PVC data.
+- **FR-011**: Ephemeral ARC runners MUST have shared caching for the **pnpm store** (via an NFS server pod backed by a RWO PVC, mounted by runner pods via `nfs` volume type) and **Docker build layers** (via registry-backed cache with `--cache-to=type=registry` targeting GHCR). Runner pods MUST NOT be pinned to a single node — the NFS server provides multi-node cache access without requiring an RWX storage class. **Availability risk**: If the NFS server pod is down, runner pods cannot mount the cache volume and remain in `ContainerCreating` until the NFS Deployment restarts the server. Mitigation: (1) NFS Deployment auto-restarts crashed pods, (2) Docker builds proceed without cache, (3) NFS server health monitored via readiness/liveness probes.
 
 ## Success Criteria _(mandatory)_
 
@@ -188,7 +188,7 @@ As a DevOps engineer, I want a dedicated workflow to build and publish the custo
 - DinD is enabled via a **full pod template** in the ARC `AutoScalingRunnerSet` Helm values (not `containerMode.type: "dind"`, which does not support custom volume mounts — see [ARC issue #3281](https://github.com/actions/actions-runner-controller/issues/3281)). The pod template defines an init container, runner container, and DinD sidecar with `--privileged` mode. All workflows needing Docker (K8s deploy + Docker Hub release) use this DinD sidecar. Docker Hub release workflows additionally require QEMU + Buildx setup inside the DinD environment for multiplatform builds.
 - ARC runners are configured in ephemeral mode (one pod per job, destroyed after completion). GitHub Actions cache service (`actions/cache`) remains functional since ARC runners connect to GitHub — existing caching steps are preserved as-is.
 - ARC Helm values (`AutoScalingRunnerSet`) are managed in a separate infra/GitOps repository. This spec provides the required DinD configuration as reference; the operator applies it out-of-band before PR 3/PR 4 workflows can be tested.
-- All ARC runner pods are scheduled on the same node (via `nodeSelector`/`nodeAffinity`), enabling RWO PVC sharing for local cache. The node must have sufficient disk for the pnpm store cache (~1-2 GB) alongside runner workloads.
+- An NFS server pod (backed by a 25 Gi RWO PVC) provides shared pnpm store cache accessible from all nodes. Runner pods mount via `nfs` volume type — no `nodeSelector` needed. The NFS server requires `privileged: true` for the kernel NFS daemon and nodes must have NFS client support (`nfs-common` / `nfs-utils`). The cache serves ~15 repositories with pnpm deduplication.
 
 ## Migration Phases
 
@@ -214,7 +214,7 @@ Swap all `runs-on: ubuntu-latest` to `runs-on: arc-runner-set` across all workfl
 
 | Gate | Condition to proceed |
 |------|---------------------|
-| PR 1 → PR 2 | `review-router.yml` runs successfully on `arc-runner-set` post-merge. Travis + E2E removal confirmed. **Infra prerequisite for PR 1**: ARC runner pods have pnpm store PVC (`arc-pnpm-store`, RWO) mounted at `/opt/cache/pnpm-store` with `npm_config_store_dir` env var set. Runner pods pinned to single node via `nodeSelector`. |
+| PR 1 → PR 2 | `review-router.yml` runs successfully on `arc-runner-set` post-merge. Travis + E2E removal confirmed. **Infra prerequisite for PR 1**: NFS cache server deployed (`arc-nfs-cache-server.yaml`) and ARC runner pods mount NFS volume at `/opt/cache/pnpm-store` (server: `pnpm-cache-nfs`, path: `/`) with `npm_config_store_dir` env var set. No `nodeSelector` needed. |
 | PR 2 → PR 3 | `schema-contract.yml` produces valid PR comment, `trigger-sonarqube.yml` reports quality gate, `schema-baseline.yml` creates baseline PR — all on `arc-runner-set` post-merge. **Infra prerequisite**: ARC DinD Helm values (full pod template with DinD sidecar, `privileged: true`) applied in infra repo and verified — runner pod spawns with DinD sidecar. |
 | PR 3 → PR 4 | At least one K8s deploy workflow (`build-deploy-k8s-dev-hetzner.yml`) completes a successful deployment via DinD post-merge. ARC DinD Helm values confirmed applied in infra repo. |
 | PR 4 done | `build-release-docker-hub-new.yml` produces a valid multiplatform Docker image on `arc-runner-set` via DinD + QEMU/Buildx. Old workflow removed. |
@@ -262,13 +262,16 @@ The ARC `AutoScalingRunnerSet` Helm values are managed in the **infra/GitOps rep
 
 **Summary of Helm values**:
 - Full pod template with init container (`init-dind-externals`), runner container, and DinD sidecar
-- Runner container: `requests: {cpu: "4", memory: "3Gi"}`, `limits: {cpu: "5", memory: "6Gi"}`, `npm_config_store_dir=/opt/cache/pnpm-store` env var, PVC mount at `/opt/cache/pnpm-store`, `DOCKER_HOST=unix:///var/run/docker.sock`
+- Runner container: `requests: {cpu: "4", memory: "3Gi"}`, `limits: {cpu: "5", memory: "6Gi"}`, `npm_config_store_dir=/opt/cache/pnpm-store` env var, NFS mount at `/opt/cache/pnpm-store` (server: `pnpm-cache-nfs`, path: `/`), `DOCKER_HOST=unix:///var/run/docker.sock`
 - DinD sidecar: `docker:27.5.1-dind` with `privileged: true`, shared volumes for socket and work directory
 - `maxRunners: 10` — cluster supports up to 10 concurrent pods (2 nodes × 32 CPU × 60 GiB)
-- Node pinning via `nodeSelector` for RWO PVC sharing
-- Pre-provisioned RWO PVC (`arc-pnpm-store`, 5 GB) — see `contracts/arc-pnpm-store-pvc.yaml`
+- No `nodeSelector` needed — NFS cache is accessible from any node
 - Docker build cache uses registry-backed caching (`--cache-to=type=registry,ref=ghcr.io/<org>/buildcache`) — no PVC needed
+
+### Reference: NFS Cache Server
+
+An NFS server pod provides shared pnpm store cache accessible from all nodes without requiring an RWX storage class. See `contracts/arc-nfs-cache-server.yaml` for the complete stack (PVC + Deployment + Service). Deploy before PR 1.
 
 ### Reference: pnpm Store Cache Maintenance CronJob
 
-A weekly CronJob should be deployed alongside ARC to prune orphaned packages from the shared pnpm store. See `contracts/arc-pnpm-store-prune-cronjob.yaml` for the complete, apply-ready manifest (includes resource limits, job history retention, and structured logging).
+A daily CronJob performs access-time-based cleanup of stale packages in the shared pnpm store. Unlike `pnpm store prune` (which would wipe everything on ephemeral runners), it uses `find -atime +30` to remove only packages unused for 30+ days. See `contracts/arc-pnpm-store-prune-cronjob.yaml` for the complete manifest.
