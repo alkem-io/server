@@ -9,6 +9,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { IRoleSet } from '@domain/access/role-set';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
@@ -47,6 +48,7 @@ import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create
 @Injectable()
 export class AccountService {
   constructor(
+    private actorService: ActorService,
     private accountHostService: AccountHostService,
     private accountLookupService: AccountLookupService,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -235,9 +237,12 @@ export class AccountService {
       await this.spaceService.deleteSpaceOrFail({ ID: space.id });
     }
 
-    const result = await this.accountRepository.remove(account as Account);
-    result.id = accountID;
-    return result;
+    // Delete actor — cascades to delete the account row via FK (account.id → actor.id ON DELETE CASCADE).
+    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+    await this.actorService.deleteActorById(accountID);
+
+    account.id = accountID;
+    return account;
   }
 
   public updateExternalSubscriptionId(

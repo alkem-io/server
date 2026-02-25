@@ -1,6 +1,7 @@
 import { UUID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseType } from '@common/enums/license.type';
@@ -97,6 +98,7 @@ type SpaceSortingData = {
 @Injectable()
 export class SpaceService {
   constructor(
+    private actorService: ActorService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private spacesFilterService: SpaceFilterService,
     private spaceAboutService: SpaceAboutService,
@@ -400,9 +402,12 @@ export class SpaceService {
 
     await this.storageAggregatorService.delete(space.storageAggregator.id);
 
-    const result = await this.spaceRepository.remove(space as Space);
-    result.id = deleteData.ID;
-    return result;
+    // Delete actor — cascades to delete the space row via FK (space.id → actor.id ON DELETE CASCADE).
+    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+    await this.actorService.deleteActorById(deleteData.ID);
+
+    space.id = deleteData.ID;
+    return space;
   }
 
   public async createTemplatesManagerForSpaceL0(): Promise<ITemplatesManager> {

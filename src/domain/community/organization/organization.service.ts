@@ -1,6 +1,7 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
 import { ActorType } from '@common/enums/actor.type';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { RoleName } from '@common/enums/role.name';
@@ -64,6 +65,7 @@ import { IOrganization } from './organization.interface';
 @Injectable()
 export class OrganizationService {
   constructor(
+    private actorService: ActorService,
     private accountLookupService: AccountLookupService,
     private accountHostService: AccountHostService,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -398,11 +400,12 @@ export class OrganizationService {
 
     await this.roleSetService.removeRoleSetOrFail(organization.roleSet.id);
 
-    const result = await this.organizationRepository.remove(
-      organization as Organization
-    );
-    result.id = orgID;
-    return result;
+    // Delete actor — cascades to delete the organization row via FK (organization.id → actor.id ON DELETE CASCADE).
+    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+    await this.actorService.deleteActorById(orgID);
+
+    organization.id = orgID;
+    return organization;
   }
 
   async getOrganization(

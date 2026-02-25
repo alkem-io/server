@@ -102,6 +102,15 @@ export class ActorService {
     return await this.actorRepository.save(actor as Actor);
   }
 
+  /**
+   * Delete an actor by ID.
+   * Must be called AFTER the child entity (User, Org, etc.) has been removed,
+   * because the child's FK (child.id → actor.id) must be gone first.
+   */
+  async deleteActorById(actorID: string): Promise<void> {
+    await this.actorRepository.delete(actorID);
+  }
+
   // =========================================================================
   // Credential Management Methods (to be implemented in Phase 2, Task 2.3)
   // =========================================================================

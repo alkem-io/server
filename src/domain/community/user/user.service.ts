@@ -22,6 +22,7 @@ import { PaginationArgs } from '@core/pagination';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { actorDefaults } from '@domain/actor/actor/actor.defaults';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -72,6 +73,7 @@ export class UserService {
     private accountLookupService: AccountLookupService,
     private userLookupService: UserLookupService,
     private actorLookupService: ActorLookupService,
+    private actorService: ActorService,
     private accountHostService: AccountHostService,
     private userSettingsService: UserSettingsService,
     private profileAvatarService: ProfileAvatarService,
@@ -455,13 +457,15 @@ export class UserService {
       await this.kratosService.deleteIdentityByEmail(user.email);
     }
 
-    const result = await this.userRepository.remove(user as User);
+    // Delete actor — cascades to delete the user row via FK (user.id → actor.id ON DELETE CASCADE).
+    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+    await this.actorService.deleteActorById(id);
 
     // Note: Should we unregister the user from communications?
 
-    // TypeORM clears the id after remove; restore it so callers get the deleted entity's id
-    result.id = id;
-    return result;
+    // Restore id so callers get the deleted entity's id
+    user.id = id;
+    return user;
   }
 
   public async getAccount(user: IUser): Promise<IAccount> {

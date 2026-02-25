@@ -1,5 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
@@ -51,6 +52,7 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 @Injectable()
 export class VirtualContributorService {
   constructor(
+    private actorService: ActorService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private profileAvatarService: ProfileAvatarService,
@@ -389,12 +391,11 @@ export class VirtualContributorService {
       );
     }
 
-    // Note: Credentials are on Actor (which VirtualContributor extends), will be deleted via cascade
+    // Delete actor — cascades to delete the VC row via FK (virtual_contributor.id → actor.id ON DELETE CASCADE).
+    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+    await this.actorService.deleteActorById(virtualContributorID);
 
-    const result = await this.virtualContributorRepository.remove(
-      virtualContributor as VirtualContributor
-    );
-    result.id = virtualContributorID;
+    virtualContributor.id = virtualContributorID;
 
     if (virtualContributor.aiPersonaID) {
       try {
@@ -417,7 +418,7 @@ export class VirtualContributorService {
     await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
     await this.deleteVCInvitations(virtualContributorID);
 
-    return result;
+    return virtualContributor;
   }
 
   async getVirtualContributor(
