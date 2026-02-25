@@ -18,6 +18,8 @@ spec:
       backoffLimit: 2
       template:
         spec:
+          securityContext:
+            fsGroup: 1000  # Ensures PVC volume files are writable by UID 1000
           nodeSelector:
             kubernetes.io/hostname: "<runner-node-name>"  # MUST match runner nodeSelector
           volumes:

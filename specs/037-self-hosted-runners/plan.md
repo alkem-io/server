@@ -99,7 +99,7 @@ The following manifests must be applied in the **infra/GitOps repository** befor
 
 ### PR 1 — Low Risk: Runner Swap + Legacy CI Cleanup
 
-**Infra prerequisites**: Basic ARC runner pods registered with GitHub. No PVC or DinD required — pnpm installs from network (slower but functional). PVC optimization deferred to later phase.
+**Infra prerequisites**: Basic ARC runner pods registered with GitHub with pnpm store PVC (`arc-pnpm-store`, RWO) mounted at `/opt/cache/pnpm-store` and `npm_config_store_dir` env var set. No DinD required for PR 1. See T004+T005 in tasks.md.
 
 #### 1.1 `review-router.yml` — Swap runner
 
