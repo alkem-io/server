@@ -59,6 +59,7 @@ import { RegistrationModule } from '@services/api/registration/registration.modu
 import { RolesModule } from '@services/api/roles/roles.module';
 import { SearchModule } from '@services/api/search/search.module';
 import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.module';
+import { CalendarEventIcsModule } from '@services/api-rest/calendar-event-ics/calendar-event-ics.module';
 import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-document-integration';
@@ -316,6 +317,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     GeoLocationModule,
     ContributionReporterModule,
     InnovationHubModule,
+    CalendarEventIcsModule,
     IdentityResolveModule,
     MeModule,
     VirtualContributorModule,

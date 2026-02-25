@@ -1098,6 +1098,13 @@ export class UrlGeneratorService {
     );
   }
 
+  public getCalendarEventIcsRestUrl(calendarEventID: string): string {
+    const { path_api_private_rest } = this.configService.get('hosting', {
+      infer: true,
+    });
+    return `${this.endpoint_cluster}${path_api_private_rest}/calendar/event/${calendarEventID}/ics`;
+  }
+
   public async createSpaceAdminCommunityURL(id: string): Promise<string> {
     const spaceAdminUrl = await this.getSpaceUrlPathByID(
       id,

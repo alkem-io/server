@@ -36,30 +36,30 @@ describe('NotificationExternalAdapter', () => {
   });
 
   it('generates calendar URLs with encoded fields', () => {
-    const urls = generateCalendarUrls({
-      id: 'event-1',
-      title: 'Team Sync & Review',
-      url: 'https://alkem.io/events/1',
-      startDate: '2026-02-20T10:00:00Z',
-      endDate: '2026-02-20T11:00:00Z',
-      description: 'Agenda: Q1, Q2',
-      location: 'HQ, Amsterdam',
-    });
+    const icsRestUrl =
+      'https://alkem.io/api/private/rest/calendar/event/event-1/ics';
+    const urls = generateCalendarUrls(
+      {
+        id: 'event-1',
+        title: 'Team Sync & Review',
+        url: 'https://alkem.io/events/1',
+        startDate: '2026-02-20T10:00:00Z',
+        endDate: '2026-02-20T11:00:00Z',
+        wholeDay: false,
+        description: 'Agenda: Q1, Q2',
+        location: 'HQ, Amsterdam',
+      },
+      icsRestUrl
+    );
 
-    expect(urls.googleCalendarUrl).toContain(
-      'text=Team%20Sync%20%26%20Review'
-    );
-    expect(urls.googleCalendarUrl).toContain(
-      'details=Agenda%3A%20Q1%2C%20Q2'
-    );
+    expect(urls.googleCalendarUrl).toContain('text=Team%20Sync%20%26%20Review');
+    expect(urls.googleCalendarUrl).toContain('details=Agenda%3A%20Q1%2C%20Q2');
     expect(urls.googleCalendarUrl).toContain('location=HQ%2C%20Amsterdam');
     expect(urls.outlookCalendarUrl).toContain(
       'subject=Team%20Sync%20%26%20Review'
     );
-    expect(urls.appleCalendarUrl).toMatch(
-      /^data:text\/calendar;charset=utf8,/u
-    );
-    expect(urls.icsDownloadUrl).toBe(urls.appleCalendarUrl);
+    expect(urls.appleCalendarUrl).toBe(icsRestUrl);
+    expect(urls.icsDownloadUrl).toBe(icsRestUrl);
   });
 
   it('generates RFC5545 iCalendar content', () => {
@@ -70,6 +70,7 @@ describe('NotificationExternalAdapter', () => {
         url: 'https://alkem.io/events/1',
         startDate: '2026-02-20T10:00:00Z',
         endDate: '2026-02-20T11:00:00Z',
+        wholeDay: false,
         description: 'Event Description',
         location: 'Amsterdam',
       },

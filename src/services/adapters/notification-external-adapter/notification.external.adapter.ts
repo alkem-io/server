@@ -591,8 +591,13 @@ export class NotificationExternalAdapter {
       location,
     };
 
+    const icsRestUrl = this.urlGeneratorService.getCalendarEventIcsRestUrl(
+      calendarEvent.id
+    );
+
     const calendarUrls: CalendarUrls = generateCalendarUrls(
-      calendarEventCalendarData
+      calendarEventCalendarData,
+      icsRestUrl
     );
 
     // Add calendar event details - will be properly typed once notifications-lib is updated

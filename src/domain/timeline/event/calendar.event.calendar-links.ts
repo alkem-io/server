@@ -22,22 +22,19 @@ export interface CalendarUrls {
 }
 
 export const generateCalendarUrls = (
-  event: CalendarEventCalendarData
+  event: CalendarEventCalendarData,
+  icsRestUrl: string
 ): CalendarUrls => {
   const encodedTitle = encodeURIComponent(event.title);
   const encodedDescription = encodeURIComponent(event.description ?? '');
   const encodedLocation = encodeURIComponent(event.location ?? '');
   const dates = formatDatesForCalendar(event.startDate, event.endDate);
-  const icsContent = generateICS(event, dates.icalStart, dates.icalEnd);
-  const icsDataUrl = `data:text/calendar;charset=utf8,${encodeURIComponent(
-    icsContent
-  )}`;
 
   return {
     googleCalendarUrl: `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodedTitle}&dates=${dates.google}&details=${encodedDescription}&location=${encodedLocation}`,
     outlookCalendarUrl: `https://outlook.live.com/calendar/deeplink/compose?subject=${encodedTitle}&startTime=${dates.outlookStart}&endTime=${dates.outlookEnd}&body=${encodedDescription}`,
-    appleCalendarUrl: icsDataUrl,
-    icsDownloadUrl: icsDataUrl,
+    appleCalendarUrl: icsRestUrl,
+    icsDownloadUrl: icsRestUrl,
   };
 };
 

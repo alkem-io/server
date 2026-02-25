@@ -65,6 +65,21 @@
   mutators:
     - handler: id_token
 
+- id: 'alkemio:api:private:rest:calendar'
+  upstream:
+    preserve_host: true
+    url: 'http://host.docker.internal:4000'
+  match:
+    url: 'http://localhost:3000/rest/calendar/<**>'
+    methods:
+      - GET
+  authenticators:
+    - handler: cookie_session # for browsers
+    - handler: noop           # no authentication
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: id_token
 
 - id: 'alkemio:api:private:ws:socket-io'
   upstream:

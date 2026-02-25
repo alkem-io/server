@@ -6,8 +6,10 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Inject, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   CalendarEventCalendarData,
@@ -28,7 +30,8 @@ export class CalendarEventResolverFields {
     private readonly logger: LoggerService,
     private calendarEventService: CalendarEventService,
     private userLookupService: UserLookupService,
-    private urlGeneratorService: UrlGeneratorService
+    private urlGeneratorService: UrlGeneratorService,
+    private configService: ConfigService<AlkemioConfig, true>
   ) {}
 
   private calendarUrlCache = new WeakMap<
@@ -164,6 +167,10 @@ export class CalendarEventResolverFields {
       location,
     };
 
-    return generateCalendarUrls(calendarEventData);
+    const icsRestUrl = this.urlGeneratorService.getCalendarEventIcsRestUrl(
+      event.id
+    );
+
+    return generateCalendarUrls(calendarEventData, icsRestUrl);
   }
 }
