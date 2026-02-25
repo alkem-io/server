@@ -20,3 +20,6 @@ test: pnpm test:watch 2>&1 | tee -a /tmp/overmind-log.txt
 
 # NestJS development server with hot reload
 app: pnpm start:dev 2>&1 | tee ../../tmp/overmind-log.txt
+
+# GQL schema validation (runs every 5 min)
+gql: while true; do bash ../../.scripts/gql-validate/validate-queries.sh 2>&1 | tee -a /tmp/overmind-gql-log.txt; sleep 300; done

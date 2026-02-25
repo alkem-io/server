@@ -84,6 +84,8 @@ subscriptions.log
 .scripts/*
 !.scripts/migrations/
 !.scripts/overmind/
+!.scripts/gql-validate/
+!.scripts/lib/
 .scripts/overmind/.overmind.sock
 .scripts/**/*.psql
 .storage/

@@ -16,7 +16,11 @@
       "Bash(bash restore_latest_backup_set.sh acc true true)",
       "Bash(git stash*)",
       "Bash(git worktree add:*)",
-      "mcp__ide__getDiagnostics"
+      "mcp__ide__getDiagnostics",
+      "Bash(bash .claude/hooks/setup-pipeline.sh)",
+      "Bash(bash .scripts/gql-validate/validate-queries.sh)",
+      "Bash(python3:*)",
+      "Bash(node:*)"
     ]
   }
 }
