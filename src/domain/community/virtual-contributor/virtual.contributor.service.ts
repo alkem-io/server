@@ -119,6 +119,7 @@ export class VirtualContributorService {
         virtualContributorData.bodyOfKnowledgeType
       );
 
+    // In-memory entity construction (no DB writes)
     virtualContributor.knowledgeBase =
       await this.knowledgeBaseService.createKnowledgeBase(
         knowledgeBaseData,
@@ -126,28 +127,12 @@ export class VirtualContributorService {
         actorContext?.actorID
       );
 
-    const kb = await this.knowledgeBaseService.save(
-      virtualContributor.knowledgeBase
-    );
-
-    if (
-      virtualContributorData.bodyOfKnowledgeType ===
-      VirtualContributorBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
-    ) {
-      virtualContributor.bodyOfKnowledgeID = kb.id;
-    }
-
     const aiPersonaInput: CreateAiPersonaInput = {
       ...virtualContributorData.aiPersona,
     };
 
-    // Get the default AI server
+    // Read-only query — safe outside the transaction
     const aiServer = await this.aiServerAdapter.getAiServer();
-    const aiPersona = await this.aiPersonaService.createAiPersona(
-      aiPersonaInput,
-      aiServer
-    );
-    virtualContributor.aiPersonaID = aiPersona.id;
 
     virtualContributor.profile = await this.profileService.createProfile(
       virtualContributorData.profileData,
@@ -174,11 +159,31 @@ export class VirtualContributorService {
       virtualContributorData.profileData
     );
 
-    // Save Actor and VirtualContributor in a single transaction.
-    // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-    // reliably set FK columns, so we pre-save Actor explicitly.
+    // Single transaction: all DB writes (KnowledgeBase, AiPersona, Actor,
+    // VirtualContributor) are atomic — no orphans if any step fails.
     virtualContributor =
       await this.virtualContributorRepository.manager.transaction(async mgr => {
+        const kb = await this.knowledgeBaseService.save(
+          virtualContributor.knowledgeBase,
+          mgr
+        );
+
+        if (
+          virtualContributorData.bodyOfKnowledgeType ===
+          VirtualContributorBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
+        ) {
+          virtualContributor.bodyOfKnowledgeID = kb.id;
+        }
+
+        const aiPersona = await this.aiPersonaService.createAiPersona(
+          aiPersonaInput,
+          aiServer,
+          mgr
+        );
+        virtualContributor.aiPersonaID = aiPersona.id;
+
+        // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+        // reliably set FK columns, so we pre-save Actor explicitly.
         await mgr.save((virtualContributor as VirtualContributor).actor!);
         return await mgr.save(virtualContributor as VirtualContributor);
       });

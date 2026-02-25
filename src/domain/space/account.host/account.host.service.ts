@@ -17,7 +17,7 @@ import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Account } from '../account/account.entity';
 import { IAccount } from '../account/account.interface';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
@@ -35,78 +35,90 @@ export class AccountHostService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async createAccount(accountType: AccountType): Promise<IAccount> {
-    const account: IAccount = new Account();
-    account.accountType = accountType;
-    // Actor type is set by Account constructor to ActorType.ACCOUNT
-    // Generate a unique nameID for the account using first 8 chars of a UUID
-    account.nameID = `account-${randomUUID().substring(0, 8)}`;
-    account.authorization = new AuthorizationPolicy(
-      AuthorizationPolicyType.ACCOUNT
-    );
-    account.baselineLicensePlan = this.getBaselineAccountLicensePlan();
-    account.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator(
-        StorageAggregatorType.ACCOUNT
+  async createAccount(
+    accountType: AccountType,
+    txnMgr?: EntityManager
+  ): Promise<IAccount> {
+    // All DB writes happen inside a single transaction to prevent orphans.
+    // When called within an outer transaction (txnMgr), reuse it;
+    // otherwise create a standalone transaction.
+    const doCreate = async (mgr: EntityManager): Promise<IAccount> => {
+      const account: IAccount = new Account();
+      account.accountType = accountType;
+      // Actor type is set by Account constructor to ActorType.ACCOUNT
+      // Generate a unique nameID for the account using first 8 chars of a UUID
+      account.nameID = `account-${randomUUID().substring(0, 8)}`;
+      account.authorization = new AuthorizationPolicy(
+        AuthorizationPolicyType.ACCOUNT
+      );
+      account.baselineLicensePlan = this.getBaselineAccountLicensePlan();
+      account.storageAggregator =
+        await this.storageAggregatorService.createStorageAggregator(
+          StorageAggregatorType.ACCOUNT,
+          undefined,
+          mgr
+        );
+
+      // Create a minimal profile for the Account actor
+      account.profile = await this.profileService.createProfile(
+        { displayName: account.nameID },
+        ProfileType.ACCOUNT,
+        account.storageAggregator
       );
 
-    // Create a minimal profile for the Account actor
-    account.profile = await this.profileService.createProfile(
-      { displayName: account.nameID },
-      ProfileType.ACCOUNT,
-      account.storageAggregator
-    );
+      account.license = this.licenseService.createLicense({
+        type: LicenseType.ACCOUNT,
+        entitlements: [
+          {
+            type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0,
+            enabled: false,
+          },
+          {
+            type: LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0,
+            enabled: false,
+          },
+          {
+            type: LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0,
+            enabled: false,
+          },
+          {
+            type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0,
+            enabled: false,
+          },
+          {
+            type: LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0,
+            enabled: false,
+          },
+          {
+            type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
+            dataType: LicenseEntitlementDataType.LIMIT,
+            limit: 0,
+            enabled: false,
+          },
+        ],
+      });
 
-    account.license = this.licenseService.createLicense({
-      type: LicenseType.ACCOUNT,
-      entitlements: [
-        {
-          type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
-          dataType: LicenseEntitlementDataType.LIMIT,
-          limit: 0,
-          enabled: false,
-        },
-        {
-          type: LicenseEntitlementType.ACCOUNT_SPACE_PLUS,
-          dataType: LicenseEntitlementDataType.LIMIT,
-          limit: 0,
-          enabled: false,
-        },
-        {
-          type: LicenseEntitlementType.ACCOUNT_SPACE_PREMIUM,
-          dataType: LicenseEntitlementDataType.LIMIT,
-          limit: 0,
-          enabled: false,
-        },
-        {
-          type: LicenseEntitlementType.ACCOUNT_VIRTUAL_CONTRIBUTOR,
-          dataType: LicenseEntitlementDataType.LIMIT,
-          limit: 0,
-          enabled: false,
-        },
-        {
-          type: LicenseEntitlementType.ACCOUNT_INNOVATION_HUB,
-          dataType: LicenseEntitlementDataType.LIMIT,
-          limit: 0,
-          enabled: false,
-        },
-        {
-          type: LicenseEntitlementType.ACCOUNT_INNOVATION_PACK,
-          dataType: LicenseEntitlementDataType.LIMIT,
-          limit: 0,
-          enabled: false,
-        },
-      ],
-    });
-
-    // Save Actor, License, and Account in a single transaction.
-    // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-    // reliably set FK columns, so we pre-save children explicitly.
-    return await this.accountRepository.manager.transaction(async mgr => {
+      // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+      // reliably set FK columns, so we pre-save children explicitly.
       await mgr.save((account as Account).actor!);
       account.license = await mgr.save(account.license);
       return await mgr.save(account);
-    });
+    };
+
+    if (txnMgr) {
+      return await doCreate(txnMgr);
+    }
+    return await this.accountRepository.manager.transaction(doCreate);
   }
 
   private getBaselineAccountLicensePlan(): IAccountLicensePlan {

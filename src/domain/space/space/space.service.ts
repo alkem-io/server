@@ -67,7 +67,7 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { keyBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import { EntityManager, FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
@@ -157,20 +157,6 @@ export class SpaceService {
         parentPlatformRolesAccess
       );
 
-    const storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator(
-        StorageAggregatorType.SPACE,
-        spaceData.storageAggregatorParent
-      );
-    space.storageAggregator = storageAggregator;
-
-    // Create a minimal profile for the Space actor
-    space.profile = await this.profileService.createProfile(
-      { displayName: spaceData.about.profileData.displayName },
-      ProfileType.SPACE,
-      storageAggregator
-    );
-
     space.license = this.createLicenseForSpaceL0();
 
     const roleSetRolesData = this.spaceDefaultsService.getRoleSetCommunityRoles(
@@ -189,6 +175,10 @@ export class SpaceService {
       },
     };
 
+    // Community creation saves Communication + Room + external Matrix room,
+    // so it cannot participate in the DB transaction below.
+    // TODO: wrap Community creation in the transaction once Communication
+    // supports compensating cleanup for external Matrix rooms.
     space.community =
       await this.communityService.createCommunity(communityData);
 
@@ -198,16 +188,33 @@ export class SpaceService {
       spaceData.about
     );
 
-    space.about = await this.spaceAboutService.createSpaceAbout(
-      modifiedAbout,
-      storageAggregator
-    );
-
     space.levelZeroSpaceID = spaceData.levelZeroSpaceID;
-    // Save Actor, License, and Space in a single transaction.
-    // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-    // reliably set FK columns, so we pre-save children explicitly.
+
+    // Single transaction: StorageAggregator, Profile, SpaceAbout, Actor,
+    // License, and Space are atomic. Community stays outside (external calls).
     await this.spaceRepository.manager.transaction(async mgr => {
+      const storageAggregator =
+        await this.storageAggregatorService.createStorageAggregator(
+          StorageAggregatorType.SPACE,
+          spaceData.storageAggregatorParent,
+          mgr
+        );
+      space.storageAggregator = storageAggregator;
+
+      // Create a minimal profile for the Space actor
+      space.profile = await this.profileService.createProfile(
+        { displayName: spaceData.about.profileData.displayName },
+        ProfileType.SPACE,
+        storageAggregator
+      );
+
+      space.about = await this.spaceAboutService.createSpaceAbout(
+        modifiedAbout,
+        storageAggregator
+      );
+
+      // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+      // reliably set FK columns, so we pre-save children explicitly.
       await mgr.save((space as Space).actor!);
       space.license = await mgr.save(space.license);
       await mgr.save(space as Space);
@@ -237,7 +244,7 @@ export class SpaceService {
     }
     space.collaboration = await this.collaborationService.createCollaboration(
       updatedCollaborationData,
-      space.storageAggregator,
+      space.storageAggregator!,
       actorContext
     );
 
@@ -570,7 +577,8 @@ export class SpaceService {
 
     const qb = this.spaceRepository.createQueryBuilder('space');
     if (visibilities) {
-      qb.leftJoinAndSelect('space.actor.authorization', 'authorization');
+      qb.leftJoin('space.actor', 'actor');
+      qb.leftJoinAndSelect('actor.authorization', 'authorization');
       qb.where({
         level: SpaceLevel.L0,
         visibility: In(visibilities),
@@ -587,7 +595,8 @@ export class SpaceService {
     const qb = this.spaceRepository.createQueryBuilder('space');
 
     qb.leftJoinAndSelect('space.subspaces', 'subspace');
-    qb.leftJoinAndSelect('space.actor.authorization', 'authorization_policy');
+    qb.leftJoin('space.actor', 'actor_for_auth');
+    qb.leftJoinAndSelect('actor_for_auth.authorization', 'authorization_policy');
     qb.leftJoinAndSelect('subspace.subspaces', 'subspaces');
     qb.where({
       level: SpaceLevel.L0,

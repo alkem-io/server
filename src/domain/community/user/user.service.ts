@@ -48,7 +48,7 @@ import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { InstrumentService } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
 import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
@@ -121,34 +121,6 @@ export class UserService {
     const profileData = await this.extendProfileDataWithReferences(
       userData.profileData
     );
-    user.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator(
-        StorageAggregatorType.USER
-      );
-    // Do not create the guidance room here, it will be created on demand
-
-    user.profile = await this.profileService.createProfile(
-      profileData,
-      ProfileType.USER,
-      user.storageAggregator
-    );
-
-    await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
-      name: TagsetReservedName.SKILLS,
-      tags: [],
-    });
-    await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
-      name: TagsetReservedName.KEYWORDS,
-      tags: [],
-    });
-    await this.profileAvatarService.addAvatarVisualToProfile(
-      user.profile,
-      userData.profileData,
-      kratosData,
-      userData.firstName,
-      userData.lastName
-    );
-
     // Note: Conversations now belong to the single platform Messaging.
     // User conversations are tracked via the conversation_membership pivot table.
 
@@ -172,15 +144,47 @@ export class UserService {
       LogContext.COMMUNITY
     );
 
-    const account = await this.accountHostService.createAccount(
-      AccountType.USER
-    );
-    user.accountID = account.id;
-
-    // Save Actor, Settings, and User in a single transaction.
-    // TypeORM's cascade doesn't reliably set FK columns on the parent entity,
-    // so we pre-save children explicitly within a transaction.
+    // Single transaction: all DB writes (StorageAggregator, Account, Actor,
+    // Settings, User) are atomic — no orphans if any step fails.
     user = await this.userRepository.manager.transaction(async mgr => {
+      user.storageAggregator =
+        await this.storageAggregatorService.createStorageAggregator(
+          StorageAggregatorType.USER,
+          undefined,
+          mgr
+        );
+      // Do not create the guidance room here, it will be created on demand
+
+      user.profile = await this.profileService.createProfile(
+        profileData,
+        ProfileType.USER,
+        user.storageAggregator
+      );
+
+      await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
+        name: TagsetReservedName.SKILLS,
+        tags: [],
+      });
+      await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
+        name: TagsetReservedName.KEYWORDS,
+        tags: [],
+      });
+      await this.profileAvatarService.addAvatarVisualToProfile(
+        user.profile,
+        userData.profileData,
+        kratosData,
+        userData.firstName,
+        userData.lastName
+      );
+
+      const account = await this.accountHostService.createAccount(
+        AccountType.USER,
+        mgr
+      );
+      user.accountID = account.id;
+
+      // TypeORM's cascade doesn't reliably set FK columns on the parent entity,
+      // so we pre-save children explicitly within the transaction.
       await mgr.save((user as User).actor!);
       user.settings = await mgr.save(user.settings);
       return await mgr.save(user as User);
@@ -555,7 +559,8 @@ export class UserService {
     const qb = this.userRepository.createQueryBuilder('user');
 
     if (withTags !== undefined) {
-      qb.leftJoin('user.actor.profile', 'profile')
+      qb.leftJoin('user.actor', 'actor')
+        .leftJoin('actor.profile', 'profile')
         .leftJoin('tagset', 'tagset', 'profile.id = tagset.profileId')
         // cannot use object or operators here
         // because typeorm cannot construct the query properly

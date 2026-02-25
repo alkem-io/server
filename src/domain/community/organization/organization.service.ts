@@ -50,7 +50,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { UpdateOrganizationSettingsEntityInput } from '../organization-settings/dto/organization.settings.dto.update';
 import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
 import { OrganizationSettingsService } from '../organization-settings/organization.settings.service';
@@ -117,50 +117,60 @@ export class OrganizationService {
       await this.roleSetService.createRoleSet(roleSetInput);
     organization.settings = this.getDefaultOrganizationSettings();
 
-    organization.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator(
-        StorageAggregatorType.ORGANIZATION
-      );
-
     organizationData.profileData.referencesData =
       this.getDefaultContributorProfileReferences();
 
-    organization.profile = await this.profileService.createProfile(
-      organizationData.profileData,
-      ProfileType.ORGANIZATION,
-      organization.storageAggregator
-    );
-    await this.profileService.addOrUpdateTagsetOnProfile(organization.profile, {
-      name: TagsetReservedName.KEYWORDS,
-      tags: [],
-    });
-    await this.profileService.addOrUpdateTagsetOnProfile(organization.profile, {
-      name: TagsetReservedName.CAPABILITIES,
-      tags: [],
-    });
-
-    await this.profileAvatarService.addAvatarVisualToProfile(
-      organization.profile,
-      organizationData.profileData,
-      undefined,
-      organizationData.profileData.displayName
-    );
-
     organization.groups = [];
-
-    const account = await this.accountHostService.createAccount(
-      AccountType.ORGANIZATION
-    );
-    organization.accountID = account.id;
 
     // Cache some of the contents before saving
     const roleSetBeforeSave = organization.roleSet;
 
-    // Save Actor and Organization in a single transaction.
-    // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-    // reliably set FK columns, so we pre-save Actor explicitly.
+    // Single transaction: all DB writes (StorageAggregator, Account, Actor,
+    // Organization) are atomic — no orphans if any step fails.
     organization = await this.organizationRepository.manager.transaction(
       async mgr => {
+        organization.storageAggregator =
+          await this.storageAggregatorService.createStorageAggregator(
+            StorageAggregatorType.ORGANIZATION,
+            undefined,
+            mgr
+          );
+
+        organization.profile = await this.profileService.createProfile(
+          organizationData.profileData,
+          ProfileType.ORGANIZATION,
+          organization.storageAggregator
+        );
+        await this.profileService.addOrUpdateTagsetOnProfile(
+          organization.profile,
+          {
+            name: TagsetReservedName.KEYWORDS,
+            tags: [],
+          }
+        );
+        await this.profileService.addOrUpdateTagsetOnProfile(
+          organization.profile,
+          {
+            name: TagsetReservedName.CAPABILITIES,
+            tags: [],
+          }
+        );
+
+        await this.profileAvatarService.addAvatarVisualToProfile(
+          organization.profile,
+          organizationData.profileData,
+          undefined,
+          organizationData.profileData.displayName
+        );
+
+        const account = await this.accountHostService.createAccount(
+          AccountType.ORGANIZATION,
+          mgr
+        );
+        organization.accountID = account.id;
+
+        // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+        // reliably set FK columns, so we pre-save Actor explicitly.
         await mgr.save((organization as Organization).actor!);
         return await mgr.save(organization as Organization);
       }
@@ -472,10 +482,8 @@ export class OrganizationService {
     status?: OrganizationVerificationEnum
   ): Promise<IPaginatedType<IOrganization>> {
     const qb = this.organizationRepository.createQueryBuilder('organization');
-    qb.leftJoinAndSelect(
-      'organization.actor.authorization',
-      'authorization_policy'
-    );
+    qb.leftJoin('organization.actor', 'actor');
+    qb.leftJoinAndSelect('actor.authorization', 'authorization_policy');
 
     if (status) {
       qb.leftJoin('organization.verification', 'verification').where(
