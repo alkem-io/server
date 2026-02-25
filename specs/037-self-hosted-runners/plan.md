@@ -308,10 +308,12 @@ Remove entirely. Consolidated into the new workflow above.
 ## Dependency Graph
 
 ```text
-[Infra: Basic ARC runner (no PVC, no DinD)]
+[Infra: Basic ARC runner (no DinD)]
+         │
+[Infra: Apply PVC arc-pnpm-store + basic Helm values]
          │
          ▼
-    ┌─ PR 1 (Low — no PVC/DinD needed) ────────────┐
+    ┌─ PR 1 (Low — PVC required, no DinD) ─────────┐
     │  review-router.yml → swap runner              │
     │  trigger-e2e-tests.yml → DELETE               │
     │  .travis.yml → DELETE + ci-tests.yml (NEW)    │
@@ -319,9 +321,6 @@ Remove entirely. Consolidated into the new workflow above.
                         │ Gate: 2 workflows pass on arc-runner-set
                         │       (review-router + ci-tests)
                         │       Branch protection updated (Travis → CI Tests)
-                        ▼
-    [Infra: Add PVC for pnpm cache (performance)]
-                        │
                         ▼
     ┌─ PR 2 (Medium — Node.js/pnpm workflows) ─────┐
     │  schema-contract.yml → swap runner            │

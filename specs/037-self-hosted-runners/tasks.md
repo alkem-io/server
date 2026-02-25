@@ -134,7 +134,7 @@
 
 ### Implementation for Custom Image
 
-- [ ] T022 [US3] Create `Dockerfile.runner` at repository root (or `runner/Dockerfile`) with Ubuntu 22.04 base, pre-installed: Node.js 22.21.1 (via Volta or direct install), pnpm 10.17.1 (via corepack), Docker CLI + Buildx plugin, kubectl 1.27.6, Python 3.x + pip, GPG, git, curl, jq, corepack. Must be compatible with ARC runner image contract (`ghcr.io/actions/actions-runner` base layers or standalone).
+- [ ] T022 [US3] Create `Dockerfile.runner` at repository root (or `runner/Dockerfile`) with Ubuntu 22.04 base, pre-installed: Node.js 22.22.0 (via Volta or direct install), pnpm 10.17.1 (via corepack), Docker CLI + Buildx plugin, kubectl 1.27.6, Python 3.x + pip, GPG, git, curl, jq, corepack. Must be compatible with ARC runner image contract (`ghcr.io/actions/actions-runner` base layers or standalone).
 - [ ] T023 [US4] Create `.github/workflows/build-runner-image.yml` — triggered on changes to `Dockerfile.runner`, builds and pushes to GHCR at `ghcr.io/alkem-io/arc-runner:latest` (and semver tags). Runs on `arc-runner-set` with DinD.
 - [ ] T024 [US3] Update ARC Helm values in infra repo — change runner image from `ghcr.io/actions/actions-runner:<pinned-version>` to `ghcr.io/alkem-io/arc-runner:<pinned-version>`
 - [ ] T025 [P] [US3] Update workflows to remove tool setup steps that are now pre-installed: remove `actions/setup-node`, `corepack enable/prepare`, `azure/setup-kubectl` steps from workflows where the custom image provides these tools. Affects: `ci-tests.yml`, `schema-contract.yml`, `trigger-sonarqube.yml`, `schema-baseline.yml`, K8s deploy workflows.
@@ -146,7 +146,7 @@
 **Purpose**: Final maintenance, validation, and Constitution compliance.
 
 - [ ] T026 Hand off `contracts/arc-pnpm-store-prune-cronjob.yaml` to infra repo operator — weekly pnpm store prune CronJob
-- [ ] T027 Verify pinned container image tags in infra repo ARC Helm values are current per Constitution Principle 9 (Container Determinism): runner image pinned to `ghcr.io/actions/actions-runner:2.321.0` and DinD sidecar pinned to `docker:27-dind` — confirm these are the latest stable versions at time of deployment
+- [ ] T027 Verify pinned container image tags in infra repo ARC Helm values are current per Constitution Principle 9 (Container Determinism): runner image pinned to `ghcr.io/actions/actions-runner:2.321.0` and DinD sidecar pinned to `docker:27.5.1-dind` — confirm these are the latest stable versions at time of deployment
 - [ ] T028 Final audit: `grep -r 'ubuntu-latest' .github/workflows/` returns zero matches. All workflow files reference `arc-runner-set`. (Deferred until T016–T021 complete — K8s deploy and Docker Hub release workflows still pending migration)
 - [ ] T029 Run `specs/037-self-hosted-runners/quickstart.md` full validation checklist across all PRs
 - [ ] T030 Update `docs/Developing.md` to note that CI runs on self-hosted ARC runners (if CI setup is documented there)

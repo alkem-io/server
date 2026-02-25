@@ -37,12 +37,11 @@ spec:
                 - sh
                 - -c
                 - |
-                  corepack enable
-                  corepack prepare pnpm@10.17.1 --activate
-                  echo "Store path: $(pnpm store path)"
+                  echo "Store path:"
+                  npx -y pnpm@10.17.1 store path
                   echo "Store size before prune:"
                   du -sh /opt/cache/pnpm-store || true
-                  pnpm store prune
+                  npx -y pnpm@10.17.1 store prune
                   echo "Store size after prune:"
                   du -sh /opt/cache/pnpm-store || true
               env:
