@@ -32,7 +32,8 @@ export default defineConfig({
     // GitHub Actions sets CI=true automatically.
     pool: process.env.CI ? 'forks' : 'threads',
     // Vitest 4: pool options are now top-level (poolOptions was removed)
-    maxWorkers: 4,
+    // CI runners have 1.5 CPU cores — limit to 1 worker to avoid CFS throttling
+    maxWorkers: process.env.CI ? 2 : 4,
     // Reuse module cache across tests - avoids re-importing per test file
     // Requires tests to not leak state (clearMocks: true handles mock call data)
     isolate: false,
