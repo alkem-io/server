@@ -5,12 +5,10 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
-import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ICalendarEvent } from './event.interface';
-import { CalendarEventService } from './event.service';
 import {
   CalendarEventCalendarData,
   CalendarUrls,
@@ -20,6 +18,8 @@ import {
   toIsoString,
   validateCalendarDateRange,
 } from './calendar.event.calendar-links';
+import { ICalendarEvent } from './event.interface';
+import { CalendarEventService } from './event.service';
 
 @Resolver(() => ICalendarEvent)
 export class CalendarEventResolverFields {
@@ -125,9 +125,7 @@ export class CalendarEventResolverFields {
     return urls.icsDownloadUrl;
   }
 
-  private async getCalendarUrls(
-    event: ICalendarEvent
-  ): Promise<CalendarUrls> {
+  private async getCalendarUrls(event: ICalendarEvent): Promise<CalendarUrls> {
     const cached = this.calendarUrlCache.get(event);
     if (cached) {
       return cached;
@@ -161,6 +159,7 @@ export class CalendarEventResolverFields {
       url: calendarEventUrl,
       startDate: startDateIso,
       endDate: endDateIso,
+      wholeDay: event.wholeDay,
       description,
       location,
     };
