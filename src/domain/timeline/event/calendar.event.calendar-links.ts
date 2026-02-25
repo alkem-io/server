@@ -9,6 +9,7 @@ export interface CalendarEventCalendarData {
   url: string;
   startDate: string;
   endDate: string;
+  wholeDay: boolean;
   description?: string;
   location?: string;
 }
@@ -83,9 +84,7 @@ export const generateICS = (
     ...(event.description
       ? [`DESCRIPTION:${escapeIcsText(event.description)}`]
       : []),
-    ...(event.location
-      ? [`LOCATION:${escapeIcsText(event.location)}`]
-      : []),
+    ...(event.location ? [`LOCATION:${escapeIcsText(event.location)}`] : []),
     `URL:${escapeIcsText(event.url)}`,
     'END:VEVENT',
     'END:VCALENDAR',
@@ -104,9 +103,7 @@ export const escapeIcsText = (value: string): string =>
 export const formatDateForCalendar = (iso: string): string =>
   iso.replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
 
-export const calculateCalendarEventEndDate = (
-  event: ICalendarEvent
-): Date => {
+export const calculateCalendarEventEndDate = (event: ICalendarEvent): Date => {
   const start = toDate(event.startDate, 'startDate');
   if (event.durationDays && event.durationDays > 0) {
     const end = new Date(start.getTime());
@@ -124,10 +121,14 @@ export const toIsoString = (
 ): string => {
   if (value instanceof Date) {
     if (Number.isNaN(value.getTime())) {
-      throw new ValidationException('Invalid calendar event date', LogContext.NOTIFICATIONS, {
-        field: fieldName,
-        value,
-      });
+      throw new ValidationException(
+        'Invalid calendar event date',
+        LogContext.NOTIFICATIONS,
+        {
+          field: fieldName,
+          value,
+        }
+      );
     }
     return value.toISOString();
   }
@@ -145,10 +146,14 @@ export const toIsoString = (
 
   const parsed = new Date(value);
   if (Number.isNaN(parsed.getTime())) {
-    throw new ValidationException('Invalid calendar event date', LogContext.NOTIFICATIONS, {
-      field: fieldName,
-      value,
-    });
+    throw new ValidationException(
+      'Invalid calendar event date',
+      LogContext.NOTIFICATIONS,
+      {
+        field: fieldName,
+        value,
+      }
+    );
   }
 
   return parsed.toISOString();
@@ -158,10 +163,14 @@ export const toDate = (value: string | Date, fieldName: string): Date => {
   const iso = toIsoString(value, fieldName);
   const parsed = new Date(iso);
   if (Number.isNaN(parsed.getTime())) {
-    throw new ValidationException('Invalid calendar event date', LogContext.NOTIFICATIONS, {
-      field: fieldName,
-      value,
-    });
+    throw new ValidationException(
+      'Invalid calendar event date',
+      LogContext.NOTIFICATIONS,
+      {
+        field: fieldName,
+        value,
+      }
+    );
   }
   return parsed;
 };

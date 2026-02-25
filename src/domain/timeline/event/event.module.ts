@@ -7,6 +7,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { Space } from '@domain/space/space/space.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { CalendarEvent } from './event.entity';
 import { CalendarEventResolverFields } from './event.resolver.fields';
 import { CalendarEventResolverMutations } from './event.resolver.mutations';
@@ -21,6 +22,7 @@ import { CalendarEventAuthorizationService } from './event.service.authorization
     VisualModule,
     UserLookupModule,
     ProfileModule,
+    UrlGeneratorModule,
     TypeOrmModule.forFeature([CalendarEvent, Space]),
   ],
   providers: [

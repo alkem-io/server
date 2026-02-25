@@ -43,6 +43,13 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
+import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config/dist/config.service';
+import { ClientProxy } from '@nestjs/microservices';
+import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
+import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { AlkemioConfig } from '@src/types';
 import {
   CalendarEventCalendarData,
   CalendarUrls,
@@ -52,13 +59,6 @@ import {
   toIsoString,
   validateCalendarDateRange,
 } from '../../../domain/timeline/event/calendar.event.calendar-links';
-import { Inject, Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config/dist/config.service';
-import { ClientProxy } from '@nestjs/microservices';
-import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
-import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
-import { AlkemioConfig } from '@src/types';
 import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutContributionCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
@@ -81,6 +81,7 @@ interface CalendarEventPayload {
   url: string;
   startDate: string;
   endDate: string;
+  wholeDay: boolean;
   description?: string;
   location?: string;
   googleCalendarUrl: string;
@@ -89,10 +90,12 @@ interface CalendarEventPayload {
   icsDownloadUrl: string;
 }
 
-type NotificationEventPayloadSpaceCalendarEventExtended =
-  Omit<NotificationEventPayloadSpaceCalendarEvent, 'calendarEvent'> & {
-    calendarEvent: CalendarEventPayload;
-  };
+type NotificationEventPayloadSpaceCalendarEventExtended = Omit<
+  NotificationEventPayloadSpaceCalendarEvent,
+  'calendarEvent'
+> & {
+  calendarEvent: CalendarEventPayload;
+};
 
 @Injectable()
 export class NotificationExternalAdapter {
@@ -583,6 +586,7 @@ export class NotificationExternalAdapter {
       url: calendarEventUrl,
       startDate: startDateIso,
       endDate: endDateIso,
+      wholeDay: calendarEvent.wholeDay,
       description,
       location,
     };
@@ -602,6 +606,7 @@ export class NotificationExternalAdapter {
         url: calendarEventUrl,
         startDate: startDateIso,
         endDate: endDateIso,
+        wholeDay: calendarEvent.wholeDay,
         description,
         location,
         ...calendarUrls,
