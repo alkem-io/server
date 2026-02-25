@@ -27,13 +27,12 @@ export default defineConfig({
     dedupe: ['graphql'],
   },
   test: {
-    // Pool strategy: 'threads' for local dev (shared module cache, faster),
-    // 'forks' for CI/constrained runners (independent processes, more resilient).
-    // GitHub Actions sets CI=true automatically.
-    pool: process.env.CI ? 'forks' : 'threads',
-    // Vitest 4: pool options are now top-level (poolOptions was removed)
-    // CI runners have 2 CPU cores — limit to 2 worker to avoid CFS throttling
-    maxWorkers: process.env.CI ? 2 : 4,
+    // Use threads pool: workers share the process and module cache (with isolate: false),
+    // giving better memory efficiency and clean process exit.
+    pool: 'threads',
+    // Match the number of workers to available CPU cores
+    // Adjust for CI if needed
+    maxWorkers: process.env.CI ? 4 : 4,
     // Reuse module cache across tests - avoids re-importing per test file
     // Requires tests to not leak state (clearMocks: true handles mock call data)
     isolate: false,

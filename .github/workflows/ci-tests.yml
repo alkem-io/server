@@ -12,7 +12,9 @@ jobs:
   test:
     runs-on: arc-runner-set
     env:
-      NODE_OPTIONS: "--max-old-space-size=768"
+      # Pod: 4 CPU request (no limit) / 6 Gi memory limit.
+      # 4 Gi heap leaves ~2 Gi for native allocations, worker thread stacks, and OS.
+      NODE_OPTIONS: "--max-old-space-size=4096"
     steps:
       - uses: actions/checkout@v4
 
