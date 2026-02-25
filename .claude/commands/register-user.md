@@ -15,10 +15,17 @@ arguments:
     required: false
 ---
 
-Run the registration script. Parse the arguments from `$ARGUMENTS` (email, password, firstName, lastName in that order) and execute:
+Parse the arguments from `$ARGUMENTS` (email, password, firstName, lastName in that order).
+
+IMPORTANT: The password must be written to a file to avoid shell escaping issues with special characters like `!`, `\`, etc. Follow these steps exactly:
+
+1. Use the **Write** tool to write the password (exactly as provided, no escaping) to `/tmp/.register-password`
+2. Then run the script via Bash (password is NOT a CLI argument):
 
 ```bash
-.scripts/register-user.sh <email> <password> [firstName] [lastName]
+.scripts/register-user.sh <email> [firstName] [lastName]
 ```
+
+The script reads and deletes the password file automatically.
 
 Report the script output to the user. If it fails, show the error.
