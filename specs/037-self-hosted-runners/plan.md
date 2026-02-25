@@ -17,7 +17,9 @@ Migrate all 10 GitHub Actions workflows and 1 Travis CI configuration from GitHu
 **Project Type**: CI/CD infrastructure (no `src/` changes)
 **Performance Goals**: pnpm install from local PVC cache < 30s (vs ~2 min from network); Docker builds with registry cache < 50% of uncached time
 **Constraints**: Ephemeral runners (pod destroyed per job); all pods pinned to single node (RWO PVC); DinD sidecar requires `--privileged` mode
-**Scale/Scope**: 10 workflow files modified/created/deleted, 3 infra manifests produced, 0 application source changes
+**Runner Pod Resources**: `requests: {cpu: "4", memory: "3Gi"}`, `limits: {cpu: "5", memory: "6Gi"}`. CPU limit at 5 gives 25% burst headroom (4 workers + 1 main thread) without CFS throttling, while capping runaway pods. Cluster: 2 nodes × 32 CPU × 60 GiB, max 10 concurrent pods.
+**Vitest Configuration**: `pool: 'threads'`, `maxWorkers: 4`, `isolate: false`. Threads pool avoids the process-hang-on-exit issue seen with `forks` pool; the 4 Gi heap (`--max-old-space-size=4096`) provides enough room for the full module graph in a single process.
+**Scale/Scope**: 10 workflow files modified/created/deleted, 3 infra manifests produced, 2 test config files updated (`vitest.config.ts`, `ci-tests.yml`)
 
 ## Constitution Check
 
@@ -49,7 +51,6 @@ specs/037-self-hosted-runners/
 ├── research.md                                      # Phase 0: research findings
 ├── quickstart.md                                    # Verification guide per PR tier
 ├── contracts/
-│   ├── arc-runner-set-values.yaml                   # ARC Helm values (full pod template)
 │   ├── arc-pnpm-store-pvc.yaml                      # RWO PVC for pnpm store (5 GB)
 │   └── arc-pnpm-store-prune-cronjob.yaml            # Weekly pnpm store prune CronJob
 └── tasks.md                                         # Phase 2 output (/speckit.tasks)
@@ -87,7 +88,7 @@ The following manifests must be applied in the **infra/GitOps repository** befor
 | Manifest | Target | Required Before | Purpose |
 |----------|--------|-----------------|---------|
 | `arc-pnpm-store-pvc.yaml` | Infra repo | PR 1 | 5 GB RWO PVC for pnpm store cache |
-| `arc-runner-set-values.yaml` | Infra repo | PR 1 (basic), PR 3 (DinD) | Full ARC Helm values with DinD sidecar, PVC mount, env vars |
+| ARC Helm values (managed in infra repo) | Infra repo | PR 1 (basic), PR 3 (DinD) | Full pod template with DinD sidecar, PVC mount, env vars |
 | `arc-pnpm-store-prune-cronjob.yaml` | Infra repo | After PR 1 | Weekly pnpm store prune maintenance |
 
 **Handoff protocol**:
@@ -137,13 +138,15 @@ jobs:
   test:
     runs-on: arc-runner-set
     env:
+      # Pod: 4 CPU request (no limit) / 6 Gi memory limit.
+      # 4 Gi heap leaves ~2 Gi for native allocations, worker thread stacks, and OS.
       NODE_OPTIONS: "--max-old-space-size=4096"
     steps:
       - uses: actions/checkout@v4
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6.2.0
         with:
-          node-version: "22"
+          node-version: '22.22.0'
 
       - name: Enable Corepack
         run: corepack enable
@@ -155,8 +158,11 @@ jobs:
         run: pnpm install --frozen-lockfile
 
       - name: Run tests
+        timeout-minutes: 10
         run: pnpm run test:ci:no:coverage
 ```
+
+**Vitest configuration** (`vitest.config.ts`): Updated alongside this workflow — `pool: 'threads'` (was `forks` in CI), `maxWorkers: 4` (was 2 in CI). The threads pool shares the process and module cache (`isolate: false`), giving better memory efficiency and clean process exit. The `forks` pool was previously used for CI but caused the Vitest process to hang after tests completed due to open handles in forked worker processes.
 
 **Note**: `actions/cache` for pnpm is intentionally omitted — when the PVC is provisioned, the local store at `/opt/cache/pnpm-store` (via `npm_config_store_dir` env in pod template) will be the primary cache. Without PVC, pnpm installs from network (functional but slower).
 

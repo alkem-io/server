@@ -87,4 +87,4 @@
 **Manifests to produce**:
 1. `arc-pnpm-store-pvc.yaml` — RWO PVC (5 GB) for pnpm store
 2. `arc-pnpm-store-prune-cronjob.yaml` — Weekly CronJob for `pnpm store prune`
-3. `arc-runner-set-values.yaml` — Full ARC `AutoScalingRunnerSet` Helm values with DinD, PVC mounts, and env vars
+3. ARC Helm values — managed directly in the infra/GitOps repo (not checked into this public repo). Requirements: full pod template with DinD sidecar, PVC mounts, env vars, resource limits.

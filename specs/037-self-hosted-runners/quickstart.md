@@ -3,10 +3,10 @@
 ## Prerequisites
 
 1. ARC controller installed on the Kubernetes cluster
-2. Infra manifests applied (see `contracts/` directory):
-   - `arc-pnpm-store-pvc.yaml` — PVC for pnpm store cache
-   - `arc-runner-set-values.yaml` — Full Helm values with DinD + PVC
-   - `arc-pnpm-store-prune-cronjob.yaml` — Weekly cache maintenance
+2. Infra manifests applied:
+   - `contracts/arc-pnpm-store-pvc.yaml` — PVC for pnpm store cache
+   - ARC Helm values configured in infra repo (full pod template with DinD + PVC)
+   - `contracts/arc-pnpm-store-prune-cronjob.yaml` — Weekly cache maintenance
 3. Runner pods spawning and registering with GitHub (check `gh api repos/alkem-io/server/actions/runners`)
 
 ## Verification Per PR

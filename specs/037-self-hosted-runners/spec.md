@@ -184,7 +184,7 @@ As a DevOps engineer, I want a dedicated workflow to build and publish the custo
 - The self-hosted runners have network access to all required external services (Docker Hub, Azure ACR, Hetzner clusters, SonarQube, GitHub API).
 - GitHub secrets are accessible from self-hosted runners (standard GitHub Actions behavior).
 - Migrating the `alkem-io/test-suites` repository off Travis CI is out of scope for this feature. The E2E trigger workflow will be removed, and E2E tests will be run manually until that separate migration is completed.
-- The ARC runner pods have sufficient resources (CPU, memory, disk) to handle Docker builds and test suites with `NODE_OPTIONS=--max-old-space-size=4096`.
+- ARC runner pods are sized at `requests: {cpu: "4", memory: "3Gi"}`, `limits: {cpu: "5", memory: "6Gi"}`. The CPU limit of 5 gives 25% burst headroom above the 4-CPU request — matching the 4 workers + 1 main thread ceiling without meaningful CFS throttling, while preventing runaway pods. Cluster: 2 nodes × 32 CPU × 60 GiB, supporting up to 10 concurrent pods. CI tests use `NODE_OPTIONS=--max-old-space-size=4096` (4 Gi heap, leaving ~2 Gi for native/OS within the 6 Gi memory limit). Vitest uses `pool: 'threads'` with `maxWorkers: 4` to match the 4-CPU request and avoid the process-hang issue seen with `forks` pool on constrained runners.
 - DinD is enabled via a **full pod template** in the ARC `AutoScalingRunnerSet` Helm values (not `containerMode.type: "dind"`, which does not support custom volume mounts — see [ARC issue #3281](https://github.com/actions/actions-runner-controller/issues/3281)). The pod template defines an init container, runner container, and DinD sidecar with `--privileged` mode. All workflows needing Docker (K8s deploy + Docker Hub release) use this DinD sidecar. Docker Hub release workflows additionally require QEMU + Buildx setup inside the DinD environment for multiplatform builds.
 - ARC runners are configured in ephemeral mode (one pod per job, destroyed after completion). GitHub Actions cache service (`actions/cache`) remains functional since ARC runners connect to GitHub — existing caching steps are preserved as-is.
 - ARC Helm values (`AutoScalingRunnerSet`) are managed in a separate infra/GitOps repository. This spec provides the required DinD configuration as reference; the operator applies it out-of-band before PR 3/PR 4 workflows can be tested.
@@ -258,12 +258,13 @@ Create a custom container image with all tools pre-installed. Update workflows t
 
 ### Reference: Required ARC Helm Values
 
-The following `AutoScalingRunnerSet` Helm values must be applied in the infra/GitOps repo. This uses a **full pod template** instead of `containerMode.type: "dind"` because the simplified mode does not support custom volume mounts visible to the runner container ([ARC issue #3281](https://github.com/actions/actions-runner-controller/issues/3281)). See `contracts/arc-runner-set-values.yaml` for the complete, apply-ready manifest.
+The ARC `AutoScalingRunnerSet` Helm values are managed in the **infra/GitOps repo** (not checked into this public repo). The configuration uses a **full pod template** instead of `containerMode.type: "dind"` because the simplified mode does not support custom volume mounts visible to the runner container ([ARC issue #3281](https://github.com/actions/actions-runner-controller/issues/3281)).
 
 **Summary of Helm values**:
 - Full pod template with init container (`init-dind-externals`), runner container, and DinD sidecar
-- Runner container: `npm_config_store_dir=/opt/cache/pnpm-store` env var, PVC mount at `/opt/cache/pnpm-store`, `DOCKER_HOST=unix:///var/run/docker.sock`
+- Runner container: `requests: {cpu: "4", memory: "3Gi"}`, `limits: {cpu: "5", memory: "6Gi"}`, `npm_config_store_dir=/opt/cache/pnpm-store` env var, PVC mount at `/opt/cache/pnpm-store`, `DOCKER_HOST=unix:///var/run/docker.sock`
 - DinD sidecar: `docker:27.5.1-dind` with `privileged: true`, shared volumes for socket and work directory
+- `maxRunners: 10` — cluster supports up to 10 concurrent pods (2 nodes × 32 CPU × 60 GiB)
 - Node pinning via `nodeSelector` for RWO PVC sharing
 - Pre-provisioned RWO PVC (`arc-pnpm-store`, 5 GB) — see `contracts/arc-pnpm-store-pvc.yaml`
 - Docker build cache uses registry-backed caching (`--cache-to=type=registry,ref=ghcr.io/<org>/buildcache`) — no PVC needed

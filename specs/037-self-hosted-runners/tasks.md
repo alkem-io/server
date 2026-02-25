@@ -25,7 +25,7 @@
 **Purpose**: Finalize Kubernetes manifests that the operator must apply in the infra/GitOps repository before workflow PRs can be tested.
 
 - [x] T001 Review and finalize PVC manifest in `specs/037-self-hosted-runners/contracts/arc-pnpm-store-pvc.yaml` — confirm storage class, namespace, and 5 GB size are correct for the target cluster
-- [x] T002 [P] Review and finalize ARC Helm values in `specs/037-self-hosted-runners/contracts/arc-runner-set-values.yaml` — replace `<runner-node-name>` placeholder with actual hostname, confirm runner image tag, set `githubConfigSecret` name
+- [x] T002 [P] Review and finalize ARC Helm values in infra/GitOps repo — set runner node hostname, confirm runner image tag, set `githubConfigSecret` name, set `maxRunners: 10`, set runner container resources: `requests: {cpu: "4", memory: "3Gi"}`, `limits: {cpu: "5", memory: "6Gi"}`
 - [x] T003 [P] Review and finalize CronJob manifest in `specs/037-self-hosted-runners/contracts/arc-pnpm-store-prune-cronjob.yaml` — replace `<runner-node-name>` placeholder, confirm namespace matches ARC installation
 
 ---
@@ -37,7 +37,7 @@
 **CRITICAL**: No workflow PRs can proceed until the runner is validated.
 
 - [ ] T004 Hand off `contracts/arc-pnpm-store-pvc.yaml` to infra repo operator — PVC must be created in the ARC runner namespace before PR 1
-- [ ] T005 Hand off `contracts/arc-runner-set-values.yaml` (basic mode — comment out DinD sidecar for now) to infra repo operator — runner pods must spawn and register with GitHub
+- [ ] T005 Configure ARC Helm values in infra repo (basic mode — no DinD sidecar yet) — runner pods must spawn and register with GitHub
 - [ ] T006 Validate runner pod is functional: trigger a test workflow on `arc-runner-set` that runs `echo "hello"`, `pnpm store path`, `which git && which curl && which jq && which gpg && which python3` (FR-003 tool validation), and accesses a non-sensitive GitHub secret to confirm pod spawns, pnpm PVC is mounted at `/opt/cache/pnpm-store`, `npm_config_store_dir` resolves correctly, required system tools are available, and secrets injection works (FR-003, FR-008)
 
 **Checkpoint**: ARC runner pods spawn, register with GitHub, have pnpm PVC mounted, and can access secrets. PR 1 can begin.
@@ -55,7 +55,7 @@
 - [x] T007 [P] [US1] Swap `runs-on: ubuntu-latest` to `runs-on: arc-runner-set` in `.github/workflows/review-router.yml` (single job: `pr_metrics`)
 - [x] T008 [P] [US2] Delete `.github/workflows/trigger-e2e-tests.yml` entirely (E2E tests will be triggered manually per spec FR-009)
 - [x] T009 [P] [US2] Delete `.travis.yml` from repository root and disable Travis CI integration in GitHub repository settings (Travis CI retirement per spec FR-005, US2 acceptance scenario 2)
-- [x] T010 [P] [US2] Create new `.github/workflows/ci-tests.yml` replacing Travis CI — runs `pnpm run test:ci:no:coverage` on `arc-runner-set` with Node.js 22, pnpm 10.17.1, `NODE_OPTIONS=--max-old-space-size=4096`. Triggered on `pull_request` to `[develop, main]`. See plan.md section "1.3" for exact YAML.
+- [x] T010 [P] [US2] Create new `.github/workflows/ci-tests.yml` replacing Travis CI — runs `pnpm run test:ci:no:coverage` on `arc-runner-set` with Node.js 22.22.0, pnpm 10.17.1, `NODE_OPTIONS=--max-old-space-size=4096`, `timeout-minutes: 10`. Update `vitest.config.ts`: `pool: 'threads'` (was forks in CI), `maxWorkers: 4` (was 2 in CI) — threads pool avoids process-hang-on-exit and matches the 4 CPU pod spec. Triggered on push+PR to `[develop, main]`. See plan.md section "1.3" for exact YAML.
 
 **Checkpoint**: PR 1 merged. `review-router.yml` confirmed running on `arc-runner-set` post-merge. Travis + E2E files removed. `ci-tests.yml` passes on PRs.
 
@@ -85,7 +85,7 @@
 
 **Purpose**: Update ARC Helm values to include DinD sidecar with `--privileged` mode. Required before PR 3 and PR 4.
 
-- [ ] T014 Hand off updated `contracts/arc-runner-set-values.yaml` (full version with DinD sidecar) to infra repo operator — runner pods must now spawn with DinD sidecar, Docker socket shared at `/var/run/docker.sock`
+- [ ] T014 Update ARC Helm values in infra repo to enable DinD sidecar (`--privileged`) — runner pods must now spawn with DinD sidecar, Docker socket shared at `/var/run/docker.sock`
 - [ ] T015 Validate DinD is functional: trigger a test workflow on `arc-runner-set` that runs `docker info` and `docker buildx version` to confirm DinD sidecar is running and Buildx is available
 
 **Checkpoint**: Runner pods spawn with DinD sidecar. `docker info` succeeds from runner container. PR 3 can begin.
@@ -136,7 +136,7 @@
 
 - [ ] T022 [US3] Create `Dockerfile.runner` at repository root (or `runner/Dockerfile`) with Ubuntu 22.04 base, pre-installed: Node.js 22.21.1 (via Volta or direct install), pnpm 10.17.1 (via corepack), Docker CLI + Buildx plugin, kubectl 1.27.6, Python 3.x + pip, GPG, git, curl, jq, corepack. Must be compatible with ARC runner image contract (`ghcr.io/actions/actions-runner` base layers or standalone).
 - [ ] T023 [US4] Create `.github/workflows/build-runner-image.yml` — triggered on changes to `Dockerfile.runner`, builds and pushes to GHCR at `ghcr.io/alkem-io/arc-runner:latest` (and semver tags). Runs on `arc-runner-set` with DinD.
-- [ ] T024 [US3] Hand off updated `contracts/arc-runner-set-values.yaml` to infra repo operator — change runner image from `ghcr.io/actions/actions-runner:<pinned-version>` to `ghcr.io/alkem-io/arc-runner:<pinned-version>`
+- [ ] T024 [US3] Update ARC Helm values in infra repo — change runner image from `ghcr.io/actions/actions-runner:<pinned-version>` to `ghcr.io/alkem-io/arc-runner:<pinned-version>`
 - [ ] T025 [P] [US3] Update workflows to remove tool setup steps that are now pre-installed: remove `actions/setup-node`, `corepack enable/prepare`, `azure/setup-kubectl` steps from workflows where the custom image provides these tools. Affects: `ci-tests.yml`, `schema-contract.yml`, `trigger-sonarqube.yml`, `schema-baseline.yml`, K8s deploy workflows.
 
 ---
@@ -146,7 +146,7 @@
 **Purpose**: Final maintenance, validation, and Constitution compliance.
 
 - [ ] T026 Hand off `contracts/arc-pnpm-store-prune-cronjob.yaml` to infra repo operator — weekly pnpm store prune CronJob
-- [ ] T027 Verify pinned container image tags in `contracts/arc-runner-set-values.yaml` are current per Constitution Principle 9 (Container Determinism): runner image pinned to `ghcr.io/actions/actions-runner:2.321.0` and DinD sidecar pinned to `docker:27-dind` — confirm these are the latest stable versions at time of deployment
+- [ ] T027 Verify pinned container image tags in infra repo ARC Helm values are current per Constitution Principle 9 (Container Determinism): runner image pinned to `ghcr.io/actions/actions-runner:2.321.0` and DinD sidecar pinned to `docker:27-dind` — confirm these are the latest stable versions at time of deployment
 - [ ] T028 Final audit: `grep -r 'ubuntu-latest' .github/workflows/` returns zero matches. All workflow files reference `arc-runner-set`. (Deferred until T016–T021 complete — K8s deploy and Docker Hub release workflows still pending migration)
 - [ ] T029 Run `specs/037-self-hosted-runners/quickstart.md` full validation checklist across all PRs
 - [ ] T030 Update `docs/Developing.md` to note that CI runs on self-hosted ARC runners (if CI setup is documented there)
