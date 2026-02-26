@@ -2,10 +2,10 @@ import { OrganizationVerificationEnum } from '@common/enums/organization.verific
 import { OrganizationFilterInput } from '@core/filtering';
 import { PaginationArgs } from '@core/pagination';
 import { PaginatedOrganization } from '@core/pagination/paginated.organization';
+import { ContributorQueryArgs } from '@domain/actor/actor/dto/actor.query.args';
 import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
 import { IOrganization } from './organization.interface';
 import { OrganizationService } from './organization.service';
 

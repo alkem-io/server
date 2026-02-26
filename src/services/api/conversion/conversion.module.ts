@@ -3,7 +3,7 @@ import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { TemplateModule } from '@domain/template/template/template.module';
@@ -31,7 +31,7 @@ import { ConversionService } from './conversion.service';
     InnovationFlowModule,
     TemplateModule,
     CalloutTransferModule,
-    VirtualContributorModule,
+    VirtualActorModule,
     AiServerAdapterModule,
   ],
   providers: [ConversionService, ConversionResolverMutations],

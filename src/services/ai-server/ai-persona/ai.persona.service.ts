@@ -9,7 +9,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { AiPersonaEngineAdapterInvocationInput } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.invocation.input';
 import { IAiServer } from '../ai-server/ai.server.interface';
 import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
@@ -38,7 +38,8 @@ export class AiPersonaService {
 
   async createAiPersona(
     aiPersonaData: CreateAiPersonaInput,
-    aiServer: IAiServer
+    aiServer: IAiServer,
+    mgr?: EntityManager
   ): Promise<IAiPersona> {
     const aiPersona: IAiPersona = new AiPersona();
     aiPersona.authorization = new AuthorizationPolicy(
@@ -52,7 +53,9 @@ export class AiPersonaService {
       aiPersonaData.externalConfig
     );
 
-    const savedAiPersona = await this.aiPersonaRepository.save(aiPersona);
+    const savedAiPersona = mgr
+      ? await mgr.save(aiPersona as AiPersona)
+      : await this.aiPersonaRepository.save(aiPersona);
     this.logger.verbose?.(
       `Created new AI Persona with id ${aiPersona.id}`,
       LogContext.PLATFORM

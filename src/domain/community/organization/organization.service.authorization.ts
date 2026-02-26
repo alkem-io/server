@@ -18,8 +18,7 @@ import {
 } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
@@ -35,7 +34,6 @@ import { OrganizationService } from './organization.service';
 export class OrganizationAuthorizationService {
   constructor(
     private organizationService: OrganizationService,
-    private agentAuthorizationService: AgentAuthorizationService,
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
@@ -54,8 +52,7 @@ export class OrganizationAuthorizationService {
       {
         relations: {
           storageAggregator: true,
-          profile: true,
-          agent: true,
+          actor: { authorization: true, profile: true, credentials: true },
           groups: true,
           verification: true,
           roleSet: true,
@@ -65,7 +62,7 @@ export class OrganizationAuthorizationService {
     if (
       !organization.profile ||
       !organization.storageAggregator ||
-      !organization.agent ||
+      !organization.credentials ||
       !organization.groups ||
       !organization.verification ||
       !organization.roleSet
@@ -139,12 +136,8 @@ export class OrganizationAuthorizationService {
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
 
-    const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
-        organization.agent,
-        organization.authorization
-      );
-    updatedAuthorizations.push(agentAuthorization);
+    // Note: No separate actor/agent auth inheritance needed -
+    // organization.authorization IS actor.authorization via getter delegation
 
     for (const group of organization.groups) {
       const groupAuthorizations =

@@ -1,5 +1,5 @@
 import { LogContext, ProfileType } from '@common/enums';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { ActorType } from '@common/enums/actor.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { UrlPathBase } from '@common/enums/url.path.base';
 import { UrlPathElement } from '@common/enums/url.path.element';
@@ -16,9 +16,6 @@ import { Memo } from '@domain/common/memo/memo.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { Organization } from '@domain/community/organization/organization.entity';
-import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -80,10 +77,8 @@ export class UrlGeneratorService {
       where: {
         id: id,
       },
-      select: {
-        id: true,
-        nameID: true,
-      },
+      relations: { actor: true },
+      select: { id: true, actor: { id: true, nameID: true } },
     });
     if (!vc) {
       throw new EntityNotFoundException(
@@ -105,6 +100,15 @@ export class UrlGeneratorService {
     switch (profile.type) {
       case ProfileType.SPACE_ABOUT:
         return await this.getUrlPathByAboutProfileID(profile.id);
+      case ProfileType.SPACE: {
+        // Space actor profile — look up via actor table
+        const spaceEntityInfo =
+          await this.getNameableEntityInfoForProfileOrFail('space', profile.id);
+        return this.getSpaceUrlPathByID(spaceEntityInfo.entityID);
+      }
+      case ProfileType.ACCOUNT:
+        // Account actor profile — no dedicated page, link to platform
+        return `${this.endpoint_cluster}/admin`;
       case ProfileType.USER: {
         const userEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
           'user',
@@ -182,17 +186,20 @@ export class UrlGeneratorService {
     return '';
   }
 
-  public createUrlForContributor(contributor: IContributor): string {
+  public createUrlForContributor(contributor: {
+    id: string;
+    nameID: string;
+  }): string {
     const type = this.getContributorType(contributor);
     let path: string = UrlPathBase.VIRTUAL_CONTRIBUTOR;
     switch (type) {
-      case RoleSetContributorType.USER:
+      case ActorType.USER:
         path = UrlPathBase.USER;
         break;
-      case RoleSetContributorType.ORGANIZATION:
+      case ActorType.ORGANIZATION:
         path = UrlPathBase.ORGANIZATION;
         break;
-      case RoleSetContributorType.VIRTUAL:
+      case ActorType.VIRTUAL_CONTRIBUTOR:
         path = UrlPathBase.VIRTUAL_CONTRIBUTOR;
         break;
     }
@@ -249,12 +256,11 @@ export class UrlGeneratorService {
     return url;
   }
 
-  private getContributorType(contributor: IContributor) {
-    if (contributor instanceof User) return RoleSetContributorType.USER;
-    if (contributor instanceof Organization)
-      return RoleSetContributorType.ORGANIZATION;
-    if (contributor instanceof VirtualContributor)
-      return RoleSetContributorType.VIRTUAL;
+  private getContributorType(contributor: {
+    id: string;
+    type?: ActorType;
+  }): ActorType {
+    if (contributor.type) return contributor.type;
     throw new RelationshipNotFoundException(
       `Unable to determine contributor type for ${contributor.id}`,
       LogContext.COMMUNITY
@@ -276,20 +282,40 @@ export class UrlGeneratorService {
     return result;
   }
 
+  // Actor-based entity tables where both nameID and profileId live on the actor table
+  private static readonly ACTOR_BASED_TABLES = new Set([
+    'user',
+    'organization',
+    'virtual_contributor',
+    'space',
+    'account',
+  ]);
+
   public async getNameableEntityInfo(
     entityTableName: string,
     profileID: string
   ): Promise<{ entityNameID: string; entityID: string } | null> {
+    let query: string;
+
+    if (UrlGeneratorService.ACTOR_BASED_TABLES.has(entityTableName)) {
+      // For actor-based entities, both nameID and profileId are on the actor table
+      query = `
+        SELECT "actor"."id" as "entityID", "actor"."nameID" as "entityNameID"
+        FROM "actor"
+        WHERE "actor"."profileId" = $1
+      `;
+    } else {
+      query = `
+        SELECT "${entityTableName}"."id" as "entityID", "${entityTableName}"."nameID" as "entityNameID"
+        FROM "${entityTableName}"
+        WHERE "${entityTableName}"."profileId" = $1
+      `;
+    }
+
     const [result]: {
       entityID: string;
       entityNameID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT "${entityTableName}"."id" as "entityID", "${entityTableName}"."nameID" as "entityNameID" FROM "${entityTableName}"
-        WHERE "${entityTableName}"."profileId" = $1
-      `,
-      [profileID]
-    );
+    }[] = await this.entityManager.connection.query(query, [profileID]);
 
     if (!result) {
       return null;

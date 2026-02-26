@@ -1,8 +1,8 @@
+import { ActorType } from '@common/enums/actor.type';
 import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { IUser } from '@domain/community/user/user.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -11,10 +11,10 @@ import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.comment';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
 import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
+import { InAppNotificationPayloadSpaceCommunityActor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.actor';
 import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application';
 import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event';
 import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event.comment';
-import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -571,7 +571,7 @@ export class NotificationSpaceAdapter {
       adminEvent,
       eventData,
       space.id,
-      eventData.contributorID
+      eventData.actorID
     );
 
     const adminPayload =
@@ -580,7 +580,7 @@ export class NotificationSpaceAdapter {
         eventData.triggeredBy,
         adminRecipients.emailRecipients,
         space,
-        eventData.contributorID
+        eventData.actorID
       );
     this.notificationExternalAdapter.sendExternalNotifications(
       adminEvent,
@@ -592,13 +592,12 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (adminInAppReceiverIDs.length > 0) {
-      const adminInAppPayload: InAppNotificationPayloadSpaceCommunityContributor =
-        {
-          type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
-          spaceID: space.id,
-          contributorID: eventData.contributorID,
-          contributorType: eventData.contributorType,
-        };
+      const adminInAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
+        type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
+        spaceID: space.id,
+        actorID: eventData.actorID,
+        actorType: eventData.actorType,
+      };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
         NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER,
@@ -615,7 +614,7 @@ export class NotificationSpaceAdapter {
     space: any
   ): Promise<void> {
     const event =
-      NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED;
+      NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED;
 
     const recipients = await this.getNotificationRecipientsSpace(
       event,
@@ -645,15 +644,15 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCommunityContributor = {
-        type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
+        type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
         spaceID: space.id,
-        contributorID: eventData.virtualContributorID,
-        contributorType: RoleSetContributorType.VIRTUAL,
+        actorID: eventData.virtualContributorID,
+        actorType: ActorType.VIRTUAL_CONTRIBUTOR,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED,
+        NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED,
         NotificationEventCategory.SPACE_ADMIN,
         eventData.triggeredBy,
         inAppReceiverIDs,

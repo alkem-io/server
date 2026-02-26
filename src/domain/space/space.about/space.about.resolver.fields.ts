@@ -1,4 +1,4 @@
-import { AuthorizationAgentPrivilege } from '@common/decorators';
+import { AuthorizationActorHasPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -9,11 +9,10 @@ import { SpaceMetricsLoaderCreator } from '@core/dataloader/creators/loader.crea
 import { SpaceProviderLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.provider.loader.creator';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { ICommunity } from '@domain/community/community/community.interface';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { TemplateContentSpaceLookupService } from '@domain/template/template-content-space/template-content-space.lookup/template-content-space.lookup.service';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
@@ -42,7 +41,7 @@ export class SpaceAboutResolverFields {
     return loader.load(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('metrics', () => [INVP], {
     nullable: true,
@@ -56,21 +55,21 @@ export class SpaceAboutResolverFields {
     return loader.load(spaceAbout.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('provider', () => IContributor, {
+  @ResolveField('provider', () => IActor, {
     nullable: true,
     description: 'The Space provider (host).',
   })
   async provider(
     @Parent() spaceAbout: ISpaceAbout,
     @Loader(SpaceProviderLoaderCreator)
-    loader: ILoader<IContributor | null>
-  ): Promise<IContributor | null> {
+    loader: ILoader<IActor | null>
+  ): Promise<IActor | null> {
     return loader.load(spaceAbout.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('isContentPublic', () => Boolean, {
     nullable: false,
@@ -101,7 +100,7 @@ export class SpaceAboutResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('membership', () => SpaceAboutMembership, {
     nullable: false,

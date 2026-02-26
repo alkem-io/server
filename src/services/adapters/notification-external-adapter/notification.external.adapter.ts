@@ -26,19 +26,20 @@ import {
 import { UserPayload } from '@alkemio/notifications-lib/dist/dto/user.payload';
 import { NOTIFICATIONS_SERVICE } from '@common/constants/providers';
 import { LogContext } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { NotificationEvent } from '@common/enums/notification.event';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { IActor } from '@domain/actor/actor/actor.interface';
+import { getContributorType } from '@domain/actor/actor/actor.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { getContributorType } from '@domain/community/contributor/get.contributor.type';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -47,7 +48,6 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist/config.service';
 import { ClientProxy } from '@nestjs/microservices';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { AlkemioConfig } from '@src/types';
 import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
@@ -67,7 +67,7 @@ interface CalloutContributionPayload {
 @Injectable()
 export class NotificationExternalAdapter {
   constructor(
-    private contributorLookupService: ContributorLookupService,
+    private actorLookupService: ActorLookupService,
     private userLookupService: UserLookupService,
     private configService: ConfigService<AlkemioConfig, true>,
     private urlGeneratorService: UrlGeneratorService,
@@ -133,7 +133,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     virtualContributorID: string,
-    accountHost: IContributor,
+    accountHost: IActor,
     space: ISpace,
     welcomeMessage?: string
   ): Promise<NotificationEventPayloadSpaceCommunityInvitationVirtualContributor> {
@@ -198,7 +198,7 @@ export class NotificationExternalAdapter {
         firstName: '',
         lastName: '',
         id: '',
-        type: RoleSetContributorType.USER,
+        type: ActorType.USER,
         profile: {
           url: '',
           displayName: '',
@@ -456,7 +456,7 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     space: ISpace,
-    contributorID: string
+    actorID: string
   ): Promise<NotificationEventPayloadSpaceCommunityContributor> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
@@ -464,7 +464,7 @@ export class NotificationExternalAdapter {
       recipients,
       space
     );
-    const memberPayload = await this.getContributorPayloadOrFail(contributorID);
+    const memberPayload = await this.getContributorPayloadOrFail(actorID);
     const payload: NotificationEventPayloadSpaceCommunityContributor = {
       contributor: memberPayload,
       ...spacePayload,
@@ -958,23 +958,25 @@ export class NotificationExternalAdapter {
   }
 
   private async getContributorPayloadOrFail(
-    contributorID: string
+    actorID: string
   ): Promise<ContributorPayload> {
-    const contributor =
-      await this.contributorLookupService.getContributorByUUID(contributorID, {
+    const contributor = await this.actorLookupService.getFullActorByIdOrFail(
+      actorID,
+      {
         relations: {
-          profile: true,
+          actor: { profile: true },
         },
-      });
+      } as any
+    );
 
     if (!contributor || !contributor.profile) {
       throw new EntityNotFoundException(
-        `Unable to find Contributor with profile for id: ${contributorID}`,
+        `Unable to find Contributor with profile for id: ${actorID}`,
         LogContext.COMMUNITY
       );
     }
 
-    const contributorType = getContributorType(contributor);
+    const actorType = getContributorType(contributor);
 
     const contributorURL =
       this.urlGeneratorService.createUrlForContributor(contributor);
@@ -984,29 +986,31 @@ export class NotificationExternalAdapter {
         displayName: contributor.profile.displayName,
         url: contributorURL,
       },
-      type: contributorType,
+      type: actorType,
     };
     return result;
   }
 
   private async getContributorPayloadByAgentIdOrFail(
-    agentId: string
+    actorID: string
   ): Promise<ContributorPayload> {
-    const contributor =
-      await this.contributorLookupService.getContributorByAgentId(agentId, {
+    const contributor = await this.actorLookupService.getFullActorByIdOrFail(
+      actorID,
+      {
         relations: {
-          profile: true,
+          actor: { profile: true },
         },
-      });
+      } as any
+    );
 
     if (!contributor || !contributor.profile) {
       throw new EntityNotFoundException(
-        `Unable to find Contributor with profile for agent id: ${agentId}`,
+        `Unable to find Contributor with profile for agent id: ${actorID}`,
         LogContext.COMMUNITY
       );
     }
 
-    const contributorType = getContributorType(contributor);
+    const actorType = getContributorType(contributor);
 
     const contributorURL =
       this.urlGeneratorService.createUrlForContributor(contributor);
@@ -1016,15 +1020,15 @@ export class NotificationExternalAdapter {
         displayName: contributor.profile.displayName,
         url: contributorURL,
       },
-      type: contributorType,
+      type: actorType,
     };
     return result;
   }
 
   private async getUserPayloadOrFail(userID: string): Promise<UserPayload> {
-    const user = await this.userLookupService.getUserOrFail(userID, {
+    const user = await this.userLookupService.getUserByIdOrFail(userID, {
       relations: {
-        profile: true,
+        actor: { profile: true },
       },
     });
 
@@ -1040,7 +1044,7 @@ export class NotificationExternalAdapter {
         displayName: user.profile.displayName,
         url: userURL,
       },
-      type: RoleSetContributorType.USER,
+      type: ActorType.USER,
     };
     return result;
   }
@@ -1055,7 +1059,7 @@ export class NotificationExternalAdapter {
         displayName: user.profile.displayName,
         url: this.urlGeneratorService.createUrlForUserNameID(user.nameID),
       },
-      type: RoleSetContributorType.USER,
+      type: ActorType.USER,
     };
   }
 
@@ -1064,19 +1068,19 @@ export class NotificationExternalAdapter {
   }
 
   private async getContributorPayloadOrEmpty(
-    contributorID: string | undefined
+    actorID: string | undefined
   ): Promise<ContributorPayload> {
-    if (!contributorID) {
+    if (!actorID) {
       return {
         id: '',
         profile: {
           displayName: '',
           url: '',
         },
-        type: RoleSetContributorType.USER,
+        type: ActorType.USER,
       };
     }
 
-    return await this.getContributorPayloadOrFail(contributorID);
+    return await this.getContributorPayloadOrFail(actorID);
   }
 }

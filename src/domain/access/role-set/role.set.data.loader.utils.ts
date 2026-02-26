@@ -1,19 +1,28 @@
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { ICredential } from '@domain/agent/credential/credential.interface';
+import { ActorService } from '@domain/actor/actor/actor.service';
+import { ICredential } from '@domain/actor/credential/credential.interface';
 import { In, Repository } from 'typeorm';
 import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
-import { AgentRoleKey } from './types';
+import { ActorRoleKey } from './types';
 
-/** Load credentials once per unique agentID across all keys using batch mget. */
-export async function loadAgentCredentials(
-  keys: readonly AgentRoleKey[],
-  agentService: AgentService
+/** Load credentials once per unique actorID across all keys. */
+export async function loadActorCredentials(
+  keys: readonly ActorRoleKey[],
+  actorService: ActorService
 ): Promise<Map<string, ICredential[]>> {
-  const uniqueAgentIDs = [
-    ...new Set(keys.map(k => k.agentInfo.agentID).filter(id => id.length > 0)),
+  const uniqueActorIDs = [
+    ...new Set(
+      keys.map(k => k.actorContext.actorID).filter(id => id.length > 0)
+    ),
   ];
-  return agentService.getAgentCredentialsBatch(uniqueAgentIDs);
+  const result = new Map<string, ICredential[]>();
+  await Promise.all(
+    uniqueActorIDs.map(async actorID => {
+      const { credentials } = await actorService.getActorCredentials(actorID);
+      result.set(actorID, credentials);
+    })
+  );
+  return result;
 }
 
 /**

@@ -1,10 +1,11 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
-import { CredentialModule } from '@domain/agent/credential/credential.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
+import { CredentialModule } from '@domain/actor/credential/credential.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { Module } from '@nestjs/common';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
@@ -18,7 +19,8 @@ import { AdminAuthorizationService } from './admin.authorization.service';
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
-    AgentModule,
+    ActorLookupModule,
+    ActorModule,
     UserLookupModule,
     OrganizationLookupModule,
     CredentialModule,
@@ -26,7 +28,7 @@ import { AdminAuthorizationService } from './admin.authorization.service';
     NotificationAdapterModule,
     AuthResetModule,
     SpaceModule,
-    VirtualContributorModule,
+    VirtualActorModule,
   ],
   providers: [
     AdminAuthorizationService,

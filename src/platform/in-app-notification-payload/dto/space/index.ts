@@ -5,9 +5,9 @@ export * from './notification.in.app.payload.space.collaboration.callout.comment
 export * from './notification.in.app.payload.space.collaboration.callout.post.comment';
 export * from './notification.in.app.payload.space.communication.message.direct';
 export * from './notification.in.app.payload.space.communication.update';
+export * from './notification.in.app.payload.space.community.actor';
 export * from './notification.in.app.payload.space.community.application';
 export * from './notification.in.app.payload.space.community.calendar.event';
 export * from './notification.in.app.payload.space.community.calendar.event.comment';
-export * from './notification.in.app.payload.space.community.contributor';
 export * from './notification.in.app.payload.space.community.invitation';
 export * from './notification.in.app.payload.space.community.invitation.platform';

@@ -1,7 +1,7 @@
-import { ContributorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/contributor.loader.creator';
+import { ActorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/actor.loader.creator';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
@@ -14,26 +14,26 @@ export class InAppNotificationResolverFields {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @ResolveField(() => IContributor, {
+  @ResolveField(() => IActor, {
     nullable: false,
     description: 'The receiver of the notification.',
   })
   public async receiver(
     @Parent() { receiverID }: IInAppNotification,
-    @Loader(ContributorLoaderCreator) loader: ILoader<IContributor>
-  ): Promise<IContributor> {
+    @Loader(ActorLoaderCreator) loader: ILoader<IActor>
+  ): Promise<IActor> {
     return loader.load(receiverID);
   }
 
-  @ResolveField(() => IContributor, {
+  @ResolveField(() => IActor, {
     nullable: true,
     description: 'The Contributor who triggered the notification.',
   })
   public async triggeredBy(
     @Parent() notification: IInAppNotification,
-    @Loader(ContributorLoaderCreator)
-    loader: ILoader<IContributor | null>
-  ): Promise<IContributor | null> {
+    @Loader(ActorLoaderCreator)
+    loader: ILoader<IActor | null>
+  ): Promise<IActor | null> {
     const { triggeredByID, id } = notification;
 
     if (!triggeredByID) {

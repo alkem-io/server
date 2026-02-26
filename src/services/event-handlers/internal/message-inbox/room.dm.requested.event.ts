@@ -7,8 +7,8 @@
 export class RoomDmRequestedEvent {
   constructor(
     public readonly payload: {
-      initiatorActorId: string;
-      targetActorId: string;
+      initiatorActorID: string;
+      targetActorID: string;
       timestamp: number;
     }
   ) {}

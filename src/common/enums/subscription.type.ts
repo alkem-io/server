@@ -5,7 +5,7 @@ export enum SubscriptionType {
   SUBSPACE_CREATED = 'subspaceCreated',
   ACTIVITY_CREATED = 'activityCreated',
   ROOM_EVENTS = 'roomEvents',
-  VIRTUAL_CONTRIBUTOR_UPDATED = 'virtualContributorUpdated',
+  VIRTUAL_UPDATED = 'virtualContributorUpdated',
   IN_APP_NOTIFICATION_RECEIVED = 'in-app-notification-received',
   IN_APP_NOTIFICATION_COUNTER = 'in-app-notification-counter',
   CONVERSATION_EVENTS = 'conversationEvents',

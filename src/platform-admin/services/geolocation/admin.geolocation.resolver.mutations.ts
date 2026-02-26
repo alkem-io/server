@@ -1,6 +1,6 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GeoLocationException } from '@common/exceptions/geo.location.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { LocationService } from '@domain/common/location';
 import { Location } from '@domain/common/location/location.entity';
@@ -10,7 +10,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { GeoapifyService } from '@services/external/geoapify';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, IsNull, Not } from 'typeorm';
 
@@ -31,15 +31,15 @@ export class AdminGeoLocationMutations {
     description: 'Updates the GeoLocation data where required on the platform.',
   })
   async adminUpdateGeoLocationData(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `Update GeoLocation data: ${agentInfo.email}`
+      `Update GeoLocation data: ${actorContext.actorID}`
     );
 
     if (!this.geoapifyService.isEnabled()) {

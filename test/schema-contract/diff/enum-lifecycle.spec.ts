@@ -1,6 +1,6 @@
 import {
-  indexSDL,
   createDiffContext,
+  indexSDL,
 } from '../../../src/schema-contract/diff/diff-core';
 import { diffEnums } from '../../../src/schema-contract/diff/diff-enum';
 import { ChangeType } from '../../../src/schema-contract/model';

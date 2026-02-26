@@ -1,19 +1,17 @@
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
+import { ActorType } from '@common/enums/actor.type';
 import {
   DataLoaderCreator,
   DataLoaderCreatorBaseOptions,
 } from '@core/dataloader/creators/base';
 import { createBatchLoader } from '@core/dataloader/utils';
-import { Organization } from '@domain/community/organization';
-import { User } from '@domain/community/user/user.entity';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager } from 'typeorm';
+import { EntityManager, In } from 'typeorm';
 
 @Injectable()
 export class CommunityTypeLoaderCreator
-  implements DataLoaderCreator<{ id: string; type: RoleSetContributorType }>
+  implements DataLoaderCreator<{ id: string; type: ActorType }>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
@@ -27,28 +25,20 @@ export class CommunityTypeLoaderCreator
 
   private async communityTypeInBatch(
     keys: ReadonlyArray<string>
-  ): Promise<{ id: string; type: RoleSetContributorType }[]> {
-    const result = await this.manager
-      .createQueryBuilder()
-      .select('user.id')
-      .from(User, 'user')
-      .addSelect('organization.id')
-      .addFrom(Organization, 'organization')
-      .addSelect('vc.id')
-      .addFrom(VirtualContributor, 'vc')
-      .where('user.id IN (:...ids)', { ids: keys })
-      .orWhere('organization.id IN (:...ids)', { ids: keys })
-      .orWhere('vc.id IN (:...ids)', { ids: keys })
-      .getRawMany<User | Organization | VirtualContributor>();
-
-    return result.map(item => {
-      if (item instanceof User) {
-        return { id: item.id, type: RoleSetContributorType.USER };
-      }
-      if (item instanceof Organization) {
-        return { id: item.id, type: RoleSetContributorType.ORGANIZATION };
-      }
-      return { id: item.id, type: RoleSetContributorType.VIRTUAL };
+  ): Promise<{ id: string; type: ActorType }[]> {
+    // Query actor table directly using the type discriminator column
+    const actors = await this.manager.find(Actor, {
+      where: {
+        id: In([...keys]),
+        type: In([
+          ActorType.USER,
+          ActorType.ORGANIZATION,
+          ActorType.VIRTUAL_CONTRIBUTOR,
+        ]),
+      },
+      select: { id: true, type: true },
     });
+
+    return actors.map(actor => ({ id: actor.id, type: actor.type }));
   }
 }

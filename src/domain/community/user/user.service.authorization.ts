@@ -19,9 +19,9 @@ import {
 } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ActorService } from '@domain/actor/actor/actor.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
@@ -36,24 +36,24 @@ import { UserSettingsAuthorizationService } from '../user-settings/user.settings
 export class UserAuthorizationService {
   constructor(
     private readonly authorizationPolicyService: AuthorizationPolicyService,
-    private readonly agentAuthorizationService: AgentAuthorizationService,
     private readonly profileAuthorizationService: ProfileAuthorizationService,
     private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
     private readonly storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
     private readonly userSettingsAuthorizationService: UserSettingsAuthorizationService,
-    private readonly agentService: AgentService,
+    private readonly actorService: ActorService,
+    private readonly actorLookupService: ActorLookupService,
     private readonly userLookupService: UserLookupService
   ) {}
 
   async applyAuthorizationPolicy(
     userID: string
   ): Promise<IAuthorizationPolicy[]> {
-    const user = await this.userLookupService.getUserOrFail(userID, {
-      loadEagerRelations: false,
+    const user = await this.userLookupService.getUserByIdOrFail(userID, {
       relations: {
-        authorization: true,
-        agent: { authorization: true },
-        profile: { authorization: true },
+        actor: {
+          authorization: true,
+          profile: { authorization: true },
+        },
         storageAggregator: {
           authorization: true,
           directStorage: { authorization: true },
@@ -62,43 +62,8 @@ export class UserAuthorizationService {
           authorization: true,
         },
       },
-      select: {
-        id: true,
-        authorization:
-          this.authorizationPolicyService.authorizationSelectOptions,
-        agent: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-        profile: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-        storageAggregator: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-          directStorage: {
-            id: true,
-            authorization:
-              this.authorizationPolicyService.authorizationSelectOptions,
-          },
-        },
-        settings: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-      },
     });
-    if (
-      !user.agent ||
-      !user.profile ||
-      !user.storageAggregator ||
-      !user.settings
-    )
+    if (!user.profile || !user.storageAggregator || !user.settings)
       throw new RelationshipNotFoundException(
         `Unable to load agent or profile or preferences or storage for User ${user.id} `,
         LogContext.COMMUNITY
@@ -143,12 +108,8 @@ export class UserAuthorizationService {
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
-    const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
-        user.agent,
-        user.authorization
-      );
-    updatedAuthorizations.push(agentAuthorization);
+    // Note: No separate actor/agent auth inheritance needed -
+    // user.authorization IS actor.authorization via getter delegation
 
     const settingsAuthorization =
       this.userSettingsAuthorizationService.applyAuthorizationPolicy(
@@ -171,25 +132,21 @@ export class UserAuthorizationService {
   }
 
   async grantCredentialsAllUsersReceive(userID: string): Promise<IUser> {
-    const { user, agent } =
-      await this.userLookupService.getUserAndAgent(userID);
+    const user = await this.userLookupService.getUserByIdOrFail(userID);
 
-    await this.agentService.grantCredentialOrFail({
+    await this.actorService.grantCredentialOrFail(userID, {
       type: AuthorizationCredential.GLOBAL_REGISTERED,
-      agentID: agent.id,
     });
-    await this.agentService.grantCredentialOrFail({
+    await this.actorService.grantCredentialOrFail(userID, {
       type: AuthorizationCredential.USER_SELF_MANAGEMENT,
-      agentID: agent.id,
       resourceID: userID,
     });
-    await this.agentService.grantCredentialOrFail({
+    await this.actorService.grantCredentialOrFail(userID, {
       type: AuthorizationCredential.ACCOUNT_ADMIN,
-      agentID: agent.id,
       resourceID: user.accountID,
     });
 
-    return await this.userLookupService.getUserOrFail(userID);
+    return await this.userLookupService.getUserByIdOrFail(userID);
   }
 
   private appendGlobalCredentialRules(
@@ -297,7 +254,7 @@ export class UserAuthorizationService {
     newRules.push(communityReader);
 
     // Determine who is able to see the PII designated fields for a User
-    const { credentials } = await this.userLookupService.getUserAndCredentials(
+    const credentials = await this.actorLookupService.getActorCredentialsOrFail(
       user.id
     );
     const readUserPiiCredentials: ICredentialDefinition[] = [

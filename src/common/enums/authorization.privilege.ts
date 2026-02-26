@@ -22,7 +22,7 @@ export enum AuthorizationPrivilege {
   CREATE_SPACE = 'create-space',
   CREATE_SUBSPACE = 'create-subspace',
   CREATE_ORGANIZATION = 'create-organization',
-  CREATE_VIRTUAL_CONTRIBUTOR = 'create-virtual-contributor',
+  CREATE_VIRTUAL = 'create-virtual-contributor',
   CREATE_INNOVATION_PACK = 'create-innovation-pack',
   CREATE_INNOVATION_HUB = 'create-innovation-hub',
   FILE_UPLOAD = 'file-upload',
