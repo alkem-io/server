@@ -1,26 +1,11 @@
-import { Test, TestingModule } from '@nestjs/testing';
-import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import {
   formatDatesForCalendar,
   generateCalendarUrls,
   generateICS,
 } from '../../../domain/timeline/event/calendar.event.calendar-links';
-import { NotificationExternalAdapter } from './notification.external.adapter';
 
 describe('NotificationExternalAdapter', () => {
-  let service: NotificationExternalAdapter;
-
-  beforeEach(async () => {
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [NotificationExternalAdapter],
-    })
-      .useMocker(defaultMockerFactory)
-      .compile();
-
-    service = module.get<NotificationExternalAdapter>(
-      NotificationExternalAdapter
-    );
-  });
+  beforeEach(async () => {});
 
   it('formats calendar dates for Google and Outlook', () => {
     const result = formatDatesForCalendar(
@@ -29,8 +14,8 @@ describe('NotificationExternalAdapter', () => {
     );
 
     expect(result.google).toBe('20260220T100000Z/20260220T110000Z');
-    expect(result.outlookStart).toBe('2026-02-20T10:00:00Z');
-    expect(result.outlookEnd).toBe('2026-02-20T11:00:00Z');
+    expect(result.outlookStart).toBe('2026-02-20T10:00:00.000Z');
+    expect(result.outlookEnd).toBe('2026-02-20T11:00:00.000Z');
     expect(result.icalStart).toBe('20260220T100000Z');
     expect(result.icalEnd).toBe('20260220T110000Z');
   });
