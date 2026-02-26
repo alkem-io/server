@@ -90,6 +90,11 @@ http:
         servers:
           - url: 'http://file-service:4003/'
 
+    webhook-gateway:
+      loadBalancer:
+        servers:
+          - url: 'http://webhook-gateway:8080/'
+
   middlewares:
     strip-api-private-non-interactive-prefix:
       stripPrefix:
@@ -275,6 +280,13 @@ http:
       service: 'alkemio-web-client'
       entryPoints:
         - 'web'
+
+    webhook-gateway:
+      rule: 'PathPrefix(`/api/v1/webhooks`)'
+      service: 'webhook-gateway'
+      entryPoints:
+        - 'web'
+      priority: 140
 
     oathkeeper-jwks:
       rule: 'PathPrefix(`/jwks`)'

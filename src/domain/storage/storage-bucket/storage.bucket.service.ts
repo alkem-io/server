@@ -26,7 +26,7 @@ import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.c
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Readable } from 'stream';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { Document } from '../document/document.entity';
 import { IDocument } from '../document/document.interface';
 import { DocumentService } from '../document/document.service';
@@ -98,7 +98,11 @@ export class StorageBucketService {
     return result;
   }
 
-  public async save(storage: IStorageBucket): Promise<IStorageBucket> {
+  public async save(
+    storage: IStorageBucket,
+    mgr?: EntityManager
+  ): Promise<IStorageBucket> {
+    if (mgr) return mgr.save(storage as StorageBucket);
     return this.storageBucketRepository.save(storage);
   }
 

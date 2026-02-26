@@ -61,6 +61,13 @@ const createTestSpace = (id: string): ISpace => {
     sortOrder: 0,
     createdDate: new Date(),
     updatedDate: new Date(),
+    profile: {
+      id: `profile-space-${id}`,
+      displayName: `Space ${id}`,
+      type: ProfileType.SPACE,
+      createdDate: new Date(),
+      updatedDate: new Date(),
+    },
     about: {
       id: '1',
       profile: {
@@ -86,6 +93,13 @@ const createTestSpace = (id: string): ISpace => {
       spaces: [],
       type: ActorType.ORGANIZATION,
       baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
+      profile: {
+        id: `profile-account-${id}`,
+        displayName: `Account ${id}`,
+        type: ProfileType.ACCOUNT,
+        createdDate: new Date(),
+        updatedDate: new Date(),
+      },
       createdDate: new Date(),
       updatedDate: new Date(),
     },

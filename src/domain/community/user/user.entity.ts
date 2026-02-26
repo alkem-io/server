@@ -1,9 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import {
-  MID_TEXT_LENGTH,
-  NAMEID_MAX_LENGTH_SCHEMA,
-  SMALL_TEXT_LENGTH,
-} from '@common/constants';
+import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 import { ActorType } from '@common/enums/actor.type';
 import { Application } from '@domain/access/application/application.entity';
 import { Actor } from '@domain/actor/actor/actor.entity';
@@ -65,25 +61,23 @@ export class User extends BaseAlkemioEntity implements IUser {
     return this.actor?.credentials;
   }
 
-  get profileId(): string | undefined {
-    return this.actor?.profileId;
-  }
-
   get profile(): Profile {
     return this.actor?.profile as Profile;
   }
 
-  set profile(p: Profile | undefined) {
+  set profile(p: Profile) {
     if (!this.actor) this.actor = new Actor();
     this.actor.profile = p;
   }
 
-  @Column('varchar', {
-    length: NAMEID_MAX_LENGTH_SCHEMA,
-    nullable: false,
-    unique: true,
-  })
-  nameID!: string;
+  get nameID(): string {
+    return this.actor?.nameID as string;
+  }
+
+  set nameID(val: string) {
+    if (!this.actor) this.actor = new Actor();
+    this.actor.nameID = val;
+  }
 
   @Column('uuid', { nullable: false })
   accountID!: string;

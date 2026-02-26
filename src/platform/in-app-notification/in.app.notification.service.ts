@@ -1,5 +1,4 @@
 import { LogContext } from '@common/enums';
-import { ActorType } from '@common/enums/actor.type';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
 import { EntityNotFoundException } from '@common/exceptions';
@@ -87,9 +86,7 @@ export class InAppNotificationService {
       roomID: coreEntityIds.roomID,
       // not a FK but still used for deletion
       messageID: coreEntityIds.messageID,
-      contributorOrganizationID: coreEntityIds.contributorOrganizationID,
-      contributorUserID: coreEntityIds.contributorUserID,
-      contributorVcID: coreEntityIds.contributorVcID,
+      contributorActorId: coreEntityIds.contributorActorId,
       calendarEventID: coreEntityIds.calendarEventID,
     });
   }
@@ -345,25 +342,25 @@ export class InAppNotificationService {
     });
   }
 
-  public async deleteAllForContributorVcInSpace(
-    contributorVcID: string,
+  public async deleteAllForContributorActorInSpace(
+    contributorActorId: string,
     spaceID: string
   ): Promise<void> {
     await this.inAppNotificationRepo.delete({
-      contributorVcID,
+      contributorActorId,
       spaceID,
     });
   }
 
   /**
-   * Deletes all notifications for a Virtual Contributor in multiple spaces.
-   * This is used when a VC is removed from a parent space to clean up
+   * Deletes all notifications for a contributor (actor) in multiple spaces.
+   * This is used when a contributor is removed from a parent space to clean up
    * notifications from all child spaces (L1, L2, etc.).
-   * @param contributorVcID The Virtual Contributor ID
+   * @param contributorActorId The Actor ID of the contributor
    * @param spaceIDs Array of space IDs
    */
-  public async deleteAllForContributorVcInSpaces(
-    contributorVcID: string,
+  public async deleteAllForContributorActorInSpaces(
+    contributorActorId: string,
     spaceIDs: string[]
   ): Promise<void> {
     if (spaceIDs.length === 0) {
@@ -371,38 +368,7 @@ export class InAppNotificationService {
     }
 
     await this.inAppNotificationRepo.delete({
-      contributorVcID,
-      spaceID: In(spaceIDs),
-    });
-  }
-
-  public async deleteAllForContributorOrganizationInSpace(
-    contributorOrganizationID: string,
-    spaceID: string
-  ): Promise<void> {
-    await this.inAppNotificationRepo.delete({
-      contributorOrganizationID,
-      spaceID,
-    });
-  }
-
-  /**
-   * Deletes all notifications for an Organization in multiple spaces.
-   * This is used when an Organization is removed from a parent space to clean up
-   * notifications from all child spaces (L1, L2, etc.).
-   * @param contributorOrganizationID The Organization ID
-   * @param spaceIDs Array of space IDs
-   */
-  public async deleteAllForContributorOrganizationInSpaces(
-    contributorOrganizationID: string,
-    spaceIDs: string[]
-  ): Promise<void> {
-    if (spaceIDs.length === 0) {
-      return;
-    }
-
-    await this.inAppNotificationRepo.delete({
-      contributorOrganizationID,
+      contributorActorId,
       spaceID: In(spaceIDs),
     });
   }
@@ -494,20 +460,7 @@ export class InAppNotificationService {
         const typedPayload =
           payload as InAppNotificationPayloadSpaceCommunityActor;
         result.spaceID = typedPayload.spaceID;
-        // contributor FKs
-        result.contributorOrganizationID =
-          typedPayload.actorType === ActorType.ORGANIZATION
-            ? typedPayload.actorID
-            : undefined;
-        result.contributorUserID =
-          typedPayload.actorType === ActorType.USER
-            ? typedPayload.actorID
-            : undefined;
-        result.contributorVcID =
-          typedPayload.actorType === ActorType.VIRTUAL_CONTRIBUTOR
-            ? typedPayload.actorID
-            : undefined;
-
+        result.contributorActorId = typedPayload.actorID;
         break;
       }
 
@@ -524,7 +477,7 @@ export class InAppNotificationService {
         result.spaceID = (
           payload as InAppNotificationPayloadSpaceCommunityActor
         ).spaceID;
-        result.contributorVcID = (
+        result.contributorActorId = (
           payload as InAppNotificationPayloadSpaceCommunityActor
         ).actorID;
         break;
@@ -660,7 +613,7 @@ export class InAppNotificationService {
         result.spaceID = (
           payload as InAppNotificationPayloadVirtualContributor
         ).space.id;
-        result.contributorVcID = (
+        result.contributorActorId = (
           payload as InAppNotificationPayloadVirtualContributor
         ).virtualContributorID;
         break;

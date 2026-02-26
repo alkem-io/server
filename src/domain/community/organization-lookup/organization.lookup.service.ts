@@ -80,7 +80,7 @@ export class OrganizationLookupService {
   ): Promise<IOrganization | null> {
     return this.entityManager.findOne(Organization, {
       ...options,
-      where: { ...options?.where, nameID: organizationNameID },
+      where: { ...options?.where, actor: { nameID: organizationNameID } },
     });
   }
 

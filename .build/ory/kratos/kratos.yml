@@ -92,6 +92,14 @@ selfservice:
               response:
                 ignore: false
                 parse: false   # We update via Admin API
+          - hook: web_hook
+            config:
+              url: http://webhook-gateway:8080/api/v1/webhooks/kratos/verification
+              method: POST
+              body: file:///etc/config/kratos/webhook-gateway-verification.jsonnet
+              response:
+                ignore: true
+                parse: false
 
     logout:
       after:

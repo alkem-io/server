@@ -13,7 +13,6 @@ import {
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { AgentAuthorizationService } from '@domain/actor/actor/actor.service';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -30,7 +29,6 @@ import { VirtualContributorService } from './virtual.contributor.service';
 export class VirtualContributorAuthorizationService {
   constructor(
     private virtualService: VirtualContributorService,
-    private agentAuthorizationService: AgentAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private knowledgeBaseAuthorizations: KnowledgeBaseAuthorizationService,
@@ -49,7 +47,7 @@ export class VirtualContributorAuthorizationService {
             account: {
               spaces: true,
             },
-            actor: { profile: true },
+            actor: { authorization: true, profile: true },
             knowledgeBase: true,
           },
         }
@@ -127,12 +125,8 @@ export class VirtualContributorAuthorizationService {
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
-    const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
-        virtualContributor,
-        virtualContributor.authorization
-      );
-    updatedAuthorizations.push(agentAuthorization);
+    // Note: No separate actor/agent auth inheritance needed -
+    // virtualContributor.authorization IS actor.authorization via getter delegation
 
     // TODO: this is a hack to deal with the fact that the AI Persona has an authorization policy that uses the VC's account
     const aiPersonaAuthorizations =

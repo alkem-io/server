@@ -13,7 +13,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '../storage-bucket/storage.bucket.service';
 import { IStorageAggregatorParent } from './dto/storage.aggregator.dto.parent';
@@ -34,23 +34,30 @@ export class StorageAggregatorService {
 
   public async createStorageAggregator(
     type: StorageAggregatorType,
-    parentStorageAggregator?: IStorageAggregator
+    parentStorageAggregator?: IStorageAggregator,
+    mgr?: EntityManager
   ): Promise<IStorageAggregator> {
-    const storageAggregator: IStorageAggregator = new StorageAggregator();
-    storageAggregator.type = type;
-    storageAggregator.authorization = new AuthorizationPolicy(
-      AuthorizationPolicyType.STORAGE_AGGREGATOR
-    );
+    const doCreate = async (m: EntityManager): Promise<IStorageAggregator> => {
+      const storageAggregator: IStorageAggregator = new StorageAggregator();
+      storageAggregator.type = type;
+      storageAggregator.authorization = new AuthorizationPolicy(
+        AuthorizationPolicyType.STORAGE_AGGREGATOR
+      );
 
-    storageAggregator.parentStorageAggregator = parentStorageAggregator;
+      storageAggregator.parentStorageAggregator = parentStorageAggregator;
 
-    storageAggregator.directStorage =
-      this.storageBucketService.createStorageBucket({});
-    // Need to save the storage bucket to avoid a TypeORM saving circular dependency
-    storageAggregator.directStorage = await this.storageBucketService.save(
-      storageAggregator.directStorage
-    );
-    return await this.save(storageAggregator);
+      storageAggregator.directStorage =
+        this.storageBucketService.createStorageBucket({});
+      // Need to save the storage bucket to avoid a TypeORM saving circular dependency
+      storageAggregator.directStorage = await this.storageBucketService.save(
+        storageAggregator.directStorage,
+        m
+      );
+      return await this.save(storageAggregator, m);
+    };
+
+    if (mgr) return doCreate(mgr);
+    return this.storageAggregatorRepository.manager.transaction(doCreate);
   }
 
   async delete(storageAggregatorID: string): Promise<IStorageAggregator> {
@@ -104,8 +111,11 @@ export class StorageAggregatorService {
   }
 
   async save(
-    storageAggregator: IStorageAggregator
+    storageAggregator: IStorageAggregator,
+    mgr?: EntityManager
   ): Promise<IStorageAggregator> {
+    if (mgr)
+      return await mgr.save(storageAggregator as StorageAggregator);
     return await this.storageAggregatorRepository.save(storageAggregator);
   }
 

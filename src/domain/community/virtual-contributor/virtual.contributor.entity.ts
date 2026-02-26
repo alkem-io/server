@@ -1,9 +1,5 @@
 import { randomUUID } from 'node:crypto';
-import {
-  ENUM_LENGTH,
-  NAMEID_MAX_LENGTH_SCHEMA,
-  SMALL_TEXT_LENGTH,
-} from '@common/constants';
+import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 import { ActorType } from '@common/enums/actor.type';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
@@ -73,25 +69,23 @@ export class VirtualContributor
     return this.actor?.credentials;
   }
 
-  get profileId(): string | undefined {
-    return this.actor?.profileId;
-  }
-
   get profile(): Profile {
     return this.actor?.profile as Profile;
   }
 
-  set profile(p: Profile | undefined) {
+  set profile(p: Profile) {
     if (!this.actor) this.actor = new Actor();
     this.actor.profile = p;
   }
 
-  @Column('varchar', {
-    length: NAMEID_MAX_LENGTH_SCHEMA,
-    nullable: false,
-    unique: true,
-  })
-  nameID!: string;
+  get nameID(): string {
+    return this.actor?.nameID as string;
+  }
+
+  set nameID(val: string) {
+    if (!this.actor) this.actor = new Actor();
+    this.actor.nameID = val;
+  }
 
   @Column({
     unique: true,
