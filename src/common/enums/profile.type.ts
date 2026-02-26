@@ -20,6 +20,8 @@ export enum ProfileType {
   COMMUNITY_GUIDELINES = 'community-guidelines',
   VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
   VIRTUAL_PERSONA = 'virtual-persona',
+  SPACE = 'space',
+  ACCOUNT = 'account',
 }
 
 registerEnumType(ProfileType, {

@@ -19,10 +19,7 @@ import {
 } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import {
-  ActorService,
-  AgentAuthorizationService,
-} from '@domain/actor/actor/actor.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -39,7 +36,6 @@ import { UserSettingsAuthorizationService } from '../user-settings/user.settings
 export class UserAuthorizationService {
   constructor(
     private readonly authorizationPolicyService: AuthorizationPolicyService,
-    private readonly agentAuthorizationService: AgentAuthorizationService,
     private readonly profileAuthorizationService: ProfileAuthorizationService,
     private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
     private readonly storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService,
@@ -112,12 +108,8 @@ export class UserAuthorizationService {
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
-    const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
-        user,
-        user.authorization
-      );
-    updatedAuthorizations.push(agentAuthorization);
+    // Note: No separate actor/agent auth inheritance needed -
+    // user.authorization IS actor.authorization via getter delegation
 
     const settingsAuthorization =
       this.userSettingsAuthorizationService.applyAuthorizationPolicy(

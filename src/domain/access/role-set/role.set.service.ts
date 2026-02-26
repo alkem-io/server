@@ -500,36 +500,45 @@ export class RoleSetService {
     );
   }
 
-  // Convenience methods for GraphQL resolvers that need specific types
+  // Convenience methods for GraphQL resolvers that need specific entity types.
+  // These query the actual entity tables (User, Organization, VirtualContributor)
+  // instead of casting Actor[], which would lack entity-specific fields like nameID.
   public async getUsersWithRole(
     roleSet: IRoleSet,
     roleType: RoleName,
     limit?: number
   ): Promise<IUser[]> {
-    return (await this.getActorsWithRole(
+    const credential = await this.getCredentialDefinitionForRole(
       roleSet,
-      roleType,
-      [ActorType.USER],
-      limit
-    )) as IUser[];
+      roleType
+    );
+    return this.userLookupService.usersWithCredential(credential, limit);
   }
 
   public async getOrganizationsWithRole(
     roleSet: IRoleSet,
     roleType: RoleName
   ): Promise<IOrganization[]> {
-    return (await this.getActorsWithRole(roleSet, roleType, [
-      ActorType.ORGANIZATION,
-    ])) as IOrganization[];
+    const credential = await this.getCredentialDefinitionForRole(
+      roleSet,
+      roleType
+    );
+    return this.organizationLookupService.organizationsWithCredentials(
+      credential
+    );
   }
 
   public async getVirtualContributorsWithRole(
     roleSet: IRoleSet,
     roleType: RoleName
   ): Promise<IVirtualContributor[]> {
-    return (await this.getActorsWithRole(roleSet, roleType, [
-      ActorType.VIRTUAL_CONTRIBUTOR,
-    ])) as IVirtualContributor[];
+    const credential = await this.getCredentialDefinitionForRole(
+      roleSet,
+      roleType
+    );
+    return this.virtualContributorLookupService.virtualContributorsWithCredentials(
+      credential
+    );
   }
 
   private async getUserIDsWithImplicitSpaceRole(
@@ -1158,8 +1167,8 @@ export class RoleSetService {
     const policy = this.getPolicyForActorType(roleDefinition, actorType);
 
     if (action === RoleSetUpdateType.ASSIGN) {
-      // Skip validation if no actors yet (first assignment always allowed)
-      if (actorCount === 0) {
+      // -1 means unlimited; skip validation
+      if (policy.maximum < 0) {
         return;
       }
       if (actorCount >= policy.maximum) {
@@ -1171,6 +1180,10 @@ export class RoleSetService {
     }
 
     if (action === RoleSetUpdateType.REMOVE) {
+      // -1 means no minimum; skip validation
+      if (policy.minimum < 0) {
+        return;
+      }
       if (actorCount <= policy.minimum) {
         throw new RoleSetPolicyRoleLimitsException(
           `Min limit of ${actorType} reached for role '${roleType}': ${policy.minimum}`,

@@ -76,7 +76,7 @@ export class SpaceLookupService {
   ): Promise<ISpace> {
     const space = await this.spaceRepository.findOne({
       where: {
-        nameID: spaceNameID,
+        actor: { nameID: spaceNameID },
         level: SpaceLevel.L0,
       },
       ...options,
@@ -98,7 +98,7 @@ export class SpaceLookupService {
   ): Promise<ISpace | null> {
     const subspace = await this.spaceRepository.findOne({
       where: {
-        nameID: subspaceNameID,
+        actor: { nameID: subspaceNameID },
         levelZeroSpaceID: levelZeroSpaceID,
         level: Not(SpaceLevel.L0),
       },
@@ -178,15 +178,18 @@ export class SpaceLookupService {
         ? Array.isArray(options.where)
           ? [
               { id: In(spaceIdsOrNameIds) },
-              { nameID: In(spaceIdsOrNameIds) },
+              { actor: { nameID: In(spaceIdsOrNameIds) } },
               ...options.where,
             ]
           : [
               { id: In(spaceIdsOrNameIds) },
-              { nameID: In(spaceIdsOrNameIds) },
+              { actor: { nameID: In(spaceIdsOrNameIds) } },
               options.where,
             ]
-        : [{ id: In(spaceIdsOrNameIds) }, { nameID: In(spaceIdsOrNameIds) }],
+        : [
+            { id: In(spaceIdsOrNameIds) },
+            { actor: { nameID: In(spaceIdsOrNameIds) } },
+          ],
     });
   }
 

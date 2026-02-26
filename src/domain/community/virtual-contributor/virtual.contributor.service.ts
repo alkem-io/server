@@ -1,5 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
@@ -51,6 +52,7 @@ import { IVirtualContributor } from './virtual.contributor.interface';
 @Injectable()
 export class VirtualContributorService {
   constructor(
+    private actorService: ActorService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
     private profileAvatarService: ProfileAvatarService,
@@ -92,6 +94,9 @@ export class VirtualContributorService {
     let virtualContributor: IVirtualContributor = VirtualContributor.create(
       virtualContributorData
     );
+    // nameID is a getter/setter delegating to actor, not a @Column on VirtualContributor,
+    // so TypeORM's create() won't copy it from the input — set it explicitly.
+    virtualContributor.nameID = virtualContributorData.nameID!;
 
     virtualContributor.listedInStore = true;
     virtualContributor.searchVisibility = SearchVisibility.ACCOUNT;
@@ -114,6 +119,7 @@ export class VirtualContributorService {
         virtualContributorData.bodyOfKnowledgeType
       );
 
+    // In-memory entity construction (no DB writes)
     virtualContributor.knowledgeBase =
       await this.knowledgeBaseService.createKnowledgeBase(
         knowledgeBaseData,
@@ -121,28 +127,12 @@ export class VirtualContributorService {
         actorContext?.actorID
       );
 
-    const kb = await this.knowledgeBaseService.save(
-      virtualContributor.knowledgeBase
-    );
-
-    if (
-      virtualContributorData.bodyOfKnowledgeType ===
-      VirtualContributorBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
-    ) {
-      virtualContributor.bodyOfKnowledgeID = kb.id;
-    }
-
     const aiPersonaInput: CreateAiPersonaInput = {
       ...virtualContributorData.aiPersona,
     };
 
-    // Get the default AI server
+    // Read-only query — safe outside the transaction
     const aiServer = await this.aiServerAdapter.getAiServer();
-    const aiPersona = await this.aiPersonaService.createAiPersona(
-      aiPersonaInput,
-      aiServer
-    );
-    virtualContributor.aiPersonaID = aiPersona.id;
 
     virtualContributor.profile = await this.profileService.createProfile(
       virtualContributorData.profileData,
@@ -169,11 +159,31 @@ export class VirtualContributorService {
       virtualContributorData.profileData
     );
 
-    // Save Actor and VirtualContributor in a single transaction.
-    // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-    // reliably set FK columns, so we pre-save Actor explicitly.
+    // Single transaction: all DB writes (KnowledgeBase, AiPersona, Actor,
+    // VirtualContributor) are atomic — no orphans if any step fails.
     virtualContributor =
       await this.virtualContributorRepository.manager.transaction(async mgr => {
+        const kb = await this.knowledgeBaseService.save(
+          virtualContributor.knowledgeBase,
+          mgr
+        );
+
+        if (
+          virtualContributorData.bodyOfKnowledgeType ===
+          VirtualContributorBodyOfKnowledgeType.ALKEMIO_KNOWLEDGE_BASE
+        ) {
+          virtualContributor.bodyOfKnowledgeID = kb.id;
+        }
+
+        const aiPersona = await this.aiPersonaService.createAiPersona(
+          aiPersonaInput,
+          aiServer,
+          mgr
+        );
+        virtualContributor.aiPersonaID = aiPersona.id;
+
+        // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+        // reliably set FK columns, so we pre-save Actor explicitly.
         await mgr.save((virtualContributor as VirtualContributor).actor!);
         return await mgr.save(virtualContributor as VirtualContributor);
       });
@@ -245,8 +255,8 @@ export class VirtualContributorService {
   }
 
   private async checkNameIdOrFail(nameID: string) {
-    const virtualCount = await this.virtualContributorRepository.countBy({
-      nameID: nameID,
+    const virtualCount = await this.virtualContributorRepository.count({
+      where: { actor: { nameID: nameID } },
     });
     if (virtualCount >= 1)
       throw new ValidationException(
@@ -386,12 +396,11 @@ export class VirtualContributorService {
       );
     }
 
-    // Note: Credentials are on Actor (which VirtualContributor extends), will be deleted via cascade
+    // Delete actor — cascades to delete the VC row via FK (virtual_contributor.id → actor.id ON DELETE CASCADE).
+    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+    await this.actorService.deleteActorById(virtualContributorID);
 
-    const result = await this.virtualContributorRepository.remove(
-      virtualContributor as VirtualContributor
-    );
-    result.id = virtualContributorID;
+    virtualContributor.id = virtualContributorID;
 
     if (virtualContributor.aiPersonaID) {
       try {
@@ -414,7 +423,7 @@ export class VirtualContributorService {
     await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
     await this.deleteVCInvitations(virtualContributorID);
 
-    return result;
+    return virtualContributor;
   }
 
   async getVirtualContributor(
@@ -561,10 +570,8 @@ export class VirtualContributorService {
     if (credentialsFilter) {
       virtualContributors = await this.virtualContributorRepository
         .createQueryBuilder('virtual_contributor')
-        .leftJoinAndSelect(
-          'virtual_contributor.actor.credentials',
-          'credential'
-        )
+        .leftJoin('virtual_contributor.actor', 'actor')
+        .leftJoinAndSelect('actor.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -633,7 +640,8 @@ export class VirtualContributorService {
     const virtualContributorMatchesCount =
       await this.virtualContributorRepository
         .createQueryBuilder('virtual')
-        .leftJoinAndSelect('virtual.actor.credentials', 'credential')
+        .leftJoin('virtual.actor', 'actor')
+        .leftJoinAndSelect('actor.credentials', 'credential')
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
         .setParameters({

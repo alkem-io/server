@@ -1,11 +1,13 @@
 import { UUID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseType } from '@common/enums/license.type';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
+import { ProfileType } from '@common/enums/profile.type';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -39,6 +41,7 @@ import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
@@ -64,7 +67,7 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { keyBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import { EntityManager, FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
@@ -95,6 +98,7 @@ type SpaceSortingData = {
 @Injectable()
 export class SpaceService {
   constructor(
+    private actorService: ActorService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private spacesFilterService: SpaceFilterService,
     private spaceAboutService: SpaceAboutService,
@@ -112,6 +116,7 @@ export class SpaceService {
     private licenseService: LicenseService,
     private urlGeneratorCacheService: UrlGeneratorCacheService,
     private spacePlatformRolesAccessService: SpacePlatformRolesAccessService,
+    private profileService: ProfileService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -131,6 +136,11 @@ export class SpaceService {
     parentPlatformRolesAccess?: IPlatformRolesAccess
   ): Promise<ISpace> {
     const space: ISpace = Space.create(spaceData);
+    // nameID is a getter/setter delegating to actor, not a @Column on Space,
+    // so TypeORM's create() won't copy it from the input — set it explicitly.
+    if (spaceData.nameID) {
+      space.nameID = spaceData.nameID;
+    }
     // default to demo space
     space.visibility = SpaceVisibility.ACTIVE;
     space.sortOrder = 0;
@@ -146,13 +156,6 @@ export class SpaceService {
         space.settings,
         parentPlatformRolesAccess
       );
-
-    const storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator(
-        StorageAggregatorType.SPACE,
-        spaceData.storageAggregatorParent
-      );
-    space.storageAggregator = storageAggregator;
 
     space.license = this.createLicenseForSpaceL0();
 
@@ -172,6 +175,10 @@ export class SpaceService {
       },
     };
 
+    // Community creation saves Communication + Room + external Matrix room,
+    // so it cannot participate in the DB transaction below.
+    // TODO: wrap Community creation in the transaction once Communication
+    // supports compensating cleanup for external Matrix rooms.
     space.community =
       await this.communityService.createCommunity(communityData);
 
@@ -181,16 +188,33 @@ export class SpaceService {
       spaceData.about
     );
 
-    space.about = await this.spaceAboutService.createSpaceAbout(
-      modifiedAbout,
-      storageAggregator
-    );
-
     space.levelZeroSpaceID = spaceData.levelZeroSpaceID;
-    // Save Actor, License, and Space in a single transaction.
-    // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-    // reliably set FK columns, so we pre-save children explicitly.
+
+    // Single transaction: StorageAggregator, Profile, SpaceAbout, Actor,
+    // License, and Space are atomic. Community stays outside (external calls).
     await this.spaceRepository.manager.transaction(async mgr => {
+      const storageAggregator =
+        await this.storageAggregatorService.createStorageAggregator(
+          StorageAggregatorType.SPACE,
+          spaceData.storageAggregatorParent,
+          mgr
+        );
+      space.storageAggregator = storageAggregator;
+
+      // Create a minimal profile for the Space actor
+      space.profile = await this.profileService.createProfile(
+        { displayName: spaceData.about.profileData.displayName },
+        ProfileType.SPACE,
+        storageAggregator
+      );
+
+      space.about = await this.spaceAboutService.createSpaceAbout(
+        modifiedAbout,
+        storageAggregator
+      );
+
+      // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+      // reliably set FK columns, so we pre-save children explicitly.
       await mgr.save((space as Space).actor!);
       space.license = await mgr.save(space.license);
       await mgr.save(space as Space);
@@ -220,7 +244,7 @@ export class SpaceService {
     }
     space.collaboration = await this.collaborationService.createCollaboration(
       updatedCollaborationData,
-      space.storageAggregator,
+      space.storageAggregator!,
       actorContext
     );
 
@@ -385,9 +409,12 @@ export class SpaceService {
 
     await this.storageAggregatorService.delete(space.storageAggregator.id);
 
-    const result = await this.spaceRepository.remove(space as Space);
-    result.id = deleteData.ID;
-    return result;
+    // Delete actor — cascades to delete the space row via FK (space.id → actor.id ON DELETE CASCADE).
+    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+    await this.actorService.deleteActorById(deleteData.ID);
+
+    space.id = deleteData.ID;
+    return space;
   }
 
   public async createTemplatesManagerForSpaceL0(): Promise<ITemplatesManager> {
@@ -550,7 +577,8 @@ export class SpaceService {
 
     const qb = this.spaceRepository.createQueryBuilder('space');
     if (visibilities) {
-      qb.leftJoinAndSelect('space.actor.authorization', 'authorization');
+      qb.leftJoin('space.actor', 'actor');
+      qb.leftJoinAndSelect('actor.authorization', 'authorization');
       qb.where({
         level: SpaceLevel.L0,
         visibility: In(visibilities),
@@ -567,7 +595,8 @@ export class SpaceService {
     const qb = this.spaceRepository.createQueryBuilder('space');
 
     qb.leftJoinAndSelect('space.subspaces', 'subspace');
-    qb.leftJoinAndSelect('space.actor.authorization', 'authorization_policy');
+    qb.leftJoin('space.actor', 'actor_for_auth');
+    qb.leftJoinAndSelect('actor_for_auth.authorization', 'authorization_policy');
     qb.leftJoinAndSelect('subspace.subspaces', 'subspaces');
     qb.where({
       level: SpaceLevel.L0,

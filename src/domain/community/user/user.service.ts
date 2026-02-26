@@ -22,6 +22,7 @@ import { PaginationArgs } from '@core/pagination';
 import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { actorDefaults } from '@domain/actor/actor/actor.defaults';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -47,7 +48,7 @@ import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { InstrumentService } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
 import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
@@ -72,6 +73,7 @@ export class UserService {
     private accountLookupService: AccountLookupService,
     private userLookupService: UserLookupService,
     private actorLookupService: ActorLookupService,
+    private actorService: ActorService,
     private accountHostService: AccountHostService,
     private userSettingsService: UserSettingsService,
     private profileAvatarService: ProfileAvatarService,
@@ -104,6 +106,9 @@ export class UserService {
     let user: IUser = User.create({
       ...userData,
     });
+    // nameID is a getter/setter delegating to actor, not a @Column on User,
+    // so TypeORM's create() won't copy it from the input — set it explicitly.
+    user.nameID = userData.nameID!;
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
     user.settings = this.userSettingsService.createUserSettings(
       this.getDefaultUserSettings()
@@ -116,34 +121,6 @@ export class UserService {
     const profileData = await this.extendProfileDataWithReferences(
       userData.profileData
     );
-    user.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator(
-        StorageAggregatorType.USER
-      );
-    // Do not create the guidance room here, it will be created on demand
-
-    user.profile = await this.profileService.createProfile(
-      profileData,
-      ProfileType.USER,
-      user.storageAggregator
-    );
-
-    await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
-      name: TagsetReservedName.SKILLS,
-      tags: [],
-    });
-    await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
-      name: TagsetReservedName.KEYWORDS,
-      tags: [],
-    });
-    await this.profileAvatarService.addAvatarVisualToProfile(
-      user.profile,
-      userData.profileData,
-      kratosData,
-      userData.firstName,
-      userData.lastName
-    );
-
     // Note: Conversations now belong to the single platform Messaging.
     // User conversations are tracked via the conversation_membership pivot table.
 
@@ -167,15 +144,47 @@ export class UserService {
       LogContext.COMMUNITY
     );
 
-    const account = await this.accountHostService.createAccount(
-      AccountType.USER
-    );
-    user.accountID = account.id;
-
-    // Save Actor, Settings, and User in a single transaction.
-    // TypeORM's cascade doesn't reliably set FK columns on the parent entity,
-    // so we pre-save children explicitly within a transaction.
+    // Single transaction: all DB writes (StorageAggregator, Account, Actor,
+    // Settings, User) are atomic — no orphans if any step fails.
     user = await this.userRepository.manager.transaction(async mgr => {
+      user.storageAggregator =
+        await this.storageAggregatorService.createStorageAggregator(
+          StorageAggregatorType.USER,
+          undefined,
+          mgr
+        );
+      // Do not create the guidance room here, it will be created on demand
+
+      user.profile = await this.profileService.createProfile(
+        profileData,
+        ProfileType.USER,
+        user.storageAggregator
+      );
+
+      await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
+        name: TagsetReservedName.SKILLS,
+        tags: [],
+      });
+      await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
+        name: TagsetReservedName.KEYWORDS,
+        tags: [],
+      });
+      await this.profileAvatarService.addAvatarVisualToProfile(
+        user.profile,
+        userData.profileData,
+        kratosData,
+        userData.firstName,
+        userData.lastName
+      );
+
+      const account = await this.accountHostService.createAccount(
+        AccountType.USER,
+        mgr
+      );
+      user.accountID = account.id;
+
+      // TypeORM's cascade doesn't reliably set FK columns on the parent entity,
+      // so we pre-save children explicitly within the transaction.
       await mgr.save((user as User).actor!);
       user.settings = await mgr.save(user.settings);
       return await mgr.save(user as User);
@@ -390,8 +399,8 @@ export class UserService {
   }
 
   private async isUserNameIdAvailableOrFail(nameID: string) {
-    const userCount = await this.userRepository.countBy({
-      nameID: nameID,
+    const userCount = await this.userRepository.count({
+      where: { actor: { nameID: nameID } },
     });
     if (userCount != 0)
       throw new ValidationException(
@@ -452,13 +461,15 @@ export class UserService {
       await this.kratosService.deleteIdentityByEmail(user.email);
     }
 
-    const result = await this.userRepository.remove(user as User);
+    // Delete actor — cascades to delete the user row via FK (user.id → actor.id ON DELETE CASCADE).
+    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+    await this.actorService.deleteActorById(id);
 
     // Note: Should we unregister the user from communications?
 
-    // TypeORM clears the id after remove; restore it so callers get the deleted entity's id
-    result.id = id;
-    return result;
+    // Restore id so callers get the deleted entity's id
+    user.id = id;
+    return user;
   }
 
   public async getAccount(user: IUser): Promise<IAccount> {
@@ -522,7 +533,8 @@ export class UserService {
       // User extends Actor which has the credentials relationship
       users = await this.userRepository
         .createQueryBuilder('user')
-        .leftJoinAndSelect('user.actor.credentials', 'credential')
+        .leftJoin('user.actor', 'actor')
+        .leftJoinAndSelect('actor.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -547,7 +559,8 @@ export class UserService {
     const qb = this.userRepository.createQueryBuilder('user');
 
     if (withTags !== undefined) {
-      qb.leftJoin('user.actor.profile', 'profile')
+      qb.leftJoin('user.actor', 'actor')
+        .leftJoin('actor.profile', 'profile')
         .leftJoin('tagset', 'tagset', 'profile.id = tagset.profileId')
         // cannot use object or operators here
         // because typeorm cannot construct the query properly
@@ -574,7 +587,8 @@ export class UserService {
     const qb = this.userRepository.createQueryBuilder('user').select();
 
     if (entryRoleCredentials.parentRoleSetRole) {
-      qb.leftJoin('user.actor.credentials', 'credential')
+      qb.leftJoin('user.actor', 'actor')
+        .leftJoin('actor.credentials', 'credential')
         .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
@@ -615,7 +629,8 @@ export class UserService {
     const qb = this.userRepository
       .createQueryBuilder('user')
       .select()
-      .leftJoin('user.actor.credentials', 'credential')
+      .leftJoin('user.actor', 'actor')
+      .leftJoin('actor.credentials', 'credential')
       .addSelect(['credential.type', 'credential.resourceID'])
       .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')

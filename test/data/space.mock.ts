@@ -116,6 +116,13 @@ export const spaceData: { space: ISpace } = {
     },
     community: mockCommunity,
     authorization: mockAuthorization,
+    profile: {
+      id: 'profile-space-00655835',
+      displayName: 'UN SDGs',
+      type: ProfileType.SPACE,
+      createdDate: now,
+      updatedDate: now,
+    } as IProfile,
     // Tagset is not a direct ISpace property, but included here for completeness if needed in tests
     // tagset: mockTagset,
     level: SpaceLevel.L0,

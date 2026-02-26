@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums';
 import { HttpExceptionFilter } from '@core/error-handling/http.exception.filter';
+import { UserService } from '@domain/community/user/user.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import {
   INestApplication,
@@ -42,6 +43,9 @@ describe('IdentityResolveController (REST)', () => {
   const kratosService = {
     getIdentityById: vi.fn(),
   } as unknown as KratosService;
+  const userServiceMock = {
+    save: vi.fn(),
+  } as unknown as UserService;
   const userLookupService = {
     getUserByAuthenticationID: vi.fn(),
     getUserByEmail: vi.fn(),
@@ -72,6 +76,7 @@ describe('IdentityResolveController (REST)', () => {
         IdentityResolveService,
         { provide: RegistrationService, useValue: registrationService },
         { provide: KratosService, useValue: kratosService },
+        { provide: UserService, useValue: userServiceMock },
         { provide: UserLookupService, useValue: userLookupService },
         { provide: WINSTON_MODULE_NEST_PROVIDER, useValue: loggerMock },
       ],

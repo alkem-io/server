@@ -9,6 +9,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { IRoleSet } from '@domain/access/role-set';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
@@ -47,6 +48,7 @@ import { CreateVirtualContributorOnAccountInput } from './dto/account.dto.create
 @Injectable()
 export class AccountService {
   constructor(
+    private actorService: ActorService,
     private accountHostService: AccountHostService,
     private accountLookupService: AccountLookupService,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -235,9 +237,12 @@ export class AccountService {
       await this.spaceService.deleteSpaceOrFail({ ID: space.id });
     }
 
-    const result = await this.accountRepository.remove(account as Account);
-    result.id = accountID;
-    return result;
+    // Delete actor — cascades to delete the account row via FK (account.id → actor.id ON DELETE CASCADE).
+    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+    await this.actorService.deleteActorById(accountID);
+
+    account.id = accountID;
+    return account;
   }
 
   public updateExternalSubscriptionId(
@@ -275,13 +280,14 @@ export class AccountService {
       `
         SELECT
           "account"."id" as "accountId", "account"."externalSubscriptionID" as "externalSubscriptionID",
-          "organization"."id" as "orgId", "organization"."contactEmail" as "orgContactEmail", "organization"."legalEntityName" as "orgLegalName", "organization"."nameID" as "orgNameID",
+          "organization"."id" as "orgId", "organization"."contactEmail" as "orgContactEmail", "organization"."legalEntityName" as "orgLegalName", "org_actor"."nameID" as "orgNameID",
           "profile"."displayName" as "orgDisplayName",
           "user"."id" as "userId", "user"."email" as "userEmail", CONCAT("user"."firstName", ' ', "user"."lastName") as "userName"
         FROM "account"
         LEFT JOIN "user" on "account"."id" = "user"."accountID"
         LEFT JOIN "organization" on "account"."id" = "organization"."accountID"
-        LEFT JOIN "profile" on "organization"."profileId" = "profile"."id"
+        LEFT JOIN "actor" as "org_actor" on "organization"."id" = "org_actor"."id"
+        LEFT JOIN "profile" on "org_actor"."profileId" = "profile"."id"
         WHERE "account"."id" = $1
     `,
       [accountID]
