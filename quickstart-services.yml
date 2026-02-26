@@ -536,6 +536,8 @@ services:
       - 4004
 
   webhook-gateway:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_webhook_gateway
     hostname: webhook-gateway
     image: alkemio/webhook-gateway:v0.1.0
