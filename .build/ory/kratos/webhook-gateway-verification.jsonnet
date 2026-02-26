@@ -10,8 +10,11 @@
 //   ctx.identity.traits - User traits (email, name, etc.)
 
 function(ctx) {
+  local name = std.get(ctx.identity.traits, 'name', {}),
+  local firstName = std.get(name, 'first', ''),
+  local lastName = std.get(name, 'last', ''),
   identity_id: ctx.identity.id,
   email: ctx.identity.traits.email,
-  first_name: ctx.identity.traits.name.first,
-  display_name: ctx.identity.traits.name.first + " " + ctx.identity.traits.name.last,
+  first_name: firstName,
+  display_name: if lastName != '' then firstName + ' ' + lastName else firstName,
 }
