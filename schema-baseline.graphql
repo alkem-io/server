@@ -34,7 +34,7 @@ type Account implements ActorFull {
   license: License!
   """A name identifier of the Account, unique within the platform."""
   nameID: NameID!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The Spaces within this Account."""
   spaces: [Space!]!
@@ -547,6 +547,8 @@ type Actor {
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  """A name identifier of the entity, unique within a given scope."""
+  nameID: NameID!
   """The profile for this Actor."""
   profile: Profile
   """The type of Actor"""
@@ -571,7 +573,7 @@ interface ActorFull {
   id: UUID!
   """A name identifier of the Actor, unique within a given scope."""
   nameID: NameID!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The type of Actor"""
   type: ActorType!
@@ -4591,7 +4593,7 @@ type Organization implements ActorFull & Groupable {
   metrics: [NVP!]
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The RoleSet for this Organization."""
   roleSet: RoleSet!
@@ -5054,6 +5056,7 @@ type Profile {
 }
 
 enum ProfileType {
+  ACCOUNT
   CALENDAR_EVENT
   CALLOUT_FRAMING
   COMMUNITY_GUIDELINES
@@ -5066,6 +5069,7 @@ enum ProfileType {
   MEMO
   ORGANIZATION
   POST
+  SPACE
   SPACE_ABOUT
   TEMPLATE
   USER
@@ -5429,7 +5433,7 @@ type RelayPaginatedSpace implements ActorFull {
   nameID: NameID!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
@@ -6183,7 +6187,7 @@ type Space implements ActorFull {
   nameID: NameID!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
@@ -7774,7 +7778,7 @@ type User implements ActorFull {
   nameID: NameID!
   """The phone number for this User."""
   phone: String
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The settings for this User."""
   settings: UserSettings!
@@ -8040,7 +8044,7 @@ type VirtualContributor implements ActorFull {
   Platform-level settings of this Virtual Contributor, modifiable only by platform admins.
   """
   platformSettings: VirtualContributorPlatformSettings!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """Prompt graph definition for this Virtual Contributor."""
   promptGraphDefinition: PromptGraphDefinition

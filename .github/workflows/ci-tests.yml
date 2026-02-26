@@ -1,0 +1,36 @@
+name: CI Tests
+
+on:
+  # covers push / force push to these branches
+  push:
+    branches: [develop, main]
+  # covers PRs opened against these branches
+  pull_request:
+    branches: [develop, main]
+
+jobs:
+  test:
+    runs-on: arc-runner-set
+    env:
+      # Pod: 4 CPU request / 5 CPU limit / 3 Gi memory request / 6 Gi memory limit.
+      # 4 Gi heap leaves ~2 Gi for native allocations, worker thread stacks, and OS.
+      NODE_OPTIONS: "--max-old-space-size=4096"
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-node@v6.2.0
+        with:
+          node-version: '22.22.0'
+
+      - name: Enable Corepack
+        run: corepack enable
+
+      - name: Install pnpm
+        run: corepack prepare pnpm@10.17.1 --activate
+
+      - name: Install dependencies
+        run: pnpm install --frozen-lockfile
+
+      - name: Run tests
+        timeout-minutes: 10
+        run: pnpm run test:ci:no:coverage
