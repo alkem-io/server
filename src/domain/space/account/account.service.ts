@@ -9,9 +9,9 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { IRoleSet } from '@domain/access/role-set';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
