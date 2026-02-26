@@ -81,8 +81,7 @@
   - `schema-baseline.yml` runs on merges to `develop`, regenerates the baseline snapshot, uploads diff artifacts, and raises a signed pull request with the refreshed `schema-baseline.graphql` when it detects changes (falling back to CODEOWNER notification on failure).
   - `build-release-docker-hub.yml` builds and publishes Docker images (Node 22 + pnpm caches).
   - `build-deploy-k8s-*.yml` target dev/sandbox/test Hetzner clusters after container build.
-  - `trigger-e2e-tests.yml` dispatches downstream full-stack tests.
-- Legacy Travis badge remains in README; GitHub Actions are the authoritative CI. Expect schema gate + build workflows to run on PRs touching `src/**`, schema artifacts, or package manifests.
+- Expect schema gate + build workflows to run on PRs touching `src/**`, schema artifacts, or package manifests.
 
 ## Operational Tips
 
