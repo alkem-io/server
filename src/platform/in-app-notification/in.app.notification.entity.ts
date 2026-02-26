@@ -209,7 +209,7 @@ export class InAppNotification
   @ManyToOne(() => Actor, {
     eager: false,
     cascade: false,
-    onDelete: 'SET NULL',
+    onDelete: 'CASCADE',
   })
   @JoinColumn({ name: 'contributorActorId' })
   contributorActor?: Actor;
