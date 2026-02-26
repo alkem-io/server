@@ -50,10 +50,8 @@ export class UserAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     const user = await this.userLookupService.getUserByIdOrFail(userID, {
       relations: {
-        actor: {
-          authorization: true,
-          profile: { authorization: true },
-        },
+        authorization: true,
+        profile: { authorization: true },
         storageAggregator: {
           authorization: true,
           directStorage: { authorization: true },

@@ -53,7 +53,7 @@ export class AdminLicensingService {
       licensePlanData.spaceID,
       {
         relations: {
-          actor: { credentials: true },
+          credentials: true,
         },
       }
     );
@@ -92,7 +92,7 @@ export class AdminLicensingService {
       licensePlanData.spaceID,
       {
         relations: {
-          actor: { credentials: true },
+          credentials: true,
         },
       }
     );
@@ -130,7 +130,7 @@ export class AdminLicensingService {
       licensePlanData.accountID,
       {
         relations: {
-          actor: { credentials: true },
+          credentials: true,
         },
       }
     );
@@ -169,7 +169,7 @@ export class AdminLicensingService {
       licensePlanData.accountID,
       {
         relations: {
-          actor: { credentials: true },
+          credentials: true,
         },
       }
     );

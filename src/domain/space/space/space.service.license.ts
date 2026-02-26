@@ -31,7 +31,7 @@ export class SpaceLicenseService {
   ): Promise<ILicense[]> {
     const space = await this.spaceService.getSpaceOrFail(spaceID, {
       relations: {
-        actor: { credentials: true },
+        credentials: true,
         subspaces: true,
         license: {
           entitlements: true,

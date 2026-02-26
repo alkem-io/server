@@ -108,9 +108,7 @@ export class AccountHostService {
         ],
       });
 
-      // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-      // reliably set FK columns, so we pre-save children explicitly.
-      await mgr.save((account as Account).actor!);
+      // CTI handles multi-table saves automatically, just save children that need pre-saving
       account.license = await mgr.save(account.license);
       return await mgr.save(account);
     };

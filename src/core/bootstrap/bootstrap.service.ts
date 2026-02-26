@@ -466,7 +466,7 @@ export class BootstrapService {
     const adminUserEmail = 'admin@alkem.io';
     const adminUser = await this.userService.getUserByEmail(adminUserEmail, {
       relations: {
-        actor: { credentials: true },
+        credentials: true,
       },
     });
     if (!adminUser) {

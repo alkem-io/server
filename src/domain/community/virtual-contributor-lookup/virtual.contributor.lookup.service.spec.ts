@@ -168,11 +168,9 @@ describe('VirtualActorLookupService', () => {
         expect.anything(),
         expect.objectContaining({
           where: {
-            actor: {
-              credentials: {
-                type: 'space-admin',
-                resourceID: '',
-              },
+            credentials: {
+              type: 'space-admin',
+              resourceID: '',
             },
           },
         })

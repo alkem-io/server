@@ -169,9 +169,7 @@ export class OrganizationService {
         );
         organization.accountID = account.id;
 
-        // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-        // reliably set FK columns, so we pre-save Actor explicitly.
-        await mgr.save((organization as Organization).actor!);
+        // CTI handles multi-table saves automatically — no need to save actor separately.
         return await mgr.save(organization as Organization);
       }
     );
@@ -193,7 +191,7 @@ export class OrganizationService {
     organization = await this.getOrganizationOrFail(organization.id, {
       relations: {
         roleSet: true,
-        actor: { profile: true },
+        profile: true,
       },
     });
     if (!organization.roleSet || !organization.profile) {
@@ -263,7 +261,7 @@ export class OrganizationService {
 
   async checkNameIdOrFail(nameID: string) {
     const organizationCount = await this.organizationRepository.count({
-      where: { actor: { nameID: nameID } },
+      where: { nameID: nameID },
     });
     if (organizationCount >= 1)
       throw new ValidationException(
@@ -283,10 +281,8 @@ export class OrganizationService {
       return;
     }
     const organizationCount = await this.organizationRepository.countBy({
-      actor: {
-        profile: {
-          displayName: newDisplayName,
-        },
+      profile: {
+        displayName: newDisplayName,
       },
     });
     if (organizationCount >= 1)
@@ -311,7 +307,7 @@ export class OrganizationService {
     organizationData: UpdateOrganizationInput
   ): Promise<IOrganization> {
     const organization = await this.getOrganizationOrFail(organizationData.ID, {
-      relations: { actor: { profile: true } },
+      relations: { profile: true },
     });
 
     await this.checkDisplayNameOrFail(
@@ -352,7 +348,7 @@ export class OrganizationService {
     const orgID = deleteData.ID;
     const organization = await this.getOrganizationOrFail(orgID, {
       relations: {
-        actor: { profile: true },
+        profile: true,
         verification: true,
         groups: true,
         storageAggregator: true,
@@ -462,8 +458,7 @@ export class OrganizationService {
     if (credentialsFilter) {
       organizations = await this.organizationRepository
         .createQueryBuilder('organization')
-        .leftJoin('organization.actor', 'actor')
-        .leftJoinAndSelect('actor.credentials', 'credential')
+        .leftJoinAndSelect('organization.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -482,8 +477,7 @@ export class OrganizationService {
     status?: OrganizationVerificationEnum
   ): Promise<IPaginatedType<IOrganization>> {
     const qb = this.organizationRepository.createQueryBuilder('organization');
-    qb.leftJoin('organization.actor', 'actor');
-    qb.leftJoinAndSelect('actor.authorization', 'authorization_policy');
+    qb.leftJoinAndSelect('organization.authorization', 'authorization_policy');
 
     if (status) {
       qb.leftJoin('organization.verification', 'verification').where(

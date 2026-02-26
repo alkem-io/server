@@ -69,7 +69,7 @@ export class ActorContextService {
     const user = await this.entityManager.findOneOrFail(User, {
       where: { id: userId },
       relations: {
-        actor: { credentials: true },
+        credentials: true,
       },
     });
 

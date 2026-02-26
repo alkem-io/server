@@ -183,9 +183,7 @@ export class UserService {
       );
       user.accountID = account.id;
 
-      // TypeORM's cascade doesn't reliably set FK columns on the parent entity,
-      // so we pre-save children explicitly within the transaction.
-      await mgr.save((user as User).actor!);
+      // CTI handles multi-table saves automatically — no need to save actor separately.
       user.settings = await mgr.save(user.settings);
       return await mgr.save(user as User);
     });
@@ -400,7 +398,7 @@ export class UserService {
 
   private async isUserNameIdAvailableOrFail(nameID: string) {
     const userCount = await this.userRepository.count({
-      where: { actor: { nameID: nameID } },
+      where: { nameID: nameID },
     });
     if (userCount != 0)
       throw new ValidationException(
@@ -413,7 +411,7 @@ export class UserService {
     const userID = deleteData.ID;
     const user = await this.getUserByIdOrFail(userID, {
       relations: {
-        actor: { profile: true },
+        profile: true,
         storageAggregator: true,
         settings: true,
       },
@@ -530,11 +528,10 @@ export class UserService {
     const credentialsFilter = args.filter?.credentials;
     let users: User[] = [];
     if (credentialsFilter) {
-      // User extends Actor which has the credentials relationship
+      // User extends Actor which has the credentials relationship directly
       users = await this.userRepository
         .createQueryBuilder('user')
-        .leftJoin('user.actor', 'actor')
-        .leftJoinAndSelect('actor.credentials', 'credential')
+        .leftJoinAndSelect('user.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -559,8 +556,7 @@ export class UserService {
     const qb = this.userRepository.createQueryBuilder('user');
 
     if (withTags !== undefined) {
-      qb.leftJoin('user.actor', 'actor')
-        .leftJoin('actor.profile', 'profile')
+      qb.leftJoin('user.profile', 'profile')
         .leftJoin('tagset', 'tagset', 'profile.id = tagset.profileId')
         // cannot use object or operators here
         // because typeorm cannot construct the query properly
@@ -587,8 +583,7 @@ export class UserService {
     const qb = this.userRepository.createQueryBuilder('user').select();
 
     if (entryRoleCredentials.parentRoleSetRole) {
-      qb.leftJoin('user.actor', 'actor')
-        .leftJoin('actor.credentials', 'credential')
+      qb.leftJoin('user.credentials', 'credential')
         .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
@@ -629,8 +624,7 @@ export class UserService {
     const qb = this.userRepository
       .createQueryBuilder('user')
       .select()
-      .leftJoin('user.actor', 'actor')
-      .leftJoin('actor.credentials', 'credential')
+      .leftJoin('user.credentials', 'credential')
       .addSelect(['credential.type', 'credential.resourceID'])
       .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')
@@ -654,7 +648,7 @@ export class UserService {
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
     const user = await this.getUserByIdOrFail(userInput.ID, {
-      relations: { actor: { profile: true } },
+      relations: { profile: true },
     });
 
     if (userInput.nameID) {
@@ -726,7 +720,7 @@ export class UserService {
 
   async getProfile(user: IUser): Promise<IProfile> {
     const userWithProfile = await this.getUserByIdOrFail(user.id, {
-      relations: { actor: { profile: true } },
+      relations: { profile: true },
     });
     const profile = userWithProfile.profile;
     if (!profile)

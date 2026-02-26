@@ -182,9 +182,6 @@ export class VirtualContributorService {
         );
         virtualContributor.aiPersonaID = aiPersona.id;
 
-        // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-        // reliably set FK columns, so we pre-save Actor explicitly.
-        await mgr.save((virtualContributor as VirtualContributor).actor!);
         return await mgr.save(virtualContributor as VirtualContributor);
       });
 
@@ -256,7 +253,7 @@ export class VirtualContributorService {
 
   private async checkNameIdOrFail(nameID: string) {
     const virtualCount = await this.virtualContributorRepository.count({
-      where: { actor: { nameID: nameID } },
+      where: { nameID: nameID },
     });
     if (virtualCount >= 1)
       throw new ValidationException(
@@ -294,7 +291,7 @@ export class VirtualContributorService {
       virtualContributorData.ID,
       {
         relations: {
-          actor: { profile: true },
+          profile: true,
           knowledgeBase: {
             profile: true,
           },
@@ -375,7 +372,7 @@ export class VirtualContributorService {
       virtualContributorID,
       {
         relations: {
-          actor: { profile: true },
+          profile: true,
           knowledgeBase: true,
         },
       }
@@ -458,7 +455,7 @@ export class VirtualContributorService {
     const virtualContributor = await this.getVirtualContributorByIdOrFail(
       virtualID,
       {
-        relations: { actor: { credentials: true } },
+        relations: { credentials: true },
       }
     );
 
@@ -489,10 +486,8 @@ export class VirtualContributorService {
       virtualContributorID,
       {
         relations: {
-          actor: {
-            profile: {
-              storageBucket: true,
-            },
+          profile: {
+            storageBucket: true,
           },
         },
       }
@@ -570,8 +565,7 @@ export class VirtualContributorService {
     if (credentialsFilter) {
       virtualContributors = await this.virtualContributorRepository
         .createQueryBuilder('virtual_contributor')
-        .leftJoin('virtual_contributor.actor', 'actor')
-        .leftJoinAndSelect('actor.credentials', 'credential')
+        .leftJoinAndSelect('virtual_contributor.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -640,8 +634,7 @@ export class VirtualContributorService {
     const virtualContributorMatchesCount =
       await this.virtualContributorRepository
         .createQueryBuilder('virtual')
-        .leftJoin('virtual.actor', 'actor')
-        .leftJoinAndSelect('actor.credentials', 'credential')
+        .leftJoinAndSelect('virtual.credentials', 'credential')
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
         .setParameters({

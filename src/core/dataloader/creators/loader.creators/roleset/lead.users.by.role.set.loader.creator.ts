@@ -36,22 +36,20 @@ export class LeadUsersByRoleSetLoaderCreator
     const whereConditions = keys.map(key => {
       const [type, resourceID] = key.split('|');
       return {
-        actor: {
-          credentials: { type, resourceID: resourceID || '' },
-        },
+        credentials: { type, resourceID: resourceID || '' },
       };
     });
 
     const users = await this.manager.find(User, {
       where: whereConditions,
-      relations: { actor: { credentials: true } },
+      relations: { credentials: true },
     });
 
     // Group users back by their matching composite key
     return keys.map(key => {
       const [type, resourceID] = key.split('|');
       return users.filter(user =>
-        user.actor?.credentials?.some(
+        user.credentials?.some(
           cred => cred.type === type && cred.resourceID === resourceID
         )
       );
