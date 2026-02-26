@@ -91,7 +91,10 @@ export class VirtualContributorLookupService {
     const virtualContributor: IVirtualContributor | null =
       await this.entityManager.findOne(VirtualContributor, {
         ...options,
-        where: { ...options?.where, nameID: virtualContributorNameID },
+        where: {
+          ...options?.where,
+          actor: { nameID: virtualContributorNameID },
+        },
       });
     if (!virtualContributor)
       throw new EntityNotFoundException(

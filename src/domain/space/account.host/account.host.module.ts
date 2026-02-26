@@ -1,5 +1,6 @@
 import { ActorModule } from '@domain/actor/actor/actor.module';
 import { LicenseModule } from '@domain/common/license/license.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/storage.aggregator.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -14,6 +15,7 @@ import { AccountHostService } from './account.host.service';
     LicenseIssuerModule,
     LicensingFrameworkModule,
     LicenseModule,
+    ProfileModule,
     StorageAggregatorModule,
     TypeOrmModule.forFeature([Account]),
   ],

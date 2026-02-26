@@ -1,6 +1,7 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
 import { ActorType } from '@common/enums/actor.type';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { RoleName } from '@common/enums/role.name';
@@ -49,7 +50,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { UpdateOrganizationSettingsEntityInput } from '../organization-settings/dto/organization.settings.dto.update';
 import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
 import { OrganizationSettingsService } from '../organization-settings/organization.settings.service';
@@ -64,6 +65,7 @@ import { IOrganization } from './organization.interface';
 @Injectable()
 export class OrganizationService {
   constructor(
+    private actorService: ActorService,
     private accountLookupService: AccountLookupService,
     private accountHostService: AccountHostService,
     private authorizationPolicyService: AuthorizationPolicyService,
@@ -98,6 +100,9 @@ export class OrganizationService {
     );
 
     let organization: IOrganization = Organization.create(organizationData);
+    // nameID is a getter/setter delegating to actor, not a @Column on Organization,
+    // so TypeORM's create() won't copy it from the input — set it explicitly.
+    organization.nameID = organizationData.nameID!;
     organization.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.ORGANIZATION
     );
@@ -112,50 +117,60 @@ export class OrganizationService {
       await this.roleSetService.createRoleSet(roleSetInput);
     organization.settings = this.getDefaultOrganizationSettings();
 
-    organization.storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator(
-        StorageAggregatorType.ORGANIZATION
-      );
-
     organizationData.profileData.referencesData =
       this.getDefaultContributorProfileReferences();
 
-    organization.profile = await this.profileService.createProfile(
-      organizationData.profileData,
-      ProfileType.ORGANIZATION,
-      organization.storageAggregator
-    );
-    await this.profileService.addOrUpdateTagsetOnProfile(organization.profile, {
-      name: TagsetReservedName.KEYWORDS,
-      tags: [],
-    });
-    await this.profileService.addOrUpdateTagsetOnProfile(organization.profile, {
-      name: TagsetReservedName.CAPABILITIES,
-      tags: [],
-    });
-
-    await this.profileAvatarService.addAvatarVisualToProfile(
-      organization.profile,
-      organizationData.profileData,
-      undefined,
-      organizationData.profileData.displayName
-    );
-
     organization.groups = [];
-
-    const account = await this.accountHostService.createAccount(
-      AccountType.ORGANIZATION
-    );
-    organization.accountID = account.id;
 
     // Cache some of the contents before saving
     const roleSetBeforeSave = organization.roleSet;
 
-    // Save Actor and Organization in a single transaction.
-    // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-    // reliably set FK columns, so we pre-save Actor explicitly.
+    // Single transaction: all DB writes (StorageAggregator, Account, Actor,
+    // Organization) are atomic — no orphans if any step fails.
     organization = await this.organizationRepository.manager.transaction(
       async mgr => {
+        organization.storageAggregator =
+          await this.storageAggregatorService.createStorageAggregator(
+            StorageAggregatorType.ORGANIZATION,
+            undefined,
+            mgr
+          );
+
+        organization.profile = await this.profileService.createProfile(
+          organizationData.profileData,
+          ProfileType.ORGANIZATION,
+          organization.storageAggregator
+        );
+        await this.profileService.addOrUpdateTagsetOnProfile(
+          organization.profile,
+          {
+            name: TagsetReservedName.KEYWORDS,
+            tags: [],
+          }
+        );
+        await this.profileService.addOrUpdateTagsetOnProfile(
+          organization.profile,
+          {
+            name: TagsetReservedName.CAPABILITIES,
+            tags: [],
+          }
+        );
+
+        await this.profileAvatarService.addAvatarVisualToProfile(
+          organization.profile,
+          organizationData.profileData,
+          undefined,
+          organizationData.profileData.displayName
+        );
+
+        const account = await this.accountHostService.createAccount(
+          AccountType.ORGANIZATION,
+          mgr
+        );
+        organization.accountID = account.id;
+
+        // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+        // reliably set FK columns, so we pre-save Actor explicitly.
         await mgr.save((organization as Organization).actor!);
         return await mgr.save(organization as Organization);
       }
@@ -247,8 +262,8 @@ export class OrganizationService {
   }
 
   async checkNameIdOrFail(nameID: string) {
-    const organizationCount = await this.organizationRepository.countBy({
-      nameID: nameID,
+    const organizationCount = await this.organizationRepository.count({
+      where: { actor: { nameID: nameID } },
     });
     if (organizationCount >= 1)
       throw new ValidationException(
@@ -395,11 +410,12 @@ export class OrganizationService {
 
     await this.roleSetService.removeRoleSetOrFail(organization.roleSet.id);
 
-    const result = await this.organizationRepository.remove(
-      organization as Organization
-    );
-    result.id = orgID;
-    return result;
+    // Delete actor — cascades to delete the organization row via FK (organization.id → actor.id ON DELETE CASCADE).
+    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+    await this.actorService.deleteActorById(orgID);
+
+    organization.id = orgID;
+    return organization;
   }
 
   async getOrganization(
@@ -446,7 +462,8 @@ export class OrganizationService {
     if (credentialsFilter) {
       organizations = await this.organizationRepository
         .createQueryBuilder('organization')
-        .leftJoinAndSelect('organization.actor.credentials', 'credential')
+        .leftJoin('organization.actor', 'actor')
+        .leftJoinAndSelect('actor.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -465,10 +482,8 @@ export class OrganizationService {
     status?: OrganizationVerificationEnum
   ): Promise<IPaginatedType<IOrganization>> {
     const qb = this.organizationRepository.createQueryBuilder('organization');
-    qb.leftJoinAndSelect(
-      'organization.actor.authorization',
-      'authorization_policy'
-    );
+    qb.leftJoin('organization.actor', 'actor');
+    qb.leftJoinAndSelect('actor.authorization', 'authorization_policy');
 
     if (status) {
       qb.leftJoin('organization.verification', 'verification').where(

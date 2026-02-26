@@ -32,7 +32,7 @@ describe('VirtualContributorService', () => {
     findOne: Mock;
     save: Mock;
     remove: Mock;
-    countBy: Mock;
+    count: Mock;
     find: Mock;
     createQueryBuilder: Mock;
   };
@@ -506,7 +506,7 @@ describe('VirtualContributorService', () => {
         knowledgeBase: { profile: { description: '' } },
       };
       repository.findOne.mockResolvedValue(mockVC);
-      repository.countBy.mockResolvedValue(0);
+      repository.count.mockResolvedValue(0);
       profileService.updateProfile.mockResolvedValue(mockProfile);
       repository.save.mockImplementation((entity: any) =>
         Promise.resolve(entity)
@@ -531,7 +531,7 @@ describe('VirtualContributorService', () => {
         knowledgeBase: { profile: {} },
       };
       repository.findOne.mockResolvedValue(mockVC);
-      repository.countBy.mockResolvedValue(1);
+      repository.count.mockResolvedValue(1);
 
       await expect(
         service.updateVirtualContributor({
@@ -558,7 +558,7 @@ describe('VirtualContributorService', () => {
         nameID: 'same-name',
       } as any);
 
-      expect(repository.countBy).not.toHaveBeenCalled();
+      expect(repository.count).not.toHaveBeenCalled();
     });
 
     it('should update listedInStore when provided as a boolean', async () => {

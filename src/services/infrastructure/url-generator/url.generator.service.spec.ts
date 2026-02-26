@@ -117,9 +117,8 @@ describe('UrlGeneratorService', () => {
   describe('createUrlForContributor', () => {
     it('should create URL with user path when contributor is a User instance', () => {
       const userContributor = Object.create(User.prototype);
-      userContributor.nameID = 'john-doe';
       userContributor.id = 'user-1';
-      userContributor.actor = { type: ActorType.USER };
+      userContributor.actor = { type: ActorType.USER, nameID: 'john-doe' };
 
       const result = service.createUrlForContributor(userContributor);
 
@@ -128,9 +127,11 @@ describe('UrlGeneratorService', () => {
 
     it('should create URL with organization path when contributor is an Organization instance', () => {
       const orgContributor = Object.create(Organization.prototype);
-      orgContributor.nameID = 'acme-corp';
       orgContributor.id = 'org-1';
-      orgContributor.actor = { type: ActorType.ORGANIZATION };
+      orgContributor.actor = {
+        type: ActorType.ORGANIZATION,
+        nameID: 'acme-corp',
+      };
 
       const result = service.createUrlForContributor(orgContributor);
 
@@ -139,9 +140,11 @@ describe('UrlGeneratorService', () => {
 
     it('should create URL with virtual contributor path when contributor is a VirtualContributor', () => {
       const vcContributor = Object.create(VirtualContributor.prototype);
-      vcContributor.nameID = 'my-vc';
       vcContributor.id = 'vc-1';
-      vcContributor.actor = { type: ActorType.VIRTUAL_CONTRIBUTOR };
+      vcContributor.actor = {
+        type: ActorType.VIRTUAL_CONTRIBUTOR,
+        nameID: 'my-vc',
+      };
 
       const result = service.createUrlForContributor(vcContributor);
 
