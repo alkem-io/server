@@ -121,6 +121,15 @@ const DISCOVERY_QUERIES = [
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
 
+/**
+ * Strip single-line GraphQL comments (# to end of line).
+ * This prevents regex-based parsers from matching keywords inside comments
+ * (e.g. a commented-out `# fragment Foo on Bar {` or `# query shouldn't`).
+ */
+function stripGraphQLComments(source) {
+  return source.replace(/#[^\n]*/g, '');
+}
+
 function loadEnvFile(path) {
   const result = {};
   if (!existsSync(path)) return result;
@@ -220,12 +229,17 @@ function buildFragmentMap(dir) {
 
   for (const file of files) {
     const content = readFileSync(file, 'utf8');
+    // Strip comments so we don't match fragment definitions inside comments
+    // (e.g. a fully commented-out `# fragment Foo on Bar { ... }`)
+    const stripped = stripGraphQLComments(content);
     let match;
     fragmentRegex.lastIndex = 0;
-    while ((match = fragmentRegex.exec(content)) !== null) {
+    while ((match = fragmentRegex.exec(stripped)) !== null) {
       const name = match[1];
       if (!fragments.has(name)) {
-        fragments.set(name, content);
+        // Store stripped content so extractFragmentDef brace-matching
+        // is not confused by braces inside comments
+        fragments.set(name, stripped);
       }
     }
   }
@@ -339,12 +353,15 @@ function findGraphqlFiles(dir) {
  */
 function parseOperations(filePath) {
   const content = readFileSync(filePath, 'utf8');
+  // Strip comments to avoid matching keywords inside comments
+  // (e.g. `# This query shouldn't be needed` matching as operation "shouldn")
+  const stripped = stripGraphQLComments(content);
   const ops = [];
   // Match the start of operation definitions (type + name)
   const opStartRegex = /(query|mutation|subscription)\s+(\w+)/g;
   let match;
 
-  while ((match = opStartRegex.exec(content)) !== null) {
+  while ((match = opStartRegex.exec(stripped)) !== null) {
     const type = match[1];
     const name = match[2];
     let varString = '';
@@ -352,18 +369,18 @@ function parseOperations(filePath) {
     // Look at what follows the name — could be `(` (vars) or `{` (body) or whitespace
     let pos = match.index + match[0].length;
     // Skip whitespace
-    while (pos < content.length && /\s/.test(content[pos])) pos++;
+    while (pos < stripped.length && /\s/.test(stripped[pos])) pos++;
 
-    if (content[pos] === '(') {
+    if (stripped[pos] === '(') {
       // Extract everything between matching parens (handles multiline)
       let depth = 0;
       const varStart = pos + 1;
-      for (let i = pos; i < content.length; i++) {
-        if (content[i] === '(') depth++;
-        if (content[i] === ')') {
+      for (let i = pos; i < stripped.length; i++) {
+        if (stripped[i] === '(') depth++;
+        if (stripped[i] === ')') {
           depth--;
           if (depth === 0) {
-            varString = content.slice(varStart, i);
+            varString = stripped.slice(varStart, i);
             break;
           }
         }
@@ -371,13 +388,13 @@ function parseOperations(filePath) {
     }
 
     const variables = parseVariables(varString);
-    ops.push({ name, type, variables, filePath, rawText: content });
+    ops.push({ name, type, variables, filePath, rawText: stripped });
   }
 
   // Handle anonymous queries (no operation name)
-  if (ops.length === 0 && content.trim().startsWith('{')) {
+  if (ops.length === 0 && stripped.trim().startsWith('{')) {
     const name = basename(filePath, '.graphql');
-    ops.push({ name, type: 'query', variables: [], filePath, rawText: content });
+    ops.push({ name, type: 'query', variables: [], filePath, rawText: stripped });
   }
 
   return ops;

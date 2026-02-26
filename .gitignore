@@ -51,6 +51,8 @@ subscriptions.log
 .claude/pipeline/fixes/
 .claude/pipeline/reviews/
 .claude/pipeline/signals/
+.claude/pipeline/.last-cycle
+.claude/agent-memory/
 
 # Overmind socket
 .overmind.sock
