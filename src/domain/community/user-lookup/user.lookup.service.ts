@@ -10,7 +10,13 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindManyOptions, FindOneOptions, In } from 'typeorm';
+import {
+  EntityManager,
+  FindManyOptions,
+  FindOneOptions,
+  FindOptionsRelations,
+  In,
+} from 'typeorm';
 import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';
 
@@ -173,33 +179,28 @@ export class UserLookupService {
       },
     }));
 
+    const optionsRelations: FindOptionsRelations<User> | undefined =
+      options?.relations as FindOptionsRelations<User> | undefined;
+
+    const agentSubRelations =
+      typeof optionsRelations?.agent === 'object'
+        ? optionsRelations.agent
+        : undefined;
+
     const findOptions: FindManyOptions<User> = {
+      ...options,
       where: whereConditions,
       relations: {
+        ...optionsRelations,
         agent: {
           credentials: true,
+          ...agentSubRelations,
         },
-        ...options?.relations,
       },
-      take: limit,
-      ...options,
+      take: limit ?? options?.take,
     };
 
-    // Merge relations properly to avoid overriding the agent.credentials relation
-    if (options?.relations) {
-      findOptions.relations = {
-        ...findOptions.relations,
-        ...options.relations,
-        agent: {
-          credentials: true,
-          ...(options.relations as any)?.agent,
-        },
-      };
-    }
-
-    const users = await this.entityManager.find(User, findOptions);
-
-    return users;
+    return this.entityManager.find(User, findOptions);
   }
 
   public async countUsersWithCredentials(

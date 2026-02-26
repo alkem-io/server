@@ -248,8 +248,7 @@ export class ConversionResolverMutations {
     for (const callout of space.collaboration.calloutsSet.callouts) {
       await this.calloutTransferService.transferCallout(
         callout,
-        targetCalloutsSet,
-        agentInfo
+        targetCalloutsSet
       );
     }
 

@@ -146,9 +146,10 @@ describe('SpaceAboutResolverFields', () => {
       const spaceAbout = makeSpaceAbout('about-1');
       const roleSet = { id: 'rs-1' };
       const community = { id: 'comm-1', roleSet } as unknown as ICommunity;
+      const space = { id: 'space-1', community } as unknown as ISpace;
       const loader = {
-        load: vi.fn().mockResolvedValue(community),
-      } as unknown as ILoader<ICommunity | null>;
+        load: vi.fn().mockResolvedValue(space),
+      } as unknown as ILoader<ISpace | null>;
 
       const result = await resolver.membership(spaceAbout, loader);
 
@@ -165,7 +166,7 @@ describe('SpaceAboutResolverFields', () => {
       } as unknown as ICommunity;
       const loader = {
         load: vi.fn().mockResolvedValue(null),
-      } as unknown as ILoader<ICommunity | null>;
+      } as unknown as ILoader<ISpace | null>;
 
       spaceAboutService.getCommunityWithRoleSet.mockResolvedValue(
         fallbackCommunity
@@ -182,15 +183,45 @@ describe('SpaceAboutResolverFields', () => {
       );
     });
 
+    it('should fall back to service when space has no community', async () => {
+      const spaceAbout = makeSpaceAbout('about-no-comm');
+      const space = {
+        id: 'space-no-comm',
+        community: undefined,
+      } as unknown as ISpace;
+      const loader = {
+        load: vi.fn().mockResolvedValue(space),
+      } as unknown as ILoader<ISpace | null>;
+
+      const roleSet = { id: 'rs-fallback' };
+      const fallbackCommunity = {
+        id: 'comm-fb',
+        roleSet,
+      } as unknown as ICommunity;
+      spaceAboutService.getCommunityWithRoleSet.mockResolvedValue(
+        fallbackCommunity
+      );
+
+      const result = await resolver.membership(spaceAbout, loader);
+
+      expect(result).toEqual({
+        community: fallbackCommunity,
+        roleSet,
+      });
+      expect(spaceAboutService.getCommunityWithRoleSet).toHaveBeenCalledWith(
+        'about-no-comm'
+      );
+    });
+
     it('should fall back to service when community has no roleSet', async () => {
       const spaceAbout = makeSpaceAbout('about-3');
-      const communityNoRoleSet = {
-        id: 'comm-no-rs',
-        roleSet: undefined,
-      } as unknown as ICommunity;
+      const space = {
+        id: 'space-3',
+        community: { id: 'comm-no-rs', roleSet: undefined },
+      } as unknown as ISpace;
       const loader = {
-        load: vi.fn().mockResolvedValue(communityNoRoleSet),
-      } as unknown as ILoader<ICommunity | null>;
+        load: vi.fn().mockResolvedValue(space),
+      } as unknown as ILoader<ISpace | null>;
 
       const roleSet = { id: 'rs-service' };
       const serviceCommunity = {

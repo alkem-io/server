@@ -5,7 +5,6 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { GraphqlGuard } from '@core/authorization';
 import { ProfileLoaderCreator } from '@core/dataloader/creators/loader.creators/profile.loader.creator';
 import { SpaceBySpaceAboutIdLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.by.space.about.id.loader.creator';
-import { SpaceCommunityWithRoleSetLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.community.with.roleset.loader.creator';
 import { SpaceMetricsLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.metrics.loader.creator';
 import { SpaceProviderLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.provider.loader.creator';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
@@ -110,10 +109,11 @@ export class SpaceAboutResolverFields {
   })
   async membership(
     @Parent() spaceAbout: ISpaceAbout,
-    @Loader(SpaceCommunityWithRoleSetLoaderCreator)
-    loader: ILoader<ICommunity | null>
+    @Loader(SpaceBySpaceAboutIdLoaderCreator)
+    loader: ILoader<ISpace | null>
   ): Promise<SpaceAboutMembership> {
-    const community = await loader.load(spaceAbout.id);
+    const space = await loader.load(spaceAbout.id);
+    const community = space?.community;
     if (!community || !community.roleSet) {
       // Fallback to the original method if the DataLoader didn't find a space
       const fallbackCommunity =
