@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { ILocation } from '@domain/common/location/location.interface';
+import { convertMarkdownToPlainText } from '@library/markdown';
 import { ICalendarEvent } from './event.interface';
 
 export interface CalendarEventCalendarData {
@@ -26,7 +27,10 @@ export const generateCalendarUrls = (
   icsRestUrl: string
 ): CalendarUrls => {
   const encodedTitle = encodeURIComponent(event.title);
-  const encodedDescription = encodeURIComponent(event.description ?? '');
+  const plainTextDescription = convertMarkdownToPlainText(
+    event.description ?? ''
+  );
+  const encodedDescription = encodeURIComponent(plainTextDescription);
   const encodedLocation = encodeURIComponent(event.location ?? '');
   const dates = formatDatesForCalendar(event.startDate, event.endDate);
 
