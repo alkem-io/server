@@ -1,7 +1,7 @@
 import { RoleName } from '@common/enums/role.name';
 import { DataLoaderCreator } from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { Credential } from '@domain/agent/credential/credential.entity';
+import { Credential } from '@domain/actor/credential/credential.entity';
 import { NVP } from '@domain/common/nvp/nvp.entity';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { Space } from '@domain/space/space/space.entity';

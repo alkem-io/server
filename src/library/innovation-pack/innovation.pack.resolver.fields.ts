@@ -3,12 +3,12 @@ import { GraphqlGuard } from '@core/authorization';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { ITemplatesSet } from '@domain/template/templates-set';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@src/common/decorators';
+import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
 import { InnovationPack } from './innovation.pack.entity';
 import { IInnovationPack } from './innovation.pack.interface';
 import { InnovationPackService } from './innovation.pack.service';
@@ -29,7 +29,7 @@ export class InnovationPackResolverFields {
     return loader.load(pack.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('templatesSet', () => ITemplatesSet, {
     nullable: true,
@@ -43,13 +43,11 @@ export class InnovationPackResolverFields {
     );
   }
 
-  @ResolveField('provider', () => IContributor, {
+  @ResolveField('provider', () => IActor, {
     nullable: false,
     description: 'The InnovationPack provider.',
   })
-  async provider(
-    @Parent() innovationPack: IInnovationPack
-  ): Promise<IContributor> {
+  async provider(@Parent() innovationPack: IInnovationPack): Promise<IActor> {
     return await this.innovationPackService.getProvider(innovationPack.id);
   }
 }

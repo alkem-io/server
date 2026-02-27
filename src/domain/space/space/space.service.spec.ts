@@ -1,5 +1,6 @@
 import { AuthorizationPrivilege, ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
@@ -502,6 +503,7 @@ const getSubspacesMock = (
   const result: Space[] = [];
   for (let i = 0; i < count; i++) {
     result.push({
+      type: ActorType.SPACE,
       id: `${spaceId}.${i}`,
       rowId: i,
       nameID: `challenge-${spaceId}.${i}`,
@@ -511,16 +513,34 @@ const getSubspacesMock = (
       platformRolesAccess: {
         roles: [],
       },
+      profile: {
+        id: `profile-space-${spaceId}.${i}`,
+        displayName: `Challenge ${spaceId}.${i}`,
+        type: ProfileType.SPACE,
+        ...getEntityMock<Profile>(),
+      },
       account: {
         id: `account-${spaceId}.${i}`,
+        nameID: `account-nameid-${spaceId}.${i}`,
+        accountType: AccountType.ORGANIZATION,
         virtualContributors: [],
         innovationHubs: [],
         innovationPacks: [],
         spaces: [],
         externalSubscriptionID: '',
-        type: AccountType.ORGANIZATION,
+        type: ActorType.ORGANIZATION,
+        authorization: getAuthorizationPolicyMock(
+          `account-auth-${spaceId}.${i}`
+        ),
+        credentials: [],
         ...getEntityMock<Account>(),
         baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
+        profile: {
+          id: `profile-account-${spaceId}.${i}`,
+          displayName: `Account ${spaceId}.${i}`,
+          type: ProfileType.ACCOUNT,
+          ...getEntityMock<Profile>(),
+        },
       },
       level: SpaceLevel.L1,
       visibility: SpaceVisibility.ACTIVE,
@@ -617,6 +637,8 @@ const getSubspacesMock = (
         `${spaceId}.${i}`,
         subsubspaceCount[i] ?? 0
       ),
+      authorization: getAuthorizationPolicyMock(`space-auth-${spaceId}.${i}`),
+      credentials: [],
       ...getEntityMock<Space>(),
     });
   }
@@ -627,6 +649,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
   const result: Space[] = [];
   for (let i = 0; i < count; i++) {
     result.push({
+      type: ActorType.SPACE,
       id: `${subsubspaceId}.${i}`,
       rowId: i,
       nameID: `subsubspace-${subsubspaceId}.${i}`,
@@ -636,16 +659,34 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       platformRolesAccess: {
         roles: [],
       },
+      profile: {
+        id: `profile-space-${subsubspaceId}.${i}`,
+        displayName: `Subsubspace ${subsubspaceId}.${i}`,
+        type: ProfileType.SPACE,
+        ...getEntityMock<Profile>(),
+      },
       account: {
         id: `account-${subsubspaceId}.${i}`,
+        nameID: `account-nameid-${subsubspaceId}.${i}`,
+        accountType: AccountType.ORGANIZATION,
         virtualContributors: [],
         innovationHubs: [],
         innovationPacks: [],
         spaces: [],
         externalSubscriptionID: '',
-        type: AccountType.ORGANIZATION,
+        type: ActorType.ORGANIZATION,
+        authorization: getAuthorizationPolicyMock(
+          `account-auth-${subsubspaceId}.${i}`
+        ),
+        credentials: [],
         ...getEntityMock<Account>(),
         baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
+        profile: {
+          id: `profile-account-${subsubspaceId}.${i}`,
+          displayName: `Account ${subsubspaceId}.${i}`,
+          type: ProfileType.ACCOUNT,
+          ...getEntityMock<Profile>(),
+        },
       },
       level: SpaceLevel.L2,
       visibility: SpaceVisibility.ACTIVE,
@@ -738,6 +779,10 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
         },
         ...getEntityMock<SpaceAbout>(),
       },
+      authorization: getAuthorizationPolicyMock(
+        `space-auth-${subsubspaceId}.${i}`
+      ),
+      credentials: [],
       ...getEntityMock<Space>(),
     });
   }
@@ -758,6 +803,7 @@ const getSpaceMock = ({
   settings: ISpaceSettings;
 }): Space => {
   return {
+    type: ActorType.SPACE,
     id,
     rowId: parseInt(id),
     nameID: `space-${id}`,
@@ -766,6 +812,12 @@ const getSpaceMock = ({
     sortOrder: 0,
     platformRolesAccess: {
       roles: [],
+    },
+    profile: {
+      id: `profile-space-${id}`,
+      displayName: `Space ${id}`,
+      type: ProfileType.SPACE,
+      ...getEntityMock<Profile>(),
     },
     about: {
       id: '',
@@ -783,16 +835,27 @@ const getSpaceMock = ({
     visibility,
     account: {
       id: `account-${id}`,
+      nameID: `account-nameid-${id}`,
+      accountType: AccountType.ORGANIZATION,
       virtualContributors: [],
       innovationHubs: [],
       innovationPacks: [],
       spaces: [],
       externalSubscriptionID: '',
-      type: AccountType.ORGANIZATION,
+      type: ActorType.ORGANIZATION,
+      authorization: getAuthorizationPolicyMock(`account-auth-${id}`),
+      credentials: [],
       ...getEntityMock<Account>(),
       baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
+      profile: {
+        id: `profile-account-${id}`,
+        displayName: `Account ${id}`,
+        type: ProfileType.ACCOUNT,
+        ...getEntityMock<Profile>(),
+      },
     },
     authorization: getAuthorizationPolicyMock(`auth-${id}`),
+    credentials: [],
     subspaces: getSubspacesMock(id, challengesCount, opportunitiesCounts),
     ...getEntityMock<Space>(),
   };

@@ -1,6 +1,7 @@
 import { ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
 import { ActivityEventType } from '@common/enums/activity.event.type';
+import { ActorType } from '@common/enums/actor.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
@@ -47,6 +48,7 @@ const spaceSettings = {
 
 const createTestSpace = (id: string): ISpace => {
   return {
+    type: ActorType.SPACE,
     id,
     rowId: 1,
     nameID: 'space1',
@@ -59,6 +61,13 @@ const createTestSpace = (id: string): ISpace => {
     sortOrder: 0,
     createdDate: new Date(),
     updatedDate: new Date(),
+    profile: {
+      id: `profile-space-${id}`,
+      displayName: `Space ${id}`,
+      type: ProfileType.SPACE,
+      createdDate: new Date(),
+      updatedDate: new Date(),
+    },
     about: {
       id: '1',
       profile: {
@@ -75,13 +84,22 @@ const createTestSpace = (id: string): ISpace => {
     },
     account: {
       id: `account${id}`,
+      nameID: `account-nameid-${id}`,
+      accountType: AccountType.ORGANIZATION,
       virtualContributors: [],
       innovationHubs: [],
       innovationPacks: [],
       externalSubscriptionID: '',
       spaces: [],
-      type: AccountType.ORGANIZATION,
+      type: ActorType.ORGANIZATION,
       baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
+      profile: {
+        id: `profile-account-${id}`,
+        displayName: `Account ${id}`,
+        type: ProfileType.ACCOUNT,
+        createdDate: new Date(),
+        updatedDate: new Date(),
+      },
       createdDate: new Date(),
       updatedDate: new Date(),
     },

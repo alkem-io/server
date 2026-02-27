@@ -2,7 +2,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -386,18 +386,19 @@ describe('CalendarService', () => {
   });
 
   describe('getCalendarEvents', () => {
-    const buildAgentInfo = (overrides?: Partial<AgentInfo>): AgentInfo => {
-      const agentInfo = new AgentInfo();
-      agentInfo.userID = 'user-1';
-      agentInfo.email = 'user@example.com';
-      Object.assign(agentInfo, overrides);
-      return agentInfo;
+    const buildActorContext = (
+      overrides?: Partial<ActorContext>
+    ): ActorContext => {
+      const actorContext = new ActorContext();
+      actorContext.actorID = 'user-1';
+      Object.assign(actorContext, overrides);
+      return actorContext;
     };
 
     it('should return only events the agent has READ access to when no rootSpaceId is provided', async () => {
       // Arrange
       const calendarId = 'calendar-1';
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
       const eventWithAccess = {
         id: 'event-1',
         authorization: { id: 'auth-1' },
@@ -415,7 +416,7 @@ describe('CalendarService', () => {
       authorizationService.isAccessGranted = vi
         .fn()
         .mockImplementation(
-          (_agentInfo: AgentInfo, authorization: AuthorizationPolicy) => {
+          (_actorContext: ActorContext, authorization: AuthorizationPolicy) => {
             return authorization?.id === 'auth-1';
           }
         );
@@ -423,13 +424,16 @@ describe('CalendarService', () => {
       const inputCalendar = { id: calendarId } as ICalendar;
 
       // Act
-      const result = await service.getCalendarEvents(inputCalendar, agentInfo);
+      const result = await service.getCalendarEvents(
+        inputCalendar,
+        actorContext
+      );
 
       // Assert
       expect(result).toHaveLength(1);
       expect(result[0]).toBe(eventWithAccess);
       expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
-        agentInfo,
+        actorContext,
         eventWithAccess.authorization,
         AuthorizationPrivilege.READ
       );
@@ -438,7 +442,7 @@ describe('CalendarService', () => {
     it('should return empty array when agent has no READ access to any events', async () => {
       // Arrange
       const calendarId = 'calendar-1';
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
       const mockCalendar = {
         id: calendarId,
         events: [
@@ -453,7 +457,10 @@ describe('CalendarService', () => {
       const inputCalendar = { id: calendarId } as ICalendar;
 
       // Act
-      const result = await service.getCalendarEvents(inputCalendar, agentInfo);
+      const result = await service.getCalendarEvents(
+        inputCalendar,
+        actorContext
+      );
 
       // Assert
       expect(result).toEqual([]);
@@ -462,7 +469,7 @@ describe('CalendarService', () => {
     it('should throw EntityNotFoundException when calendar events are not initialized', async () => {
       // Arrange
       const calendarId = 'calendar-1';
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
       const mockCalendar = {
         id: calendarId,
         events: undefined,
@@ -474,7 +481,7 @@ describe('CalendarService', () => {
 
       // Act & Assert
       await expect(
-        service.getCalendarEvents(inputCalendar, agentInfo)
+        service.getCalendarEvents(inputCalendar, actorContext)
       ).rejects.toThrow(EntityNotFoundException);
     });
 
@@ -482,7 +489,7 @@ describe('CalendarService', () => {
       // Arrange
       const calendarId = 'calendar-1';
       const rootSpaceId = 'space-root';
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
       const calendarEvent = {
         id: 'event-1',
         authorization: { id: 'auth-1' },
@@ -510,7 +517,7 @@ describe('CalendarService', () => {
       // Act
       const result = await service.getCalendarEvents(
         inputCalendar,
-        agentInfo,
+        actorContext,
         rootSpaceId
       );
 
@@ -523,7 +530,7 @@ describe('CalendarService', () => {
     it('should not fetch subspace events when rootSpaceId is not provided', async () => {
       // Arrange
       const calendarId = 'calendar-1';
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
       const mockCalendar = {
         id: calendarId,
         events: [],
@@ -538,7 +545,7 @@ describe('CalendarService', () => {
       const inputCalendar = { id: calendarId } as ICalendar;
 
       // Act
-      await service.getCalendarEvents(inputCalendar, agentInfo);
+      await service.getCalendarEvents(inputCalendar, actorContext);
 
       // Assert
       expect(getSubspaceEventsSpy).not.toHaveBeenCalled();
@@ -546,14 +553,14 @@ describe('CalendarService', () => {
 
     it('should throw EntityNotFoundException when calendar does not exist', async () => {
       // Arrange
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(null);
 
       const inputCalendar = { id: 'non-existent-id' } as ICalendar;
 
       // Act & Assert
       await expect(
-        service.getCalendarEvents(inputCalendar, agentInfo)
+        service.getCalendarEvents(inputCalendar, actorContext)
       ).rejects.toThrow(EntityNotFoundException);
     });
   });
@@ -561,9 +568,8 @@ describe('CalendarService', () => {
   describe('processActivityCalendarEventCreated', () => {
     it('should emit activity event and report contribution when spaceID exists', async () => {
       // Arrange
-      const agentInfo = new AgentInfo();
-      agentInfo.userID = 'user-1';
-      agentInfo.email = 'user@example.com';
+      const actorContext = new ActorContext();
+      actorContext.actorID = 'user-1';
 
       const mockCalendar = { id: 'calendar-1' } as ICalendar;
       const mockEvent = {
@@ -581,7 +587,7 @@ describe('CalendarService', () => {
       await service.processActivityCalendarEventCreated(
         mockCalendar,
         mockEvent,
-        agentInfo
+        actorContext
       );
 
       // Assert
@@ -598,16 +604,15 @@ describe('CalendarService', () => {
         },
         {
           id: 'user-1',
-          email: 'user@example.com',
+          email: 'user-1',
         }
       );
     });
 
     it('should emit activity event but skip contribution report when spaceID is null', async () => {
       // Arrange
-      const agentInfo = new AgentInfo();
-      agentInfo.userID = 'user-1';
-      agentInfo.email = 'user@example.com';
+      const actorContext = new ActorContext();
+      actorContext.actorID = 'user-1';
 
       const mockCalendar = { id: 'calendar-1' } as ICalendar;
       const mockEvent = {
@@ -625,7 +630,7 @@ describe('CalendarService', () => {
       await service.processActivityCalendarEventCreated(
         mockCalendar,
         mockEvent,
-        agentInfo
+        actorContext
       );
 
       // Assert

@@ -21,7 +21,7 @@ import { CommunityModule } from '@domain/community/community/community.module';
 import { CommunityGuidelinesModule } from '@domain/community/community-guidelines/community.guidelines.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { AccountModule } from '@domain/space/account/account.module';
 import { SpaceModule } from '@domain/space/space/space.module';
@@ -76,7 +76,7 @@ import { LookupService } from './lookup.service';
     PlatformAuthorizationPolicyModule,
     UserLookupModule,
     OrganizationLookupModule,
-    VirtualContributorModule,
+    VirtualActorModule,
     SpaceModule,
     CommunityGuidelinesModule,
     TemplateContentSpaceModule,

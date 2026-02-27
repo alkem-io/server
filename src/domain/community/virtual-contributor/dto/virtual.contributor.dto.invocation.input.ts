@@ -23,7 +23,7 @@ export class RoomDetails {
     nullable: false,
     description: 'The actor ID (agent.id) for the VC',
   })
-  actorId!: string;
+  actorID!: string;
 }
 
 @InputType()

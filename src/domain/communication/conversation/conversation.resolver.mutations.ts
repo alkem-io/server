@@ -1,9 +1,9 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { LogContext } from '@common/enums';
-import { AgentType } from '@common/enums/agent.type';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ValidationException } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -28,7 +28,7 @@ export class ConversationResolverMutations {
     description: 'Resets the interaction with the VC by recreating the room.',
   })
   async resetConversationVc(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('input') input: ConversationVcResetInput
   ): Promise<IConversation> {
     // Fetch conversation with room relation (needed for reset)
@@ -44,7 +44,7 @@ export class ConversationResolverMutations {
 
     // Validate type: must be USER_VC
     const hasVC = members.some(
-      m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
+      m => m.actorType === ActorType.VIRTUAL_CONTRIBUTOR
     );
     if (!hasVC) {
       throw new ValidationException(
@@ -55,15 +55,15 @@ export class ConversationResolverMutations {
 
     // Authorization check
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       conversation.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
-      `conversation VC reset: ${agentInfo.email}`
+      `conversation VC reset: ${actorContext.actorID}`
     );
 
     // Get VC's agent ID from already-fetched members
     const vcMember = members.find(
-      m => m.agent.type === AgentType.VIRTUAL_CONTRIBUTOR
+      m => m.actorType === ActorType.VIRTUAL_CONTRIBUTOR
     );
     if (!vcMember) {
       throw new ValidationException(
@@ -75,8 +75,8 @@ export class ConversationResolverMutations {
     // Reset with pre-resolved data (no duplicate queries in service)
     const resetConversation = await this.conversationService.resetConversation(
       conversation,
-      agentInfo.agentID,
-      vcMember.agentId
+      actorContext.actorID,
+      vcMember.actorID
     );
 
     // Update authorization after reset
@@ -96,7 +96,7 @@ export class ConversationResolverMutations {
       'Deletes a Conversation. The Matrix room is only deleted if no reciprocal conversation exists.',
   })
   async deleteConversation(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteConversationInput
   ): Promise<IConversation> {
     const conversation = await this.conversationService.getConversationOrFail(
@@ -110,7 +110,7 @@ export class ConversationResolverMutations {
 
     // Authorization check - user must have delete permission on the conversation
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       conversation.authorization,
       AuthorizationPrivilege.DELETE,
       `delete conversation: ${conversation.id}`

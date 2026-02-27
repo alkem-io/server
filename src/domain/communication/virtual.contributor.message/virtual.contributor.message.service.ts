@@ -1,12 +1,12 @@
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { isInputValidForAction } from '@domain/community/virtual-contributor/dto/utils';
 import {
   InvocationResultAction,
   VirtualContributorInvocationInput,
 } from '@domain/community/virtual-contributor/dto/virtual.contributor.dto.invocation.input';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { AiServerAdapterInvocationInput } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
@@ -18,7 +18,7 @@ import { RoomLookupService } from '../room-lookup/room.lookup.service';
 export class VirtualContributorMessageService {
   constructor(
     private roomLookupService: RoomLookupService,
-    private virtualContributorLookupService: VirtualContributorLookupService,
+    private virtualActorLookupService: VirtualActorLookupService,
     private aiServerAdapter: AiServerAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -27,12 +27,12 @@ export class VirtualContributorMessageService {
     virtualContributorActorID: string,
     message: string,
     threadID: string,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     contextSpaceID: string,
     room: IRoom
   ) {
     const virtualContributor =
-      await this.virtualContributorLookupService.getVirtualContributorByAgentIdOrFail(
+      await this.virtualActorLookupService.getVirtualContributorByIdOrFail(
         virtualContributorActorID
       );
 
@@ -47,13 +47,13 @@ export class VirtualContributorMessageService {
       virtualContributorID: virtualContributor.id,
       message,
       contextSpaceID,
-      userID: agentInfo.userID,
+      userID: actorContext.actorID,
       resultHandler: {
         action: InvocationResultAction.POST_REPLY,
         roomDetails: {
           roomID: room.id,
           threadID,
-          actorId: virtualContributorActorID,
+          actorID: virtualContributorActorID,
         },
       },
     };
@@ -65,23 +65,14 @@ export class VirtualContributorMessageService {
     invocationInput: VirtualContributorInvocationInput
   ): Promise<void> {
     const virtualContributor =
-      await this.virtualContributorLookupService.getVirtualContributorOrFail(
+      await this.virtualActorLookupService.getVirtualContributorByIdOrFail(
         invocationInput.virtualContributorID,
         {
           relations: {
-            authorization: true,
-            agent: true,
-            profile: true,
+            actor: { authorization: true, profile: true },
           },
         }
       );
-    if (!virtualContributor.agent) {
-      throw new EntityNotInitializedException(
-        `Virtual Contributor Agent not initialized: ${invocationInput.virtualContributorID}`,
-        LogContext.AUTH
-      );
-    }
-
     this.logger.verbose?.(
       `still need to use the context ${invocationInput.contextSpaceID}, ${invocationInput.userID}`,
       LogContext.AI_PERSONA_ENGINE

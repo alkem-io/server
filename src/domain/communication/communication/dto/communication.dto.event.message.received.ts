@@ -7,7 +7,7 @@ export class CommunicationEventMessageReceived {
 
   message!: IMessage;
 
-  actorId!: string;
+  actorID!: string;
 
   communityId!: string | undefined;
 }

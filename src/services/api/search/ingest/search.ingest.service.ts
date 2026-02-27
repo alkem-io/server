@@ -783,10 +783,14 @@ export class SearchIngestService {
       .find<Organization>(Organization, {
         loadEagerRelations: false,
         relations: {
-          profile: profileRelationOptions,
+          actor: { profile: profileRelationOptions },
         },
         select: {
-          profile: profileSelectOptions,
+          id: true,
+          actor: {
+            id: true,
+            profile: profileSelectOptions,
+          },
         },
         skip: start,
         take: limit,
@@ -815,10 +819,14 @@ export class SearchIngestService {
         loadEagerRelations: false,
         where: { serviceProfile: false },
         relations: {
-          profile: profileRelationOptions,
+          actor: { profile: profileRelationOptions },
         },
         select: {
-          profile: profileSelectOptions,
+          id: true,
+          actor: {
+            id: true,
+            profile: profileSelectOptions,
+          },
         },
         skip: start,
         take: limit,

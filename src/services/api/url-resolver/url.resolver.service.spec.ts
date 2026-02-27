@@ -6,7 +6,7 @@ import {
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
@@ -34,7 +34,7 @@ describe('UrlResolverService', () => {
   let _innovationHubService: { getInnovationHubByNameIdOrFail: Mock };
   let _innovationPackService: { getInnovationPackByNameIdOrFail: Mock };
   let _forumDiscussionLookupService: { getForumDiscussionByNameIdOrFail: Mock };
-  let _virtualContributorLookupService: {
+  let _virtualActorLookupService: {
     getVirtualContributorByNameIdOrFail: Mock;
   };
   let urlGeneratorService: {
@@ -44,7 +44,7 @@ describe('UrlResolverService', () => {
   };
   let entityManager: { findOneOrFail: Mock; findOne: Mock };
 
-  const agentInfo = { credentials: [] } as any;
+  const actorContext = { credentials: [] } as any;
 
   beforeEach(async () => {
     entityManager = {
@@ -75,9 +75,7 @@ describe('UrlResolverService', () => {
     _forumDiscussionLookupService = module.get(
       ForumDiscussionLookupService
     ) as any;
-    _virtualContributorLookupService = module.get(
-      VirtualContributorLookupService
-    ) as any;
+    _virtualActorLookupService = module.get(VirtualActorLookupService) as any;
     urlGeneratorService = module.get(UrlGeneratorService) as any;
   });
 
@@ -85,7 +83,7 @@ describe('UrlResolverService', () => {
     it('should return HOME type when URL path is empty', async () => {
       const result = await service.resolveUrl(
         'https://example.com/',
-        agentInfo
+        actorContext
       );
 
       expect(result.type).toBe(UrlType.HOME);
@@ -95,7 +93,7 @@ describe('UrlResolverService', () => {
     it('should return HOME type for /home base route', async () => {
       const result = await service.resolveUrl(
         'https://example.com/home',
-        agentInfo
+        actorContext
       );
 
       expect(result.type).toBe(UrlType.HOME);
@@ -104,7 +102,7 @@ describe('UrlResolverService', () => {
     it('should return FLOW type for /create-space route', async () => {
       const result = await service.resolveUrl(
         'https://example.com/create-space',
-        agentInfo
+        actorContext
       );
 
       expect(result.type).toBe(UrlType.FLOW);
@@ -113,7 +111,7 @@ describe('UrlResolverService', () => {
     it('should return DOCUMENTATION type for /docs route', async () => {
       const result = await service.resolveUrl(
         'https://example.com/docs',
-        agentInfo
+        actorContext
       );
 
       expect(result.type).toBe(UrlType.DOCUMENTATION);
@@ -125,7 +123,7 @@ describe('UrlResolverService', () => {
 
       const result = await service.resolveUrl(
         'https://example.com/user/john-doe',
-        agentInfo
+        actorContext
       );
 
       expect(result.type).toBe(UrlType.USER);
@@ -145,7 +143,7 @@ describe('UrlResolverService', () => {
 
       const result = await service.resolveUrl(
         'https://example.com/user/unknown',
-        agentInfo
+        actorContext
       );
 
       expect(result.state).toBe(UrlResolverResultState.NotFound);
@@ -161,7 +159,7 @@ describe('UrlResolverService', () => {
 
       const result = await service.resolveUrl(
         'https://example.com/my-space',
-        agentInfo
+        actorContext
       );
 
       expect(result.state).toBe(UrlResolverResultState.Forbidden);
@@ -173,7 +171,7 @@ describe('UrlResolverService', () => {
       );
 
       await expect(
-        service.resolveUrl('https://example.com/my-space', agentInfo)
+        service.resolveUrl('https://example.com/my-space', actorContext)
       ).rejects.toThrow(UrlResolverException);
     });
 
@@ -185,7 +183,7 @@ describe('UrlResolverService', () => {
 
       const result = await service.resolveUrl(
         'https://example.com/organization/acme',
-        agentInfo
+        actorContext
       );
 
       expect(result.type).toBe(UrlType.ORGANIZATION);
@@ -208,7 +206,7 @@ describe('UrlResolverService', () => {
 
       const result = await service.resolveUrl(
         'https://example.com/my-space',
-        agentInfo
+        actorContext
       );
 
       expect(result.type).toBe(UrlType.SPACE);
@@ -220,7 +218,7 @@ describe('UrlResolverService', () => {
     it('should resolve SPACE_EXPLORER type', async () => {
       const result = await service.resolveUrl(
         'https://example.com/spaces',
-        agentInfo
+        actorContext
       );
 
       expect(result.type).toBe(UrlType.SPACE_EXPLORER);
@@ -229,7 +227,7 @@ describe('UrlResolverService', () => {
     it('should resolve CONTRIBUTORS_EXPLORER type', async () => {
       const result = await service.resolveUrl(
         'https://example.com/contributors',
-        agentInfo
+        actorContext
       );
 
       expect(result.type).toBe(UrlType.CONTRIBUTORS_EXPLORER);
@@ -238,7 +236,7 @@ describe('UrlResolverService', () => {
     it('should resolve FORUM type', async () => {
       const result = await service.resolveUrl(
         'https://example.com/forum',
-        agentInfo
+        actorContext
       );
 
       expect(result.type).toBe(UrlType.FORUM);
@@ -247,7 +245,7 @@ describe('UrlResolverService', () => {
     it('should resolve INNOVATION_LIBRARY type', async () => {
       const result = await service.resolveUrl(
         'https://example.com/innovation-library',
-        agentInfo
+        actorContext
       );
 
       expect(result.type).toBe(UrlType.INNOVATION_LIBRARY);
@@ -256,19 +254,19 @@ describe('UrlResolverService', () => {
     it('should resolve identity routes (login, logout, registration)', async () => {
       const loginResult = await service.resolveUrl(
         'https://example.com/login',
-        agentInfo
+        actorContext
       );
       expect(loginResult.type).toBe(UrlType.LOGIN);
 
       const logoutResult = await service.resolveUrl(
         'https://example.com/logout',
-        agentInfo
+        actorContext
       );
       expect(logoutResult.type).toBe(UrlType.LOGOUT);
 
       const registrationResult = await service.resolveUrl(
         'https://example.com/registration',
-        agentInfo
+        actorContext
       );
       expect(registrationResult.type).toBe(UrlType.REGISTRATION);
     });
@@ -283,7 +281,7 @@ describe('UrlResolverService', () => {
 
       const result = await service.resolveUrl(
         'https://example.com/user/unknown',
-        agentInfo
+        actorContext
       );
 
       expect(result.state).toBe(UrlResolverResultState.NotFound);

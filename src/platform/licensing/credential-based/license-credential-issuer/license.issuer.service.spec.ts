@@ -1,5 +1,4 @@
-import { IAgent } from '@domain/agent/agent/agent.interface';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -9,7 +8,7 @@ import { LicenseIssuerService } from './license.issuer.service';
 
 describe('LicenseIssuerService', () => {
   let service: LicenseIssuerService;
-  let agentService: AgentService;
+  let actorService: ActorService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -19,62 +18,54 @@ describe('LicenseIssuerService', () => {
       .compile();
 
     service = module.get(LicenseIssuerService);
-    agentService = module.get(AgentService);
+    actorService = module.get(ActorService);
   });
 
   describe('assignLicensePlan', () => {
     it('should grant credential without expiry when trialEnabled is false', async () => {
-      const agent = { id: 'agent-1' } as IAgent;
       const licensePlan = {
         id: 'plan-1',
         trialEnabled: false,
         licenseCredential: 'SPACE_LICENSE' as any,
       } as ILicensePlan;
-      const updatedAgent = {
-        id: 'agent-1',
-        credentials: [],
-      } as unknown as IAgent;
-
-      vi.mocked(agentService.grantCredentialOrFail).mockResolvedValue(
-        updatedAgent
-      );
-
-      const result = await service.assignLicensePlan(
-        agent,
-        licensePlan,
-        'resource-1'
-      );
-
-      expect(agentService.grantCredentialOrFail).toHaveBeenCalledWith({
-        agentID: 'agent-1',
+      const mockCredential = {
+        id: 'cred-1',
         type: 'SPACE_LICENSE',
         resourceID: 'resource-1',
-        expires: undefined,
-      });
-      expect(result).toBe(updatedAgent);
+      };
+
+      vi.mocked(actorService.grantCredentialOrFail).mockResolvedValue(
+        mockCredential as any
+      );
+
+      await service.assignLicensePlan('agent-1', licensePlan, 'resource-1');
+
+      expect(actorService.grantCredentialOrFail).toHaveBeenCalledWith(
+        'agent-1',
+        {
+          type: 'SPACE_LICENSE',
+          resourceID: 'resource-1',
+          expires: undefined,
+        }
+      );
     });
 
     it('should grant credential with one month expiry when trialEnabled is true', async () => {
-      const agent = { id: 'agent-1' } as IAgent;
       const licensePlan = {
         id: 'plan-1',
         trialEnabled: true,
         licenseCredential: 'SPACE_LICENSE' as any,
       } as ILicensePlan;
-      const updatedAgent = { id: 'agent-1' } as IAgent;
+      const mockCredential = { id: 'cred-1' };
 
-      vi.mocked(agentService.grantCredentialOrFail).mockResolvedValue(
-        updatedAgent
+      vi.mocked(actorService.grantCredentialOrFail).mockResolvedValue(
+        mockCredential as any
       );
 
-      const result = await service.assignLicensePlan(
-        agent,
-        licensePlan,
-        'resource-1'
-      );
+      await service.assignLicensePlan('agent-1', licensePlan, 'resource-1');
 
-      const callArgs = vi.mocked(agentService.grantCredentialOrFail).mock
-        .calls[0][0];
+      const callArgs = vi.mocked(actorService.grantCredentialOrFail).mock
+        .calls[0][1];
       expect(callArgs.expires).toBeDefined();
       expect(callArgs.expires).toBeInstanceOf(Date);
       // The expiry should be approximately one month from now
@@ -86,54 +77,41 @@ describe('LicenseIssuerService', () => {
       );
       const expiresDate = callArgs.expires!;
       expect(expiresDate.getMonth()).toBe(oneMonthFromNow.getMonth());
-      expect(result).toBe(updatedAgent);
     });
 
-    it('should return original agent and log warning when grantCredentialOrFail throws', async () => {
-      const agent = { id: 'agent-1' } as IAgent;
+    it('should not throw when grantCredentialOrFail throws (logs warning instead)', async () => {
       const licensePlan = {
         id: 'plan-1',
         trialEnabled: false,
         licenseCredential: 'SPACE_LICENSE' as any,
       } as ILicensePlan;
 
-      vi.mocked(agentService.grantCredentialOrFail).mockRejectedValue(
+      vi.mocked(actorService.grantCredentialOrFail).mockRejectedValue(
         new Error('Grant failed')
       );
 
-      const result = await service.assignLicensePlan(
-        agent,
-        licensePlan,
-        'resource-1'
-      );
-
-      expect(result).toBe(agent);
+      // assignLicensePlan catches the error and logs a warning
+      await expect(
+        service.assignLicensePlan('agent-1', licensePlan, 'resource-1')
+      ).resolves.toBeUndefined();
     });
   });
 
   describe('revokeLicensePlan', () => {
-    it('should call agentService.revokeCredential with correct parameters', async () => {
-      const agent = { id: 'agent-1' } as IAgent;
+    it('should call actorService.revokeCredential with correct parameters', async () => {
       const licensePlan = {
         id: 'plan-1',
         licenseCredential: 'SPACE_LICENSE' as any,
       } as ILicensePlan;
-      const updatedAgent = { id: 'agent-1' } as IAgent;
 
-      vi.mocked(agentService.revokeCredential).mockResolvedValue(updatedAgent);
+      vi.mocked(actorService.revokeCredential).mockResolvedValue(true);
 
-      const result = await service.revokeLicensePlan(
-        agent,
-        licensePlan,
-        'resource-1'
-      );
+      await service.revokeLicensePlan('agent-1', licensePlan, 'resource-1');
 
-      expect(agentService.revokeCredential).toHaveBeenCalledWith({
-        agentID: 'agent-1',
+      expect(actorService.revokeCredential).toHaveBeenCalledWith('agent-1', {
         type: 'SPACE_LICENSE',
         resourceID: 'resource-1',
       });
-      expect(result).toBe(updatedAgent);
     });
   });
 });

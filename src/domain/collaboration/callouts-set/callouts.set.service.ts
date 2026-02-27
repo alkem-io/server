@@ -11,7 +11,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -328,7 +328,7 @@ export class CalloutsSetService {
   async createCallout(
     calloutsSet: ICalloutsSet,
     calloutInput: CreateCalloutInput,
-    agentInfo?: AgentInfo
+    actorContext?: ActorContext
   ): Promise<ICallout> {
     const reservedNameIDs: string[] = [];
     // TODO      await this.namingService.getReservedNameIDsInCalloutsSet(calloutsSet.id);
@@ -360,7 +360,7 @@ export class CalloutsSetService {
       calloutInput,
       tagsetTemplates,
       storageAggregator,
-      agentInfo?.userID
+      actorContext?.actorID
     );
     callout.calloutsSet = calloutsSet;
     return await this.calloutService.save(callout);
@@ -434,7 +434,7 @@ export class CalloutsSetService {
   public async getCalloutsFromCollaboration(
     calloutsSet: ICalloutsSet,
     args: CalloutsSetArgsCallouts,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ICallout[]> {
     const queryTags: boolean = !!args.withTags?.length;
 
@@ -473,7 +473,7 @@ export class CalloutsSetService {
     const availableCallouts = allCallouts.filter(callout => {
       // Check for READ privilege
       const hasAccess = this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         callout.authorization,
         AuthorizationPrivilege.READ
       );
@@ -544,7 +544,7 @@ export class CalloutsSetService {
           );
 
         const hasAccess = this.authorizationService.isAccessGranted(
-          agentInfo,
+          actorContext,
           callout.authorization,
           AuthorizationPrivilege.READ
         );
@@ -590,7 +590,7 @@ export class CalloutsSetService {
 
   public async getAllTags(
     calloutsSetID: string,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     classificationTagsets?: TagsetArgs[]
   ): Promise<string[]> {
     const calloutsSet = await this.getCalloutsSetOrFail(calloutsSetID, {
@@ -620,7 +620,7 @@ export class CalloutsSetService {
       .filter(callout => {
         // Check for READ privilege in every callout
         return this.authorizationService.isAccessGranted(
-          agentInfo,
+          actorContext,
           callout.authorization,
           AuthorizationPrivilege.READ
         );

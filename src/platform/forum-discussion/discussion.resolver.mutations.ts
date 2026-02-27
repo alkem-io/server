@@ -1,9 +1,9 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { IDiscussion } from './discussion.interface';
 import { DiscussionService } from './discussion.service';
 import { DeleteDiscussionInput } from './dto/discussion.dto.delete';
@@ -21,14 +21,14 @@ export class DiscussionResolverMutations {
     description: 'Deletes the specified Discussion.',
   })
   async deleteDiscussion(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteDiscussionInput
   ): Promise<IDiscussion> {
     const discussion = await this.discussionService.getDiscussionOrFail(
       deleteData.ID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       discussion.authorization,
       AuthorizationPrivilege.DELETE,
       `delete discussion: ${discussion.id}`
@@ -40,7 +40,7 @@ export class DiscussionResolverMutations {
     description: 'Updates the specified Discussion.',
   })
   async updateDiscussion(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateDiscussionInput
   ): Promise<IDiscussion> {
     const discussion = await this.discussionService.getDiscussionOrFail(
@@ -50,7 +50,7 @@ export class DiscussionResolverMutations {
       }
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       discussion.authorization,
       AuthorizationPrivilege.UPDATE,
       `Update discussion: ${discussion.id}`

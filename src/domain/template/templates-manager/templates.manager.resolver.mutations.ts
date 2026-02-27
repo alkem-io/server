@@ -1,11 +1,11 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -30,7 +30,7 @@ export class TemplatesManagerResolverMutations {
     description: 'Updates the specified Template Defaults.',
   })
   async updateTemplateDefault(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('templateDefaultData')
     templateDefaultData: UpdateTemplateDefaultTemplateInput
   ): Promise<ITemplateDefault> {
@@ -61,7 +61,7 @@ export class TemplatesManagerResolverMutations {
     }
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       templateDefault.authorization,
       AuthorizationPrivilege.UPDATE,
       `update templateDefault of type ${templateDefault.type}: ${templateDefault.id}`

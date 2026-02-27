@@ -1,4 +1,4 @@
-import { ICredential } from '@src/domain/agent/credential';
+import { ICredential } from '@domain/actor/credential/credential.interface';
 import { EntityManager } from 'typeorm';
 import { getOrganizationRolesForUserEntityData } from './get.organization.roles.for.user.entity.data';
 import { getOrganizationRolesForUserQueryResult } from './get.organization.roles.for.user.query.result';

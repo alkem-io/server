@@ -1,4 +1,4 @@
-import { AlkemioErrorStatus, LogContext } from '@common/enums';
+import { LogContext } from '@common/enums';
 import {
   UserAlreadyRegisteredException,
   UserRegistrationInvalidEmail,
@@ -8,12 +8,13 @@ import {
   NotFoundHttpException,
 } from '@common/exceptions/http';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
 import { IUser } from '@domain/community/user/user.interface';
+import { UserService } from '@domain/community/user/user.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { RegistrationService } from '@services/api/registration/registration.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { OryDefaultIdentitySchema } from '@services/infrastructure/kratos/types/ory.default.identity.schema';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IdentityResolveRequestMeta } from './types/identity-resolve.request-meta';
 
@@ -22,8 +23,8 @@ export class IdentityResolveService {
   constructor(
     private readonly registrationService: RegistrationService,
     private readonly kratosService: KratosService,
+    private readonly userService: UserService,
     private readonly userLookupService: UserLookupService,
-    private readonly agentInfoService: AgentInfoService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -34,18 +35,14 @@ export class IdentityResolveService {
   ): Promise<IUser> {
     const existingUser = await this.userLookupService.getUserByAuthenticationID(
       authenticationId,
-      {
-        relations: {
-          agent: true,
-        },
-      }
+      {}
     );
     if (existingUser) {
       this.logger.log?.(
         `Identity resolve: returning existing user ${existingUser.id} for authenticationId=${authenticationId} (ip=${meta.ip ?? 'unknown'})`,
         LogContext.AUTH
       );
-      return this.ensureAgentOrFail(existingUser, authenticationId);
+      return existingUser;
     }
 
     const identity = await this.kratosService.getIdentityById(authenticationId);
@@ -60,13 +57,11 @@ export class IdentityResolveService {
       );
     }
 
-    const agentInfo = this.agentInfoService.buildAgentInfoFromOryIdentity(
-      identity,
-      { authenticationId }
-    );
+    const oryIdentity = identity as OryDefaultIdentitySchema;
+    const email = oryIdentity.traits?.email;
 
     // Validate email is present (required for registration)
-    if (!agentInfo.email) {
+    if (!email) {
       this.logger.warn?.(
         `Identity resolve: Kratos identity ${identity.id} missing email trait`,
         LogContext.AUTH
@@ -85,23 +80,36 @@ export class IdentityResolveService {
       );
     }
 
-    const existingUserByEmail = await this.userLookupService.getUserByEmail(
-      agentInfo.email
-    );
+    const existingUserByEmail =
+      await this.userLookupService.getUserByEmail(email);
 
-    const outcome = existingUserByEmail ? 'link' : 'create';
+    // Legacy flow: if a user with this email exists but without an authenticationID,
+    // link the Kratos identity to the existing user instead of creating a new one.
+    if (existingUserByEmail) {
+      const linkedUser = await this.linkAuthenticationToExistingUser(
+        existingUserByEmail,
+        authenticationId,
+        meta
+      );
+      return linkedUser;
+    }
 
+    // No existing user — create a new one
     // FIXME: temporary ugly workaround to skip email verification for Kratos users,
     //  based on the fact that this EP is called only by OIDC controller, so we silently assume
     //  that this is OIDC session and don't care about email verification status from Kratos side.
-    // depending on future development and use of this EP we will need to either provide token/session
-    //  info here to verify that this is indeed OIDC session, or get list of sessions for user to deduct
-    //  that one of sessions is OIDC based, so we can skip email verification.
-    agentInfo.emailVerified = true;
+    const kratosSessionData = {
+      authenticationID: authenticationId,
+      email,
+      emailVerified: true,
+      firstName: oryIdentity.traits?.name?.first ?? '',
+      lastName: oryIdentity.traits?.name?.last ?? '',
+      avatarURL: oryIdentity.traits?.picture ?? '',
+    };
 
     let user: IUser;
     try {
-      user = await this.registrationService.registerNewUser(agentInfo);
+      user = await this.registrationService.registerNewUser(kratosSessionData);
     } catch (error) {
       if (error instanceof UserAlreadyRegisteredException) {
         throw new BadRequestHttpException(error.message, LogContext.AUTH);
@@ -135,29 +143,71 @@ export class IdentityResolveService {
     }
 
     this.logger.log?.(
-      `Identity resolve: ${outcome} user ${user.id} for authenticationId=${authenticationId} (ip=${meta.ip ?? 'unknown'})`,
+      `Identity resolve: created user ${user.id} for authenticationId=${authenticationId} (ip=${meta.ip ?? 'unknown'})`,
       LogContext.AUTH
     );
 
-    const userWithAgent = await this.userLookupService.getUserOrFail(user.id, {
-      relations: { agent: true },
-    });
-    return this.ensureAgentOrFail(userWithAgent, authenticationId);
+    return this.userLookupService.getUserByIdOrFail(user.id);
   }
 
-  private ensureAgentOrFail(user: IUser, authenticationId: string): IUser {
-    if (!user.agent) {
-      this.logger.warn?.(
-        `Identity resolve: user ${user.id} has no agent linked for authenticationId=${authenticationId}`,
+  /**
+   * Links a Kratos authentication ID to an existing user found by email.
+   * Handles conflicts when the user already has a different authentication ID.
+   */
+  private async linkAuthenticationToExistingUser(
+    existingUser: IUser,
+    authenticationId: string,
+    meta: IdentityResolveRequestMeta
+  ): Promise<IUser> {
+    // If already linked to this auth ID, just return
+    if (existingUser.authenticationID === authenticationId) {
+      this.logger.log?.(
+        `Identity resolve: user ${existingUser.id} already linked to authenticationId=${authenticationId}`,
         LogContext.AUTH
       );
-      throw new NotFoundHttpException(
-        `Agent not found for user ${user.id}`,
-        LogContext.AUTH,
-        AlkemioErrorStatus.NO_AGENT_FOR_USER
+      return existingUser;
+    }
+
+    // If linked to a different auth ID, check if the old identity still exists
+    if (existingUser.authenticationID) {
+      const existingKratosIdentity = await this.kratosService.getIdentityById(
+        existingUser.authenticationID
+      );
+
+      if (existingKratosIdentity) {
+        // Old identity still exists — this is a real conflict
+        throw new BadRequestHttpException(
+          'User already registered with different authentication ID',
+          LogContext.AUTH
+        );
+      }
+
+      // Old identity no longer exists in Kratos — allow relinking
+      this.logger.verbose?.(
+        `Old authentication ID ${existingUser.authenticationID} no longer exists in Kratos, allowing relink to ${authenticationId}`,
+        LogContext.AUTH
       );
     }
 
-    return user;
+    // Check that the new auth ID isn't already claimed by another user
+    const otherUser =
+      await this.userLookupService.getUserByAuthenticationID(authenticationId);
+    if (otherUser && otherUser.id !== existingUser.id) {
+      throw new BadRequestHttpException(
+        'Kratos identity already linked to another user',
+        LogContext.AUTH
+      );
+    }
+
+    // Link the authentication ID to the existing user
+    existingUser.authenticationID = authenticationId;
+    const updatedUser = await this.userService.save(existingUser);
+
+    this.logger.log?.(
+      `Identity resolve: linked authenticationId=${authenticationId} to existing user ${updatedUser.id} (ip=${meta.ip ?? 'unknown'})`,
+      LogContext.AUTH
+    );
+
+    return updatedUser;
   }
 }

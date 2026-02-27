@@ -2,7 +2,7 @@ import {
   CREDENTIAL_RULE_ACCOUNT_ADMIN_MANAGE,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_COMMUNITY_READ,
   CREDENTIAL_RULE_TYPES_VC_GLOBAL_SUPPORT_MANAGE,
-  CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_PLATFORM_SETTINGS,
+  CREDENTIAL_RULE_VIRTUAL_PLATFORM_SETTINGS,
   POLICY_RULE_READ_ABOUT,
 } from '@common/constants';
 import {
@@ -13,8 +13,7 @@ import {
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { KnowledgeBaseAuthorizationService } from '@domain/common/knowledge-base/knowledge.base.service.authorization';
@@ -30,7 +29,6 @@ import { VirtualContributorService } from './virtual.contributor.service';
 export class VirtualContributorAuthorizationService {
   constructor(
     private virtualService: VirtualContributorService,
-    private agentAuthorizationService: AgentAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileAuthorizationService: ProfileAuthorizationService,
     private knowledgeBaseAuthorizations: KnowledgeBaseAuthorizationService,
@@ -42,21 +40,22 @@ export class VirtualContributorAuthorizationService {
     virtualInput: IVirtualContributor
   ): Promise<IAuthorizationPolicy[]> {
     const virtualContributor =
-      await this.virtualService.getVirtualContributorOrFail(virtualInput.id, {
-        relations: {
-          account: {
-            spaces: true,
+      await this.virtualService.getVirtualContributorByIdOrFail(
+        virtualInput.id,
+        {
+          relations: {
+            account: {
+              spaces: true,
+            },
+            actor: { authorization: true, profile: true },
+            knowledgeBase: true,
           },
-          profile: true,
-          agent: true,
-          knowledgeBase: true,
-        },
-      });
+        }
+      );
     if (
       !virtualContributor.account ||
       !virtualContributor.account.spaces ||
       !virtualContributor.profile ||
-      !virtualContributor.agent ||
       !virtualContributor.knowledgeBase
     )
       throw new RelationshipNotFoundException(
@@ -126,12 +125,8 @@ export class VirtualContributorAuthorizationService {
       );
     updatedAuthorizations.push(...profileAuthorizations);
 
-    const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
-        virtualContributor.agent,
-        virtualContributor.authorization
-      );
-    updatedAuthorizations.push(agentAuthorization);
+    // Note: No separate actor/agent auth inheritance needed -
+    // virtualContributor.authorization IS actor.authorization via getter delegation
 
     // TODO: this is a hack to deal with the fact that the AI Persona has an authorization policy that uses the VC's account
     const aiPersonaAuthorizations =
@@ -209,7 +204,7 @@ export class VirtualContributorAuthorizationService {
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
         ],
-        CREDENTIAL_RULE_VIRTUAL_CONTRIBUTOR_PLATFORM_SETTINGS
+        CREDENTIAL_RULE_VIRTUAL_PLATFORM_SETTINGS
       );
     platformSettings.cascade = false;
     newRules.push(platformSettings);

@@ -1,6 +1,6 @@
+import { ActorType } from '@common/enums/actor.type';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -85,11 +85,11 @@ describe('InAppNotificationService', () => {
       expect(result.roomID).toBe('room-1');
     });
 
-    it('should extract contributorUserID for SPACE_ADMIN_COMMUNITY_NEW_MEMBER with USER type', () => {
+    it('should extract contributorActorId for SPACE_ADMIN_COMMUNITY_NEW_MEMBER', () => {
       const payload = {
         spaceID: 'space-1',
-        contributorType: RoleSetContributorType.USER,
-        contributorID: 'user-contributor',
+        actorType: ActorType.USER,
+        actorID: 'user-contributor',
       };
       notificationRepo.create!.mockImplementation((input: any) => input);
 
@@ -102,54 +102,8 @@ describe('InAppNotificationService', () => {
         payload: payload as any,
       });
 
-      expect(result.contributorUserID).toBe('user-contributor');
-      expect(result.contributorOrganizationID).toBeUndefined();
-      expect(result.contributorVcID).toBeUndefined();
+      expect(result.contributorActorId).toBe('user-contributor');
       expect(result.spaceID).toBe('space-1');
-    });
-
-    it('should extract contributorOrganizationID for SPACE_ADMIN_COMMUNITY_NEW_MEMBER with ORGANIZATION type', () => {
-      const payload = {
-        spaceID: 'space-1',
-        contributorType: RoleSetContributorType.ORGANIZATION,
-        contributorID: 'org-contributor',
-      };
-      notificationRepo.create!.mockImplementation((input: any) => input);
-
-      const result = service.createInAppNotification({
-        type: NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER,
-        category: 'admin' as any,
-        triggeredByID: 'user-1',
-        triggeredAt: new Date(),
-        receiverID: 'user-2',
-        payload: payload as any,
-      });
-
-      expect(result.contributorOrganizationID).toBe('org-contributor');
-      expect(result.contributorUserID).toBeUndefined();
-      expect(result.contributorVcID).toBeUndefined();
-    });
-
-    it('should extract contributorVcID for SPACE_ADMIN_COMMUNITY_NEW_MEMBER with VIRTUAL type', () => {
-      const payload = {
-        spaceID: 'space-1',
-        contributorType: RoleSetContributorType.VIRTUAL,
-        contributorID: 'vc-contributor',
-      };
-      notificationRepo.create!.mockImplementation((input: any) => input);
-
-      const result = service.createInAppNotification({
-        type: NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER,
-        category: 'admin' as any,
-        triggeredByID: 'user-1',
-        triggeredAt: new Date(),
-        receiverID: 'user-2',
-        payload: payload as any,
-      });
-
-      expect(result.contributorVcID).toBe('vc-contributor');
-      expect(result.contributorUserID).toBeUndefined();
-      expect(result.contributorOrganizationID).toBeUndefined();
     });
 
     it('should extract userID for PLATFORM_ADMIN_USER_PROFILE_CREATED event', () => {
@@ -242,9 +196,9 @@ describe('InAppNotificationService', () => {
     });
   });
 
-  describe('deleteAllForContributorVcInSpaces', () => {
+  describe('deleteAllForContributorActorInSpaces', () => {
     it('should return early without calling delete when spaceIDs is empty', async () => {
-      await service.deleteAllForContributorVcInSpaces('vc-1', []);
+      await service.deleteAllForContributorActorInSpaces('actor-1', []);
 
       expect(notificationRepo.delete).not.toHaveBeenCalled();
     });
@@ -252,17 +206,11 @@ describe('InAppNotificationService', () => {
     it('should call delete when spaceIDs are provided', async () => {
       notificationRepo.delete!.mockResolvedValue({ affected: 1 });
 
-      await service.deleteAllForContributorVcInSpaces('vc-1', ['space-1']);
+      await service.deleteAllForContributorActorInSpaces('actor-1', [
+        'space-1',
+      ]);
 
       expect(notificationRepo.delete).toHaveBeenCalled();
-    });
-  });
-
-  describe('deleteAllForContributorOrganizationInSpaces', () => {
-    it('should return early without calling delete when spaceIDs is empty', async () => {
-      await service.deleteAllForContributorOrganizationInSpaces('org-1', []);
-
-      expect(notificationRepo.delete).not.toHaveBeenCalled();
     });
   });
 

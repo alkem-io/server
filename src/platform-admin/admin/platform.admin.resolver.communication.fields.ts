@@ -1,6 +1,6 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Args, ResolveField, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -25,10 +25,10 @@ export class PlatformAdminCommunicationResolverFields {
   async adminCommunicationMembership(
     @Args('communicationData', { nullable: false })
     communicationData: CommunicationAdminMembershipInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<CommunicationAdminMembershipResult> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'platformAdmin communicationMembership'
@@ -45,10 +45,10 @@ export class PlatformAdminCommunicationResolverFields {
       'Usage of the messaging platform that are not tied to the domain model.',
   })
   async adminCommunicationOrphanedUsage(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<CommunicationAdminOrphanedUsageResult> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'platformAdmin communication OrphanedUsage'

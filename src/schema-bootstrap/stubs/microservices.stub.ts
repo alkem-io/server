@@ -6,7 +6,7 @@ import {
   SUBSCRIPTION_DISCUSSION_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_SUBSPACE_CREATED,
-  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+  SUBSCRIPTION_VIRTUAL_UPDATED,
 } from '@common/constants/providers';
 import { Provider } from '@nestjs/common';
 import { ClientProxy } from '@nestjs/microservices';
@@ -30,7 +30,7 @@ const microserviceTokens = [
   SUBSCRIPTION_CALLOUT_POST_CREATED,
   SUBSCRIPTION_SUBSPACE_CREATED,
   SUBSCRIPTION_ROOM_EVENT,
-  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+  SUBSCRIPTION_VIRTUAL_UPDATED,
 ];
 
 export const MicroservicesStubProviders: Provider[] = microserviceTokens.map(

@@ -1,21 +1,21 @@
 import { vi } from 'vitest';
 import 'reflect-metadata';
-import { Test } from '@nestjs/testing';
+import { IS_SCHEMA_BOOTSTRAP } from '@common/constants';
+import { Type } from '@nestjs/common';
 import { GraphQLSchemaHost } from '@nestjs/graphql';
-import { printSchema, parse, print, buildSchema, GraphQLSchema } from 'graphql';
-import { existsSync, mkdtempSync, unlinkSync, writeFileSync } from 'fs';
-import { join } from 'path';
-import { tmpdir } from 'os';
+import { Test } from '@nestjs/testing';
 import { AppModule } from '@src/app.module';
 import { SchemaBootstrapModule } from '@src/schema-bootstrap/module.schema-bootstrap';
-import { Type } from '@nestjs/common';
-import { IS_SCHEMA_BOOTSTRAP } from '@common/constants';
-import { DataSource, EntityManager } from 'typeorm';
+import { CacheStubProvider } from '@src/schema-bootstrap/stubs/cache.stub';
 import {
   DataSourceStubProvider,
   EntityManagerStubProvider,
 } from '@src/schema-bootstrap/stubs/db.stub';
-import { CacheStubProvider } from '@src/schema-bootstrap/stubs/cache.stub';
+import { existsSync, mkdtempSync, unlinkSync, writeFileSync } from 'fs';
+import { buildSchema, GraphQLSchema, parse, print, printSchema } from 'graphql';
+import { tmpdir } from 'os';
+import { join } from 'path';
+import { DataSource, EntityManager } from 'typeorm';
 
 function normalizeSDL(schema: GraphQLSchema): string {
   const rawSDL = printSchema(schema);
@@ -117,14 +117,8 @@ describe.skip('Schema bootstrap parity', () => {
         idx++;
       }
       const contextStart = Math.max(0, idx - 80);
-      const contextLight = light.sdl.slice(contextStart, idx + 80);
-      const contextFull = full.sdl.slice(contextStart, idx + 80);
-      console.error(
-        'SDL mismatch context:\n--- Light ---\n' +
-          contextLight +
-          '\n--- Full ---\n' +
-          contextFull
-      );
+      const _contextLight = light.sdl.slice(contextStart, idx + 80);
+      const _contextFull = full.sdl.slice(contextStart, idx + 80);
     }
 
     expect(light.sdl).toBe(full.sdl);

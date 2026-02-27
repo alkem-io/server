@@ -7,12 +7,16 @@ import { InvitationEventInput } from '@domain/access/invitation/dto/invitation.d
 import { ApplyForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.apply';
 import { InviteForEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.invite';
 import { JoinAsEntryRoleOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.entry.role.join';
-import { AssignRoleOnRoleSetToOrganizationInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.organization';
-import { AssignRoleOnRoleSetToUserInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.user';
-import { AssignRoleOnRoleSetToVirtualContributorInput } from '@domain/access/role-set/dto/role.set.dto.role.assign.virtual';
-import { RemoveRoleOnRoleSetFromOrganizationInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.organization';
-import { RemoveRoleOnRoleSetFromUserInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.user';
-import { RemoveRoleOnRoleSetFromVirtualContributorInput } from '@domain/access/role-set/dto/role.set.dto.role.remove.virtual';
+import {
+  AssignRoleOnRoleSetToOrganizationInput,
+  AssignRoleOnRoleSetToUserInput,
+  AssignRoleOnRoleSetToVirtualContributorInput,
+} from '@domain/access/role-set/dto/role.set.dto.role.assign';
+import {
+  RemoveRoleOnRoleSetFromOrganizationInput,
+  RemoveRoleOnRoleSetFromUserInput,
+  RemoveRoleOnRoleSetFromVirtualContributorInput,
+} from '@domain/access/role-set/dto/role.set.dto.role.remove';
 import { UpdateApplicationFormOnRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.update.application.form';
 import { UpdateCalloutEntityInput } from '@domain/collaboration/callout/dto';
 import { CreateContributionOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.contribution';
@@ -103,7 +107,7 @@ import { UpdateCalendarEventInput } from '@domain/timeline/event';
 import { ForumCreateDiscussionInput } from '@platform/forum/dto/forum.dto.create.discussion';
 import { UpdateDiscussionInput } from '@platform/forum-discussion/dto/discussion.dto.update';
 import { UpdatePlatformSettingsInput } from '@platform/platform-settings';
-import { RolesUserInput } from '@services/api/roles/dto/roles.dto.input.user';
+import { RolesUserInput } from '@services/api/roles/dto/roles.dto.input.actor';
 import { ValidationError, validate } from 'class-validator';
 import { AbstractHandler } from './abstract.handler';
 

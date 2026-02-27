@@ -217,8 +217,8 @@ describe('AdminCommunicationService', () => {
         community as any
       );
       vi.mocked(roleSetService.getUsersWithRole).mockResolvedValue([
-        { agent: { id: 'agent-1' } },
-        { agent: { id: 'agent-2' } },
+        { id: 'user-1' },
+        { id: 'user-2' },
       ] as any);
       const communication = {
         id: 'commn-1',
@@ -232,16 +232,16 @@ describe('AdminCommunicationService', () => {
       vi.mocked(communicationService.getUpdates).mockReturnValue(
         updatesRoom as any
       );
-      // Only agent-1 is in the room
+      // Only user-1 is in the room
       vi.mocked(communicationAdapter.getRoomMembers).mockResolvedValue([
-        'agent-1',
+        'user-1',
       ]);
 
       const result = await service.communicationMembership({
         communityID: 'comm-1',
       });
 
-      expect(result.rooms[0].missingMembers).toContain('agent-2');
+      expect(result.rooms[0].missingMembers).toContain('user-2');
     });
 
     it('should detect extra members who are in room but not in community', async () => {
@@ -250,7 +250,7 @@ describe('AdminCommunicationService', () => {
         community as any
       );
       vi.mocked(roleSetService.getUsersWithRole).mockResolvedValue([
-        { agent: { id: 'agent-1' } },
+        { id: 'user-1' },
       ] as any);
       const communication = {
         id: 'commn-1',
@@ -263,28 +263,27 @@ describe('AdminCommunicationService', () => {
       vi.mocked(communicationService.getUpdates).mockReturnValue(
         updatesRoom as any
       );
-      // Room has agent-1 and an extra agent-999
+      // Room has user-1 and an extra user-999
       vi.mocked(communicationAdapter.getRoomMembers).mockResolvedValue([
-        'agent-1',
-        'agent-999',
+        'user-1',
+        'user-999',
       ]);
 
       const result = await service.communicationMembership({
         communityID: 'comm-1',
       });
 
-      expect(result.rooms[0].extraMembers).toContain('agent-999');
+      expect(result.rooms[0].extraMembers).toContain('user-999');
     });
 
-    it('should skip community members without an agent', async () => {
+    it('should report no missing members when all community members are in the room', async () => {
       const community = { id: 'comm-1', roleSet: { id: 'rs-1' } };
       vi.mocked(communityService.getCommunityOrFail).mockResolvedValue(
         community as any
       );
-      // One member has no agent
       vi.mocked(roleSetService.getUsersWithRole).mockResolvedValue([
-        { agent: { id: 'agent-1' } },
-        { agent: undefined },
+        { id: 'user-1' },
+        { id: 'user-2' },
       ] as any);
       const communication = { id: 'commn-1', displayName: 'Comm' };
       vi.mocked(communityService.getCommunication).mockResolvedValue(
@@ -295,14 +294,15 @@ describe('AdminCommunicationService', () => {
         updatesRoom as any
       );
       vi.mocked(communicationAdapter.getRoomMembers).mockResolvedValue([
-        'agent-1',
+        'user-1',
+        'user-2',
       ]);
 
       const result = await service.communicationMembership({
         communityID: 'comm-1',
       });
 
-      // The member without agent should not appear in missing members
+      // All community members are in the room, so no missing members
       expect(result.rooms[0].missingMembers).toHaveLength(0);
     });
   });

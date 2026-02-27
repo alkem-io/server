@@ -71,7 +71,7 @@ describe('RoomControllerService', () => {
             roomDetails: {
               roomID: 'room-1',
               threadID: undefined,
-              actorId: 'actor-1',
+              actorID: 'actor-1',
             },
           },
         },
@@ -98,7 +98,7 @@ describe('RoomControllerService', () => {
             roomDetails: {
               roomID: 'room-1',
               threadID: 'thread-1',
-              actorId: 'actor-1',
+              actorID: 'actor-1',
             },
           },
         },
@@ -142,7 +142,7 @@ describe('RoomControllerService', () => {
             roomDetails: {
               roomID: 'room-1',
               threadID: 'thread-1',
-              actorId: 'actor-1',
+              actorID: 'actor-1',
             },
           },
         },
@@ -169,7 +169,7 @@ describe('RoomControllerService', () => {
       const event = {
         original: {
           resultHandler: {
-            roomDetails: { roomID: 'room-1', actorId: 'actor-1' },
+            roomDetails: { roomID: 'room-1', actorID: 'actor-1' },
           },
         },
         response: {
@@ -199,7 +199,7 @@ describe('RoomControllerService', () => {
       const event = {
         original: {
           resultHandler: {
-            roomDetails: { roomID: 'room-1', actorId: 'actor-1' },
+            roomDetails: { roomID: 'room-1', actorID: 'actor-1' },
           },
         },
         response: {

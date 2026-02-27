@@ -1,8 +1,8 @@
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
@@ -31,14 +31,14 @@ export class VisualResolverMutations {
     description: 'Updates the image URI for the specified Visual.',
   })
   async updateVisual(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateVisualInput
   ): Promise<IVisual> {
     const visual = await this.visualService.getVisualOrFail(
       updateData.visualID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       visual.authorization,
       AuthorizationPrivilege.UPDATE,
       `visual image update: ${visual.id}`
@@ -50,7 +50,7 @@ export class VisualResolverMutations {
     description: 'Uploads and sets an image for the specified Visual.',
   })
   async uploadImageOnVisual(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('uploadData') uploadData: VisualUploadImageInput,
     @Args({ name: 'file', type: () => GraphQLUpload })
     { createReadStream, filename, mimetype }: FileUpload
@@ -73,7 +73,7 @@ export class VisualResolverMutations {
       }
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       visual.authorization,
       AuthorizationPrivilege.UPDATE,
       `visual image upload: ${visual.id}`
@@ -106,7 +106,7 @@ export class VisualResolverMutations {
 
     if (hasCredentialRules) {
       this.authorizationService.grantAccessOrFail(
-        agentInfo,
+        actorContext,
         storageBucketAuthorization,
         AuthorizationPrivilege.FILE_UPLOAD,
         `visual image upload on storage bucket: ${visual.id}`
@@ -125,7 +125,7 @@ export class VisualResolverMutations {
       }
 
       this.authorizationService.grantAccessOrFail(
-        agentInfo,
+        actorContext,
         fallbackAuthorization,
         AuthorizationPrivilege.UPDATE,
         `visual image upload via fallback authorization: ${visual.id}`
@@ -139,7 +139,7 @@ export class VisualResolverMutations {
       readStream,
       filename,
       mimetype,
-      agentInfo.userID
+      actorContext.actorID
     );
 
     await this.documentService.saveDocument(visualDocument);
