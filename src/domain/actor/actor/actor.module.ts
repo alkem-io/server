@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { CredentialModule } from '@domain/actor/credential/credential.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Module } from '@nestjs/common';
@@ -13,6 +14,7 @@ import { ActorAuthorizationService } from './actor.service.authorization';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Actor]),
+    ActorLookupModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     CredentialModule,

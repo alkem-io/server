@@ -2,16 +2,16 @@ import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { IActorFull } from './actor.interface';
-import { ActorService } from './actor.service';
 
 @Resolver()
 export class ActorResolverQueries {
   constructor(
-    private readonly actorService: ActorService,
+    private readonly actorLookupService: ActorLookupService,
     private readonly authorizationService: AuthorizationService,
     private readonly platformAuthorizationService: PlatformAuthorizationPolicyService
   ) {}
@@ -31,7 +31,10 @@ export class ActorResolverQueries {
       'actor query'
     );
 
-    const actor = await this.actorService.getActorOrNull(id);
-    return actor as IActorFull | null;
+    // Must use getFullActorById (queries the child table) instead of
+    // getActorOrNull (queries only the parent actor table) so that
+    // child-specific fields (email, firstName, contactEmail, etc.)
+    // are loaded for GraphQL inline fragments.
+    return this.actorLookupService.getFullActorById(id);
   }
 }
