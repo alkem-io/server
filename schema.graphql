@@ -685,6 +685,7 @@ enum SpaceVisibility {
   ACTIVE
   ARCHIVED
   DEMO
+  INACTIVE
 }
 
 enum StorageAggregatorType {

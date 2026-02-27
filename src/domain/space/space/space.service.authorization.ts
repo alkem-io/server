@@ -174,6 +174,7 @@ export class SpaceAuthorizationService {
     switch (spaceVisibility) {
       case SpaceVisibility.ACTIVE:
       case SpaceVisibility.DEMO:
+      case SpaceVisibility.INACTIVE:
         space.authorization = await this.extendAuthorizationPolicyLocal(
           space.authorization,
           space.community.roleSet,
