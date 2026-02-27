@@ -12,6 +12,14 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Actor } from './actor.entity';
 import { IActorFull } from './actor.interface';
 
+/**
+ * Field resolvers for the IActorFull @InterfaceType.
+ *
+ * With `inheritResolversFromInterfaces: true`, these fire for all
+ * implementing types (User, Organization, VirtualContributor, Space, Account).
+ * Concrete type resolvers take precedence — these act as fallback for types
+ * that don't define their own (e.g. Space, Account for profile).
+ */
 @Resolver(() => IActorFull)
 export class ActorFullResolverFields {
   constructor(private credentialService: CredentialService) {}
