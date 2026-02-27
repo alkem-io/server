@@ -21,7 +21,10 @@ import { PromptGraphDefinition } from './dto/prompt-graph-definition/prompt.grap
 import { PromptGraphTransformer } from './transformers/prompt.graph.transformer';
 import { IVirtualContributor } from './virtual.contributor.interface';
 
-@ChildEntity({ discriminatorValue: ActorType.VIRTUAL_CONTRIBUTOR, tableName: 'virtual_contributor' })
+@ChildEntity({
+  discriminatorValue: ActorType.VIRTUAL_CONTRIBUTOR,
+  tableName: 'virtual_contributor',
+})
 export class VirtualContributor extends Actor implements IVirtualContributor {
   // Inherited from Actor (on actor table):
   //   id, type, nameID, profile, authorization, credentials, createdDate, updatedDate, version

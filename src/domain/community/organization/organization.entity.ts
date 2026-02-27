@@ -16,7 +16,10 @@ import { IOrganizationSettings } from '../organization-settings/organization.set
 import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
 import { IOrganization } from './organization.interface';
 
-@ChildEntity({ discriminatorValue: ActorType.ORGANIZATION, tableName: 'organization' })
+@ChildEntity({
+  discriminatorValue: ActorType.ORGANIZATION,
+  tableName: 'organization',
+})
 export class Organization extends Actor implements IOrganization, IGroupable {
   // Inherited from Actor (on actor table):
   //   id, type, nameID, profile, authorization, credentials, createdDate, updatedDate, version

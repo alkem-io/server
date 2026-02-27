@@ -69,7 +69,8 @@ export class VirtualContributorMessageService {
         invocationInput.virtualContributorID,
         {
           relations: {
-            authorization: true, profile: true,
+            authorization: true,
+            profile: true,
           },
         }
       );

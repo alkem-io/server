@@ -31,9 +31,8 @@ export class VirtualContributorLookupService {
     private actorLookupService: ActorLookupService
   ) {}
 
-  // Note: VirtualContributor has credentials via the actor relation.
-  // This method returns both the virtualContributor and the actorID/credentials.
-  // Callers should prefer using virtualContributor.id and virtualContributor.credentials directly.
+  // Loads the VirtualContributor with its credentials (inherited from Actor via CTI).
+  // Returns actorID and credentials alongside the entity for legacy callers.
   public async getVirtualContributorAndActor(virtualID: string): Promise<{
     virtualContributor: IVirtualContributor;
     actorID: string;
@@ -105,7 +104,7 @@ export class VirtualContributorLookupService {
     return virtualContributor;
   }
 
-  // Credentials are accessed via the actor relation
+  // Credentials are inherited from Actor (CTI) and queried directly on VirtualContributor.
   async virtualContributorsWithCredentials(
     credentialCriteria: CredentialsSearchInput,
     limit?: number

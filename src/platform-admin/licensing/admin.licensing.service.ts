@@ -57,7 +57,6 @@ export class AdminLicensingService {
         },
       }
     );
-    // Credentials are accessed via space.credentials getter (delegating to actor)
     await this.licenseIssuerService.assignLicensePlan(
       space.id,
       licensePlan,
@@ -96,7 +95,6 @@ export class AdminLicensingService {
         },
       }
     );
-    // Credentials are accessed via space.credentials getter (delegating to actor)
     await this.licenseIssuerService.revokeLicensePlan(
       space.id,
       licensePlan,
@@ -134,7 +132,6 @@ export class AdminLicensingService {
         },
       }
     );
-    // Credentials are accessed via account.credentials getter (delegating to actor)
     await this.licenseIssuerService.assignLicensePlan(
       account.id,
       licensePlan,
@@ -173,7 +170,6 @@ export class AdminLicensingService {
         },
       }
     );
-    // Credentials are accessed via account.credentials getter (delegating to actor)
     await this.licenseIssuerService.revokeLicensePlan(
       account.id,
       licensePlan,

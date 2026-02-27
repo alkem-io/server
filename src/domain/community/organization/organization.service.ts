@@ -50,7 +50,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { UpdateOrganizationSettingsEntityInput } from '../organization-settings/dto/organization.settings.dto.update';
 import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
 import { OrganizationSettingsService } from '../organization-settings/organization.settings.service';
@@ -100,7 +100,7 @@ export class OrganizationService {
     );
 
     let organization: IOrganization = Organization.create(organizationData);
-    // nameID is a getter/setter delegating to actor, not a @Column on Organization,
+    // nameID is inherited from Actor (CTI), not a @Column on Organization,
     // so TypeORM's create() won't copy it from the input — set it explicitly.
     organization.nameID = organizationData.nameID!;
     organization.authorization = new AuthorizationPolicy(

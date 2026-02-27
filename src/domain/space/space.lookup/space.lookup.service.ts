@@ -186,10 +186,7 @@ export class SpaceLookupService {
               { nameID: In(spaceIdsOrNameIds) },
               options.where,
             ]
-        : [
-            { id: In(spaceIdsOrNameIds) },
-            { nameID: In(spaceIdsOrNameIds) },
-          ],
+        : [{ id: In(spaceIdsOrNameIds) }, { nameID: In(spaceIdsOrNameIds) }],
     });
   }
 

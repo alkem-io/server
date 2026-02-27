@@ -1,7 +1,6 @@
 import { UUID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { ActorService } from '@domain/actor/actor/actor.service';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseType } from '@common/enums/license.type';
@@ -34,6 +33,7 @@ import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platf
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IActor } from '@domain/actor/actor/actor.interface';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
@@ -67,7 +67,7 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { keyBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
@@ -136,7 +136,7 @@ export class SpaceService {
     parentPlatformRolesAccess?: IPlatformRolesAccess
   ): Promise<ISpace> {
     const space: ISpace = Space.create(spaceData);
-    // nameID is a getter/setter delegating to actor, not a @Column on Space,
+    // nameID is inherited from Actor (CTI), not a @Column on Space,
     // so TypeORM's create() won't copy it from the input — set it explicitly.
     if (spaceData.nameID) {
       space.nameID = spaceData.nameID;

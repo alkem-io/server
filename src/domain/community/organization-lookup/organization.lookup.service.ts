@@ -28,7 +28,7 @@ export class OrganizationLookupService {
     });
   }
 
-  // Credentials are accessed via the actor relation
+  // Credentials are inherited from Actor (CTI) and queried directly on Organization.
   async organizationsWithCredentials(
     credentialCriteria: CredentialsSearchInput,
     limit?: number

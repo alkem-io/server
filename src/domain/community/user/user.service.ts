@@ -48,7 +48,7 @@ import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { InstrumentService } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
 import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
@@ -106,7 +106,7 @@ export class UserService {
     let user: IUser = User.create({
       ...userData,
     });
-    // nameID is a getter/setter delegating to actor, not a @Column on User,
+    // nameID is inherited from Actor (CTI), not a @Column on User,
     // so TypeORM's create() won't copy it from the input — set it explicitly.
     user.nameID = userData.nameID!;
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);

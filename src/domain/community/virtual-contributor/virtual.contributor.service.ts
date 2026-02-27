@@ -94,7 +94,7 @@ export class VirtualContributorService {
     let virtualContributor: IVirtualContributor = VirtualContributor.create(
       virtualContributorData
     );
-    // nameID is a getter/setter delegating to actor, not a @Column on VirtualContributor,
+    // nameID is inherited from Actor (CTI), not a @Column on VirtualContributor,
     // so TypeORM's create() won't copy it from the input — set it explicitly.
     virtualContributor.nameID = virtualContributorData.nameID!;
 
@@ -448,7 +448,7 @@ export class VirtualContributorService {
     return virtual;
   }
 
-  // Credentials are loaded via the actor relation.
+  // Loads credentials (inherited from Actor via CTI) on the VirtualContributor.
   async getVirtualContributorWithCredentials(
     virtualID: string
   ): Promise<IVirtualContributor> {

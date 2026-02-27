@@ -9,13 +9,7 @@ import { IAccount } from '@domain/space/account/account.interface';
 import { IAccountLicensePlan } from '@domain/space/account.license.plan';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
-import {
-  ChildEntity,
-  Column,
-  JoinColumn,
-  OneToMany,
-  OneToOne,
-} from 'typeorm';
+import { ChildEntity, Column, JoinColumn, OneToMany, OneToOne } from 'typeorm';
 import { Space } from '../space/space.entity';
 
 @ChildEntity({ discriminatorValue: ActorType.ACCOUNT, tableName: 'account' })
@@ -24,7 +18,11 @@ export class Account extends Actor implements IAccount {
   //   id, type, nameID, profile, authorization, credentials, createdDate, updatedDate, version
 
   // DB column renamed from 'type' to 'account_type' to avoid CTI discriminator collision
-  @Column('varchar', { length: ENUM_LENGTH, nullable: true, name: 'account_type' })
+  @Column('varchar', {
+    length: ENUM_LENGTH,
+    nullable: true,
+    name: 'account_type',
+  })
   accountType!: AccountType;
 
   @Column('varchar', { length: ENUM_LENGTH, nullable: true })

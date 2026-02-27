@@ -186,7 +186,7 @@ export class UserLookupService {
     );
   }
 
-  // Credentials are loaded via the actor relation
+  // Credentials are inherited from Actor (CTI) and loaded directly on User.
   public async getUsersWithCredentials(ids: string[]): Promise<IUser[]> {
     const users = await this.entityManager.find(User, {
       where: {
