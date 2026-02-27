@@ -84,8 +84,9 @@ export class SpaceLookupService {
     if (!space) {
       if (!space)
         throw new EntityNotFoundException(
-          `Unable to find L0 Space with nameID: ${spaceNameID}`,
-          LogContext.SPACES
+          'L0 Space not found',
+          LogContext.SPACES,
+          { spaceNameID }
         );
     }
     return space;

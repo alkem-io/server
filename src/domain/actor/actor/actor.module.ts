@@ -1,3 +1,4 @@
+import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { CredentialModule } from '@domain/actor/credential/credential.module';
@@ -15,6 +16,7 @@ import { ActorAuthorizationService } from './actor.service.authorization';
 @Module({
   imports: [
     TypeOrmModule.forFeature([Actor]),
+    ActorContextModule,
     ActorLookupModule,
     AuthorizationPolicyModule,
     AuthorizationModule,

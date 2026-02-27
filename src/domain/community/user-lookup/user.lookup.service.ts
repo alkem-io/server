@@ -103,8 +103,9 @@ export class UserLookupService {
     });
     if (!user) {
       throw new EntityNotFoundException(
-        `User with nameId ${userNameID} not found`,
-        LogContext.COMMUNITY
+        'User not found',
+        LogContext.COMMUNITY,
+        { nameId: userNameID }
       );
     }
     return user;
