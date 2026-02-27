@@ -1,39 +1,39 @@
-import { Injectable } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseType } from '@common/enums/license.type';
+import { SpaceLevel } from '@common/enums/space.level';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CreateTagsetTemplateInput } from '@domain/common/tagset-template';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { TimelineService } from '@domain/timeline/timeline/timeline.service';
-import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { InnovationFlowService } from '../innovation-flow/innovation.flow.service';
-import { TagsetType } from '@common/enums/tagset.type';
-import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
-import { CreateCollaborationInput } from './dto/collaboration.dto.create';
-import { Space } from '@domain/space/space/space.entity';
-import { SpaceLevel } from '@common/enums/space.level';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { CreateInnovationFlowInput } from '../innovation-flow/dto/innovation.flow.dto.create';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
-import { LicenseType } from '@common/enums/license.type';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
-import { CalloutsSetService } from '../callouts-set/callouts.set.service';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { CreateTagsetTemplateInput } from '@domain/common/tagset-template';
+import { Space } from '@domain/space/space/space.entity';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ITimeline } from '@domain/timeline/timeline/timeline.interface';
+import { TimelineService } from '@domain/timeline/timeline/timeline.service';
+import { Injectable } from '@nestjs/common';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
-import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { CalloutsSetService } from '../callouts-set/callouts.set.service';
+import { CreateInnovationFlowInput } from '../innovation-flow/dto/innovation.flow.dto.create';
+import { IInnovationFlow } from '../innovation-flow/innovation.flow.interface';
+import { InnovationFlowService } from '../innovation-flow/innovation.flow.service';
 import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
+import { CreateCollaborationInput } from './dto/collaboration.dto.create';
 
 @Injectable()
 export class CollaborationService {
@@ -52,7 +52,7 @@ export class CollaborationService {
   async createCollaboration(
     collaborationData: CreateCollaborationInput,
     storageAggregator: IStorageAggregator,
-    agentInfo?: AgentInfo
+    actorContext?: ActorContext
   ): Promise<ICollaboration> {
     if (
       !collaborationData.calloutsSetData ||
@@ -145,7 +145,7 @@ export class CollaborationService {
           collaboration.calloutsSet,
           collaborationData.calloutsSetData.calloutsData,
           storageAggregator,
-          agentInfo?.userID
+          actorContext?.actorID
         );
     }
 
@@ -163,7 +163,7 @@ export class CollaborationService {
     this.innovationFlowService.validateInnovationFlowDefinition(
       innovationFlowData.states
     );
-    const allowedValues = innovationFlowData.states
+    const allowedValues = [...innovationFlowData.states]
       .sort(sortBySortOrder)
       .map(state => state.displayName);
     let defaultSelectedValue = innovationFlowData.currentStateDisplayName;
@@ -226,7 +226,7 @@ export class CollaborationService {
     }
 
     switch (space.level) {
-      case SpaceLevel.L0:
+      case SpaceLevel.L0: {
         const spacesInAccount = await this.entityManager.find(Space, {
           where: {
             levelZeroSpaceID: space.id,
@@ -249,7 +249,8 @@ export class CollaborationService {
           }
           return x.collaboration;
         });
-      case SpaceLevel.L1:
+      }
+      case SpaceLevel.L1: {
         const subsubspaces = space.subspaces;
         if (!subsubspaces) {
           throw new EntityNotInitializedException(
@@ -267,6 +268,7 @@ export class CollaborationService {
           }
           return subsubspace.collaboration;
         });
+      }
     }
 
     return [];
@@ -337,7 +339,7 @@ export class CollaborationService {
   async getInnovationFlow(collaborationID: string): Promise<IInnovationFlow> {
     const collaboration = await this.getCollaborationOrFail(collaborationID, {
       relations: {
-        innovationFlow: true,
+        innovationFlow: { states: { defaultCalloutTemplate: true } },
       },
     });
 

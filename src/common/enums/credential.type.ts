@@ -1,6 +1,6 @@
 import { registerEnumType } from '@nestjs/graphql';
-import { LicensingCredentialBasedCredentialType } from './licensing.credential.based.credential.type';
 import { AuthorizationCredential } from './authorization.credential';
+import { LicensingCredentialBasedCredentialType } from './licensing.credential.based.credential.type';
 
 export const CredentialType = {
   ...LicensingCredentialBasedCredentialType,

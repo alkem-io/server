@@ -1,11 +1,11 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IInnovationFlowState } from './innovation.flow.state.interface';
-import { InnovationFlowState } from './innovation.flow.state.entity';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
-import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
+import { AuthorizationActorHasPrivilege } from '@common/decorators/authorizationActorHasPrivilege';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { ITemplate } from '@domain/template/template/template.interface';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { InnovationFlowState } from './innovation.flow.state.entity';
+import { IInnovationFlowState } from './innovation.flow.state.interface';
 import { InnovationFlowStateService } from './innovation.flow.state.service';
 
 @Resolver(() => IInnovationFlowState)
@@ -14,7 +14,7 @@ export class InnovationFlowStateResolverFields {
     private readonly innovationFlowStateService: InnovationFlowStateService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('defaultCalloutTemplate', () => ITemplate, {
     nullable: true,

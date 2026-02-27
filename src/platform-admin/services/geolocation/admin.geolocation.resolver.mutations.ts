@@ -1,18 +1,18 @@
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { GeoLocationException } from '@common/exceptions/geo.location.exception';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { LocationService } from '@domain/common/location';
+import { Location } from '@domain/common/location/location.entity';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { InstrumentResolver } from '@src/apm/decorators';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, IsNull, Not } from 'typeorm';
-import { Location } from '@domain/common/location/location.entity';
-import { LocationService } from '@domain/common/location';
-import { GeoLocationException } from '@common/exceptions/geo.location.exception';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { GeoapifyService } from '@services/external/geoapify';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, IsNull, Not } from 'typeorm';
 
 @InstrumentResolver()
 @Resolver()
@@ -31,15 +31,15 @@ export class AdminGeoLocationMutations {
     description: 'Updates the GeoLocation data where required on the platform.',
   })
   async adminUpdateGeoLocationData(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `Update GeoLocation data: ${agentInfo.email}`
+      `Update GeoLocation data: ${actorContext.actorID}`
     );
 
     if (!this.geoapifyService.isEnabled()) {

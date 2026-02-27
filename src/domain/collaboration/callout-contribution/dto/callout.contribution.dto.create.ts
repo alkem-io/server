@@ -1,10 +1,10 @@
-import { InputType, Field, ObjectType } from '@nestjs/graphql';
-import { IsOptional, ValidateNested } from 'class-validator';
-import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { CreatePostInput } from '@domain/collaboration/post/dto/post.dto.create';
 import { CreateMemoInput } from '@domain/common/memo/dto/memo.dto.create';
-import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
+import { IsOptional, ValidateNested } from 'class-validator';
 
 @InputType()
 @ObjectType('CreateCalloutContributionData')

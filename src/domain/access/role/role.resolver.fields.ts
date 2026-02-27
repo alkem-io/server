@@ -1,7 +1,7 @@
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { IActorRolePolicy } from './actor.role.policy.interface';
 import { IRole } from './role.interface';
-import { IContributorRolePolicy } from './contributor.role.policy.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 
 @Resolver(() => IRole)
 export class RoleResolverFields {
@@ -21,28 +21,28 @@ export class RoleResolverFields {
     return role.parentCredentials;
   }
 
-  @ResolveField('userPolicy', () => IContributorRolePolicy, {
+  @ResolveField('userPolicy', () => IActorRolePolicy, {
     nullable: false,
     description: 'The role policy that applies for Users in this Role.',
   })
-  userPolicy(@Parent() role: IRole): IContributorRolePolicy {
+  userPolicy(@Parent() role: IRole): IActorRolePolicy {
     return role.userPolicy;
   }
 
-  @ResolveField('organizationPolicy', () => IContributorRolePolicy, {
+  @ResolveField('organizationPolicy', () => IActorRolePolicy, {
     nullable: false,
     description: 'The role policy that applies for Organizations in this Role.',
   })
-  organizationPolicy(@Parent() role: IRole): IContributorRolePolicy {
+  organizationPolicy(@Parent() role: IRole): IActorRolePolicy {
     return role.organizationPolicy;
   }
 
-  @ResolveField('virtualContributorPolicy', () => IContributorRolePolicy, {
+  @ResolveField('virtualContributorPolicy', () => IActorRolePolicy, {
     nullable: false,
     description:
       'The role policy that applies for VirtualContributors in this Role.',
   })
-  virtualContributorPolicy(@Parent() role: IRole): IContributorRolePolicy {
+  virtualContributorPolicy(@Parent() role: IRole): IActorRolePolicy {
     return role.virtualContributorPolicy;
   }
 }

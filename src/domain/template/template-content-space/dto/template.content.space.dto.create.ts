@@ -1,10 +1,10 @@
-import { Field, InputType } from '@nestjs/graphql';
-import { IsOptional, ValidateNested } from 'class-validator';
-import { Type } from 'class-transformer';
-import { CreateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.create';
-import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { SpaceLevel } from '@common/enums/space.level';
+import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import { CreateSpaceAboutInput } from '@domain/space/space.about/dto/space.about.dto.create';
 import { CreateSpaceSettingsInput } from '@domain/space/space.settings/dto/space.settings.dto.create';
+import { Field, InputType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
+import { IsOptional, ValidateNested } from 'class-validator';
 
 @InputType()
 export class CreateTemplateContentSpaceInput {

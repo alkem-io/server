@@ -1,17 +1,17 @@
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { UserIdentityDeletionException } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserService } from '@domain/community/user/user.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { UserService } from '@domain/community/user/user.service';
-import { IUser } from '@domain/community/user/user.interface';
-import { UserIdentityDeletionException } from '@common/exceptions';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @InstrumentResolver()
 @Resolver()
@@ -29,19 +29,19 @@ export class AdminUsersMutations {
       'Remove the Kratos account associated with the specified User. Note: the Users profile on the platform is not deleted.',
   })
   async adminUserAccountDelete(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('userID', { type: () => UUID }) userID: string
   ): Promise<IUser> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `Remove Kratos account for User ${userID}: ${agentInfo.email}`
+      `Remove Kratos account for User ${userID}: ${actorContext.actorID}`
     );
 
-    const user = await this.userService.getUserOrFail(userID);
+    const user = await this.userService.getUserByIdOrFail(userID);
     try {
       await this.kratosService.deleteIdentityByEmail(user.email);
       const updatedUser =

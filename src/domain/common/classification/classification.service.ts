@@ -1,25 +1,25 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LogContext } from '@common/enums/logging.context';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { ITagset } from '@domain/common/tagset/tagset.interface';
-import { TagsetService } from '@domain/common/tagset/tagset.service';
-import { Classification } from '@domain/common/classification/classification.entity';
-import { IClassification } from '@domain/common/classification/classification.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Classification } from '@domain/common/classification/classification.entity';
+import { IClassification } from '@domain/common/classification/classification.interface';
+import { ITagset } from '@domain/common/tagset/tagset.interface';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, Repository } from 'typeorm';
 import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { UpdateClassificationSelectTagsetValueInput } from './dto/classification.dto.update.select.tagset.value';
-import { LogContext } from '@common/enums/logging.context';
-import { UpdateClassificationInput } from './dto/classification.dto.update';
 import { CreateClassificationInput } from './dto/classification.dto.create';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { UpdateClassificationInput } from './dto/classification.dto.update';
+import { UpdateClassificationSelectTagsetValueInput } from './dto/classification.dto.update.select.tagset.value';
 
 @Injectable()
 export class ClassificationService {
@@ -190,16 +190,47 @@ export class ClassificationService {
     });
   }
 
+  async updateTagsetTemplateOnSelectTagset(
+    classificationID: string,
+    tagsetTemplate: ITagsetTemplate
+  ): Promise<ITagset> {
+    const tagsets = await this.getTagsets(classificationID);
+    const existingTagset = this.tagsetService.getTagsetByName(
+      tagsets,
+      tagsetTemplate.name
+    );
+
+    const defaultTags = tagsetTemplate.defaultSelectedValue
+      ? [tagsetTemplate.defaultSelectedValue]
+      : [];
+
+    if (existingTagset) {
+      existingTagset.tagsetTemplate = tagsetTemplate;
+      existingTagset.tags = defaultTags;
+      return await this.tagsetService.save(existingTagset);
+    }
+
+    // Target callouts set has a template not present in the source classification;
+    // create a new tagset for it
+    const classification = await this.getClassificationOrFail(classificationID);
+    return await this.addTagsetOnClassification(classification, {
+      name: tagsetTemplate.name,
+      type: tagsetTemplate.type,
+      tags: defaultTags,
+      tagsetTemplate,
+    });
+  }
+
   // Note: provided data has priority when it comes to tags
   public updateClassificationTagsetInputs(
-    tagsetInputDtata: CreateTagsetInput[] | undefined,
+    tagsetInputData: CreateTagsetInput[] | undefined,
     additionalTagsetInputs: CreateTagsetInput[]
   ): CreateTagsetInput[] {
     const result: CreateTagsetInput[] = [...additionalTagsetInputs];
 
-    if (!tagsetInputDtata) return result;
+    if (!tagsetInputData) return result;
 
-    for (const tagsetInput of tagsetInputDtata) {
+    for (const tagsetInput of tagsetInputData) {
       const existingInput = result.find(t => t.name === tagsetInput.name);
       if (existingInput) {
         // Do not change type, name etc - only tags

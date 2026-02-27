@@ -1,6 +1,8 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, In, Repository } from 'typeorm';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TagsetType } from '@common/enums/tagset.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -8,38 +10,36 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CalloutsSet } from './callouts.set.entity';
-import { ICalloutsSet } from './callouts.set.interface';
-import { CalloutService } from '../callout/callout.service';
-import { ICallout } from '../callout/callout.interface';
-import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ITagset } from '@domain/common/tagset';
+import { TagsetArgs } from '@domain/common/tagset/dto/tagset.args';
 import {
   CreateTagsetTemplateInput,
   ITagsetTemplate,
 } from '@domain/common/tagset-template';
-import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { TagsetType } from '@common/enums/tagset.type';
-import { CalloutsSetArgsCallouts } from './dto/callouts.set.args.callouts';
-import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.callouts.sort.order';
-import { compact, keyBy } from 'lodash';
-import { CreateCalloutsSetInput } from './dto/callouts.set.dto.create';
-import { Callout } from '../callout/callout.entity';
-import { CreateCalloutOnCalloutsSetInput } from './dto/callouts.set.dto.create.callout';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
 import { ITagsetTemplateSet } from '@domain/common/tagset-template-set/tagset.template.set.interface';
-import { CalloutsSetType } from '@common/enums/callouts.set.type';
-import { ITagset } from '@domain/common/tagset';
-import { TagsetArgs } from '@domain/common/tagset/dto/tagset.args';
+import { TagsetTemplateSetService } from '@domain/common/tagset-template-set/tagset.template.set.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { compact, keyBy } from 'lodash';
+import { FindOneOptions, FindOptionsRelations, In, Repository } from 'typeorm';
+import { Callout } from '../callout/callout.entity';
+import { ICallout } from '../callout/callout.interface';
+import { CalloutService } from '../callout/callout.service';
+import { CreateCalloutInput } from '../callout/dto/callout.dto.create';
+import { CalloutsSet } from './callouts.set.entity';
+import { ICalloutsSet } from './callouts.set.interface';
+import { CalloutsSetArgsCallouts } from './dto/callouts.set.args.callouts';
+import { CreateCalloutsSetInput } from './dto/callouts.set.dto.create';
+import { CreateCalloutOnCalloutsSetInput } from './dto/callouts.set.dto.create.callout';
+import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.callouts.sort.order';
 
 @Injectable()
 export class CalloutsSetService {
@@ -328,7 +328,7 @@ export class CalloutsSetService {
   async createCallout(
     calloutsSet: ICalloutsSet,
     calloutInput: CreateCalloutInput,
-    agentInfo?: AgentInfo
+    actorContext?: ActorContext
   ): Promise<ICallout> {
     const reservedNameIDs: string[] = [];
     // TODO      await this.namingService.getReservedNameIDsInCalloutsSet(calloutsSet.id);
@@ -360,7 +360,7 @@ export class CalloutsSetService {
       calloutInput,
       tagsetTemplates,
       storageAggregator,
-      agentInfo?.userID
+      actorContext?.actorID
     );
     callout.calloutsSet = calloutsSet;
     return await this.calloutService.save(callout);
@@ -434,7 +434,7 @@ export class CalloutsSetService {
   public async getCalloutsFromCollaboration(
     calloutsSet: ICalloutsSet,
     args: CalloutsSetArgsCallouts,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ICallout[]> {
     const queryTags: boolean = !!args.withTags?.length;
 
@@ -473,7 +473,7 @@ export class CalloutsSetService {
     const availableCallouts = allCallouts.filter(callout => {
       // Check for READ privilege
       const hasAccess = this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         callout.authorization,
         AuthorizationPrivilege.READ
       );
@@ -544,7 +544,7 @@ export class CalloutsSetService {
           );
 
         const hasAccess = this.authorizationService.isAccessGranted(
-          agentInfo,
+          actorContext,
           callout.authorization,
           AuthorizationPrivilege.READ
         );
@@ -563,9 +563,7 @@ export class CalloutsSetService {
 
     // (b) by activity. First get the activity for all callouts + sort by it; shuffle does not make sense.
     if (args.sortByActivity) {
-      for (const callout of availableCallouts) {
-        callout.activity = await this.calloutService.getActivityCount(callout);
-      }
+      await this.calloutService.getActivityCountBatch(availableCallouts);
       const sortedCallouts = availableCallouts.sort((a, b) =>
         a.activity < b.activity ? 1 : -1
       );
@@ -592,7 +590,7 @@ export class CalloutsSetService {
 
   public async getAllTags(
     calloutsSetID: string,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     classificationTagsets?: TagsetArgs[]
   ): Promise<string[]> {
     const calloutsSet = await this.getCalloutsSetOrFail(calloutsSetID, {
@@ -622,7 +620,7 @@ export class CalloutsSetService {
       .filter(callout => {
         // Check for READ privilege in every callout
         return this.authorizationService.isAccessGranted(
-          agentInfo,
+          actorContext,
           callout.authorization,
           AuthorizationPrivilege.READ
         );

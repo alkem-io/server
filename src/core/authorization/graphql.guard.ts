@@ -1,3 +1,12 @@
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthenticationException } from '@common/exceptions';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
+import {
+  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
+  AUTH_STRATEGY_OATHKEEPER_JWT,
+} from '@core/authentication';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
   ContextType,
   ExecutionContext,
@@ -6,26 +15,12 @@ import {
   LoggerService,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
-import { AuthGuard } from '@nestjs/passport';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  AuthorizationCredential,
-  AuthorizationPrivilege,
-  LogContext,
-} from '@common/enums';
-import { AuthenticationException } from '@common/exceptions';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationRuleAgentPrivilege } from './authorization.rule.agent.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthGuard } from '@nestjs/passport';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
-import {
-  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
-  AUTH_STRATEGY_OATHKEEPER_JWT,
-} from '@core/authentication';
+import { AuthorizationRuleActorPrivilege } from './authorization.rule.actor.privilege';
 
 @Injectable()
 export class GraphqlGuard extends AuthGuard([
@@ -37,6 +32,7 @@ export class GraphqlGuard extends AuthGuard([
   constructor(
     private reflector: Reflector,
     private authorizationService: AuthorizationService,
+    private actorContextService: ActorContextService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -72,7 +68,7 @@ export class GraphqlGuard extends AuthGuard([
  */
   handleRequest(
     err: any,
-    agentInfo: any,
+    actorContext: any,
     info: any,
     _context: any,
     _status?: any
@@ -88,18 +84,18 @@ export class GraphqlGuard extends AuthGuard([
     const graphqlInfo = gqlContext.getInfo();
     const fieldName = graphqlInfo.fieldName;
 
-    // Ensure there is always an AgentInfo
-    let resultAgentInfo = agentInfo;
+    // Ensure there is always an ActorContext
+    let resultActorContext = actorContext;
 
-    if (agentInfo) {
-      this.authorizationService.logAgentInfo(agentInfo);
+    if (actorContext) {
+      this.authorizationService.logActorContext(actorContext);
     } else {
       this.logger.warn?.(
-        `[${this.instanceId}] - AgentInfo NOT present or false: ${agentInfo}`,
+        `[${this.instanceId}] - ActorContext NOT present or false: ${actorContext}`,
         LogContext.AUTH
       );
-      // Create anonymous agent info as fallback
-      resultAgentInfo = this.createAnonymousAgentInfo();
+      // Create anonymous actor context as fallback
+      resultActorContext = this.actorContextService.createAnonymous();
     }
 
     // Apply any rules
@@ -139,7 +135,7 @@ export class GraphqlGuard extends AuthGuard([
               privilege,
               fieldParent,
               fieldName,
-              resultAgentInfo
+              resultActorContext
             );
           });
       } else {
@@ -147,36 +143,26 @@ export class GraphqlGuard extends AuthGuard([
           privilege,
           fieldParent,
           fieldName,
-          resultAgentInfo
+          resultActorContext
         );
       }
     }
 
-    return resultAgentInfo;
+    return resultActorContext;
   }
 
   private executeAuthorizationRule(
     privilege: AuthorizationPrivilege,
     fieldParent: any,
     fieldName: any,
-    resultAgentInfo: any
+    resultActorContext: any
   ) {
-    const rule = new AuthorizationRuleAgentPrivilege(
+    const rule = new AuthorizationRuleActorPrivilege(
       this.authorizationService,
       privilege,
       fieldParent,
       fieldName
     );
-    rule.execute(resultAgentInfo);
-  }
-
-  public createAnonymousAgentInfo(): AgentInfo {
-    const agentInfo = new AgentInfo();
-    const anonymousCredential: ICredentialDefinition = {
-      type: AuthorizationCredential.GLOBAL_ANONYMOUS,
-      resourceID: '',
-    };
-    agentInfo.credentials = [anonymousCredential];
-    return agentInfo;
+    rule.execute(resultActorContext);
   }
 }

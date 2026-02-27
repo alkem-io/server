@@ -1,19 +1,19 @@
-import { Injectable } from '@nestjs/common';
+import { CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS } from '@common/constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CREDENTIAL_RULE_TYPES_PLATFORM_GLOBAL_ADMINS } from '@common/constants';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { Platform } from '@platform/platform/platform.entity';
 import { Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class PlatformAuthorizationPolicyService {
@@ -28,14 +28,12 @@ export class PlatformAuthorizationPolicyService {
   }
 
   public async getPlatformAuthorizationPolicy(): Promise<IAuthorizationPolicy> {
-    const platform = (
-      await this.platformRepository.find({
-        take: 1,
-        relations: {
-          authorization: true,
-        },
-      })
-    )?.[0];
+    const platform = await this.platformRepository.findOne({
+      where: {},
+      relations: {
+        authorization: true,
+      },
+    });
 
     if (!platform || !platform.authorization) {
       throw new EntityNotFoundException(

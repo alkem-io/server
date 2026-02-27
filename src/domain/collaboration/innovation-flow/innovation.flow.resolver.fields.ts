@@ -1,22 +1,23 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IInnovationFlow } from './innovation.flow.interface';
-import { IProfile } from '@domain/common/profile/profile.interface';
+import { AuthorizationActorHasPrivilege } from '@common/decorators/authorizationActorHasPrivilege';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { InnovationFlow } from './innovation.flow.entity';
-import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { IProfile } from '@domain/common/profile/profile.interface';
 import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
+import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
+import { InnovationFlow } from './innovation.flow.entity';
+import { IInnovationFlow } from './innovation.flow.interface';
 import { InnovationFlowService } from './innovation.flow.service';
 
 @Resolver(() => IInnovationFlow)
 export class InnovationFlowResolverFields {
   constructor(private innovationFlowService: InnovationFlowService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('states', () => [IInnovationFlowState], {
     nullable: false,
@@ -25,10 +26,14 @@ export class InnovationFlowResolverFields {
   async states(
     @Parent() innovationFlow: IInnovationFlow
   ): Promise<IInnovationFlowState[]> {
+    // If states were eagerly loaded (e.g. from getInnovationFlow), reuse them
+    if (innovationFlow.states?.length) {
+      return [...innovationFlow.states].sort(sortBySortOrder);
+    }
     return await this.innovationFlowService.getStates(innovationFlow.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('currentState', () => IInnovationFlowState, {
     nullable: true,
@@ -39,6 +44,14 @@ export class InnovationFlowResolverFields {
   ): Promise<IInnovationFlowState | null> {
     if (!innovationFlow.currentStateID) {
       return null;
+    }
+    // If states were eagerly loaded, find currentState from the array
+    if (innovationFlow.states?.length) {
+      return (
+        innovationFlow.states.find(
+          s => s.id === innovationFlow.currentStateID
+        ) ?? null
+      );
     }
     return await this.innovationFlowService.getCurrentState(
       innovationFlow.currentStateID

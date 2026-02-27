@@ -1,17 +1,16 @@
-import { Inject, Injectable } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthenticationService } from '@core/authentication/authentication.service';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { AlkemioConfig } from '@src/types';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { AuthenticationService } from '@core/authentication/authentication.service';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MemoService } from '@domain/common/memo';
+import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { MemoContributionsInputData } from '@services/collaborative-document-integration/inputs/memo.contributions.input.data';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { AlkemioConfig } from '@src/types';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import {
   FetchInputData,
   InfoInputData,
@@ -43,7 +42,7 @@ export class CollaborativeDocumentIntegrationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: WinstonLogger,
     private readonly authorizationService: AuthorizationService,
     private readonly authenticationService: AuthenticationService,
-    private readonly agentInfoService: AgentInfoService,
+    private readonly authActorInfoService: ActorContextService,
     private readonly memoService: MemoService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly contributionReporter: ContributionReporterService,
@@ -58,12 +57,12 @@ export class CollaborativeDocumentIntegrationService {
   public async accessGranted(data: AccessGrantedInputData): Promise<boolean> {
     try {
       const memo = await this.memoService.getMemoOrFail(data.documentId);
-      const agentInfo = await this.agentInfoService.buildAgentInfoForUser(
+      const actorContext = await this.authActorInfoService.buildForUser(
         data.userId
       );
 
       return this.authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         memo.authorization,
         data.privilege
       );
@@ -109,8 +108,10 @@ export class CollaborativeDocumentIntegrationService {
     return { read, update, isMultiUser, maxCollaborators };
   }
 
-  public who(data: WhoInputData): Promise<AgentInfo> {
-    return this.authenticationService.getAgentInfo(data.auth);
+  public async who(data: WhoInputData): Promise<string> {
+    const authCtx = await this.authenticationService.getActorContext(data.auth);
+
+    return authCtx.actorID;
   }
 
   public async save({

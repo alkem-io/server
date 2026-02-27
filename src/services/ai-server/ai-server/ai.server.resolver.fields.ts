@@ -1,19 +1,19 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { GraphqlGuard } from '@core/authorization';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@src/common/decorators';
+import { IAiPersona } from '@services/ai-server/ai-persona';
+import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
 import { IAiServer } from './ai.server.interface';
 import { AiServerService } from './ai.server.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { IAiPersona } from '@services/ai-server/ai-persona';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 
 @Resolver(() => IAiServer)
 export class AiServerResolverFields {
   constructor(private aiServerService: AiServerService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     description: 'The authorization policy for the aiServer',
@@ -23,7 +23,7 @@ export class AiServerResolverFields {
     return this.aiServerService.getAuthorizationPolicy(aiServer);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('defaultAiPersona', () => IAiPersona, {
     nullable: false,
@@ -33,7 +33,7 @@ export class AiServerResolverFields {
     return await this.aiServerService.getDefaultAiPersonaOrFail();
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField(() => [IAiPersona], {
     nullable: false,
@@ -43,7 +43,7 @@ export class AiServerResolverFields {
     return await this.aiServerService.getAiPersonas();
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField(() => IAiPersona, {
     nullable: false,

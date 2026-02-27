@@ -1,8 +1,8 @@
-import { Module } from '@nestjs/common';
-import { MemoModule } from '@domain/common/memo';
+import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
-import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { MemoModule } from '@domain/common/memo';
+import { Module } from '@nestjs/common';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CollaborativeDocumentIntegrationController } from './collaborative-document-integration.controller';
@@ -12,7 +12,7 @@ import { CollaborativeDocumentIntegrationService } from './collaborative-documen
   imports: [
     AuthorizationModule,
     AuthenticationModule,
-    AuthenticationAgentInfoModule,
+    ActorContextModule,
     MemoModule,
     ContributionReporterModule,
     EntityResolverModule,

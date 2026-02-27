@@ -1,7 +1,7 @@
-import { ArgsType, Field, Float } from '@nestjs/graphql';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { UUID } from '@domain/common/scalars';
 import { TagsetArgs } from '@domain/common/tagset/dto/tagset.args';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { ArgsType, Field, Float } from '@nestjs/graphql';
 
 @ArgsType()
 export class CalloutsSetArgsCallouts {

@@ -1,17 +1,17 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { UseGuards } from '@nestjs/common';
-import { GraphqlGuard } from '@core/authorization/graphql.guard';
-import { ITemplateDefault } from './template.default.interface';
-import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
+import { AuthorizationActorHasPrivilege } from '@common/decorators/authorizationActorHasPrivilege';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { GraphqlGuard } from '@core/authorization/graphql.guard';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ITemplate } from '../template/template.interface';
 import { TemplateService } from '../template/template.service';
+import { ITemplateDefault } from './template.default.interface';
 
 @Resolver(() => ITemplateDefault)
 export class TemplateDefaultResolverFields {
   constructor(private templateService: TemplateService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('template', () => ITemplate, {
     nullable: true,

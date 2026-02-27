@@ -1,8 +1,8 @@
 import { Field, InputType } from '@nestjs/graphql';
-import { ValidateNested } from 'class-validator';
-import { UpdateUserSettingsNotificationPlatformAdminInput } from './user.settings.notification.platform.admin.dto.update';
-import { NotificationSettingInput } from './notification.setting.input';
 import { Type } from 'class-transformer';
+import { ValidateNested } from 'class-validator';
+import { NotificationSettingInput } from './notification.setting.input';
+import { UpdateUserSettingsNotificationPlatformAdminInput } from './user.settings.notification.platform.admin.dto.update';
 
 @InputType()
 export class UpdateUserSettingsNotificationPlatformInput {

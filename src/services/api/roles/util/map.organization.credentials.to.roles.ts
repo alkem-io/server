@@ -1,8 +1,8 @@
+import { ICredential } from '@domain/actor/credential/credential.interface';
 import { EntityManager } from 'typeorm';
-import { ICredential } from '@src/domain/agent/credential';
-import { groupCredentialsByEntity } from './group.credentials.by.entity';
 import { getOrganizationRolesForUserEntityData } from './get.organization.roles.for.user.entity.data';
 import { getOrganizationRolesForUserQueryResult } from './get.organization.roles.for.user.query.result';
+import { groupCredentialsByEntity } from './group.credentials.by.entity';
 
 export const mapOrganizationCredentialsToRoles = async (
   entityManager: EntityManager,

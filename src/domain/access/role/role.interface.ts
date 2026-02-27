@@ -1,8 +1,8 @@
 import { RoleName } from '@common/enums/role.name';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IBaseAlkemio } from '@domain/common/entity/base-entity/base.alkemio.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
-import { IContributorRolePolicy } from './contributor.role.policy.interface';
+import { IActorRolePolicy } from './actor.role.policy.interface';
 
 @ObjectType('Role')
 export abstract class IRole extends IBaseAlkemio {
@@ -30,7 +30,7 @@ export abstract class IRole extends IBaseAlkemio {
 
   parentCredentials!: ICredentialDefinition[];
 
-  userPolicy!: IContributorRolePolicy;
-  organizationPolicy!: IContributorRolePolicy;
-  virtualContributorPolicy!: IContributorRolePolicy;
+  userPolicy!: IActorRolePolicy;
+  organizationPolicy!: IActorRolePolicy;
+  virtualContributorPolicy!: IActorRolePolicy;
 }

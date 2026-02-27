@@ -1,12 +1,12 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { InstrumentResolver } from '@src/apm/decorators';
-import { AdminIdentityService } from './admin.identity.service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor } from '@src/common/decorators';
+import { AdminIdentityService } from './admin.identity.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -22,12 +22,12 @@ export class AdminIdentityResolverMutations {
     description: 'Delete a Kratos identity by ID.',
   })
   async adminIdentityDeleteKratosIdentity(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('kratosIdentityId', { type: () => UUID })
     kratosIdentityId: string
   ): Promise<boolean> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_SETTINGS_ADMIN,
       'adminIdentityDeleteKratosIdentity'

@@ -1,13 +1,13 @@
-import { Args, ResolveField, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { InstrumentResolver } from '@src/apm/decorators';
-import { AdminIdentityService } from './admin.identity.service';
-import { PlatformAdminIdentityQueryResults } from '../../admin/dto/platform.admin.query.identity.results';
 import { IdentityVerificationStatusFilter } from '@common/enums/identity.verification.status.filter';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Args, ResolveField, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor } from '@src/common/decorators';
+import { PlatformAdminIdentityQueryResults } from '../../admin/dto/platform.admin.query.identity.results';
+import { AdminIdentityService } from './admin.identity.service';
 import { KratosIdentityDto } from './dto/kratos.identity.dto';
 
 @InstrumentResolver()
@@ -24,7 +24,7 @@ export class AdminIdentityResolverFields {
     description: 'Get identities from Kratos with optional filtering.',
   })
   async identities(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('filter', {
       type: () => IdentityVerificationStatusFilter,
       nullable: true,
@@ -34,7 +34,7 @@ export class AdminIdentityResolverFields {
     filter?: IdentityVerificationStatusFilter
   ): Promise<KratosIdentityDto[]> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'adminIdentities'

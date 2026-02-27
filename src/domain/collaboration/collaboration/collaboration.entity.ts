@@ -1,11 +1,11 @@
-import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
-import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { Timeline } from '@domain/timeline/timeline/timeline.entity';
-import { InnovationFlow } from '../innovation-flow/innovation.flow.entity';
+import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { License } from '@domain/common/license/license.entity';
-import { CalloutsSet } from '../callouts-set/callouts.set.entity';
 import { Space } from '@domain/space/space/space.entity';
+import { Timeline } from '@domain/timeline/timeline/timeline.entity';
+import { Column, Entity, JoinColumn, OneToOne } from 'typeorm';
+import { CalloutsSet } from '../callouts-set/callouts.set.entity';
+import { InnovationFlow } from '../innovation-flow/innovation.flow.entity';
 
 @Entity()
 export class Collaboration
@@ -47,6 +47,9 @@ export class Collaboration
   @JoinColumn()
   license?: License;
 
-  @OneToOne(() => Space, space => space.collaboration)
+  @OneToOne(
+    () => Space,
+    space => space.collaboration
+  )
   space?: Space;
 }

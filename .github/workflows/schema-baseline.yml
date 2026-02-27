@@ -13,7 +13,7 @@ concurrency:
 jobs:
   regenerate:
     name: Regenerate Baseline
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     permissions:
       actions: read
       contents: write
@@ -33,18 +33,16 @@ jobs:
             echo "BASELINE_FAILURE_PHASE=bootstrap"
           } >> "$GITHUB_ENV"
 
+      - name: Use Node.js 22
+        uses: actions/setup-node@v6.2.0
+        with:
+          node-version: '22.22.0'
+
       - name: Bootstrap pnpm toolchain
         run: |
           set -euo pipefail
           corepack enable
           corepack prepare pnpm@10.17.1 --activate
-
-      - name: Use Node.js 22
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-          cache: 'pnpm'
-          cache-dependency-path: pnpm-lock.yaml
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

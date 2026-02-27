@@ -1,24 +1,24 @@
-import { ConfigModule, ConfigService } from '@nestjs/config';
-import { Global, Module, OnModuleDestroy, Inject } from '@nestjs/common';
-import { PubSubEngine } from 'graphql-subscriptions';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { APP_ID_PROVIDER } from '@common/app.id.provider';
 import {
-  NOTIFICATIONS_SERVICE,
+  AUTH_RESET_SERVICE,
+  IS_SCHEMA_BOOTSTRAP,
   MATRIX_ADAPTER_SERVICE,
+  NOTIFICATIONS_SERVICE,
   SUBSCRIPTION_CALLOUT_POST_CREATED,
   SUBSCRIPTION_DISCUSSION_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
-  AUTH_RESET_SERVICE,
   SUBSCRIPTION_SUBSPACE_CREATED,
-  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
-  IS_SCHEMA_BOOTSTRAP,
+  SUBSCRIPTION_VIRTUAL_UPDATED,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
+import { Global, Inject, Module, OnModuleDestroy } from '@nestjs/common';
+import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common/constants';
-import { subscriptionFactoryProvider } from './subscription.factory.provider';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 import { clientProxyFactory } from './client.proxy.factory';
-import { APP_ID_PROVIDER } from '@common/app.id.provider';
+import { subscriptionFactoryProvider } from './subscription.factory.provider';
 
 const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
@@ -38,8 +38,8 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
     queueName: MessagingQueue.SUBSCRIPTION_ROOM_EVENT,
   },
   {
-    provide: SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
-    queueName: MessagingQueue.SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+    provide: SUBSCRIPTION_VIRTUAL_UPDATED,
+    queueName: MessagingQueue.SUBSCRIPTION_VIRTUAL_UPDATED,
   },
 ];
 
@@ -97,7 +97,7 @@ export class MicroservicesModule implements OnModuleDestroy {
     private readonly subspaceCreated: PubSubEngine,
     @Inject(SUBSCRIPTION_ROOM_EVENT)
     private readonly roomEvent: PubSubEngine,
-    @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
+    @Inject(SUBSCRIPTION_VIRTUAL_UPDATED)
     private readonly virtualContributorUpdated: PubSubEngine
   ) {}
 

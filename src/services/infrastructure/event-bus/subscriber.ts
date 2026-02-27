@@ -1,11 +1,9 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { IEvent, IMessageSource } from '@nestjs/cqrs';
-import { Subject } from 'rxjs';
-
-import { AmqpConnection, Nack } from '@golevelup/nestjs-rabbitmq';
-import { Injectable } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums';
+import { AmqpConnection, Nack } from '@golevelup/nestjs-rabbitmq';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { IEvent, IMessageSource } from '@nestjs/cqrs';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Subject } from 'rxjs';
 
 @Injectable()
 export class Subscriber implements IMessageSource {

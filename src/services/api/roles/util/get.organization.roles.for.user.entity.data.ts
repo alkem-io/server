@@ -1,5 +1,5 @@
-import { EntityManager, FindManyOptions, In } from 'typeorm';
 import { Organization } from '@src/domain/community/organization';
+import { EntityManager, FindManyOptions, In } from 'typeorm';
 
 export const getOrganizationRolesForUserEntityData = (
   entityManager: EntityManager,
@@ -9,10 +9,14 @@ export const getOrganizationRolesForUserEntityData = (
     where: {
       id: In(organizationIds),
     },
-    relations: { profile: true },
+    relations: { actor: { profile: true } },
     select: {
-      profile: {
-        displayName: true,
+      id: true,
+      actor: {
+        id: true,
+        profile: {
+          displayName: true,
+        },
       },
     },
   } as FindManyOptions);

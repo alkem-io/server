@@ -1,39 +1,39 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
-import { Space } from '@domain/space/space/space.entity';
+import {
+  ActorLoaderCreator,
+  SpaceAboutLoaderCreator,
+  SpaceCollaborationLoaderCreator,
+  SpaceCommunityLoaderCreator,
+} from '@core/dataloader/creators';
+import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { ILicense } from '@domain/common/license/license.interface';
+import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
 import { NameID } from '@domain/common/scalars';
 import { ICommunity } from '@domain/community/community';
+import { Space } from '@domain/space/space/space.entity';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceService } from '@domain/space/space/space.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ITemplatesManager } from '@domain/template/templates-manager';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
+  AuthorizationActorHasPrivilege,
+  CurrentActor,
 } from '@src/common/decorators';
-import { SpaceService } from '@domain/space/space/space.service';
-import { ISpace } from '@domain/space/space/space.interface';
-import { IAgent } from '@domain/agent/agent';
-import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
-import { Loader } from '@core/dataloader/decorators';
-import {
-  SpaceCollaborationLoaderCreator,
-  SpaceCommunityLoaderCreator,
-  SpaceAboutLoaderCreator,
-  AgentLoaderCreator,
-} from '@core/dataloader/creators';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { ISpaceSettings } from '../space.settings/space.settings.interface';
 import { IAccount } from '../account/account.interface';
-import { ISpaceSubscription } from './space.license.subscription.interface';
-import { ITemplatesManager } from '@domain/template/templates-manager';
-import { ILicense } from '@domain/common/license/license.interface';
-import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
 import { ISpaceAbout } from '../space.about';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
-import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { ISpaceSubscription } from './space.license.subscription.interface';
 
 @Resolver(() => ISpace)
 export class SpaceResolverFields {
@@ -130,22 +130,22 @@ export class SpaceResolverFields {
     return loader.load(space.id);
   }
 
-  @ResolveField('agent', () => IAgent, {
+  @ResolveField('actor', () => IActor, {
     nullable: false,
-    description: 'The Agent representing this Space.',
+    description: 'The Actor representing this Space.',
   })
   async agent(
     @Parent() space: Space,
-    @Loader(AgentLoaderCreator, {
+    @Loader(ActorLoaderCreator, {
       parentClassRef: Space,
       checkParentPrivilege: AuthorizationPrivilege.READ,
     })
-    loader: ILoader<IAgent>
-  ): Promise<IAgent> {
+    loader: ILoader<IActor>
+  ): Promise<IActor> {
     return loader.load(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: false,
@@ -166,7 +166,7 @@ export class SpaceResolverFields {
     return await this.spaceService.getSubspaces(space, args);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('account', () => IAccount, {
     nullable: false,
@@ -176,7 +176,7 @@ export class SpaceResolverFields {
     return await this.spaceService.getAccountForLevelZeroSpaceOrFail(space);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('subspaceByNameID', () => ISpace, {
     nullable: false,
@@ -184,7 +184,7 @@ export class SpaceResolverFields {
   })
   async subspace(
     @Args('NAMEID', { type: () => NameID }) id: string,
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() space: ISpace
   ): Promise<ISpace> {
     const subspace =
@@ -196,7 +196,7 @@ export class SpaceResolverFields {
       throw new EntityNotFoundException(
         `Unable to find subspace with ID: '${id}'`,
         LogContext.SPACES,
-        { subspaceId: id, spaceId: space.id, userId: agentInfo.userID }
+        { subspaceId: id, spaceId: space.id, userId: actorContext.actorID }
       );
     }
     return subspace;
@@ -211,7 +211,7 @@ export class SpaceResolverFields {
     return new Date(createdDate);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('settings', () => ISpaceSettings, {
     nullable: false,
@@ -221,7 +221,7 @@ export class SpaceResolverFields {
     return space.settings;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('templatesManager', () => ITemplatesManager, {
     nullable: true,

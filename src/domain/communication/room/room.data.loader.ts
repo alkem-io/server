@@ -1,7 +1,7 @@
 import { Injectable, Scope } from '@nestjs/common';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import DataLoader from 'dataloader';
 import { IMessage } from '../message/message.interface';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 
 /**
  * Request-scoped DataLoader for batching room communication data requests.
@@ -26,13 +26,13 @@ export class RoomDataLoader {
 
   /**
    * Get the unread count for a room using batched loading.
-   * Creates a separate loader per actorId since unread counts are user-specific.
+   * Creates a separate loader per actorID since unread counts are user-specific.
    */
-  async loadUnreadCount(roomId: string, actorId: string): Promise<number> {
-    let loader = this.unreadCountLoaders.get(actorId);
+  async loadUnreadCount(roomId: string, actorID: string): Promise<number> {
+    let loader = this.unreadCountLoaders.get(actorID);
     if (!loader) {
-      loader = this.createUnreadCountLoader(actorId);
-      this.unreadCountLoaders.set(actorId, loader);
+      loader = this.createUnreadCountLoader(actorID);
+      this.unreadCountLoaders.set(actorID, loader);
     }
     return loader.load(roomId);
   }
@@ -53,11 +53,11 @@ export class RoomDataLoader {
     );
   }
 
-  private createUnreadCountLoader(actorId: string): DataLoader<string, number> {
+  private createUnreadCountLoader(actorID: string): DataLoader<string, number> {
     return new DataLoader<string, number>(
       async (roomIds: readonly string[]) => {
         const results = await this.communicationAdapter.batchGetUnreadCounts(
-          actorId,
+          actorID,
           [...roomIds]
         );
         // Return results in the same order as input keys, defaulting to 0
@@ -65,7 +65,7 @@ export class RoomDataLoader {
       },
       {
         cache: true,
-        name: `RoomUnreadCountLoader:${actorId}`,
+        name: `RoomUnreadCountLoader:${actorID}`,
       }
     );
   }

@@ -1,16 +1,16 @@
-import { Args, Query, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@common/decorators';
+import { CurrentActor, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { PaginationArgs } from '@core/pagination';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { ActivityFeedGroupedQueryArgs } from './activity.feed.grouped.query.args';
+import { ActivityFeed } from './activity.feed.interface';
 import { ActivityFeedQueryArgs } from './activity.feed.query.args';
 import { ActivityFeedService } from './activity.feed.service';
-import { ActivityFeed } from './activity.feed.interface';
-import { PaginationArgs } from '@core/pagination';
-import { IActivityLogEntry } from '@services/api/activity-log/dto/activity.log.entry.interface';
-import { ActivityFeedGroupedQueryArgs } from './activity.feed.grouped.query.args';
-import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
 @Resolver()
@@ -29,18 +29,21 @@ export class ActivityFeedResolverQueries {
   public async activityFeed(
     @Args({ nullable: true })
     pagination: PaginationArgs,
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('args', { nullable: true })
     args?: ActivityFeedQueryArgs
   ): Promise<ActivityFeed> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Activity feed query: ${agentInfo.email}`
+      `Activity feed query: ${actorContext.actorID}`
     );
 
-    return this.feedService.getActivityFeed(agentInfo, { ...args, pagination });
+    return this.feedService.getActivityFeed(actorContext, {
+      ...args,
+      pagination,
+    });
   }
 
   @Query(() => [IActivityLogEntry], {
@@ -50,17 +53,17 @@ export class ActivityFeedResolverQueries {
   })
   @Profiling.api
   public async activityFeedGrouped(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('args', { nullable: true })
     args?: ActivityFeedGroupedQueryArgs
   ): Promise<IActivityLogEntry[]> {
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Activity feed query: ${agentInfo.email}`
+      `Activity feed query: ${actorContext.actorID}`
     );
 
-    return this.feedService.getGroupedActivityFeed(agentInfo, args);
+    return this.feedService.getGroupedActivityFeed(actorContext, args);
   }
 }

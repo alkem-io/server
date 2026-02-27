@@ -1,6 +1,6 @@
 import { UUID } from '@domain/common/scalars';
-import { Field, ObjectType } from '@nestjs/graphql';
 import { ISpace } from '@domain/space/space/space.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType()
 export class CommunityMembershipResult {

@@ -4,7 +4,7 @@ import swc from 'unplugin-swc';
 import tsconfigPaths from 'vite-tsconfig-paths';
 import { defineConfig } from 'vitest/config';
 
-// @ts-ignore
+// @ts-expect-error
 const require = createRequire(import.meta.url);
 
 export default defineConfig({
@@ -27,8 +27,14 @@ export default defineConfig({
     dedupe: ['graphql'],
   },
   test: {
-    // Use 'forks' pool for better compatibility with CJS dependencies
-    pool: 'forks',
+    // Use threads pool: workers share the process and module cache (with isolate: false),
+    // giving better memory efficiency and clean process exit.
+    pool: 'threads',
+    // Match the number of workers to available CPU cores
+    maxWorkers: 4,
+    // Reuse module cache across tests - avoids re-importing per test file
+    // Requires tests to not leak state (clearMocks: true handles mock call data)
+    isolate: false,
     // Enable global test APIs (describe, it, expect, beforeEach, etc.)
     // This provides Jest-like API without explicit imports
     globals: true,
@@ -50,28 +56,50 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       enabled: false, // Enable via CLI: vitest run --coverage
-      reporter: ['text', 'lcov', 'json'],
-      reportsDirectory: './coverage-ci',
-
-      // Files to include in coverage (matching current Jest config)
-      include: [
-        'src/**/*.service.ts',
-        'src/core/authentication/*.strategy.*',
-        'src/core/authorization/*.guard.*',
-        'src/core/middleware/*.*',
-        'src/core/logging/logging.profiling.decorator.ts',
-        'src/common/error-handling/http.exceptions.filter.ts',
-        'src/schema-contract/**/*.ts',
-        'src/schema-bootstrap/**/*.ts',
+      reporter: [
+        ['lcov', { subdir: 'lcov' }],
+        ['html-spa', { subdir: 'html-spa' }],
       ],
+      reportsDirectory: './coverage',
 
-      // Files to exclude from coverage
+      // Measure all TS files in src/ — denylist approach for broad visibility
+      include: ['src/**/*.ts'],
+
+      // Exclude non-logic boilerplate and declarative files
       exclude: [
+        // Test files
         '**/*.spec.ts',
         '**/*.e2e-spec.ts',
         '**/*.it-spec.ts',
         '**/node_modules/**',
         '**/dist/**',
+
+        // Declarative / decorator-only files (no testable logic)
+        'src/types/**',
+        'src/**/*.entity.ts',
+        'src/**/*.interface.ts',
+        'src/**/*.module.ts',
+        'src/**/*.dto.ts',
+        'src/**/*.dto.*.ts',
+        'src/**/*.input.ts',
+        'src/**/*.enum.ts',
+        'src/**/*.type.ts',
+        'src/**/*.types.ts',
+        'src/**/*.constants.ts',
+        'src/**/index.ts',
+
+        'src/common/exceptions/**',
+        'src/common/constants/**',
+        'src/common/enums/**',
+
+        // Infrastructure & config (tested by other harnesses or trivial)
+        'src/migrations/**',
+        'src/main.ts',
+        'src/app.module.ts',
+        'src/app.controller.ts',
+        'src/config/**',
+        'src/apm/**',
+        'src/tools/**',
       ],
 
       // Coverage thresholds (matching current Jest config)

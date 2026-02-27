@@ -1,5 +1,5 @@
-import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 import { LogContext } from '@common/enums';
+import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
 import { isUUID } from 'class-validator';
 
 /**

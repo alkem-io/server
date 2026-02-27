@@ -1,3 +1,17 @@
+import { LogContext } from '@common/enums';
+import { NotificationEvent } from '@common/enums/notification.event';
+import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
+import { EntityNotFoundException } from '@common/exceptions';
+import {
+  getPaginationResults,
+  PaginatedInAppNotifications,
+  PaginationArgs,
+} from '@core/pagination';
+import { Injectable } from '@nestjs/common';
+import { Inject } from '@nestjs/common/decorators';
+import { InjectRepository } from '@nestjs/typeorm';
+import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
+import { NotificationEventsFilterInput } from '@services/api/me/dto/me.notification.event.filter.dto.input';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import {
   Brackets,
@@ -7,49 +21,34 @@ import {
   Repository,
   UpdateResult,
 } from 'typeorm';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { Inject } from '@nestjs/common/decorators';
-import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
-import { NotificationEventInAppState } from '@common/enums/notification.event.in.app.state';
-import { EntityNotFoundException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { NotificationEvent } from '@common/enums/notification.event';
-import { NotificationEventsFilterInput } from '@services/api/me/dto/me.notification.event.filter.dto.input';
-import { CreateInAppNotificationInput } from './dto/in.app.notification.create';
-import { IInAppNotification } from './in.app.notification.interface';
 import {
-  getPaginationResults,
-  PaginatedInAppNotifications,
-  PaginationArgs,
-} from '@core/pagination';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { InAppNotificationCoreEntityIds } from './in.app.notification.core.entity.ids';
+  InAppNotificationPayloadOrganizationMessageDirect,
+  InAppNotificationPayloadOrganizationMessageRoom,
+} from '../in-app-notification-payload/dto/organization';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '../in-app-notification-payload/dto/platform';
+import {
+  InAppNotificationPayloadSpace,
+  InAppNotificationPayloadSpaceCollaborationCallout,
+  InAppNotificationPayloadSpaceCollaborationCalloutComment,
+  InAppNotificationPayloadSpaceCollaborationCalloutPostComment,
+  InAppNotificationPayloadSpaceCommunicationMessageDirect,
+  InAppNotificationPayloadSpaceCommunicationUpdate,
+  InAppNotificationPayloadSpaceCommunityActor,
+  InAppNotificationPayloadSpaceCommunityApplication,
+  InAppNotificationPayloadSpaceCommunityCalendarEvent,
+  InAppNotificationPayloadSpaceCommunityCalendarEventComment,
+  InAppNotificationPayloadSpaceCommunityInvitation,
+  InAppNotificationPayloadSpaceCommunityInvitationPlatform,
+} from '../in-app-notification-payload/dto/space';
 import {
   InAppNotificationPayloadUser,
   InAppNotificationPayloadUserMessageDirect,
   InAppNotificationPayloadUserMessageRoom,
 } from '../in-app-notification-payload/dto/user';
-import {
-  InAppNotificationPayloadSpace,
-  InAppNotificationPayloadSpaceCommunityApplication,
-  InAppNotificationPayloadSpaceCommunityContributor,
-  InAppNotificationPayloadSpaceCollaborationCallout,
-  InAppNotificationPayloadSpaceCommunicationMessageDirect,
-  InAppNotificationPayloadSpaceCommunicationUpdate,
-  InAppNotificationPayloadSpaceCommunityCalendarEvent,
-  InAppNotificationPayloadSpaceCommunityCalendarEventComment,
-  InAppNotificationPayloadSpaceCollaborationCalloutComment,
-  InAppNotificationPayloadSpaceCollaborationCalloutPostComment,
-  InAppNotificationPayloadSpaceCommunityInvitationPlatform,
-  InAppNotificationPayloadSpaceCommunityInvitation,
-} from '../in-app-notification-payload/dto/space';
-import {
-  InAppNotificationPayloadOrganizationMessageDirect,
-  InAppNotificationPayloadOrganizationMessageRoom,
-} from '../in-app-notification-payload/dto/organization';
 import { InAppNotificationPayloadVirtualContributor } from '../in-app-notification-payload/dto/virtual-contributor';
+import { CreateInAppNotificationInput } from './dto/in.app.notification.create';
+import { InAppNotificationCoreEntityIds } from './in.app.notification.core.entity.ids';
+import { IInAppNotification } from './in.app.notification.interface';
 
 @Injectable()
 export class InAppNotificationService {
@@ -87,9 +86,7 @@ export class InAppNotificationService {
       roomID: coreEntityIds.roomID,
       // not a FK but still used for deletion
       messageID: coreEntityIds.messageID,
-      contributorOrganizationID: coreEntityIds.contributorOrganizationID,
-      contributorUserID: coreEntityIds.contributorUserID,
-      contributorVcID: coreEntityIds.contributorVcID,
+      contributorActorId: coreEntityIds.contributorActorId,
       calendarEventID: coreEntityIds.calendarEventID,
     });
   }
@@ -345,25 +342,25 @@ export class InAppNotificationService {
     });
   }
 
-  public async deleteAllForContributorVcInSpace(
-    contributorVcID: string,
+  public async deleteAllForContributorActorInSpace(
+    contributorActorId: string,
     spaceID: string
   ): Promise<void> {
     await this.inAppNotificationRepo.delete({
-      contributorVcID,
+      contributorActorId,
       spaceID,
     });
   }
 
   /**
-   * Deletes all notifications for a Virtual Contributor in multiple spaces.
-   * This is used when a VC is removed from a parent space to clean up
+   * Deletes all notifications for a contributor (actor) in multiple spaces.
+   * This is used when a contributor is removed from a parent space to clean up
    * notifications from all child spaces (L1, L2, etc.).
-   * @param contributorVcID The Virtual Contributor ID
+   * @param contributorActorId The Actor ID of the contributor
    * @param spaceIDs Array of space IDs
    */
-  public async deleteAllForContributorVcInSpaces(
-    contributorVcID: string,
+  public async deleteAllForContributorActorInSpaces(
+    contributorActorId: string,
     spaceIDs: string[]
   ): Promise<void> {
     if (spaceIDs.length === 0) {
@@ -371,38 +368,7 @@ export class InAppNotificationService {
     }
 
     await this.inAppNotificationRepo.delete({
-      contributorVcID,
-      spaceID: In(spaceIDs),
-    });
-  }
-
-  public async deleteAllForContributorOrganizationInSpace(
-    contributorOrganizationID: string,
-    spaceID: string
-  ): Promise<void> {
-    await this.inAppNotificationRepo.delete({
-      contributorOrganizationID,
-      spaceID,
-    });
-  }
-
-  /**
-   * Deletes all notifications for an Organization in multiple spaces.
-   * This is used when an Organization is removed from a parent space to clean up
-   * notifications from all child spaces (L1, L2, etc.).
-   * @param contributorOrganizationID The Organization ID
-   * @param spaceIDs Array of space IDs
-   */
-  public async deleteAllForContributorOrganizationInSpaces(
-    contributorOrganizationID: string,
-    spaceIDs: string[]
-  ): Promise<void> {
-    if (spaceIDs.length === 0) {
-      return;
-    }
-
-    await this.inAppNotificationRepo.delete({
-      contributorOrganizationID,
+      contributorActorId,
       spaceID: In(spaceIDs),
     });
   }
@@ -492,22 +458,9 @@ export class InAppNotificationService {
 
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER: {
         const typedPayload =
-          payload as InAppNotificationPayloadSpaceCommunityContributor;
+          payload as InAppNotificationPayloadSpaceCommunityActor;
         result.spaceID = typedPayload.spaceID;
-        // contributor FKs
-        result.contributorOrganizationID =
-          typedPayload.contributorType === RoleSetContributorType.ORGANIZATION
-            ? typedPayload.contributorID
-            : undefined;
-        result.contributorUserID =
-          typedPayload.contributorType === RoleSetContributorType.USER
-            ? typedPayload.contributorID
-            : undefined;
-        result.contributorVcID =
-          typedPayload.contributorType === RoleSetContributorType.VIRTUAL
-            ? typedPayload.contributorID
-            : undefined;
-
+        result.contributorActorId = typedPayload.actorID;
         break;
       }
 
@@ -520,13 +473,13 @@ export class InAppNotificationService {
         break;
       }
 
-      case NotificationEvent.SPACE_ADMIN_VIRTUAL_CONTRIBUTOR_COMMUNITY_INVITATION_DECLINED:
+      case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
         result.spaceID = (
-          payload as InAppNotificationPayloadSpaceCommunityContributor
+          payload as InAppNotificationPayloadSpaceCommunityActor
         ).spaceID;
-        result.contributorVcID = (
-          payload as InAppNotificationPayloadSpaceCommunityContributor
-        ).contributorID;
+        result.contributorActorId = (
+          payload as InAppNotificationPayloadSpaceCommunityActor
+        ).actorID;
         break;
 
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
@@ -630,11 +583,11 @@ export class InAppNotificationService {
 
       case NotificationEvent.USER_SPACE_COMMUNITY_JOINED:
         result.spaceID = (
-          payload as InAppNotificationPayloadSpaceCommunityContributor
+          payload as InAppNotificationPayloadSpaceCommunityActor
         ).spaceID;
         result.userID = (
-          payload as InAppNotificationPayloadSpaceCommunityContributor
-        ).contributorID;
+          payload as InAppNotificationPayloadSpaceCommunityActor
+        ).actorID;
         break;
 
       case NotificationEvent.USER_MESSAGE:
@@ -656,11 +609,11 @@ export class InAppNotificationService {
       // VIRTUAL CONTRIBUTOR NOTIFICATIONS
       // ========================================
 
-      case NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION:
+      case NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION:
         result.spaceID = (
           payload as InAppNotificationPayloadVirtualContributor
         ).space.id;
-        result.contributorVcID = (
+        result.contributorActorId = (
           payload as InAppNotificationPayloadVirtualContributor
         ).virtualContributorID;
         break;

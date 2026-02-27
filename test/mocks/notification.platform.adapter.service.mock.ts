@@ -1,7 +1,7 @@
-import { vi } from 'vitest';
 import { ValueProvider } from '@nestjs/common';
-import { PublicPart } from '../utils/public-part';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { vi } from 'vitest';
+import { PublicPart } from '../utils/public-part';
 
 export const MockNotificationPlatformAdapter: ValueProvider<
   PublicPart<NotificationPlatformAdapter>

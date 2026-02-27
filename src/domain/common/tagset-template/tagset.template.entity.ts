@@ -1,10 +1,10 @@
-import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
+import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { TagsetType } from '@common/enums/tagset.type';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { TagsetTemplateSet } from '@domain/common/tagset-template-set/tagset.template.set.entity';
+import { Column, Entity, ManyToOne, OneToMany } from 'typeorm';
 import { BaseAlkemioEntity } from '../entity/base-entity';
-import { TagsetType } from '@common/enums/tagset.type';
 import { Tagset } from '../tagset/tagset.entity';
-import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 
 export enum RestrictedTagsetTemplateNames {
   DEFAULT = 'default',
@@ -39,10 +39,14 @@ export class TagsetTemplate
   })
   defaultSelectedValue?: string;
 
-  @OneToMany(() => Tagset, tagset => tagset.tagsetTemplate, {
-    eager: false,
-    cascade: false, // This must be false, the tagsets are owned by the classification, not the template
-  })
+  @OneToMany(
+    () => Tagset,
+    tagset => tagset.tagsetTemplate,
+    {
+      eager: false,
+      cascade: false, // This must be false, the tagsets are owned by the classification, not the template
+    }
+  )
   tagsets?: Tagset[];
 
   @ManyToOne(

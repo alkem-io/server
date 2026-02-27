@@ -1,6 +1,6 @@
 import {
-  indexSDL,
   createDiffContext,
+  indexSDL,
 } from '../../../src/schema-contract/diff/diff-core';
 import { diffScalars } from '../../../src/schema-contract/diff/diff-scalar';
 import { ChangeType } from '../../../src/schema-contract/model';

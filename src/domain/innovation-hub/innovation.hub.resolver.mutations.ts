@@ -1,13 +1,13 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
-import { IInnovationHub } from './innovation.hub.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { DeleteInnovationHubInput } from './dto/innovation.hub.dto.delete';
-import { InnovationHubService } from './innovation.hub.service';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { UpdateInnovationHubInput } from './dto/innovation.hub.dto.update';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
+import { DeleteInnovationHubInput } from './dto/innovation.hub.dto.delete';
+import { UpdateInnovationHubInput } from './dto/innovation.hub.dto.update';
+import { IInnovationHub } from './innovation.hub.interface';
+import { InnovationHubService } from './innovation.hub.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -22,13 +22,13 @@ export class InnovationHubResolverMutations {
   })
   @Profiling.api
   async updateInnovationHub(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateInnovationHubInput
   ): Promise<IInnovationHub> {
     const innovationHub =
       await this.innovationHubService.getInnovationHubOrFail(updateData.ID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       innovationHub.authorization,
       AuthorizationPrivilege.UPDATE,
       'update innovation hub'
@@ -42,13 +42,13 @@ export class InnovationHubResolverMutations {
   })
   @Profiling.api
   async deleteInnovationHub(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteInnovationHubInput
   ): Promise<IInnovationHub> {
     const innovationHub =
       await this.innovationHubService.getInnovationHubOrFail(deleteData.ID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       innovationHub.authorization,
       AuthorizationPrivilege.DELETE,
       'delete innovation hub'

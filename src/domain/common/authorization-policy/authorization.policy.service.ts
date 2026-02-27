@@ -1,31 +1,31 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOptionsSelect, Repository } from 'typeorm';
-import {
-  EntityNotFoundException,
-  ForbiddenException,
-  RelationshipNotFoundException,
-} from '@common/exceptions';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   AuthorizationRoleGlobal,
   LogContext,
 } from '@common/enums';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { IAuthorizationPolicy } from './authorization.policy.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CredentialsSearchInput } from '@domain/agent/credential/dto/credentials.dto.search';
-import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/authorization.policy.rule.credential.interface';
-import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { ConfigService } from '@nestjs/config';
-import { AlkemioConfig } from '@src/types';
+import {
+  EntityNotFoundException,
+  ForbiddenException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
+import { IAuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege.interface';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
+import { CredentialsSearchInput } from '@domain/actor/credential/dto/credentials.dto.search';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
+import { AlkemioConfig } from '@src/types';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOptionsSelect, Repository } from 'typeorm';
+import { IAuthorizationPolicyRuleCredential } from '../../../core/authorization/authorization.policy.rule.credential.interface';
+import { IAuthorizationPolicy } from './authorization.policy.interface';
 
 @Injectable()
 export class AuthorizationPolicyService {
@@ -410,13 +410,13 @@ export class AuthorizationPolicyService {
   }
 
   getAgentPrivileges(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     authorizationPolicy: IAuthorizationPolicy
   ): AuthorizationPrivilege[] {
-    if (!agentInfo || !agentInfo.credentials) return [];
+    if (!actorContext || !actorContext.credentials) return [];
 
     return this.authorizationService.getGrantedPrivileges(
-      agentInfo.credentials,
+      actorContext.credentials,
       authorizationPolicy
     );
   }

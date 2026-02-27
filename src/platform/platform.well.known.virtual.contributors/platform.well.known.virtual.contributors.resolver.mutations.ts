@@ -1,15 +1,15 @@
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
-import { PlatformWellKnownVirtualContributorsService } from './platform.well.known.virtual.contributors.service';
-import { IPlatformWellKnownVirtualContributors } from './platform.well.known.virtual.contributors.interface';
-import { SetPlatformWellKnownVirtualContributorInput } from './dto/platform.well.known.virtual.contributor.dto.set';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { PlatformWellKnownVirtualContributorMapping } from './dto/platform.well.known.virtual.contributor.dto.mapping';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { SetPlatformWellKnownVirtualContributorInput } from './dto/platform.well.known.virtual.contributor.dto.set';
+import { IPlatformWellKnownVirtualContributors } from './platform.well.known.virtual.contributors.interface';
+import { PlatformWellKnownVirtualContributorsService } from './platform.well.known.virtual.contributors.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -25,15 +25,15 @@ export class PlatformWellKnownVirtualContributorsResolverMutations {
       'Set the mapping of a well-known Virtual Contributor to a specific Virtual Contributor UUID.',
   })
   async setPlatformWellKnownVirtualContributor(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('mappingData')
     mappingData: SetPlatformWellKnownVirtualContributorInput
   ): Promise<IPlatformWellKnownVirtualContributors> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `set Platform well-known Virtual Contributor: ${agentInfo.email}`
+      `set Platform well-known Virtual Contributor: ${actorContext.actorID}`
     );
 
     const mappingsRecord =

@@ -1,38 +1,39 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationCredential, LogContext } from '@common/enums';
-import { AuthorizationPrivilege } from '@common/enums';
-import { IOrganization } from '@domain/community/organization';
-import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import {
+  CREDENTIAL_RULE_ORGANIZATION_ADMIN,
+  CREDENTIAL_RULE_ORGANIZATION_READ,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_SUPPORT_MANAGE,
+  CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN,
+} from '@common/constants';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { OrganizationService } from './organization.service';
-import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
-import { OrganizationVerificationAuthorizationService } from '../organization-verification/organization.verification.service.authorization';
-import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import {
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET,
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_COMMUNITY_READ,
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_ADMINS,
-  CREDENTIAL_RULE_ORGANIZATION_ADMIN,
-  CREDENTIAL_RULE_ORGANIZATION_READ,
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_GLOBAL_SUPPORT_MANAGE,
-  CREDENTIAL_RULE_TYPES_ORGANIZATION_PLATFORM_ADMIN,
-} from '@common/constants';
-import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
-import { AgentAuthorizationService } from '@domain/agent/agent/agent.service.authorization';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
+import { IOrganization } from '@domain/community/organization';
+import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
+import { Injectable } from '@nestjs/common';
+import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
+import { OrganizationVerificationAuthorizationService } from '../organization-verification/organization.verification.service.authorization';
+import { UserGroupAuthorizationService } from '../user-group/user-group.service.authorization';
+import { OrganizationService } from './organization.service';
 
 @Injectable()
 export class OrganizationAuthorizationService {
   constructor(
     private organizationService: OrganizationService,
-    private agentAuthorizationService: AgentAuthorizationService,
     private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
@@ -51,8 +52,7 @@ export class OrganizationAuthorizationService {
       {
         relations: {
           storageAggregator: true,
-          profile: true,
-          agent: true,
+          actor: { authorization: true, profile: true, credentials: true },
           groups: true,
           verification: true,
           roleSet: true,
@@ -62,7 +62,7 @@ export class OrganizationAuthorizationService {
     if (
       !organization.profile ||
       !organization.storageAggregator ||
-      !organization.agent ||
+      !organization.credentials ||
       !organization.groups ||
       !organization.verification ||
       !organization.roleSet
@@ -136,12 +136,8 @@ export class OrganizationAuthorizationService {
       );
     updatedAuthorizations.push(...roleSetAuthorizations);
 
-    const agentAuthorization =
-      this.agentAuthorizationService.applyAuthorizationPolicy(
-        organization.agent,
-        organization.authorization
-      );
-    updatedAuthorizations.push(agentAuthorization);
+    // Note: No separate actor/agent auth inheritance needed -
+    // organization.authorization IS actor.authorization via getter delegation
 
     for (const group of organization.groups) {
       const groupAuthorizations =

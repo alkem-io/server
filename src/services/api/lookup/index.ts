@@ -1,3 +1,3 @@
 export * from './lookup.module';
-export * from './lookup.service';
 export * from './lookup.resolver.queries';
+export * from './lookup.service';

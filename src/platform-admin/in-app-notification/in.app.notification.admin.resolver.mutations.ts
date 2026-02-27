@@ -1,12 +1,12 @@
-import { CurrentUser } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { Resolver, Mutation } from '@nestjs/graphql';
-import { InAppNotificationAdminService } from './in.app.notification.admin.service';
-import { PruneInAppNotificationAdminResult } from './dto/in.app.notification.admin.dto.prune.result';
-import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { InstrumentResolver } from '@src/apm/decorators';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { PruneInAppNotificationAdminResult } from './dto/in.app.notification.admin.dto.prune.result';
+import { InAppNotificationAdminService } from './in.app.notification.admin.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -22,10 +22,10 @@ export class InAppNotificationAdminResolverMutations {
       'Prunes InAppNotifications according to the platform defined criteria. The effects of the pruning are returned.',
   })
   async adminInAppNotificationsPrune(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<PruneInAppNotificationAdminResult> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'pruning InApp Notifications'

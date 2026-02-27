@@ -1,9 +1,9 @@
-import { InputType, Field } from '@nestjs/graphql';
-import { Type } from 'class-transformer';
-import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
-import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { MID_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
 import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity';
+import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
+import { Field, InputType } from '@nestjs/graphql';
+import { Type } from 'class-transformer';
+import { IsOptional, MaxLength, ValidateNested } from 'class-validator';
 
 @InputType()
 export class UpdateLinkInput extends UpdateBaseAlkemioInput {

@@ -1,9 +1,9 @@
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { Module } from '@nestjs/common';
 import { LicenseIssuerService } from './license.issuer.service';
-import { AgentModule } from '@domain/agent/agent/agent.module';
 
 @Module({
-  imports: [AgentModule],
+  imports: [ActorModule],
   providers: [LicenseIssuerService],
   exports: [LicenseIssuerService],
 })

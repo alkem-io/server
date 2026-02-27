@@ -1,34 +1,33 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { Account } from '@domain/space/account/account.entity';
-import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@src/common/decorators';
-import { AccountService } from '@domain/space/account/account.service';
-import { IAccount } from '@domain/space/account/account.interface';
-import { Loader } from '@core/dataloader/decorators';
-import { ILoader } from '@core/dataloader/loader.interface';
 import {
-  AuthorizationLoaderCreator,
-  AgentLoaderCreator,
-  AccountVirtualContributorsLoaderCreator,
   AccountInnovationHubsLoaderCreator,
   AccountInnovationPacksLoaderCreator,
   AccountSpacesLoaderCreator,
+  AccountVirtualContributorsLoaderCreator,
+  ActorLoaderCreator,
+  AuthorizationLoaderCreator,
 } from '@core/dataloader/creators/loader.creators';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { IAgent } from '@domain/agent/agent/agent.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
-import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { ISpace } from '../space/space.interface';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { IAccountSubscription } from './account.license.subscription.interface';
-import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { ILicense } from '@domain/common/license/license.interface';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { Account } from '@domain/space/account/account.entity';
+import { IAccount } from '@domain/space/account/account.interface';
+import { AccountService } from '@domain/space/account/account.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
+import { ISpace } from '../space/space.interface';
+import { IAccountSubscription } from './account.license.subscription.interface';
 
 @Resolver(() => IAccount)
 export class AccountResolverFields {
@@ -37,18 +36,18 @@ export class AccountResolverFields {
     private accountLookupService: AccountLookupService
   ) {}
 
-  @ResolveField('agent', () => IAgent, {
+  @ResolveField('actor', () => IActor, {
     nullable: false,
-    description: 'The Agent representing this Account.',
+    description: 'The Actor representing this Account.',
   })
   async agent(
     @Parent() account: Account,
-    @Loader(AgentLoaderCreator, {
+    @Loader(ActorLoaderCreator, {
       parentClassRef: Account,
       checkParentPrivilege: AuthorizationPrivilege.READ,
     })
-    loader: ILoader<IAgent>
-  ): Promise<IAgent> {
+    loader: ILoader<IActor>
+  ): Promise<IActor> {
     return loader.load(account.id);
   }
 
@@ -67,11 +66,11 @@ export class AccountResolverFields {
     return loader.load(account.id);
   }
 
-  @ResolveField('host', () => IContributor, {
+  @ResolveField('host', () => IActor, {
     nullable: true,
     description: 'The Account host.',
   })
-  async host(@Parent() account: Account): Promise<IContributor> {
+  async host(@Parent() account: Account): Promise<IActor> {
     return await this.accountLookupService.getHostOrFail(account);
   }
 
@@ -143,7 +142,7 @@ export class AccountResolverFields {
     return loader.load(account.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: false,

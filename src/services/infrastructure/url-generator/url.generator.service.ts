@@ -1,41 +1,38 @@
 import { LogContext, ProfileType } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
+import { SpaceLevel } from '@common/enums/space.level';
+import { UrlPathBase } from '@common/enums/url.path.base';
+import { UrlPathElement } from '@common/enums/url.path.element';
+import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { Memo } from '@domain/common/memo/memo.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
+import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { Space } from '@domain/space/space/space.entity';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
+import { Template } from '@domain/template/template/template.entity';
+import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
+import { TemplatesManager } from '@domain/template/templates-manager/templates.manager.entity';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOptionsWhere } from 'typeorm';
-import { Space } from '@domain/space/space/space.entity';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { ISpace } from '@domain/space/space/space.interface';
-import { SpaceLevel } from '@common/enums/space.level';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { User } from '@domain/community/user/user.entity';
-import { Organization } from '@domain/community/organization/organization.entity';
-import { AlkemioConfig } from '@src/types';
-import { Template } from '@domain/template/template/template.entity';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
-import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
-import { UrlPathElement } from '@common/enums/url.path.element';
-import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
-import { UrlPathBase } from '@common/enums/url.path.base';
-import { UrlGeneratorCacheService } from './url.generator.service.cache';
-import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import { Discussion } from '@platform/forum-discussion/discussion.entity';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
-import { SpaceAbout } from '@domain/space/space.about/space.about.entity';
-import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
-import { Memo } from '@domain/common/memo/memo.entity';
-import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
-import { TemplatesManager } from '@domain/template/templates-manager/templates.manager.entity';
+import { AlkemioConfig } from '@src/types';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOptionsWhere } from 'typeorm';
+import { UrlGeneratorCacheService } from './url.generator.service.cache';
 
 @Injectable()
 export class UrlGeneratorService {
@@ -80,10 +77,8 @@ export class UrlGeneratorService {
       where: {
         id: id,
       },
-      select: {
-        id: true,
-        nameID: true,
-      },
+      relations: { actor: true },
+      select: { id: true, actor: { id: true, nameID: true } },
     });
     if (!vc) {
       throw new EntityNotFoundException(
@@ -105,6 +100,15 @@ export class UrlGeneratorService {
     switch (profile.type) {
       case ProfileType.SPACE_ABOUT:
         return await this.getUrlPathByAboutProfileID(profile.id);
+      case ProfileType.SPACE: {
+        // Space actor profile — look up via actor table
+        const spaceEntityInfo =
+          await this.getNameableEntityInfoForProfileOrFail('space', profile.id);
+        return this.getSpaceUrlPathByID(spaceEntityInfo.entityID);
+      }
+      case ProfileType.ACCOUNT:
+        // Account actor profile — no dedicated page, link to platform
+        return `${this.endpoint_cluster}/admin`;
       case ProfileType.USER: {
         const userEntityInfo = await this.getNameableEntityInfoForProfileOrFail(
           'user',
@@ -171,27 +175,31 @@ export class UrlGeneratorService {
       case ProfileType.USER_GROUP:
         // to do: implement and decide what to do with user groups
         return `${this.endpoint_cluster}`;
-      case ProfileType.KNOWLEDGE_BASE:
+      case ProfileType.KNOWLEDGE_BASE: {
         const vc =
           await this.getVirtualContributorFromKnowledgeBaseProfileOrFail(
             profile.id
           );
         return `${this.endpoint_cluster}/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/${vc.nameID}/${UrlPathElement.KNOWLEDGE_BASE}`;
+      }
     }
     return '';
   }
 
-  public createUrlForContributor(contributor: IContributor): string {
+  public createUrlForContributor(contributor: {
+    id: string;
+    nameID: string;
+  }): string {
     const type = this.getContributorType(contributor);
     let path: string = UrlPathBase.VIRTUAL_CONTRIBUTOR;
     switch (type) {
-      case RoleSetContributorType.USER:
+      case ActorType.USER:
         path = UrlPathBase.USER;
         break;
-      case RoleSetContributorType.ORGANIZATION:
+      case ActorType.ORGANIZATION:
         path = UrlPathBase.ORGANIZATION;
         break;
-      case RoleSetContributorType.VIRTUAL:
+      case ActorType.VIRTUAL_CONTRIBUTOR:
         path = UrlPathBase.VIRTUAL_CONTRIBUTOR;
         break;
     }
@@ -248,12 +256,11 @@ export class UrlGeneratorService {
     return url;
   }
 
-  private getContributorType(contributor: IContributor) {
-    if (contributor instanceof User) return RoleSetContributorType.USER;
-    if (contributor instanceof Organization)
-      return RoleSetContributorType.ORGANIZATION;
-    if (contributor instanceof VirtualContributor)
-      return RoleSetContributorType.VIRTUAL;
+  private getContributorType(contributor: {
+    id: string;
+    type?: ActorType;
+  }): ActorType {
+    if (contributor.type) return contributor.type;
     throw new RelationshipNotFoundException(
       `Unable to determine contributor type for ${contributor.id}`,
       LogContext.COMMUNITY
@@ -275,20 +282,40 @@ export class UrlGeneratorService {
     return result;
   }
 
+  // Actor-based entity tables where both nameID and profileId live on the actor table
+  private static readonly ACTOR_BASED_TABLES = new Set([
+    'user',
+    'organization',
+    'virtual_contributor',
+    'space',
+    'account',
+  ]);
+
   public async getNameableEntityInfo(
     entityTableName: string,
     profileID: string
   ): Promise<{ entityNameID: string; entityID: string } | null> {
+    let query: string;
+
+    if (UrlGeneratorService.ACTOR_BASED_TABLES.has(entityTableName)) {
+      // For actor-based entities, both nameID and profileId are on the actor table
+      query = `
+        SELECT "actor"."id" as "entityID", "actor"."nameID" as "entityNameID"
+        FROM "actor"
+        WHERE "actor"."profileId" = $1
+      `;
+    } else {
+      query = `
+        SELECT "${entityTableName}"."id" as "entityID", "${entityTableName}"."nameID" as "entityNameID"
+        FROM "${entityTableName}"
+        WHERE "${entityTableName}"."profileId" = $1
+      `;
+    }
+
     const [result]: {
       entityID: string;
       entityNameID: string;
-    }[] = await this.entityManager.connection.query(
-      `
-        SELECT "${entityTableName}"."id" as "entityID", "${entityTableName}"."nameID" as "entityNameID" FROM "${entityTableName}"
-        WHERE "${entityTableName}"."profileId" = $1
-      `,
-      [profileID]
-    );
+    }[] = await this.entityManager.connection.query(query, [profileID]);
 
     if (!result) {
       return null;

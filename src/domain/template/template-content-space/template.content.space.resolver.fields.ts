@@ -1,17 +1,17 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@src/common/decorators';
-import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
+import { SpaceCollaborationLoaderCreator } from '@core/dataloader/creators';
+import { SpaceAboutLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.about.loader.creator';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { ITemplateContentSpace } from './template.content.space.interface';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
 import { TemplateContentSpace } from './template.content.space.entity';
-import { SpaceAboutLoaderCreator } from '@core/dataloader/creators/loader.creators/space/space.about.loader.creator';
-import { SpaceCollaborationLoaderCreator } from '@core/dataloader/creators';
+import { ITemplateContentSpace } from './template.content.space.interface';
 import { TemplateContentSpaceService } from './template.content.space.service';
 
 @Resolver(() => ITemplateContentSpace)
@@ -20,7 +20,7 @@ export class TemplateContentSpaceResolverFields {
     private templateContentSpaceService: TemplateContentSpaceService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('subspaces', () => [ITemplateContentSpace], {
     nullable: false,
@@ -34,7 +34,7 @@ export class TemplateContentSpaceResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('about', () => ISpaceAbout, {
     nullable: false,
@@ -51,7 +51,7 @@ export class TemplateContentSpaceResolverFields {
     return about;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('collaboration', () => ICollaboration, {
     nullable: false,
@@ -67,7 +67,7 @@ export class TemplateContentSpaceResolverFields {
     return loader.load(templateContentSpace.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('settings', () => ISpaceSettings, {
     nullable: false,

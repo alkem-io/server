@@ -1,18 +1,18 @@
+import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
+import { RoleName } from '@common/enums/role.name';
+import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { IForm } from '@domain/common/form/form.interface';
 import { Inject } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { RoleSetService } from './role.set.service';
-import { IForm } from '@domain/common/form/form.interface';
-import { IRoleSet } from './role.set.interface';
-import { RoleSet } from './role.set.entity';
-import { RoleName } from '@common/enums/role.name';
-import { IRole } from '../role/role.interface';
-import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
-import { RoleSetAgentRolesDataLoader } from './role.set.data.loaders.agent.roles';
-import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor } from '@src/common/decorators';
+import { IRole } from '../role/role.interface';
+import { RoleSetMembershipStatusDataLoader } from './role.set.data.loader.membership.status';
+import { RoleSetActorRolesDataLoader } from './role.set.data.loaders.actor.roles';
+import { RoleSet } from './role.set.entity';
+import { IRoleSet } from './role.set.interface';
+import { RoleSetService } from './role.set.service';
 
 // Resolver for fields on RoleSet that are available without READ access
 @InstrumentResolver()
@@ -20,8 +20,8 @@ import { InstrumentResolver } from '@src/apm/decorators';
 export class RoleSetResolverFieldsPublic {
   constructor(
     private roleSetService: RoleSetService,
-    @Inject(RoleSetAgentRolesDataLoader)
-    private readonly agentRolesLoader: RoleSetAgentRolesDataLoader,
+    @Inject(RoleSetActorRolesDataLoader)
+    private readonly actorRolesLoader: RoleSetActorRolesDataLoader,
     @Inject(RoleSetMembershipStatusDataLoader)
     private readonly membershipStatusLoader: RoleSetMembershipStatusDataLoader
   ) {}
@@ -75,11 +75,11 @@ export class RoleSetResolverFieldsPublic {
     description: 'The membership status of the currently logged in user.',
   })
   async myMembershipStatus(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() roleSet: RoleSet
   ): Promise<CommunityMembershipStatus> {
     // Uses the DataLoader to batch load membership statuses
-    return this.membershipStatusLoader.loader.load({ agentInfo, roleSet });
+    return this.membershipStatusLoader.loader.load({ actorContext, roleSet });
   }
 
   @ResolveField('myRoles', () => [RoleName], {
@@ -89,10 +89,10 @@ export class RoleSetResolverFieldsPublic {
   })
   async myRoles(
     @Parent() roleSet: RoleSet,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<RoleName[]> {
-    // Utilize the loader to batch getRolesForAgentInfo calls.
-    return this.agentRolesLoader.loader.load({ agentInfo, roleSet });
+    // Utilize the loader to batch getRolesForActorContext calls.
+    return this.actorRolesLoader.loader.load({ actorContext, roleSet });
   }
 
   @ResolveField('myRolesImplicit', () => [RoleSetRoleImplicit], {
@@ -101,9 +101,9 @@ export class RoleSetResolverFieldsPublic {
       'The implicit roles on this community for the currently logged in user.',
   })
   async myRolesImplicit(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() roleSet: IRoleSet
   ): Promise<RoleSetRoleImplicit[]> {
-    return this.roleSetService.getImplicitRoles(agentInfo, roleSet);
+    return this.roleSetService.getImplicitRoles(actorContext, roleSet);
   }
 }

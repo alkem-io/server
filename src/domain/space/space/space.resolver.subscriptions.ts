@@ -1,20 +1,20 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
+import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Resolver } from '@nestjs/graphql';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { PubSubEngine } from 'graphql-subscriptions';
-import { LogContext } from '@common/enums/logging.context';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
-import { SpaceService } from './space.service';
-import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
-import { SubspaceCreatedArgs } from './dto/space.subspace.created.args';
-import { SubspaceCreated as SubspaceCreated } from './dto/space.dto.event.subspace.created';
-import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { SubspaceCreated } from './dto/space.dto.event.subspace.created';
+import { SubspaceCreatedArgs } from './dto/space.subspace.created.args';
+import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
+import { SpaceService } from './space.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -33,8 +33,8 @@ export class SpaceResolverSubscriptions {
     {
       description: 'Receive new Subspaces created on the Space.',
       resolve(this: SpaceResolverSubscriptions, payload, args, context) {
-        const agentInfo = context.req.user;
-        const logMsgPrefix = `[SubspaceCreated subscription] - [${agentInfo.email}] -`;
+        const actorContext = context.req.user;
+        const logMsgPrefix = `[SubspaceCreated subscription] - [${actorContext.actorID}] -`;
         this.logger.verbose?.(
           `${logMsgPrefix} sending out event for created challenge on Space: ${payload.spaceID} `,
           LogContext.SUBSCRIPTIONS
@@ -42,8 +42,8 @@ export class SpaceResolverSubscriptions {
         return payload;
       },
       filter(this: SpaceResolverSubscriptions, payload, variables, context) {
-        const agentInfo = context.req.user;
-        const logMsgPrefix = `[SubspaceCreated subscription] - [${agentInfo.email}] -`;
+        const actorContext = context.req.user;
+        const logMsgPrefix = `[SubspaceCreated subscription] - [${actorContext.actorID}] -`;
         this.logger.verbose?.(
           `${logMsgPrefix} Filtering event '${payload.eventID}'`,
           LogContext.SUBSCRIPTIONS
@@ -59,7 +59,7 @@ export class SpaceResolverSubscriptions {
     }
   )
   async subspaceCreated(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args({
       nullable: false,
     })
@@ -67,14 +67,14 @@ export class SpaceResolverSubscriptions {
   ) {
     const logMsgPrefix = '[SubspaceCreated subscription] -';
     this.logger.verbose?.(
-      `${logMsgPrefix} User ${agentInfo.email} subscribed for new subspace on the following Space: ${args.spaceID}`,
+      `${logMsgPrefix} User ${actorContext.actorID} subscribed for new subspace on the following Space: ${args.spaceID}`,
       LogContext.SUBSCRIPTIONS
     );
     // Validate
     const space = await this.spaceService.getSpaceOrFail(args.spaceID);
 
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.READ,
       `subscription to new Subspaces on Space: ${space.id}`

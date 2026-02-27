@@ -1,5 +1,5 @@
-import { Field, Float, InputType } from '@nestjs/graphql';
 import { DiscussionsOrderBy } from '@common/enums/discussions.orderBy';
+import { Field, Float, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class DiscussionsInput {

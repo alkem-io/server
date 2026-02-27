@@ -1,17 +1,17 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Inject } from '@nestjs/common/decorators';
-import { ICalloutContribution } from './callout.contribution.interface';
-import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
-import { CalloutContributionService } from './callout.contribution.service';
-import { IPost } from '../post/post.interface';
-import { IMemo } from '@domain/common/memo/memo.interface';
-import { IUser } from '@domain/community/user/user.interface';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LogContext } from '@common/enums/logging.context';
-import { ILink } from '../link/link.interface';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { IMemo } from '@domain/common/memo/memo.interface';
+import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { LoggerService } from '@nestjs/common';
+import { Inject } from '@nestjs/common/decorators';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ILink } from '../link/link.interface';
+import { IPost } from '../post/post.interface';
+import { ICalloutContribution } from './callout.contribution.interface';
+import { CalloutContributionService } from './callout.contribution.service';
 
 @Resolver(() => ICalloutContribution)
 export class CalloutContributionResolverFields {
@@ -79,7 +79,7 @@ export class CalloutContributionResolverFields {
     }
 
     try {
-      return await this.userLookupService.getUserByUUID(createdBy);
+      return await this.userLookupService.getUserById(createdBy);
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(

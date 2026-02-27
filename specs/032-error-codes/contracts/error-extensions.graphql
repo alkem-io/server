@@ -1,0 +1,147 @@
+# GraphQL Error Extensions Contract
+# Feature: 032-error-codes
+# Date: 2026-01-22
+#
+# NOTE: This is documentation only. GraphQL error extensions are untyped
+# and not part of the schema. This file documents the expected structure.
+
+"""
+Error extensions structure returned in GraphQL error responses.
+These are added to the `extensions` field of GraphQL errors.
+
+IMPORTANT: The `extensions` object is NOT part of the GraphQL schema.
+This documentation describes the runtime structure for API consumers.
+"""
+
+# Example error response structure (JSON):
+#
+# {
+#   "errors": [{
+#     "message": "Entity not found",
+#     "locations": [{"line": 2, "column": 3}],
+#     "path": ["space"],
+#     "extensions": {
+#       "code": "ENTITY_NOT_FOUND",
+#       "numericCode": 10101,
+#       "errorId": "550e8400-e29b-41d4-a716-446655440000",
+#       "details": {
+#         "entityId": "abc-123",
+#         "entityType": "Space"
+#       }
+#     }
+#   }]
+# }
+
+# Extension Fields:
+#
+# code: String!
+#   - The existing string-based error code from AlkemioErrorStatus enum
+#   - Example: "ENTITY_NOT_FOUND", "FORBIDDEN_POLICY", "BAD_USER_INPUT"
+#   - UNCHANGED from current behavior
+#
+# numericCode: Int!            # NEW
+#   - 5-digit numeric error code (10000-99999)
+#   - First two digits indicate category:
+#     - 10xxx = Not Found
+#     - 11xxx = Authorization
+#     - 12xxx = Validation
+#     - 13xxx = Operations
+#     - 14xxx = System/Infrastructure
+#     - 99xxx = Fallback/Unmapped
+#   - Example: 10101, 11104, 12101, 13109, 14101, 99999
+#
+# errorId: String!
+#   - Unique UUID for this specific error occurrence
+#   - Used for tracking and support reference
+#   - UNCHANGED from current behavior
+#
+# details: Object
+#   - Optional structured data about the error
+#   - Contents vary by error type
+#   - Only included in development mode (stripped in production)
+#   - UNCHANGED from current behavior
+
+# Numeric Code Categories:
+#
+# 10xxx - NOT_FOUND (10 codes)
+#   10101 ENTITY_NOT_FOUND
+#   10102 NOT_FOUND
+#   10103 ACCOUNT_NOT_FOUND
+#   10104 LICENSE_NOT_FOUND
+#   10105 STORAGE_BUCKET_NOT_FOUND
+#   10106 TAGSET_NOT_FOUND
+#   10107 MIME_TYPE_NOT_FOUND
+#   10108 MATRIX_ENTITY_NOT_FOUND_ERROR
+#   10109 USER_IDENTITY_NOT_FOUND
+#   10110 PAGINATION_NOT_FOUND
+#
+# 11xxx - AUTHORIZATION (16 codes)
+#   11101 UNAUTHENTICATED
+#   11102 UNAUTHORIZED
+#   11103 FORBIDDEN
+#   11104 FORBIDDEN_POLICY
+#   11105 FORBIDDEN_LICENSE_POLICY
+#   11106 AUTHORIZATION_INVALID_POLICY
+#   11107 AUTHORIZATION_RESET
+#   11108 USER_NOT_VERIFIED
+#   11109 SUBSCRIPTION_USER_NOT_AUTHENTICATED
+#   11110 API_RESTRICTED_ACCESS
+#   11111 INVALID_TOKEN
+#   11112 BEARER_TOKEN
+#   11113 SESSION_EXPIRED
+#   11114 SESSION_EXTEND
+#   11115 LOGIN_FLOW
+#   11116 LOGIN_FLOW_INIT
+#
+# 12xxx - VALIDATION (13 codes)
+#   12101 BAD_USER_INPUT
+#   12102 INPUT_VALIDATION_ERROR
+#   12103 INVALID_UUID
+#   12104 FORMAT_NOT_SUPPORTED
+#   12105 INVALID_STATE_TRANSITION
+#   12106 INVALID_TEMPLATE_TYPE
+#   12107 GROUP_NOT_INITIALIZED
+#   12108 ENTITY_NOT_INITIALIZED
+#   12109 RELATION_NOT_LOADED
+#   12110 PAGINATION_INPUT_OUT_OF_BOUND
+#   12111 PAGINATION_PARAM_NOT_FOUND
+#   12113 FORUM_DISCUSSION_CATEGORY
+#   12114 NOT_SUPPORTED
+#
+# 13xxx - OPERATIONS (13 codes)
+#   13101 OPERATION_NOT_ALLOWED
+#   13102 NOT_ENABLED
+#   13103 MESSAGING_NOT_ENABLED
+#   13104 ROLE_SET_ROLE
+#   13105 ROLE_SET_INVITATION
+#   13106 ROLE_SET_POLICY_ROLE_LIMITS_VIOLATED
+#   13107 LICENSE_ENTITLEMENT_NOT_AVAILABLE
+#   13108 LICENSE_ENTITLEMENT_NOT_SUPPORTED
+#   13109 CALLOUT_CLOSED
+#   13110 USER_ALREADY_REGISTERED
+#   13111 USER_NOT_REGISTERED
+#   13112 NO_AGENT_FOR_USER
+#   13113 USER_IDENTITY_DELETION_FAILED
+#
+# 14xxx - SYSTEM (18 codes)
+#   14101 BOOTSTRAP_FAILED
+#   14102 NOTIFICATION_PAYLOAD_BUILDER_ERROR
+#   14103 GEO_LOCATION_ERROR
+#   14104 GEO_SERVICE_NOT_AVAILABLE
+#   14105 GEO_SERVICE_ERROR
+#   14106 GEO_SERVICE_REQUEST_LIMIT_EXCEEDED
+#   14107 STORAGE_DISABLED
+#   14108 STORAGE_UPLOAD_FAILED
+#   14109 LOCAL_STORAGE_SAVE_FAILED
+#   14110 LOCAL_STORAGE_READ_FAILED
+#   14111 LOCAL_STORAGE_DELETE_FAILED
+#   14112 DOCUMENT_SAVE_FAILED
+#   14113 DOCUMENT_READ_FAILED
+#   14114 DOCUMENT_DELETE_FAILED
+#   14115 URL_RESOLVER_ERROR
+#   14116 EXCALIDRAW_AMQP_RESULT_ERROR
+#   14117 EXCALIDRAW_REDIS_ADAPTER_INIT
+#   14118 EXCALIDRAW_SERVER_INIT
+#
+# 99xxx - FALLBACK (1 code)
+#   99999 UNSPECIFIED (used for unmapped errors)

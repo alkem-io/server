@@ -1,17 +1,17 @@
+import { CurrentActor, TypedSubscription } from '@common/decorators';
+import { LogContext } from '@common/enums';
+import { ForbiddenException } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Resolver } from '@nestjs/graphql';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CurrentUser, TypedSubscription } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
-import { ForbiddenException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { ConversationEventSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   ConversationEventSubscriptionResult,
   ConversationEventType,
 } from './dto/subscription';
-import { ConversationEventSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
-import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
 @Resolver()
@@ -33,10 +33,10 @@ export class ConversationEventResolverSubscription {
         _variables,
         context
       ) {
-        const agentInfo = context.req?.user;
+        const actorContext = context.req?.user;
 
         // Guard against missing user context
-        if (!agentInfo) {
+        if (!actorContext) {
           this.logger.verbose?.(
             `[Conversation Events] Filtering event ${payload.eventID}: no user context, rejecting`,
             LogContext.SUBSCRIPTIONS
@@ -45,10 +45,10 @@ export class ConversationEventResolverSubscription {
         }
 
         // User must be a member of the conversation
-        const isMember = payload.memberAgentIds.includes(agentInfo.agentID);
+        const isMember = payload.memberAgentIds.includes(actorContext.actorID);
 
         this.logger.verbose?.(
-          `[Conversation Events] Filtering event ${payload.eventID} for user ${agentInfo.userID}: member=${isMember}`,
+          `[Conversation Events] Filtering event ${payload.eventID} for user ${actorContext.actorID}: member=${isMember}`,
           LogContext.SUBSCRIPTIONS
         );
 
@@ -82,17 +82,17 @@ export class ConversationEventResolverSubscription {
       },
     }
   )
-  public async conversationEvents(@CurrentUser() agentInfo: AgentInfo) {
-    if (!agentInfo.userID) {
+  public async conversationEvents(@CurrentActor() actorContext: ActorContext) {
+    if (!actorContext.actorID) {
       throw new ForbiddenException(
         'User could not be resolved',
         LogContext.COMMUNICATION_CONVERSATION,
-        { agentInfo }
+        { actorContext }
       );
     }
 
     this.logger.verbose?.(
-      `[Conversation Events] User ${agentInfo.userID} subscribed to conversation events`,
+      `[Conversation Events] User ${actorContext.actorID} subscribed to conversation events`,
       LogContext.SUBSCRIPTIONS
     );
 

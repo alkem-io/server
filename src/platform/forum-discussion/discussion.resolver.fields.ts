@@ -1,17 +1,20 @@
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { GraphqlGuard } from '@core/authorization';
+import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
-import { IDiscussion } from './discussion.interface';
-import { Discussion } from './discussion.entity';
-import { Loader } from '@core/dataloader/decorators';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import {
+  AuthorizationActorHasPrivilege,
+  Profiling,
+} from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IRoom } from '../../domain/communication/room/room.interface';
+import { Discussion } from './discussion.entity';
+import { IDiscussion } from './discussion.interface';
 import { DiscussionService } from './discussion.service';
 
 @Resolver(() => IDiscussion)
@@ -50,7 +53,7 @@ export class DiscussionResolverFields {
     return createdBy;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('comments', () => IRoom, {
     nullable: false,

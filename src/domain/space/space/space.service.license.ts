@@ -1,18 +1,18 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LogContext } from '@common/enums';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
-import { IAgent } from '@domain/agent/agent/agent.interface';
-import { LicenseService } from '@domain/common/license/license.service';
+import { RoleSetLicenseService } from '@domain/access/role-set/role.set.service.license';
+import { IActor } from '@domain/actor/actor/actor.interface';
+import { CollaborationLicenseService } from '@domain/collaboration/collaboration/collaboration.service.license';
 import { ILicense } from '@domain/common/license/license.interface';
+import { LicenseService } from '@domain/common/license/license.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { LicensingCredentialBasedService } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.service';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { SpaceService } from './space.service';
-import { RoleSetLicenseService } from '@domain/access/role-set/role.set.service.license';
-import { CollaborationLicenseService } from '@domain/collaboration/collaboration/collaboration.service.license';
 
 @Injectable()
 export class SpaceLicenseService {
@@ -27,13 +27,11 @@ export class SpaceLicenseService {
 
   async applyLicensePolicy(
     spaceID: string,
-    level0SpaceAgent?: IAgent
+    level0SpaceAgent?: IActor
   ): Promise<ILicense[]> {
     const space = await this.spaceService.getSpaceOrFail(spaceID, {
       relations: {
-        agent: {
-          credentials: true,
-        },
+        actor: { credentials: true },
         subspaces: true,
         license: {
           entitlements: true,
@@ -46,7 +44,7 @@ export class SpaceLicenseService {
     });
     if (
       !space.subspaces ||
-      !space.agent ||
+      !space.credentials ||
       !space.license ||
       !space.license.entitlements ||
       !space.community ||
@@ -62,7 +60,7 @@ export class SpaceLicenseService {
 
     // Ensure always applying from a clean state
     space.license = this.licenseService.reset(space.license);
-    const rootLevelSpaceAgent = level0SpaceAgent ?? space.agent;
+    const rootLevelSpaceAgent = level0SpaceAgent ?? space;
 
     space.license = await this.extendLicensePolicy(
       space.license,
@@ -103,7 +101,7 @@ export class SpaceLicenseService {
 
   private async extendLicensePolicy(
     license: ILicense | undefined,
-    levelZeroSpaceAgent: IAgent
+    levelZeroSpaceAgent: IActor
   ): Promise<ILicense> {
     if (!license || !license.entitlements) {
       throw new EntityNotInitializedException(
@@ -113,7 +111,7 @@ export class SpaceLicenseService {
     }
     for (const entitlement of license.entitlements) {
       switch (entitlement.type) {
-        case LicenseEntitlementType.SPACE_FREE:
+        case LicenseEntitlementType.SPACE_FREE: {
           const spaceFree =
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_FREE,
@@ -124,7 +122,8 @@ export class SpaceLicenseService {
             entitlement.enabled = true;
           }
           break;
-        case LicenseEntitlementType.SPACE_PLUS:
+        }
+        case LicenseEntitlementType.SPACE_PLUS: {
           const spacePlus =
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_PLUS,
@@ -135,7 +134,8 @@ export class SpaceLicenseService {
             entitlement.enabled = true;
           }
           break;
-        case LicenseEntitlementType.SPACE_PREMIUM:
+        }
+        case LicenseEntitlementType.SPACE_PREMIUM: {
           const spacePremium =
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_PREMIUM,
@@ -146,7 +146,8 @@ export class SpaceLicenseService {
             entitlement.enabled = true;
           }
           break;
-        case LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE:
+        }
+        case LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE: {
           const saveAsTemplate =
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE,
@@ -157,7 +158,8 @@ export class SpaceLicenseService {
             entitlement.enabled = true;
           }
           break;
-        case LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS:
+        }
+        case LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS: {
           const createVirtualContributor =
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS,
@@ -168,7 +170,8 @@ export class SpaceLicenseService {
             entitlement.enabled = true;
           }
           break;
-        case LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER:
+        }
+        case LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER: {
           const createWhiteboard =
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
@@ -179,8 +182,9 @@ export class SpaceLicenseService {
             entitlement.enabled = true;
           }
           break;
+        }
 
-        case LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER:
+        case LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER: {
           const createMemo =
             await this.licenseEngineService.isEntitlementGranted(
               LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER,
@@ -191,6 +195,7 @@ export class SpaceLicenseService {
             entitlement.enabled = true;
           }
           break;
+        }
 
         default:
           throw new EntityNotInitializedException(

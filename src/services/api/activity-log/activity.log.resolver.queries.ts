@@ -1,17 +1,17 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Resolver, Query } from '@nestjs/graphql';
-import { ActivityLogService } from './activity.log.service';
-import { CurrentUser, Profiling } from '@src/common/decorators';
-import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { IActivityLogEntry } from './dto/activity.log.entry.interface';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Query, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ActivityLogService } from './activity.log.service';
+import { ActivityLogInput } from './dto/activity.log.dto.collaboration.input';
+import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 
 @InstrumentResolver()
 @Resolver()
@@ -31,16 +31,16 @@ export class ActivityLogResolverQueries {
   })
   @Profiling.api
   async activityLogOnCollaboration(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('queryData', { type: () => ActivityLogInput, nullable: false })
     queryData: ActivityLogInput
   ): Promise<IActivityLogEntry[]> {
     // can agent read users
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `Collaboration activity query READ_USERS: ${agentInfo.email}`
+      `Collaboration activity query READ_USERS: ${actorContext.actorID}`
     );
     // does collaboration exist
     const collaboration =
@@ -49,10 +49,10 @@ export class ActivityLogResolverQueries {
       );
     // can agent read the collaboration
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       collaboration.authorization,
       AuthorizationPrivilege.READ,
-      `Collaboration activity query: ${agentInfo.email}`
+      `Collaboration activity query: ${actorContext.actorID}`
     );
 
     if (queryData.includeChild) {
@@ -67,10 +67,10 @@ export class ActivityLogResolverQueries {
         childCollaboration => {
           try {
             return this.authorizationService.grantAccessOrFail(
-              agentInfo,
+              actorContext,
               childCollaboration.authorization,
               AuthorizationPrivilege.READ,
-              `Collaboration activity query: ${agentInfo.email}`
+              `Collaboration activity query: ${actorContext.actorID}`
             );
           } catch {
             return false;
@@ -90,7 +90,7 @@ export class ActivityLogResolverQueries {
 
     this.logger.verbose?.(
       `Querying activityLog by user ${
-        agentInfo.userID
+        actorContext.actorID
       } + terms: ${JSON.stringify(queryData)}`,
       LogContext.ACTIVITY
     );

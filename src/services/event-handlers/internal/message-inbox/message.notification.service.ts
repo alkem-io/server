@@ -1,19 +1,18 @@
-import { Injectable } from '@nestjs/common';
-import { RoomType } from '@common/enums/room.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
-import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
-import { RoomMentionsService } from '@domain/communication/room-mentions/room.mentions.service';
-import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IRoom } from '@domain/communication/room/room.interface';
+import { RoomType } from '@common/enums/room.type';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { IMessage } from '@domain/communication/message/message.interface';
 import {
   Mention,
   MentionedEntityType,
 } from '@domain/communication/messaging/mention.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
+import { RoomMentionsService } from '@domain/communication/room-mentions/room.mentions.service';
+import { Injectable } from '@nestjs/common';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 
 /**
  * Service responsible for processing notifications and activity events
@@ -25,7 +24,6 @@ export class MessageNotificationService {
     private readonly roomServiceEvents: RoomServiceEvents,
     private readonly roomMentionsService: RoomMentionsService,
     private readonly roomResolverService: RoomResolverService,
-    private readonly contributorLookupService: ContributorLookupService,
     private readonly communicationAdapter: CommunicationAdapter
   ) {}
 
@@ -36,7 +34,7 @@ export class MessageNotificationService {
   async processMessageNotifications(
     room: IRoom,
     message: IMessage,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     threadID?: string
   ): Promise<void> {
     // Parse mentions from message text
@@ -50,26 +48,31 @@ export class MessageNotificationService {
         mentions,
         room,
         message,
-        agentInfo
+        actorContext
       );
     }
 
     // Process reply notification if this is a reply
     const isReply = threadID && threadID !== message.id;
     if (isReply && threadID) {
-      await this.processReplyNotification(room, message, agentInfo, threadID);
+      await this.processReplyNotification(
+        room,
+        message,
+        actorContext,
+        threadID
+      );
     }
 
     // Extract user IDs from mentions to avoid double notifications
     const mentionedUserIDs = mentions
-      .filter(m => m.contributorType === MentionedEntityType.USER)
-      .map(m => m.contributorID);
+      .filter(m => m.actorType === MentionedEntityType.USER)
+      .map(m => m.actorID);
 
     // Process room-type-specific notifications and activities
     await this.processRoomTypeNotificationsAndActivities(
       room,
       message,
-      agentInfo,
+      actorContext,
       mentionedUserIDs
     );
   }
@@ -80,26 +83,21 @@ export class MessageNotificationService {
   private async processReplyNotification(
     room: IRoom,
     message: IMessage,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     parentMessageId: string
   ): Promise<void> {
-    const parentMessageSenderActorId =
+    const parentMessageSenderActorID =
       await this.communicationAdapter.getMessageSenderActor({
         alkemioRoomId: room.id,
         messageId: parentMessageId,
       });
 
-    const messageOwnerId =
-      await this.contributorLookupService.getUserIdByAgentId(
-        parentMessageSenderActorId
-      );
-
-    if (messageOwnerId) {
+    if (parentMessageSenderActorID) {
       await this.roomServiceEvents.processNotificationCommentReply(
         room,
         message,
-        agentInfo,
-        messageOwnerId
+        actorContext,
+        parentMessageSenderActorID
       );
     }
   }
@@ -110,7 +108,7 @@ export class MessageNotificationService {
   private async processRoomTypeNotificationsAndActivities(
     room: IRoom,
     message: IMessage,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     mentionedUserIDs: string[]
   ): Promise<void> {
     switch (room.type) {
@@ -126,7 +124,7 @@ export class MessageNotificationService {
           contribution,
           room,
           message,
-          agentInfo,
+          actorContext,
           mentionedUserIDs
         );
 
@@ -134,7 +132,7 @@ export class MessageNotificationService {
           post,
           room,
           message,
-          agentInfo
+          actorContext
         );
         break;
       }
@@ -147,7 +145,7 @@ export class MessageNotificationService {
           calendarEvent,
           room,
           message,
-          agentInfo
+          actorContext
         );
         break;
       }
@@ -159,7 +157,7 @@ export class MessageNotificationService {
         await this.roomServiceEvents.processNotificationForumDiscussionComment(
           discussionForum,
           message,
-          agentInfo
+          actorContext
         );
         break;
       }
@@ -168,13 +166,13 @@ export class MessageNotificationService {
         await this.roomServiceEvents.processNotificationUpdateSent(
           room,
           message,
-          agentInfo
+          actorContext
         );
 
         await this.roomServiceEvents.processActivityUpdateSent(
           room,
           message,
-          agentInfo
+          actorContext
         );
         break;
       }
@@ -191,14 +189,14 @@ export class MessageNotificationService {
           await this.roomServiceEvents.processActivityCalloutCommentCreated(
             callout,
             message,
-            agentInfo
+            actorContext
           );
 
           await this.roomServiceEvents.processNotificationCalloutComment(
             callout,
             room,
             message,
-            agentInfo,
+            actorContext,
             mentionedUserIDs
           );
         }
@@ -227,14 +225,14 @@ export class MessageNotificationService {
     mentions: Mention[],
     messageText: string,
     threadID: string,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     room: IRoom
   ): Promise<void> {
     await this.roomMentionsService.processVirtualContributorMentions(
       mentions,
       messageText,
       threadID,
-      agentInfo,
+      actorContext,
       room
     );
   }

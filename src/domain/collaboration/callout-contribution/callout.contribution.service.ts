@@ -1,31 +1,31 @@
-import { Injectable } from '@nestjs/common';
-import { CreateCalloutContributionInput } from './dto/callout.contribution.dto.create';
-import { ICalloutContribution } from './callout.contribution.interface';
-import { CalloutContribution } from './callout.contribution.entity';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { LogContext } from '@common/enums/logging.context';
-import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
-import { IWhiteboard } from '@domain/common/whiteboard/types';
-import { PostService } from '../post/post.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IPost } from '../post';
-import { MemoService } from '@domain/common/memo/memo.service';
-import { IMemo } from '@domain/common/memo/memo.interface';
-import { ICalloutSettingsContribution } from '../callout-settings/callout.settings.contribution.interface';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { LogContext } from '@common/enums/logging.context';
 import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { LinkService } from '../link/link.service';
-import { ILink } from '../link/link.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IMemo } from '@domain/common/memo/memo.interface';
+import { MemoService } from '@domain/common/memo/memo.service';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { IWhiteboard } from '@domain/common/whiteboard/types';
+import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { ICalloutSettingsContribution } from '../callout-settings/callout.settings.contribution.interface';
+import { ILink } from '../link/link.interface';
+import { LinkService } from '../link/link.service';
+import { IPost } from '../post';
+import { PostService } from '../post/post.service';
+import { CalloutContribution } from './callout.contribution.entity';
+import { ICalloutContribution } from './callout.contribution.interface';
+import { CreateCalloutContributionInput } from './dto/callout.contribution.dto.create';
 
 @Injectable()
 export class CalloutContributionService {
@@ -251,6 +251,32 @@ export class CalloutContributionService {
         id: calloutID,
       },
     });
+  }
+
+  /**
+   * Batch-loads contribution counts for multiple callouts in a single query.
+   * Returns a Map from calloutId to count (defaults to 0 for callouts with no contributions).
+   */
+  public async getContributionsCountBatch(
+    calloutIds: string[]
+  ): Promise<Map<string, number>> {
+    if (calloutIds.length === 0) {
+      return new Map();
+    }
+
+    const results = await this.contributionRepository
+      .createQueryBuilder('contribution')
+      .select('contribution.calloutId', 'calloutId')
+      .addSelect('COUNT(*)', 'count')
+      .where('contribution.calloutId IN (:...calloutIds)', { calloutIds })
+      .groupBy('contribution.calloutId')
+      .getRawMany<{ calloutId: string; count: string }>();
+
+    const countsMap = new Map<string, number>();
+    for (const row of results) {
+      countsMap.set(row.calloutId, parseInt(row.count, 10));
+    }
+    return countsMap;
   }
 
   public async getWhiteboard(

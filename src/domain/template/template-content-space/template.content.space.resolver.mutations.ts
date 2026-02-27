@@ -1,12 +1,12 @@
-import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { TemplateContentSpaceService } from './template.content.space.service';
-import { ITemplateContentSpace } from './template.content.space.interface';
+import { CurrentActor } from '@src/common/decorators';
 import { UpdateTemplateContentSpaceInput } from './dto/template.content.space.dto.update';
+import { ITemplateContentSpace } from './template.content.space.interface';
+import { TemplateContentSpaceService } from './template.content.space.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -20,7 +20,7 @@ export class TemplateContentSpaceResolverMutations {
     description: 'Updates the TemplateContentSpace.',
   })
   async updateTemplateContentSpace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('templateContentSpaceData')
     templateContentSpaceData: UpdateTemplateContentSpaceInput
   ): Promise<ITemplateContentSpace> {
@@ -36,7 +36,7 @@ export class TemplateContentSpaceResolverMutations {
         }
       );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       templateContentSpace.authorization,
       AuthorizationPrivilege.UPDATE,
       `update TemplateContentSpace: ${templateContentSpace.id}`

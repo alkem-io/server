@@ -1,8 +1,8 @@
-import { LogContext, AlkemioErrorStatus } from '@common/enums';
+import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from './base.exception';
 
 export class AuthorizationInvalidPolicyException extends BaseException {
-  constructor(error: string, context: LogContext) {
-    super(error, context, AlkemioErrorStatus.AUTHORIZATION_INVALID_POLICY);
+  constructor(message: string, context: LogContext) {
+    super(message, context, AlkemioErrorStatus.AUTHORIZATION_INVALID_POLICY);
   }
 }

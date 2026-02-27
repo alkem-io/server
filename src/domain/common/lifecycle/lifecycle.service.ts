@@ -5,12 +5,12 @@ import {
 } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { AnyMachineSnapshot, AnyStateMachine, createActor } from 'xstate';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
+import { AnyMachineSnapshot, AnyStateMachine, createActor } from 'xstate';
+import { LifecycleEventInput } from './dto/lifecycle.dto.event';
 import { Lifecycle } from './lifecycle.entity';
 import { ILifecycle } from './lifecycle.interface';
-import { LifecycleEventInput } from './dto/lifecycle.dto.event';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class LifecycleService {
@@ -86,7 +86,7 @@ export class LifecycleService {
     try {
       actor.send({
         type: eventName,
-        agentInfo: eventData.agentInfo,
+        actorContext: eventData.actorContext,
         authorization: eventData.authorization,
       });
     } catch (e: any) {

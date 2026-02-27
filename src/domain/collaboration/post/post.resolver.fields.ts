@@ -1,17 +1,17 @@
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Inject, LoggerService } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Profiling } from '@common/decorators/profiling.decorator';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { IUser } from '@domain/community/user/user.interface';
-import { IPost } from './post.interface';
-import { Loader } from '@core/dataloader/decorators';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { Post } from '@domain/collaboration/post/post.entity';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IPost } from './post.interface';
 
 @Resolver(() => IPost)
 export class PostResolverFields {
@@ -32,7 +32,7 @@ export class PostResolverFields {
     }
 
     try {
-      return await this.userLookupService.getUserByUUID(createdBy);
+      return await this.userLookupService.getUserById(createdBy);
     } catch (e: unknown) {
       if (e instanceof EntityNotFoundException) {
         this.logger?.warn(

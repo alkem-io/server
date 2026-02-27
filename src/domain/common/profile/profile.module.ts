@@ -1,21 +1,23 @@
-import { Module } from '@nestjs/common';
-import { TypeOrmModule } from '@nestjs/typeorm';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { LocationModule } from '@domain/common/location';
 import { ReferenceModule } from '@domain/common/reference/reference.module';
 import { TagsetModule } from '@domain/common/tagset/tagset.module';
+import { VisualModule } from '@domain/common/visual/visual.module';
+import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
+import { DocumentModule } from '@domain/storage/document/document.module';
+import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
+import { Module } from '@nestjs/common';
+import { TypeOrmModule } from '@nestjs/typeorm';
+import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
+import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
+import { TagsetTemplateModule } from '../tagset-template/tagset.template.module';
+import { ProfileAvatarService } from './profile.avatar.service';
 import { Profile } from './profile.entity';
+import { ProfileResolverFields } from './profile.resolver.fields';
 import { ProfileResolverMutations } from './profile.resolver.mutations';
 import { ProfileService } from './profile.service';
-import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ProfileAuthorizationService } from './profile.service.authorization';
-import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
-import { VisualModule } from '@domain/common/visual/visual.module';
-import { ProfileResolverFields } from './profile.resolver.fields';
-import { LocationModule } from '@domain/common/location';
-import { TagsetTemplateModule } from '../tagset-template/tagset.template.module';
-import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
-import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
-import { DocumentModule } from '@domain/storage/document/document.module';
-import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
 
 @Module({
   imports: [
@@ -31,13 +33,20 @@ import { ProfileDocumentsModule } from '@domain/profile-documents/profile.docume
     ProfileDocumentsModule,
     DocumentModule,
     UrlGeneratorModule,
+    AvatarCreatorModule,
   ],
   providers: [
     ProfileResolverMutations,
     ProfileService,
     ProfileAuthorizationService,
     ProfileResolverFields,
+    ProfileAvatarService,
   ],
-  exports: [ProfileService, ProfileAuthorizationService, ProfileResolverFields],
+  exports: [
+    ProfileService,
+    ProfileAuthorizationService,
+    ProfileResolverFields,
+    ProfileAvatarService,
+  ],
 })
 export class ProfileModule {}

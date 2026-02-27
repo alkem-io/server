@@ -1,13 +1,26 @@
-import { Field, ObjectType } from '@nestjs/graphql';
-import { IContributorBase } from '../contributor/contributor.base.interface';
-import { IContributor } from '../contributor/contributor.interface';
+import { IActor, IActorFull } from '@domain/actor/actor/actor.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { IUserSettings } from '../user-settings/user.settings.interface';
 
 @ObjectType('User', {
-  implements: () => [IContributor],
+  implements: () => [IActorFull],
 })
-export class IUser extends IContributorBase implements IContributor {
+export class IUser extends IActor implements IActorFull {
+  @Field(() => NameID, {
+    nullable: false,
+    description:
+      'A name identifier of the entity, unique within a given scope.',
+  })
+  declare nameID: string;
+
+  // Override to make profile required for contributors
+  declare profile: IProfile;
+
+  // User extends Actor - credentials are on Actor.credentials
+
   accountID!: string;
   rowId!: number;
 

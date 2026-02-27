@@ -1,24 +1,27 @@
-import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { LoggerService } from '@nestjs/common';
-import { Inject, UseGuards } from '@nestjs/common/decorators';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CalloutService } from '@domain/collaboration/callout/callout.service';
-import { AuthorizationAgentPrivilege } from '@common/decorators';
+import { AuthorizationActorHasPrivilege } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
+import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { GraphqlGuard } from '@core/authorization';
+import {
+  CalloutActivityLoaderCreator,
+  UserLoaderCreator,
+} from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { IUser } from '@domain/community/user/user.interface';
-import { UserLoaderCreator } from '@core/dataloader/creators';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { Loader } from '@core/dataloader/decorators';
+import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { IClassification } from '@domain/common/classification/classification.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { LoggerService } from '@nestjs/common';
+import { Inject, UseGuards } from '@nestjs/common/decorators';
+import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
-import { IClassification } from '@domain/common/classification/classification.interface';
-import { ContributionsFilterInput } from './dto/contributions.filter';
 import { CalloutContributionsCountOutput } from './dto/callout.contributions.count.dto';
-import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { ContributionsFilterInput } from './dto/contributions.filter';
 
 @Resolver(() => ICallout)
 export class CalloutResolverFields {
@@ -28,7 +31,7 @@ export class CalloutResolverFields {
     private calloutService: CalloutService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('contributions', () => [ICalloutContribution], {
     nullable: false,
@@ -68,7 +71,7 @@ export class CalloutResolverFields {
       shuffle
     );
   }
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('contributionsCount', () => CalloutContributionsCountOutput, {
     nullable: false,
@@ -80,7 +83,7 @@ export class CalloutResolverFields {
     return await this.calloutService.getContributionsCount(callout);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('comments', () => IRoom, {
     nullable: true,
@@ -90,7 +93,7 @@ export class CalloutResolverFields {
     return await this.calloutService.getComments(callout.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('classification', () => IClassification, {
     nullable: true,
@@ -108,11 +111,25 @@ export class CalloutResolverFields {
     description:
       'The activity for this Callout. The number of Contributions if the callout allows contributions, or the number of comments if it does not.',
   })
-  async activity(@Parent() callout: ICallout): Promise<number> {
+  async activity(
+    @Parent() callout: ICallout,
+    @Loader(CalloutActivityLoaderCreator)
+    loader: ILoader<number>
+  ): Promise<number> {
+    // If activity was already computed (e.g. during sortByActivity), reuse it
+    if (callout.activity !== undefined) {
+      return callout.activity;
+    }
+    // Contribution-type callouts: use batched DataLoader (1 query for all callouts)
+    if (callout.settings.contribution.allowedTypes.length > 0) {
+      return loader.load(callout.id);
+    }
+    // Comment-type callouts: fall back to individual RPC (rare, involves Matrix)
+    // can be optimized further with the adapter supporting reading multiple rooms
     return await this.calloutService.getActivityCount(callout);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('contributionDefaults', () => ICalloutContributionDefaults, {
     nullable: false,

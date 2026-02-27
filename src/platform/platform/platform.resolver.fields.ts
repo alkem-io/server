@@ -1,26 +1,26 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { ILibrary } from '@library/library/library.interface';
-import { IPlatform } from './platform.interface';
-import { PlatformService } from './platform.service';
-import { IConfig } from '@platform/configuration/config/config.interface';
-import { KonfigService } from '@platform/configuration/config/config.service';
-import { IMetadata } from '@platform/metadata/metadata.interface';
-import { MetadataService } from '@platform/metadata/metadata.service';
+import { CurrentActor } from '@common/decorators';
+import { AuthorizationPrivilege } from '@common/enums';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
-import { IForum } from '@platform/forum';
 import { ITemplatesManager } from '@domain/template/templates-manager/templates.manager.interface';
-import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors';
-import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ILibrary } from '@library/library/library.interface';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { CurrentUser } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationPrivilege } from '@common/enums';
+import { IConfig } from '@platform/configuration/config/config.interface';
+import { KonfigService } from '@platform/configuration/config/config.service';
+import { IForum } from '@platform/forum';
+import { ILicensingFramework } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.interface';
+import { IMetadata } from '@platform/metadata/metadata.interface';
+import { MetadataService } from '@platform/metadata/metadata.service';
+import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors';
 import { PlatformWellKnownVirtualContributorMapping } from '@platform/platform.well.known.virtual.contributors/dto/platform.well.known.virtual.contributor.dto.mapping';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
+import { IPlatform } from './platform.interface';
+import { PlatformService } from './platform.service';
 
 @Resolver(() => IPlatform)
 export class PlatformResolverFields {
@@ -133,13 +133,13 @@ export class PlatformResolverFields {
   )
   async wellKnownVirtualContributors(
     @Parent() platform: IPlatform,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IPlatformWellKnownVirtualContributors> {
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ,
-      `get Platform well-known Virtual Contributors: ${agentInfo.email}`
+      `get Platform well-known Virtual Contributors: ${actorContext.actorID}`
     );
 
     // Convert from JSON storage format to DTO array format

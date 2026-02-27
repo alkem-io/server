@@ -1,22 +1,22 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
-import { SpaceService } from '@domain/space/space/space.service';
-import { RolesService } from '../roles/roles.service';
-import { ISpace } from '@domain/space/space/space.interface';
-import { ActivityLogService } from '../activity-log';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { MySpaceResults } from './dto/my.journeys.results';
-import { ActivityService } from '@platform/activity/activity.service';
 import { LogContext } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
-import { CommunityInvitationResult } from './dto/me.invitation.result';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { EntityNotFoundException } from '@common/exceptions';
-import { CommunityApplicationResult } from './dto/me.application.result';
-import { SpaceMembershipCollaborationInfo } from './space.membership.type';
-import { CommunityMembershipResult } from './dto/me.membership.result';
 import { SpaceLevel } from '@common/enums/space.level';
+import { EntityNotFoundException } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { sortSpacesByActivity } from '@domain/space/space/sort.spaces.by.activity';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceService } from '@domain/space/space/space.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ActivityService } from '@platform/activity/activity.service';
+import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ActivityLogService } from '../activity-log';
+import { RolesService } from '../roles/roles.service';
+import { CommunityApplicationResult } from './dto/me.application.result';
+import { CommunityInvitationResult } from './dto/me.invitation.result';
+import { CommunityMembershipResult } from './dto/me.membership.result';
+import { MySpaceResults } from './dto/my.journeys.results';
+import { SpaceMembershipCollaborationInfo } from './space.membership.type';
 
 @Injectable()
 export class MeService {
@@ -119,10 +119,10 @@ export class MeService {
     return results;
   }
 
-  private async getSpaceMembershipsForAgentInfo(
-    agentInfo: AgentInfo
+  private async getSpaceMembershipsForActorContext(
+    actorContext: ActorContext
   ): Promise<ISpace[]> {
-    const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
+    const credentialMap = groupCredentialsByEntity(actorContext.credentials);
     const spaceIds = Array.from(credentialMap.get('spaces')?.keys() ?? []);
 
     const allSpaces = await this.spaceService.getSpacesInList(spaceIds);
@@ -131,7 +131,7 @@ export class MeService {
       this.getSpaceMembershipCollaborationInfo(validSpaces);
     const latestActivitiesPerSpace =
       await this.activityService.getLatestActivitiesPerSpaceMembership(
-        agentInfo.userID,
+        actorContext.actorID,
         spaceMembershipCollaborationInfo
       );
     return sortSpacesByActivity(validSpaces, latestActivitiesPerSpace);
@@ -163,10 +163,10 @@ export class MeService {
   }
 
   public async getSpaceMembershipsFlat(
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<CommunityMembershipResult[]> {
     const sortedFlatListSpacesWithMembership =
-      await this.getSpaceMembershipsForAgentInfo(agentInfo);
+      await this.getSpaceMembershipsForActorContext(actorContext);
     const spaceMemberships: CommunityMembershipResult[] = [];
 
     for (const space of sortedFlatListSpacesWithMembership) {
@@ -181,11 +181,11 @@ export class MeService {
   }
 
   public async getSpaceMembershipsHierarchical(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     limit?: number
   ): Promise<CommunityMembershipResult[]> {
     const sortedFlatListSpacesWithMembership =
-      await this.getSpaceMembershipsForAgentInfo(agentInfo);
+      await this.getSpaceMembershipsForActorContext(actorContext);
 
     const levelZeroSpacesRaw = this.filterSpacesByLevel(
       sortedFlatListSpacesWithMembership,
@@ -282,29 +282,29 @@ export class MeService {
   }
 
   public async getMySpaces(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     limit = 20
   ): Promise<MySpaceResults[]> {
     const rawActivities = await this.activityService.getMySpacesActivity(
-      agentInfo.userID,
+      actorContext.actorID,
       limit * 2 //magic number, should not be needed. toDo Fix in https://app.zenhub.com/workspaces/alkemio-development-5ecb98b262ebd9f4aec4194c/issues/gh/alkem-io/server/3626
     );
 
     // Get the user's actual space memberships to filter activities
-    const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
+    const credentialMap = groupCredentialsByEntity(actorContext.credentials);
     const userSpaceIds = new Set(
       Array.from(credentialMap.get('spaces')?.keys() ?? [])
     );
 
+    const activityLogs =
+      await this.activityLogService.convertRawActivityToResults(rawActivities);
+
     const mySpaceResults: MySpaceResults[] = [];
-
-    for (const rawActivity of rawActivities) {
-      const activityLog =
-        await this.activityLogService.convertRawActivityToResult(rawActivity);
-
+    for (let i = 0; i < rawActivities.length; i++) {
+      const activityLog = activityLogs[i];
       if (!activityLog?.space) {
         this.logger.warn(
-          `Unable to process activity entry ${rawActivity.id} because it does not have a journey.`,
+          `Unable to process activity entry ${rawActivities[i].id} because it does not have a journey.`,
           LogContext.ACTIVITY
         );
         continue;

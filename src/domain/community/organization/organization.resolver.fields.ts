@@ -1,31 +1,30 @@
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { Organization } from './organization.entity';
-import { OrganizationService } from './organization.service';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
-
-import { IOrganization } from '@domain/community/organization';
-import { IUserGroup } from '@domain/community/user-group';
-import { IProfile } from '@domain/common/profile';
-import { CurrentUser } from '@common/decorators';
-import { IAgent } from '@domain/agent/agent';
-import { UUID } from '@domain/common/scalars';
-import { UserGroupService } from '@domain/community/user-group/user-group.service';
-import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
-import { INVP } from '@domain/common/nvp/nvp.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { Loader } from '@core/dataloader/decorators';
 import {
-  AgentLoaderCreator,
+  ActorLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
-import { ILoader } from '@core/dataloader/loader.interface';
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { IAccount } from '@domain/space/account/account.interface';
-import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
+import { Loader } from '@core/dataloader/decorators';
+import { ILoader } from '@core/dataloader/loader.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { INVP } from '@domain/common/nvp/nvp.interface';
+import { IProfile } from '@domain/common/profile';
+import { UUID } from '@domain/common/scalars';
+import { IOrganization } from '@domain/community/organization';
+import { IUserGroup } from '@domain/community/user-group';
+import { UserGroupService } from '@domain/community/user-group/user-group.service';
+import { IAccount } from '@domain/space/account/account.interface';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
+import { IOrganizationVerification } from '../organization-verification/organization.verification.interface';
+import { Organization } from './organization.entity';
+import { OrganizationService } from './organization.service';
 
 @Resolver(() => IOrganization)
 export class OrganizationResolverFields {
@@ -41,7 +40,7 @@ export class OrganizationResolverFields {
   })
   async groups(
     @Parent() parent: Organization,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IUserGroup[]> {
     // Reload to ensure the authorization is loaded
     const organization = await this.organizationService.getOrganizationOrFail(
@@ -49,7 +48,7 @@ export class OrganizationResolverFields {
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.READ,
       `read user groups on org: ${organization.id}`
@@ -71,7 +70,7 @@ export class OrganizationResolverFields {
     description: 'Group defined on this organization.',
   })
   async group(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() parent: Organization,
     @Args('ID', { type: () => UUID }) groupID: string
   ): Promise<IUserGroup> {
@@ -81,7 +80,7 @@ export class OrganizationResolverFields {
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.READ,
       `read single usergroup on org: ${organization.id}`
@@ -118,10 +117,10 @@ export class OrganizationResolverFields {
   })
   async account(
     @Parent() organization: IOrganization,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IAccount | undefined> {
     const accountVisible = this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.UPDATE
     );
@@ -166,15 +165,15 @@ export class OrganizationResolverFields {
     return await this.organizationService.getVerification(organization);
   }
 
-  @ResolveField('agent', () => IAgent, {
+  @ResolveField('actor', () => IActor, {
     nullable: false,
-    description: 'The Agent representing this User.',
+    description: 'The Actor representing this User.',
   })
   async agent(
     @Parent() organization: Organization,
-    @Loader(AgentLoaderCreator, { parentClassRef: Organization })
-    loader: ILoader<IAgent>
-  ): Promise<IAgent> {
+    @Loader(ActorLoaderCreator, { parentClassRef: Organization })
+    loader: ILoader<IActor>
+  ): Promise<IActor> {
     return loader.load(organization.id);
   }
 

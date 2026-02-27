@@ -1,24 +1,24 @@
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LogContext } from '@common/enums/logging.context';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import {
+  EntityNotInitializedException,
+  NotSupportedException,
+} from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
-import { StorageAggregator } from './storage.aggregator.entity';
-import { IStorageAggregator } from './storage.aggregator.interface';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '../storage-bucket/storage.bucket.service';
 import { IStorageAggregatorParent } from './dto/storage.aggregator.dto.parent';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { IStorageBucket } from '../storage-bucket/storage.bucket.interface';
-import {
-  EntityNotInitializedException,
-  NotSupportedException,
-} from '@common/exceptions';
-import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { StorageAggregator } from './storage.aggregator.entity';
+import { IStorageAggregator } from './storage.aggregator.interface';
 @Injectable()
 export class StorageAggregatorService {
   constructor(
@@ -34,23 +34,30 @@ export class StorageAggregatorService {
 
   public async createStorageAggregator(
     type: StorageAggregatorType,
-    parentStorageAggregator?: IStorageAggregator
+    parentStorageAggregator?: IStorageAggregator,
+    mgr?: EntityManager
   ): Promise<IStorageAggregator> {
-    const storageAggregator: IStorageAggregator = new StorageAggregator();
-    storageAggregator.type = type;
-    storageAggregator.authorization = new AuthorizationPolicy(
-      AuthorizationPolicyType.STORAGE_AGGREGATOR
-    );
+    const doCreate = async (m: EntityManager): Promise<IStorageAggregator> => {
+      const storageAggregator: IStorageAggregator = new StorageAggregator();
+      storageAggregator.type = type;
+      storageAggregator.authorization = new AuthorizationPolicy(
+        AuthorizationPolicyType.STORAGE_AGGREGATOR
+      );
 
-    storageAggregator.parentStorageAggregator = parentStorageAggregator;
+      storageAggregator.parentStorageAggregator = parentStorageAggregator;
 
-    storageAggregator.directStorage =
-      this.storageBucketService.createStorageBucket({});
-    // Need to save the storage bucket to avoid a TypeORM saving circular dependency
-    storageAggregator.directStorage = await this.storageBucketService.save(
-      storageAggregator.directStorage
-    );
-    return await this.save(storageAggregator);
+      storageAggregator.directStorage =
+        this.storageBucketService.createStorageBucket({});
+      // Need to save the storage bucket to avoid a TypeORM saving circular dependency
+      storageAggregator.directStorage = await this.storageBucketService.save(
+        storageAggregator.directStorage,
+        m
+      );
+      return await this.save(storageAggregator, m);
+    };
+
+    if (mgr) return doCreate(mgr);
+    return this.storageAggregatorRepository.manager.transaction(doCreate);
   }
 
   async delete(storageAggregatorID: string): Promise<IStorageAggregator> {
@@ -104,8 +111,10 @@ export class StorageAggregatorService {
   }
 
   async save(
-    storageAggregator: IStorageAggregator
+    storageAggregator: IStorageAggregator,
+    mgr?: EntityManager
   ): Promise<IStorageAggregator> {
+    if (mgr) return await mgr.save(storageAggregator as StorageAggregator);
     return await this.storageAggregatorRepository.save(storageAggregator);
   }
 
@@ -223,7 +232,7 @@ export class StorageAggregatorService {
       url: '',
     };
     switch (storageAggregator.type) {
-      case StorageAggregatorType.SPACE:
+      case StorageAggregatorType.SPACE: {
         const space =
           await this.storageAggregatorResolverService.getParentSpaceForStorageAggregator(
             storageAggregator
@@ -235,12 +244,13 @@ export class StorageAggregatorService {
           space.id
         );
         break;
+      }
       case StorageAggregatorType.PLATFORM:
         result.displayName = 'platform';
         result.url = this.urlGeneratorService.generateUrlForPlatform();
         break;
 
-      case StorageAggregatorType.ORGANIZATION:
+      case StorageAggregatorType.ORGANIZATION: {
         const organization =
           await this.storageAggregatorResolverService.getParentOrganizationForStorageAggregator(
             storageAggregator
@@ -251,7 +261,8 @@ export class StorageAggregatorService {
           organization.nameID
         );
         break;
-      case StorageAggregatorType.USER:
+      }
+      case StorageAggregatorType.USER: {
         const user =
           await this.storageAggregatorResolverService.getParentUserForStorageAggregator(
             storageAggregator
@@ -262,7 +273,8 @@ export class StorageAggregatorService {
           user.nameID
         );
         break;
-      case StorageAggregatorType.ACCOUNT:
+      }
+      case StorageAggregatorType.ACCOUNT: {
         const account =
           await this.storageAggregatorResolverService.getParentAccountForStorageAggregator(
             storageAggregator
@@ -273,6 +285,7 @@ export class StorageAggregatorService {
         result.displayName = 'account';
         result.url = this.urlGeneratorService.generateUrlForPlatform();
         break;
+      }
       default:
         throw new NotSupportedException(
           `Retrieval of parent entity information for storage aggregator on ${storageAggregator.id} of type ${storageAggregator.type} not yet implemented`,

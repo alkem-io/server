@@ -1,27 +1,27 @@
-import { Resolver, Mutation, Args } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoleChangeType } from '@alkemio/notifications-lib';
-import { IUser } from '@domain/community/user/user.interface';
-import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
 import { RoleName } from '@common/enums/role.name';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
+import { ActorService } from '@domain/actor/actor/actor.service';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
+import { LicenseService } from '@domain/common/license/license.service';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
-import { LicenseService } from '@domain/common/license/license.service';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
-import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
-import { RemovePlatformRoleInput } from './dto/platform.role.dto.remove';
-import { AssignPlatformRoleInput } from './dto/platform.role.dto.assign';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformService } from '@platform/platform/platform.service';
-import { InstrumentResolver } from '@src/apm/decorators';
+import { NotificationInputPlatformGlobalRoleChange } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.global.role.change';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor } from '@src/common/decorators';
+import { AssignPlatformRoleInput } from './dto/platform.role.dto.assign';
+import { RemovePlatformRoleInput } from './dto/platform.role.dto.remove';
 
 @InstrumentResolver()
 @Resolver()
@@ -33,7 +33,7 @@ export class PlatformRoleResolverMutations {
     private authorizationService: AuthorizationService,
     private notificationPlatformAdapter: NotificationPlatformAdapter,
     private licenseService: LicenseService,
-    private agentService: AgentService,
+    private actorService: ActorService,
     private roleSetService: RoleSetService,
     private userLookupService: UserLookupService,
     private roleSetAuthorizationService: RoleSetAuthorizationService,
@@ -44,7 +44,7 @@ export class PlatformRoleResolverMutations {
     description: 'Assigns a User to a role on the Platform.',
   })
   async assignPlatformRoleToUser(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: AssignPlatformRoleInput
   ): Promise<IUser> {
     const roleSet = await this.platformService.getRoleSetOrFail();
@@ -59,58 +59,55 @@ export class PlatformRoleResolverMutations {
     }
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       roleSet.authorization,
       privilegeRequired,
       `assign role to User: ${roleSet.id} on roleSet of type: ${roleSet.type}`
     );
 
-    await this.roleSetService.assignUserToRole(
+    await this.roleSetService.assignActorToRole(
       roleSet,
       roleData.role,
-      roleData.contributorID,
-      agentInfo,
+      roleData.actorID,
+      actorContext,
       true
     );
 
-    const user = await this.userLookupService.getUserOrFail(
-      roleData.contributorID
+    const user = await this.userLookupService.getUserByIdOrFail(
+      roleData.actorID
     );
     if (
       roleData.role === RoleName.PLATFORM_BETA_TESTER ||
       roleData.role === RoleName.PLATFORM_VC_CAMPAIGN
     ) {
       // Also assign the user account a license plan
-      const accountAgent = await this.accountLookupService.getAgent(
-        user.accountID
-      );
-
+      // Account IS the Actor - use accountID directly as actorID
       const accountLicenseCredential: ICredentialDefinition = {
         type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
         resourceID: user.accountID,
       };
-      await this.agentService.grantCredentialOrFail({
-        agentID: accountAgent.id,
-        ...accountLicenseCredential,
-      });
+      await this.actorService.grantCredentialOrFail(
+        user.accountID,
+        accountLicenseCredential
+      );
       await this.resetLicenseForUserAccount(user);
     }
 
     this.notifyPlatformGlobalRoleChange(
-      agentInfo.userID,
+      actorContext.actorID,
       user,
       RoleChangeType.ADDED,
       roleData.role
     );
 
-    return await this.userLookupService.getUserOrFail(roleData.contributorID);
+    return await this.userLookupService.getUserByIdOrFail(roleData.actorID);
   }
 
   @Mutation(() => IUser, {
     description: 'Removes a User from a Role on the Platform.',
   })
   async removePlatformRoleFromUser(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: RemovePlatformRoleInput
   ): Promise<IUser> {
     const roleSet = await this.platformService.getRoleSetOrFail();
@@ -130,54 +127,52 @@ export class PlatformRoleResolverMutations {
       extendedAuthorization =
         this.roleSetAuthorizationService.extendAuthorizationPolicyForSelfRemoval(
           roleSet,
-          roleData.contributorID
+          roleData.actorID
         );
     }
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       extendedAuthorization,
       privilegeRequired,
       `remove role from User: ${roleSet.id} on roleSet of type ${roleSet.type}`
     );
 
-    await this.roleSetService.removeUserFromRole(
+    await this.roleSetService.removeActorFromRole(
       roleSet,
       roleData.role,
-      roleData.contributorID
+      roleData.actorID
     );
 
-    const user = await this.userLookupService.getUserOrFail(
-      roleData.contributorID
+    const user = await this.userLookupService.getUserByIdOrFail(
+      roleData.actorID
     );
     if (
       roleData.role === RoleName.PLATFORM_BETA_TESTER ||
       roleData.role === RoleName.PLATFORM_VC_CAMPAIGN
     ) {
-      // Also remoove the user account a license plan
-      const accountAgent = await this.accountLookupService.getAgent(
-        user.accountID
-      );
+      // Also remove the user account a license plan
+      // Account IS the Actor - use accountID directly as actorID
       const accountLicenseCredential: ICredentialDefinition = {
         type: LicensingCredentialBasedCredentialType.ACCOUNT_LICENSE_PLUS,
         resourceID: user.accountID,
       };
-      await this.agentService.revokeCredential({
-        agentID: accountAgent.id,
-        ...accountLicenseCredential,
-      });
+      await this.actorService.revokeCredential(
+        user.accountID,
+        accountLicenseCredential
+      );
 
       await this.resetLicenseForUserAccount(user);
     }
 
     this.notifyPlatformGlobalRoleChange(
-      agentInfo.userID,
+      actorContext.actorID,
       user,
       RoleChangeType.REMOVED,
       roleData.role
     );
 
-    return await this.userLookupService.getUserOrFail(roleData.contributorID);
+    return await this.userLookupService.getUserByIdOrFail(roleData.actorID);
   }
 
   private async resetLicenseForUserAccount(user: IUser) {

@@ -1,28 +1,27 @@
-import { ConfigService } from '@nestjs/config';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { HttpService } from '@nestjs/axios';
-import { firstValueFrom, map, TimeoutError, timer } from 'rxjs';
-import { isAxiosError } from 'axios';
-import { AlkemioConfig } from '@src/types';
-import { UpdateCustomer } from '@services/external/wingback/types/wingback.type.update.customer';
-import { WingbackEntitlement } from './types/wingback.type.entitlement';
-import { CreateWingbackCustomer } from '@services/external/wingback/types/wingback.type.create.customer';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { WingbackFeature } from '@services/external/wingback/types/wingback.type.feature';
-import { BaseException } from '@common/exceptions/base.exception';
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
-import { catchError, retry, timeout } from 'rxjs/operators';
+import { BaseException } from '@common/exceptions/base.exception';
 import { RetryException, TimeoutException } from '@common/exceptions/internal';
 import { BaseExceptionInternal } from '@common/exceptions/internal/base.exception.internal';
-import { WingbackContract } from '@services/external/wingback/types/wingback.type.contract';
+import { HttpService } from '@nestjs/axios';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { WingbackCustomerNotCreated } from '@services/external/wingback/exceptions/wingback.customer.not.created';
 import { WingbackCustomerNotFound } from '@services/external/wingback/exceptions/wingback.customer.not.found';
 import { WingbackCustomerNotRemoved } from '@services/external/wingback/exceptions/wingback.customer.not.removed';
-import { WingbackCustomerNotCreated } from '@services/external/wingback/exceptions/wingback.customer.not.created';
-
 import {
   isWingbackException,
   WingbackException,
 } from '@services/external/wingback/exceptions/wingback.exception';
+import { WingbackContract } from '@services/external/wingback/types/wingback.type.contract';
+import { CreateWingbackCustomer } from '@services/external/wingback/types/wingback.type.create.customer';
+import { WingbackFeature } from '@services/external/wingback/types/wingback.type.feature';
+import { UpdateCustomer } from '@services/external/wingback/types/wingback.type.update.customer';
+import { AlkemioConfig } from '@src/types';
+import { isAxiosError } from 'axios';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { firstValueFrom, map, TimeoutError, timer } from 'rxjs';
+import { catchError, retry, timeout } from 'rxjs/operators';
+import { WingbackEntitlement } from './types/wingback.type.entitlement';
 
 // https://docs.wingback.com/dev/api-reference/introduction
 @Injectable()

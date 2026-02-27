@@ -1,18 +1,14 @@
 import { LogContext } from '@common/enums';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { Injectable, Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IAccount } from '../account/account.interface';
-import {
-  EntityNotFoundException,
-  RelationshipNotFoundException,
-} from '@common/exceptions';
-import { User } from '@domain/community/user/user.entity';
+import { EntityNotFoundException } from '@common/exceptions';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { Organization } from '@domain/community/organization';
-import { Account } from '../account/account.entity';
+import { User } from '@domain/community/user/user.entity';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindOneOptions } from 'typeorm';
-import { IAgent } from '@domain/agent/agent/agent.interface';
+import { Account } from '../account/account.entity';
+import { IAccount } from '../account/account.interface';
 
 @Injectable()
 export class AccountLookupService {
@@ -46,24 +42,7 @@ export class AccountLookupService {
     return account;
   }
 
-  public async getAgent(accountID: string): Promise<IAgent> {
-    const account = await this.getAccountOrFail(accountID, {
-      relations: {
-        agent: true,
-      },
-    });
-
-    if (!account.agent) {
-      throw new RelationshipNotFoundException(
-        `Unable to retrieve Agent for Account: ${account.id}`,
-        LogContext.PLATFORM
-      );
-    }
-
-    return account.agent;
-  }
-
-  public async getHostOrFail(account: IAccount): Promise<IContributor> {
+  public async getHostOrFail(account: IAccount): Promise<IActor> {
     const host = await this.getHost(account);
     if (!host)
       throw new EntityNotFoundException(
@@ -73,7 +52,7 @@ export class AccountLookupService {
     return host;
   }
 
-  public async getHost(account: IAccount): Promise<IContributor | null> {
+  public async getHost(account: IAccount): Promise<IActor | null> {
     const user = await this.entityManager.findOne(User, {
       where: {
         accountID: account.id,

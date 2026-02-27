@@ -1,70 +1,70 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { InjectRepository } from '@nestjs/typeorm';
-import { SpaceService } from '@domain/space/space/space.service';
-import { UserService } from '@domain/community/user/user.service';
-import { Repository } from 'typeorm';
-import * as defaultRoles from './platform-template-definitions/user/users.json';
-import * as defaultLicensePlan from './platform-template-definitions/license-plan/license-plans.json';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Profiling } from '@common/decorators';
-import { LogContext } from '@common/enums';
-import { BootstrapException } from '@common/exceptions/bootstrap.exception';
-import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import {
   DEFAULT_HOST_ORG_DISPLAY_NAME,
   DEFAULT_HOST_ORG_NAMEID,
   DEFAULT_SPACE_DISPLAYNAME,
   DEFAULT_SPACE_NAMEID,
 } from '@common/constants';
-import { OrganizationService } from '@domain/community/organization/organization.service';
-import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
-import { PlatformService } from '@platform/platform/platform.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
+import { Profiling } from '@common/decorators';
+import { LogContext } from '@common/enums';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
-import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
-import { AccountService } from '@domain/space/account/account.service';
-import { SpaceAuthorizationService } from '@domain/space/space/space.service.authorization';
-import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
-import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
-import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
-import { Space } from '@domain/space/space/space.entity';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
-import { TemplateDefaultService } from '@domain/template/template-default/template.default.service';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
 import { TemplateType } from '@common/enums/template.type';
+import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
+import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
+import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { BootstrapException } from '@common/exceptions/bootstrap.exception';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
+import { MessagingService } from '@domain/communication/messaging/messaging.service';
+import { OrganizationService } from '@domain/community/organization/organization.service';
+import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { UserService } from '@domain/community/user/user.service';
+import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { AccountService } from '@domain/space/account/account.service';
+import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
+import { CreateSpaceOnAccountInput } from '@domain/space/account/dto/account.dto.create.space';
+import { Space } from '@domain/space/space/space.entity';
+import { SpaceService } from '@domain/space/space/space.service';
+import { SpaceAuthorizationService } from '@domain/space/space/space.service.authorization';
+import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
+import { TemplateDefaultService } from '@domain/template/template-default/template.default.service';
+import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectRepository } from '@nestjs/typeorm';
 import { LicensePlanService } from '@platform/licensing/credential-based/license-plan/license.plan.service';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
-import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
-import { bootstrapTemplateSpaceContentSpaceL0 } from './platform-template-definitions/default-templates/bootstrap.template.space.content.space.l0';
-import { bootstrapTemplateSpaceContentSubspace } from './platform-template-definitions/default-templates/bootstrap.template.space.content.subspace';
+import { PlatformService } from '@platform/platform/platform.service';
+import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
+import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.service';
+import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
+import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
+import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
+import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { Repository } from 'typeorm';
 import { bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.space.l0.tutorials';
 import { bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.vc.knowledge.base';
-import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
-import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
-import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
-import { MessagingService } from '@domain/communication/messaging/messaging.service';
-import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.service';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { RoleName } from '@common/enums/role.name';
+import { bootstrapTemplateSpaceContentSpaceL0 } from './platform-template-definitions/default-templates/bootstrap.template.space.content.space.l0';
+import { bootstrapTemplateSpaceContentSubspace } from './platform-template-definitions/default-templates/bootstrap.template.space.content.subspace';
+import * as defaultLicensePlan from './platform-template-definitions/license-plan/license-plans.json';
+import * as defaultRoles from './platform-template-definitions/user/users.json';
 
 @Injectable()
 export class BootstrapService {
   constructor(
     private accountService: AccountService,
     private accountAuthorizationService: AccountAuthorizationService,
-    private agentInfoService: AgentInfoService,
+    private actorContextService: ActorContextService,
     private spaceService: SpaceService,
     private userService: UserService,
     private userLookupService: UserLookupService,
@@ -110,8 +110,7 @@ export class BootstrapService {
         Profiling.profilingEnabled = profilingEnabled;
       }
 
-      const anonymousAgentInfo =
-        this.agentInfoService.createAnonymousAgentInfo();
+      const anonymousActorContext = this.actorContextService.createAnonymous();
 
       // Order matters:
       // 1. Infrastructure: Forum, Messaging
@@ -142,7 +141,7 @@ export class BootstrapService {
 
       await this.bootstrapLicensePlans();
       await this.ensureAuthorizationsPopulated();
-      await this.ensureSpaceSingleton(anonymousAgentInfo);
+      await this.ensureSpaceSingleton(anonymousActorContext);
       // reset auth as last in the actions
       // await this.ensureSpaceNamesInElastic();
     } catch (error: any) {
@@ -393,14 +392,14 @@ export class BootstrapService {
     }
   }
 
-  private async ensureOrganizationSingleton(agentInfo?: AgentInfo) {
+  private async ensureOrganizationSingleton(actorContext?: ActorContext) {
     // create a default host org
     let hostOrganization =
       await this.organizationLookupService.getOrganizationByNameId(
         DEFAULT_HOST_ORG_NAMEID
       );
     if (!hostOrganization) {
-      // If agentInfo is not provided, we create without an admin initially
+      // If actorContext is not provided, we create without an admin initially
       // The admin will be linked later
       hostOrganization = await this.organizationService.createOrganization(
         {
@@ -409,7 +408,7 @@ export class BootstrapService {
             displayName: DEFAULT_HOST_ORG_DISPLAY_NAME,
           },
         },
-        agentInfo
+        actorContext
       );
       const orgAuthorizations =
         await this.organizationAuthorizationService.applyAuthorizationPolicy(
@@ -432,7 +431,7 @@ export class BootstrapService {
   }
 
   private async ensureAdminUserLinkedToOrganization() {
-    const adminAgentInfo = await this.getAdminAgentInfo();
+    const adminActorContext = await this.getAdminActorContext();
     const hostOrganization =
       await this.organizationLookupService.getOrganizationByNameIdOrFail(
         DEFAULT_HOST_ORG_NAMEID
@@ -441,19 +440,19 @@ export class BootstrapService {
     const roleSet = await this.organizationService.getRoleSet(hostOrganization);
 
     // Assign Admin as Associate and Admin
-    await this.roleSetService.assignUserToRole(
+    await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.ASSOCIATE,
-      adminAgentInfo.userID,
-      adminAgentInfo,
+      adminActorContext.actorID,
+      adminActorContext,
       false
     );
 
-    await this.roleSetService.assignUserToRole(
+    await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.ADMIN,
-      adminAgentInfo.userID,
-      adminAgentInfo,
+      adminActorContext.actorID,
+      adminActorContext,
       false
     );
 
@@ -463,11 +462,11 @@ export class BootstrapService {
     );
   }
 
-  private async getAdminAgentInfo(): Promise<AgentInfo> {
+  private async getAdminActorContext(): Promise<ActorContext> {
     const adminUserEmail = 'admin@alkem.io';
     const adminUser = await this.userService.getUserByEmail(adminUserEmail, {
       relations: {
-        agent: true,
+        actor: { credentials: true },
       },
     });
     if (!adminUser) {
@@ -475,22 +474,18 @@ export class BootstrapService {
         `Unable to load fixed admin user for creating organization: ${adminUserEmail}`
       );
     }
-    return {
-      isAnonymous: false,
-      userID: adminUser.id,
-      email: adminUser.email,
-      emailVerified: true,
-      firstName: adminUser.firstName,
-      lastName: adminUser.lastName,
-      guestName: '',
-      avatarURL: '',
-      credentials: adminUser.agent?.credentials || [],
-      agentID: adminUser.agent?.id,
-      authenticationID: adminUser.authenticationID ?? '',
-    };
+    const ctx = new ActorContext();
+    ctx.actorID = adminUser.id;
+    ctx.isAnonymous = false;
+    ctx.credentials = (adminUser.credentials || []).map(c => ({
+      type: c.type,
+      resourceID: c.resourceID,
+    }));
+    ctx.authenticationID = adminUser.authenticationID ?? undefined;
+    return ctx;
   }
 
-  private async ensureSpaceSingleton(agentInfo: AgentInfo) {
+  private async ensureSpaceSingleton(actorContext: ActorContext) {
     this.logger.verbose?.(
       '=== Ensuring at least one Account with a space is present ===',
       LogContext.BOOTSTRAP
@@ -527,7 +522,7 @@ export class BootstrapService {
 
       const space = await this.accountService.createSpaceOnAccount(
         spaceInput,
-        agentInfo
+        actorContext
       );
       const spaceAuthorizations =
         await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);

@@ -1,3 +1,14 @@
+import { randomUUID } from 'node:crypto';
+import { ActorType } from '@common/enums/actor.type';
+import { RoleSet } from '@domain/access/role-set/role.set.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
+import { Credential } from '@domain/actor/credential/credential.entity';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
+import { Profile } from '@domain/common/profile/profile.entity';
+import { UserGroup } from '@domain/community/user-group/user-group.entity';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { IGroupable } from '@src/common/interfaces/groupable.interface';
 import {
   Column,
   Entity,
@@ -6,21 +17,71 @@ import {
   OneToMany,
   OneToOne,
 } from 'typeorm';
-import { IGroupable } from '@src/common/interfaces/groupable.interface';
-import { UserGroup } from '@domain/community/user-group/user-group.entity';
-import { IOrganization } from './organization.interface';
-import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
-import { ContributorBase } from '../contributor/contributor.base.entity';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-
 import { IOrganizationSettings } from '../organization-settings/organization.settings.interface';
-import { RoleSet } from '@domain/access/role-set/role.set.entity';
+import { OrganizationVerification } from '../organization-verification/organization.verification.entity';
+import { IOrganization } from './organization.interface';
 
-@Entity()
+@Entity('organization')
 export class Organization
-  extends ContributorBase
+  extends BaseAlkemioEntity
   implements IOrganization, IGroupable
 {
+  constructor() {
+    super();
+    const id = randomUUID();
+    this.id = id;
+    const actor = new Actor();
+    actor.type = ActorType.ORGANIZATION;
+    actor.id = id;
+    this.actor = actor;
+  }
+
+  // Actor relation — shared primary key (organization.id = actor.id)
+  @OneToOne(() => Actor, {
+    eager: true,
+    cascade: true,
+    onDelete: 'CASCADE',
+    nullable: false,
+  })
+  @JoinColumn({ name: 'id', referencedColumnName: 'id' })
+  actor?: Actor;
+
+  // Transparent getters delegating to actor
+  get type(): ActorType {
+    return this.actor?.type as ActorType;
+  }
+
+  get authorization(): AuthorizationPolicy | undefined {
+    return this.actor?.authorization;
+  }
+
+  set authorization(auth: AuthorizationPolicy | undefined) {
+    if (!this.actor) this.actor = new Actor();
+    this.actor.authorization = auth;
+  }
+
+  get credentials(): Credential[] | undefined {
+    return this.actor?.credentials;
+  }
+
+  get profile(): Profile {
+    return this.actor?.profile as Profile;
+  }
+
+  set profile(p: Profile) {
+    if (!this.actor) this.actor = new Actor();
+    this.actor.profile = p;
+  }
+
+  get nameID(): string {
+    return this.actor?.nameID as string;
+  }
+
+  set nameID(val: string) {
+    if (!this.actor) this.actor = new Actor();
+    this.actor.nameID = val;
+  }
+
   @Column('uuid', { nullable: false })
   accountID!: string;
 
@@ -33,10 +94,14 @@ export class Organization
   @Generated('increment')
   rowId!: number;
 
-  @OneToMany(() => UserGroup, userGroup => userGroup.organization, {
-    eager: false,
-    cascade: true,
-  })
+  @OneToMany(
+    () => UserGroup,
+    userGroup => userGroup.organization,
+    {
+      eager: false,
+      cascade: true,
+    }
+  )
   groups?: UserGroup[];
 
   @Column()

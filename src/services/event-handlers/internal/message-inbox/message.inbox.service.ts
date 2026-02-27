@@ -1,30 +1,30 @@
-import { randomUUID } from 'crypto';
+import { LogContext } from '@common/enums';
+import { RoomType } from '@common/enums/room.type';
+import { MutationType } from '@common/enums/subscriptions';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { ConversationService } from '@domain/communication/conversation/conversation.service';
+import { IMessage } from '@domain/communication/message/message.interface';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
+import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
+import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
+import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
-import { MutationType } from '@common/enums/subscriptions';
-import { RoomType } from '@common/enums/room.type';
+import { MessageEditedEvent } from './message.edited.event';
+import { MessageNotificationService } from './message.notification.service';
 import { MessageReceivedEvent } from './message.received.event';
+import { MessageRedactedEvent } from './message.redacted.event';
 import { ReactionAddedEvent } from './reaction.added.event';
 import { ReactionRemovedEvent } from './reaction.removed.event';
-import { MessageEditedEvent } from './message.edited.event';
-import { MessageRedactedEvent } from './message.redacted.event';
 import { RoomCreatedEvent } from './room.created.event';
 import { RoomDmRequestedEvent } from './room.dm.requested.event';
 import { RoomMemberLeftEvent } from './room.member.left.event';
 import { RoomMemberUpdatedEvent } from './room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from './room.receipt.updated.event';
-import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
-import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
-import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
-import { MessageNotificationService } from './message.notification.service';
 import { VcInvocationService } from './vc.invocation.service';
-import { IMessage } from '@domain/communication/message/message.interface';
-import { ConversationService } from '@domain/communication/conversation/conversation.service';
-import { IRoom } from '@domain/communication/room/room.interface';
 
 /**
  * Check if a room is a conversation room (direct messaging).
@@ -50,7 +50,7 @@ export class MessageInboxService {
   constructor(
     private readonly roomLookupService: RoomLookupService,
     private readonly subscriptionPublishService: SubscriptionPublishService,
-    private readonly agentInfoService: AgentInfoService,
+    private readonly actorContextService: ActorContextService,
     private readonly roomServiceEvents: RoomServiceEvents,
     private readonly inAppNotificationService: InAppNotificationService,
     private readonly messageNotificationService: MessageNotificationService,
@@ -103,14 +103,14 @@ export class MessageInboxService {
 
     // Process notifications (skip for conversation rooms)
     if (!isConversationRoom(room)) {
-      const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
+      const actorContext = await this.actorContextService.buildForActor(
         payload.actorID
       );
 
       await this.messageNotificationService.processMessageNotifications(
         room,
         message,
-        agentInfo,
+        actorContext,
         payload.message.threadID
       );
     }
@@ -182,7 +182,7 @@ export class MessageInboxService {
       {
         id: payload.originalMessageId,
         message: payload.newContent,
-        sender: payload.senderActorId,
+        sender: payload.senderActorID,
         threadID: payload.threadId || '',
         timestamp: originalMessage.timestamp,
         reactions: originalMessage.reactions ?? [],
@@ -210,12 +210,12 @@ export class MessageInboxService {
     );
 
     // Process activity event
-    const agentInfo = await this.agentInfoService.buildAgentInfoForAgent(
-      payload.redactorActorId
+    const actorContext = await this.actorContextService.buildForActor(
+      payload.redactorActorID
     );
     await this.roomServiceEvents.processActivityMessageRemoved(
       payload.redactedMessageId,
-      agentInfo
+      actorContext
     );
 
     // Publish room subscription
@@ -301,7 +301,7 @@ export class MessageInboxService {
     const { payload } = event;
 
     this.logger.verbose?.(
-      `Processing room created: roomId=${payload.roomId}, roomType=${payload.roomType}, creator=${payload.creatorActorId}`,
+      `Processing room created: roomId=${payload.roomId}, roomType=${payload.roomType}, creator=${payload.creatorActorID}`,
       LogContext.COMMUNICATION
     );
 
@@ -313,7 +313,7 @@ export class MessageInboxService {
     const { payload } = event;
 
     this.logger.verbose?.(
-      `Processing DM requested: initiator=${payload.initiatorActorId}, target=${payload.targetActorId}`,
+      `Processing DM requested: initiator=${payload.initiatorActorID}, target=${payload.targetActorID}`,
       LogContext.COMMUNICATION
     );
 
@@ -325,7 +325,7 @@ export class MessageInboxService {
     const { payload } = event;
 
     this.logger.verbose?.(
-      `Processing room member left: roomId=${payload.roomId}, actorId=${payload.actorId}, reason=${payload.reason || 'none'}`,
+      `Processing room member left: roomId=${payload.roomId}, actorID=${payload.actorID}, reason=${payload.reason || 'none'}`,
       LogContext.COMMUNICATION
     );
 
@@ -337,7 +337,7 @@ export class MessageInboxService {
     const { payload } = event;
 
     this.logger.verbose?.(
-      `Processing room member updated: roomId=${payload.roomId}, memberActorId=${payload.memberActorId}, membership=${payload.membership}`,
+      `Processing room member updated: roomId=${payload.roomId}, memberActorID=${payload.memberActorID}, membership=${payload.membership}`,
       LogContext.COMMUNICATION
     );
 
@@ -351,14 +351,14 @@ export class MessageInboxService {
     const { payload } = event;
 
     this.logger.verbose?.(
-      `Processing read receipt updated: roomId=${payload.roomId}, actorId=${payload.actorId}, eventId=${payload.eventId}`,
+      `Processing read receipt updated: roomId=${payload.roomId}, actorID=${payload.actorID}, eventId=${payload.eventId}`,
       LogContext.COMMUNICATION
     );
 
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
 
     this.subscriptionPublishService.publishRoomReceiptEvent(room, {
-      actorId: payload.actorId,
+      actorID: payload.actorID,
       eventId: payload.eventId,
       threadId: payload.threadId,
       timestamp: payload.timestamp,
@@ -452,7 +452,7 @@ export class MessageInboxService {
   ): Promise<void> {
     this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
-      memberAgentIds: [payload.actorId], // Only the reader receives this event
+      memberAgentIds: [payload.actorID], // Only the reader receives this event
       readReceiptUpdated: {
         roomId: room.id,
         lastReadMessageId: payload.eventId,

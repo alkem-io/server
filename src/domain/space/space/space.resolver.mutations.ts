@@ -1,30 +1,30 @@
-import { Inject } from '@nestjs/common';
-import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { SpaceService } from './space.service';
+import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LicenseService } from '@domain/common/license/license.service';
 import {
   DeleteSpaceInput,
   UpdateSpaceInput,
   UpdateSubspacesSortOrderInput,
 } from '@domain/space/space';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { SpaceAuthorizationService } from './space.service.authorization';
-import { ISpace } from './space.interface';
-import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
-import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
-import { SubscriptionType } from '@common/enums/subscription.type';
-import { PubSubEngine } from 'graphql-subscriptions';
+import { Inject } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
-import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
-import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
-import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { SpaceLicenseService } from './space.service.license';
-import { LicenseService } from '@domain/common/license/license.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor } from '@src/common/decorators';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
+import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
+import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
+import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
+import { ISpace } from './space.interface';
+import { SpaceService } from './space.service';
+import { SpaceAuthorizationService } from './space.service.authorization';
+import { SpaceLicenseService } from './space.service.license';
 
 @InstrumentResolver()
 @Resolver()
@@ -46,7 +46,7 @@ export class SpaceResolverMutations {
     description: 'Updates the Space.',
   })
   async updateSpace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('spaceData') spaceData: UpdateSpaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(spaceData.ID, {
@@ -57,7 +57,7 @@ export class SpaceResolverMutations {
       },
     });
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.UPDATE,
       `update Space: ${space.id}`
@@ -72,8 +72,8 @@ export class SpaceResolverMutations {
         space: updatedSpace.id,
       },
       {
-        id: agentInfo.userID,
-        email: agentInfo.email,
+        id: actorContext.actorID,
+        email: actorContext.actorID,
       }
     );
 
@@ -84,13 +84,13 @@ export class SpaceResolverMutations {
     description: 'Deletes the specified Space.',
   })
   async deleteSpace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteSpaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(deleteData.ID);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.DELETE,
       `deleteSpace: ${space.nameID}`
@@ -102,13 +102,13 @@ export class SpaceResolverMutations {
     description: 'Updates one of the Setting on a Space',
   })
   async updateSpaceSettings(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('settingsData') settingsData: UpdateSpaceSettingsInput
   ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(settingsData.spaceID);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.UPDATE,
       `space settings update: ${space.id}`
@@ -140,14 +140,14 @@ export class SpaceResolverMutations {
       'Update the platform settings, such as nameID, of the specified Space.',
   })
   async updateSpacePlatformSettings(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateSpacePlatformSettingsInput
   ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(updateData.spaceID, {
       relations: { about: { profile: true } },
     });
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `update platform settings on space: ${space.id}`
@@ -170,14 +170,14 @@ export class SpaceResolverMutations {
     description: 'Creates a new Subspace within the specified Space.',
   })
   async createSubspace(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('subspaceData') subspaceData: CreateSubspaceInput
   ): Promise<ISpace> {
     const space = await this.spaceService.getSpaceOrFail(subspaceData.spaceID, {
       relations: {},
     });
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.CREATE_SUBSPACE,
       `subspace create in: ${space.id}`
@@ -185,7 +185,7 @@ export class SpaceResolverMutations {
 
     const subspace = await this.spaceService.createSubspace(
       subspaceData,
-      agentInfo
+      actorContext
     );
     // Save here so can reuse it later without another load
     const displayName = subspace.about.profile.displayName;
@@ -198,7 +198,7 @@ export class SpaceResolverMutations {
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     this.activityAdapter.subspaceCreated({
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorID,
       subspace,
     });
 
@@ -209,21 +209,21 @@ export class SpaceResolverMutations {
         space: space.id, //TODO: should this be a root space ID?
       },
       {
-        id: agentInfo.userID,
-        email: agentInfo.email,
+        id: actorContext.actorID,
+        email: actorContext.actorID,
       }
     );
 
     const level0Space = await this.spaceService.getSpaceOrFail(
       subspace.levelZeroSpaceID,
       {
-        relations: { agent: { credentials: true } },
+        relations: { actor: { credentials: true } },
       }
     );
 
     const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
       subspace.id,
-      level0Space.agent
+      level0Space
     );
     await this.licenseService.saveAll(updatedLicenses);
 
@@ -247,13 +247,13 @@ export class SpaceResolverMutations {
       'Update the sortOrder field of the supplied Subspaces to increase as per the order that they are provided in.',
   })
   async updateSubspacesSortOrder(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('sortOrderData') sortOrderData: UpdateSubspacesSortOrderInput
   ): Promise<ISpace[]> {
     const space = await this.spaceService.getSpaceOrFail(sortOrderData.spaceID);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.UPDATE,
       `update subspaces sort order on space: ${space.id}`

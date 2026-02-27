@@ -1,7 +1,7 @@
+import { SearchVisibility } from '@common/enums/search.visibility';
+import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
 import { Field, InputType } from '@nestjs/graphql';
 import { IsOptional } from 'class-validator';
-import { UpdateNameableInput } from '@domain/common/entity/nameable-entity/dto/nameable.dto.update';
-import { SearchVisibility } from '@common/enums/search.visibility';
 
 @InputType()
 export class UpdateInnovationPackInput extends UpdateNameableInput {

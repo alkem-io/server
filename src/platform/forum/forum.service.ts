@@ -1,28 +1,28 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { DiscussionsOrderBy } from '@common/enums/discussions.orderBy';
+import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
+import { RoomType } from '@common/enums/room.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
+import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { IUser } from '@domain/community/user/user.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { Discussion } from '../forum-discussion/discussion.entity';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
 import { DiscussionService } from '../forum-discussion/discussion.service';
-import { IUser } from '@domain/community/user/user.interface';
 import { ForumCreateDiscussionInput } from './dto/forum.dto.create.discussion';
-import { RoomType } from '@common/enums/room.type';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { DiscussionsOrderBy } from '@common/enums/discussions.orderBy';
-import { Discussion } from '../forum-discussion/discussion.entity';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { Forum } from './forum.entity';
-import { ForumDiscussionCategory } from '@common/enums/forum.discussion.category';
 import { IForum } from './forum.interface';
-import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 
 @Injectable()
 export class ForumService {
@@ -224,22 +224,13 @@ export class ForumService {
   }
 
   async removeUserFromForums(forum: IForum, user: IUser): Promise<boolean> {
-    if (!user.agent?.id) {
-      throw new EntityNotInitializedException(
-        `User ${user.id} does not have an agent`,
-        LogContext.PLATFORM_FORUM
-      );
-    }
     // get the list of rooms to remove the user from
     const forumRoomIDs: string[] = [];
     for (const discussion of await this.getDiscussions(forum)) {
       const room = await this.discussionService.getComments(discussion.id);
       forumRoomIDs.push(room.id);
     }
-    await this.communicationAdapter.batchRemoveMember(
-      user.agent.id,
-      forumRoomIDs
-    );
+    await this.communicationAdapter.batchRemoveMember(user.id, forumRoomIDs);
 
     return true;
   }

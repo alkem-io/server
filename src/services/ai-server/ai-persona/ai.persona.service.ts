@@ -1,28 +1,28 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { EncryptionService } from '@hedger/nestjs-encryption';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { AiPersonaEngineAdapterInvocationInput } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.invocation.input';
+import { IAiServer } from '../ai-server/ai.server.interface';
+import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
 import { AiPersona } from './ai.persona.entity';
 import { IAiPersona } from './ai.persona.interface';
 import {
+  AiPersonaInvocationInput,
   CreateAiPersonaInput,
   DeleteAiPersonaInput,
-  UpdateAiPersonaInput,
-  AiPersonaInvocationInput,
   InteractionMessage,
+  UpdateAiPersonaInput,
 } from './dto';
-import { LogContext } from '@common/enums/logging.context';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AiPersonaEngineAdapter } from '@services/ai-server/ai-persona-engine-adapter/ai.persona.engine.adapter';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { IExternalConfig } from './dto/external.config';
-import { EncryptionService } from '@hedger/nestjs-encryption';
-import { AiPersonaEngineAdapterInvocationInput } from '../ai-persona-engine-adapter/dto/ai.persona.engine.adapter.dto.invocation.input';
-import { IAiServer } from '../ai-server/ai.server.interface';
-import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import graphJson from '../prompt-graph/config/prompt.graph.expert.json';
 
 @Injectable()
 export class AiPersonaService {
@@ -38,7 +38,8 @@ export class AiPersonaService {
 
   async createAiPersona(
     aiPersonaData: CreateAiPersonaInput,
-    aiServer: IAiServer
+    aiServer: IAiServer,
+    mgr?: EntityManager
   ): Promise<IAiPersona> {
     const aiPersona: IAiPersona = new AiPersona();
     aiPersona.authorization = new AuthorizationPolicy(
@@ -52,7 +53,9 @@ export class AiPersonaService {
       aiPersonaData.externalConfig
     );
 
-    const savedAiPersona = await this.aiPersonaRepository.save(aiPersona);
+    const savedAiPersona = mgr
+      ? await mgr.save(aiPersona as AiPersona)
+      : await this.aiPersonaRepository.save(aiPersona);
     this.logger.verbose?.(
       `Created new AI Persona with id ${aiPersona.id}`,
       LogContext.PLATFORM
@@ -81,22 +84,28 @@ export class AiPersonaService {
       });
     }
     if (aiPersonaData.promptGraph !== undefined) {
-      aiPersona.promptGraph = aiPersona.promptGraph || {};
-      const promptGraphData = aiPersonaData.promptGraph;
-      if (promptGraphData.nodes !== undefined) {
-        aiPersona.promptGraph.nodes = promptGraphData.nodes;
-      }
-      if (promptGraphData.edges !== undefined) {
-        aiPersona.promptGraph.edges = promptGraphData.edges;
-      }
-      if (promptGraphData.start !== undefined) {
-        aiPersona.promptGraph.start = promptGraphData.start;
-      }
-      if (promptGraphData.end !== undefined) {
-        aiPersona.promptGraph.end = promptGraphData.end;
-      }
-      if (promptGraphData.state !== undefined) {
-        aiPersona.promptGraph.state = promptGraphData.state;
+      // If explicitly set to null, clear the entire promptGraph
+      if (aiPersonaData.promptGraph === null) {
+        aiPersona.promptGraph = null;
+      } else {
+        // Otherwise do partial updates
+        aiPersona.promptGraph = aiPersona.promptGraph || {};
+        const promptGraphData = aiPersonaData.promptGraph;
+        if (promptGraphData.nodes !== undefined) {
+          aiPersona.promptGraph.nodes = promptGraphData.nodes;
+        }
+        if (promptGraphData.edges !== undefined) {
+          aiPersona.promptGraph.edges = promptGraphData.edges;
+        }
+        if (promptGraphData.start !== undefined) {
+          aiPersona.promptGraph.start = promptGraphData.start;
+        }
+        if (promptGraphData.end !== undefined) {
+          aiPersona.promptGraph.end = promptGraphData.end;
+        }
+        if (promptGraphData.state !== undefined) {
+          aiPersona.promptGraph.state = promptGraphData.state;
+        }
       }
     }
 
@@ -200,7 +209,10 @@ export class AiPersonaService {
         invocationGraph = processedGraph;
       }
 
-      input.promptGraph = invocationGraph;
+      // Only assign if we have a valid graph (not null/undefined)
+      if (invocationGraph) {
+        input.promptGraph = invocationGraph;
+      }
     }
 
     return this.aiPersonaEngineAdapter.invoke(input);

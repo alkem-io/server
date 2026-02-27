@@ -1,7 +1,7 @@
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
-import { BaseHttpException } from './base.http.exception';
-import { HttpStatus } from '@nestjs/common';
 import { ExceptionDetails } from '@common/exceptions/exception.details';
+import { HttpStatus } from '@nestjs/common';
+import { BaseHttpException } from './base.http.exception';
 
 export class BadRequestHttpException extends BaseHttpException {
   constructor(

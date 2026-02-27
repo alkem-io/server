@@ -1,5 +1,5 @@
-import { UrlPathElement } from '@common/enums/url.path.element';
 import { UrlPathBase } from '@common/enums/url.path.base';
+import { UrlPathElement } from '@common/enums/url.path.element';
 import { match } from 'path-to-regexp';
 
 export const spacePathMatcher = match(
@@ -28,6 +28,10 @@ export const virtualContributorPathMatcher = match(
 
 export const innovationHubPathMatcher = match(
   `/${UrlPathBase.INNOVATION_HUBS}/:innovationHubNameID{/*path}`
+);
+
+export const hubPathMatcher = match(
+  `/${UrlPathBase.HUB}/:innovationHubNameID{/${UrlPathElement.SETTINGS}}{/*path}`
 );
 
 export function getPathElements(url: string): string[] {

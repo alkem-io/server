@@ -1,17 +1,17 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
-import { Inject, LoggerService, UseGuards } from '@nestjs/common';
-import { Args, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@src/common/decorators';
-import { ILibrary } from './library.interface';
-import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
-import { LibraryService } from './library.service';
-import { InnovationPacksInput } from './dto/library.dto.innovationPacks.input';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
+import { Inject, LoggerService, UseGuards } from '@nestjs/common';
+import { Args, ResolveField, Resolver } from '@nestjs/graphql';
+import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { InnovationPacksInput } from './dto/library.dto.innovationPacks.input';
 import { ITemplateResult } from './dto/library.dto.template.result';
 import { LibraryTemplatesFilterInput } from './dto/library.dto.templates.input';
+import { ILibrary } from './library.interface';
+import { LibraryService } from './library.service';
 
 @Resolver(() => ILibrary)
 export class LibraryResolverFields {
@@ -20,7 +20,7 @@ export class LibraryResolverFields {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('innovationPacks', () => [IInnovationPack], {
     nullable: false,
@@ -40,7 +40,7 @@ export class LibraryResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('templates', () => [ITemplateResult], {
     nullable: false,

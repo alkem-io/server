@@ -95,5 +95,6 @@ mutators:
       ttl: 1h
       claims: |
         {
-          "session": {{ .Extra | toJson }}
+          "session": {{ .Extra | toJson }},
+          "alkemio_actor_id": "{{ .Extra.identity.metadata_public.alkemio_actor_id }}"
         }

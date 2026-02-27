@@ -1,5 +1,20 @@
-import { keyBy } from 'lodash';
+import { UUID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
+import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
+import { LicenseType } from '@common/enums/license.type';
+import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
+import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
+import { ProfileType } from '@common/enums/profile.type';
+import { RoleName } from '@common/enums/role.name';
+import { RoleSetType } from '@common/enums/role.set.type';
+import { SpaceLevel } from '@common/enums/space.level';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
+import { TemplateDefaultType } from '@common/enums/template.default.type';
+import { TemplateType } from '@common/enums/template.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -7,82 +22,74 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { IAgent } from '@domain/agent/agent';
-import { CreateSpaceInput, DeleteSpaceInput } from '@domain/space/space';
-import { ICommunity } from '@domain/community/community';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Space } from './space.entity';
-import { ISpace } from './space.interface';
-import { UpdateSpaceInput } from './dto/space.dto.update';
-import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
-import { UpdateSubspacesSortOrderInput } from './dto/space.dto.update.subspaces.sort.order';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { limitAndShuffle } from '@common/utils/limitAndShuffle';
-import { SpacesQueryArgs } from './dto/space.args.query.spaces';
-import { SpaceVisibility } from '@common/enums/space.visibility';
-import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
-import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
-import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
 import { OperationNotAllowedException } from '@common/exceptions/operation.not.allowed.exception';
-import { IPaginatedType } from '@core/pagination/paginated.type';
-import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
+import { getDiff, hasOnlyAllowedFields } from '@common/utils';
+import { limitAndShuffle } from '@common/utils/limitAndShuffle';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { PaginationArgs } from '@core/pagination';
+import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
-import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { IActor } from '@domain/actor/actor/actor.interface';
+import { ActorService } from '@domain/actor/actor/actor.service';
+import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ILicense } from '@domain/common/license/license.interface';
+import { LicenseService } from '@domain/common/license/license.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
+import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
+import { ICommunity } from '@domain/community/community';
 import { CommunityService } from '@domain/community/community/community.service';
 import { CreateCommunityInput } from '@domain/community/community/dto/community.dto.create';
-import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
-import { SpaceSettingsService } from '../space.settings/space.settings.service';
-import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.settings.dto.update';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { RoleName } from '@common/enums/role.name';
-import { SpaceLevel } from '@common/enums/space.level';
+import { InnovationHub, InnovationHubType } from '@domain/innovation-hub/types';
+import { CreateSpaceInput, DeleteSpaceInput } from '@domain/space/space';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { AgentType } from '@common/enums/agent.type';
-import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
-import { ISpaceSubscription } from './space.license.subscription.interface';
-import { IAccount } from '../account/account.interface';
-import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
-import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { ITemplatesManager } from '@domain/template/templates-manager';
-import { Activity } from '@platform/activity';
-import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
-import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
-import { LicenseService } from '@domain/common/license/license.service';
-import { LicenseType } from '@common/enums/license.type';
-import { getDiff, hasOnlyAllowedFields } from '@common/utils';
-import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
-import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
-import { RoleSetType } from '@common/enums/role.set.type';
-import { ISpaceAbout } from '../space.about/space.about.interface';
-import { SpaceAboutService } from '../space.about/space.about.service';
-import { ILicense } from '@domain/common/license/license.interface';
-import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
-import { CreateTemplateDefaultInput } from '@domain/template/template-default/dto/template.default.dto.create';
-import { TemplateDefaultType } from '@common/enums/template.default.type';
-import { TemplateType } from '@common/enums/template.type';
-import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
-import { SpaceLookupService } from '../space.lookup/space.lookup.service';
-import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { ITemplateContentSpace } from '@domain/template/template-content-space/template.content.space.interface';
 import { TemplateContentSpaceService } from '@domain/template/template-content-space/template.content.space.service';
-import { UUID_LENGTH } from '@common/constants';
+import { CreateTemplateDefaultInput } from '@domain/template/template-default/dto/template.default.dto.create';
+import { ITemplatesManager } from '@domain/template/templates-manager';
+import { CreateTemplatesManagerInput } from '@domain/template/templates-manager/dto/templates.manager.dto.create';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Activity } from '@platform/activity';
+import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
+import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
+import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
+import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
+import { keyBy } from 'lodash';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import {
+  EntityManager,
+  FindManyOptions,
+  FindOneOptions,
+  In,
+  Repository,
+} from 'typeorm';
+import { IAccount } from '../account/account.interface';
+import { ISpaceAbout } from '../space.about/space.about.interface';
+import { SpaceAboutService } from '../space.about/space.about.service';
+import { SpaceDefaultsService } from '../space.defaults/space.defaults.service';
+import { SpaceLookupService } from '../space.lookup/space.lookup.service';
+import { UpdateSpaceSettingsEntityInput } from '../space.settings/dto/space.settings.dto.update';
+import { SpaceSettingsService } from '../space.settings/space.settings.service';
+import { SpacesQueryArgs } from './dto/space.args.query.spaces';
+import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
+import { UpdateSpaceInput } from './dto/space.dto.update';
+import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
+import { UpdateSubspacesSortOrderInput } from './dto/space.dto.update.subspaces.sort.order';
+import { Space } from './space.entity';
+import { ISpace } from './space.interface';
+import { ISpaceSubscription } from './space.license.subscription.interface';
 import { SpacePlatformRolesAccessService } from './space.service.platform.roles.access';
-import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -97,10 +104,10 @@ type SpaceSortingData = {
 @Injectable()
 export class SpaceService {
   constructor(
+    private actorService: ActorService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private spacesFilterService: SpaceFilterService,
     private spaceAboutService: SpaceAboutService,
-    private agentService: AgentService,
     private communityService: CommunityService,
     private roleSetService: RoleSetService,
     private namingService: NamingService,
@@ -115,6 +122,7 @@ export class SpaceService {
     private licenseService: LicenseService,
     private urlGeneratorCacheService: UrlGeneratorCacheService,
     private spacePlatformRolesAccessService: SpacePlatformRolesAccessService,
+    private profileService: ProfileService,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -124,16 +132,21 @@ export class SpaceService {
    * Create a new Space.
    * @param spaceData
    * @param templateContentSpaceID The template to use for any content missing.
-   * @param agentInfo
+   * @param actorContext
    * @returns
    */
   private async createSpace(
     spaceData: CreateSpaceInput,
     templateContentSpace: ITemplateContentSpace,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     parentPlatformRolesAccess?: IPlatformRolesAccess
   ): Promise<ISpace> {
     const space: ISpace = Space.create(spaceData);
+    // nameID is a getter/setter delegating to actor, not a @Column on Space,
+    // so TypeORM's create() won't copy it from the input — set it explicitly.
+    if (spaceData.nameID) {
+      space.nameID = spaceData.nameID;
+    }
     // default to demo space
     space.visibility = SpaceVisibility.ACTIVE;
     space.sortOrder = 0;
@@ -149,13 +162,6 @@ export class SpaceService {
         space.settings,
         parentPlatformRolesAccess
       );
-
-    const storageAggregator =
-      await this.storageAggregatorService.createStorageAggregator(
-        StorageAggregatorType.SPACE,
-        spaceData.storageAggregatorParent
-      );
-    space.storageAggregator = storageAggregator;
 
     space.license = this.createLicenseForSpaceL0();
 
@@ -175,6 +181,10 @@ export class SpaceService {
       },
     };
 
+    // Community creation saves Communication + Room + external Matrix room,
+    // so it cannot participate in the DB transaction below.
+    // TODO: wrap Community creation in the transaction once Communication
+    // supports compensating cleanup for external Matrix rooms.
     space.community =
       await this.communityService.createCommunity(communityData);
 
@@ -184,14 +194,37 @@ export class SpaceService {
       spaceData.about
     );
 
-    space.about = await this.spaceAboutService.createSpaceAbout(
-      modifiedAbout,
-      storageAggregator
-    );
-
     space.levelZeroSpaceID = spaceData.levelZeroSpaceID;
-    // save the collaboration and all it's template sets
-    await this.save(space);
+
+    // Single transaction: StorageAggregator, Profile, SpaceAbout, Actor,
+    // License, and Space are atomic. Community stays outside (external calls).
+    await this.spaceRepository.manager.transaction(async mgr => {
+      const storageAggregator =
+        await this.storageAggregatorService.createStorageAggregator(
+          StorageAggregatorType.SPACE,
+          spaceData.storageAggregatorParent,
+          mgr
+        );
+      space.storageAggregator = storageAggregator;
+
+      // Create a minimal profile for the Space actor
+      space.profile = await this.profileService.createProfile(
+        { displayName: spaceData.about.profileData.displayName },
+        ProfileType.SPACE,
+        storageAggregator
+      );
+
+      space.about = await this.spaceAboutService.createSpaceAbout(
+        modifiedAbout,
+        storageAggregator
+      );
+
+      // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
+      // reliably set FK columns, so we pre-save children explicitly.
+      await mgr.save((space as Space).actor!);
+      space.license = await mgr.save(space.license);
+      await mgr.save(space as Space);
+    });
 
     if (spaceData.level === SpaceLevel.L0) {
       space.levelZeroSpaceID = space.id;
@@ -217,13 +250,9 @@ export class SpaceService {
     }
     space.collaboration = await this.collaborationService.createCollaboration(
       updatedCollaborationData,
-      space.storageAggregator,
-      agentInfo
+      space.storageAggregator!,
+      actorContext
     );
-
-    space.agent = await this.agentService.createAgent({
-      type: AgentType.SPACE,
-    });
 
     // Community:
     // set immediate community parent + resourceID
@@ -262,7 +291,11 @@ export class SpaceService {
             calloutsSetData: {},
           },
         };
-        await this.createSubspace(subspaceData, agentInfo, subspaceContent.id);
+        await this.createSubspace(
+          subspaceData,
+          actorContext,
+          subspaceContent.id
+        );
       }
     }
 
@@ -330,7 +363,6 @@ export class SpaceService {
         collaboration: true,
         community: true,
         about: true,
-        agent: true,
         storageAggregator: true,
         templatesManager: true,
         license: true,
@@ -342,7 +374,6 @@ export class SpaceService {
       !space.collaboration ||
       !space.community ||
       !space.about ||
-      !space.agent ||
       !space.storageAggregator ||
       !space.authorization ||
       !space.license
@@ -366,7 +397,7 @@ export class SpaceService {
       space.collaboration.id
     );
     await this.communityService.removeCommunityOrFail(space.community.id);
-    await this.agentService.deleteAgent(space.agent.id);
+    // Note: Credentials are on Actor (which Space extends), will be deleted via cascade
     await this.licenseService.removeLicenseOrFail(space.license.id);
     await this.authorizationPolicyService.delete(space.authorization);
 
@@ -384,9 +415,12 @@ export class SpaceService {
 
     await this.storageAggregatorService.delete(space.storageAggregator.id);
 
-    const result = await this.spaceRepository.remove(space as Space);
-    result.id = deleteData.ID;
-    return result;
+    // Delete actor — cascades to delete the space row via FK (space.id → actor.id ON DELETE CASCADE).
+    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+    await this.actorService.deleteActorById(deleteData.ID);
+
+    space.id = deleteData.ID;
+    return space;
   }
 
   public async createTemplatesManagerForSpaceL0(): Promise<ITemplatesManager> {
@@ -549,7 +583,8 @@ export class SpaceService {
 
     const qb = this.spaceRepository.createQueryBuilder('space');
     if (visibilities) {
-      qb.leftJoinAndSelect('space.authorization', 'authorization');
+      qb.leftJoin('space.actor', 'actor');
+      qb.leftJoinAndSelect('actor.authorization', 'authorization');
       qb.where({
         level: SpaceLevel.L0,
         visibility: In(visibilities),
@@ -566,7 +601,11 @@ export class SpaceService {
     const qb = this.spaceRepository.createQueryBuilder('space');
 
     qb.leftJoinAndSelect('space.subspaces', 'subspace');
-    qb.leftJoinAndSelect('space.authorization', 'authorization_policy');
+    qb.leftJoin('space.actor', 'actor_for_auth');
+    qb.leftJoinAndSelect(
+      'actor_for_auth.authorization',
+      'authorization_policy'
+    );
     qb.leftJoinAndSelect('subspace.subspaces', 'subspaces');
     qb.where({
       level: SpaceLevel.L0,
@@ -682,10 +721,10 @@ export class SpaceService {
 
     const spaceIds = spaceIdsWithActivity.map(row => row.id);
 
-    // Then fetch the full space entities with authorization relation
+    // Then fetch the full space entities with actor relation (authorization eagerly loaded on actor)
     const spaces = await this.spaceRepository.find({
       where: { id: In(spaceIds) },
-      relations: { authorization: true },
+      relations: { actor: true },
     });
 
     // Preserve the activity-based ordering from the first query
@@ -710,7 +749,7 @@ export class SpaceService {
   }
 
   public async getAllSpaces(
-    options?: FindManyOptions<ISpace>
+    options?: FindManyOptions<Space>
   ): Promise<ISpace[]> {
     return this.spaceRepository.find(options);
   }
@@ -934,20 +973,18 @@ export class SpaceService {
   ): Promise<ISpace[]> {
     let spaceWithSubspaces;
     if (args && args.IDs) {
-      {
-        spaceWithSubspaces = await this.getSpaceOrFail(space.id, {
-          relations: {
-            subspaces: {
-              about: {
-                profile: true,
-              },
+      spaceWithSubspaces = await this.getSpaceOrFail(space.id, {
+        relations: {
+          subspaces: {
+            about: {
+              profile: true,
             },
           },
-        });
-        spaceWithSubspaces.subspaces = spaceWithSubspaces.subspaces?.filter(c =>
-          args.IDs?.includes(c.id)
-        );
-      }
+        },
+      });
+      spaceWithSubspaces.subspaces = spaceWithSubspaces.subspaces?.filter(c =>
+        args.IDs?.includes(c.id)
+      );
     } else
       spaceWithSubspaces = await this.getSpaceOrFail(space.id, {
         relations: {
@@ -1033,7 +1070,8 @@ export class SpaceService {
       .map(subspaceId => subspacesByID[subspaceId]?.sortOrder)
       .filter(sortOrder => sortOrder !== undefined);
 
-    const minimumSortOrder = sortOrders.length > 0 ? Math.min(...sortOrders) : 0;
+    const minimumSortOrder =
+      sortOrders.length > 0 ? Math.min(...sortOrders) : 0;
     const modifiedSubspaces: ISpace[] = [];
 
     // Use step of 10 to avoid collisions with untouched siblings during partial reorder
@@ -1059,19 +1097,17 @@ export class SpaceService {
   async getSubscriptions(spaceInput: ISpace): Promise<ISpaceSubscription[]> {
     const space = await this.getSpaceOrFail(spaceInput.id, {
       relations: {
-        agent: {
-          credentials: true,
-        },
+        actor: { credentials: true },
       },
     });
-    if (!space.agent || !space.agent.credentials) {
+    if (!space.credentials) {
       throw new EntityNotFoundException(
-        `Unable to find agent with credentials for space: ${spaceInput.id}`,
+        `Unable to find credentials for space: ${spaceInput.id}`,
         LogContext.ACCOUNT
       );
     }
     const subscriptions: ISpaceSubscription[] = [];
-    for (const credential of space.agent.credentials) {
+    for (const credential of space.credentials) {
       if (
         Object.values(LicensingCredentialBasedCredentialType).includes(
           credential.type as LicensingCredentialBasedCredentialType
@@ -1088,7 +1124,7 @@ export class SpaceService {
 
   public async createRootSpaceAndSubspaces(
     spaceData: CreateSpaceInput,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ISpace> {
     const templateContentSpaceID =
       await this.spaceDefaultsService.getTemplateSpaceContentToAugmentFrom(
@@ -1116,12 +1152,16 @@ export class SpaceService {
     templateContentSpace.collaboration.innovationFlow.settings.minimumNumberOfStates = 4;
     templateContentSpace.collaboration.innovationFlow.settings.maximumNumberOfStates = 4;
 
-    return await this.createSpace(spaceData, templateContentSpace, agentInfo);
+    return await this.createSpace(
+      spaceData,
+      templateContentSpace,
+      actorContext
+    );
   }
 
   public async createSubspace(
     subspaceData: CreateSubspaceInput,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     templateContentSpaceID?: string
   ): Promise<ISpace> {
     const space = await this.getSpaceOrFail(subspaceData.spaceID, {
@@ -1204,7 +1244,7 @@ export class SpaceService {
     let subspace = await this.createSpace(
       subspaceData,
       templateContentSubspace,
-      agentInfo,
+      actorContext,
       space.platformRolesAccess
     );
 
@@ -1231,7 +1271,7 @@ export class SpaceService {
     });
 
     // Before assigning roles in the subspace check that the user is a member
-    if (agentInfo) {
+    if (actorContext) {
       if (!subspace.community || !subspace.community.roleSet) {
         throw new EntityNotInitializedException(
           `unable to load community with role set: ${subspace.id}`,
@@ -1240,10 +1280,14 @@ export class SpaceService {
       }
       const roleSet = subspace.community.roleSet;
       const parentRoleSet = space.community.roleSet;
-      const agent = await this.agentService.getAgentOrFail(agentInfo?.agentID);
-      const isMember = await this.roleSetService.isMember(agent, parentRoleSet);
+      const isMember = actorContext?.actorID
+        ? await this.roleSetService.isMember(
+            actorContext.actorID,
+            parentRoleSet
+          )
+        : false;
       if (isMember) {
-        await this.assignUserToRoles(roleSet, agentInfo);
+        await this.assignUserToRoles(roleSet, actorContext);
       }
     }
 
@@ -1335,30 +1379,33 @@ export class SpaceService {
     );
   }
 
-  public async assignUserToRoles(roleSet: IRoleSet, agentInfo: AgentInfo) {
-    if (!agentInfo.userID || agentInfo.userID.length !== UUID_LENGTH) {
+  public async assignUserToRoles(
+    roleSet: IRoleSet,
+    actorContext: ActorContext
+  ) {
+    if (!actorContext.actorID || actorContext.actorID.length !== UUID_LENGTH) {
       // No userID to assign the role to
       return;
     }
-    await this.roleSetService.assignUserToRole(
+    await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.MEMBER,
-      agentInfo.userID,
-      agentInfo
+      actorContext.actorID,
+      actorContext
     );
 
-    await this.roleSetService.assignUserToRole(
+    await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.LEAD,
-      agentInfo.userID,
-      agentInfo
+      actorContext.actorID,
+      actorContext
     );
 
-    await this.roleSetService.assignUserToRole(
+    await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.ADMIN,
-      agentInfo.userID,
-      agentInfo
+      actorContext.actorID,
+      actorContext
     );
   }
 
@@ -1366,13 +1413,13 @@ export class SpaceService {
     roleSet: IRoleSet,
     organizationID: string
   ) {
-    await this.roleSetService.assignOrganizationToRole(
+    await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.MEMBER,
       organizationID
     );
 
-    await this.roleSetService.assignOrganizationToRole(
+    await this.roleSetService.assignActorToRole(
       roleSet,
       RoleName.LEAD,
       organizationID
@@ -1618,16 +1665,11 @@ export class SpaceService {
     return calloutsSet;
   }
 
-  public async getAgent(subspaceId: string): Promise<IAgent> {
-    const subspaceWithContext = await this.getSpaceOrFail(subspaceId, {
-      relations: { agent: true },
-    });
-    const agent = subspaceWithContext.agent;
-    if (!agent)
-      throw new RelationshipNotFoundException(
-        `Unable to load Agent for subspace ${subspaceId}`,
-        LogContext.AGENT
-      );
-    return agent;
+  /**
+   * In the Actor model, Space IS the Actor (extends Actor directly via STI).
+   * Returns the space itself since space.id is the actorID.
+   */
+  public async getAgent(subspaceId: string): Promise<IActor> {
+    return await this.getSpaceOrFail(subspaceId);
   }
 }

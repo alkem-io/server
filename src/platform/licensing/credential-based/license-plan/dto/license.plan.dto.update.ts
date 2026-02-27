@@ -1,6 +1,6 @@
-import { Field, InputType } from '@nestjs/graphql';
-import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/dto/base.alkemio.dto.update';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
+import { UpdateBaseAlkemioInput } from '@domain/common/entity/base-entity/dto/base.alkemio.dto.update';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class UpdateLicensePlanInput extends UpdateBaseAlkemioInput {

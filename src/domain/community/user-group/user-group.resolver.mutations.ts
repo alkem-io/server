@@ -1,17 +1,17 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { IUserGroup } from './user-group.interface';
-import { UserGroupService } from './user-group.service';
-import { CurrentUser, Profiling } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   AssignUserGroupMemberInput,
   DeleteUserGroupInput,
   RemoveUserGroupMemberInput,
   UpdateUserGroupInput,
 } from '@domain/community/user-group/dto';
-import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
+import { IUserGroup } from './user-group.interface';
+import { UserGroupService } from './user-group.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -25,12 +25,12 @@ export class UserGroupResolverMutations {
     description: 'Deletes the specified User Group.',
   })
   async deleteUserGroup(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteUserGroupInput
   ): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(deleteData.ID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       group.authorization,
       AuthorizationPrivilege.DELETE,
       `user group delete: ${group.id}`
@@ -43,12 +43,12 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async updateUserGroup(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('userGroupData') userGroupData: UpdateUserGroupInput
   ): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(userGroupData.ID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       group.authorization,
       AuthorizationPrivilege.UPDATE,
       `user group update: ${group.id}`
@@ -61,14 +61,14 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async assignUserToGroup(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('membershipData') membershipData: AssignUserGroupMemberInput
   ): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(
       membershipData.groupID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       group.authorization,
       AuthorizationPrivilege.GRANT,
       `Assign user to group: ${group.id}`
@@ -81,14 +81,14 @@ export class UserGroupResolverMutations {
   })
   @Profiling.api
   async removeUserFromGroup(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('membershipData') membershipData: RemoveUserGroupMemberInput
   ): Promise<IUserGroup> {
     const group = await this.groupService.getUserGroupOrFail(
       membershipData.groupID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       group.authorization,
       AuthorizationPrivilege.DELETE,
       `user group remove user: ${group.id}`

@@ -1,22 +1,21 @@
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { LogContext } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoomType } from '@common/enums/room.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { FindOneOptions, Repository } from 'typeorm';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import {
   Communication,
   ICommunication,
 } from '@domain/communication/communication';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { IUser } from '@domain/community/user/user.interface';
-import { RoomService } from '../room/room.service';
+import { FindOneOptions, Repository } from 'typeorm';
 import { IRoom } from '../room/room.interface';
-import { RoomType } from '@common/enums/room.type';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { RoomService } from '../room/room.service';
 
 @Injectable()
 export class CommunicationService {
@@ -102,14 +101,14 @@ export class CommunicationService {
 
   async addContributorToCommunications(
     communication: ICommunication,
-    contributorActorId: string
+    contributorActorID: string
   ): Promise<boolean> {
-    if (!contributorActorId) {
+    if (!contributorActorID) {
       // no actor ID to manage, just return
       return true;
     }
     const roomIds = this.getRoomIds(communication);
-    await this.communicationAdapter.batchAddMember(contributorActorId, roomIds);
+    await this.communicationAdapter.batchAddMember(contributorActorID, roomIds);
     return true;
   }
 
@@ -129,16 +128,12 @@ export class CommunicationService {
     return results.map(r => r.id);
   }
 
-  async removeUserFromCommunications(
+  async removeActorFromCommunications(
     communication: ICommunication,
-    user: IUser
+    actorID: string
   ): Promise<boolean> {
-    if (!user.agent?.id) {
-      // no agent ID to manage, just return
-      return true;
-    }
     const roomIds = this.getRoomIds(communication);
-    await this.communicationAdapter.batchRemoveMember(user.agent.id, roomIds);
+    await this.communicationAdapter.batchRemoveMember(actorID, roomIds);
     return true;
   }
 }

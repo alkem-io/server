@@ -1,6 +1,6 @@
 import { Brackets, ObjectLiteral, SelectQueryBuilder } from 'typeorm';
-import { OrganizationFilterInput } from '../input-types';
 import { applyFilteringOnWhereExpression } from '../filter.fn.where.expression';
+import { OrganizationFilterInput } from '../input-types';
 
 export const applyOrganizationFilter = <T extends ObjectLiteral>(
   query: SelectQueryBuilder<T>,
@@ -22,7 +22,8 @@ export const applyOrganizationFilter = <T extends ObjectLiteral>(
 
       if (displayName) {
         const hasRest = Object.keys(rest).length > 0;
-        query.leftJoin('organization.profile', 'profile');
+        query.leftJoin('organization.actor', 'actor');
+        query.leftJoin('actor.profile', 'profile');
         // Use parameterized query to prevent SQL injection
         if (hasRest) {
           wqb.orWhere('profile.displayName ILIKE :orgDisplayName', {

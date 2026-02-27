@@ -1,31 +1,31 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { EventEmitter2 } from '@nestjs/event-emitter';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
 import {
   MatrixAdapterEventType,
-  MessageReceivedPayload,
-  ReactionAddedEvent as MatrixReactionAddedEvent,
-  ReactionRemovedEvent as MatrixReactionRemovedEvent,
+  DMRequestedEvent as MatrixDMRequestedEvent,
   MessageEditedEvent as MatrixMessageEditedEvent,
   MessageRedactedEvent as MatrixMessageRedactedEvent,
+  ReactionAddedEvent as MatrixReactionAddedEvent,
+  ReactionRemovedEvent as MatrixReactionRemovedEvent,
+  ReadReceiptUpdatedEvent as MatrixReadReceiptUpdatedEvent,
   RoomCreatedEvent as MatrixRoomCreatedEvent,
-  DMRequestedEvent as MatrixDMRequestedEvent,
   RoomMemberLeftEvent as MatrixRoomMemberLeftEvent,
   RoomMemberUpdatedEvent as MatrixRoomMemberUpdatedEvent,
-  ReadReceiptUpdatedEvent as MatrixReadReceiptUpdatedEvent,
+  MessageReceivedPayload,
 } from '@alkemio/matrix-adapter-lib';
-import { RabbitSubscribe, Nack } from '@golevelup/nestjs-rabbitmq';
+import { LogContext } from '@common/enums';
+import { Nack, RabbitSubscribe } from '@golevelup/nestjs-rabbitmq';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { EventEmitter2 } from '@nestjs/event-emitter';
+import { MessageEditedEvent } from '@services/event-handlers/internal/message-inbox/message.edited.event';
 import { MessageReceivedEvent } from '@services/event-handlers/internal/message-inbox/message.received.event';
+import { MessageRedactedEvent } from '@services/event-handlers/internal/message-inbox/message.redacted.event';
 import { ReactionAddedEvent } from '@services/event-handlers/internal/message-inbox/reaction.added.event';
 import { ReactionRemovedEvent } from '@services/event-handlers/internal/message-inbox/reaction.removed.event';
-import { MessageEditedEvent } from '@services/event-handlers/internal/message-inbox/message.edited.event';
-import { MessageRedactedEvent } from '@services/event-handlers/internal/message-inbox/message.redacted.event';
 import { RoomCreatedEvent } from '@services/event-handlers/internal/message-inbox/room.created.event';
 import { RoomDmRequestedEvent } from '@services/event-handlers/internal/message-inbox/room.dm.requested.event';
 import { RoomMemberLeftEvent } from '@services/event-handlers/internal/message-inbox/room.member.left.event';
 import { RoomMemberUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.receipt.updated.event';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 /**
  * Boundary service for Matrix Adapter RabbitMQ events.
@@ -189,7 +189,7 @@ export class CommunicationAdapterEventService {
         'message.edited',
         new MessageEditedEvent({
           roomId: payload.alkemio_room_id,
-          senderActorId: payload.sender_actor_id,
+          senderActorID: payload.sender_actor_id,
           originalMessageId: payload.original_message_id,
           newMessageId: payload.new_message_id,
           newContent: payload.new_content,
@@ -230,7 +230,7 @@ export class CommunicationAdapterEventService {
         'message.redacted',
         new MessageRedactedEvent({
           roomId: payload.alkemio_room_id,
-          redactorActorId: payload.redactor_actor_id,
+          redactorActorID: payload.redactor_actor_id,
           redactedMessageId: payload.redacted_message_id,
           redactionMessageId: payload.redaction_message_id,
           reason: payload.reason,
@@ -269,7 +269,7 @@ export class CommunicationAdapterEventService {
         'room.created',
         new RoomCreatedEvent({
           roomId: payload.alkemio_room_id,
-          creatorActorId: payload.creator_actor_id,
+          creatorActorID: payload.creator_actor_id,
           roomType: payload.room_type,
           name: payload.name,
           topic: payload.topic,
@@ -308,8 +308,8 @@ export class CommunicationAdapterEventService {
       this.eventEmitter.emit(
         'room.dm.requested',
         new RoomDmRequestedEvent({
-          initiatorActorId: payload.initiator_actor_id,
-          targetActorId: payload.target_actor_id,
+          initiatorActorID: payload.initiator_actor_id,
+          targetActorID: payload.target_actor_id,
           timestamp: payload.timestamp,
         })
       );
@@ -338,7 +338,7 @@ export class CommunicationAdapterEventService {
   ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
-        `Received room member left event: roomId=${payload.alkemio_room_id}, actorId=${payload.actor_id}`,
+        `Received room member left event: roomId=${payload.alkemio_room_id}, actorID=${payload.actor_id}`,
         LogContext.COMMUNICATION
       );
 
@@ -346,7 +346,7 @@ export class CommunicationAdapterEventService {
         'room.member.left',
         new RoomMemberLeftEvent({
           roomId: payload.alkemio_room_id,
-          actorId: payload.actor_id,
+          actorID: payload.actor_id,
           reason: payload.reason,
           timestamp: payload.timestamp,
         })
@@ -376,7 +376,7 @@ export class CommunicationAdapterEventService {
   ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
-        `Received room member updated event: roomId=${payload.alkemio_room_id}, memberActorId=${payload.member_actor_id}, membership=${payload.membership}`,
+        `Received room member updated event: roomId=${payload.alkemio_room_id}, memberActorID=${payload.member_actor_id}, membership=${payload.membership}`,
         LogContext.COMMUNICATION
       );
 
@@ -384,8 +384,8 @@ export class CommunicationAdapterEventService {
         'room.member.updated',
         new RoomMemberUpdatedEvent({
           roomId: payload.alkemio_room_id,
-          memberActorId: payload.member_actor_id,
-          senderActorId: payload.sender_actor_id,
+          memberActorID: payload.member_actor_id,
+          senderActorID: payload.sender_actor_id,
           membership: payload.membership,
           timestamp: payload.timestamp,
         })
@@ -415,7 +415,7 @@ export class CommunicationAdapterEventService {
   ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
-        `Received read receipt updated event: roomId=${payload.alkemio_room_id}, actorId=${payload.actor_id}, eventId=${payload.event_id}`,
+        `Received read receipt updated event: roomId=${payload.alkemio_room_id}, actorID=${payload.actor_id}, eventId=${payload.event_id}`,
         LogContext.COMMUNICATION
       );
 
@@ -423,7 +423,7 @@ export class CommunicationAdapterEventService {
         'room.receipt.updated',
         new RoomReceiptUpdatedEvent({
           roomId: payload.alkemio_room_id,
-          actorId: payload.actor_id,
+          actorID: payload.actor_id,
           eventId: payload.event_id,
           threadId: payload.thread_id,
           timestamp: payload.timestamp,

@@ -1,8 +1,8 @@
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { GeoapifyModule } from '@services/external/geoapify/geoapify.module';
 import { Location } from './location.entity';
 import { LocationService } from './location.service';
-import { GeoapifyModule } from '@services/external/geoapify/geoapify.module';
 
 @Module({
   imports: [GeoapifyModule, TypeOrmModule.forFeature([Location])],

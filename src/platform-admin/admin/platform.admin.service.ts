@@ -1,10 +1,11 @@
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { SpaceLevel } from '@common/enums/space.level';
 import { OrganizationFilterInput } from '@core/filtering/input-types/organization.filter.input';
 import { UserFilterInput } from '@core/filtering/input-types/user.filter.input';
 import { PaginatedOrganization } from '@core/pagination/paginated.organization';
 import { PaginatedUsers } from '@core/pagination/paginated.user';
 import { PaginationArgs } from '@core/pagination/pagination.args';
-import { ContributorQueryArgs } from '@domain/community/contributor/dto/contributor.query.args';
+import { ContributorQueryArgs } from '@domain/actor/actor/dto/actor.query.args';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
@@ -21,7 +22,6 @@ import { LibraryService } from '@library/library/library.service';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { EntityManager, In } from 'typeorm';
-import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class PlatformAdminService {

@@ -1,28 +1,28 @@
-import { Injectable } from '@nestjs/common';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CalloutContributionService } from './callout.contribution.service';
-import { ICalloutContribution } from './callout.contribution.interface';
-import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
-import { PostAuthorizationService } from '../post/post.service.authorization';
-import { EntityNotInitializedException } from '@common/exceptions';
-import { LogContext } from '@common/enums/logging.context';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { RoleName } from '@common/enums/role.name';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
 import {
   CREDENTIAL_RULE_CONTRIBUTION_ADMINS_MOVE,
   CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY,
   CREDENTIAL_RULE_CONTRIBUTION_CREATED_BY_DELETE,
 } from '@common/constants';
-import { LinkAuthorizationService } from '../link/link.service.authorization';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import { LogContext } from '@common/enums/logging.context';
+import { RoleName } from '@common/enums/role.name';
+import { EntityNotInitializedException } from '@common/exceptions';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
+import { WhiteboardAuthorizationService } from '@domain/common/whiteboard/whiteboard.service.authorization';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { Injectable } from '@nestjs/common';
+import { LinkAuthorizationService } from '../link/link.service.authorization';
+import { PostAuthorizationService } from '../post/post.service.authorization';
+import { ICalloutContribution } from './callout.contribution.interface';
+import { CalloutContributionService } from './callout.contribution.service';
 
 @Injectable()
 export class CalloutContributionAuthorizationService {

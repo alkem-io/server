@@ -1,18 +1,18 @@
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { LifecycleEventInput } from '@domain/common/lifecycle/dto/lifecycle.dto.event';
+import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { OrganizationVerificationEventInput } from './dto/organization.verification.dto.event';
 import { IOrganizationVerification } from './organization.verification.interface';
 import { OrganizationVerificationService } from './organization.verification.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { LogContext } from '@common/enums/logging.context';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { LifecycleEventInput } from '@domain/common/lifecycle/dto/lifecycle.dto.event';
 import { OrganizationVerificationLifecycleService } from './organization.verification.service.lifecycle';
-import { LifecycleService } from '@domain/common/lifecycle/lifecycle.service';
-import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
 @Resolver(() => IOrganizationVerification)
@@ -32,14 +32,14 @@ export class OrganizationVerificationResolverMutations {
   async eventOnOrganizationVerification(
     @Args('eventData')
     organizationVerificationEventData: OrganizationVerificationEventInput,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IOrganizationVerification> {
     let organizationVerification =
       await this.organizationVerificationService.getOrganizationVerificationOrFail(
         organizationVerificationEventData.organizationVerificationID
       );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organizationVerification.authorization,
       AuthorizationPrivilege.UPDATE,
       `event on organization verification: ${organizationVerification.id}`
@@ -56,7 +56,7 @@ export class OrganizationVerificationResolverMutations {
       machine:
         this.organizationVerificationLifecycleService.getOrganizationVerificationMachine(),
       eventName: organizationVerificationEventData.eventName,
-      agentInfo,
+      actorContext,
       authorization: organizationVerification.authorization,
     };
 

@@ -1,12 +1,12 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { AuthorizationPrivilege } from '@common/enums';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IApplication } from '@domain/access/application';
 import { ApplicationService } from '@domain/access/application/application.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { DeleteApplicationInput } from './dto/application.dto.delete';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor } from '@src/common/decorators';
+import { DeleteApplicationInput } from './dto/application.dto.delete';
 
 @InstrumentResolver()
 @Resolver()
@@ -17,17 +17,17 @@ export class ApplicationResolverMutations {
   ) {}
 
   @Mutation(() => IApplication, {
-    description: 'Removes the specified User Application.',
+    description: 'Removes the specified Application.',
   })
-  async deleteUserApplication(
-    @CurrentUser() agentInfo: AgentInfo,
+  async deleteApplication(
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteApplicationInput
   ): Promise<IApplication> {
     const application = await this.applicationService.getApplicationOrFail(
       deleteData.ID
     );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       application.authorization,
       AuthorizationPrivilege.DELETE,
       `delete application on RoleSet: ${application.id}`

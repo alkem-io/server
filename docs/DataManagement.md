@@ -160,4 +160,3 @@ For detailed Kratos migration documentation, see:
 
 - Official Kratos Documentation: https://www.ory.sh/docs/kratos/manage-identities/migrations
 - Kratos GitHub: https://github.com/ory/kratos
-

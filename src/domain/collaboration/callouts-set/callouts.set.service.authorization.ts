@@ -1,22 +1,22 @@
-import { Injectable } from '@nestjs/common';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
-import { CalloutsSetService } from './callouts.set.service';
-import { ICalloutsSet } from './callouts.set.interface';
-import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
-import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_ACCEPT,
   CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_OFFER,
   POLICY_RULE_CALLOUT_CONTRIBUTE,
   POLICY_RULE_COLLABORATION_CREATE,
 } from '@common/constants';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
+import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
+import { Injectable } from '@nestjs/common';
+import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
+import { ICalloutsSet } from './callouts.set.interface';
+import { CalloutsSetService } from './callouts.set.service';
 
 @Injectable()
 export class CalloutsSetAuthorizationService {
@@ -88,7 +88,10 @@ export class CalloutsSetAuthorizationService {
     const globalAdminTransferCalloutOffer =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER],
-        [AuthorizationCredential.GLOBAL_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
+        ],
         CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_OFFER
       );
     globalAdminTransferCalloutOffer.cascade = false;
@@ -97,7 +100,10 @@ export class CalloutsSetAuthorizationService {
     const globalAdminTransferCalloutAccept =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT],
-        [AuthorizationCredential.GLOBAL_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT_MANAGER,
+        ],
         CREDENTIAL_RULE_CALLOUTS_SET_TRANSFER_ACCEPT
       );
     globalAdminTransferCalloutAccept.cascade = false;

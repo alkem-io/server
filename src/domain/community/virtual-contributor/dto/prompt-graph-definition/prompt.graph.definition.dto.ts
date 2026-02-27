@@ -1,8 +1,7 @@
-import { ObjectType, Field } from '@nestjs/graphql';
-
-import { PromptGraphDefinitionNode } from './prompt.graph.definition.node.dto';
-import { PromptGraphDefinitionEdge } from './prompt.graph.definition.edge.dto';
+import { Field, ObjectType } from '@nestjs/graphql';
 import { PromptGraphDefinitionDataStruct } from './prompt.graph.definition.data.struct.dto';
+import { PromptGraphDefinitionEdge } from './prompt.graph.definition.edge.dto';
+import { PromptGraphDefinitionNode } from './prompt.graph.definition.node.dto';
 
 @ObjectType()
 export class PromptGraphDefinition {

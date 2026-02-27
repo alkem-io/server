@@ -1,15 +1,15 @@
-import { Resolver, Int } from '@nestjs/graphql';
-import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser, TypedSubscription } from '@common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import {
-  InAppNotificationReceivedSubscriptionPayload,
-  InAppNotificationCounterSubscriptionPayload,
-} from '@services/subscriptions/subscription-service/dto';
-import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
-import { ForbiddenException } from '@common/exceptions';
+import { CurrentActor, TypedSubscription } from '@common/decorators';
 import { LogContext } from '@common/enums';
+import { ForbiddenException } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { Int, Resolver } from '@nestjs/graphql';
 import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
+import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
+import {
+  InAppNotificationCounterSubscriptionPayload,
+  InAppNotificationReceivedSubscriptionPayload,
+} from '@services/subscriptions/subscription-service/dto';
+import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
 @Resolver()
@@ -27,8 +27,8 @@ export class InAppNotificationResolverSubscription {
         _variables,
         context
       ) {
-        const agentInfo = context.req.user;
-        return agentInfo?.userID === payload.notification.receiverID;
+        const actorContext = context.req.user;
+        return actorContext?.userID === payload.notification.receiverID;
       },
       async resolve(
         this: InAppNotificationResolverSubscription,
@@ -43,12 +43,14 @@ export class InAppNotificationResolverSubscription {
       },
     }
   )
-  public async inAppNotificationReceived(@CurrentUser() agentInfo: AgentInfo) {
-    if (!agentInfo.userID) {
+  public async inAppNotificationReceived(
+    @CurrentActor() actorContext: ActorContext
+  ) {
+    if (!actorContext.actorID) {
       throw new ForbiddenException(
         'User could not be resolved',
         LogContext.IN_APP_NOTIFICATION,
-        { agentInfo }
+        { actorContext }
       );
     }
 
@@ -66,8 +68,8 @@ export class InAppNotificationResolverSubscription {
         _variables,
         context
       ) {
-        const agentInfo = context.req.user;
-        return agentInfo?.userID === payload?.receiverID;
+        const actorContext = context.req.user;
+        return actorContext?.userID === payload?.receiverID;
       },
       async resolve(
         this: InAppNotificationResolverSubscription,
@@ -79,12 +81,14 @@ export class InAppNotificationResolverSubscription {
       },
     }
   )
-  public async notificationsUnreadCount(@CurrentUser() agentInfo: AgentInfo) {
-    if (!agentInfo.userID) {
+  public async notificationsUnreadCount(
+    @CurrentActor() actorContext: ActorContext
+  ) {
+    if (!actorContext.actorID) {
       throw new ForbiddenException(
         'User could not be resolved',
         LogContext.IN_APP_NOTIFICATION,
-        { agentInfo }
+        { actorContext }
       );
     }
 

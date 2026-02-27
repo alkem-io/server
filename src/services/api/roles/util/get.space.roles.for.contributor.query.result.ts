@@ -1,12 +1,12 @@
-import { groupBy } from 'lodash';
-import { Logger } from '@nestjs/common';
-import { Space } from '@domain/space/space/space.entity';
-import { RolesResultSpace } from '../dto/roles.dto.result.space';
-import { RolesResultCommunity } from '../dto/roles.dto.result.community';
-import { CredentialMap } from './group.credentials.by.entity';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Space } from '@domain/space/space/space.entity';
+import { Logger } from '@nestjs/common';
+import { groupBy } from 'lodash';
+import { RolesResultCommunity } from '../dto/roles.dto.result.community';
+import { RolesResultSpace } from '../dto/roles.dto.result.space';
+import { CredentialMap } from './group.credentials.by.entity';
 
 const logger = new Logger(LogContext.ROLES);
 
@@ -14,7 +14,7 @@ export const getSpaceRolesForContributorQueryResult = (
   map: CredentialMap,
   spaces: Space[],
   subspaces: Space[],
-  agentInfo: AgentInfo,
+  actorContext: ActorContext,
   authorizationService: AuthorizationService
 ): RolesResultSpace[] => {
   const subspacesByLevelZero = groupBy(subspaces, 'levelZeroSpaceID');
@@ -39,7 +39,7 @@ export const getSpaceRolesForContributorQueryResult = (
     }
     // can this agent read this space
     const readAccessSpace = authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.READ_ABOUT
     );
@@ -68,7 +68,7 @@ export const getSpaceRolesForContributorQueryResult = (
       }
       // can the agent read this subspace?
       const readAccessSubspace = authorizationService.isAccessGranted(
-        agentInfo,
+        actorContext,
         subspace.authorization,
         AuthorizationPrivilege.READ_ABOUT
       );

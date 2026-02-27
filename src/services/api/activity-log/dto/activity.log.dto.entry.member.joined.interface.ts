@@ -1,9 +1,9 @@
+import { ActorType } from '@common/enums/actor.type';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { ICommunity } from '@domain/community/community';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IActivityLogEntryBase } from './activity.log.dto.entry.base.interface';
 import { IActivityLogEntry } from './activity.log.entry.interface';
-import { RoleSetContributorType } from '@common/enums/role.set.contributor.type';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 
 @ObjectType('ActivityLogEntryMemberJoined', {
   implements: () => [IActivityLogEntry],
@@ -12,17 +12,17 @@ export abstract class IActivityLogEntryMemberJoined
   extends IActivityLogEntryBase
   implements IActivityLogEntry
 {
-  @Field(() => IContributor, {
+  @Field(() => IActor, {
     nullable: false,
     description: 'The Contributor that joined the Community.',
   })
-  contributor!: IContributor;
+  contributor!: IActor;
 
-  @Field(() => RoleSetContributorType, {
+  @Field(() => ActorType, {
     nullable: false,
     description: 'The type of the Contributor that joined the Community.',
   })
-  contributorType!: RoleSetContributorType;
+  actorType!: ActorType;
 
   @Field(() => ICommunity, {
     nullable: false,

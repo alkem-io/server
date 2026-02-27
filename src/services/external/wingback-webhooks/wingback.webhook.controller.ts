@@ -1,3 +1,4 @@
+import { LogContext } from '@common/enums';
 import {
   Body,
   Controller,
@@ -8,11 +9,10 @@ import {
   UsePipes,
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
-import { WingbackContractPayload } from './types';
-import { WingbackWebhookService } from './wingback.webhook.service';
-import { HeaderInterceptor } from './wingback.webhook.interceptor';
 import { getContractValidationPipe } from './get.contract.validation.pipe';
+import { WingbackContractPayload } from './types';
+import { HeaderInterceptor } from './wingback.webhook.interceptor';
+import { WingbackWebhookService } from './wingback.webhook.service';
 
 @Controller('rest/wingback')
 @UseInterceptors(HeaderInterceptor)

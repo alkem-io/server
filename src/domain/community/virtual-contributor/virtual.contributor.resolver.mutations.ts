@@ -1,23 +1,23 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Resolver, Mutation, ObjectType } from '@nestjs/graphql';
-import { VirtualContributorService } from './virtual.contributor.service';
-import { CurrentUser } from '@src/common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { RelationshipNotFoundException } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { IVirtualContributor } from './virtual.contributor.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, ObjectType, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor } from '@src/common/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   DeleteVirtualContributorInput,
   UpdateVirtualContributorInput,
-  UpdateVirtualContributorSettingsInput,
   UpdateVirtualContributorPlatformSettingsInput,
+  UpdateVirtualContributorSettingsInput,
 } from './dto';
 import { RefreshVirtualContributorBodyOfKnowledgeInput } from './dto/virtual.contributor.dto.refresh.body.of.knowledge';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IVirtualContributor } from './virtual.contributor.interface';
+import { VirtualContributorService } from './virtual.contributor.service';
 import { VirtualContributorAuthorizationService } from './virtual.contributor.service.authorization';
-import { RelationshipNotFoundException } from '@common/exceptions';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { InstrumentResolver } from '@src/apm/decorators';
 
 @ObjectType('MigrateEmbeddings') // TODO: what is this about?
 @InstrumentResolver()
@@ -36,16 +36,16 @@ export class VirtualContributorResolverMutations {
     description: 'Updates the specified VirtualContributor.',
   })
   async updateVirtualContributor(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('virtualContributorData')
     virtualContributorData: UpdateVirtualContributorInput
   ): Promise<IVirtualContributor> {
     const virtualContributor =
-      await this.virtualContributorService.getVirtualContributorOrFail(
+      await this.virtualContributorService.getVirtualContributorByIdOrFail(
         virtualContributorData.ID
       );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       virtualContributor.authorization,
       AuthorizationPrivilege.UPDATE,
       `virtual contributor Update: ${virtualContributor.id}`
@@ -63,7 +63,7 @@ export class VirtualContributorResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return this.virtualContributorService.getVirtualContributorOrFail(
+    return this.virtualContributorService.getVirtualContributorByIdOrFail(
       updatedVirtualContributor.id
     );
   }
@@ -72,17 +72,17 @@ export class VirtualContributorResolverMutations {
     description: 'Updates one of the Setting on an Virtual Contributor',
   })
   async updateVirtualContributorSettings(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('settingsData')
     settingsData: UpdateVirtualContributorSettingsInput
   ): Promise<IVirtualContributor> {
     let virtualContributor =
-      await this.virtualContributorService.getVirtualContributorOrFail(
+      await this.virtualContributorService.getVirtualContributorByIdOrFail(
         settingsData.virtualContributorID,
         {
           relations: {
             account: {
-              authorization: true,
+              actor: true,
             },
           },
         }
@@ -97,7 +97,7 @@ export class VirtualContributorResolverMutations {
     }
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       virtualContributor.authorization,
       AuthorizationPrivilege.UPDATE,
       `virtualContributor settings update: ${virtualContributor.id}`
@@ -118,7 +118,7 @@ export class VirtualContributorResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return this.virtualContributorService.getVirtualContributorOrFail(
+    return this.virtualContributorService.getVirtualContributorByIdOrFail(
       virtualContributor.id
     );
   }
@@ -128,17 +128,17 @@ export class VirtualContributorResolverMutations {
       'Updates platform-level settings of a VirtualContributor (platform admins only).',
   })
   async updateVirtualContributorPlatformSettings(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('settingsData')
     settingsData: UpdateVirtualContributorPlatformSettingsInput
   ): Promise<IVirtualContributor> {
     let virtualContributor =
-      await this.virtualContributorService.getVirtualContributorOrFail(
+      await this.virtualContributorService.getVirtualContributorByIdOrFail(
         settingsData.virtualContributorID
       );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       virtualContributor.authorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
       `virtualContributor platform settings update: ${virtualContributor.id}`
@@ -156,7 +156,7 @@ export class VirtualContributorResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    return this.virtualContributorService.getVirtualContributorOrFail(
+    return this.virtualContributorService.getVirtualContributorByIdOrFail(
       virtualContributor.id
     );
   }
@@ -165,15 +165,15 @@ export class VirtualContributorResolverMutations {
     description: 'Deletes the specified VirtualContributor.',
   })
   async deleteVirtualContributor(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeleteVirtualContributorInput
   ): Promise<IVirtualContributor> {
     const virtual =
-      await this.virtualContributorService.getVirtualContributorOrFail(
+      await this.virtualContributorService.getVirtualContributorByIdOrFail(
         deleteData.ID
       );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       virtual.authorization,
       AuthorizationPrivilege.DELETE,
       `delete virtual contributor: ${virtual.id}`
@@ -188,7 +188,7 @@ export class VirtualContributorResolverMutations {
       'Triggers a request to the backing AI Service to refresh the knowledge that is available to it.',
   })
   async refreshVirtualContributorBodyOfKnowledge(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('refreshData')
     refreshData: RefreshVirtualContributorBodyOfKnowledgeInput
   ): Promise<boolean> {
@@ -198,7 +198,7 @@ export class VirtualContributorResolverMutations {
     );
 
     const virtual =
-      await this.virtualContributorService.getVirtualContributorOrFail(
+      await this.virtualContributorService.getVirtualContributorByIdOrFail(
         refreshData.virtualContributorID
       );
     this.logger.verbose?.(
@@ -207,14 +207,14 @@ export class VirtualContributorResolverMutations {
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       virtual.authorization,
       AuthorizationPrivilege.UPDATE,
       `refresh body of knowledge: ${virtual.id}`
     );
     return await this.virtualContributorService.refreshBodyOfKnowledge(
       virtual,
-      agentInfo
+      actorContext
     );
   }
 }

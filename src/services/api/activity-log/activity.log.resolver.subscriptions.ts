@@ -1,19 +1,19 @@
-import { Args, Resolver } from '@nestjs/graphql';
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { ActivityCreatedSubscriptionPayload } from './dto/subscriptions/activity.log.dto.activity.created.subscription.payload';
-import { ActivityCreatedSubscriptionInput } from './dto/subscriptions/activity.log.activity.created.subscription.input';
-import { ActivityCreatedSubscriptionResult } from './dto/subscriptions/activity.created.dto';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
-import { LogContext } from '@common/enums/logging.context';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Resolver } from '@nestjs/graphql';
 import { ActivityLogService } from '@services/api/activity-log/activity.log.service';
+import { SubscriptionReadService } from '@services/subscriptions/subscription-service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ActivityCreatedSubscriptionResult } from './dto/subscriptions/activity.created.dto';
+import { ActivityCreatedSubscriptionInput } from './dto/subscriptions/activity.log.activity.created.subscription.input';
+import { ActivityCreatedSubscriptionPayload } from './dto/subscriptions/activity.log.dto.activity.created.subscription.payload';
 
 @InstrumentResolver()
 @Resolver()
@@ -37,8 +37,8 @@ export class ActivityLogResolverSubscriptions {
       args,
       context
     ) {
-      const agentInfo = context.req.user;
-      const logMsgPrefix = `[New activity subscription] - [${agentInfo.email}] -`;
+      const actorContext = context.req.user;
+      const logMsgPrefix = `[New activity subscription] - [${actorContext.actorID}] -`;
       this.logger.verbose?.(
         `${logMsgPrefix} sending out event for new activity on Collaboration: ${args.input.collaborationID} `,
         LogContext.SUBSCRIPTIONS
@@ -68,8 +68,8 @@ export class ActivityLogResolverSubscriptions {
       context
     ) {
       const { types = [], collaborationID, includeChild } = variables.input;
-      const agentInfo = context.req.user;
-      const logMsgPrefix = `[New activity subscription] - [${agentInfo.email}] -`;
+      const actorContext = context.req.user;
+      const logMsgPrefix = `[New activity subscription] - [${actorContext.actorID}] -`;
       this.logger.verbose?.(
         `${logMsgPrefix} filtering event: ${payload.eventID}`,
         LogContext.SUBSCRIPTIONS
@@ -81,7 +81,7 @@ export class ActivityLogResolverSubscriptions {
         // note: may cause performance issues in the future
         // get all child collaborations and authorize them
         const childCollaborations = await this.getAuthorizedChildCollaborations(
-          agentInfo,
+          actorContext,
           collaborationID
         );
         collaborationsIds.push(...childCollaborations);
@@ -106,7 +106,7 @@ export class ActivityLogResolverSubscriptions {
     },
   })
   async activityCreated(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args({
       nullable: false,
       name: 'input',
@@ -115,7 +115,7 @@ export class ActivityLogResolverSubscriptions {
   ) {
     const logMsgPrefix = '[New activity subscription] - ';
     this.logger.verbose?.(
-      `${logMsgPrefix} User ${agentInfo.email} subscribed for new activities on Collaboration: ${input.collaborationID}`,
+      `${logMsgPrefix} User ${actorContext.actorID} subscribed for new activities on Collaboration: ${input.collaborationID}`,
       LogContext.SUBSCRIPTIONS
     );
     // validate args
@@ -125,7 +125,7 @@ export class ActivityLogResolverSubscriptions {
       );
     // authorize
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       collaboration.authorization,
       AuthorizationPrivilege.READ,
       `subscription to new activities on Collaboration: ${input.collaborationID}`
@@ -135,7 +135,7 @@ export class ActivityLogResolverSubscriptions {
   }
 
   private async getAuthorizedChildCollaborations(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     collaborationID: string
   ) {
     const childCollaborations =
@@ -147,10 +147,10 @@ export class ActivityLogResolverSubscriptions {
       childCollaboration => {
         try {
           return this.authorizationService.grantAccessOrFail(
-            agentInfo,
+            actorContext,
             childCollaboration.authorization,
             AuthorizationPrivilege.READ,
-            `Collaboration activity query: ${agentInfo.email}`
+            `Collaboration activity query: ${actorContext.actorID}`
           );
         } catch {
           return false;

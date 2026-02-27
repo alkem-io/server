@@ -1,28 +1,28 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Resolver, Mutation, Args, Field, ObjectType } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { IAiServer } from './ai.server.interface';
-import { AiServerAuthorizationService } from './ai.server.service.authorization';
-import { AiServerService } from './ai.server.service';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Space } from '@domain/space/space/space.entity';
-import { ChromaClient } from 'chromadb';
+import { Inject, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { Args, Field, Mutation, ObjectType, Resolver } from '@nestjs/graphql';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { EntityManager } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { AlkemioConfig } from '@src/types';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
+import { AlkemioConfig } from '@src/types';
+import { ChromaClient } from 'chromadb';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager } from 'typeorm';
 import {
   AiPersonaService,
   CreateAiPersonaInput,
   IAiPersona,
 } from '../ai-persona';
 import { AiPersonaAuthorizationService } from '../ai-persona/ai.persona.service.authorization';
+import { IAiServer } from './ai.server.interface';
+import { AiServerService } from './ai.server.service';
+import { AiServerAuthorizationService } from './ai.server.service.authorization';
 
 @ObjectType('MigrateEmbeddings')
 class IMigrateEmbeddingsResponse {
@@ -53,12 +53,12 @@ export class AiServerResolverMutations {
   })
   @Profiling.api
   async cleanupCollections(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IMigrateEmbeddingsResponse> {
     const platformAuthorization =
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformAuthorization,
       AuthorizationPrivilege.PLATFORM_ADMIN,
       'User not authenticated to migrate embeddings'
@@ -94,7 +94,7 @@ export class AiServerResolverMutations {
 
       // get the space by nameID
       const space = await this.entityManager.findOne(Space, {
-        where: { nameID: nameID },
+        where: { actor: { nameID: nameID } },
       });
 
       // if the space doesn't exit skip the colletion
@@ -123,14 +123,14 @@ export class AiServerResolverMutations {
     description: 'Reset the Authorization Policy on the specified AiServer.',
   })
   async aiServerAuthorizationPolicyReset(
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IAiServer> {
     const aiServer = await this.aiServerService.getAiServerOrFail();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       aiServer.authorization,
       AuthorizationPrivilege.GRANT, // to be auth reset
-      `reset authorization on aiServer: ${agentInfo.email}`
+      `reset authorization on aiServer: ${actorContext.actorID}`
     );
     const authorizations =
       await this.aiServerAuthorizationService.applyAuthorizationPolicy();
@@ -142,13 +142,13 @@ export class AiServerResolverMutations {
     description: 'Creates a new AiPersona on the aiServer.',
   })
   async aiServerCreateAiPersona(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('aiPersonaData')
     aiPersonaData: CreateAiPersonaInput
   ): Promise<IAiPersona> {
     const aiServer = await this.aiServerService.getAiServerOrFail();
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       aiServer.authorization,
       AuthorizationPrivilege.CREATE,
       `create Virtual persona: ${aiPersonaData.engine}`

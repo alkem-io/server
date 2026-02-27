@@ -1,31 +1,31 @@
 import { LogContext, ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { SearchVisibility } from '@common/enums/search.visibility';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IInnovationPack } from './innovation.pack.interface';
-import { UpdateInnovationPackInput } from './dto/innovation.pack.dto.update';
-import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
-import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
-import { CreateInnovationPackInput } from './dto/innovation.pack.dto.create';
-import { DeleteInnovationPackInput } from './dto/innovationPack.dto.delete';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
-import { VisualType } from '@common/enums/visual.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { SearchVisibility } from '@common/enums/search.visibility';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
-import { InnovationPack } from './innovation.pack.entity';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ITemplatesSet } from '@domain/template/templates-set/templates.set.interface';
+import { TemplatesSetService } from '@domain/template/templates-set/templates.set.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import { CreateInnovationPackInput } from './dto/innovation.pack.dto.create';
+import { UpdateInnovationPackInput } from './dto/innovation.pack.dto.update';
+import { DeleteInnovationPackInput } from './dto/innovationPack.dto.delete';
 import { InnovationPackDefaultsService } from './innovation.pack.defaults/innovation.pack.defaults.service';
+import { InnovationPack } from './innovation.pack.entity';
+import { IInnovationPack } from './innovation.pack.interface';
 
 @Injectable()
 export class InnovationPackService {
@@ -270,7 +270,7 @@ export class InnovationPackService {
     return await this.templatesSetService.getTemplatesCount(templatesSetId);
   }
 
-  public async getProvider(innovationPackID: string): Promise<IContributor> {
+  public async getProvider(innovationPackID: string): Promise<IActor> {
     const innovationPack = await this.innovationPackRepository.findOne({
       where: { id: innovationPackID },
       relations: {

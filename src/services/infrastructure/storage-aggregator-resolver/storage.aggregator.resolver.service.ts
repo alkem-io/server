@@ -1,35 +1,35 @@
+import { LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { InvalidUUID } from '@common/exceptions/invalid.uuid';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
+import { IOrganization, Organization } from '@domain/community/organization';
+import { User } from '@domain/community/user/user.entity';
+import { IUser } from '@domain/community/user/user.interface';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { Account } from '@domain/space/account/account.entity';
+import { IAccount } from '@domain/space/account/account.interface';
+import { Space } from '@domain/space/space/space.entity';
+import { ISpace } from '@domain/space/space/space.interface';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Template } from '@domain/template/template/template.entity';
+import { TemplatesManager } from '@domain/template/templates-manager';
+import { TemplatesSet } from '@domain/template/templates-set';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import {
   Inject,
   Injectable,
   LoggerService,
   NotImplementedException,
 } from '@nestjs/common';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { LogContext } from '@common/enums';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { TimelineResolverService } from '../entity-resolver/timeline.resolver.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Space } from '@domain/space/space/space.entity';
-import { isUUID } from 'class-validator';
-import { InvalidUUID } from '@common/exceptions/invalid.uuid';
-import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
-import { ISpace } from '@domain/space/space/space.interface';
-import { IOrganization, Organization } from '@domain/community/organization';
-import { IUser } from '@domain/community/user/user.interface';
-import { Account } from '@domain/space/account/account.entity';
-import { IAccount } from '@domain/space/account/account.interface';
-import { User } from '@domain/community/user/user.entity';
 import { Platform } from '@platform/platform/platform.entity';
-import { TemplatesManager } from '@domain/template/templates-manager';
-import { Template } from '@domain/template/template/template.entity';
-import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
-import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
-import { TemplatesSet } from '@domain/template/templates-set';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { isUUID } from 'class-validator';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { TimelineResolverService } from '../entity-resolver/timeline.resolver.service';
 
 @Injectable()
 export class StorageAggregatorResolverService {
@@ -128,7 +128,7 @@ export class StorageAggregatorResolverService {
         },
       },
       relations: {
-        profile: true,
+        actor: { profile: true },
       },
     });
     if (!organization) {
@@ -150,7 +150,7 @@ export class StorageAggregatorResolverService {
         },
       },
       relations: {
-        profile: true,
+        actor: { profile: true },
       },
     });
     if (!user) {

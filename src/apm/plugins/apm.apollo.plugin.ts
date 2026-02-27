@@ -1,13 +1,13 @@
 import {
   ApolloServerPlugin,
+  GraphQLFieldResolverParams,
   GraphQLRequestContextDidResolveOperation,
   GraphQLRequestListener,
-  GraphQLFieldResolverParams,
 } from '@apollo/server';
-import { apmAgent } from '../apm';
-import { IncomingMessage } from 'http';
 import { GraphQLRequestListenerDidResolveField } from '@apollo/server/src/externalTypes/plugins';
 import { GraphQLObjectType } from 'graphql/type';
+import { IncomingMessage } from 'http';
+import { apmAgent } from '../apm';
 
 const ENABLE_GLOBAL_INSTRUMENTATION = false;
 

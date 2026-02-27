@@ -1,15 +1,15 @@
+import { ExcalidrawContent } from '@common/interfaces';
+import { base64ToBuffer } from '@common/utils';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Whiteboard } from '@domain/common/whiteboard/types';
+import { DocumentService } from '@domain/storage/document/document.service';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { EntityManager, FindManyOptions } from 'typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { DocumentService } from '@domain/storage/document/document.service';
-import { base64ToBuffer } from '@common/utils';
-import { ExcalidrawContent } from '@common/interfaces';
-import { Whiteboard } from '@domain/common/whiteboard/types';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { EntityManager, FindManyOptions } from 'typeorm';
 
 @Injectable()
 export class AdminWhiteboardService {
@@ -22,7 +22,9 @@ export class AdminWhiteboardService {
     private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
-  public async uploadFilesFromContentToStorageBucket(agentInfo: AgentInfo) {
+  public async uploadFilesFromContentToStorageBucket(
+    actorContext: ActorContext
+  ) {
     // select the ids of the entities, needed for the save
     const options: FindManyOptions = {
       relations: {
@@ -47,7 +49,7 @@ export class AdminWhiteboardService {
 
     const whiteboardResults = await this._uploadFilesFromContentToStorageBucket(
       whiteboards,
-      agentInfo.userID
+      actorContext.actorID
     );
 
     return {

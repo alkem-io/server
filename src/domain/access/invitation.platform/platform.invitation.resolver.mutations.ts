@@ -1,12 +1,12 @@
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { AuthorizationPrivilege } from '@common/enums';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { DeletePlatformInvitationInput } from './dto/platform.invitation.dto.delete';
-import { PlatformInvitationService } from './platform.invitation.service';
-import { IPlatformInvitation } from './platform.invitation.interface';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor } from '@src/common/decorators';
+import { DeletePlatformInvitationInput } from './dto/platform.invitation.dto.delete';
+import { IPlatformInvitation } from './platform.invitation.interface';
+import { PlatformInvitationService } from './platform.invitation.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -20,7 +20,7 @@ export class PlatformInvitationResolverMutations {
     description: 'Removes the specified User platformInvitation.',
   })
   async deletePlatformInvitation(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeletePlatformInvitationInput
   ): Promise<IPlatformInvitation> {
     const platformInvitation =
@@ -28,7 +28,7 @@ export class PlatformInvitationResolverMutations {
         deleteData.ID
       );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       platformInvitation.authorization,
       AuthorizationPrivilege.DELETE,
       `delete platformInvitation: ${platformInvitation.id}`

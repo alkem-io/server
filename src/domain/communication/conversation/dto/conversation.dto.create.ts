@@ -1,6 +1,6 @@
-import { Field, InputType, ObjectType } from '@nestjs/graphql';
-import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { UUID } from '@domain/common/scalars/scalar.uuid';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 
 /**
  * GraphQL input for creating a conversation.
@@ -26,10 +26,10 @@ export class CreateConversationInput {
  * Either invitedAgentId OR wellKnownVirtualContributor must be provided.
  */
 export interface CreateConversationData {
-  /** Agent ID of the caller (creator of the conversation) */
+  /** Actor ID of the caller (creator of the conversation) */
   callerAgentId: string;
 
-  /** Agent ID of the invited party (user or VC). Required if wellKnownVirtualContributor is not set. */
+  /** Actor ID of the invited party (user or VC). Required if wellKnownVirtualContributor is not set. */
   invitedAgentId?: string;
 
   /** Well-known VC enum. Required if invitedAgentId is not set. Service will resolve to agent ID. */

@@ -1,24 +1,24 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Mutation, Resolver } from '@nestjs/graphql';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ICallout } from '../callout/callout.interface';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
+import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { CalloutService } from '../callout/callout.service';
 import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { CalloutsSetService } from '../callouts-set/callouts.set.service';
-import { TransferCalloutInput } from './dto/callouts.set.dto.transfer.callout';
-import { CalloutTransferService } from './callout.transfer.service';
-import { InstrumentResolver } from '@src/apm/decorators';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { ICallout } from '../callout/callout.interface';
+import { CalloutService } from '../callout/callout.service';
+import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
+import { CalloutsSetService } from '../callouts-set/callouts.set.service';
+import { CalloutTransferService } from './callout.transfer.service';
+import { TransferCalloutInput } from './dto/callouts.set.dto.transfer.callout';
 
 @InstrumentResolver()
 @Resolver()
@@ -39,7 +39,7 @@ export class CalloutTransferResolverMutations {
       'Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet. Note: this is experimental, and only for GlobalAdmins. The user that executes the transfer becomes the creator of the Callout.',
   })
   async transferCallout(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('transferData')
     transferData: TransferCalloutInput
   ): Promise<ICallout> {
@@ -69,13 +69,13 @@ export class CalloutTransferResolverMutations {
         transferData.targetCalloutsSetID
       );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       sourceCalloutsSet.authorization,
       AuthorizationPrivilege.TRANSFER_RESOURCE_OFFER,
       `callouts set transfer callout: ${callout.id}`
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       targetCalloutsSet.authorization,
       AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
       `callouts set transfer callout: ${callout.id}`
@@ -84,8 +84,7 @@ export class CalloutTransferResolverMutations {
     // Transfer is authorized, now try to execute it
     await this.calloutTransferService.transferCallout(
       callout,
-      targetCalloutsSet,
-      agentInfo
+      targetCalloutsSet
     );
 
     const { platformRolesAccess } =
@@ -97,7 +96,7 @@ export class CalloutTransferResolverMutations {
     const authorizations =
       await this.calloutAuthorizationService.applyAuthorizationPolicy(
         callout.id,
-        sourceCalloutsSet.authorization,
+        targetCalloutsSet.authorization,
         platformRolesAccess
       );
 

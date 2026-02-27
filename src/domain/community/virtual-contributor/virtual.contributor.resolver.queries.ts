@@ -1,14 +1,14 @@
+import { AuthorizationPrivilege } from '@common/enums';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ContributorQueryArgs } from '@domain/actor/actor/dto/actor.query.args';
 import { UUID } from '@domain/common/scalars';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { IVirtualContributor } from './virtual.contributor.interface';
-import { VirtualContributorService } from './virtual.contributor.service';
-import { ContributorQueryArgs } from '../contributor/dto/contributor.query.args';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor } from '@src/common/decorators';
+import { IVirtualContributor } from './virtual.contributor.interface';
+import { VirtualContributorService } from './virtual.contributor.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -26,13 +26,13 @@ export class VirtualContributorResolverQueries {
   })
   async virtualContributors(
     @Args({ nullable: true }) args: ContributorQueryArgs,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IVirtualContributor[]> {
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
 
     const hasAccess = this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN
     );
@@ -50,6 +50,8 @@ export class VirtualContributorResolverQueries {
   async virtualContributor(
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<IVirtualContributor> {
-    return await this.virtualContributorService.getVirtualContributorOrFail(id);
+    return await this.virtualContributorService.getVirtualContributorByIdOrFail(
+      id
+    );
   }
 }

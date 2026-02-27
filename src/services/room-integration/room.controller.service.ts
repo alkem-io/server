@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
-import { Post } from '@domain/collaboration/post/post.entity';
+import { EntityNotFoundException } from '@common/exceptions';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { RoomDetails } from '@services/adapters/ai-server-adapter/dto/ai.server.adapter.dto.invocation';
@@ -8,9 +9,7 @@ import {
   InvokeEngineResponse,
   InvokeEngineResult,
 } from '@services/infrastructure/event-bus/messages/invoke.engine.result';
-
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityNotFoundException } from '@common/exceptions';
 
 @Injectable()
 export class RoomControllerService {
@@ -60,14 +59,14 @@ export class RoomControllerService {
   }
 
   public async postReply(event: InvokeEngineResult) {
-    const { roomID, threadID, actorId }: RoomDetails =
+    const { roomID, threadID, actorID }: RoomDetails =
       event.original.resultHandler.roomDetails!;
 
     if (!threadID) {
       return;
     }
     const room = await this.roomLookupService.getRoomOrFail(roomID);
-    await this.roomLookupService.sendMessageReply(room, actorId, {
+    await this.roomLookupService.sendMessageReply(room, actorID, {
       roomID: room.id,
       message: this.convertResultToMessage(event.response),
       threadID,
@@ -88,11 +87,11 @@ export class RoomControllerService {
   }
 
   public async postMessage(event: InvokeEngineResult) {
-    const { roomID, actorId }: RoomDetails =
+    const { roomID, actorID }: RoomDetails =
       event.original.resultHandler.roomDetails!;
     const response: InvokeEngineResponse = event.response;
     const room = await this.roomLookupService.getRoomOrFail(roomID);
-    await this.roomLookupService.sendMessage(room, actorId, {
+    await this.roomLookupService.sendMessage(room, actorID, {
       roomID: room.id,
       // this second argument (sourcesLable = true) should be part of the resultHandler and not hardcoded here
       message: this.convertResultToMessage(response, true),

@@ -1,18 +1,13 @@
+import { UserModule } from '@domain/community/user/user.module';
+import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
-import { IdentityResolveController } from './identity-resolve.controller';
-import { IdentityResolveService } from './identity-resolve.service';
 import { RegistrationModule } from '@services/api/registration/registration.module';
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
-import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
-import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { IdentityResolveController } from './identity-resolve.controller';
+import { IdentityResolveService } from './identity-resolve.service';
 
 @Module({
-  imports: [
-    RegistrationModule,
-    KratosModule,
-    UserLookupModule,
-    AuthenticationAgentInfoModule,
-  ],
+  imports: [RegistrationModule, KratosModule, UserModule, UserLookupModule],
   controllers: [IdentityResolveController],
   providers: [IdentityResolveService],
   exports: [IdentityResolveService],

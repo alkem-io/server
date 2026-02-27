@@ -1,11 +1,11 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { VirtualContributorModelCard } from './dto/virtual.contributor.model.card.dto.result';
-import { ModelCardSpaceUsageResult } from './dto/virtual.contributor.model.card.dto.space.usage.result';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { VirtualContributorModelCardEntry } from '@common/enums/virtual.contributor.model.card.entry';
 import { VirtualContributorModelCardEntryFlagName } from '@common/enums/virtual.contributor.model.card.entry.flag.name';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { ModelCardAiEngineResult } from './dto/virtual.contributor.model.card.dto.ai.engine.result';
-import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { ModelCardMonitoringResult } from './dto/virtual.contributor.model.card.dto.monitoring.result';
+import { VirtualContributorModelCard } from './dto/virtual.contributor.model.card.dto.result';
+import { ModelCardSpaceUsageResult } from './dto/virtual.contributor.model.card.dto.space.usage.result';
 
 const DEFAULT_ENGINE_HOSTING_LOCATION = 'Sweden, EU';
 

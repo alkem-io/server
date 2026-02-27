@@ -16,7 +16,7 @@ export class IMessageReaction {
   })
   emoji!: string;
 
-  // Agent ID of the sender - resolved to User by field resolver
+  // Actor ID of the sender - resolved to User by field resolver
   sender!: string;
 
   @Field(() => Number, {

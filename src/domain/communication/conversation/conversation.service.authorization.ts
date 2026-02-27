@@ -1,18 +1,18 @@
-import { Injectable } from '@nestjs/common';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ConversationService } from './conversation.service';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { EntityNotInitializedException } from '@common/exceptions';
-import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { AgentType } from '@common/enums/agent.type';
+import { Injectable } from '@nestjs/common';
+import { ConversationService } from './conversation.service';
 
 @Injectable()
 export class ConversationAuthorizationService {
@@ -53,9 +53,9 @@ export class ConversationAuthorizationService {
     // In the future, this should be refactored to use agent-based credentials
     const participantUserIDs: string[] = [];
     for (const membership of memberships) {
-      if (membership.agent?.type === AgentType.USER) {
-        const user = await this.userLookupService.getUserByAgentId(
-          membership.agentId
+      if (membership.actorType === ActorType.USER) {
+        const user = await this.userLookupService.getUserById(
+          membership.actorID
         );
         if (user) {
           participantUserIDs.push(user.id);

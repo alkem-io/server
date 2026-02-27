@@ -1,6 +1,6 @@
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { UUID } from '@domain/common/scalars';
-import { InputType, Field } from '@nestjs/graphql';
+import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
 export class ContributionsFilterInput {

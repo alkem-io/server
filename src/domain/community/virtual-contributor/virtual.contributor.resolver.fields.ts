@@ -1,33 +1,35 @@
-import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { VirtualContributor } from './virtual.contributor.entity';
-import { VirtualContributorService } from './virtual.contributor.service';
+import {
+  AuthorizationActorHasPrivilege,
+  CurrentActor,
+} from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
+import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { VirtualContributorStatus } from '@common/enums/virtual.contributor.status.enum';
+import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
-import { IProfile } from '@domain/common/profile';
-import { AuthorizationAgentPrivilege, CurrentUser } from '@common/decorators';
-import { IAgent } from '@domain/agent/agent';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
-import { Loader } from '@core/dataloader/decorators';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   AccountLoaderCreator,
-  AgentLoaderCreator,
+  ActorLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IVirtualContributor } from './virtual.contributor.interface';
-import { IAccount } from '@domain/space/account/account.interface';
-import { IContributor } from '../contributor/contributor.interface';
-import { VirtualContributorStatus } from '@common/enums/virtual.contributor.status.enum';
+import { IActor } from '@domain/actor/actor/actor.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { VirtualContributorModelCard } from '../virtual-contributor-model-card/dto/virtual.contributor.model.card.dto.result';
+import { IProfile } from '@domain/common/profile';
+import { IAccount } from '@domain/space/account/account.interface';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { IAiPersona } from '@services/ai-server/ai-persona';
-import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { VirtualContributorModelCard } from '../virtual-contributor-model-card/dto/virtual.contributor.model.card.dto.result';
+import { VirtualContributor } from './virtual.contributor.entity';
+import { IVirtualContributor } from './virtual.contributor.interface';
+import { VirtualContributorService } from './virtual.contributor.service';
 
 @Resolver(() => IVirtualContributor)
 export class VirtualContributorResolverFields {
@@ -38,7 +40,7 @@ export class VirtualContributorResolverFields {
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField(
     'wellKnownVirtualContributor',
@@ -63,7 +65,7 @@ export class VirtualContributorResolverFields {
     return undefined;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('engine', () => AiPersonaEngine, {
     nullable: false,
@@ -77,7 +79,7 @@ export class VirtualContributorResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('aiPersona', () => IAiPersona, {
     nullable: false,
@@ -91,7 +93,7 @@ export class VirtualContributorResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('modelCard', () => VirtualContributorModelCard, {
     nullable: false,
@@ -131,7 +133,7 @@ export class VirtualContributorResolverFields {
     return loader.load(virtualContributor.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('authorization', () => IAuthorizationPolicy, {
     nullable: true,
@@ -156,18 +158,18 @@ export class VirtualContributorResolverFields {
     return loader.load(virtualContributor.id);
   }
 
-  @ResolveField('agent', () => IAgent, {
+  @ResolveField('actor', () => IActor, {
     nullable: false,
-    description: 'The Agent representing this User.',
+    description: 'The Actor representing this User.',
   })
   async agent(
     @Parent() virtualContributor: VirtualContributor,
-    @Loader(AgentLoaderCreator, {
+    @Loader(ActorLoaderCreator, {
       parentClassRef: VirtualContributor,
       checkParentPrivilege: AuthorizationPrivilege.READ,
     })
-    loader: ILoader<IAgent>
-  ): Promise<IAgent> {
+    loader: ILoader<IActor>
+  ): Promise<IActor> {
     return loader.load(virtualContributor.id);
   }
 
@@ -177,7 +179,7 @@ export class VirtualContributorResolverFields {
   })
   async knowledgeBase(
     @Parent() virtualContributor: VirtualContributor,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IKnowledgeBase> {
     const knowledgeBase =
       await this.virtualContributorService.getKnowledgeBaseOrFail(
@@ -185,7 +187,7 @@ export class VirtualContributorResolverFields {
       );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       knowledgeBase.authorization,
       AuthorizationPrivilege.READ_ABOUT,
       'KnowledgeBase ReadAbout'
@@ -193,19 +195,19 @@ export class VirtualContributorResolverFields {
     return knowledgeBase;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('provider', () => IContributor, {
+  @ResolveField('provider', () => IActor, {
     nullable: false,
     description: 'The Virtual Contributor provider.',
   })
   async provider(
     @Parent() virtualContributor: IVirtualContributor
-  ): Promise<IContributor> {
+  ): Promise<IActor> {
     return await this.virtualContributorService.getProvider(virtualContributor);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('status', () => VirtualContributorStatus, {
     nullable: false,
@@ -219,7 +221,7 @@ export class VirtualContributorResolverFields {
         virtualContributor
       );
 
-    if (!!lastUpdated) {
+    if (lastUpdated) {
       return VirtualContributorStatus.READY;
     }
     return VirtualContributorStatus.INITIALIZING;

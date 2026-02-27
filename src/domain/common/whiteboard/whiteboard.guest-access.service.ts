@@ -1,25 +1,25 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { WhiteboardService } from './whiteboard.service';
-import { IWhiteboard } from './whiteboard.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
   LogContext,
 } from '@common/enums';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
-import { IAuthorizationPolicy } from '../authorization-policy';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
-import { ISpace } from '@domain/space/space/space.interface';
 import {
   EntityNotInitializedException,
   ForbiddenException,
 } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential';
+import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ISpace } from '@domain/space/space/space.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IAuthorizationPolicy } from '../authorization-policy';
+import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '../profile/profile.service.authorization';
+import { IWhiteboard } from './whiteboard.interface';
+import { WhiteboardService } from './whiteboard.service';
 
 const PUBLIC_RULE_NAME = 'public-access';
 const GRANTED_GUEST_PRIVILEGES: AuthorizationPrivilege[] = [
@@ -62,11 +62,11 @@ export class WhiteboardGuestAccessService {
   }
 
   async updateGuestAccess(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     whiteboardId: string,
     guestAccessEnabled: boolean
   ): Promise<IWhiteboard> {
-    const baseLogMeta = this.buildLogMetadata(agentInfo, whiteboardId, {
+    const baseLogMeta = this.buildLogMetadata(actorContext, whiteboardId, {
       guestAccessEnabled,
     });
     this.logger.debug?.(
@@ -92,7 +92,7 @@ export class WhiteboardGuestAccessService {
     const authorization = this.ensureAuthorization(whiteboard);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       authorization,
       AuthorizationPrivilege.PUBLIC_SHARE,
       `toggle guest access on whiteboard: ${whiteboard.id}`
@@ -103,7 +103,7 @@ export class WhiteboardGuestAccessService {
     if (guestAccessEnabled && !this.isGuestToggleAllowed(space)) {
       this.logger.debug?.(
         'Whiteboard guest access toggle rejected: space disallows guest contributions',
-        this.buildLogMetadata(agentInfo, whiteboardId, {
+        this.buildLogMetadata(actorContext, whiteboardId, {
           guestAccessEnabled,
           spaceId: space.id,
         })
@@ -114,7 +114,7 @@ export class WhiteboardGuestAccessService {
         {
           spaceId: space.id,
           whiteboardId,
-          userId: agentInfo.userID,
+          userId: actorContext.actorID,
         }
       );
     }
@@ -316,15 +316,16 @@ export class WhiteboardGuestAccessService {
   }
 
   private buildLogMetadata(
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     whiteboardId: string,
     extra?: Record<string, unknown>
   ) {
     const metadata = {
       whiteboardId,
       userId:
-        agentInfo.userID || (agentInfo.isAnonymous ? 'anonymous' : 'unknown'),
-      actorId: agentInfo.agentID || agentInfo.userID || 'unknown',
+        actorContext.actorID ||
+        (actorContext.isAnonymous ? 'anonymous' : 'unknown'),
+      actorID: actorContext.actorID || actorContext.actorID || 'unknown',
       context: LogContext.COLLABORATION,
     };
 

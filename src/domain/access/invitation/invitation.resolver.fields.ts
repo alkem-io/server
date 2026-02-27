@@ -1,32 +1,32 @@
-import { UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
-import { InvitationService } from './invitation.service';
 import { AuthorizationPrivilege } from '@common/enums';
-import { IInvitation } from '@domain/access/invitation';
 import { GraphqlGuard } from '@core/authorization';
+import { IInvitation } from '@domain/access/invitation';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { IUser } from '@domain/community/user/user.interface';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import {
+  AuthorizationActorHasPrivilege,
+  Profiling,
+} from '@src/common/decorators';
+import { InvitationService } from './invitation.service';
 
 @Resolver(() => IInvitation)
 export class InvitationResolverFields {
   constructor(private invitationService: InvitationService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('contributor', () => IContributor, {
+  @ResolveField('contributor', () => IActor, {
     nullable: false,
-    description: 'The Contributor who is invited.',
+    description: 'The Actor who is invited.',
   })
   @Profiling.api
-  async invitedContributor(
-    @Parent() invitation: IInvitation
-  ): Promise<IContributor> {
-    return await this.invitationService.getInvitedContributor(invitation);
+  async invitedActor(@Parent() invitation: IInvitation): Promise<IActor> {
+    return await this.invitationService.getInvitedActor(invitation);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('createdBy', () => IUser, {
     nullable: true,

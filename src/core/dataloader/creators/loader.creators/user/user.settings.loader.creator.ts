@@ -1,10 +1,10 @@
-import { EntityManager } from 'typeorm';
+import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { IUserSettings } from '@domain/community/user-settings/user.settings.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { DataLoaderInitError } from '@common/exceptions/data-loader';
+import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../../base';
-import { IUserSettings } from '@domain/community/user-settings/user.settings.interface';
 
 @Injectable()
 export class UserSettingsLoaderCreator

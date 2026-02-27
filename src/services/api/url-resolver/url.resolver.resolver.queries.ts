@@ -1,9 +1,9 @@
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { Args, Query, Resolver } from '@nestjs/graphql';
-import { UrlResolverQueryResults } from './dto/url.resolver.query.results';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { UrlResolverService } from './url.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { UrlResolverQueryResults } from './dto/url.resolver.query.results';
+import { UrlResolverService } from './url.resolver.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -15,9 +15,9 @@ export class UrlResolverResolverQueries {
     description: 'Allow resolving of a URL into a set of IDs.',
   })
   async urlResolver(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('url', { type: () => String }) url: string
   ): Promise<UrlResolverQueryResults> {
-    return await this.urlResolverService.resolveUrl(url, agentInfo);
+    return await this.urlResolverService.resolveUrl(url, actorContext);
   }
 }

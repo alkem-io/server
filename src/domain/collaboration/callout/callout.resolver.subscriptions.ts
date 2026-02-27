@@ -1,22 +1,22 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
-import { SubscriptionType } from '@common/enums/subscription.type';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { Inject, LoggerService } from '@nestjs/common';
-import { Args, Resolver } from '@nestjs/graphql';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { PubSubEngine } from 'graphql-subscriptions';
-import { LogContext } from '@common/enums/logging.context';
-import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants/providers';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
+import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { LogContext } from '@common/enums/logging.context';
+import { SubscriptionType } from '@common/enums/subscription.type';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { UUID } from '@domain/common/scalars';
-import { TypedSubscription } from '@common/decorators/typed.subscription/typed.subscription.decorator';
-import { CalloutPostCreatedArgs } from './dto/callout.args.post.created';
-import { CalloutPostCreated, CalloutPostCreatedPayload } from './dto';
-import { UnableToSubscribeException } from '@src/common/exceptions';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Args, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { UnableToSubscribeException } from '@src/common/exceptions';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { CalloutPostCreated, CalloutPostCreatedPayload } from './dto';
+import { CalloutPostCreatedArgs } from './dto/callout.args.post.created';
 
 @InstrumentResolver()
 @Resolver()
@@ -36,8 +36,8 @@ export class CalloutResolverSubscriptions {
       description:
         'Receive new Update messages on Communities the currently authenticated User is a member of.',
       resolve(this: CalloutResolverSubscriptions, payload, args, context) {
-        const agentInfo = context.req.user;
-        const logMsgPrefix = `[User (${agentInfo.email}) Callout Post Collection] - `;
+        const actorContext = context.req.user;
+        const logMsgPrefix = `[User (${actorContext.actorID}) Callout Post Collection] - `;
         this.logger.verbose?.(
           `${logMsgPrefix} sending out event for Posts on Callout: ${payload.calloutID} `,
           LogContext.SUBSCRIPTIONS
@@ -52,8 +52,8 @@ export class CalloutResolverSubscriptions {
         };
       },
       filter(this: CalloutResolverSubscriptions, payload, variables, context) {
-        const agentInfo = context.req.user;
-        const logMsgPrefix = `[User (${agentInfo.email}) Callout Post Collection] - `;
+        const actorContext = context.req.user;
+        const logMsgPrefix = `[User (${actorContext.actorID}) Callout Post Collection] - `;
         this.logger.verbose?.(
           `${logMsgPrefix} Filtering event '${payload.eventID}'`,
           LogContext.SUBSCRIPTIONS
@@ -69,7 +69,7 @@ export class CalloutResolverSubscriptions {
     }
   )
   async calloutPostCreated(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args({
       name: 'calloutID',
       type: () => UUID,
@@ -78,7 +78,7 @@ export class CalloutResolverSubscriptions {
     })
     calloutID: string
   ) {
-    const logMsgPrefix = `[User (${agentInfo.email}) Callout Post Collection] - `;
+    const logMsgPrefix = `[User (${actorContext.actorID}) Callout Post Collection] - `;
     this.logger.verbose?.(
       `${logMsgPrefix} Subscribing to the Callout of type Post Collection: ${calloutID}`,
       LogContext.SUBSCRIPTIONS
@@ -96,7 +96,7 @@ export class CalloutResolverSubscriptions {
       );
     }
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       callout.authorization,
       AuthorizationPrivilege.READ,
       `subscription to new Posts on Callout: ${callout.id}`

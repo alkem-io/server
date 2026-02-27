@@ -1,14 +1,28 @@
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
+import { SpaceLevel } from '@common/enums/space.level';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { convertToEntity } from '@common/utils/convert-to-entity';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Collaboration } from '@domain/collaboration/collaboration';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Space } from '@domain/space/space/space.entity';
+import { ISpace } from '@domain/space/space/space.interface';
+import { CalendarEvent } from '@domain/timeline/event';
+import { Timeline } from '@domain/timeline/timeline/timeline.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
+import { ActivityInputCalendarEventCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.calendar.event.created';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
+import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { PrefixKeys } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { ICalendarEvent } from '../event/event.interface';
@@ -16,20 +30,6 @@ import { CalendarEventService } from '../event/event.service';
 import { Calendar } from './calendar.entity';
 import { ICalendar } from './calendar.interface';
 import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.event';
-import { ActivityInputCalendarEventCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.calendar.event.created';
-import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
-import { TimelineResolverService } from '@services/infrastructure/entity-resolver/timeline.resolver.service';
-import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { ISpace } from '@domain/space/space/space.interface';
-import { PrefixKeys } from '@src/types';
-import { Space } from '@domain/space/space/space.entity';
-import { convertToEntity } from '@common/utils/convert-to-entity';
-import { Collaboration } from '@domain/collaboration/collaboration';
-import { Timeline } from '@domain/timeline/timeline/timeline.entity';
-import { CalendarEvent } from '@domain/timeline/event';
-import { SpaceLevel } from '@common/enums/space.level';
 
 @Injectable()
 export class CalendarService {
@@ -168,7 +168,7 @@ export class CalendarService {
 
   public async getCalendarEvents(
     calendar: ICalendar,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     rootSpaceId?: string
   ): Promise<ICalendarEvent[]> {
     const calendarLoaded = await this.getCalendarOrFail(calendar.id, {
@@ -189,7 +189,9 @@ export class CalendarService {
     }
 
     // First filter the events the current user has READ privilege to
-    return events.filter(event => this.hasAgentAccessToEvent(event, agentInfo));
+    return events.filter(event =>
+      this.hasAgentAccessToEvent(event, actorContext)
+    );
   }
 
   public async getCalendarEvent(
@@ -213,10 +215,10 @@ export class CalendarService {
 
   private hasAgentAccessToEvent(
     event: ICalendarEvent,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): boolean {
     return this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       event.authorization,
       AuthorizationPrivilege.READ
     );
@@ -254,10 +256,10 @@ export class CalendarService {
   public async processActivityCalendarEventCreated(
     calendar: ICalendar,
     calendarEvent: ICalendarEvent,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ) {
     const activityLogInput: ActivityInputCalendarEventCreated = {
-      triggeredBy: agentInfo.userID,
+      triggeredBy: actorContext.actorID,
       calendar: calendar,
       calendarEvent: calendarEvent,
     };
@@ -275,8 +277,8 @@ export class CalendarService {
           space: spaceID,
         },
         {
-          id: agentInfo.userID,
-          email: agentInfo.email,
+          id: actorContext.actorID,
+          email: actorContext.actorID,
         }
       );
     }

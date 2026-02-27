@@ -1,9 +1,9 @@
 import { Test, TestingModule } from '@nestjs/testing';
-import { defaultMockerFactory } from '@test/utils';
 import { MockConfigService } from '@test/mocks';
+import { defaultMockerFactory } from '@test/utils';
+import { WingbackContractPayload } from './types';
 import { WingbackWebhookController } from './wingback.webhook.controller';
 import { WingbackWebhookService } from './wingback.webhook.service';
-import { WingbackContractPayload } from './types';
 
 describe('WingbackWebhookController', () => {
   let controller: WingbackWebhookController;

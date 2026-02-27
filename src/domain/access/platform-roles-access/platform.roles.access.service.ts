@@ -1,3 +1,6 @@
+import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import { RoleName } from '@common/enums/role.name';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import {
   Inject,
   Injectable,
@@ -6,9 +9,6 @@ import {
 } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IPlatformAccessRole } from './platform.roles.access.role.interface';
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
-import { RoleName } from '@common/enums/role.name';
 
 @Injectable()
 export class PlatformRolesAccessService {

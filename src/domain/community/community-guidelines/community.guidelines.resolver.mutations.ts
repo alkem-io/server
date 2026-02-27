@@ -1,13 +1,13 @@
-import { Resolver, Args, Mutation } from '@nestjs/graphql';
-import { CurrentUser, Profiling } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
+import { CurrentActor, Profiling } from '@src/common/decorators';
 import { ICommunityGuidelines } from './community.guidelines.interface';
 import { CommunityGuidelinesService } from './community.guidelines.service';
+import { RemoveCommunityGuidelinesContentInput } from './dto/community.guidelines.dto.remove.content';
 import { UpdateCommunityGuidelinesEntityInput } from './dto/community.guidelines.dto.update.entity';
-import { RemoveCommunityGuidelinesContentInput as RemoveCommunityGuidelinesContentInput } from './dto/community.guidelines.dto.remove.content';
-import { InstrumentResolver } from '@src/apm/decorators';
 
 @InstrumentResolver()
 @Resolver()
@@ -22,7 +22,7 @@ export class CommunityGuidelinesResolverMutations {
   })
   @Profiling.api
   async updateCommunityGuidelines(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('communityGuidelinesData')
     communityGuidelinesData: UpdateCommunityGuidelinesEntityInput
   ): Promise<ICommunityGuidelines> {
@@ -31,7 +31,7 @@ export class CommunityGuidelinesResolverMutations {
         communityGuidelinesData.communityGuidelinesID
       );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       communityGuidelines.authorization,
       AuthorizationPrivilege.UPDATE,
       `updateCommunityGuidelines: ${communityGuidelines.id}`
@@ -48,7 +48,7 @@ export class CommunityGuidelinesResolverMutations {
   })
   @Profiling.api
   async removeCommunityGuidelinesContent(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('communityGuidelinesData')
     communityGuidelinesData: RemoveCommunityGuidelinesContentInput
   ): Promise<ICommunityGuidelines> {
@@ -57,7 +57,7 @@ export class CommunityGuidelinesResolverMutations {
         communityGuidelinesData.communityGuidelinesID
       );
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       communityGuidelines.authorization,
       AuthorizationPrivilege.UPDATE,
       `removeCommunityGuidelinesContent: ${communityGuidelines.id}`

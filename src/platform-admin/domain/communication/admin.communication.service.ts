@@ -1,23 +1,23 @@
+import { LogContext } from '@common/enums';
+import { RoleName } from '@common/enums/role.name';
+import { ValidationException } from '@common/exceptions';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { CommunicationService } from '@domain/communication/communication/communication.service';
+import { ConversationService } from '@domain/communication/conversation/conversation.service';
+import { IRoom } from '@domain/communication/room/room.interface';
+import { CommunityService } from '@domain/community/community/community.service';
+import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { CommunicationAdminMembershipInput } from './dto';
-import { LogContext } from '@common/enums';
-import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { CommunicationAdminMembershipResult } from './dto/admin.communication.dto.membership.result';
-import { CommunityService } from '@domain/community/community/community.service';
-import { CommunicationService } from '@domain/communication/communication/communication.service';
-import { CommunicationAdminRoomMembershipResult } from './dto/admin.communication.dto.room.result';
-import { IUser } from '@domain/community/user/user.interface';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
-import { CommunicationAdminOrphanedUsageResult } from './dto/admin.communication.dto.orphaned.usage.result';
-import { CommunicationAdminRoomResult } from './dto/admin.communication.dto.orphaned.room.result';
-import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
+import { CommunicationAdminMembershipResult } from './dto/admin.communication.dto.membership.result';
 import { CommunicationAdminMigrateRoomsResult } from './dto/admin.communication.dto.migrate.rooms.result';
-import { ValidationException } from '@common/exceptions';
-import { RoleName } from '@common/enums/role.name';
-import { IRoom } from '@domain/communication/room/room.interface';
-import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { ConversationService } from '@domain/communication/conversation/conversation.service';
+import { CommunicationAdminRoomResult } from './dto/admin.communication.dto.orphaned.room.result';
+import { CommunicationAdminOrphanedUsageResult } from './dto/admin.communication.dto.orphaned.usage.result';
+import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
+import { CommunicationAdminRoomMembershipResult } from './dto/admin.communication.dto.room.result';
 
 @Injectable()
 export class AdminCommunicationService {
@@ -79,24 +79,21 @@ export class AdminCommunicationService {
     result.roomID = room.id;
     // Use getRoomMembers for efficient membership-only lookup (no message history)
     result.members = await this.communicationAdapter.getRoomMembers(room.id);
-    // check which ones are missing - compare using agent.id (actorId)
+    // check which ones are missing - compare using agent.id (actorID)
     for (const communityMember of communityMembers) {
-      const memberActorId = communityMember.agent?.id;
-      if (!memberActorId) {
-        continue; // skip members without agent
-      }
+      const memberActorID = communityMember.id;
       const inCommunicationRoom = result.members.find(
-        roomMember => roomMember === memberActorId
+        roomMember => roomMember === memberActorID
       );
       if (!inCommunicationRoom) {
-        result.missingMembers.push(memberActorId);
+        result.missingMembers.push(memberActorID);
       }
     }
 
-    // check which ones are extra - compare using agent.id (actorId)
+    // check which ones are extra - compare using entity id (which IS the actorID)
     for (const roomMember of result.members) {
       const inCommunity = communityMembers.find(
-        communityMember => communityMember.agent?.id === roomMember
+        communityMember => communityMember.id === roomMember
       );
       if (!inCommunity) {
         result.extraMembers.push(roomMember);
@@ -129,13 +126,9 @@ export class AdminCommunicationService {
       RoleName.MEMBER
     );
     for (const communityMember of communityMembers) {
-      const memberActorId = communityMember.agent?.id;
-      if (!memberActorId) {
-        continue; // skip members without agent
-      }
       await this.communicationService.addContributorToCommunications(
         communication,
-        memberActorId
+        communityMember.id
       );
     }
     return true;

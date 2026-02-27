@@ -1,10 +1,10 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
-import { ValidationException } from '@common/exceptions';
 import { LogContext } from '@common/enums/logging.context';
+import { ValidationException } from '@common/exceptions';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { groupCredentialsByEntity } from '@services/api/roles/util/group.credentials.by.entity';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class UserSettingsHomeSpaceValidationService {
@@ -20,13 +20,13 @@ export class UserSettingsHomeSpaceValidationService {
    */
   async validateSpaceAccess(
     spaceID: string,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<void> {
     // First verify space exists
     await this.spaceLookupService.getSpaceOrFail(spaceID);
 
     // Check user has credentials for this space
-    const credentialMap = groupCredentialsByEntity(agentInfo.credentials);
+    const credentialMap = groupCredentialsByEntity(actorContext.credentials);
     const userSpaces = credentialMap.get('spaces');
 
     if (!userSpaces || !userSpaces.has(spaceID)) {
@@ -44,14 +44,14 @@ export class UserSettingsHomeSpaceValidationService {
    */
   async isHomeSpaceValid(
     spaceID: string | null | undefined,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<boolean> {
     if (!spaceID) {
       return false;
     }
 
     try {
-      await this.validateSpaceAccess(spaceID, agentInfo);
+      await this.validateSpaceAccess(spaceID, actorContext);
       return true;
     } catch {
       return false;

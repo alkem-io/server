@@ -1,8 +1,8 @@
+import { BaseException } from '@common/exceptions/base.exception';
 import { ArgumentsHost, Catch, Inject, LoggerService } from '@nestjs/common';
 import { GqlExceptionFilter } from '@nestjs/graphql';
 import { GraphQLError } from 'graphql';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { BaseException } from '@common/exceptions/base.exception';
 
 @Catch(GraphQLError)
 export class GraphqlExceptionFilter implements GqlExceptionFilter {
@@ -15,7 +15,7 @@ export class GraphqlExceptionFilter implements GqlExceptionFilter {
     const httpArguments = host.switchToHttp();
     const ctx = httpArguments.getNext<IGraphQLContext>();
     const userID =
-      exception.details?.userId ?? ctx.req.user.userID ?? 'unknown';
+      exception.details?.userId ?? ctx.req.user.actorID ?? 'unknown';
     exception.details = {
       ...exception.details,
       userId: userID,

@@ -1,33 +1,33 @@
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IAgent } from '@domain/agent/agent';
-import { IUser } from '@domain/community/user/user.interface';
-import { Inject, LoggerService } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { AuthenticationType } from '@common/enums/authentication.type';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { UserService } from './user.service';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
-import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
-import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
 import {
-  AgentLoaderCreator,
+  ActorLoaderCreator,
   AuthorizationLoaderCreator,
   ProfileLoaderCreator,
   UserSettingsLoaderCreator,
 } from '@core/dataloader/creators';
-import { ILoader } from '@core/dataloader/loader.interface';
+import { UserStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/user.storage.aggregator.loader.creator';
 import { Loader } from '@core/dataloader/decorators';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { IUser } from '@domain/community/user/user.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { User } from './user.entity';
-import { AuthenticationType } from '@common/enums/authentication.type';
-import { UserAuthenticationResult } from './dto/roles.dto.authentication.result';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Inject, LoggerService } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
-import { IUserSettings } from '../user-settings/user.settings.interface';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IUserSettings } from '../user-settings/user.settings.interface';
+import { UserAuthenticationResult } from './dto/roles.dto.authentication.result';
+import { User } from './user.entity';
+import { UserService } from './user.service';
 
 @InstrumentResolver()
 @Resolver(() => IUser)
@@ -55,15 +55,15 @@ export class UserResolverFields {
     return loader.load(user.id);
   }
 
-  @ResolveField('agent', () => IAgent, {
+  @ResolveField('actor', () => IActor, {
     nullable: false,
-    description: 'The Agent representing this User.',
+    description: 'The Actor representing this User.',
   })
   async agent(
     @Parent() user: User,
-    @Loader(AgentLoaderCreator, { parentClassRef: User })
-    loader: ILoader<IAgent>
-  ): Promise<IAgent> {
+    @Loader(ActorLoaderCreator, { parentClassRef: User })
+    loader: ILoader<IActor>
+  ): Promise<IActor> {
     return loader.load(user.id);
   }
 
@@ -85,12 +85,12 @@ export class UserResolverFields {
   })
   async email(
     @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<string | 'not accessible'> {
     if (
       await this.isAccessGranted(
         user,
-        agentInfo,
+        actorContext,
         AuthorizationPrivilege.READ_USER_PII
       )
     ) {
@@ -105,12 +105,12 @@ export class UserResolverFields {
   })
   async phone(
     @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<string | null | 'not accessible'> {
     if (
       await this.isAccessGranted(
         user,
-        agentInfo,
+        actorContext,
         AuthorizationPrivilege.READ_USER_PII
       )
     ) {
@@ -125,13 +125,13 @@ export class UserResolverFields {
   })
   async account(
     @Parent() user: User,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IAccount | undefined> {
     const accountVisible =
-      user.id === agentInfo.userID || // user can see their own account
+      user.id === actorContext.actorID || // user can see their own account
       (await this.isAccessGranted(
         user,
-        agentInfo,
+        actorContext,
         AuthorizationPrivilege.READ_USER_PII
       ));
     if (accountVisible) {
@@ -193,11 +193,11 @@ export class UserResolverFields {
   })
   async authentication(
     @Parent() user: IUser,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<UserAuthenticationResult> {
-    const isCurrentUser = user.id === agentInfo.userID;
+    const isCurrentActor = user.id === actorContext.actorID;
     const platformAccessGranted = this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.PLATFORM_ADMIN
     );
@@ -206,7 +206,7 @@ export class UserResolverFields {
       createdAt: undefined,
       authenticatedAt: undefined,
     };
-    if (isCurrentUser || platformAccessGranted) {
+    if (isCurrentActor || platformAccessGranted) {
       const identity = await this.kratosService.getIdentityByEmail(user.email);
       if (identity) {
         result.methods =
@@ -222,30 +222,35 @@ export class UserResolverFields {
 
   private async isAccessGranted(
     user: IUser,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     privilege: AuthorizationPrivilege
   ): Promise<boolean> {
-    // needs to be loaded if you are not going through the orm layer
-    // e.g. pagination is going around the orm layer
-    const { authorization } = await this.userService.getUserOrFail(user.id, {
-      relations: { authorization: true },
-    });
+    // Use the already-loaded authorization when available (eager actor relation).
+    // Only reload when the entity came from a path that skipped eager loading
+    // (e.g. QueryBuilder-based pagination).
+    let authorization = user.authorization;
+    if (!authorization) {
+      const loaded = await this.userService.getUserByIdOrFail(user.id, {
+        relations: { actor: true },
+      });
+      authorization = loaded.authorization;
+    }
     const accessGranted = this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       authorization,
       privilege
     );
     if (!accessGranted) {
       // Check if the user has a particular credential, which signals that it should be able to access the user
       // todo: remove later, this is code to track down a particular race condition: https://github.com/alkem-io/notifications/issues/283
-      const hasGlobalAdminCredential = agentInfo.credentials.some(
+      const hasGlobalAdminCredential = actorContext.credentials.some(
         credential =>
           credential.type === AuthorizationCredential.GLOBAL_COMMUNITY_READ ||
           credential.type === AuthorizationCredential.GLOBAL_SUPPORT
       );
       if (hasGlobalAdminCredential) {
         this.logger.error(
-          `Agent: ${agentInfo.email} is not authorized to access user: ${
+          `Agent: ${actorContext.actorID} is not authorized to access user: ${
             user.email
           }: authorization policy of user: ${JSON.stringify(authorization)}`
         );

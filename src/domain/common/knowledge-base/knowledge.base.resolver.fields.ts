@@ -1,15 +1,15 @@
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { IProfile } from '@domain/common/profile/profile.interface';
-import { IKnowledgeBase } from './knowledge.base.interface';
-import { Loader } from '@core/dataloader/decorators';
-import { KnowledgeBase } from './knowledge.base.entity';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   KnowledgeBaseCalloutsSetLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
+import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { KnowledgeBase } from './knowledge.base.entity';
+import { IKnowledgeBase } from './knowledge.base.interface';
 
 @Resolver(() => IKnowledgeBase)
 export class KnowledgeBaseResolverFields {

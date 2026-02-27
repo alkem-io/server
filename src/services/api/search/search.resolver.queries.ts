@@ -1,10 +1,10 @@
-import { Args, Resolver, Query } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { Args, Query, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { SearchService } from './search.service';
+import { CurrentActor } from '@src/common/decorators';
 import { SearchInput } from './dto/inputs';
 import { ISearchResults } from './dto/results';
+import { SearchService } from './search.service';
 
 @InstrumentResolver()
 @Resolver()
@@ -16,9 +16,9 @@ export class SearchResolverQueries {
     description: 'Search the platform for terms supplied',
   })
   async search(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('searchData') searchData: SearchInput
   ): Promise<ISearchResults> {
-    return this.searchService.search(searchData, agentInfo);
+    return this.searchService.search(searchData, actorContext);
   }
 }

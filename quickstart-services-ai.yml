@@ -209,8 +209,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oidc_service
-    image: docker.io/alkemio/oidc-service:v0.7.1
-    platform: linux/amd64
+    image: docker.io/alkemio/oidc-service:v0.7.3
     depends_on:
       - hydra
       - kratos
@@ -240,6 +239,7 @@ services:
     container_name: alkemio_dev_oathkeeper
     image: oryd/oathkeeper:v0.38.19-beta.1
     restart: always
+    platform: linux/amd64
     depends_on:
       - kratos
     ports:
@@ -258,6 +258,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_kratos_mailslurper
     image: oryd/mailslurper:latest-smtps
+    platform: linux/amd64
     restart: always
     ports:
       - 4436
@@ -326,6 +327,7 @@ services:
     hostname: synapse-admin
     image: awesometechnologies/synapse-admin:0.8.1
     restart: always
+    platform: linux/amd64
     networks:
       - alkemio_dev_net
     ports:
@@ -388,7 +390,7 @@ services:
       - SERVICE_ACCOUNT_USERNAME
       - SERVICE_ACCOUNT_PASSWORD
       - WAIT_HOSTS=host.docker.internal:3000
-      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
       - WAIT_HOST_CONNECT_TIMEOUT=30
       - EMAIL_FROM
@@ -403,8 +405,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter-go:v0.8.4-mapping8
-    platform: linux/amd64
+    image: alkemio/matrix-adapter-go:v0.8.4.1-mapping
     depends_on:
       - rabbitmq
     environment:
@@ -421,21 +422,22 @@ services:
       - LOGGING_LEVEL_CONSOLE=debug
       - ENVIRONMENT=dev
       - WAIT_HOSTS=host.docker.internal:3000
-      - WAIT_HOSTS_TIMEOUT=300
+      - WAIT_TIMEOUT=300
       - WAIT_SLEEP_INTERVAL=30
       - WAIT_HOST_CONNECT_TIMEOUT=30
+      - WAIT_COMMAND=/app/matrix-adapter
       - DATABASE_HOST
       - DATABASE_PORT
       - DATABASE_USERNAME
       - DATABASE_PASSWORD
       - DATABASE_NAME=alkemio
-      - ACTOR_ID_MAPPER_ENABLED=true
+      - ACTOR_ID_MAPPER_ENABLED=false
     restart: always
     networks:
       - alkemio_dev_net
     ports:
       - 8280
-    command: sh -c "/wait && /app/matrix-adapter"
+    entrypoint: ["/wait"]
 
   redis:
     extra_hosts:
@@ -817,3 +819,26 @@ services:
       - VECTOR_DB_PORT
       - VECTOR_DB_HOST
       - VECTOR_DB_CREDENTIALS
+
+  webhook-gateway:
+    container_name: alkemio_dev_webhook_gateway
+    hostname: webhook-gateway
+    image: alkemio/webhook-gateway:v0.1.0
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - PORT=8080
+      - LOG_LEVEL=info
+      - LOG_FORMAT=json
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
+      - PLATFORM_URL=http://host.docker.internal:4000
+      - MAINTENANCE_MODE=false
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 8080

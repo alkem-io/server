@@ -1,26 +1,26 @@
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
-import { Injectable } from '@nestjs/common';
-import { InjectRepository } from '@nestjs/typeorm';
+import { LogContext, ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { SearchVisibility } from '@common/enums/search.visibility';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { VisualType } from '@common/enums/visual.type';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { IInnovationHub, InnovationHub, InnovationHubType } from './types';
-import { CreateInnovationHubInput, UpdateInnovationHubInput } from './dto';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { SearchVisibility } from '@common/enums/search.visibility';
+import { ProfileService } from '@domain/common/profile/profile.service';
 import { IAccount } from '@domain/space/account/account.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import { CreateInnovationHubInput, UpdateInnovationHubInput } from './dto';
+import { IInnovationHub, InnovationHub, InnovationHubType } from './types';
 
 @Injectable()
 export class InnovationHubService {
@@ -334,7 +334,7 @@ export class InnovationHubService {
     return true;
   }
 
-  public async getProvider(innovationHubID: string): Promise<IContributor> {
+  public async getProvider(innovationHubID: string): Promise<IActor> {
     const innovationHub = await this.innovationHubRepository.findOne({
       where: { id: innovationHubID },
       relations: {

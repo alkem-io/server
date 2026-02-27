@@ -2,9 +2,9 @@ import {
   getDeprecationDirective,
   parseDeprecationReason,
 } from '../deprecation/parser';
-import { DiffContext, pushEntry, IndexedSchema } from './diff-core';
+import { ChangeType, ElementType } from '../model';
 import { unionKeys } from './cleanup';
-import { ElementType, ChangeType } from '../model';
+import { DiffContext, IndexedSchema, pushEntry } from './diff-core';
 
 export function diffEnums(
   oldIdx: IndexedSchema,

@@ -1,30 +1,32 @@
-import { UseGuards } from '@nestjs/common';
-import { Resolver } from '@nestjs/graphql';
-import { Parent, ResolveField } from '@nestjs/graphql';
-import { ApplicationService } from './application.service';
 import { AuthorizationPrivilege } from '@common/enums';
-import { Application, IApplication } from '@domain/access/application';
 import { GraphqlGuard } from '@core/authorization';
-import { AuthorizationAgentPrivilege, Profiling } from '@src/common/decorators';
+import { Application, IApplication } from '@domain/access/application';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { IQuestion } from '@domain/common/question/question.interface';
-import { IContributor } from '../../community/contributor/contributor.interface';
+import { UseGuards } from '@nestjs/common';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import {
+  AuthorizationActorHasPrivilege,
+  Profiling,
+} from '@src/common/decorators';
+import { ApplicationService } from './application.service';
 
 @Resolver(() => IApplication)
 export class ApplicationResolverFields {
   constructor(private applicationService: ApplicationService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('contributor', () => IContributor, {
+  @ResolveField('contributor', () => IActor, {
     nullable: false,
     description: 'The User for this Application.',
   })
   @Profiling.api
-  async contributor(@Parent() application: Application): Promise<IContributor> {
+  async contributor(@Parent() application: Application): Promise<IActor> {
     return await this.applicationService.getContributor(application.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('questions', () => [IQuestion], {
     nullable: false,

@@ -7,6 +7,17 @@ export const VISUAL_ALLOWED_TYPES = [
   'image/jpg',
   'image/svg+xml',
   'image/webp',
+  'image/gif',
+  'image/avif',
+  'image/heic',
+  'image/heif',
+] as const;
+
+export const MEDIA_GALLERY_VIDEO_ALLOWED_TYPES = [
+  'video/mp4',
+  'video/webm',
+  'video/ogg',
+  'video/quicktime',
 ] as const;
 
 // We still have some of these copied in the client.
@@ -52,6 +63,22 @@ export const DEFAULT_VISUAL_CONSTRAINTS = {
     aspectRatio: 10,
     allowedTypes: VISUAL_ALLOWED_TYPES,
   },
+  [VisualType.MEDIA_GALLERY_IMAGE]: {
+    minWidth: 1,
+    maxWidth: 8000,
+    minHeight: 1,
+    maxHeight: 8000,
+    aspectRatio: 1,
+    allowedTypes: VISUAL_ALLOWED_TYPES,
+  },
+  [VisualType.MEDIA_GALLERY_VIDEO]: {
+    minWidth: 1,
+    maxWidth: 8000,
+    minHeight: 1,
+    maxHeight: 8000,
+    aspectRatio: 1,
+    allowedTypes: MEDIA_GALLERY_VIDEO_ALLOWED_TYPES,
+  },
 } as const;
 
 @ObjectType('VisualConstraints')
@@ -84,5 +111,5 @@ export class VisualConstraints {
   @Field(() => [String], {
     description: 'Allowed file types.',
   })
-  allowedTypes!: typeof VISUAL_ALLOWED_TYPES;
+  allowedTypes!: readonly string[];
 }

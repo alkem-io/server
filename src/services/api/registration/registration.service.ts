@@ -1,31 +1,31 @@
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { UserService } from '@domain/community/user/user.service';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { IUser } from '@domain/community/user/user.interface';
 import { LogContext } from '@common/enums/logging.context';
+import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
+import { RoleName } from '@common/enums/role.name';
+import { RelationshipNotFoundException } from '@common/exceptions';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
 import { getEmailDomain } from '@common/utils';
-import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
-import { IInvitation } from '@domain/access/invitation/invitation.interface';
-import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
-import { CreateInvitationInput } from '@domain/access/invitation/dto/invitation.dto.create';
-import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
-import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { KratosSessionData } from '@core/authentication/kratos.session';
 import { ApplicationService } from '@domain/access/application/application.service';
+import { CreateInvitationInput } from '@domain/access/invitation/dto/invitation.dto.create';
+import { IInvitation } from '@domain/access/invitation/invitation.interface';
+import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { AccountService } from '@domain/space/account/account.service';
-import { IOrganization } from '@domain/community/organization';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { RoleName } from '@common/enums/role.name';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IOrganization } from '@domain/community/organization';
 import { OrganizationService } from '@domain/community/organization/organization.service';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { DeleteUserInput } from '@domain/community/user/dto/user.dto.delete';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
+import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
-import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { Inject, LoggerService } from '@nestjs/common';
 import { NotificationInputPlatformUserRegistered } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.registered';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 export class RegistrationService {
   constructor(
@@ -45,25 +45,27 @@ export class RegistrationService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  async registerNewUser(agentInfo: AgentInfo): Promise<IUser> {
-    if (!agentInfo.emailVerified) {
+  async registerNewUser(kratosData: KratosSessionData): Promise<IUser> {
+    if (!kratosData.emailVerified) {
       throw new UserNotVerifiedException(
-        `User '${agentInfo.email}' not verified`,
+        `User '${kratosData.email}' not verified`,
         LogContext.COMMUNITY
       );
     }
 
-    const { user, isNew } =
-      await this.userService.createOrLinkUserFromAgentInfo(agentInfo);
-
-    if (!isNew) {
-      // User was linked - no finalization needed, they already have credentials
-      this.logger.verbose?.(
-        `Existing user ${user.id} linked to authentication ID`,
-        LogContext.AUTH
-      );
-      return user;
-    }
+    const user = await this.userService.createUser(
+      {
+        email: kratosData.email,
+        firstName: kratosData.firstName ?? '',
+        lastName: kratosData.lastName ?? '',
+        profileData: {
+          displayName:
+            `${kratosData.firstName ?? ''} ${kratosData.lastName ?? ''}`.trim() ||
+            kratosData.email.split('@')[0],
+        },
+      },
+      kratosData
+    );
 
     // New user - finalize registration
     await this.assignUserToOrganizationByDomain(user);
@@ -172,7 +174,7 @@ export class RegistrationService {
       return false;
     }
 
-    await this.roleSetService.assignUserToRole(
+    await this.roleSetService.assignActorToRole(
       org.roleSet,
       RoleName.ASSOCIATE,
       user.id
@@ -203,14 +205,14 @@ export class RegistrationService {
       }
 
       const invitationInput: CreateInvitationInput = {
-        invitedContributorID: user.id,
+        invitedActorID: user.id,
         roleSetID: roleSet.id,
         createdBy: platformInvitation.createdBy,
         extraRoles: platformInvitation.roleSetExtraRoles,
         invitedToParent: platformInvitation.roleSetInvitedToParent,
       };
       let invitation =
-        await this.roleSetService.createInvitationExistingContributor(
+        await this.roleSetService.createInvitationExistingActor(
           invitationInput
         );
       invitation.invitedToParent = platformInvitation.roleSetInvitedToParent;
@@ -238,7 +240,7 @@ export class RegistrationService {
     const userID = deleteData.ID;
 
     const invitations =
-      await this.invitationService.findInvitationsForContributor(userID);
+      await this.invitationService.findInvitationsForActor(userID);
     for (const invitation of invitations) {
       await this.invitationService.deleteInvitation({ ID: invitation.id });
     }
@@ -249,7 +251,7 @@ export class RegistrationService {
       await this.applicationService.deleteApplication({ ID: application.id });
     }
 
-    let user = await this.userService.getUserOrFail(userID);
+    let user = await this.userService.getUserByIdOrFail(userID);
     const account = await this.userService.getAccount(user);
 
     user = await this.userService.deleteUser(deleteData);
@@ -263,15 +265,13 @@ export class RegistrationService {
     const organizationID = deleteData.ID;
 
     const invitations =
-      await this.invitationService.findInvitationsForContributor(
-        organizationID
-      );
+      await this.invitationService.findInvitationsForActor(organizationID);
     for (const invitation of invitations) {
       await this.invitationService.deleteInvitation({ ID: invitation.id });
     }
 
     let organization =
-      await this.organizationLookupService.getOrganizationOrFail(
+      await this.organizationLookupService.getOrganizationByIdOrFail(
         organizationID
       );
     const account = await this.organizationService.getAccount(organization);

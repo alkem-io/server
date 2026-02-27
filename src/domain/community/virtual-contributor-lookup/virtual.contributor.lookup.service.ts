@@ -1,21 +1,24 @@
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { Inject, LoggerService } from '@nestjs/common';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { isUUID } from 'class-validator';
+import { ActorType, LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { CredentialsSearchInput, IAgent } from '@domain/agent';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { PaginationArgs } from '@core/pagination/pagination.args';
+import { getPaginationResults } from '@core/pagination/pagination.fn';
+import { RoleSetRoleWithParentCredentials } from '@domain/access/role-set/dto/role.set.dto.role.with.parent.credentials';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
+import { CredentialsSearchInput } from '@domain/actor/credential';
+import { ICredential } from '@domain/actor/credential/credential.interface';
+import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IAccount } from '@domain/space/account/account.interface';
-import { PaginationArgs } from '@core/pagination/pagination.args';
-import { RoleSetRoleWithParentCredentials } from '@domain/access/role-set/dto/role.set.dto.role.with.parent.credentials';
-import { IPaginatedType } from '@core/pagination/paginated.type';
-import { getPaginationResults } from '@core/pagination/pagination.fn';
+import { Inject, LoggerService } from '@nestjs/common';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { isUUID } from 'class-validator';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 
 export class VirtualContributorLookupService {
   constructor(
@@ -24,89 +27,58 @@ export class VirtualContributorLookupService {
     @InjectRepository(VirtualContributor)
     private virtualContributorRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private actorLookupService: ActorLookupService
   ) {}
 
-  public async getVirtualContributorAndAgent(
-    virtualID: string
-  ): Promise<{ virtualContributor: IVirtualContributor; agent: IAgent }> {
-    const virtualContributor = await this.getVirtualContributorOrFail(
+  // Note: VirtualContributor has credentials via the actor relation.
+  // This method returns both the virtualContributor and the actorID/credentials.
+  // Callers should prefer using virtualContributor.id and virtualContributor.credentials directly.
+  public async getVirtualContributorAndActor(virtualID: string): Promise<{
+    virtualContributor: IVirtualContributor;
+    actorID: string;
+    credentials: ICredential[];
+  }> {
+    const virtualContributor = await this.getVirtualContributorByIdOrFail(
       virtualID,
       {
-        relations: { agent: true },
+        relations: { actor: { credentials: true } },
       }
     );
 
-    if (!virtualContributor.agent) {
-      throw new EntityNotInitializedException(
-        `Virtual Contributor Agent not initialized: ${virtualID}`,
-        LogContext.AUTH
-      );
-    }
     return {
-      virtualContributor: virtualContributor,
-      agent: virtualContributor.agent,
+      virtualContributor,
+      actorID: virtualContributor.id,
+      credentials: virtualContributor.credentials || [],
     };
   }
 
-  async getVirtualContributorOrFail(
-    virtualContributorID: string,
-    options?: FindOneOptions<VirtualContributor>
-  ): Promise<IVirtualContributor> {
-    if (!isUUID(virtualContributorID)) {
-      throw new EntityNotFoundException(
-        `Unable to find VirtualContributor with ID: ${virtualContributorID}`,
-        LogContext.COMMUNITY
-      );
-    }
-
-    const virtualContributor: IVirtualContributor | null =
-      await this.entityManager.findOne(VirtualContributor, {
-        ...options,
-        where: { ...options?.where, id: virtualContributorID },
-      });
-    if (!virtualContributor)
-      throw new EntityNotFoundException(
-        'Unable to find VirtualContributor with ID',
-        LogContext.COMMUNITY,
-        { virtualContributorID }
-      );
-    return virtualContributor;
-  }
-
-  async getVirtualContributorByAgentId(
-    agentID: string,
+  async getVirtualContributorById(
+    vcId: string,
     options?: FindOneOptions<VirtualContributor>
   ): Promise<IVirtualContributor | null> {
-    const virtualContributor: IVirtualContributor | null =
-      await this.entityManager.findOne(VirtualContributor, {
-        ...options,
-        where: {
-          ...options?.where,
-          agent: {
-            id: agentID,
-          },
-        },
-        relations: {
-          agent: true,
-          ...options?.relations,
-        },
-      });
-    return virtualContributor;
+    if (!isUUID(vcId)) {
+      return null;
+    }
+    return this.entityManager.findOne(VirtualContributor, {
+      ...options,
+      where: { ...options?.where, id: vcId },
+    });
   }
 
-  async getVirtualContributorByAgentIdOrFail(
-    agentID: string,
+  async getVirtualContributorByIdOrFail(
+    vcId: string,
     options?: FindOneOptions<VirtualContributor>
   ): Promise<IVirtualContributor> {
-    const virtualContributor = await this.getVirtualContributorByAgentId(
-      agentID,
+    const virtualContributor = await this.getVirtualContributorById(
+      vcId,
       options
     );
     if (!virtualContributor) {
       throw new EntityNotFoundException(
-        `Unable to find VirtualContributor with agent ID: ${agentID}`,
-        LogContext.COMMUNITY
+        'VirtualContributor not found',
+        LogContext.COMMUNITY,
+        { vcId }
       );
     }
     return virtualContributor;
@@ -119,7 +91,10 @@ export class VirtualContributorLookupService {
     const virtualContributor: IVirtualContributor | null =
       await this.entityManager.findOne(VirtualContributor, {
         ...options,
-        where: { ...options?.where, nameID: virtualContributorNameID },
+        where: {
+          ...options?.where,
+          actor: { nameID: virtualContributorNameID },
+        },
       });
     if (!virtualContributor)
       throw new EntityNotFoundException(
@@ -130,15 +105,16 @@ export class VirtualContributorLookupService {
     return virtualContributor;
   }
 
+  // Credentials are accessed via the actor relation
   async virtualContributorsWithCredentials(
     credentialCriteria: CredentialsSearchInput,
     limit?: number
   ): Promise<IVirtualContributor[]> {
     const credResourceID = credentialCriteria.resourceID || '';
 
-    const vcContributors = await this.entityManager.find(VirtualContributor, {
+    return this.entityManager.find(VirtualContributor, {
       where: {
-        agent: {
+        actor: {
           credentials: {
             type: credentialCriteria.type,
             resourceID: credResourceID,
@@ -146,21 +122,17 @@ export class VirtualContributorLookupService {
         },
       },
       relations: {
-        agent: {
-          credentials: true,
-        },
+        actor: { credentials: true },
       },
       take: limit,
     });
-
-    return vcContributors;
   }
 
   public async getAccountOrFail(
     virtualContributorID: string
   ): Promise<IAccount | never> {
     const virtualContributorWithAccount =
-      await this.getVirtualContributorOrFail(virtualContributorID, {
+      await this.getVirtualContributorByIdOrFail(virtualContributorID, {
         relations: { account: true },
       });
     const account = virtualContributorWithAccount.account;
@@ -172,20 +144,25 @@ export class VirtualContributorLookupService {
     return account;
   }
 
+  // VirtualContributor IS an Actor - credentials are directly on the entity
   public async getPaginatedAvailableEntryRoleVCs(
     entryRoleCredentials: RoleSetRoleWithParentCredentials,
     paginationArgs: PaginationArgs
   ): Promise<IPaginatedType<IVirtualContributor>> {
-    const currentEntryRoleVirtualContributors =
-      await this.virtualContributorsWithCredentials(entryRoleCredentials.role);
+    const currentEntryRoleVCIds =
+      await this.actorLookupService.getActorIDsWithCredential(
+        entryRoleCredentials.role,
+        [ActorType.VIRTUAL_CONTRIBUTOR]
+      );
     const qb = this.virtualContributorRepository
       .createQueryBuilder('virtual_contributor')
-      .leftJoinAndSelect('virtual_contributor.authorization', 'authorization')
+      .leftJoinAndSelect('virtual_contributor.actor', 'actor')
+      .leftJoinAndSelect('actor.authorization', 'authorization')
       .select();
 
     if (entryRoleCredentials.parentRoleSetRole) {
-      qb.leftJoin('virtual_contributor.agent', 'agent')
-        .leftJoin('agent.credentials', 'credential')
+      // Credentials are on the actor relation
+      qb.leftJoin('actor.credentials', 'credential')
         .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
@@ -195,19 +172,55 @@ export class VirtualContributorLookupService {
         });
     }
 
-    if (currentEntryRoleVirtualContributors.length > 0) {
+    if (currentEntryRoleVCIds.length > 0) {
       const hasWhere =
         qb.expressionMap.wheres && qb.expressionMap.wheres.length > 0;
 
       qb[hasWhere ? 'andWhere' : 'where'](
         'NOT virtual_contributor.id IN (:...memberVirtualContributors)'
       ).setParameters({
-        memberVirtualContributors: currentEntryRoleVirtualContributors.map(
-          virtualContributor => virtualContributor.id
-        ),
+        memberVirtualContributors: currentEntryRoleVCIds,
       });
     }
 
     return getPaginationResults(qb, paginationArgs);
   }
+
+  /**
+   * Get the account ID for a virtual contributor without loading the full entity.
+   * Use when you only need the account ID.
+   */
+  async getVirtualContributorAccountIdOrFail(vcId: string): Promise<string> {
+    const vc = await this.getVirtualContributorById(vcId, {
+      relations: { account: true },
+      select: { id: true, account: { id: true } },
+    });
+    if (!vc) {
+      throw new EntityNotFoundException(
+        'VirtualContributor not found',
+        LogContext.COMMUNITY,
+        { vcId }
+      );
+    }
+    if (!vc.account) {
+      throw new EntityNotInitializedException(
+        'Virtual Contributor Account not initialized',
+        LogContext.AUTH,
+        { vcId }
+      );
+    }
+    return vc.account.id;
+  }
+
+  /**
+   * Get authorization policy for a virtual contributor without loading the full entity.
+   * Wraps ActorLookupService.getActorAuthorizationOrFail.
+   */
+  async getVirtualContributorAuthorizationOrFail(
+    vcId: string
+  ): Promise<IAuthorizationPolicy> {
+    return this.actorLookupService.getActorAuthorizationOrFail(vcId);
+  }
 }
+
+export { VirtualContributorLookupService as VirtualActorLookupService };

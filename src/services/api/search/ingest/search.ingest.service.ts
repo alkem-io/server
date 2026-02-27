@@ -1,35 +1,35 @@
 import { setTimeout } from 'node:timers/promises';
-import { EntityManager, FindManyOptions } from 'typeorm';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { InjectEntityManager } from '@nestjs/typeorm';
+import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
+import { LogContext } from '@common/enums';
+import { SpaceLevel } from '@common/enums/space.level';
+import { SpaceVisibility } from '@common/enums/space.visibility';
+import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
+import { isDefined } from '@common/utils';
+import { asyncMap } from '@common/utils/async.map';
+import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
+import { Memo } from '@domain/common/memo/memo.entity';
+import { Tagset } from '@domain/common/tagset';
+import { Organization } from '@domain/community/organization';
+import { User } from '@domain/community/user/user.entity';
+import { Space } from '@domain/space/space/space.entity';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import {
   ErrorCause,
   IndicesUpdateAliasesAction,
 } from '@elastic/elasticsearch/lib/api/types';
-import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
-import { Space } from '@domain/space/space/space.entity';
-import { Organization } from '@domain/community/organization';
-import { User } from '@domain/community/user/user.entity';
-import { SpaceVisibility } from '@common/enums/space.visibility';
-import { Tagset } from '@domain/common/tagset';
-import { LogContext } from '@common/enums';
-import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
-import { asyncMap } from '@common/utils/async.map';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { InjectEntityManager } from '@nestjs/typeorm';
 import { ElasticResponseError } from '@services/external/elasticsearch/types';
-import { SpaceLevel } from '@common/enums/space.level';
-import { getIndexPattern } from './get.index.pattern';
-import { SearchResultType } from '../search.result.type';
-import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { TaskService } from '@services/task';
 import { Task } from '@services/task/task.interface';
 import { AlkemioConfig } from '@src/types';
-import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
-import { isDefined } from '@common/utils';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { Memo } from '@domain/common/memo/memo.entity';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindManyOptions } from 'typeorm';
+import { SearchResultType } from '../search.result.type';
+import { getIndexPattern } from './get.index.pattern';
 
 const profileRelationOptions = {
   location: true,
@@ -783,10 +783,14 @@ export class SearchIngestService {
       .find<Organization>(Organization, {
         loadEagerRelations: false,
         relations: {
-          profile: profileRelationOptions,
+          actor: { profile: profileRelationOptions },
         },
         select: {
-          profile: profileSelectOptions,
+          id: true,
+          actor: {
+            id: true,
+            profile: profileSelectOptions,
+          },
         },
         skip: start,
         take: limit,
@@ -815,10 +819,14 @@ export class SearchIngestService {
         loadEagerRelations: false,
         where: { serviceProfile: false },
         relations: {
-          profile: profileRelationOptions,
+          actor: { profile: profileRelationOptions },
         },
         select: {
-          profile: profileSelectOptions,
+          id: true,
+          actor: {
+            id: true,
+            profile: profileSelectOptions,
+          },
         },
         skip: start,
         take: limit,
@@ -1328,8 +1336,7 @@ const extractTextFromWhiteboardContent = (content: string): string => {
       .filter(isExcalidrawTextElement)
       .map(x => x.originalText)
       .join(' ');
-    // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  } catch (error: any) {
+  } catch (_error: any) {
     return '';
   }
 };

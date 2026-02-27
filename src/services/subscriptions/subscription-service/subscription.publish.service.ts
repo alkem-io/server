@@ -1,32 +1,32 @@
-import { PubSubEngine } from 'graphql-subscriptions';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import {
-  SUBSCRIPTION_ACTIVITY_CREATED,
-  SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
-  SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
-  SUBSCRIPTION_ROOM_EVENT,
-  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
-  SUBSCRIPTION_CONVERSATION_EVENT,
-} from '@src/common/constants';
+import { LogContext } from '@common/enums';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { IActivity } from '@platform/activity';
-import { IMessage } from '@domain/communication/message/message.interface';
 import { MutationType } from '@common/enums/subscriptions';
+import { IMessage } from '@domain/communication/message/message.interface';
 import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
-import {
-  ActivityCreatedSubscriptionPayload,
-  RoomEventSubscriptionPayload,
-  VirtualContributorUpdatedSubscriptionPayload,
-  InAppNotificationCounterSubscriptionPayload,
-  ReadReceiptData,
-  ConversationEventSubscriptionPayload,
-} from './dto';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { LogContext } from '@common/enums';
-import { TypedPubSubEngine } from '@services/subscriptions/subscription-service/typed.pub.sub.engine';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { IActivity } from '@platform/activity';
 import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
+import { TypedPubSubEngine } from '@services/subscriptions/subscription-service/typed.pub.sub.engine';
+import {
+  SUBSCRIPTION_ACTIVITY_CREATED,
+  SUBSCRIPTION_CONVERSATION_EVENT,
+  SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
+  SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
+  SUBSCRIPTION_ROOM_EVENT,
+  SUBSCRIPTION_VIRTUAL_UPDATED,
+} from '@src/common/constants';
+import { PubSubEngine } from 'graphql-subscriptions';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import {
+  ActivityCreatedSubscriptionPayload,
+  ConversationEventSubscriptionPayload,
+  InAppNotificationCounterSubscriptionPayload,
+  ReadReceiptData,
+  RoomEventSubscriptionPayload,
+  VirtualContributorUpdatedSubscriptionPayload,
+} from './dto';
 
 @Injectable()
 export class SubscriptionPublishService {
@@ -35,7 +35,7 @@ export class SubscriptionPublishService {
     private activityCreatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_ROOM_EVENT)
     private roomEventsSubscription: PubSubEngine,
-    @Inject(SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED)
+    @Inject(SUBSCRIPTION_VIRTUAL_UPDATED)
     private virtualContributorUpdatedSubscription: PubSubEngine,
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED)
     private inAppNotificationReceivedSubscription: TypedPubSubEngine<IInAppNotification>,
@@ -114,7 +114,7 @@ export class SubscriptionPublishService {
     };
 
     this.logger.verbose?.(
-      `Publishing room receipt event: roomID=${room.id}, eventID=${payload.eventID}, actorId=${data.actorId}`,
+      `Publishing room receipt event: roomID=${room.id}, eventID=${payload.eventID}, actorID=${data.actorID}`,
       LogContext.SUBSCRIPTIONS
     );
 
@@ -133,7 +133,7 @@ export class SubscriptionPublishService {
     };
 
     this.virtualContributorUpdatedSubscription.publish(
-      SubscriptionType.VIRTUAL_CONTRIBUTOR_UPDATED,
+      SubscriptionType.VIRTUAL_UPDATED,
       payload
     );
 

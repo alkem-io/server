@@ -1,48 +1,48 @@
+import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { RoleName } from '@common/enums/role.name';
+import { ValidationException } from '@common/exceptions';
+import { PaginationInputOutOfBoundException } from '@common/exceptions/pagination/pagination.input.out.of.bounds.exception';
 import { GraphqlGuard } from '@core/authorization';
+import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
+import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
+import { ILoader } from '@core/dataloader/loader.interface';
+import { UserFilterInput } from '@core/filtering/input-types/user.filter.input';
+import { IPaginatedType } from '@core/pagination/paginated.type';
+import { PaginatedUsers } from '@core/pagination/paginated.user';
+import { PaginatedVirtualContributor } from '@core/pagination/paginated.virtual.contributor';
+import { PaginationArgs } from '@core/pagination/pagination.args';
+import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
+import { ILicense } from '@domain/common/license/license.interface';
+import { IOrganization } from '@domain/community/organization/organization.interface';
+import { IUser } from '@domain/community/user/user.interface';
+import { UserService } from '@domain/community/user/user.service';
+import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
+import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { UseGuards } from '@nestjs/common';
 import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationAgentPrivilege } from '@src/common/decorators';
-import { RoleSetService } from './role.set.service';
-import { IRoleSet } from './role.set.interface';
+import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
 import { IApplication } from '../application/application.interface';
-import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { UserFilterInput } from '@core/filtering/input-types/user.filter.input';
-import { PaginationArgs } from '@core/pagination/pagination.args';
-import { PaginatedUsers } from '@core/pagination/paginated.user';
-import { PaginationInputOutOfBoundException } from '@common/exceptions/pagination/pagination.input.out.of.bounds.exception';
-import { IUser } from '@domain/community/user/user.interface';
-import { RoleName } from '@common/enums/role.name';
-import { UserService } from '@domain/community/user/user.service';
-import { IOrganization } from '@domain/community/organization/organization.interface';
-import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IInvitation } from '../invitation/invitation.interface';
-import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
-import { RoleSetRoleWithParentCredentials } from './dto/role.set.dto.role.with.parent.credentials';
-import { ILicense } from '@domain/common/license/license.interface';
-import { RoleSet } from './role.set.entity';
-import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
-import { ILoader } from '@core/dataloader/loader.interface';
-import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import {
   IOrganizationsInRoles,
   IUsersInRoles,
   IVirtualContributorsInRoles,
 } from './dto/role.set.contributors.in.roles.interfaces';
-import { ValidationException } from '@common/exceptions';
-import { LogContext } from '@common/enums';
-import { IPaginatedType } from '@core/pagination/paginated.type';
-import { PaginatedVirtualContributor } from '@core/pagination/paginated.virtual.contributor';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { RoleSetRoleWithParentCredentials } from './dto/role.set.dto.role.with.parent.credentials';
+import { RoleSet } from './role.set.entity';
+import { IRoleSet } from './role.set.interface';
+import { RoleSetService } from './role.set.service';
 
 @Resolver(() => IRoleSet)
 export class RoleSetResolverFields {
   constructor(
     private roleSetService: RoleSetService,
     private userService: UserService,
-    private virtualContributorLookupService: VirtualContributorLookupService
+    private virtualActorLookupService: VirtualActorLookupService
   ) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('availableUsersForEntryRole', () => PaginatedUsers, {
     nullable: false,
@@ -88,7 +88,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField(
     'availableVirtualContributorsForEntryRole',
@@ -122,13 +122,13 @@ export class RoleSetResolverFields {
       parentRoleSetRole: parentRoleSetEntryRoleCredential,
     };
 
-    return this.virtualContributorLookupService.getPaginatedAvailableEntryRoleVCs(
+    return this.virtualActorLookupService.getPaginatedAvailableEntryRoleVCs(
       roleSetEntryRoleCredential,
       pagination
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('availableUsersForElevatedRole', () => PaginatedUsers, {
     nullable: false,
@@ -169,7 +169,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('usersInRole', () => [IUser], {
     nullable: false,
@@ -198,7 +198,7 @@ export class RoleSetResolverFields {
     return await this.roleSetService.getUsersWithRole(roleSet, role, limit);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('usersInRoles', () => [IUsersInRoles], {
     nullable: false,
@@ -231,7 +231,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('organizationsInRole', () => [IOrganization], {
     nullable: false,
@@ -246,7 +246,7 @@ export class RoleSetResolverFields {
     return await this.roleSetService.getOrganizationsWithRole(roleSet, role);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('organizationsInRoles', () => [IOrganizationsInRoles], {
     nullable: false,
@@ -269,7 +269,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('virtualContributorsInRole', () => [IVirtualContributor], {
     nullable: false,
@@ -287,7 +287,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField(
     'virtualContributorsInRoleInHierarchy',
@@ -309,7 +309,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField(
     'virtualContributorsInRoles',
@@ -337,7 +337,7 @@ export class RoleSetResolverFields {
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('invitations', () => [IInvitation], {
     nullable: false,
@@ -347,7 +347,7 @@ export class RoleSetResolverFields {
     return await this.roleSetService.getInvitations(roleSet);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('platformInvitations', () => [IPlatformInvitation], {
     nullable: false,
@@ -360,7 +360,7 @@ export class RoleSetResolverFields {
     return await this.roleSetService.getPlatformInvitations(roleSet);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('applications', () => [IApplication], {
     nullable: false,

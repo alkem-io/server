@@ -1,47 +1,47 @@
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { LogContext, ProfileType } from '@common/enums';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
+import { TemplateType } from '@common/enums/template.type';
+import { VisualType } from '@common/enums/visual.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { LogContext, ProfileType } from '@common/enums';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Template } from './template.entity';
-import { ITemplate } from './template.interface';
-import { CreateTemplateInput } from './dto/template.dto.create';
-import { UpdateTemplateInput } from './dto/template.dto.update';
-import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { VisualType } from '@common/enums/visual.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { ProfileService } from '@domain/common/profile/profile.service';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { TemplateType } from '@common/enums/template.type';
-import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
-import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
-import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
+import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
+import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
+import { ICollaboration } from '@domain/collaboration/collaboration';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
+import { ProfileService } from '@domain/common/profile/profile.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
-import { randomUUID } from 'crypto';
-import { ICollaboration } from '@domain/collaboration/collaboration';
-import { TemplateDefault } from '../template-default/template.default.entity';
-import { UpdateTemplateFromSpaceInput } from './dto/template.dto.update.from.space';
-import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
+import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
+import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
+import { ISpace } from '@domain/space/space/space.interface';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
-import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
-import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
+import { randomUUID } from 'crypto';
+import { merge } from 'lodash';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { ITemplateContentSpace } from '../template-content-space/template.content.space.interface';
 import { TemplateContentSpaceService } from '../template-content-space/template.content.space.service';
-import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
-import { ISpace } from '@domain/space/space/space.interface';
-import { CreateCalloutInput } from '@domain/collaboration/callout/dto';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
-import { merge } from 'lodash';
+import { TemplateDefault } from '../template-default/template.default.entity';
+import { CreateTemplateInput } from './dto/template.dto.create';
+import { UpdateTemplateInput } from './dto/template.dto.update';
+import { UpdateTemplateFromSpaceInput } from './dto/template.dto.update.from.space';
+import { Template } from './template.entity';
+import { ITemplate } from './template.interface';
 
 @Injectable()
 export class TemplateService {
@@ -289,7 +289,7 @@ export class TemplateService {
   public async updateTemplateFromSpace(
     templateInput: ITemplate,
     templateData: UpdateTemplateFromSpaceInput,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<ITemplate> {
     if (
       !templateInput.contentSpace ||
@@ -361,14 +361,14 @@ export class TemplateService {
     await this.updateTemplateContentSubspacesFromSpace(
       templateInput,
       sourceSpace.subspaces,
-      agentInfo
+      actorContext
     );
 
     templateInput.contentSpace = await this.updateTemplateContentSpaceFromSpace(
       sourceSpace,
       templateInput.contentSpace,
       true,
-      agentInfo.userID
+      actorContext.actorID
     );
 
     return await this.getTemplateOrFail(templateInput.id);
@@ -377,7 +377,7 @@ export class TemplateService {
   private async updateTemplateContentSubspacesFromSpace(
     templateInput: ITemplate,
     sourceSpaceSubspaces: ISpace[] | undefined,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<void> {
     const currentSubspaces = templateInput.contentSpace?.subspaces ?? [];
     const storageAggregator =
@@ -409,7 +409,7 @@ export class TemplateService {
               subspace.id
             ),
             storageAggregator,
-            agentInfo
+            actorContext
           );
         templateInput.contentSpace?.subspaces?.push(subspaceContent);
       }

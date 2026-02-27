@@ -1,5 +1,5 @@
-import { Field, ObjectType } from '@nestjs/graphql';
 import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
+import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('WhiteboardPreviewCoordinates')
 export abstract class IWhiteboardPreviewCoordinates {

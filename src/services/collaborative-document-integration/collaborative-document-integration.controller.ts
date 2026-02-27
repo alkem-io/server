@@ -1,4 +1,4 @@
-import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
+import { LogContext } from '@common/enums';
 import { Controller, Inject } from '@nestjs/common';
 import {
   Ctx,
@@ -8,18 +8,14 @@ import {
   Transport,
 } from '@nestjs/microservices';
 import { ack } from '@services/util';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { CollaborativeDocumentIntegrationService } from './collaborative-document-integration.service';
-import {
-  UserInfo,
-  CollaborativeDocumentMessagePattern,
-  CollaborativeDocumentEventPattern,
-} from './types';
 import {
   FetchInputData,
   InfoInputData,
+  MemoContributionsInputData,
   SaveInputData,
   WhoInputData,
-  MemoContributionsInputData,
 } from './inputs';
 import {
   FetchOutputData,
@@ -27,7 +23,10 @@ import {
   InfoOutputData,
   SaveOutputData,
 } from './outputs';
-import { LogContext } from '@common/enums';
+import {
+  CollaborativeDocumentEventPattern,
+  CollaborativeDocumentMessagePattern,
+} from './types';
 
 @Controller()
 export class CollaborativeDocumentIntegrationController {
@@ -53,15 +52,13 @@ export class CollaborativeDocumentIntegrationController {
   public async who(
     @Payload() data: WhoInputData,
     @Ctx() context: RmqContext
-  ): Promise<UserInfo> {
+  ): Promise<string> {
     this.logger.verbose?.(
       'Received WHO request',
       LogContext.COLLAB_DOCUMENT_INTEGRATION
     );
     ack(context);
-    return this.integrationService
-      .who(data)
-      .then(({ userID, email }) => ({ id: userID, email }));
+    return this.integrationService.who(data);
   }
 
   @MessagePattern(
