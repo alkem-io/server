@@ -429,7 +429,6 @@ export class UserService {
       );
     }
 
-    // TODO: give additional feedback?
     const accountHasResources =
       await this.accountLookupService.areResourcesInAccount(user.accountID);
     if (accountHasResources) {
@@ -442,28 +441,45 @@ export class UserService {
 
     await this.invalidateActorContextCache(user);
 
-    await this.profileService.deleteProfile(user.profile.id);
+    // All DB deletions in a single transaction so a partial failure
+    // does not leave the user in an inconsistent state.
+    await this.userRepository.manager.transaction(async () => {
+      await this.profileService.deleteProfile(user.profile.id);
 
-    // Note: Credentials are on Actor (which User extends), will be deleted via cascade
-    await this.authorizationPolicyService.delete(user.authorization);
+      // Note: Credentials are on Actor (which User extends), will be deleted via cascade
+      await this.authorizationPolicyService.delete(user.authorization!);
 
-    await this.storageAggregatorService.delete(user.storageAggregator.id);
+      await this.storageAggregatorService.delete(user.storageAggregator!.id);
 
-    await this.userSettingsService.deleteUserSettings(user.settings.id);
+      await this.userSettingsService.deleteUserSettings(user.settings!.id);
+
+      // Delete actor — cascades to delete the user row via FK (user.id → actor.id ON DELETE CASCADE).
+      // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+      await this.actorService.deleteActorById(id);
+    });
 
     // Note: Conversations belong to the platform Messaging.
     // User's conversation memberships are cleaned up via cascade.
-    // TODO: Consider deleting conversations where this user is the only member
 
-    if (deleteData.deleteIdentity) {
-      await this.kratosService.deleteIdentityByEmail(user.email);
+    // Kratos identity deletion — outside the DB transaction since it's
+    // an external system call. Uses authenticationID (the Kratos identity
+    // UUID) which is more reliable than email lookup. If authenticationID
+    // is absent the user was never linked to Kratos — skip silently.
+    if (deleteData.deleteIdentity && user.authenticationID) {
+      try {
+        await this.kratosService.deleteIdentityById(user.authenticationID);
+      } catch (error: any) {
+        this.logger.warn?.(
+          {
+            message: 'Failed to delete Kratos identity during user deletion',
+            userID: id,
+            authenticationID: user.authenticationID,
+            error: error?.message,
+          },
+          LogContext.AUTH
+        );
+      }
     }
-
-    // Delete actor — cascades to delete the user row via FK (user.id → actor.id ON DELETE CASCADE).
-    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
-    await this.actorService.deleteActorById(id);
-
-    // Note: Should we unregister the user from communications?
 
     // Restore id so callers get the deleted entity's id
     user.id = id;

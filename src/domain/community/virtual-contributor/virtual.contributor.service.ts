@@ -385,41 +385,44 @@ export class VirtualContributorService {
       );
     }
 
-    await this.profileService.deleteProfile(virtualContributor.profile.id);
+    // All DB deletions in a single transaction so a partial failure
+    // does not leave the VC in an inconsistent state.
+    await this.virtualContributorRepository.manager.transaction(async () => {
+      await this.profileService.deleteProfile(virtualContributor.profile.id);
 
-    if (virtualContributor.authorization) {
-      await this.authorizationPolicyService.delete(
-        virtualContributor.authorization
-      );
-    }
-
-    // Delete actor — cascades to delete the VC row via FK (virtual_contributor.id → actor.id ON DELETE CASCADE).
-    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
-    await this.actorService.deleteActorById(virtualContributorID);
-
-    virtualContributor.id = virtualContributorID;
-
-    if (virtualContributor.aiPersonaID) {
-      try {
-        await this.aiPersonaService.deleteAiPersona({
-          ID: virtualContributor.aiPersonaID,
-        });
-      } catch (error: any) {
-        this.logger.error(
-          {
-            message: 'Failed to delete external AI Persona.',
-            aiPersonaID: virtualContributor.aiPersonaID,
-            virtualContributorID,
-          },
-          error?.stack,
-          LogContext.AI_PERSONA
+      if (virtualContributor.authorization) {
+        await this.authorizationPolicyService.delete(
+          virtualContributor.authorization
         );
       }
-    }
 
-    await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
-    await this.deleteVCInvitations(virtualContributorID);
+      await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
+      await this.deleteVCInvitations(virtualContributorID);
 
+      if (virtualContributor.aiPersonaID) {
+        try {
+          await this.aiPersonaService.deleteAiPersona({
+            ID: virtualContributor.aiPersonaID,
+          });
+        } catch (error: any) {
+          this.logger.error(
+            {
+              message: 'Failed to delete AI Persona during VC deletion',
+              aiPersonaID: virtualContributor.aiPersonaID,
+              virtualContributorID,
+            },
+            error?.stack,
+            LogContext.AI_PERSONA
+          );
+        }
+      }
+
+      // Delete actor — cascades to delete the VC row via FK (virtual_contributor.id → actor.id ON DELETE CASCADE).
+      // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+      await this.actorService.deleteActorById(virtualContributorID);
+    });
+
+    virtualContributor.id = virtualContributorID;
     return virtualContributor;
   }
 
