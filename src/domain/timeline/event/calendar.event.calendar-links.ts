@@ -4,6 +4,8 @@ import { ILocation } from '@domain/common/location/location.interface';
 import { convertMarkdownToPlainText } from '@library/markdown';
 import { ICalendarEvent } from './event.interface';
 
+const MAX_DESCRIPTION_IN_URL_LENGTH = 1000;
+const MAX_DESCRIPTION_IN_ICS_LENGTH = 8000;
 export interface CalendarEventCalendarData {
   id: string;
   title: string;
@@ -29,7 +31,8 @@ export const generateCalendarUrls = (
   const encodedTitle = encodeURIComponent(event.title);
   const plainTextDescription = convertMarkdownToPlainText(
     event.description ?? ''
-  );
+  ).slice(0, MAX_DESCRIPTION_IN_URL_LENGTH);
+
   const encodedDescription = encodeURIComponent(plainTextDescription);
   const encodedLocation = encodeURIComponent(event.location ?? '');
   const dates = formatDatesForCalendar(event.startDate, event.endDate);
@@ -72,6 +75,10 @@ export const generateICS = (
   start: string,
   end: string
 ): string => {
+  const plainTextDescription = convertMarkdownToPlainText(
+    event.description ?? ''
+  ).slice(0, MAX_DESCRIPTION_IN_ICS_LENGTH);
+
   const lines = [
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
@@ -82,8 +89,8 @@ export const generateICS = (
     `DTSTART:${start}`,
     `DTEND:${end}`,
     `SUMMARY:${escapeIcsText(event.title)}`,
-    ...(event.description
-      ? [`DESCRIPTION:${escapeIcsText(event.description)}`]
+    ...(plainTextDescription.length > 0
+      ? [`DESCRIPTION:${escapeIcsText(plainTextDescription)}`]
       : []),
     ...(event.location ? [`LOCATION:${escapeIcsText(event.location)}`] : []),
     `URL:${escapeIcsText(event.url)}`,

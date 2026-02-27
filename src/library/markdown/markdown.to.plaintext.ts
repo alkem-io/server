@@ -16,7 +16,10 @@ export const convertMarkdownToPlainText = (markdown: string): string => {
     return '';
   }
 
-  const md = markdownIt();
+  // Enable html so that inline HTML tags (e.g. <br>, <strong>) in the
+  // markdown source are parsed as real elements and stripped by textContent,
+  // rather than escaped to visible &lt;br&gt; / &lt;strong&gt; literals.
+  const md = markdownIt({ html: true });
   const html = md.render(markdown);
 
   // Use JSDOM to properly parse HTML and extract text content
