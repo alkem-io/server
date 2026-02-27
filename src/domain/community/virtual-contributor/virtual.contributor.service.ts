@@ -94,7 +94,7 @@ export class VirtualContributorService {
     let virtualContributor: IVirtualContributor = VirtualContributor.create(
       virtualContributorData
     );
-    // nameID is a getter/setter delegating to actor, not a @Column on VirtualContributor,
+    // nameID is inherited from Actor (CTI), not a @Column on VirtualContributor,
     // so TypeORM's create() won't copy it from the input — set it explicitly.
     virtualContributor.nameID = virtualContributorData.nameID!;
 
@@ -182,9 +182,6 @@ export class VirtualContributorService {
         );
         virtualContributor.aiPersonaID = aiPersona.id;
 
-        // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-        // reliably set FK columns, so we pre-save Actor explicitly.
-        await mgr.save((virtualContributor as VirtualContributor).actor!);
         return await mgr.save(virtualContributor as VirtualContributor);
       });
 
@@ -256,7 +253,7 @@ export class VirtualContributorService {
 
   private async checkNameIdOrFail(nameID: string) {
     const virtualCount = await this.virtualContributorRepository.count({
-      where: { actor: { nameID: nameID } },
+      where: { nameID: nameID },
     });
     if (virtualCount >= 1)
       throw new ValidationException(
@@ -294,7 +291,7 @@ export class VirtualContributorService {
       virtualContributorData.ID,
       {
         relations: {
-          actor: { profile: true },
+          profile: true,
           knowledgeBase: {
             profile: true,
           },
@@ -375,7 +372,7 @@ export class VirtualContributorService {
       virtualContributorID,
       {
         relations: {
-          actor: { profile: true },
+          profile: true,
           knowledgeBase: true,
         },
       }
@@ -388,41 +385,44 @@ export class VirtualContributorService {
       );
     }
 
-    await this.profileService.deleteProfile(virtualContributor.profile.id);
+    // All DB deletions in a single transaction so a partial failure
+    // does not leave the VC in an inconsistent state.
+    await this.virtualContributorRepository.manager.transaction(async () => {
+      await this.profileService.deleteProfile(virtualContributor.profile.id);
 
-    if (virtualContributor.authorization) {
-      await this.authorizationPolicyService.delete(
-        virtualContributor.authorization
-      );
-    }
-
-    // Delete actor — cascades to delete the VC row via FK (virtual_contributor.id → actor.id ON DELETE CASCADE).
-    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
-    await this.actorService.deleteActorById(virtualContributorID);
-
-    virtualContributor.id = virtualContributorID;
-
-    if (virtualContributor.aiPersonaID) {
-      try {
-        await this.aiPersonaService.deleteAiPersona({
-          ID: virtualContributor.aiPersonaID,
-        });
-      } catch (error: any) {
-        this.logger.error(
-          {
-            message: 'Failed to delete external AI Persona.',
-            aiPersonaID: virtualContributor.aiPersonaID,
-            virtualContributorID,
-          },
-          error?.stack,
-          LogContext.AI_PERSONA
+      if (virtualContributor.authorization) {
+        await this.authorizationPolicyService.delete(
+          virtualContributor.authorization
         );
       }
-    }
 
-    await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
-    await this.deleteVCInvitations(virtualContributorID);
+      await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
+      await this.deleteVCInvitations(virtualContributorID);
 
+      if (virtualContributor.aiPersonaID) {
+        try {
+          await this.aiPersonaService.deleteAiPersona({
+            ID: virtualContributor.aiPersonaID,
+          });
+        } catch (error: any) {
+          this.logger.error(
+            {
+              message: 'Failed to delete AI Persona during VC deletion',
+              aiPersonaID: virtualContributor.aiPersonaID,
+              virtualContributorID,
+            },
+            error?.stack,
+            LogContext.AI_PERSONA
+          );
+        }
+      }
+
+      // Delete actor — cascades to delete the VC row via FK (virtual_contributor.id → actor.id ON DELETE CASCADE).
+      // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+      await this.actorService.deleteActorById(virtualContributorID);
+    });
+
+    virtualContributor.id = virtualContributorID;
     return virtualContributor;
   }
 
@@ -451,14 +451,14 @@ export class VirtualContributorService {
     return virtual;
   }
 
-  // Credentials are loaded via the actor relation.
+  // Loads credentials (inherited from Actor via CTI) on the VirtualContributor.
   async getVirtualContributorWithCredentials(
     virtualID: string
   ): Promise<IVirtualContributor> {
     const virtualContributor = await this.getVirtualContributorByIdOrFail(
       virtualID,
       {
-        relations: { actor: { credentials: true } },
+        relations: { credentials: true },
       }
     );
 
@@ -489,10 +489,8 @@ export class VirtualContributorService {
       virtualContributorID,
       {
         relations: {
-          actor: {
-            profile: {
-              storageBucket: true,
-            },
+          profile: {
+            storageBucket: true,
           },
         },
       }
@@ -570,8 +568,7 @@ export class VirtualContributorService {
     if (credentialsFilter) {
       virtualContributors = await this.virtualContributorRepository
         .createQueryBuilder('virtual_contributor')
-        .leftJoin('virtual_contributor.actor', 'actor')
-        .leftJoinAndSelect('actor.credentials', 'credential')
+        .leftJoinAndSelect('virtual_contributor.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -640,8 +637,7 @@ export class VirtualContributorService {
     const virtualContributorMatchesCount =
       await this.virtualContributorRepository
         .createQueryBuilder('virtual')
-        .leftJoin('virtual.actor', 'actor')
-        .leftJoinAndSelect('actor.credentials', 'credential')
+        .leftJoinAndSelect('virtual.credentials', 'credential')
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
         .setParameters({

@@ -36,7 +36,7 @@ export class AccountLicenseService {
   async applyLicensePolicy(accountID: string): Promise<ILicense[]> {
     const account = await this.accountService.getAccountOrFail(accountID, {
       relations: {
-        actor: { credentials: true },
+        credentials: true,
         spaces: true,
         license: {
           entitlements: true,

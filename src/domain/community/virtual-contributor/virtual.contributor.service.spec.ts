@@ -95,6 +95,10 @@ describe('VirtualContributorService', () => {
 
     service = module.get(VirtualContributorService);
     repository = module.get(getRepositoryToken(VirtualContributor));
+    // Add manager.transaction mock for transactional delete
+    (repository as any).manager = {
+      transaction: vi.fn(async (cb: any) => cb()),
+    };
     authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
     profileService = module.get(ProfileService) as any;
     _contributorService = module.get(ProfileAvatarService) as any;

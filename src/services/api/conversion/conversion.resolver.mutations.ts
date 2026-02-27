@@ -269,9 +269,7 @@ export class ConversionResolverMutations {
   ): Promise<IAuthorizationPolicy | never> {
     const subspace = await this.spaceService.getSpaceOrFail(subspaceID, {
       relations: {
-        parentSpace: {
-          actor: true,
-        },
+        parentSpace: true,
       },
     });
     if (!subspace.parentSpace || !subspace.parentSpace.authorization) {

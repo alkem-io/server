@@ -98,7 +98,7 @@ describe('SpaceLookupService', () => {
 
       await expect(
         service.getSpaceByNameIdOrFail('nonexistent')
-      ).rejects.toThrow('Unable to find L0 Space with nameID: nonexistent');
+      ).rejects.toThrow('L0 Space not found');
     });
   });
 

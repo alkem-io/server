@@ -97,14 +97,15 @@ export class UserLookupService {
   ): Promise<IUser> {
     const user: IUser | null = await this.entityManager.findOne(User, {
       where: {
-        actor: { nameID: userNameID },
+        nameID: userNameID,
       },
       ...options,
     });
     if (!user) {
       throw new EntityNotFoundException(
-        `User with nameId ${userNameID} not found`,
-        LogContext.COMMUNITY
+        'User not found',
+        LogContext.COMMUNITY,
+        { nameId: userNameID }
       );
     }
     return user;
@@ -149,33 +150,23 @@ export class UserLookupService {
     }
 
     // Build OR conditions for multiple credential criteria
-    // User has credentials via actor relation
+    // User extends Actor which has the credentials relationship directly
     const whereConditions = credentialCriteriaArray.map(criteria => ({
-      actor: {
-        credentials: {
-          type: criteria.type,
-          resourceID: criteria.resourceID || '',
-        },
+      credentials: {
+        type: criteria.type,
+        resourceID: criteria.resourceID || '',
       },
     }));
 
     const optionsRelations: FindOptionsRelations<User> | undefined =
       options?.relations as FindOptionsRelations<User> | undefined;
 
-    const actorSubRelations =
-      typeof optionsRelations?.actor === 'object'
-        ? optionsRelations.actor
-        : undefined;
-
     const findOptions: FindManyOptions<User> = {
       ...options,
       where: whereConditions,
       relations: {
         ...optionsRelations,
-        actor: {
-          credentials: true,
-          ...actorSubRelations,
-        },
+        credentials: true,
       },
       take: limit ?? options?.take,
     };
@@ -196,14 +187,14 @@ export class UserLookupService {
     );
   }
 
-  // Credentials are loaded via the actor relation
+  // Credentials are inherited from Actor (CTI) and loaded directly on User.
   public async getUsersWithCredentials(ids: string[]): Promise<IUser[]> {
     const users = await this.entityManager.find(User, {
       where: {
         id: In(ids),
       },
       relations: {
-        actor: { credentials: true },
+        credentials: true,
       },
     });
     return users;
@@ -213,7 +204,7 @@ export class UserLookupService {
     userId: string
   ): Promise<{ user: IUser; credentials: ICredential[] }> {
     const user = await this.getUserByIdOrFail(userId, {
-      relations: { actor: { credentials: true } },
+      relations: { credentials: true },
     });
 
     if (!user.credentials) {

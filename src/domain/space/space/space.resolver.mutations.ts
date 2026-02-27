@@ -217,7 +217,7 @@ export class SpaceResolverMutations {
     const level0Space = await this.spaceService.getSpaceOrFail(
       subspace.levelZeroSpaceID,
       {
-        relations: { actor: { credentials: true } },
+        relations: { credentials: true },
       }
     );
 
