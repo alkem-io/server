@@ -1,5 +1,6 @@
+import { CurrentActor } from '@common/decorators';
 import { RestEndpoint } from '@common/enums/rest.endpoint';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { RestGuard } from '@core/authorization/rest.guard';
 import {
   Controller,
@@ -26,18 +27,18 @@ export class CalendarEventIcsController {
   @UseFilters(CalendarEventIcsRedirectFilter)
   async downloadIcs(
     @Param('id', ParseUUIDPipe) id: string,
+    @CurrentActor() actorContext: ActorContext,
     @Req() req: Request,
     @Res() res: Response
   ): Promise<void> {
-    if (!req.user) {
+    if (!actorContext || !actorContext.actorID) {
       const returnUrl = req.originalUrl ?? req.url ?? '/';
       res.redirect(302, `/login?returnUrl=${encodeURIComponent(returnUrl)}`);
       return;
     }
 
-    const agentInfo = req.user as AgentInfo;
     const { filename, content } =
-      await this.calendarEventIcsService.generateIcs(id, agentInfo);
+      await this.calendarEventIcsService.generateIcs(id, actorContext);
 
     res.set({
       'Content-Type': 'text/calendar; charset=utf-8',

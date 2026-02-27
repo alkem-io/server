@@ -1,5 +1,5 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   CalendarEventCalendarData,
@@ -32,7 +32,7 @@ export class CalendarEventIcsService {
 
   async generateIcs(
     eventId: string,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<CalendarEventIcsResult> {
     const event = await this.calendarEventService.getCalendarEventOrFail(
       eventId,
@@ -40,7 +40,7 @@ export class CalendarEventIcsService {
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       event.authorization,
       AuthorizationPrivilege.READ,
       `ics download for calendar event`
@@ -79,7 +79,7 @@ export class CalendarEventIcsService {
     );
 
     this.logger.verbose?.(
-      `ICS generated for calendar event ${eventId} by user ${agentInfo.userID}`,
+      `ICS generated for calendar event ${eventId} by actor ${actorContext.actorID}`,
       LogContext.CALENDAR
     );
 
