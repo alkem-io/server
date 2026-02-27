@@ -7,6 +7,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { Actor } from './actor.entity';
+import { ActorFullResolverFields } from './actor.full.resolver.fields';
 import { ActorResolverFields } from './actor.resolver.fields';
 import { ActorResolverMutations } from './actor.resolver.mutations';
 import { ActorResolverQueries } from './actor.resolver.queries';
@@ -26,6 +27,7 @@ import { ActorAuthorizationService } from './actor.service.authorization';
   providers: [
     ActorService,
     ActorAuthorizationService,
+    ActorFullResolverFields,
     ActorResolverFields,
     ActorResolverQueries,
     ActorResolverMutations,

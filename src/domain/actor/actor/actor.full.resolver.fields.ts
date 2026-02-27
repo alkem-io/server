@@ -10,10 +10,10 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IProfile } from '@domain/common/profile';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { Actor } from './actor.entity';
-import { IActor } from './actor.interface';
+import { IActorFull } from './actor.interface';
 
-@Resolver(() => IActor)
-export class ActorResolverFields {
+@Resolver(() => IActorFull)
+export class ActorFullResolverFields {
   constructor(private credentialService: CredentialService) {}
 
   @ResolveField('profile', () => IProfile, {
