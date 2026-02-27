@@ -136,7 +136,7 @@
     "sharp": "^0.34.5",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "4.2.0",
-    "typeorm": "https://pkg.pr.new/antst/typeorm@659f9df",
+    "typeorm": "https://pkg.pr.new/antst/typeorm@4975be5",
     "winston": "^3.13.1",
     "xstate": "5.18.0",
     "yaml": "^2.4.5",
