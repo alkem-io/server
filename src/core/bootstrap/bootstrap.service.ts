@@ -577,6 +577,15 @@ export class BootstrapService {
         },
       });
 
+      // Apply authorization for the newly created VC via account auth reset
+      // (the earlier account auth reset in ensureOrganizationSingleton ran before
+      // this VC existed, so it was skipped)
+      const accountAuthorizations =
+        await this.accountAuthorizationService.applyAuthorizationPolicy(
+          account
+        );
+      await this.authorizationPolicyService.saveAll(accountAuthorizations);
+
       // Register the VC as the CHAT_GUIDANCE well-known VC
       await this.platformWellKnownVirtualContributorsService.setMapping(
         VirtualContributorWellKnown.CHAT_GUIDANCE,
