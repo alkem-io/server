@@ -58,13 +58,13 @@ describe('AccountLookupService', () => {
         .spyOn(entityManager, 'findOne')
         .mockResolvedValue(mockAccount);
       const options = {
-        relations: { actor: { credentials: true } },
+        relations: { credentials: true },
       };
 
       await service.getAccountOrFail('account-1', options as any);
 
       expect(findOneSpy).toHaveBeenCalledWith(Account, {
-        relations: { actor: { credentials: true } },
+        relations: { credentials: true },
         where: { id: 'account-1' },
       });
     });

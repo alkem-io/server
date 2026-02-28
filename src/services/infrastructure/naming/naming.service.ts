@@ -32,8 +32,7 @@ export class NamingService {
         levelZeroSpaceID: levelZeroSpaceID,
         level: Not(SpaceLevel.L0),
       },
-      relations: { actor: true },
-      select: { id: true, actor: { id: true, nameID: true } },
+      select: { id: true, nameID: true },
     });
     return subspaces.map(space => space.nameID);
   }
@@ -43,8 +42,7 @@ export class NamingService {
       where: {
         level: SpaceLevel.L0,
       },
-      relations: { actor: true },
-      select: { id: true, actor: { id: true, nameID: true } },
+      select: { id: true, nameID: true },
     });
     const nameIDs = levelZeroSpaces.map(space => space.nameID.toLowerCase());
 
@@ -133,24 +131,21 @@ export class NamingService {
 
   public async getReservedNameIDsInUsers(): Promise<string[]> {
     const users = await this.entityManager.find(User, {
-      relations: { actor: true },
-      select: { id: true, actor: { id: true, nameID: true } },
+      select: { id: true, nameID: true },
     });
     return users.map(user => user.nameID);
   }
 
   public async getReservedNameIDsInVirtualContributors(): Promise<string[]> {
     const vcs = await this.entityManager.find(VirtualContributor, {
-      relations: { actor: true },
-      select: { id: true, actor: { id: true, nameID: true } },
+      select: { id: true, nameID: true },
     });
     return vcs.map(vc => vc.nameID);
   }
 
   public async getReservedNameIDsInOrganizations(): Promise<string[]> {
     const organizations = await this.entityManager.find(Organization, {
-      relations: { actor: true },
-      select: { id: true, actor: { id: true, nameID: true } },
+      select: { id: true, nameID: true },
     });
     return organizations.map(organization => organization.nameID);
   }

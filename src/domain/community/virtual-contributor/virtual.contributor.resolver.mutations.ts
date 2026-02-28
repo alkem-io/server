@@ -81,9 +81,7 @@ export class VirtualContributorResolverMutations {
         settingsData.virtualContributorID,
         {
           relations: {
-            account: {
-              actor: true,
-            },
+            account: true,
           },
         }
       );

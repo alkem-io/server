@@ -47,7 +47,8 @@ export class VirtualContributorAuthorizationService {
             account: {
               spaces: true,
             },
-            actor: { authorization: true, profile: true },
+            authorization: true,
+            profile: true,
             knowledgeBase: true,
           },
         }

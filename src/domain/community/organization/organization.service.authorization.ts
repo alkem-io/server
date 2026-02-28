@@ -52,7 +52,9 @@ export class OrganizationAuthorizationService {
       {
         relations: {
           storageAggregator: true,
-          actor: { authorization: true, profile: true, credentials: true },
+          authorization: true,
+          profile: true,
+          credentials: true,
           groups: true,
           verification: true,
           roleSet: true,

@@ -230,9 +230,7 @@ export class UserResolverFields {
     // (e.g. QueryBuilder-based pagination).
     let authorization = user.authorization;
     if (!authorization) {
-      const loaded = await this.userService.getUserByIdOrFail(user.id, {
-        relations: { actor: true },
-      });
+      const loaded = await this.userService.getUserByIdOrFail(user.id);
       authorization = loaded.authorization;
     }
     const accessGranted = this.authorizationService.isAccessGranted(

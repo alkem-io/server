@@ -326,7 +326,7 @@ export class LookupResolverFields {
         authorizationPolicyID
       );
     const user = await this.userLookupService.getUserByIdOrFail(userID, {
-      relations: { actor: { credentials: true } },
+      relations: { credentials: true },
     });
     return this.authorizationService.getGrantedPrivileges(
       user.credentials || [],

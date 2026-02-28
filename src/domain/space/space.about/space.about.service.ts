@@ -49,7 +49,7 @@ export class SpaceAboutService {
     spaceAboutData: CreateSpaceAboutInput,
     storageAggregator: IStorageAggregator
   ): Promise<ISpaceAbout> {
-    let spaceAbout: ISpaceAbout = SpaceAbout.create({
+    const spaceAbout: ISpaceAbout = SpaceAbout.create({
       ...spaceAboutData,
       authorization: new AuthorizationPolicy(AuthorizationPolicyType.SPACE),
     });
@@ -84,8 +84,11 @@ export class SpaceAboutService {
       [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD]
     );
 
-    spaceAbout = await this.save(spaceAbout);
-    return this.getSpaceAboutOrFail(spaceAbout.id);
+    // Do not save here — callers assign this to a parent entity with
+    // cascade: true, so the parent's save handles persistence.
+    // Saving via the default repository would bypass the caller's
+    // transaction and cause FK violations on storageAggregator.
+    return spaceAbout;
   }
 
   async getSpaceAboutOrFail(

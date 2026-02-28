@@ -193,6 +193,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
           cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
           uploads: false,
           autoSchemaFile: true,
+          inheritResolversFromInterfaces: true,
           introspection: true,
           playground: {
             settings: {

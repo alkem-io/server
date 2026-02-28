@@ -41,6 +41,10 @@ describe('AccountService', () => {
     accountRepository = module.get<Repository<Account>>(
       getRepositoryToken(Account)
     );
+    // Add manager.transaction mock for transactional delete
+    (accountRepository as any).manager = {
+      transaction: vi.fn(async (cb: any) => cb()),
+    };
     storageAggregatorService = module.get(StorageAggregatorService);
     spaceService = module.get(SpaceService);
     virtualContributorService = module.get(VirtualContributorService);

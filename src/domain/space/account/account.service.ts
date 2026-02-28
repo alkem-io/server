@@ -15,6 +15,7 @@ import { ActorService } from '@domain/actor/actor/actor.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
+import { ProfileService } from '@domain/common/profile/profile.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
@@ -61,6 +62,7 @@ export class AccountService {
     private innovationPackAuthorizationService: InnovationPackAuthorizationService,
     private namingService: NamingService,
     private licenseService: LicenseService,
+    private profileService: ProfileService,
     private platformTemplatesService: PlatformTemplatesService,
     @InjectRepository(Account)
     private accountRepository: Repository<Account>,
@@ -199,6 +201,7 @@ export class AccountService {
         storageAggregator: true,
         innovationHubs: true,
         license: true,
+        profile: true,
       },
     });
 
@@ -216,30 +219,42 @@ export class AccountService {
       );
     }
 
-    // Note: Credentials are on Actor (which Account extends), will be deleted via cascade
+    // All DB deletions in a single transaction so a partial failure
+    // does not leave the account in an inconsistent state.
+    await this.accountRepository.manager.transaction(async () => {
+      // Note: Credentials are on Actor (which Account extends), will be deleted via cascade
 
-    await this.storageAggregatorService.delete(account.storageAggregator.id);
+      for (const vc of account.virtualContributors) {
+        await this.virtualContributorService.deleteVirtualContributor(vc.id);
+      }
+      for (const ip of account.innovationPacks) {
+        await this.innovationPackService.deleteInnovationPack({ ID: ip.id });
+      }
 
-    await this.licenseService.removeLicenseOrFail(account.license.id);
+      for (const hub of account.innovationHubs) {
+        await this.innovationHubService.delete(hub.id);
+      }
 
-    for (const vc of account.virtualContributors) {
-      await this.virtualContributorService.deleteVirtualContributor(vc.id);
-    }
-    for (const ip of account.innovationPacks) {
-      await this.innovationPackService.deleteInnovationPack({ ID: ip.id });
-    }
+      for (const space of account.spaces) {
+        await this.spaceService.deleteSpaceOrFail({ ID: space.id });
+      }
 
-    for (const hub of account.innovationHubs) {
-      await this.innovationHubService.delete(hub.id);
-    }
+      await this.storageAggregatorService.delete(account.storageAggregator!.id);
 
-    for (const space of account.spaces) {
-      await this.spaceService.deleteSpaceOrFail({ ID: space.id });
-    }
+      await this.licenseService.removeLicenseOrFail(account.license!.id);
 
-    // Delete actor — cascades to delete the account row via FK (account.id → actor.id ON DELETE CASCADE).
-    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
-    await this.actorService.deleteActorById(accountID);
+      if (account.profile) {
+        await this.profileService.deleteProfile(account.profile.id);
+      }
+
+      if (account.authorization) {
+        await this.authorizationPolicyService.delete(account.authorization);
+      }
+
+      // Delete actor — cascades to delete the account row via FK (account.id → actor.id ON DELETE CASCADE).
+      // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+      await this.actorService.deleteActorById(accountID);
+    });
 
     account.id = accountID;
     return account;
@@ -451,7 +466,7 @@ export class AccountService {
   ): Promise<IAccountSubscription[]> {
     const account = await this.getAccountOrFail(accountInput.id, {
       relations: {
-        actor: { credentials: true },
+        credentials: true,
       },
     });
 
