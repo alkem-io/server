@@ -514,6 +514,35 @@ services:
     ports:
       - 4003
 
+  webhook-gateway:
+    container_name: alkemio_dev_webhook_gateway
+    hostname: webhook-gateway
+    image: alkemio/webhook-gateway:latest
+    depends_on:
+      redis:
+        condition: service_started
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - PORT=8080
+      - LOG_LEVEL=debug
+      - LOG_FORMAT=json
+      - REDIS_URL=redis://redis:6379/0
+      - RABBITMQ_URL=amqp://alkemio-admin:alkemio!@rabbitmq:5672/
+      - PLATFORM_URL=http://host.docker.internal:4000
+      - MAINTENANCE_MODE=false
+      - CORRELATION_ID_HEADER=X-Request-ID
+      - LOGIN_BACKOFF_MAX_IDENTIFIER_ATTEMPTS=10
+      - LOGIN_BACKOFF_MAX_IP_ATTEMPTS=20
+      - LOGIN_BACKOFF_IDENTIFIER_LOCKOUT_SECONDS=120
+      - LOGIN_BACKOFF_IP_LOCKOUT_SECONDS=120
+      - KRATOS_INTERNAL_URL=http://kratos:4433
+    restart: always
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 8080
+
   collaborative-document:
     container_name: alkemio_dev_collaborative-document
     hostname: collaborative-document

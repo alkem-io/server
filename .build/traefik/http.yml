@@ -40,6 +40,11 @@ http:
         servers:
           - url: 'http://oidc-service:8080/'
 
+    webhook-gateway:
+      loadBalancer:
+        servers:
+          - url: 'http://webhook-gateway:8080/'
+
     kratos-public:
       loadBalancer:
         servers:
@@ -252,6 +257,16 @@ http:
         - strip-api-private-prefix
       entryPoints:
         - 'web'
+
+    # Login backoff proxy: intercepts login submissions for brute-force protection
+    kratos-login-backoff:
+      rule: 'PathPrefix(`/ory/kratos/public/self-service/login`)'
+      service: 'webhook-gateway'
+      middlewares:
+        - strip-kratos-public-prefix
+      entryPoints:
+        - 'web'
+      priority: 200
 
     kratos-public:
       rule: 'PathPrefix(`/ory/kratos/public`)'
