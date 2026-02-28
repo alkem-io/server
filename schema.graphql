@@ -1505,6 +1505,8 @@ type Calendar {
 }
 
 type CalendarEvent {
+  """ICS download URL for adding this CalendarEvent to Apple Calendar."""
+  appleCalendarUrl: String
   """The authorization rules for the entity"""
   authorization: Authorization
   """The comments for this CalendarEvent"""
@@ -1517,12 +1519,18 @@ type CalendarEvent {
   durationDays: Float
   """The length of the event in minutes."""
   durationMinutes: Float!
+  """Google Calendar add-event URL for this CalendarEvent."""
+  googleCalendarUrl: String
+  """ICS download URL for this CalendarEvent."""
+  icsDownloadUrl: String
   """The ID of the entity"""
   id: UUID!
   """Flag to indicate if this event is for multiple days."""
   multipleDays: Boolean!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
+  """Outlook Calendar add-event URL for this CalendarEvent."""
+  outlookCalendarUrl: String
   """The Profile for this Post."""
   profile: Profile!
   """The start time for this CalendarEvent."""

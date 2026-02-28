@@ -253,6 +253,14 @@ http:
       entryPoints:
         - 'web'
 
+    calendar-event-ics:
+      rule: 'PathPrefix(`/api/private/rest/calendar`)'
+      service: 'oathkeeper-proxy'
+      middlewares:
+        - strip-api-private-prefix
+      entryPoints:
+        - 'web'
+
     kratos-public:
       rule: 'PathPrefix(`/ory/kratos/public`)'
       service: 'kratos-public'
