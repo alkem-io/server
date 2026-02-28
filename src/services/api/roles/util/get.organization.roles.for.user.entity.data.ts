@@ -12,6 +12,7 @@ export const getOrganizationRolesForUserEntityData = (
     relations: { profile: true },
     select: {
       id: true,
+      nameID: true,
       profile: {
         displayName: true,
       },
