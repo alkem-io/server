@@ -8,6 +8,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
+import { NotificationPushAdapter } from '../notification-push-adapter/notification.push.adapter';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputCommunityInvitationVirtualContributor } from './dto/space/notification.dto.input.space.community.invitation.vc';
 import { NotificationAdapter } from './notification.adapter';
@@ -20,6 +21,7 @@ export class NotificationVirtualContributorAdapter {
     private notificationAdapter: NotificationAdapter,
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationInAppAdapter: NotificationInAppAdapter,
+    private notificationPushAdapter: NotificationPushAdapter,
     private communityResolverService: CommunityResolverService
   ) {}
 
@@ -67,6 +69,22 @@ export class NotificationVirtualContributorAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New VC invitation',
+          body: 'A virtual contributor has been invited to a space',
+          url: `/spaces/${space.id}`,
+        }
       );
     }
   }

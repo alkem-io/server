@@ -114,8 +114,7 @@ export class StorageAggregatorService {
     storageAggregator: IStorageAggregator,
     mgr?: EntityManager
   ): Promise<IStorageAggregator> {
-    if (mgr)
-      return await mgr.save(storageAggregator as StorageAggregator);
+    if (mgr) return await mgr.save(storageAggregator as StorageAggregator);
     return await this.storageAggregatorRepository.save(storageAggregator);
   }
 

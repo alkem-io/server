@@ -170,10 +170,9 @@ export class IdentityResolveService {
 
     // If linked to a different auth ID, check if the old identity still exists
     if (existingUser.authenticationID) {
-      const existingKratosIdentity =
-        await this.kratosService.getIdentityById(
-          existingUser.authenticationID
-        );
+      const existingKratosIdentity = await this.kratosService.getIdentityById(
+        existingUser.authenticationID
+      );
 
       if (existingKratosIdentity) {
         // Old identity still exists — this is a real conflict

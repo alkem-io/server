@@ -13,6 +13,7 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
+import { NotificationPushAdapter } from '../notification-push-adapter/notification.push.adapter';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputPlatformForumDiscussionComment } from './dto/platform/notification.dto.input.platform.forum.discussion.comment';
 import { NotificationInputPlatformForumDiscussionCreated } from './dto/platform/notification.dto.input.platform.forum.discussion.created';
@@ -32,6 +33,7 @@ export class NotificationPlatformAdapter {
     private notificationAdapter: NotificationAdapter,
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationInAppAdapter: NotificationInAppAdapter,
+    private notificationPushAdapter: NotificationPushAdapter,
     private notificationUserAdapter: NotificationUserAdapter,
     private communityResolverService: CommunityResolverService,
     private urlGeneratorService: UrlGeneratorService
@@ -75,6 +77,22 @@ export class NotificationPlatformAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'Global role changed',
+          body: 'A global role has been updated',
+          url: '/',
+        }
       );
     }
   }
@@ -125,6 +143,22 @@ export class NotificationPlatformAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New forum discussion',
+          body: 'A new discussion has been created in the forum',
+          url: '/forum',
+        }
       );
     }
   }
@@ -199,6 +233,22 @@ export class NotificationPlatformAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New comment on discussion',
+          body: 'Someone commented on a forum discussion',
+          url: '/forum',
+        }
+      );
+    }
   }
 
   public async platformInvitationCreated(
@@ -259,6 +309,22 @@ export class NotificationPlatformAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New space created',
+          body: 'A new space has been created on the platform',
+          url: `/spaces/${eventData.space.id}`,
+        }
+      );
+    }
   }
 
   public async platformUserProfileCreated(
@@ -300,6 +366,22 @@ export class NotificationPlatformAdapter {
         adminInAppPayload
       );
     }
+
+    // Send admin push notifications
+    const adminPushRecipientsFiltered = adminRecipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (adminPushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        adminPushRecipientsFiltered,
+        adminEvent,
+        {
+          title: 'New user registered',
+          body: 'A new user profile has been created on the platform',
+          url: '/',
+        }
+      );
+    }
   }
 
   public async platformUserRemoved(
@@ -338,6 +420,22 @@ export class NotificationPlatformAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'User profile removed',
+          body: 'A user profile has been removed from the platform',
+          url: '/',
+        }
       );
     }
   }

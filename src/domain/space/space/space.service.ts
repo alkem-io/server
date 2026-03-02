@@ -1,7 +1,6 @@
 import { UUID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { ActorService } from '@domain/actor/actor/actor.service';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseType } from '@common/enums/license.type';
@@ -34,6 +33,7 @@ import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platf
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IActor } from '@domain/actor/actor/actor.interface';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
@@ -67,7 +67,13 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { keyBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import {
+  EntityManager,
+  FindManyOptions,
+  FindOneOptions,
+  In,
+  Repository,
+} from 'typeorm';
 import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
@@ -596,7 +602,10 @@ export class SpaceService {
 
     qb.leftJoinAndSelect('space.subspaces', 'subspace');
     qb.leftJoin('space.actor', 'actor_for_auth');
-    qb.leftJoinAndSelect('actor_for_auth.authorization', 'authorization_policy');
+    qb.leftJoinAndSelect(
+      'actor_for_auth.authorization',
+      'authorization_policy'
+    );
     qb.leftJoinAndSelect('subspace.subspaces', 'subspaces');
     qb.where({
       level: SpaceLevel.L0,

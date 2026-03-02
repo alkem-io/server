@@ -581,6 +581,7 @@ enum PlatformFeatureFlagName {
 }
 
 enum ProfileType {
+  ACCOUNT
   CALENDAR_EVENT
   CALLOUT_FRAMING
   COMMUNITY_GUIDELINES
@@ -593,6 +594,7 @@ enum ProfileType {
   MEMO
   ORGANIZATION
   POST
+  SPACE
   SPACE_ABOUT
   TEMPLATE
   USER
@@ -600,6 +602,12 @@ enum ProfileType {
   VIRTUAL_CONTRIBUTOR
   VIRTUAL_PERSONA
   WHITEBOARD
+}
+
+"""Status of a push notification subscription."""
+enum PushSubscriptionStatus {
+  ACTIVE
+  EXPIRED
 }
 
 enum RoleName {
@@ -868,7 +876,7 @@ interface ActorFull {
   id: UUID!
   """A name identifier of the Actor, unique within a given scope."""
   nameID: NameID!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The type of Actor"""
   type: ActorType!
@@ -929,7 +937,7 @@ type Account implements ActorFull {
   license: License!
   """A name identifier of the Account, unique within the platform."""
   nameID: NameID!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The Spaces within this Account."""
   spaces: [Space!]!
@@ -1322,6 +1330,8 @@ type Actor {
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  """A name identifier of the entity, unique within a given scope."""
+  nameID: NameID!
   """The profile for this Actor."""
   profile: Profile
   """The type of Actor"""
@@ -3692,6 +3702,10 @@ type Mutation {
   """
   setPlatformWellKnownVirtualContributor(mappingData: SetPlatformWellKnownVirtualContributorInput!): PlatformWellKnownVirtualContributors!
   """
+  Subscribe the current user's device to push notifications. If the subscription endpoint already exists, it is updated. If the user has reached the maximum number of subscriptions (10), the oldest subscription is automatically replaced.
+  """
+  subscribeToPushNotifications(subscriptionData: SubscribeToPushNotificationsInput!): PushSubscription!
+  """
   Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet. Note: this is experimental, and only for GlobalAdmins. The user that executes the transfer becomes the creator of the Callout.
   """
   transferCallout(transferData: TransferCalloutInput!): Callout!
@@ -3703,6 +3717,8 @@ type Mutation {
   transferSpaceToAccount(transferData: TransferAccountSpaceInput!): Space!
   """Transfer the specified Virtual Contributor to another Account."""
   transferVirtualContributorToAccount(transferData: TransferAccountVirtualContributorInput!): InnovationPack!
+  """Remove a push notification subscription for the current user."""
+  unsubscribeFromPushNotifications(subscriptionData: UnsubscribeFromPushNotificationsInput!): PushSubscription!
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
   """Update the baseline License Plan on the specified Account."""
@@ -3841,6 +3857,8 @@ type NotificationRecipientResult {
   emailRecipients: [User!]!
   """The in-app recipients for the notification."""
   inAppRecipients: [User!]!
+  """The push recipients for the notification."""
+  pushRecipients: [User!]!
   """The user that triggered the event."""
   triggeredBy: User
 }
@@ -3883,7 +3901,7 @@ type Organization implements ActorFull & Groupable {
   metrics: [NVP!]
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The RoleSet for this Organization."""
   roleSet: RoleSet!
@@ -4389,6 +4407,24 @@ type PruneInAppNotificationAdminResult {
   removedCountOutsideRetentionPeriod: Int!
 }
 
+"""
+Represents a user's push notification subscription for a specific device/browser.
+"""
+type PushSubscription {
+  """When this subscription was created."""
+  createdDate: DateTime!
+  """Unique identifier for this subscription."""
+  id: UUID!
+  """
+  Last time a notification was successfully delivered to this subscription.
+  """
+  lastActiveDate: DateTime
+  """Current status of the subscription."""
+  status: PushSubscriptionStatus!
+  """Browser/device user agent string for display purposes."""
+  userAgent: String
+}
+
 type Query {
   """
   The Accounts on this platform; If accessed through an Innovation Hub will return ONLY the Accounts defined in it.
@@ -4432,6 +4468,10 @@ type Query {
   lookupByName: LookupByNameQueryResults!
   """Information about the current authenticated user"""
   me: MeQueryResults!
+  """
+  Returns the current user's active push notification subscriptions. Requires authentication.
+  """
+  myPushSubscriptions: [PushSubscription!]!
   """The notificationRecipients for the provided event on the given entity."""
   notificationRecipients(eventData: NotificationRecipientsInput!): NotificationRecipientResult!
   """A particular Organization"""
@@ -4533,6 +4573,10 @@ type Query {
   ): PaginatedUsers!
   """All Users that hold credentials matching the supplied criteria."""
   usersWithAuthorizationCredential(credentialsCriteriaData: UsersWithAuthorizationCredentialInput!): [User!]!
+  """
+  Returns the VAPID public key needed by clients to subscribe to push notifications. Returns null if push notifications are not enabled on this server.
+  """
+  vapidPublicKey: String
   """A particular VirtualContributor"""
   virtualContributor(ID: UUID!): VirtualContributor!
   """
@@ -4623,7 +4667,7 @@ type RelayPaginatedSpace implements ActorFull {
   nameID: NameID!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
@@ -5139,7 +5183,7 @@ type Space implements ActorFull {
   nameID: NameID!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
@@ -5717,7 +5761,7 @@ type User implements ActorFull {
   nameID: NameID!
   """The phone number for this User."""
   phone: String
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The settings for this User."""
   settings: UserSettings!
@@ -5808,6 +5852,8 @@ type UserSettingsNotificationChannels {
   email: Boolean!
   """Receive notifications by inApp."""
   inApp: Boolean!
+  """Receive push notifications."""
+  push: Boolean!
 }
 
 type UserSettingsNotificationOrganization {
@@ -5964,7 +6010,7 @@ type VirtualContributor implements ActorFull {
   Platform-level settings of this Virtual Contributor, modifiable only by platform admins.
   """
   platformSettings: VirtualContributorPlatformSettings!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """Prompt graph definition for this Virtual Contributor."""
   promptGraphDefinition: PromptGraphDefinition
@@ -7129,6 +7175,8 @@ input NotificationSettingInput {
   email: Boolean
   """Enable in-app notifications for this setting"""
   inApp: Boolean
+  """Enable push notifications for this setting"""
+  push: Boolean
 }
 
 input OrganizationAuthorizationResetInput {
@@ -7366,6 +7414,21 @@ input StorageBucketUploadFileOnReferenceInput {
   referenceID: String!
 }
 
+input SubscribeToPushNotificationsInput {
+  """The auth key from PushSubscription.getKey('auth'), Base64URL-encoded"""
+  auth: String!
+  """The push service endpoint URL from PushSubscription.endpoint"""
+  endpoint: String!
+  """
+  The p256dh key from PushSubscription.getKey('p256dh'), Base64URL-encoded
+  """
+  p256dh: String!
+  """
+  Optional browser/device user agent for display in subscription management UI
+  """
+  userAgent: String
+}
+
 input TagsetArgs {
   """
   Return only Callouts that match one of the tagsets and any of the tags in them.
@@ -7408,6 +7471,11 @@ input TransferCalloutInput {
   calloutID: UUID!
   """The target CalloutsSet to which the Callout will be transferred."""
   targetCalloutsSetID: UUID!
+}
+
+input UnsubscribeFromPushNotificationsInput {
+  """The ID of the push subscription to remove."""
+  subscriptionID: UUID!
 }
 
 input UpdateAiPersonaInput {

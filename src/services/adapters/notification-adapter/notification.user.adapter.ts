@@ -16,6 +16,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
+import { NotificationPushAdapter } from '../notification-push-adapter/notification.push.adapter';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputPlatformUserRegistered } from './dto/platform/notification.dto.input.platform.user.registered';
 import { NotificationInputCommentReply } from './dto/space/notification.dto.input.space.communication.user.comment.reply';
@@ -34,6 +35,7 @@ export class NotificationUserAdapter {
     private notificationAdapter: NotificationAdapter,
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationInAppAdapter: NotificationInAppAdapter,
+    private notificationPushAdapter: NotificationPushAdapter,
     private communityResolverService: CommunityResolverService,
     private messageDetailsService: MessageDetailsService
   ) {}
@@ -74,6 +76,22 @@ export class NotificationUserAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'Welcome to Alkemio',
+          body: 'Your account has been created successfully',
+          url: '/',
+        }
       );
     }
   }
@@ -124,6 +142,22 @@ export class NotificationUserAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New invitation',
+          body: 'You have been invited to join a space',
+          url: `/spaces/${space.id}`,
+        }
+      );
+    }
   }
 
   public async userSpaceCommunityJoined(
@@ -167,6 +201,22 @@ export class NotificationUserAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'You joined a space',
+          body: 'You are now a member of a space',
+          url: `/spaces/${space.id}`,
+        }
       );
     }
   }
@@ -225,6 +275,22 @@ export class NotificationUserAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'You were mentioned',
+          body: 'Someone mentioned you in a conversation',
+          url: '/',
+        }
+      );
+    }
   }
 
   public async userToUserMessageDirect(
@@ -269,6 +335,22 @@ export class NotificationUserAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New direct message',
+          body: 'You received a new direct message',
+          url: '/',
+        }
       );
     }
   }
@@ -331,6 +413,22 @@ export class NotificationUserAdapter {
           inAppPayload
         );
       }
+
+      // Send push notifications
+      const pushRecipientsFiltered = recipients.pushRecipients.filter(
+        recipient => recipient.id !== eventData.triggeredBy
+      );
+      if (pushRecipientsFiltered.length > 0) {
+        await this.notificationPushAdapter.sendPushNotifications(
+          pushRecipientsFiltered,
+          event,
+          {
+            title: 'New reply to your comment',
+            body: 'Someone replied to your comment',
+            url: '/',
+          }
+        );
+      }
     } catch (error: any) {
       this.logger.error(
         'Error while building comment reply notification payload',
@@ -384,6 +482,22 @@ export class NotificationUserAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'Application declined',
+          body: 'Your application to join a space was declined',
+          url: `/spaces/${eventData.spaceID}`,
+        }
       );
     }
   }

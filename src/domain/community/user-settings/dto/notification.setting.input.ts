@@ -16,4 +16,11 @@ export class NotificationSettingInput {
   })
   @IsBoolean()
   email?: boolean;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description: 'Enable push notifications for this setting',
+  })
+  @IsBoolean()
+  push?: boolean;
 }

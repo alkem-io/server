@@ -30,6 +30,7 @@ import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
 import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
+import { PushSubscriptionModule } from '@domain/push-subscription/push.subscription.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { TaskGraphqlModule } from '@domain/task/task.module';
 import { TemplateApplierModule } from '@domain/template/template-applier/template.applier.module';
@@ -324,6 +325,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     LookupByNameModule,
     AuthResetSubscriberModule,
     TaskGraphqlModule,
+    PushSubscriptionModule,
     ActivityFeedModule,
     EventBusModule,
     WhiteboardIntegrationModule,

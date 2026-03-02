@@ -1,6 +1,5 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { ActorService } from '@domain/actor/actor/actor.service';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
@@ -13,6 +12,7 @@ import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { Invitation } from '@domain/access/invitation/invitation.entity';
 import { IActor } from '@domain/actor/actor/actor.interface';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorQueryArgs } from '@domain/actor/actor/dto';
 import { ICredential } from '@domain/actor/credential/credential.interface';
 import { CredentialsSearchInput } from '@domain/actor/credential/dto/credentials.dto.search';

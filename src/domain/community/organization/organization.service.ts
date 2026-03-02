@@ -1,7 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
 import { ActorType } from '@common/enums/actor.type';
-import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { OrganizationVerificationEnum } from '@common/enums/organization.verification';
 import { RoleName } from '@common/enums/role.name';
@@ -26,6 +25,7 @@ import { CreateRoleSetInput } from '@domain/access/role-set/dto/role.set.dto.cre
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { actorDefaults } from '@domain/actor/actor/actor.defaults';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorQueryArgs } from '@domain/actor/actor/dto/actor.query.args';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';

@@ -21,6 +21,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InAppNotificationPayloadSpaceCommunicationUpdate } from '../../../platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
+import { NotificationPushAdapter } from '../notification-push-adapter/notification.push.adapter';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputCollaborationCalloutComment } from './dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutContributionCreated } from './dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
@@ -44,6 +45,7 @@ export class NotificationSpaceAdapter {
     private readonly logger: LoggerService,
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationInAppAdapter: NotificationInAppAdapter,
+    private notificationPushAdapter: NotificationPushAdapter,
     private notificationAdapter: NotificationAdapter,
     private notificationUserAdapter: NotificationUserAdapter,
     private communityResolverService: CommunityResolverService,
@@ -106,6 +108,22 @@ export class NotificationSpaceAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New callout published',
+          body: 'A new callout has been published in your space',
+          url: `/spaces/${space.id}`,
+        }
       );
     }
   }
@@ -173,6 +191,22 @@ export class NotificationSpaceAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== creatorID
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New calendar event',
+          body: 'A new calendar event has been created in your space',
+          url: `/spaces/${space.id}`,
+        }
       );
     }
   }
@@ -246,6 +280,22 @@ export class NotificationSpaceAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== commenterID
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New comment on calendar event',
+          body: 'Someone commented on your calendar event',
+          url: `/spaces/${space.id}`,
+        }
       );
     }
   }
@@ -331,6 +381,22 @@ export class NotificationSpaceAdapter {
       );
     }
 
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New contribution',
+          body: 'A new contribution has been added to a callout',
+          url: `/spaces/${space.id}`,
+        }
+      );
+    }
+
     // ALSO send admin notifications
     const adminEvent =
       NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION;
@@ -399,6 +465,22 @@ export class NotificationSpaceAdapter {
         eventData.triggeredBy,
         adminInAppReceiverIDs,
         adminInAppPayload
+      );
+    }
+
+    // Send admin push notifications
+    const adminPushRecipientsFiltered = adminRecipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (adminPushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        adminPushRecipientsFiltered,
+        adminEvent,
+        {
+          title: 'New contribution (admin)',
+          body: 'A new contribution has been added to a callout in your space',
+          url: `/spaces/${space.id}`,
+        }
       );
     }
   }
@@ -480,6 +562,25 @@ export class NotificationSpaceAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications - only to the post creator, excluding sender and mentioned users
+    const pushRecipientCreators = recipients.pushRecipients.filter(
+      r =>
+        r.id === eventData.post.createdBy &&
+        r.id !== eventData.triggeredBy &&
+        !eventData.mentionedUserIDs?.includes(r.id)
+    );
+    if (pushRecipientCreators.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientCreators,
+        event,
+        {
+          title: 'New comment on your post',
+          body: 'Someone commented on your post contribution',
+          url: `/spaces/${space.id}`,
+        }
+      );
+    }
   }
 
   public async spaceCollaborationCalloutComment(
@@ -548,6 +649,24 @@ export class NotificationSpaceAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications - exclude sender and already-mentioned users
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient =>
+        recipient.id !== eventData.triggeredBy &&
+        !eventData.mentionedUserIDs?.includes(recipient.id)
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New comment on callout',
+          body: 'Someone commented on a callout in your space',
+          url: `/spaces/${space.id}`,
+        }
+      );
+    }
   }
 
   public async spaceCommunityNewMember(
@@ -607,6 +726,22 @@ export class NotificationSpaceAdapter {
         adminInAppPayload
       );
     }
+
+    // Send admin push notifications
+    const adminPushRecipientsFiltered = adminRecipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.actorID
+    );
+    if (adminPushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        adminPushRecipientsFiltered,
+        adminEvent,
+        {
+          title: 'New member joined',
+          body: 'A new member has joined your space',
+          url: `/spaces/${space.id}`,
+        }
+      );
+    }
   }
 
   public async spaceAdminVirtualContributorInvitationDeclined(
@@ -659,6 +794,22 @@ export class NotificationSpaceAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'Invitation declined',
+          body: 'A virtual contributor invitation was declined',
+          url: `/spaces/${space.id}`,
+        }
+      );
+    }
   }
 
   public async spaceCommunityApplicationCreated(
@@ -706,6 +857,22 @@ export class NotificationSpaceAdapter {
         eventData.triggeredBy,
         adminInAppReceiverIDs,
         adminInAppPayload
+      );
+    }
+
+    // Send admin push notifications
+    const adminPushRecipientsFiltered = adminRecipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (adminPushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        adminPushRecipientsFiltered,
+        adminEvent,
+        {
+          title: 'New application',
+          body: 'A new application has been submitted to your space',
+          url: `/spaces/${space.id}`,
+        }
       );
     }
   }
@@ -794,6 +961,22 @@ export class NotificationSpaceAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        eventRecipientsAdmins,
+        {
+          title: 'New message',
+          body: 'You received a new message in your space',
+          url: `/spaces/${space.id}`,
+        }
+      );
+    }
   }
 
   public async spaceCommunicationUpdate(
@@ -860,6 +1043,23 @@ export class NotificationSpaceAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const memberPushRecipientsWithoutAdmins = this.excludeDuplicatedRecipients(
+      memberRecipients.triggeredBy ? [memberRecipients.triggeredBy] : [],
+      memberRecipients.pushRecipients
+    );
+    if (memberPushRecipientsWithoutAdmins.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        memberPushRecipientsWithoutAdmins,
+        event,
+        {
+          title: 'New update',
+          body: 'A new update has been posted in your space',
+          url: `/spaces/${space.id}`,
+        }
       );
     }
   }
