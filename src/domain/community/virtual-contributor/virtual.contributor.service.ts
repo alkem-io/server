@@ -396,7 +396,6 @@ export class VirtualContributorService {
         );
       }
 
-      await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
       await this.deleteVCInvitations(virtualContributorID);
 
       if (virtualContributor.aiPersonaID) {
@@ -419,7 +418,10 @@ export class VirtualContributorService {
 
       // Delete actor — cascades to delete the VC row via FK (virtual_contributor.id → actor.id ON DELETE CASCADE).
       // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+      // Must happen before knowledgeBase deletion because the VC row holds a FK to knowledge_base.
       await this.actorService.deleteActorById(virtualContributorID);
+
+      await this.knowledgeBaseService.delete(virtualContributor.knowledgeBase);
     });
 
     virtualContributor.id = virtualContributorID;

@@ -28,7 +28,7 @@ export class InAppNotificationResolverSubscription {
         context
       ) {
         const actorContext = context.req.user;
-        return actorContext?.userID === payload.notification.receiverID;
+        return actorContext?.actorID === payload.notification.receiverID;
       },
       async resolve(
         this: InAppNotificationResolverSubscription,
@@ -69,7 +69,7 @@ export class InAppNotificationResolverSubscription {
         context
       ) {
         const actorContext = context.req.user;
-        return actorContext?.userID === payload?.receiverID;
+        return actorContext?.actorID === payload?.receiverID;
       },
       async resolve(
         this: InAppNotificationResolverSubscription,
