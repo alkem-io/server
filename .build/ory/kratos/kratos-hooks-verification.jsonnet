@@ -1,9 +1,9 @@
-// webhook-gateway-verification.jsonnet
+// kratos-hooks-verification.jsonnet
 // Kratos webhook payload for post-verification hook.
-// Sends identity details to the webhook-gateway for welcome email processing.
+// Sends identity details to kratos-hooks for welcome email processing.
 //
 // Usage in kratos.yml:
-//   body: file:///etc/config/kratos/webhook-gateway-verification.jsonnet
+//   body: file:///etc/config/kratos/kratos-hooks-verification.jsonnet
 //
 // Available context fields (verification flow):
 //   ctx.identity.id - Kratos identity UUID
