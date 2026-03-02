@@ -559,7 +559,7 @@ services:
   webhook-gateway:
     container_name: alkemio_dev_webhook_gateway
     hostname: webhook-gateway
-    image: alkemio/webhook-gateway:v0.1.0
+    image: alkemio/kratos-webhooks:v0.2.1
     depends_on:
       rabbitmq:
         condition: service_healthy
