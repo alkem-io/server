@@ -65,12 +65,10 @@ describe('StorageAggregatorService', () => {
         mockBucket
       );
       (storageBucketService.save as Mock).mockResolvedValue(mockBucket);
-      const mgrSave = vi
-        .fn()
-        .mockImplementation(async (entity: any) => ({
-          ...entity,
-          id: 'agg-1',
-        }));
+      const mgrSave = vi.fn().mockImplementation(async (entity: any) => ({
+        ...entity,
+        id: 'agg-1',
+      }));
       (storageAggregatorRepository as any).manager = {
         transaction: vi.fn().mockImplementation(cb => cb({ save: mgrSave })),
       };
@@ -97,12 +95,10 @@ describe('StorageAggregatorService', () => {
         mockBucket
       );
       (storageBucketService.save as Mock).mockResolvedValue(mockBucket);
-      const mgrSave = vi
-        .fn()
-        .mockImplementation(async (entity: any) => ({
-          ...entity,
-          id: 'agg-2',
-        }));
+      const mgrSave = vi.fn().mockImplementation(async (entity: any) => ({
+        ...entity,
+        id: 'agg-2',
+      }));
       (storageAggregatorRepository as any).manager = {
         transaction: vi.fn().mockImplementation(cb => cb({ save: mgrSave })),
       };
@@ -121,12 +117,10 @@ describe('StorageAggregatorService', () => {
         mockBucket
       );
       (storageBucketService.save as Mock).mockResolvedValue(mockBucket);
-      const mgrSave = vi
-        .fn()
-        .mockImplementation(async (entity: any) => ({
-          ...entity,
-          id: 'agg-3',
-        }));
+      const mgrSave = vi.fn().mockImplementation(async (entity: any) => ({
+        ...entity,
+        id: 'agg-3',
+      }));
       (storageAggregatorRepository as any).manager = {
         transaction: vi.fn().mockImplementation(cb => cb({ save: mgrSave })),
       };

@@ -94,7 +94,7 @@ export class AiServerResolverMutations {
 
       // get the space by nameID
       const space = await this.entityManager.findOne(Space, {
-        where: { actor: { nameID: nameID } },
+        where: { nameID: nameID },
       });
 
       // if the space doesn't exit skip the colletion

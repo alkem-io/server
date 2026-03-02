@@ -95,9 +95,7 @@ export class LookupMyPrivilegesResolverFields {
     @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
-    const space = await this.spaceService.getSpace(id, {
-      relations: { actor: true },
-    });
+    const space = await this.spaceService.getSpace(id);
     if (!space) return [];
 
     return this.getMyPrivilegesOnAuthorizable(actorContext, space);
@@ -111,9 +109,7 @@ export class LookupMyPrivilegesResolverFields {
     @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<AuthorizationPrivilege[]> {
-    const account = await this.accountService.getAccountOrFail(id, {
-      relations: { actor: true },
-    });
+    const account = await this.accountService.getAccountOrFail(id);
 
     return this.getMyPrivilegesOnAuthorizable(actorContext, account);
   }
@@ -157,9 +153,7 @@ export class LookupMyPrivilegesResolverFields {
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<AuthorizationPrivilege[]> {
     const virtualContributor =
-      await this.virtualContributorService.getVirtualContributorByIdOrFail(id, {
-        relations: { actor: true },
-      });
+      await this.virtualContributorService.getVirtualContributorByIdOrFail(id);
 
     return this.getMyPrivilegesOnAuthorizable(actorContext, virtualContributor);
   }
@@ -172,9 +166,7 @@ export class LookupMyPrivilegesResolverFields {
     @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID, nullable: false }) id: string
   ): Promise<AuthorizationPrivilege[]> {
-    const user = await this.userLookupService.getUserByIdOrFail(id, {
-      relations: { actor: true },
-    });
+    const user = await this.userLookupService.getUserByIdOrFail(id);
 
     return this.getMyPrivilegesOnAuthorizable(actorContext, user);
   }

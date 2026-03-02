@@ -545,6 +545,8 @@ type Actor {
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The credentials held by this Actor."""
+  credentials: [Credential!]
   """The ID of the entity"""
   id: UUID!
   """A name identifier of the entity, unique within a given scope."""
