@@ -11,7 +11,7 @@
 //   ctx.request_headers - Original request headers (filtered by Kratos allowlist)
 //
 // Note: True-Client-Ip is in Kratos v1.3.1's hardcoded header allowlist.
-// The webhook-gateway proxy sets True-Client-Ip on proxied requests so
+// The kratos-hooks proxy sets True-Client-Ip on proxied requests so
 // this header is available here regardless of the upstream proxy (Traefik, Cloudflare, etc).
 
 function(ctx)
