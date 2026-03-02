@@ -122,10 +122,8 @@ export class OrganizationResolverMutations {
       authorizationResetData.organizationID,
       {
         relations: {
-          actor: {
-            profile: {
-              storageBucket: true,
-            },
+          profile: {
+            storageBucket: true,
           },
         },
       }

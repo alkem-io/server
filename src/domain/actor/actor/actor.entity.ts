@@ -1,20 +1,20 @@
-import { ENUM_LENGTH } from '@common/constants';
 import { ActorType } from '@common/enums/actor.type';
 import { Credential } from '@domain/actor/credential/credential.entity';
 import { NameableEntity } from '@domain/common/entity/nameable-entity';
-import { Column, Entity, OneToMany } from 'typeorm';
+import { Entity, OneToMany, TableInheritance } from 'typeorm';
 import { IActor } from './actor.interface';
 
-@Entity()
+@Entity('actor')
+@TableInheritance({ pattern: 'CTI', column: { type: 'varchar', name: 'type' } })
 export class Actor extends NameableEntity implements IActor {
-  // Type discriminator - identifies which child entity this actor represents
-  @Column('varchar', { length: ENUM_LENGTH })
+  // CTI discriminator — auto-managed by TypeORM.
+  // Value is set by @ChildEntity({ discriminatorValue }) on each child.
+  // Populated automatically on load; do NOT declare @Column here.
   type!: ActorType;
 
-  // nameID and profile are inherited from NameableEntity
-  // profileId column is auto-managed by NameableEntity's @JoinColumn()
+  // nameID and profile are inherited from NameableEntity → actor table
+  // authorization is inherited from AuthorizableEntity → actor table
 
-  // Credentials owned by this actor - lazy loaded, use ActorService/ActorLookupService
   @OneToMany(
     () => Credential,
     credential => credential.actor,

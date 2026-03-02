@@ -374,9 +374,7 @@ export class AccountResolverMutations {
       transferData.innovationHubID,
       {
         relations: {
-          account: {
-            actor: true,
-          },
+          account: true,
         },
       }
     );
@@ -422,9 +420,7 @@ export class AccountResolverMutations {
   ): Promise<ISpace> {
     let space = await this.spaceService.getSpaceOrFail(transferData.spaceID, {
       relations: {
-        account: {
-          actor: true,
-        },
+        account: true,
       },
     });
     const targetAccount = await this.accountService.getAccountOrFail(
@@ -462,9 +458,7 @@ export class AccountResolverMutations {
         transferData.innovationPackID,
         {
           relations: {
-            account: {
-              actor: true,
-            },
+            account: true,
           },
         }
       );
@@ -512,9 +506,7 @@ export class AccountResolverMutations {
         transferData.virtualContributorID,
         {
           relations: {
-            account: {
-              actor: true,
-            },
+            account: true,
           },
         }
       );

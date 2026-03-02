@@ -1034,7 +1034,7 @@ export class NotificationExternalAdapter {
       actorID,
       {
         relations: {
-          actor: { profile: true },
+          profile: true,
         },
       } as any
     );
@@ -1068,7 +1068,7 @@ export class NotificationExternalAdapter {
       actorID,
       {
         relations: {
-          actor: { profile: true },
+          profile: true,
         },
       } as any
     );
@@ -1098,7 +1098,7 @@ export class NotificationExternalAdapter {
   private async getUserPayloadOrFail(userID: string): Promise<UserPayload> {
     const user = await this.userLookupService.getUserByIdOrFail(userID, {
       relations: {
-        actor: { profile: true },
+        profile: true,
       },
     });
 

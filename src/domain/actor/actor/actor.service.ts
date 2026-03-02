@@ -4,6 +4,7 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
+import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
 import {
   CreateCredentialInput,
   CredentialService,
@@ -57,7 +58,8 @@ export class ActorService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER)
-    private readonly cacheManager: Cache
+    private readonly cacheManager: Cache,
+    private actorContextCacheService: ActorContextCacheService
   ) {
     this.cache_ttl = this.configService.get(
       'identity.authentication.cache_ttl',
@@ -286,6 +288,9 @@ export class ActorService {
   private async invalidateActorCache(actorID: string): Promise<void> {
     const cacheKey = this.getActorCacheKey(actorID);
     await this.cacheManager.del(cacheKey);
+    // Also invalidate the ActorContext cache so subsequent requests
+    // pick up the updated credentials for myPrivileges evaluation
+    await this.actorContextCacheService.deleteByActorID(actorID);
   }
 }
 

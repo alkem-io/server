@@ -67,13 +67,7 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { keyBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import {
-  EntityManager,
-  FindManyOptions,
-  FindOneOptions,
-  In,
-  Repository,
-} from 'typeorm';
+import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
 import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
@@ -142,7 +136,7 @@ export class SpaceService {
     parentPlatformRolesAccess?: IPlatformRolesAccess
   ): Promise<ISpace> {
     const space: ISpace = Space.create(spaceData);
-    // nameID is a getter/setter delegating to actor, not a @Column on Space,
+    // nameID is inherited from Actor (CTI), not a @Column on Space,
     // so TypeORM's create() won't copy it from the input — set it explicitly.
     if (spaceData.nameID) {
       space.nameID = spaceData.nameID;
@@ -219,9 +213,7 @@ export class SpaceService {
         storageAggregator
       );
 
-      // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-      // reliably set FK columns, so we pre-save children explicitly.
-      await mgr.save((space as Space).actor!);
+      // CTI handles multi-table saves automatically, just save children that need pre-saving
       space.license = await mgr.save(space.license);
       await mgr.save(space as Space);
     });
@@ -583,8 +575,7 @@ export class SpaceService {
 
     const qb = this.spaceRepository.createQueryBuilder('space');
     if (visibilities) {
-      qb.leftJoin('space.actor', 'actor');
-      qb.leftJoinAndSelect('actor.authorization', 'authorization');
+      qb.leftJoinAndSelect('space.authorization', 'authorization');
       qb.where({
         level: SpaceLevel.L0,
         visibility: In(visibilities),
@@ -601,11 +592,7 @@ export class SpaceService {
     const qb = this.spaceRepository.createQueryBuilder('space');
 
     qb.leftJoinAndSelect('space.subspaces', 'subspace');
-    qb.leftJoin('space.actor', 'actor_for_auth');
-    qb.leftJoinAndSelect(
-      'actor_for_auth.authorization',
-      'authorization_policy'
-    );
+    qb.leftJoinAndSelect('space.authorization', 'authorization_policy');
     qb.leftJoinAndSelect('subspace.subspaces', 'subspaces');
     qb.where({
       level: SpaceLevel.L0,
@@ -721,10 +708,9 @@ export class SpaceService {
 
     const spaceIds = spaceIdsWithActivity.map(row => row.id);
 
-    // Then fetch the full space entities with actor relation (authorization eagerly loaded on actor)
+    // Then fetch the full space entities (Space extends Actor, no separate actor relation needed)
     const spaces = await this.spaceRepository.find({
       where: { id: In(spaceIds) },
-      relations: { actor: true },
     });
 
     // Preserve the activity-based ordering from the first query
@@ -1097,7 +1083,7 @@ export class SpaceService {
   async getSubscriptions(spaceInput: ISpace): Promise<ISpaceSubscription[]> {
     const space = await this.getSpaceOrFail(spaceInput.id, {
       relations: {
-        actor: { credentials: true },
+        credentials: true,
       },
     });
     if (!space.credentials) {

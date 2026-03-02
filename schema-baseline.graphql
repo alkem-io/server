@@ -545,6 +545,8 @@ type Actor {
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The credentials held by this Actor."""
+  credentials: [Credential!]
   """The ID of the entity"""
   id: UUID!
   """A name identifier of the entity, unique within a given scope."""
@@ -3053,7 +3055,7 @@ type InAppNotificationPayloadUserMessageDirect implements InAppNotificationPaylo
 }
 
 type InAppNotificationPayloadVirtualContributor implements InAppNotificationPayload {
-  contributor: VirtualContributor!
+  actor: VirtualContributor!
   """The Space related to the notification"""
   space: Space!
   """The payload type."""

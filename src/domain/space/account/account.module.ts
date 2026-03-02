@@ -2,6 +2,7 @@ import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { ActorModule } from '@domain/actor/actor/actor.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LicenseModule } from '@domain/common/license/license.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
 import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
@@ -46,6 +47,7 @@ import { AccountLicenseService } from './account.service.license';
     LicensingCredentialBasedModule,
     LicensingWingbackSubscriptionModule,
     LicenseModule,
+    ProfileModule,
     SpaceModule,
     InnovationHubModule,
     InnovationPackModule,
