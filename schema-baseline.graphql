@@ -3055,7 +3055,7 @@ type InAppNotificationPayloadUserMessageDirect implements InAppNotificationPaylo
 }
 
 type InAppNotificationPayloadVirtualContributor implements InAppNotificationPayload {
-  contributor: VirtualContributor!
+  actor: VirtualContributor!
   """The Space related to the notification"""
   space: Space!
   """The payload type."""
