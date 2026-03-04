@@ -23,7 +23,7 @@ export class Room extends AuthorizableEntity implements IRoom {
   displayName!: string;
 
   // The actual DB column – holds vcInteractionsByThread nested under interactionsByThread key
-  @Column('jsonb', { default: {} })
+  @Column('jsonb', { nullable: true, default: {} })
   vcData!: VcData;
 
   // Transparent getter/setter so all existing code continues to work unchanged.

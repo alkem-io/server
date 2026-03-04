@@ -63,6 +63,7 @@ export class Space extends Actor implements ISpace {
 
   @Column({
     unique: true,
+    nullable: false,
   })
   @Generated('increment')
   rowId!: number;
@@ -112,7 +113,7 @@ export class Space extends Actor implements ISpace {
   @Column('int', { nullable: false })
   level!: SpaceLevel;
 
-  @Column('int', { nullable: false })
+  @Column('int', { nullable: false, default: 0 })
   sortOrder!: number;
 
   @Column('varchar', {

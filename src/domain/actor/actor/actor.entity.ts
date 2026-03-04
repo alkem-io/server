@@ -5,7 +5,7 @@ import { Entity, OneToMany, TableInheritance } from 'typeorm';
 import { IActor } from './actor.interface';
 
 @Entity('actor')
-@TableInheritance({ pattern: 'CTI', column: { type: 'varchar', name: 'type' } })
+@TableInheritance({ pattern: 'CTI', column: { type: 'enum', enum: ActorType, name: 'type' } })
 export class Actor extends NameableEntity implements IActor {
   // CTI discriminator — auto-managed by TypeORM.
   // Value is set by @ChildEntity({ discriminatorValue }) on each child.

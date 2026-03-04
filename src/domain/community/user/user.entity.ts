@@ -25,6 +25,7 @@ export class User extends Actor implements IUser {
 
   @Column({
     unique: true,
+    nullable: false,
   })
   @Generated('increment')
   rowId!: number;

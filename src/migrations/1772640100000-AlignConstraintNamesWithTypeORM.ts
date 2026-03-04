@@ -142,6 +142,14 @@ export class AlignConstraintNamesWithTypeORM1772640100000
     );
 
     // ===================================================================
+    // #8: Drop stale DEFAULT 1 from actor.version
+    //     All other tables use @VersionColumn() with no DB-level default.
+    // ===================================================================
+    await queryRunner.query(
+      `ALTER TABLE "actor" ALTER COLUMN "version" DROP DEFAULT`
+    );
+
+    // ===================================================================
     // #5: Add column comment for in_app_notification.contributorActorId
     // ===================================================================
     await queryRunner.query(
@@ -153,6 +161,11 @@ export class AlignConstraintNamesWithTypeORM1772640100000
     // Remove comment
     await queryRunner.query(
       `COMMENT ON COLUMN "in_app_notification"."contributorActorId" IS NULL`
+    );
+
+    // Restore actor.version DEFAULT
+    await queryRunner.query(
+      `ALTER TABLE "actor" ALTER COLUMN "version" SET DEFAULT '1'`
     );
 
     // Remove unique constraints
