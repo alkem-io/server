@@ -46,7 +46,6 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
-import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -1085,22 +1084,23 @@ export class RoleSetService {
             actorID
           );
 
-          // Clean up notifications for this user in this space and all descendant spaces (L1, L2, etc.)
           const space =
             await this.communityResolverService.getSpaceForRoleSetOrFail(
               roleSet.id
             );
 
-          // Delete notifications from the current space
+          // Cascade: revoke all space credentials from descendant spaces (L1, L2, etc.)
+          const descendantSpaceIDs =
+            await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
+          if (descendantSpaceIDs.length > 0) {
+            await this.revokeSpaceTreeCredentials(actorID, descendantSpaceIDs);
+          }
+
+          // Clean up notifications for this space and all descendant spaces
           await this.inAppNotificationService.deleteAllForReceiverInSpace(
             actorID,
             space.id
           );
-
-          // Also delete notifications from all descendant spaces (L1, L2, etc.)
-          // since user is automatically removed from those as well
-          const descendantSpaceIDs =
-            await this.spaceLookupService.getAllDescendantSpaceIDs(space.id);
           if (descendantSpaceIDs.length > 0) {
             await this.inAppNotificationService.deleteAllForReceiverInSpaces(
               actorID,
@@ -1319,18 +1319,25 @@ export class RoleSetService {
     }
   }
 
-  private async getAllSubspaceIds(spaceId: string): Promise<string[]> {
-    const spaceHierarchy =
-      await this.spaceLookupService.getFullSpaceHierarchy(spaceId);
-    const subspaces = spaceHierarchy?.subspaces || [];
-    return this.flattenSubspaces(subspaces);
-  }
+  private async revokeSpaceTreeCredentials(
+    actorID: string,
+    descendantSpaceIDs: string[]
+  ): Promise<void> {
+    const spaceCredentialTypes = [
+      AuthorizationCredential.SPACE_MEMBER,
+      AuthorizationCredential.SPACE_ADMIN,
+      AuthorizationCredential.SPACE_LEAD,
+      AuthorizationCredential.SPACE_SUBSPACE_ADMIN,
+    ];
 
-  private flattenSubspaces(subspaces: ISpace[]): string[] {
-    return subspaces.flatMap(subspace => [
-      subspace.id,
-      ...(subspace.subspaces ? this.flattenSubspaces(subspace.subspaces) : []),
-    ]);
+    for (const spaceID of descendantSpaceIDs) {
+      for (const credentialType of spaceCredentialTypes) {
+        await this.actorService.revokeCredential(actorID, {
+          type: credentialType,
+          resourceID: spaceID,
+        });
+      }
+    }
   }
 
   public async isMember(actorID: string, roleSet: IRoleSet): Promise<boolean> {
