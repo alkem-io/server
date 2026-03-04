@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { ActorModule as ActorCoreModule } from '@domain/actor/actor/actor.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
@@ -17,6 +18,7 @@ import { ConversationAuthorizationService } from './conversation.service.authori
 
 @Module({
   imports: [
+    ActorCoreModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
     RoomModule,

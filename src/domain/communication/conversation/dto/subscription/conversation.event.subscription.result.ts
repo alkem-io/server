@@ -1,3 +1,4 @@
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { MessageID, UUID } from '@domain/common/scalars';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
@@ -12,6 +13,9 @@ export enum ConversationEventType {
   MESSAGE_RECEIVED = 'MESSAGE_RECEIVED',
   MESSAGE_REMOVED = 'MESSAGE_REMOVED',
   READ_RECEIPT_UPDATED = 'READ_RECEIPT_UPDATED',
+  MEMBER_ADDED = 'MEMBER_ADDED',
+  MEMBER_REMOVED = 'MEMBER_REMOVED',
+  CONVERSATION_DELETED = 'CONVERSATION_DELETED',
 }
 
 registerEnumType(ConversationEventType, {
@@ -80,6 +84,50 @@ export class ConversationReadReceiptUpdatedEvent {
   lastReadEventId!: string;
 }
 
+@ObjectType('ConversationMemberAddedEvent', {
+  description: 'Event fired when a member is added to a group conversation.',
+})
+export class ConversationMemberAddedEvent {
+  @Field(() => IConversation, {
+    description: 'The conversation the member was added to.',
+  })
+  conversation!: IConversation;
+
+  @Field(() => IActor, {
+    description: 'The actor that was added as a member.',
+  })
+  addedMember!: IActor;
+}
+
+@ObjectType('ConversationMemberRemovedEvent', {
+  description:
+    'Event fired when a member is removed from or leaves a group conversation.',
+})
+export class ConversationMemberRemovedEvent {
+  @Field(() => IConversation, {
+    description: 'The conversation the member was removed from.',
+  })
+  conversation!: IConversation;
+
+  @Field(() => UUID, {
+    description:
+      'The ID of the removed member. UUID only — removed member may not be resolvable after removal.',
+  })
+  removedMemberID!: string;
+}
+
+@ObjectType('ConversationDeletedEvent', {
+  description:
+    'Event fired when a conversation is deleted. All members are notified.',
+})
+export class ConversationDeletedEvent {
+  @Field(() => UUID, {
+    description:
+      'The ID of the deleted conversation. UUID only — conversation no longer exists.',
+  })
+  conversationID!: string;
+}
+
 @ObjectType('ConversationEventSubscriptionResult', {
   description: 'Payload for conversation subscription events.',
 })
@@ -113,4 +161,22 @@ export class ConversationEventSubscriptionResult {
     description: 'Present when eventType is READ_RECEIPT_UPDATED.',
   })
   readReceiptUpdated?: ConversationReadReceiptUpdatedEvent;
+
+  @Field(() => ConversationMemberAddedEvent, {
+    nullable: true,
+    description: 'Present when eventType is MEMBER_ADDED.',
+  })
+  memberAdded?: ConversationMemberAddedEvent;
+
+  @Field(() => ConversationMemberRemovedEvent, {
+    nullable: true,
+    description: 'Present when eventType is MEMBER_REMOVED.',
+  })
+  memberRemoved?: ConversationMemberRemovedEvent;
+
+  @Field(() => ConversationDeletedEvent, {
+    nullable: true,
+    description: 'Present when eventType is CONVERSATION_DELETED.',
+  })
+  conversationDeleted?: ConversationDeletedEvent;
 }

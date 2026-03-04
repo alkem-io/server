@@ -63,6 +63,12 @@ export class ConversationEventResolverSubscription {
           eventType = ConversationEventType.MESSAGE_RECEIVED;
         } else if (payload.messageRemoved) {
           eventType = ConversationEventType.MESSAGE_REMOVED;
+        } else if (payload.memberAdded) {
+          eventType = ConversationEventType.MEMBER_ADDED;
+        } else if (payload.memberRemoved) {
+          eventType = ConversationEventType.MEMBER_REMOVED;
+        } else if (payload.conversationDeleted) {
+          eventType = ConversationEventType.CONVERSATION_DELETED;
         } else {
           eventType = ConversationEventType.READ_RECEIPT_UPDATED;
         }
@@ -78,6 +84,9 @@ export class ConversationEventResolverSubscription {
                 lastReadEventId: payload.readReceiptUpdated.lastReadMessageId,
               }
             : undefined,
+          memberAdded: payload.memberAdded,
+          memberRemoved: payload.memberRemoved,
+          conversationDeleted: payload.conversationDeleted,
         };
       },
     }

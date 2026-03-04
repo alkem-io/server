@@ -274,11 +274,6 @@ enum CalloutVisibility {
   PUBLISHED
 }
 
-enum CommunicationConversationType {
-  USER_USER
-  USER_VC
-}
-
 enum CommunityMembershipPolicy {
   APPLICATIONS
   INVITATIONS
@@ -298,9 +293,20 @@ enum ContentUpdatePolicy {
   OWNER
 }
 
+"""
+The type of conversation to create. Maps to room type: DIRECT → DM room, GROUP → group room.
+"""
+enum ConversationCreationType {
+  DIRECT
+  GROUP
+}
+
 """The type of conversation event."""
 enum ConversationEventType {
   CONVERSATION_CREATED
+  CONVERSATION_DELETED
+  MEMBER_ADDED
+  MEMBER_REMOVED
   MESSAGE_RECEIVED
   MESSAGE_REMOVED
   READ_RECEIPT_UPDATED
@@ -581,6 +587,7 @@ enum PlatformFeatureFlagName {
 }
 
 enum ProfileType {
+  ACCOUNT
   CALENDAR_EVENT
   CALLOUT_FRAMING
   COMMUNITY_GUIDELINES
@@ -593,6 +600,7 @@ enum ProfileType {
   MEMO
   ORGANIZATION
   POST
+  SPACE
   SPACE_ABOUT
   TEMPLATE
   USER
@@ -868,7 +876,7 @@ interface ActorFull {
   id: UUID!
   """A name identifier of the Actor, unique within a given scope."""
   nameID: NameID!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The type of Actor"""
   type: ActorType!
@@ -929,7 +937,7 @@ type Account implements ActorFull {
   license: License!
   """A name identifier of the Account, unique within the platform."""
   nameID: NameID!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The Spaces within this Account."""
   spaces: [Space!]!
@@ -1320,8 +1328,12 @@ type Actor {
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The credentials held by this Actor."""
+  credentials: [Credential!]
   """The ID of the entity"""
   id: UUID!
+  """A name identifier of the entity, unique within a given scope."""
+  nameID: NameID!
   """The profile for this Actor."""
   profile: Profile
   """The type of Actor"""
@@ -1985,23 +1997,13 @@ type Conversation {
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  """All members of this Conversation, returned as actors with their types."""
+  members: [Actor!]!
   messaging: Messaging!
   """The room for this Conversation."""
   room: Room
-  """
-  The type of this Conversation (USER_USER or USER_VC), inferred from member agent types.
-  """
-  type: CommunicationConversationType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """
-  The other user participating in this Conversation (excludes the current user).
-  """
-  user: User
-  """
-  The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
-  """
-  virtualContributor: VirtualContributor
 }
 
 """
@@ -2016,20 +2018,54 @@ type ConversationCreatedEvent {
   message: Message
 }
 
+"""Event fired when a conversation is deleted. All members are notified."""
+type ConversationDeletedEvent {
+  """
+  The ID of the deleted conversation. UUID only — conversation no longer exists.
+  """
+  conversationID: UUID!
+}
+
 """Payload for conversation subscription events."""
 type ConversationEventSubscriptionResult {
   """Present when eventType is CONVERSATION_CREATED."""
   conversationCreated: ConversationCreatedEvent
+  """Present when eventType is CONVERSATION_DELETED."""
+  conversationDeleted: ConversationDeletedEvent
   """
   The type of event. Use this to determine which payload field is populated.
   """
   eventType: ConversationEventType!
+  """Present when eventType is MEMBER_ADDED."""
+  memberAdded: ConversationMemberAddedEvent
+  """Present when eventType is MEMBER_REMOVED."""
+  memberRemoved: ConversationMemberRemovedEvent
   """Present when eventType is MESSAGE_RECEIVED."""
   messageReceived: ConversationMessageReceivedEvent
   """Present when eventType is MESSAGE_REMOVED."""
   messageRemoved: ConversationMessageRemovedEvent
   """Present when eventType is READ_RECEIPT_UPDATED."""
   readReceiptUpdated: ConversationReadReceiptUpdatedEvent
+}
+
+"""Event fired when a member is added to a group conversation."""
+type ConversationMemberAddedEvent {
+  """The actor that was added as a member."""
+  addedMember: Actor!
+  """The conversation the member was added to."""
+  conversation: Conversation!
+}
+
+"""
+Event fired when a member is removed from or leaves a group conversation.
+"""
+type ConversationMemberRemovedEvent {
+  """The conversation the member was removed from."""
+  conversation: Conversation!
+  """
+  The ID of the removed member. UUID only — removed member may not be resolvable after removal.
+  """
+  removedMemberID: UUID!
 }
 
 """Event fired when a new message is received in a conversation."""
@@ -2614,7 +2650,7 @@ type InAppNotificationPayloadUserMessageDirect implements InAppNotificationPaylo
 }
 
 type InAppNotificationPayloadVirtualContributor implements InAppNotificationPayload {
-  contributor: VirtualContributor!
+  actor: VirtualContributor!
   """The Space related to the notification"""
   space: Space!
   """The payload type."""
@@ -3183,14 +3219,10 @@ type LookupQueryResults {
 }
 
 type MeConversationsResult {
-  """Conversations between users."""
-  users: [Conversation!]!
   """
-  Get a conversation with a well-known virtual contributor for the current user.
+  All conversations (direct and group) for the current authenticated user. Client handles categorization by room type and member actor types.
   """
-  virtualContributor(wellKnown: VirtualContributorWellKnown!): Conversation
-  """Conversations between users and virtual contributors."""
-  virtualContributors: [Conversation!]!
+  conversations: [Conversation!]!
 }
 
 type MediaGallery {
@@ -3389,6 +3421,8 @@ type ModelCardSpaceUsageResult {
 }
 
 type Mutation {
+  """Add a member to a group conversation."""
+  addConversationMember(memberData: AddConversationMemberInput!): Conversation!
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Adds a full email address to the platform notification blacklist"""
@@ -3497,7 +3531,9 @@ type Mutation {
   createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!): Callout!
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
-  """Create a new Conversation on the Messaging."""
+  """
+  Create a new Conversation. Use type DIRECT for 1-on-1, GROUP for multi-party.
+  """
   createConversation(conversationData: CreateConversationInput!): Conversation!
   """Creates a new Discussion as part of this Forum."""
   createDiscussion(createData: ForumCreateDiscussionInput!): Discussion!
@@ -3550,7 +3586,7 @@ type Mutation {
   """Deletes a contribution."""
   deleteContribution(deleteData: DeleteContributionInput!): CalloutContribution!
   """
-  Deletes a Conversation. The Matrix room is only deleted if no reciprocal conversation exists.
+  Deletes a Conversation. All members are notified via CONVERSATION_DELETED event.
   """
   deleteConversation(deleteData: DeleteConversationInput!): Conversation!
   """Deletes the specified Discussion."""
@@ -3615,6 +3651,10 @@ type Mutation {
   Join the specified RoleSet using the entry Role, without going through an approval process.
   """
   joinRoleSet(joinData: JoinAsEntryRoleOnRoleSetInput!): RoleSet!
+  """
+  Leave a group conversation. Returns null if the conversation was auto-deleted (0 members).
+  """
+  leaveConversation(leaveData: LeaveConversationInput!): Conversation
   """Reset the License with Entitlements on the specified Account."""
   licenseResetOnAccount(resetData: AccountLicenseResetInput!): Account!
   """Marks a message as read for the current user."""
@@ -3637,6 +3677,10 @@ type Mutation {
   refreshVirtualContributorBodyOfKnowledge(refreshData: RefreshVirtualContributorBodyOfKnowledgeInput!): Boolean!
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
+  """
+  Remove a member from a group conversation. Returns null if the conversation was auto-deleted (0 members).
+  """
+  removeConversationMember(memberData: RemoveConversationMemberInput!): Conversation
   """Remove the default callout template from an InnovationFlowState."""
   removeDefaultCalloutTemplateOnInnovationFlowState(removeData: RemoveDefaultCalloutTemplateOnInnovationFlowStateInput!): InnovationFlowState!
   """Removes an Iframe Allowed URL from the Platform Settings"""
@@ -3883,7 +3927,7 @@ type Organization implements ActorFull & Groupable {
   metrics: [NVP!]
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The RoleSet for this Organization."""
   roleSet: RoleSet!
@@ -4623,7 +4667,7 @@ type RelayPaginatedSpace implements ActorFull {
   nameID: NameID!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
@@ -5139,7 +5183,7 @@ type Space implements ActorFull {
   nameID: NameID!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
@@ -5717,7 +5761,7 @@ type User implements ActorFull {
   nameID: NameID!
   """The phone number for this User."""
   phone: String
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The settings for this User."""
   settings: UserSettings!
@@ -5964,7 +6008,7 @@ type VirtualContributor implements ActorFull {
   Platform-level settings of this Virtual Contributor, modifiable only by platform admins.
   """
   platformSettings: VirtualContributorPlatformSettings!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """Prompt graph definition for this Virtual Contributor."""
   promptGraphDefinition: PromptGraphDefinition
@@ -6204,6 +6248,13 @@ input ActivityLogInput {
 input ActorFilterInput {
   """Return actors with credentials in the provided list"""
   credentials: [AuthorizationCredential!]
+}
+
+input AddConversationMemberInput {
+  """The ID of the conversation to add a member to."""
+  conversationID: UUID!
+  """The ID of the member (user or VC) to add."""
+  memberID: UUID!
 }
 
 input AddVisualToMediaGalleryInput {
@@ -6498,9 +6549,14 @@ input CreateContributionOnCalloutInput {
 }
 
 input CreateConversationInput {
-  userID: UUID!
-  virtualContributorID: UUID
-  wellKnownVirtualContributor: VirtualContributorWellKnown
+  """
+  IDs of members to add. For DIRECT: exactly 1 ID. For GROUP: 1+ IDs. Creator is auto-included.
+  """
+  memberIDs: [UUID!]!
+  """
+  The type of conversation to create: DIRECT for 1-on-1, GROUP for multi-party.
+  """
+  type: ConversationCreationType!
 }
 
 input CreateInnovationFlowInput {
@@ -7077,6 +7133,11 @@ input JoinAsEntryRoleOnRoleSetInput {
   roleSetID: UUID!
 }
 
+input LeaveConversationInput {
+  """The ID of the conversation to leave."""
+  conversationID: UUID!
+}
+
 input LibraryTemplatesFilterInput {
   """
   Return Templates within the Library matching the specified Template Types.
@@ -7194,6 +7255,13 @@ input RefreshVirtualContributorBodyOfKnowledgeInput {
 input RemoveCommunityGuidelinesContentInput {
   """ID of the CommunityGuidelines that will be emptied"""
   communityGuidelinesID: UUID!
+}
+
+input RemoveConversationMemberInput {
+  """The ID of the conversation to remove a member from."""
+  conversationID: UUID!
+  """The ID of the member (user or VC) to remove."""
+  memberID: UUID!
 }
 
 input RemoveDefaultCalloutTemplateOnInnovationFlowStateInput {

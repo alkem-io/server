@@ -162,6 +162,7 @@ export class RoomService {
     roomData: CreateRoomInput
   ): Promise<void> {
     const isDirect = roomData.type === RoomType.CONVERSATION_DIRECT;
+    const isGroup = roomData.type === RoomType.CONVERSATION_GROUP;
 
     // Compute initial members based on room type
     let initialMembers: string[] | undefined;
@@ -172,13 +173,16 @@ export class RoomService {
         );
       }
       initialMembers = [roomData.senderActorID, roomData.receiverActorID];
+    } else if (isGroup && roomData.memberActorIDs) {
+      initialMembers = roomData.memberActorIDs;
     } else if (roomData.senderActorID) {
       initialMembers = [roomData.senderActorID];
     }
 
-    const logContext = isDirect
-      ? LogContext.COMMUNICATION_CONVERSATION
-      : LogContext.COMMUNICATION;
+    const logContext =
+      isDirect || isGroup
+        ? LogContext.COMMUNICATION_CONVERSATION
+        : LogContext.COMMUNICATION;
 
     try {
       this.logger.verbose?.(

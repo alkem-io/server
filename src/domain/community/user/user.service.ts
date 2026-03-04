@@ -223,10 +223,10 @@ export class UserService {
 
   private async createGuidanceConversation(userID: string): Promise<void> {
     try {
-      await this.messagingService.createConversation({
-        callerAgentId: userID, // user.id = actorID in the new model
-        wellKnownVirtualContributor: VirtualContributorWellKnown.CHAT_GUIDANCE,
-      });
+      await this.messagingService.createConversationWithWellKnownVC(
+        userID, // user.id = actorID in the new model
+        VirtualContributorWellKnown.CHAT_GUIDANCE
+      );
 
       this.logger.verbose?.(
         `Created guidance conversation for user: ${userID}`,

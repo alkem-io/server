@@ -1,0 +1,122 @@
+# GraphQL Contract: Group Conversations & Unified Messaging API
+# This is a design document, not executable schema.
+
+## Enum Changes
+
+# REMOVED: CommunicationConversationType — eliminated entirely.
+# Direct vs group is determined by room type. USER_USER vs USER_VC was redundant.
+
+enum ConversationEventType {
+  CONVERSATION_CREATED
+  MESSAGE_RECEIVED
+  MESSAGE_REMOVED
+  READ_RECEIPT_UPDATED
+  MEMBER_ADDED     # NEW
+  MEMBER_REMOVED   # NEW
+  CONVERSATION_DELETED  # NEW
+}
+
+# Input enum for createConversation mutation (maps to RoomType internally)
+enum ConversationCreationType {
+  DIRECT    # Maps to RoomType.CONVERSATION_DIRECT (Matrix DM room)
+  GROUP     # Maps to RoomType.CONVERSATION_GROUP (Matrix group room)
+}
+
+## Type Changes
+
+type Conversation {
+  id: UUID!
+  members: [Actor!]!                       # NEW unified field (replaces user + virtualContributor)
+  room: Room                               # Room.type is the source of truth for direct vs group
+  # REMOVED: type: CommunicationConversationType
+  # REMOVED: user: User
+  # REMOVED: virtualContributor: VirtualContributor
+}
+
+## Input Types
+
+# MODIFIED: Unified creation input replaces CreateConversationInput
+input CreateConversationInput {
+  type: ConversationCreationType!          # NEW: explicit DIRECT or GROUP
+  memberIDs: [UUID!]!                      # NEW: list of actor/user IDs to invite
+                                           # For DIRECT: exactly 1 ID
+                                           # For GROUP: 1+ IDs (creator auto-included)
+  # REMOVED: userID
+  # REMOVED: virtualContributorID
+  # REMOVED: wellKnownVirtualContributor
+}
+
+# NEW: Add member to group conversation
+input AddConversationMemberInput {
+  conversationID: UUID!
+  memberID: UUID!
+}
+
+# NEW: Remove member from group conversation
+input RemoveConversationMemberInput {
+  conversationID: UUID!
+  memberID: UUID!
+}
+
+# NEW: Leave group conversation (self-removal)
+input LeaveConversationInput {
+  conversationID: UUID!
+}
+
+## Mutations
+
+type Mutation {
+  # MODIFIED: now accepts unified input with explicit type
+  createConversation(conversationData: CreateConversationInput!): Conversation!
+
+  # EXISTING: unchanged
+  deleteConversation(deleteData: DeleteConversationInput!): Conversation!
+  resetConversationVc(resetData: ConversationVcResetInput!): Conversation!
+
+  # NEW: Group membership management
+  addConversationMember(memberData: AddConversationMemberInput!): Conversation!
+  removeConversationMember(memberData: RemoveConversationMemberInput!): Conversation  # nullable — returns null if conversation was auto-deleted (0 members)
+  leaveConversation(leaveData: LeaveConversationInput!): Conversation               # nullable — returns null if conversation was auto-deleted (0 members)
+}
+
+## Queries (via Me)
+
+type MeConversationsResult {
+  conversations: [Conversation!]!          # MODIFIED: flat list of ALL conversations (replaces users, virtualContributors, groups, virtualContributor(wellKnown:))
+  # REMOVED: users — client filters by member actor types
+  # REMOVED: virtualContributors — client filters by member actor types
+  # REMOVED: virtualContributor(wellKnown:) — client uses platform.wellKnownVirtualContributors to resolve VC ID, then filters locally
+  # REMOVED: groups (was planned) — client filters by room.type = CONVERSATION_GROUP
+}
+
+## Subscriptions
+
+# EXISTING subscription, extended with new event types
+type ConversationEventSubscriptionResult {
+  eventType: ConversationEventType!
+  conversationCreated: ConversationCreatedEvent       # EXISTING
+  messageReceived: ConversationMessageReceivedEvent    # EXISTING
+  messageRemoved: ConversationMessageRemovedEvent      # EXISTING
+  readReceiptUpdated: ConversationReadReceiptUpdatedEvent  # EXISTING
+  memberAdded: ConversationMemberAddedEvent            # NEW
+  memberRemoved: ConversationMemberRemovedEvent        # NEW
+  conversationDeleted: ConversationDeletedEvent        # NEW
+}
+
+# NEW event types
+# Note: Added events return full entity (resolvable); removed/deleted events return UUID only
+# (the entity may no longer exist or be accessible after the operation)
+type ConversationMemberAddedEvent {
+  conversation: Conversation!
+  addedMember: Actor!
+}
+
+type ConversationMemberRemovedEvent {
+  conversation: Conversation!
+  removedMemberID: UUID!              # UUID only — removed member may not be resolvable after removal
+}
+
+# NEW: Conversation deleted event
+type ConversationDeletedEvent {
+  conversationID: UUID!               # UUID only — conversation no longer exists after deletion
+}

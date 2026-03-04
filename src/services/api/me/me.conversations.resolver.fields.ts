@@ -1,12 +1,10 @@
 import { CurrentActor } from '@common/decorators';
 import { LogContext } from '@common/enums';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { IConversation } from '@domain/communication/conversation/conversation.interface';
 import { MessagingService } from '@domain/communication/messaging/messaging.service';
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { MeConversationsResult } from './dto/me.conversations.result';
 
 @Resolver(() => MeConversationsResult)
@@ -16,9 +14,9 @@ export class MeConversationsResolverFields {
   @ResolveField(() => [IConversation], {
     nullable: false,
     description:
-      'Conversations between users for the current authenticated user.',
+      'All conversations (direct and group) for the current authenticated user. Client handles categorization by room type and member actor types.',
   })
-  async users(
+  async conversations(
     @CurrentActor() actorContext: ActorContext,
     @Parent() _parent: MeConversationsResult
   ): Promise<IConversation[]> {
@@ -29,55 +27,12 @@ export class MeConversationsResolverFields {
       );
     }
 
-    return await this.messagingService.getConversationsForUser(
-      actorContext.actorID,
-      CommunicationConversationType.USER_USER
-    );
-  }
+    const platformMessaging =
+      await this.messagingService.getPlatformMessaging();
 
-  @ResolveField(() => [IConversation], {
-    nullable: false,
-    description:
-      'Conversations between users and virtual contributors for the current authenticated user.',
-  })
-  async virtualContributors(
-    @CurrentActor() actorContext: ActorContext,
-    @Parent() _parent: MeConversationsResult
-  ): Promise<IConversation[]> {
-    if (!actorContext.actorID) {
-      throw new ValidationException(
-        'Unable to retrieve conversations as no userID provided.',
-        LogContext.COMMUNICATION
-      );
-    }
-
-    return await this.messagingService.getConversationsForUser(
-      actorContext.actorID,
-      CommunicationConversationType.USER_VC
-    );
-  }
-
-  @ResolveField(() => IConversation, {
-    nullable: true,
-    description:
-      'Get a conversation with a well-known virtual contributor for the current user.',
-  })
-  async virtualContributor(
-    @CurrentActor() actorContext: ActorContext,
-    @Parent() _parent: MeConversationsResult,
-    @Args('wellKnown', { type: () => VirtualContributorWellKnown })
-    wellKnown: VirtualContributorWellKnown
-  ): Promise<IConversation | null> {
-    if (!actorContext.actorID) {
-      throw new ValidationException(
-        'Unable to retrieve conversation as no userID provided.',
-        LogContext.COMMUNICATION
-      );
-    }
-
-    return await this.messagingService.getConversationWithWellKnownVC(
-      actorContext.actorID,
-      wellKnown
+    return await this.messagingService.getConversationsForActor(
+      platformMessaging.id,
+      actorContext.actorID
     );
   }
 }

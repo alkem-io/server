@@ -1172,10 +1172,14 @@ export class CommunicationAdapter {
   // ============================================================================
 
   private mapRoomType(alkemioType: AlkemioRoomType): RoomType {
-    if (alkemioType === AlkemioRoomType.CONVERSATION_DIRECT) {
-      return RoomTypeDirect;
+    switch (alkemioType) {
+      case AlkemioRoomType.CONVERSATION_DIRECT:
+        return RoomTypeDirect;
+      case AlkemioRoomType.CONVERSATION_GROUP:
+        return RoomTypeCommunity;
+      default:
+        return RoomTypeCommunity;
     }
-    return RoomTypeCommunity;
   }
 
   private convertGetRoomResponseToCommunicationRoomResult(

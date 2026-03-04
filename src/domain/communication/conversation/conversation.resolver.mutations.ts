@@ -5,13 +5,19 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { randomUUID } from 'crypto';
 import { IConversation } from './conversation.interface';
 import { ConversationService } from './conversation.service';
 import { ConversationAuthorizationService } from './conversation.service.authorization';
+import { AddConversationMemberInput } from './dto/conversation.dto.add-member';
 import { DeleteConversationInput } from './dto/conversation.dto.delete';
+import { LeaveConversationInput } from './dto/conversation.dto.leave';
+import { RemoveConversationMemberInput } from './dto/conversation.dto.remove-member';
 import { ConversationVcResetInput } from './dto/conversation.vc.dto.reset.input';
 
 @InstrumentResolver()
@@ -21,7 +27,9 @@ export class ConversationResolverMutations {
     private authorizationService: AuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private conversationService: ConversationService,
-    private conversationAuthorizationService: ConversationAuthorizationService
+    private conversationAuthorizationService: ConversationAuthorizationService,
+    private actorService: ActorService,
+    private subscriptionPublishService: SubscriptionPublishService
   ) {}
 
   @Mutation(() => IConversation, {
@@ -93,7 +101,7 @@ export class ConversationResolverMutations {
 
   @Mutation(() => IConversation, {
     description:
-      'Deletes a Conversation. The Matrix room is only deleted if no reciprocal conversation exists.',
+      'Deletes a Conversation. All members are notified via CONVERSATION_DELETED event.',
   })
   async deleteConversation(
     @CurrentActor() actorContext: ActorContext,
@@ -108,7 +116,6 @@ export class ConversationResolverMutations {
       }
     );
 
-    // Authorization check - user must have delete permission on the conversation
     this.authorizationService.grantAccessOrFail(
       actorContext,
       conversation.authorization,
@@ -116,6 +123,175 @@ export class ConversationResolverMutations {
       `delete conversation: ${conversation.id}`
     );
 
-    return await this.conversationService.deleteConversation(conversation.id);
+    // Collect all member IDs before deletion for event publishing
+    const memberAgentIds =
+      await this.conversationService.getConversationMemberAgentIds(
+        conversation.id
+      );
+
+    const result = await this.conversationService.deleteConversation(
+      conversation.id
+    );
+
+    // Publish CONVERSATION_DELETED event to all former members
+    await this.subscriptionPublishService.publishConversationEvent({
+      eventID: `conversation-event-${randomUUID()}`,
+      memberAgentIds,
+      conversationDeleted: {
+        conversationID: conversation.id,
+      },
+    });
+
+    return result;
+  }
+
+  @Mutation(() => IConversation, {
+    description: 'Add a member to a group conversation.',
+  })
+  async addConversationMember(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('memberData') memberData: AddConversationMemberInput
+  ): Promise<IConversation> {
+    const conversation = await this.conversationService.getConversationOrFail(
+      memberData.conversationID,
+      { relations: { authorization: true } }
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      conversation.authorization,
+      AuthorizationPrivilege.CONTRIBUTE,
+      `add member to conversation: ${conversation.id}`
+    );
+
+    const updatedConversation = await this.conversationService.addMember(
+      memberData.conversationID,
+      memberData.memberID
+    );
+
+    // Re-apply authorization policy after membership change
+    const authorizations =
+      await this.conversationAuthorizationService.applyAuthorizationPolicy(
+        updatedConversation.id
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
+
+    // Resolve added member actor for the event
+    const addedActor = await this.actorService.getActorOrFail(
+      memberData.memberID
+    );
+
+    // Publish MEMBER_ADDED event to all current members
+    const memberAgentIds =
+      await this.conversationService.getConversationMemberAgentIds(
+        updatedConversation.id
+      );
+
+    await this.subscriptionPublishService.publishConversationEvent({
+      eventID: `conversation-event-${randomUUID()}`,
+      memberAgentIds,
+      memberAdded: {
+        conversation: updatedConversation,
+        addedMember: addedActor,
+      },
+    });
+
+    return await this.conversationService.getConversationOrFail(
+      updatedConversation.id,
+      { relations: { authorization: true, room: true } }
+    );
+  }
+
+  @Mutation(() => IConversation, {
+    nullable: true,
+    description:
+      'Remove a member from a group conversation. Returns null if the conversation was auto-deleted (0 members).',
+  })
+  async removeConversationMember(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('memberData') memberData: RemoveConversationMemberInput
+  ): Promise<IConversation | null> {
+    return this.removeMemberAndPublish(
+      actorContext,
+      memberData.conversationID,
+      memberData.memberID,
+      AuthorizationPrivilege.CONTRIBUTE
+    );
+  }
+
+  @Mutation(() => IConversation, {
+    nullable: true,
+    description:
+      'Leave a group conversation. Returns null if the conversation was auto-deleted (0 members).',
+  })
+  async leaveConversation(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('leaveData') leaveData: LeaveConversationInput
+  ): Promise<IConversation | null> {
+    return this.removeMemberAndPublish(
+      actorContext,
+      leaveData.conversationID,
+      actorContext.actorID,
+      AuthorizationPrivilege.READ
+    );
+  }
+
+  /**
+   * Shared logic for removing a member (or self) from a group conversation.
+   * Handles auth check, removal, re-applying auth policy, and publishing MEMBER_REMOVED event.
+   */
+  private async removeMemberAndPublish(
+    actorContext: ActorContext,
+    conversationId: string,
+    memberIdToRemove: string,
+    requiredPrivilege: AuthorizationPrivilege
+  ): Promise<IConversation | null> {
+    const conversation = await this.conversationService.getConversationOrFail(
+      conversationId,
+      { relations: { authorization: true } }
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      conversation.authorization,
+      requiredPrivilege,
+      `remove member from conversation: ${conversation.id}`
+    );
+
+    // Collect member IDs before removal for event publishing
+    const memberAgentIdsBefore =
+      await this.conversationService.getConversationMemberAgentIds(
+        conversationId
+      );
+
+    const updatedConversation = await this.conversationService.removeMember(
+      conversationId,
+      memberIdToRemove
+    );
+
+    if (updatedConversation) {
+      const authorizations =
+        await this.conversationAuthorizationService.applyAuthorizationPolicy(
+          updatedConversation.id
+        );
+      await this.authorizationPolicyService.saveAll(authorizations);
+    }
+
+    // Publish MEMBER_REMOVED event to all members (including the removed one)
+    await this.subscriptionPublishService.publishConversationEvent({
+      eventID: `conversation-event-${randomUUID()}`,
+      memberAgentIds: memberAgentIdsBefore,
+      memberRemoved: {
+        conversation,
+        removedMemberID: memberIdToRemove,
+      },
+    });
+
+    return updatedConversation
+      ? await this.conversationService.getConversationOrFail(
+          updatedConversation.id,
+          { relations: { authorization: true, room: true } }
+        )
+      : null;
   }
 }
