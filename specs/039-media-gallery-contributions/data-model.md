@@ -38,6 +38,7 @@ No new entities or database schema changes required. This feature adds a new eve
   author: string          // Actor ID
   type: ContributionType  // "MEDIA_GALLERY_CONTRIBUTION" (NEW value)
   '@timestamp': Date      // Event timestamp
+  space: string           // level0spaceId
   alkemio: boolean        // Is Alkemio team member
   environment: string     // Deployment environment
 }

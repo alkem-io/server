@@ -72,7 +72,7 @@ export class MediaGalleryResolverMutations {
 
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
-    this.reportMediaGalleryContribution(addData.mediaGalleryID, actorContext);
+    void this.reportMediaGalleryContribution(addData.mediaGalleryID, actorContext);
 
     return visual;
   }
