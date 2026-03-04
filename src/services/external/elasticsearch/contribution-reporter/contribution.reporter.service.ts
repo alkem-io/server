@@ -9,13 +9,19 @@ import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseContribution } from '../events';
 import {
-  AuthorDetails,
+  CONTRIBUTION_TYPE,
   ContributionDetails,
   ContributionDocument,
 } from '../types';
 import { isElasticError, isElasticResponseError } from '../utils';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorService } from '@domain/actor';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { ContributionAuthorDetails } from '../types/contribution.author.details';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
+
+type ContributionActorContext = Partial<Pick<ActorContext, 'actorID' | 'isAnonymous' | 'guestName'>>;
 
 @Injectable()
 export class ContributionReporterService {
@@ -25,6 +31,8 @@ export class ContributionReporterService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
+    private readonly actorService: ActorService,
+    private readonly userLookupService: UserLookupService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(ELASTICSEARCH_CLIENT_PROVIDER)
     private readonly client: ElasticClient | undefined
@@ -42,274 +50,287 @@ export class ContributionReporterService {
 
   public spaceJoined(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'SPACE_JOINED',
+        type: CONTRIBUTION_TYPE.SPACE_JOINED,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
   public spaceContentEdited(
     contribution: ContributionDetails,
-    authorDetails: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'SPACE_CONTENT_EDITED',
+        type: CONTRIBUTION_TYPE.SPACE_CONTENT_EDITED,
         id: contribution.id,
         name: contribution.name,
-        author: authorDetails.id,
         space: contribution.space,
       },
-      authorDetails
+      actorContext
     );
   }
   // ===================
   public subspaceCreated(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'SUBSPACE_CREATED',
+        type: CONTRIBUTION_TYPE.SUBSPACE_CREATED,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
   public subspaceContentEdited(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'SUBSPACE_CONTENT_EDITED',
+        type: CONTRIBUTION_TYPE.SUBSPACE_CONTENT_EDITED,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
   public subspaceJoined(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'SUBSPACE_JOINED',
+        type: CONTRIBUTION_TYPE.SUBSPACE_JOINED,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
   // ===================
   public calloutCreated(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'CALLOUT_CREATED',
+        type: CONTRIBUTION_TYPE.CALLOUT_CREATED,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
   public calloutCommentCreated(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'CALLOUT_COMMENT_CREATED',
+        type: CONTRIBUTION_TYPE.CALLOUT_COMMENT_CREATED,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
   public calloutPostCreated(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'CALLOUT_POST_CREATED',
+        type: CONTRIBUTION_TYPE.CALLOUT_POST_CREATED,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
 
   public calloutLinkCreated(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'CALLOUT_LINK_CREATED',
+        type: CONTRIBUTION_TYPE.CALLOUT_LINK_CREATED,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
   // todo: callout is not available; do we need it
   public calloutWhiteboardCreated(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'CALLOUT_WHITEBOARD_CREATED',
+        type: CONTRIBUTION_TYPE.CALLOUT_WHITEBOARD_CREATED,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
 
   public calloutMemoCreated(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'CALLOUT_MEMO_CREATED',
+        type: CONTRIBUTION_TYPE.CALLOUT_MEMO_CREATED,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
 
   public calloutPostCommentCreated(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'CALLOUT_POST_COMMENT_CREATED',
+        type: CONTRIBUTION_TYPE.CALLOUT_POST_COMMENT_CREATED,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
 
   public calendarEventCreated(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'CALENDAR_EVENT_CREATED',
+        type: CONTRIBUTION_TYPE.CALENDAR_EVENT_CREATED,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
   // ===================
   public updateCreated(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'UPDATE_CREATED',
+        type: CONTRIBUTION_TYPE.UPDATE_CREATED,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
 
   public whiteboardContribution(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'WHITEBOARD_CONTRIBUTION',
+        type: CONTRIBUTION_TYPE.WHITEBOARD_CONTRIBUTION,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
 
   public memoContribution(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'MEMO_CONTRIBUTION',
+        type: CONTRIBUTION_TYPE.MEMO_CONTRIBUTION,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
 
   public mediaGalleryContribution(
     contribution: ContributionDetails,
-    details: AuthorDetails
+    actorContext: ContributionActorContext
   ): void {
-    this.createDocument(
+    void this.createDocument(
       {
-        type: 'MEDIA_GALLERY_CONTRIBUTION',
+        type: CONTRIBUTION_TYPE.MEDIA_GALLERY_CONTRIBUTION,
         id: contribution.id,
         name: contribution.name,
-        author: details.id,
         space: contribution.space,
       },
-      details
+      actorContext
     );
   }
 
+  private async getAuthorDetails(
+    actorContext: ContributionActorContext
+  ): Promise<ContributionAuthorDetails> {
+    if (actorContext.actorID) {
+      const actor = await this.actorService.getActorOrNull(actorContext.actorID);
+      if (actor && actor.type === 'user') {
+        const user = await this.userLookupService.getUserByIdOrFail(actor.id)
+        return {
+          author: actor.id,
+          anonymous: false,
+          alkemio: isFromAlkemioTeam(user.email),
+          guest: false
+        }
+      }
+    }
+    if (actorContext.guestName) {
+      return {
+        alkemio: false,
+        anonymous: false,
+        guest: true,
+        guestName: actorContext.guestName,
+      }
+    }
+    return {
+      alkemio: false,
+      anonymous: true,
+      guest: false,
+    }
+  }
+
   private async createDocumentTest<TObject extends BaseContribution>(
-    contribution: TObject,
-    details: AuthorDetails,
+    contribution: Omit<TObject, 'author'>,
+    actorContext: ContributionActorContext,
     timestamp: number
   ): Promise<WriteResponseBase | undefined> {
     if (!this.client) {
@@ -318,8 +339,8 @@ export class ContributionReporterService {
 
     const document: ContributionDocument = {
       ...contribution,
+      ...(await this.getAuthorDetails(actorContext)),
       '@timestamp': new Date(timestamp), // todo: is this UTC?
-      alkemio: isFromAlkemioTeam(details.email),
       environment: this.environment,
     };
 
@@ -347,8 +368,8 @@ export class ContributionReporterService {
   }
 
   private async createDocument<TObject extends BaseContribution>(
-    contribution: TObject,
-    details: AuthorDetails
+    contribution: Omit<TObject, 'author'>,
+    actorContext: ContributionActorContext
   ): Promise<WriteResponseBase | undefined> {
     if (!this.client) {
       return undefined;
@@ -356,8 +377,8 @@ export class ContributionReporterService {
 
     const document: ContributionDocument = {
       ...contribution,
+      ...(await this.getAuthorDetails(actorContext)),
       '@timestamp': new Date(),
-      alkemio: isFromAlkemioTeam(details.email),
       environment: this.environment,
     };
 

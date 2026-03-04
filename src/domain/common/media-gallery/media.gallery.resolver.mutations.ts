@@ -102,10 +102,7 @@ export class MediaGalleryResolverMutations {
           name: displayName,
           space: levelZeroSpaceID,
         },
-        {
-          id: actorContext.actorID,
-          email: actorContext.actorID,
-        }
+        actorContext
       );
     } catch (error: unknown) {
       this.logger.error?.(
