@@ -291,6 +291,22 @@ export class ContributionReporterService {
     );
   }
 
+  public mediaGalleryContribution(
+    contribution: ContributionDetails,
+    details: AuthorDetails
+  ): void {
+    this.createDocument(
+      {
+        type: 'MEDIA_GALLERY_CONTRIBUTION',
+        id: contribution.id,
+        name: contribution.name,
+        author: details.id,
+        space: contribution.space,
+      },
+      details
+    );
+  }
+
   private async createDocumentTest<TObject extends BaseContribution>(
     contribution: TObject,
     details: AuthorDetails,
