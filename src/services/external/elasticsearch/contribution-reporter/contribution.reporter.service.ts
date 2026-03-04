@@ -337,14 +337,14 @@ export class ContributionReporterService {
       return undefined;
     }
 
-    const document: ContributionDocument = {
-      ...contribution,
-      ...(await this.getAuthorDetails(actorContext)),
-      '@timestamp': new Date(timestamp),
-      environment: this.environment,
-    };
-
     try {
+      const document: ContributionDocument = {
+        ...contribution,
+        ...(await this.getAuthorDetails(actorContext)),
+        '@timestamp': new Date(timestamp),
+        environment: this.environment,
+      };
+
       const result = await this.client.index({
         index: this.activityIndexName,
         document,
@@ -375,14 +375,15 @@ export class ContributionReporterService {
       return undefined;
     }
 
-    const document: ContributionDocument = {
-      ...contribution,
-      ...(await this.getAuthorDetails(actorContext)),
-      '@timestamp': new Date(),
-      environment: this.environment,
-    };
-
     try {
+
+      const document: ContributionDocument = {
+        ...contribution,
+        ...(await this.getAuthorDetails(actorContext)),
+        '@timestamp': new Date(),
+        environment: this.environment,
+      };
+
       const result = await this.client.index({
         index: this.activityIndexName,
         document,
