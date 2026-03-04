@@ -95,6 +95,11 @@ http:
         servers:
           - url: 'http://file-service:4003/'
 
+    ecosystem-analytics:
+      loadBalancer:
+        servers:
+          - url: 'http://ecosystem-analytics:4000/'
+
   middlewares:
     strip-api-private-non-interactive-prefix:
       stripPrefix:
@@ -142,6 +147,12 @@ http:
       stripPrefix:
         prefixes:
           - /hydra/admin
+        forceSlash: false
+
+    strip-analytics-prefix:
+      stripPrefix:
+        prefixes:
+          - /analytics
         forceSlash: false
 
   routers:
@@ -284,6 +295,15 @@ http:
       service: 'kratos-admin-ui'
       entryPoints:
         - 'kratos-admin-ui'
+
+    ecosystem-analytics:
+      rule: 'PathPrefix(`/analytics`)'
+      service: 'ecosystem-analytics'
+      middlewares:
+        - strip-analytics-prefix
+      entryPoints:
+        - 'web'
+      priority: 120
 
     alkemiowebroute:
       rule: 'PathPrefix(`/`)'

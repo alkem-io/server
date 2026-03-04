@@ -565,3 +565,22 @@ services:
       - alkemio_dev_net
     ports:
       - 8080
+
+  ecosystem-analytics:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_ecosystem_analytics
+    hostname: ecosystem-analytics
+    image: rg.nl-ams.scw.cloud/alkemio/ecosystem-analytics:latest
+    depends_on:
+      kratos:
+        condition: service_started
+    environment:
+      - ALKEMIO_SERVER_URL=http://host.docker.internal:4000
+      - ALKEMIO_GRAPHQL_ENDPOINT=http://host.docker.internal:4000/graphql
+      - ALKEMIO_KRATOS_PUBLIC_URL=http://kratos:4433
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 4000
