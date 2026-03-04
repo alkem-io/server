@@ -7,6 +7,7 @@ import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.fr
 import { IVisual } from '@domain/common/visual';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { InjectEntityManager } from '@nestjs/typeorm';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter/contribution.reporter.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
@@ -29,6 +30,7 @@ export class MediaGalleryResolverMutations {
     private mediaGalleryService: MediaGalleryService,
     private contributionReporterService: ContributionReporterService,
     private communityResolverService: CommunityResolverService,
+    @InjectEntityManager()
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService

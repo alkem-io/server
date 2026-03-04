@@ -62,7 +62,7 @@
 - [x] T007 [P] Run build verification (`pnpm build`) and confirm no compilation errors
 - [x] T008 [P] Run lint verification (`pnpm lint`) and confirm no lint violations
 - [x] T009 Run test suite (`pnpm test:ci:no:coverage`) and confirm all tests pass including new unit test
-- [ ] T010 Run quickstart.md validation steps from `specs/039-media-gallery-contributions/quickstart.md`
+- [x] T010 Run quickstart.md validation steps from `specs/039-media-gallery-contributions/quickstart.md`
 
 ---
 

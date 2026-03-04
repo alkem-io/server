@@ -28,14 +28,17 @@ No new entities or database schema changes required. This feature adds a new eve
 - `CalloutFraming.mediaGallery`: MediaGallery (OneToOne, JoinColumn)
 - Location: `src/domain/collaboration/callout-framing/callout.framing.entity.ts`
 
-## Elasticsearch Document (existing structure, no changes)
+## Elasticsearch Document (updated structure)
 
 ### ContributionDocument
 ```
 {
   id: string              // Media gallery ID
   name: string            // "Media Gallery of <callout display name>" (from CalloutFraming.profile.displayName)
-  author: string          // Actor ID
+  author?: string         // User actor ID when applicable
+  anonymous: boolean      // Flags a user that's not logged in and hasn't participated into a public whiteboard/memo/...
+  guest: boolean          // Flags a user that's not logged in but has participated into a  public whiteboard/memo/... and has set a guestName
+  guestName?: string      // The name set by the guest user
   type: ContributionType  // "MEDIA_GALLERY_CONTRIBUTION" (NEW value)
   '@timestamp': Date      // Event timestamp
   space: string           // level0spaceId
