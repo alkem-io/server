@@ -340,7 +340,7 @@ export class ContributionReporterService {
     const document: ContributionDocument = {
       ...contribution,
       ...(await this.getAuthorDetails(actorContext)),
-      '@timestamp': new Date(timestamp), // todo: is this UTC?
+      '@timestamp': new Date(timestamp),
       environment: this.environment,
     };
 

@@ -17,7 +17,7 @@ export type ContributionDocument = {
    */
   name: string;
   /**
-   * Timestap, TODO: confirm if this is UTC
+   * Timestamp
    */
   '@timestamp': Date;
   /**
