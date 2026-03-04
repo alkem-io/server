@@ -397,7 +397,7 @@ export class ContributionReporterService {
       const errorId = this.handleError(e);
       this.logger.error(
         `Event '${contribution.type}' for object with id '(${contribution.id})' FAILED to be ingested into (${this.activityIndexName})`,
-        { uuid: errorId },
+        { errorId },
         LogContext.CONTRIBUTION_REPORTER
       );
     }
