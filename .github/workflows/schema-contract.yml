@@ -28,15 +28,14 @@ jobs:
         with:
           fetch-depth: 0 # need full metadata for label-based baseline detection
 
-      - name: Use Node
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+
+      - name: Setup Node.js
         uses: actions/setup-node@v6.2.0
         with:
           node-version: '22.22.0'
-
-      - name: Bootstrap pnpm
-        run: |
-          corepack enable
-          corepack prepare pnpm@10.17.1 --activate
+          cache: 'pnpm'
 
       - name: Install deps
         run: pnpm install --frozen-lockfile
