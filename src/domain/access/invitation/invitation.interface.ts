@@ -20,14 +20,14 @@ export class IInvitation extends IAuthorizable {
   @Field(() => Boolean, {
     nullable: false,
     description:
-      'Whether to also add the invited contributor to the parent community.',
+      'Whether to also add the invited actor to the parent community.',
   })
   invitedToParent!: boolean;
 
   @Field(() => [RoleName], {
     nullable: false,
     description:
-      'Additional roles to assign to the Contributor, in addition to the entry Role.',
+      'Additional roles to assign to the Actor, in addition to the entry Role.',
   })
   extraRoles!: RoleName[];
 }

@@ -6,13 +6,13 @@ import { vi } from 'vitest';
 import ActivityLogBuilderService from './activity.log.builder.service';
 import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 
-// Mock getContributorType to avoid lazy require() that fails in vitest
+// Mock getActorType to avoid lazy require() that fails in vitest
 vi.mock('@domain/actor/actor/actor.service', async importOriginal => {
   const original =
     await importOriginal<typeof import('@domain/actor/actor/actor.service')>();
   return {
     ...original,
-    getContributorType: vi.fn().mockReturnValue(ActorType.USER),
+    getActorType: vi.fn().mockReturnValue(ActorType.USER),
   };
 });
 
@@ -89,23 +89,23 @@ describe('ActivityLogBuilderService', () => {
       ).rejects.toThrow(EntityNotFoundException);
     });
 
-    it('should return member joined entry with community and contributor', async () => {
+    it('should return member joined entry with community and actor', async () => {
       const community = { id: 'community-1' };
-      const contributor = { id: 'contributor-1', type: ActorType.USER };
+      const joiningActor = { id: 'actor-1', type: ActorType.USER };
       communityService.getCommunityOrFail.mockResolvedValue(community);
-      actorLookupService.getActorByIdOrFail.mockResolvedValue(contributor);
+      actorLookupService.getActorByIdOrFail.mockResolvedValue(joiningActor);
 
       const activity = {
         id: 'act-1',
         type: ActivityEventType.MEMBER_JOINED,
         parentID: 'community-1',
-        resourceID: 'contributor-1',
+        resourceID: 'actor-1',
       } as unknown as IActivity;
 
       const result = await builder[ActivityEventType.MEMBER_JOINED](activity);
 
       expect(result.community).toEqual(community);
-      expect(result.contributor).toEqual(contributor);
+      expect(result.actor).toEqual(joiningActor);
     });
   });
 

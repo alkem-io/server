@@ -141,7 +141,7 @@ describe('RolesService', () => {
 
       const organizationRoles =
         await rolesService.getOrganizationRolesForUser(roles);
-      const spaceRoles = await rolesService.getSpaceRolesForContributor(
+      const spaceRoles = await rolesService.getSpaceRolesForActor(
         roles,
         testData.actorContext
       );
@@ -190,7 +190,7 @@ describe('RolesService', () => {
         actorID: testData.organization.id,
       });
 
-      const spaces = await rolesService.getSpaceRolesForContributor(
+      const spaces = await rolesService.getSpaceRolesForActor(
         roles,
         testData.actorContext
       );

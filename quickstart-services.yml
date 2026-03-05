@@ -515,8 +515,7 @@ services:
   collaborative-document:
     container_name: alkemio_dev_collaborative-document
     hostname: collaborative-document
-    image: alkemio/collaborative-document-service:v0.0.1
-    platform: linux/amd64
+    image: alkemio/collaborative-document-service:v0.3.0
     depends_on:
       rabbitmq:
         condition: service_healthy
