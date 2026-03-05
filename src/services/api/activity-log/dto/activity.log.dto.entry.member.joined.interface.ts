@@ -14,13 +14,13 @@ export abstract class IActivityLogEntryMemberJoined
 {
   @Field(() => IActor, {
     nullable: false,
-    description: 'The Contributor that joined the Community.',
+    description: 'The Actor that joined the Community.',
   })
-  contributor!: IActor;
+  actor!: IActor;
 
   @Field(() => ActorType, {
     nullable: false,
-    description: 'The type of the Contributor that joined the Community.',
+    description: 'The type of the Actor that joined the Community.',
   })
   actorType!: ActorType;
 

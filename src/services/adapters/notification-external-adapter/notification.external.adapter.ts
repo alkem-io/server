@@ -34,7 +34,7 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { IActor } from '@domain/actor/actor/actor.interface';
-import { getContributorType } from '@domain/actor/actor/actor.service';
+import { getActorType } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
@@ -1045,7 +1045,7 @@ export class NotificationExternalAdapter {
       );
     }
 
-    const actorType = getContributorType(contributor);
+    const actorType = getActorType(contributor);
 
     const contributorURL =
       this.urlGeneratorService.createUrlForContributor(contributor);
@@ -1079,7 +1079,7 @@ export class NotificationExternalAdapter {
       );
     }
 
-    const actorType = getContributorType(contributor);
+    const actorType = getActorType(contributor);
 
     const contributorURL =
       this.urlGeneratorService.createUrlForContributor(contributor);
