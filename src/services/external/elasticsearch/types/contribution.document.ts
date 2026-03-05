@@ -26,7 +26,7 @@ export type ContributionDocument = {
   environment: string;
   /**
    * Identifier of the space this contribution belongs to.
-   * If the contribution is related to a space itself,this will be the Level 0 space id.
+   * If the contribution is related to a space itself, this will be the Level 0 space id.
    */
   space: string;
 } & ContributionAuthorDetails;

@@ -304,12 +304,26 @@ export class ContributionReporterService {
     if (actorContext.actorID) {
       const actor = await this.actorService.getActorOrNull(actorContext.actorID);
       if (actor && actor.type === 'user') {
-        const user = await this.userLookupService.getUserByIdOrFail(actor.id)
-        return {
-          author: actor.id,
-          anonymous: false,
-          alkemio: isFromAlkemioTeam(user.email),
-          guest: false
+        try {
+          const user = await this.userLookupService.getUserByIdOrFail(actor.id)
+          return {
+            author: actor.id,
+            anonymous: false,
+            alkemio: isFromAlkemioTeam(user.email),
+            guest: false
+          }
+        } catch (e) {
+          this.logger.error(
+            `Unable to fetch user details for actor with id (${actor.id}) in ContributionReporterService, ${e}`,
+            undefined,
+            LogContext.CONTRIBUTION_REPORTER
+          );
+          return {
+            author: actor.id,
+            anonymous: false,
+            alkemio: false,
+            guest: false,
+          }
         }
       }
     }
