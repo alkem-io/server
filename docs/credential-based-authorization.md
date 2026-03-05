@@ -72,7 +72,7 @@ This is primarily handled by methods like `getCredentialsWithVisibilityOfSpace` 
 2.  **Grant `READ_ABOUT` Privilege**: The credentials gathered in the previous step are then used to create an authorization rule that grants the `READ_ABOUT` privilege. This privilege allows an agent to see the existence of the entity and its basic, non-sensitive information.
 3.  **Filter Queries**: This visibility check is crucial for filtering lists of entities. When a user requests a list of spaces, the system only returns the spaces for which the user has at least `READ_ABOUT` privilege.
 
-The `SpaceVisibility` enum (`ACTIVE`, `DEMO`, `ARCHIVED`) and `SpacePrivacyMode` (`PUBLIC`, `PRIVATE`) are key inputs into this process, dictating how the credential rules for visibility are constructed. For instance, a `PUBLIC` space's visibility rules will be much broader than a `PRIVATE` space's.
+The `SpaceVisibility` enum (`ACTIVE`, `DEMO`, `ARCHIVED`, `INACTIVE`) and `SpacePrivacyMode` (`PUBLIC`, `PRIVATE`) are key inputs into this process, dictating how the credential rules for visibility are constructed. For instance, a `PUBLIC` space's visibility rules will be much broader than a `PRIVATE` space's.
 
 In essence, you can think of the authorization process as two questions:
 

@@ -524,7 +524,11 @@ export class SpaceService {
   }
 
   public async getSpacesInList(spaceIDs: string[]): Promise<ISpace[]> {
-    const visibilities = [SpaceVisibility.ACTIVE, SpaceVisibility.DEMO];
+    const visibilities = [
+      SpaceVisibility.ACTIVE,
+      SpaceVisibility.DEMO,
+      SpaceVisibility.INACTIVE,
+    ];
 
     const spaces = await this.spaceRepository.find({
       where: {
@@ -619,13 +623,14 @@ export class SpaceService {
       };
       spacesDataForSorting.push(spaceSortingData);
     }
+    const deprioritizedVisibilities = [
+      SpaceVisibility.DEMO,
+      SpaceVisibility.INACTIVE,
+    ];
     const sortedSpaces = spacesDataForSorting.sort((a, b) => {
-      if (
-        a.visibility !== b.visibility &&
-        (a.visibility === SpaceVisibility.DEMO ||
-          b.visibility === SpaceVisibility.DEMO)
-      )
-        return a.visibility === SpaceVisibility.DEMO ? 1 : -1;
+      const aDeprioritized = deprioritizedVisibilities.includes(a.visibility);
+      const bDeprioritized = deprioritizedVisibilities.includes(b.visibility);
+      if (aDeprioritized !== bDeprioritized) return aDeprioritized ? 1 : -1;
 
       if (a.accessModeIsPublic && !b.accessModeIsPublic) return -1;
       if (!a.accessModeIsPublic && b.accessModeIsPublic) return 1;
