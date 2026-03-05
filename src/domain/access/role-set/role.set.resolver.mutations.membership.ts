@@ -233,7 +233,7 @@ export class RoleSetResolverMutationsMembership {
     this.validateRoleSetTypeOrFail(roleSet, [RoleSetType.SPACE]);
 
     if (
-      invitationData.invitedContributorIDs.length === 0 &&
+      invitationData.invitedActorIDs.length === 0 &&
       invitationData.invitedUserEmails.length === 0
     ) {
       throw new RoleSetInvitationException(
@@ -254,7 +254,7 @@ export class RoleSetResolverMutationsMembership {
 
     // Validate all actors exist and get their types in a single query
     const actorTypes = await this.actorLookupService.validateActorsAndGetTypes(
-      invitationData.invitedContributorIDs
+      invitationData.invitedActorIDs
     );
 
     // Check if any of the contributors are VCs and if so check if the entitlement is on
@@ -271,9 +271,7 @@ export class RoleSetResolverMutationsMembership {
     }
 
     // Collect actor IDs to invite
-    const actorIDsToInvite: string[] = [
-      ...invitationData.invitedContributorIDs,
-    ];
+    const actorIDsToInvite: string[] = [...invitationData.invitedActorIDs];
 
     // Loop through the emails provided to see if are existing users or not
     const newUserEmails: string[] = [];
@@ -812,13 +810,13 @@ export class RoleSetResolverMutationsMembership {
               LogContext.ROLES
             );
           }
-          // Derive contributor type from the invited contributor
-          const contributorType =
+          // Derive actor type from the invited actor
+          const actorType =
             await this.actorLookupService.getActorTypeByIdOrFail(
               invitation.invitedActorID
             );
 
-          switch (contributorType) {
+          switch (actorType) {
             case ActorType.VIRTUAL_CONTRIBUTOR: {
               const account =
                 await this.virtualContributorLookupService.getAccountOrFail(

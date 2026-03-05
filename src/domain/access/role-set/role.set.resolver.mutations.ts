@@ -368,14 +368,14 @@ export class RoleSetResolverMutations {
 
   @Mutation(() => IActor, {
     description:
-      'Assigns a Contributor (User, Organization, or Virtual Contributor) to a role in the specified RoleSet.',
+      'Assigns an Actor (User, Organization, or Virtual Contributor) to a role in the specified RoleSet.',
   })
   async assignRole(
     @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: AssignRoleOnRoleSetInput
   ): Promise<IActor> {
-    // Look up contributor to determine its type (lightweight - only need id, type)
-    const contributor = await this.actorLookupService.getActorByIdOrFail(
+    // Look up actor to determine its type (lightweight - only need id, type)
+    const actor = await this.actorLookupService.getActorByIdOrFail(
       roleData.actorID
     );
 
@@ -392,7 +392,7 @@ export class RoleSetResolverMutations {
     );
 
     // Type-specific authorization and validation
-    switch (contributor.type) {
+    switch (actor.type) {
       case ActorType.USER:
         await this.authorizeAssignUser(actorContext, roleSet, roleData.role);
         break;
@@ -409,7 +409,7 @@ export class RoleSetResolverMutations {
         break;
     }
 
-    // Assign the role (generic for all contributor types)
+    // Assign the role (generic for all actor types)
     await this.roleSetService.assignActorToRole(
       roleSet,
       roleData.role,
@@ -419,30 +419,25 @@ export class RoleSetResolverMutations {
     );
 
     // Type-specific post-actions
-    if (
-      contributor.type === ActorType.USER &&
-      roleSet.type === RoleSetType.SPACE
-    ) {
+    if (actor.type === ActorType.USER && roleSet.type === RoleSetType.SPACE) {
       const authorizations =
-        await this.userAuthorizationService.applyAuthorizationPolicy(
-          contributor.id
-        );
+        await this.userAuthorizationService.applyAuthorizationPolicy(actor.id);
       await this.authorizationPolicyService.saveAll(authorizations);
     }
 
-    return contributor;
+    return actor;
   }
 
   @Mutation(() => IActor, {
     description:
-      'Removes a Contributor (User, Organization, or Virtual Contributor) from a role in the specified RoleSet.',
+      'Removes an Actor (User, Organization, or Virtual Contributor) from a role in the specified RoleSet.',
   })
   async removeRole(
     @CurrentActor() actorContext: ActorContext,
     @Args('roleData') roleData: RemoveRoleOnRoleSetInput
   ): Promise<IActor> {
-    // Look up contributor to determine its type (lightweight - only need id, type)
-    const contributor = await this.actorLookupService.getActorByIdOrFail(
+    // Look up actor to determine its type (lightweight - only need id, type)
+    const actor = await this.actorLookupService.getActorByIdOrFail(
       roleData.actorID
     );
 
@@ -451,7 +446,7 @@ export class RoleSetResolverMutations {
     );
 
     // Type-specific authorization
-    switch (contributor.type) {
+    switch (actor.type) {
       case ActorType.USER:
         await this.authorizeRemoveUser(
           actorContext,
@@ -472,27 +467,22 @@ export class RoleSetResolverMutations {
         break;
     }
 
-    // Remove the role (generic for all contributor types)
+    // Remove the role (generic for all actor types)
     await this.roleSetService.removeActorFromRole(
       roleSet,
       roleData.role,
       roleData.actorID,
-      contributor.type === ActorType.USER // triggerNewMemberEvents only for users
+      actor.type === ActorType.USER // triggerNewMemberEvents only for users
     );
 
     // Type-specific post-actions
-    if (
-      contributor.type === ActorType.USER &&
-      roleSet.type === RoleSetType.SPACE
-    ) {
+    if (actor.type === ActorType.USER && roleSet.type === RoleSetType.SPACE) {
       const authorizations =
-        await this.userAuthorizationService.applyAuthorizationPolicy(
-          contributor.id
-        );
+        await this.userAuthorizationService.applyAuthorizationPolicy(actor.id);
       await this.authorizationPolicyService.saveAll(authorizations);
     }
 
-    return contributor;
+    return actor;
   }
 
   // Authorization helpers for assign operations

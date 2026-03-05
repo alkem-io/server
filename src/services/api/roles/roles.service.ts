@@ -85,7 +85,7 @@ export class RolesService {
     );
   }
 
-  public async getSpaceRolesForContributor(
+  public async getSpaceRolesForActor(
     roles: ActorRoles,
     actorContext: ActorContext
   ): Promise<RolesResultSpace[]> {

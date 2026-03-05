@@ -27,7 +27,7 @@ export class InAppNotificationResolverFields {
 
   @ResolveField(() => IActor, {
     nullable: true,
-    description: 'The Contributor who triggered the notification.',
+    description: 'The Actor who triggered the notification.',
   })
   public async triggeredBy(
     @Parent() notification: IInAppNotification,
@@ -42,7 +42,7 @@ export class InAppNotificationResolverFields {
     const triggeredBy = await loader.load(triggeredByID);
     if (!triggeredBy) {
       this.logger.warn(
-        `InAppNotification ${id} unable to resolve the contributor that triggered it ${triggeredByID}`
+        `InAppNotification ${id} unable to resolve the actor that triggered it ${triggeredByID}`
       );
       return null;
     }
