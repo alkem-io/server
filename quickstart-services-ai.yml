@@ -454,8 +454,7 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.8.0
-    platform: linux/amd64
+    image: alkemio/whiteboard-collaboration-service:v0.10.0
     depends_on:
       rabbitmq:
         condition: service_healthy
