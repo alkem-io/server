@@ -1,5 +1,5 @@
-import { createDiffContext } from '../../../src/schema-contract/diff/diff-core';
 import { buildChangeReport } from '../../../src/schema-contract/classify/build-report';
+import { createDiffContext } from '../../../src/schema-contract/diff/diff-core';
 
 /**
  * T049: Performance test large synthetic schema diff (<5s target)
@@ -56,8 +56,5 @@ describe('Large schema diff performance', () => {
     // Basic sanity on volume
     expect(report.entries.length).toBeGreaterThan(0);
     expect(elapsed).toBeLessThan(5000); // 5s budget
-    console.log(
-      `Large schema diff time: ${elapsed}ms, entries: ${report.entries.length}`
-    );
   });
 });

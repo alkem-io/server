@@ -3,7 +3,7 @@ import {
   AuthorizationRoleGlobal,
 } from '@common/enums';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -18,11 +18,11 @@ describe('AdminAuthorizationService', () => {
   let service: AdminAuthorizationService;
   let userLookupService: {
     usersWithCredential: Mock;
-    getUserAndAgent: Mock;
+    getUserByIdOrFail: Mock;
     getUserAndCredentials: Mock;
   };
-  let organizationLookupService: { getOrganizationAndAgent: Mock };
-  let agentService: { grantCredentialOrFail: Mock; revokeCredential: Mock };
+  let organizationLookupService: { getOrganizationByIdOrFail: Mock };
+  let actorService: { grantCredentialOrFail: Mock; revokeCredential: Mock };
   let authorizationPolicyService: {
     getAuthorizationPolicyOrFail: Mock;
     reset: Mock;
@@ -49,7 +49,7 @@ describe('AdminAuthorizationService', () => {
     organizationLookupService = module.get(
       OrganizationLookupService
     ) as unknown as typeof organizationLookupService;
-    agentService = module.get(AgentService) as unknown as typeof agentService;
+    actorService = module.get(ActorService) as unknown as typeof actorService;
     authorizationPolicyService = module.get(
       AuthorizationPolicyService
     ) as unknown as typeof authorizationPolicyService;
@@ -124,15 +124,10 @@ describe('AdminAuthorizationService', () => {
 
     it('should grant credential and return user on success', async () => {
       const user = { id: 'user-1' };
-      const agent = { id: 'agent-1' };
-      const updatedAgent = { id: 'agent-1', credentials: [] };
 
-      vi.mocked(userLookupService.getUserAndAgent).mockResolvedValue({
-        user,
-        agent,
-      });
-      vi.mocked(agentService.grantCredentialOrFail).mockResolvedValue(
-        updatedAgent
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(user);
+      vi.mocked(actorService.grantCredentialOrFail).mockResolvedValue(
+        undefined
       );
 
       const result = await service.grantCredentialToUser({
@@ -141,30 +136,30 @@ describe('AdminAuthorizationService', () => {
         resourceID: 'space-1',
       });
 
-      expect(agentService.grantCredentialOrFail).toHaveBeenCalledWith({
-        agentID: 'agent-1',
-        type: AuthorizationCredential.SPACE_MEMBER,
-        resourceID: 'space-1',
-      });
+      // User IS the Actor - user.id is the actorID
+      expect(actorService.grantCredentialOrFail).toHaveBeenCalledWith(
+        'user-1',
+        {
+          type: AuthorizationCredential.SPACE_MEMBER,
+          resourceID: 'space-1',
+        }
+      );
       expect(result).toBe(user);
-      expect(result.agent).toBe(updatedAgent);
     });
 
     it('should allow global credential without resourceID', async () => {
       const user = { id: 'user-1' } as any;
-      const agent = { id: 'agent-1' };
-      vi.mocked(userLookupService.getUserAndAgent).mockResolvedValue({
-        user,
-        agent,
-      });
-      vi.mocked(agentService.grantCredentialOrFail).mockResolvedValue(agent);
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(user);
+      vi.mocked(actorService.grantCredentialOrFail).mockResolvedValue(
+        undefined
+      );
 
       await service.grantCredentialToUser({
         userID: 'user-1',
         type: AuthorizationCredential.GLOBAL_ADMIN,
       });
 
-      expect(agentService.grantCredentialOrFail).toHaveBeenCalled();
+      expect(actorService.grantCredentialOrFail).toHaveBeenCalled();
     });
   });
 
@@ -181,14 +176,9 @@ describe('AdminAuthorizationService', () => {
 
     it('should revoke credential and return user on success', async () => {
       const user = { id: 'user-1' } as any;
-      const agent = { id: 'agent-1' };
-      const updatedAgent = { id: 'agent-1', credentials: [] };
 
-      vi.mocked(userLookupService.getUserAndAgent).mockResolvedValue({
-        user,
-        agent,
-      });
-      vi.mocked(agentService.revokeCredential).mockResolvedValue(updatedAgent);
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(user);
+      vi.mocked(actorService.revokeCredential).mockResolvedValue(undefined);
 
       const result = await service.revokeCredentialFromUser({
         userID: 'user-1',
@@ -196,8 +186,8 @@ describe('AdminAuthorizationService', () => {
         resourceID: 'space-1',
       });
 
-      expect(agentService.revokeCredential).toHaveBeenCalledWith({
-        agentID: 'agent-1',
+      // User IS the Actor - user.id is the actorID
+      expect(actorService.revokeCredential).toHaveBeenCalledWith('user-1', {
         type: AuthorizationCredential.SPACE_MEMBER,
         resourceID: 'space-1',
       });
@@ -218,14 +208,12 @@ describe('AdminAuthorizationService', () => {
 
     it('should grant credential and return organization on success', async () => {
       const organization = { id: 'org-1' } as any;
-      const agent = { id: 'agent-1' };
-      const updatedAgent = { id: 'agent-1', credentials: [] };
 
       vi.mocked(
-        organizationLookupService.getOrganizationAndAgent
-      ).mockResolvedValue({ organization, agent });
-      vi.mocked(agentService.grantCredentialOrFail).mockResolvedValue(
-        updatedAgent
+        organizationLookupService.getOrganizationByIdOrFail
+      ).mockResolvedValue(organization);
+      vi.mocked(actorService.grantCredentialOrFail).mockResolvedValue(
+        undefined
       );
 
       const result = await service.grantCredentialToOrganization({
@@ -235,7 +223,6 @@ describe('AdminAuthorizationService', () => {
       });
 
       expect(result).toBe(organization);
-      expect(result.agent).toBe(updatedAgent);
     });
   });
 
@@ -252,13 +239,11 @@ describe('AdminAuthorizationService', () => {
 
     it('should revoke credential and return organization on success', async () => {
       const organization = { id: 'org-1' } as any;
-      const agent = { id: 'agent-1' };
-      const updatedAgent = { id: 'agent-1', credentials: [] };
 
       vi.mocked(
-        organizationLookupService.getOrganizationAndAgent
-      ).mockResolvedValue({ organization, agent });
-      vi.mocked(agentService.revokeCredential).mockResolvedValue(updatedAgent);
+        organizationLookupService.getOrganizationByIdOrFail
+      ).mockResolvedValue(organization);
+      vi.mocked(actorService.revokeCredential).mockResolvedValue(undefined);
 
       const result = await service.revokeCredentialFromOrganization({
         organizationID: 'org-1',
@@ -267,7 +252,6 @@ describe('AdminAuthorizationService', () => {
       });
 
       expect(result).toBe(organization);
-      expect(result.agent).toBe(updatedAgent);
     });
   });
 });

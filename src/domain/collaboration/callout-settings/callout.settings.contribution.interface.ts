@@ -1,4 +1,4 @@
-import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
+import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { Field, ObjectType } from '@nestjs/graphql';
 
@@ -11,11 +11,11 @@ export abstract class ICalloutSettingsContribution {
   })
   enabled!: boolean;
 
-  @Field(() => CalloutAllowedContributors, {
+  @Field(() => CalloutAllowedActors, {
     nullable: false,
     description: 'Indicate who can add more contributions to the callout.',
   })
-  canAddContributions!: CalloutAllowedContributors;
+  canAddContributions!: CalloutAllowedActors;
 
   @Field(() => [CalloutContributionType], {
     nullable: false,

@@ -1,7 +1,7 @@
-import { vi } from 'vitest';
 import { ValueProvider } from '@nestjs/common';
-import { PublicPart } from '../utils/public-part';
 import { TaskService } from '@services/task';
+import { vi } from 'vitest';
+import { PublicPart } from '../utils/public-part';
 
 export const MockTaskService: ValueProvider<PublicPart<TaskService>> = {
   provide: TaskService,

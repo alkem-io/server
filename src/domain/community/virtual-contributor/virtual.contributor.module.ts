@@ -1,5 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { KnowledgeBaseModule } from '@domain/common/knowledge-base/knowledge.base.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
@@ -12,9 +12,8 @@ import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.s
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { AiPersonaModule } from '@services/ai-server/ai-persona/ai.persona.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
-import { ContributorModule } from '../contributor/contributor.module';
 import { VirtualContributorDefaultsModule } from '../virtual-contributor-defaults/virtual.contributor.defaults.module';
-import { VirtualContributorLookupModule } from '../virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { VirtualActorLookupModule } from '../virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { VirtualContributorModelCardModule } from '../virtual-contributor-model-card/virtual.contributor.model.card.module';
 import { VirtualContributorPlatformSettingsModule } from '../virtual-contributor-platform-settings';
 import { VirtualContributorSettingsModule } from '../virtual-contributor-settings/virtual.contributor.settings.module';
@@ -25,19 +24,17 @@ import { VirtualContributorResolverQueries } from './virtual.contributor.resolve
 import { VirtualContributorResolverSubscriptions } from './virtual.contributor.resolver.subscriptions';
 import { VirtualContributorService } from './virtual.contributor.service';
 import { VirtualContributorAuthorizationService } from './virtual.contributor.service.authorization';
-
 @Module({
   imports: [
-    AgentModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
-    ContributorModule,
+    ActorModule,
     ProfileModule,
     AiPersonaModule,
     KnowledgeBaseModule,
     AiServerAdapterModule,
     CommunicationAdapterModule,
-    VirtualContributorLookupModule,
+    VirtualActorLookupModule,
     VirtualContributorSettingsModule,
     VirtualContributorPlatformSettingsModule,
     VirtualContributorDefaultsModule,
@@ -58,4 +55,4 @@ import { VirtualContributorAuthorizationService } from './virtual.contributor.se
   ],
   exports: [VirtualContributorService, VirtualContributorAuthorizationService],
 })
-export class VirtualContributorModule {}
+export class VirtualActorModule {}

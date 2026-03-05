@@ -2,27 +2,36 @@ import { SearchVisibility } from '@common/enums/search.visibility';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
+import { IActor, IActorFull } from '@domain/actor/actor/actor.interface';
 import { IKnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.interface';
-import { UUID } from '@domain/common/scalars';
+import { IProfile } from '@domain/common/profile/profile.interface';
+import { NameID, UUID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
+import { IVirtualContributorPlatformSettings } from '@domain/community/virtual-contributor-platform-settings/virtual.contributor.platform.settings.interface';
 import { IAccount } from '@domain/space/account/account.interface';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IAiPersona } from '@services/ai-server/ai-persona';
 import { IsEnum } from 'class-validator';
-import { IContributorBase } from '../contributor/contributor.base.interface';
-import { IContributor } from '../contributor/contributor.interface';
-import { IVirtualContributorPlatformSettings } from '../virtual-contributor-platform-settings/virtual.contributor.platform.settings.interface';
 import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
 import { PromptGraphDefinition } from './dto/prompt-graph-definition/prompt.graph.definition.dto';
 
 @ObjectType('VirtualContributor', {
-  implements: () => [IContributor],
+  implements: () => [IActorFull],
 })
-export class IVirtualContributor
-  extends IContributorBase
-  implements IContributor
-{
+export class IVirtualContributor extends IActor implements IActorFull {
+  @Field(() => NameID, {
+    nullable: false,
+    description:
+      'A name identifier of the entity, unique within a given scope.',
+  })
+  declare nameID: string;
+
+  // Override to make profile required for contributors
+  declare profile: IProfile;
+
+  // VirtualContributor extends Actor - credentials are on Actor.credentials
+
   rowId!: number;
 
   account?: IAccount;

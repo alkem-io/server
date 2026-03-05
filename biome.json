@@ -19,6 +19,7 @@
       "!**/src/migrations",
       "!**/src/tools",
       "!**/src/schema-contract",
+      "!scripts",
       "!schema.graphql",
       "!**/specs",
       "!**/*.md",

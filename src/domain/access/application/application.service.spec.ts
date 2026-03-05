@@ -119,7 +119,7 @@ describe('ApplicationService', () => {
         questions: [],
       };
 
-      (userService.getUserOrFail as Mock).mockResolvedValue(mockUser);
+      (userService.getUserByIdOrFail as Mock).mockResolvedValue(mockUser);
       (lifecycleService.createLifecycle as Mock).mockResolvedValue(
         mockLifecycle
       );
@@ -129,7 +129,7 @@ describe('ApplicationService', () => {
 
       const result = await service.createApplication(applicationData);
 
-      expect(userService.getUserOrFail).toHaveBeenCalledWith('user-1');
+      expect(userService.getUserByIdOrFail).toHaveBeenCalledWith('user-1');
       expect(result.user).toBe(mockUser);
       expect(result.authorization).toBeDefined();
       expect(result.lifecycle).toBe(mockLifecycle);
@@ -270,7 +270,7 @@ describe('ApplicationService', () => {
     });
   });
 
-  describe('getContributor', () => {
+  describe('getActor', () => {
     it('should return user when application has a loaded user relation', async () => {
       const mockUser = { id: 'user-1', email: 'user@test.com' } as any;
       const mockApplication = {
@@ -282,7 +282,7 @@ describe('ApplicationService', () => {
         mockApplication
       );
 
-      const result = await service.getContributor('app-1');
+      const result = await service.getActor('app-1');
 
       expect(result).toBe(mockUser);
     });
@@ -297,7 +297,7 @@ describe('ApplicationService', () => {
         mockApplication
       );
 
-      await expect(service.getContributor('app-1')).rejects.toThrow(
+      await expect(service.getActor('app-1')).rejects.toThrow(
         RelationshipNotFoundException
       );
     });

@@ -1,5 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { Module } from '@nestjs/common';
@@ -17,7 +17,7 @@ import { UserGroupAuthorizationService } from './user-group.service.authorizatio
     AuthorizationModule,
     ProfileModule,
     UserLookupModule,
-    AgentModule,
+    ActorModule,
     TypeOrmModule.forFeature([UserGroup]),
   ],
   providers: [

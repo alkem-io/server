@@ -1,7 +1,7 @@
 import { SYSTEM_ACTOR_IDS } from '@common/constants/system.actor.ids';
 import { DataLoaderCreator } from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
@@ -18,12 +18,12 @@ import { EntityManager, In } from 'typeorm';
  */
 @Injectable()
 export class ContributorByAgentIdLoaderCreator
-  implements DataLoaderCreator<IContributor | null>
+  implements DataLoaderCreator<IActor | null>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  public create(): ILoader<IContributor | null> {
-    return new DataLoader<string, IContributor | null>(
+  public create(): ILoader<IActor | null> {
+    return new DataLoader<string, IActor | null>(
       async agentIds => this.batchLoadByAgentIds(agentIds),
       { cache: true, name: 'ContributorByAgentIdLoader' }
     );
@@ -31,7 +31,7 @@ export class ContributorByAgentIdLoaderCreator
 
   private async batchLoadByAgentIds(
     agentIds: readonly string[]
-  ): Promise<(IContributor | null)[]> {
+  ): Promise<(IActor | null)[]> {
     // Filter out system actors and invalid UUIDs
     const validIds = [...agentIds].filter(
       id => !SYSTEM_ACTOR_IDS.has(id) && isUUID(id)
@@ -42,26 +42,27 @@ export class ContributorByAgentIdLoaderCreator
     }
 
     // Parallel batch queries for all contributor types
+    // Since entities now extend Actor directly, the entity ID is the actor ID
     const [users, orgs, vcs] = await Promise.all([
       this.manager.find(User, {
-        where: { agent: { id: In(validIds) } },
-        relations: { agent: true, profile: true },
+        where: { id: In(validIds) },
+        relations: { profile: true },
       }),
       this.manager.find(Organization, {
-        where: { agent: { id: In(validIds) } },
-        relations: { agent: true, profile: true },
+        where: { id: In(validIds) },
+        relations: { profile: true },
       }),
       this.manager.find(VirtualContributor, {
-        where: { agent: { id: In(validIds) } },
-        relations: { agent: true, profile: true },
+        where: { id: In(validIds) },
+        relations: { profile: true },
       }),
     ]);
 
-    // Map by agent ID for O(1) lookup
-    const byAgentId = new Map<string, IContributor>();
-    for (const u of users) if (u.agent) byAgentId.set(u.agent.id, u);
-    for (const o of orgs) if (o.agent) byAgentId.set(o.agent.id, o);
-    for (const vc of vcs) if (vc.agent) byAgentId.set(vc.agent.id, vc);
+    // Map by actor ID (which is the entity ID) for O(1) lookup
+    const byAgentId = new Map<string, IActor>();
+    for (const u of users) byAgentId.set(u.id, u);
+    for (const o of orgs) byAgentId.set(o.id, o);
+    for (const vc of vcs) byAgentId.set(vc.id, vc);
 
     // Return in input order
     return agentIds.map(id => byAgentId.get(id) ?? null);

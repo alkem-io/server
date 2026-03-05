@@ -22,13 +22,13 @@ import {
 import { AuthInterceptor } from '@core/interceptors';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { ActivityFeedModule } from '@domain/activity-feed';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor.module';
 import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { TaskGraphqlModule } from '@domain/task/task.module';
@@ -193,6 +193,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
           cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
           uploads: false,
           autoSchemaFile: true,
+          inheritResolversFromInterfaces: true,
           introspection: true,
           playground: {
             settings: {
@@ -301,7 +302,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     AdminGeoLocationModule,
     LicensingWingbackSubscriptionModule,
     WingbackManagerModule,
-    AgentModule,
+    ActorModule,
     MessageModule,
     MessageReactionModule,
     NotificationRecipientsModule,
@@ -318,7 +319,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     InnovationHubModule,
     IdentityResolveModule,
     MeModule,
-    VirtualContributorModule,
+    VirtualActorModule,
     InputCreatorModule,
     LookupModule,
     LookupByNameModule,

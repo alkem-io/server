@@ -15,7 +15,12 @@ import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import {
+  EntityManager,
+  FindOneOptions,
+  FindOptionsRelations,
+  Repository,
+} from 'typeorm';
 import { TagsetService } from '../tagset/tagset.service';
 import { CreateKnowledgeBaseInput } from './dto/knowledge.base.dto.create';
 import { UpdateKnowledgeBaseInput } from './dto/knowledge.base.dto.update';
@@ -139,7 +144,11 @@ export class KnowledgeBaseService {
     return result;
   }
 
-  async save(knowledgeBase: IKnowledgeBase): Promise<IKnowledgeBase> {
+  async save(
+    knowledgeBase: IKnowledgeBase,
+    mgr?: EntityManager
+  ): Promise<IKnowledgeBase> {
+    if (mgr) return await mgr.save(knowledgeBase as KnowledgeBase);
     return await this.knowledgeBaseRepository.save(knowledgeBase);
   }
 

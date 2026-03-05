@@ -3,10 +3,10 @@
  * These mocks prevent real RabbitMQ connections during test execution.
  */
 
-import { vi } from 'vitest';
 import { Publisher } from '@services/infrastructure/event-bus/publisher';
-import { Subscriber } from '@services/infrastructure/event-bus/subscriber';
 import { RabbitMQConnectionFactory } from '@services/infrastructure/event-bus/rabbitmq.connection.factory';
+import { Subscriber } from '@services/infrastructure/event-bus/subscriber';
+import { vi } from 'vitest';
 
 /**
  * Creates a mock Publisher for use in tests.

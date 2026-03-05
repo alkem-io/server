@@ -6,7 +6,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
@@ -18,7 +18,7 @@ import { NotificationRecipientsService } from './notification.recipients.service
 describe('NotificationRecipientsService', () => {
   let service: NotificationRecipientsService;
   let userLookupService: UserLookupService;
-  let virtualContributorLookupService: VirtualContributorLookupService;
+  let virtualActorLookupService: VirtualActorLookupService;
   let spaceLookupService: SpaceLookupService;
   let organizationLookupService: OrganizationLookupService;
   let authorizationService: AuthorizationService;
@@ -37,9 +37,7 @@ describe('NotificationRecipientsService', () => {
 
     service = module.get(NotificationRecipientsService);
     userLookupService = module.get(UserLookupService);
-    virtualContributorLookupService = module.get(
-      VirtualContributorLookupService
-    );
+    virtualActorLookupService = module.get(VirtualActorLookupService);
     spaceLookupService = module.get(SpaceLookupService);
     organizationLookupService = module.get(OrganizationLookupService);
     authorizationService = module.get(AuthorizationService);
@@ -48,7 +46,7 @@ describe('NotificationRecipientsService', () => {
     );
 
     // Default mocks to prevent proxy objects in template literals
-    vi.mocked(userLookupService.getUsersByUUID).mockResolvedValue([]);
+    vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([]);
     vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([]);
   });
 
@@ -113,13 +111,13 @@ describe('NotificationRecipientsService', () => {
             },
           },
         },
-        agent: { credentials: [{ type: 'test' }] },
+        credentials: [{ type: 'test' }],
       } as unknown as IUser;
 
       vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
         mockUser,
       ]);
-      vi.mocked(userLookupService.getUsersByUUID).mockResolvedValue([mockUser]);
+      vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([mockUser]);
 
       const result = await service.getRecipients({
         eventType: NotificationEvent.PLATFORM_FORUM_DISCUSSION_CREATED,
@@ -136,7 +134,7 @@ describe('NotificationRecipientsService', () => {
         email: 'trigger@example.com',
       } as unknown as IUser;
 
-      vi.mocked(userLookupService.getUserOrFail).mockResolvedValue(
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(
         triggeredByUser
       );
 
@@ -186,11 +184,9 @@ describe('NotificationRecipientsService', () => {
             },
           },
         },
-        agent: {
-          credentials: [
-            { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
-          ],
-        },
+        credentials: [
+          { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+        ],
       } as unknown as IUser;
 
       const platformAuthPolicy = { id: 'platform-auth' } as any;
@@ -198,9 +194,7 @@ describe('NotificationRecipientsService', () => {
       vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
         adminUser,
       ]);
-      vi.mocked(userLookupService.getUsersByUUID).mockResolvedValue([
-        adminUser,
-      ]);
+      vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([adminUser]);
       vi.mocked(
         platformAuthorizationService.getPlatformAuthorizationPolicy
       ).mockResolvedValue(platformAuthPolicy);
@@ -231,9 +225,7 @@ describe('NotificationRecipientsService', () => {
             },
           },
         },
-        agent: {
-          credentials: [{ type: 'some-credential', resourceID: '' }],
-        },
+        credentials: [{ type: 'some-credential', resourceID: '' }],
       } as unknown as IUser;
 
       const platformAuthPolicy = { id: 'platform-auth' } as any;
@@ -241,7 +233,7 @@ describe('NotificationRecipientsService', () => {
       vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
         userNoPriv,
       ]);
-      vi.mocked(userLookupService.getUsersByUUID).mockResolvedValue([
+      vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([
         userNoPriv,
       ]);
       vi.mocked(
@@ -418,17 +410,16 @@ describe('NotificationRecipientsService', () => {
       ).rejects.toThrow(ValidationException);
     });
 
-    it('should use ACCOUNT_ADMIN for VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION', async () => {
+    it('should use ACCOUNT_ADMIN for VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION', async () => {
       vi.mocked(
-        virtualContributorLookupService.getVirtualContributorOrFail
+        virtualActorLookupService.getVirtualContributorByIdOrFail
       ).mockResolvedValue({
         id: 'vc-1',
         account: { id: 'account-1' },
       } as any);
 
       await service.getRecipients({
-        eventType:
-          NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION,
+        eventType: NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION,
         virtualContributorID: 'vc-1',
       });
 
@@ -444,11 +435,10 @@ describe('NotificationRecipientsService', () => {
       );
     });
 
-    it('should throw ValidationException for VIRTUAL_CONTRIBUTOR_ADMIN without virtualContributorID', async () => {
+    it('should throw ValidationException for VIRTUAL_ADMIN without virtualContributorID', async () => {
       await expect(
         service.getRecipients({
-          eventType:
-            NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION,
+          eventType: NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION,
         })
       ).rejects.toThrow(ValidationException);
     });
@@ -484,13 +474,13 @@ describe('NotificationRecipientsService', () => {
             },
           },
         },
-        agent: { credentials: [] },
+        credentials: [],
       } as unknown as IUser;
 
       vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
         userWithSettings,
       ]);
-      vi.mocked(userLookupService.getUsersByUUID).mockResolvedValue([
+      vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([
         userWithSettings,
       ]);
 
@@ -511,14 +501,14 @@ describe('NotificationRecipientsService', () => {
         settings: {
           notification: {},
         },
-        agent: { credentials: [] },
+        credentials: [],
       } as unknown as IUser;
 
       vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
         user,
       ]);
       // Return the user only when called with matching IDs, empty otherwise
-      vi.mocked(userLookupService.getUsersByUUID).mockImplementation(
+      vi.mocked(userLookupService.getUsersByIds).mockImplementation(
         async (ids: string[]) => (ids.length > 0 ? [user] : [])
       );
 
@@ -550,24 +540,20 @@ describe('NotificationRecipientsService', () => {
             },
           },
         },
-        agent: {
-          credentials: [
-            {
-              type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
-              resourceID: 'org-1',
-            },
-          ],
-        },
+        credentials: [
+          {
+            type: AuthorizationCredential.ORGANIZATION_ASSOCIATE,
+            resourceID: 'org-1',
+          },
+        ],
       } as unknown as IUser;
 
       vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
         adminUser,
       ]);
-      vi.mocked(userLookupService.getUsersByUUID).mockResolvedValue([
-        adminUser,
-      ]);
+      vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([adminUser]);
       vi.mocked(
-        organizationLookupService.getOrganizationOrFail
+        organizationLookupService.getOrganizationByIdOrFail
       ).mockResolvedValue(mockOrg);
       vi.mocked(
         authorizationService.isAccessGrantedForCredentials
@@ -579,7 +565,7 @@ describe('NotificationRecipientsService', () => {
       });
 
       expect(
-        organizationLookupService.getOrganizationOrFail
+        organizationLookupService.getOrganizationByIdOrFail
       ).toHaveBeenCalledWith('org-1');
       expect(result.emailRecipients).toHaveLength(1);
     });
@@ -600,20 +586,18 @@ describe('NotificationRecipientsService', () => {
             },
           },
         },
-        agent: {
-          credentials: [
-            {
-              type: AuthorizationCredential.SPACE_MEMBER,
-              resourceID: 'space-1',
-            },
-          ],
-        },
+        credentials: [
+          {
+            type: AuthorizationCredential.SPACE_MEMBER,
+            resourceID: 'space-1',
+          },
+        ],
       } as unknown as IUser;
 
       vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
         memberUser,
       ]);
-      vi.mocked(userLookupService.getUsersByUUID).mockResolvedValue([
+      vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([
         memberUser,
       ]);
       vi.mocked(spaceLookupService.getSpaceOrFail).mockResolvedValue(mockSpace);
@@ -641,20 +625,18 @@ describe('NotificationRecipientsService', () => {
             },
           },
         },
-        agent: {
-          credentials: [
-            {
-              type: AuthorizationCredential.SPACE_MEMBER,
-              resourceID: 'space-1',
-            },
-          ],
-        },
+        credentials: [
+          {
+            type: AuthorizationCredential.SPACE_MEMBER,
+            resourceID: 'space-1',
+          },
+        ],
       } as unknown as IUser;
 
       vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
         memberUser,
       ]);
-      vi.mocked(userLookupService.getUsersByUUID).mockResolvedValue([
+      vi.mocked(userLookupService.getUsersByIds).mockResolvedValue([
         memberUser,
       ]);
 

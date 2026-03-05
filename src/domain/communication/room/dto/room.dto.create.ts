@@ -5,8 +5,8 @@ export class CreateRoomInput {
 
   type!: RoomType;
 
-  senderActorId?: string;
+  senderActorID?: string;
 
   // Needed for direct messaging rooms
-  receiverActorId?: string;
+  receiverActorID?: string;
 }

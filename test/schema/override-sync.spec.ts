@@ -1,8 +1,8 @@
-import { vi } from 'vitest';
-import { performOverrideEvaluation } from '../../src/tools/schema/override';
 import * as fs from 'node:fs';
 import * as os from 'node:os';
 import * as path from 'node:path';
+import { vi } from 'vitest';
+import { performOverrideEvaluation } from '../../src/tools/schema/override';
 
 describe('synchronous override evaluation (env-only)', () => {
   const OLD_ENV = process.env;

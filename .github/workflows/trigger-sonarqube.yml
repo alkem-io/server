@@ -10,7 +10,7 @@ on:
 jobs:
   sonarqube:
     name: SonarQube Static Analysis
-    runs-on: ubuntu-latest
+    runs-on: arc-runner-set
     permissions:
       contents: read
       pull-requests: write
@@ -21,28 +21,14 @@ jobs:
         with:
           fetch-depth: 0  # Shallow clones should be disabled for a better relevancy of analysis
 
-      - name: Set up Node.js
-        uses: actions/setup-node@v4
-        with:
-          node-version: '22'
-
-      - name: Enable Corepack
-        run: corepack enable
-
       - name: Install pnpm
-        run: corepack prepare pnpm@10.17.1 --activate
+        uses: pnpm/action-setup@v4
 
-      - name: Get pnpm cache directory
-        id: pnpm-cache
-        run: echo "PNPM_CACHE_DIR=$(pnpm store path)" >> $GITHUB_OUTPUT
-
-      - name: Cache pnpm dependencies
-        uses: actions/cache@v4
+      - name: Setup Node.js
+        uses: actions/setup-node@v6.2.0
         with:
-          path: ${{ steps.pnpm-cache.outputs.PNPM_CACHE_DIR }}
-          key: ${{ runner.os }}-pnpm-${{ hashFiles('**/pnpm-lock.yaml') }}
-          restore-keys: |
-            ${{ runner.os }}-pnpm-
+          node-version: '22.22.0'
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
@@ -52,7 +38,7 @@ jobs:
         continue-on-error: true
 
       - name: SonarQube Scan
-        uses: sonarsource/sonarqube-scan-action@v3
+        uses: sonarsource/sonarqube-scan-action@v7
         env:
           SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
           SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}

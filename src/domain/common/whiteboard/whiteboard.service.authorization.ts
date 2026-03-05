@@ -15,7 +15,7 @@ import { RelationshipNotFoundException } from '@common/exceptions/relationship.n
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { AuthorizationPolicyRulePrivilege } from '@core/authorization/authorization.policy.rule.privilege';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';

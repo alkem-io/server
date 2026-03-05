@@ -8,7 +8,7 @@ export class RoomMemberLeftEvent {
   constructor(
     public readonly payload: {
       roomId: string;
-      actorId: string;
+      actorID: string;
       reason?: string;
       timestamp: number;
     }

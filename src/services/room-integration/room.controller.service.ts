@@ -59,14 +59,14 @@ export class RoomControllerService {
   }
 
   public async postReply(event: InvokeEngineResult) {
-    const { roomID, threadID, actorId }: RoomDetails =
+    const { roomID, threadID, actorID }: RoomDetails =
       event.original.resultHandler.roomDetails!;
 
     if (!threadID) {
       return;
     }
     const room = await this.roomLookupService.getRoomOrFail(roomID);
-    await this.roomLookupService.sendMessageReply(room, actorId, {
+    await this.roomLookupService.sendMessageReply(room, actorID, {
       roomID: room.id,
       message: this.convertResultToMessage(event.response),
       threadID,
@@ -87,11 +87,11 @@ export class RoomControllerService {
   }
 
   public async postMessage(event: InvokeEngineResult) {
-    const { roomID, actorId }: RoomDetails =
+    const { roomID, actorID }: RoomDetails =
       event.original.resultHandler.roomDetails!;
     const response: InvokeEngineResponse = event.response;
     const room = await this.roomLookupService.getRoomOrFail(roomID);
-    await this.roomLookupService.sendMessage(room, actorId, {
+    await this.roomLookupService.sendMessage(room, actorID, {
       roomID: room.id,
       // this second argument (sourcesLable = true) should be part of the resultHandler and not hardcoded here
       message: this.convertResultToMessage(response, true),

@@ -6,16 +6,13 @@ import { EntityManager } from 'typeorm';
 import { createTypedRelationDataLoader } from '../../utils';
 import { DataLoaderCreator, DataLoaderCreatorOptions } from '../base';
 
+type ProfileParent = { id: string; profile?: IProfile };
+
 @Injectable()
 export class ProfileLoaderCreator implements DataLoaderCreator<IProfile> {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  create(
-    options?: DataLoaderCreatorOptions<
-      IProfile,
-      { id: string; profile?: IProfile }
-    >
-  ) {
+  create(options?: DataLoaderCreatorOptions<IProfile, ProfileParent>) {
     if (!options?.parentClassRef) {
       throw new DataLoaderInitError(
         `${this.constructor.name} requires the 'parentClassRef' to be provided.`
@@ -25,9 +22,7 @@ export class ProfileLoaderCreator implements DataLoaderCreator<IProfile> {
     return createTypedRelationDataLoader(
       this.manager,
       options.parentClassRef,
-      {
-        profile: true,
-      },
+      { profile: true },
       this.constructor.name,
       options
     );

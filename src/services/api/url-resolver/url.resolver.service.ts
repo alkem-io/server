@@ -9,13 +9,13 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -40,7 +40,7 @@ export class UrlResolverService {
     private userLookupService: UserLookupService,
     private organizationLookupService: OrganizationLookupService,
     private forumDiscussionLookupService: ForumDiscussionLookupService,
-    private virtualContributorLookupService: VirtualContributorLookupService,
+    private virtualActorLookupService: VirtualActorLookupService,
     private spaceLookupService: SpaceLookupService,
     private innovationPackService: InnovationPackService,
     private innovationHubService: InnovationHubService,
@@ -53,7 +53,7 @@ export class UrlResolverService {
 
   public async resolveUrl(
     url: string,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<UrlResolverQueryResults> {
     const pathElements = Utils.getPathElements(url);
 
@@ -79,7 +79,7 @@ export class UrlResolverService {
           baseRoute,
           pathElements,
           url,
-          agentInfo
+          actorContext
         );
       } catch (error: any) {
         return await this.handleException(error, url, result);
@@ -88,8 +88,8 @@ export class UrlResolverService {
 
     // Assumption is that everything else is a Space!
     try {
-      await this.populateSpaceResult(result, agentInfo, urlPath);
-      return await this.populateSpaceInternalResult(result, agentInfo);
+      await this.populateSpaceResult(result, actorContext, urlPath);
+      return await this.populateSpaceInternalResult(result, actorContext);
     } catch (error: any) {
       return await this.handleException(error, url, result);
     }
@@ -195,7 +195,7 @@ export class UrlResolverService {
     baseRoute: UrlPathBase,
     pathElements: string[],
     url: string,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<UrlResolverQueryResults> {
     const urlPath = Utils.getPath(url);
     switch (baseRoute) {
@@ -230,7 +230,7 @@ export class UrlResolverService {
         return await this.populateVirtualContributorResult(
           result,
           urlPath,
-          agentInfo
+          actorContext
         );
       }
       case UrlPathBase.ORGANIZATION: {
@@ -338,7 +338,7 @@ export class UrlResolverService {
   private async populateVirtualContributorResult(
     result: UrlResolverQueryResults,
     urlPath: string,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<UrlResolverQueryResults> {
     result.type = UrlType.VIRTUAL_CONTRIBUTOR;
     const virtualContributorMatch =
@@ -372,7 +372,7 @@ export class UrlResolverService {
     }
 
     const virtualContributor =
-      await this.virtualContributorLookupService.getVirtualContributorByNameIdOrFail(
+      await this.virtualActorLookupService.getVirtualContributorByNameIdOrFail(
         virtualContributorNameID,
         {
           relations: {
@@ -416,7 +416,7 @@ export class UrlResolverService {
     }
     const calloutsSetResult = await this.populateCalloutsSetResult(
       virtualContributor.knowledgeBase.calloutsSet.id,
-      agentInfo,
+      actorContext,
       urlPath,
       calloutNameID,
       postNameID,
@@ -583,7 +583,7 @@ export class UrlResolverService {
 
   private async populateSpaceResult(
     result: UrlResolverQueryResults,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     url: string
   ): Promise<UrlResolverQueryResults> {
     result.type = UrlType.SPACE;
@@ -623,7 +623,7 @@ export class UrlResolverService {
     );
     result.space = this.createSpaceResult(
       space,
-      agentInfo,
+      actorContext,
       url,
       spaceInternalPath
     );
@@ -638,7 +638,7 @@ export class UrlResolverService {
       const parentSpaces = [space.id];
       result.space = this.createSpaceResult(
         subspace,
-        agentInfo,
+        actorContext,
         url,
         spaceInternalPath
       );
@@ -656,7 +656,7 @@ export class UrlResolverService {
       const parentSpaces = [...result.space.parentSpaces, parentSpaceID];
       result.space = this.createSpaceResult(
         subsubspace,
-        agentInfo,
+        actorContext,
         url,
         spaceInternalPath
       );
@@ -667,7 +667,7 @@ export class UrlResolverService {
 
   private async populateSpaceInternalResult(
     result: UrlResolverQueryResults,
-    agentInfo: AgentInfo
+    actorContext: ActorContext
   ): Promise<UrlResolverQueryResults> {
     if (!result.space) {
       throw new ValidationException(
@@ -686,7 +686,7 @@ export class UrlResolverService {
       return await this.populateSpaceInternalResultCollaboration(
         collaborationMatch,
         result,
-        agentInfo,
+        actorContext,
         internalPath
       );
     }
@@ -696,7 +696,7 @@ export class UrlResolverService {
       return await this.populateSpaceInternalResultCalendar(
         calendarMatch,
         result
-        // agentInfo
+        // actorContext
       );
     }
 
@@ -778,7 +778,7 @@ export class UrlResolverService {
   private async populateSpaceInternalResultCollaboration(
     collaborationMatch: any,
     result: UrlResolverQueryResults,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     internalPath: string
   ): Promise<UrlResolverQueryResults> {
     if (!result.space || !result.space.collaboration.calloutsSet) {
@@ -807,7 +807,7 @@ export class UrlResolverService {
     const collaborationInternalPath = Utils.getMatchedResultAsPath(params.path);
     const calloutsSetResult = await this.populateCalloutsSetResult(
       result.space.collaboration.calloutsSet.id,
-      agentInfo,
+      actorContext,
       collaborationInternalPath || internalPath,
       calloutNameID,
       postNameID,
@@ -822,7 +822,7 @@ export class UrlResolverService {
 
   private async populateCalloutsSetResult(
     calloutsSetId: string,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     urlPath: string,
     calloutNameID: string | undefined,
     postNameID: string | undefined,
@@ -856,7 +856,7 @@ export class UrlResolverService {
       },
     });
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       callout.authorization,
       AuthorizationPrivilege.READ,
       `resolving url for callout ${urlPath}`
@@ -891,7 +891,7 @@ export class UrlResolverService {
         return result;
       }
       this.authorizationService.grantAccessOrFail(
-        agentInfo,
+        actorContext,
         contribution.authorization,
         AuthorizationPrivilege.READ,
         `resolving url for post on callout ${urlPath}`
@@ -927,7 +927,7 @@ export class UrlResolverService {
       }
 
       this.authorizationService.grantAccessOrFail(
-        agentInfo,
+        actorContext,
         contribution.authorization,
         AuthorizationPrivilege.READ,
         `resolving url for whiteboard on callout ${urlPath}`
@@ -963,7 +963,7 @@ export class UrlResolverService {
       }
 
       this.authorizationService.grantAccessOrFail(
-        agentInfo,
+        actorContext,
         contribution.authorization,
         AuthorizationPrivilege.READ,
         `resolving url for memo on callout ${urlPath}`
@@ -980,7 +980,7 @@ export class UrlResolverService {
   private async populateSpaceInternalResultCalendar(
     calendarMatch: any,
     result: UrlResolverQueryResults
-    // agentInfo: AgentInfo
+    // actorContext: ActorContext
   ): Promise<UrlResolverQueryResults> {
     if (!result.space) {
       throw new ValidationException(
@@ -1047,7 +1047,7 @@ export class UrlResolverService {
 
   private createSpaceResult(
     space: ISpace | null,
-    agentInfo: AgentInfo,
+    actorContext: ActorContext,
     url: string,
     internalSpacePath: string | undefined
   ): UrlResolverQueryResultSpace {
@@ -1064,7 +1064,7 @@ export class UrlResolverService {
       );
     }
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       space.authorization,
       AuthorizationPrivilege.READ_ABOUT,
       `resolving url ${url}`

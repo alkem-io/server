@@ -1,7 +1,7 @@
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleName } from '@common/enums/role.name';
-import { AgentService } from '@domain/agent/agent/agent.service';
-import { ICredential } from '@domain/agent/credential/credential.interface';
+import { ActorService } from '@domain/actor/actor/actor.service';
+import { ICredential } from '@domain/actor/credential/credential.interface';
 import { Repository } from 'typeorm';
 import { beforeEach, describe, expect, it, type Mocked, vi } from 'vitest';
 import { InvitationService } from '../invitation/invitation.service';
@@ -10,7 +10,7 @@ import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetService } from './role.set.service';
 import { RoleSetCacheService } from './role.set.service.cache';
-import { AgentRoleKey } from './types';
+import { ActorRoleKey } from './types';
 
 /* ───────── helpers ───────── */
 
@@ -36,21 +36,39 @@ function makeRoleSet(
 }
 
 function makeKey(
-  agentID: string,
+  actorID: string,
   userID: string,
   roleSet: IRoleSet
-): AgentRoleKey {
+): ActorRoleKey {
   return {
-    agentInfo: { agentID, userID } as any,
+    actorContext: { actorID, userID } as any,
     roleSet,
   };
+}
+
+/**
+ * Helper to set up getActorCredentials mock from a Map<actorID, ICredential[]>.
+ * The actual loadActorCredentials calls getActorCredentials per actor.
+ */
+function mockActorCredentialsFromMap(
+  actorService: Mocked<Pick<ActorService, 'getActorCredentials'>>,
+  credMap: Map<string, ICredential[]>
+) {
+  actorService.getActorCredentials.mockImplementation(
+    async (actorID: string) => ({
+      actor: { id: actorID } as any,
+      credentials: credMap.get(actorID) || [],
+    })
+  );
 }
 
 /* ───────── mocks ───────── */
 
 function createMocks() {
-  const agentService: Mocked<Pick<AgentService, 'getAgentCredentialsBatch'>> = {
-    getAgentCredentialsBatch: vi.fn().mockResolvedValue(new Map()),
+  const actorService: Mocked<Pick<ActorService, 'getActorCredentials'>> = {
+    getActorCredentials: vi
+      .fn()
+      .mockResolvedValue({ actor: {}, credentials: [] }),
   };
 
   const roleSetCacheService: Mocked<
@@ -81,7 +99,7 @@ function createMocks() {
   };
 
   return {
-    agentService,
+    actorService,
     roleSetCacheService,
     roleSetService,
     invitationService,
@@ -91,7 +109,7 @@ function createMocks() {
 
 function createLoader(mocks: ReturnType<typeof createMocks>) {
   return new RoleSetMembershipStatusDataLoader(
-    mocks.agentService as unknown as AgentService,
+    mocks.actorService as unknown as ActorService,
     mocks.roleSetCacheService as unknown as RoleSetCacheService,
     mocks.roleSetService as unknown as RoleSetService,
     mocks.invitationService as unknown as InvitationService,
@@ -110,10 +128,10 @@ describe('RoleSetMembershipStatusDataLoader', () => {
     mocks = createMocks();
   });
 
-  /* ─── Empty agentID ─── */
+  /* ─── Empty actorID ─── */
 
-  describe('empty agentID handling', () => {
-    it('should return NOT_MEMBER immediately for empty agentID', async () => {
+  describe('empty actorID handling', () => {
+    it('should return NOT_MEMBER immediately for empty actorID', async () => {
       const roleSet = makeRoleSet('rs-1', [
         {
           name: RoleName.MEMBER,
@@ -140,7 +158,7 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       const roleSet = makeRoleSet('rs-1');
       const key = makeKey('agent-1', 'user-1', roleSet);
 
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(new Map());
+      mockActorCredentialsFromMap(mocks.actorService, new Map());
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
         [CommunityMembershipStatus.MEMBER]
       );
@@ -170,7 +188,8 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       const key = makeKey('agent-1', 'user-1', roleSet);
 
       const cred = makeCredential('space-member', 'space-1');
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
+      mockActorCredentialsFromMap(
+        mocks.actorService,
         new Map([['agent-1', [cred]]])
       );
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
@@ -200,7 +219,8 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       const key = makeKey('agent-1', 'user-1', roleSet);
 
       const cred = makeCredential('org-member', 'space-1');
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
+      mockActorCredentialsFromMap(
+        mocks.actorService,
         new Map([['agent-1', [cred]]])
       );
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
@@ -223,7 +243,8 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       const key = makeKey('agent-1', 'user-1', roleSet);
 
       const cred = makeCredential('space-member', 'space-OTHER');
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
+      mockActorCredentialsFromMap(
+        mocks.actorService,
         new Map([['agent-1', [cred]]])
       );
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
@@ -246,7 +267,8 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       const key = makeKey('agent-1', 'user-1', roleSet);
 
       const cred = makeCredential('space-member', 'any-resource');
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
+      mockActorCredentialsFromMap(
+        mocks.actorService,
         new Map([['agent-1', [cred]]])
       );
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
@@ -264,7 +286,8 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       const key = makeKey('agent-1', 'user-1', roleSet);
 
       const cred = makeCredential('space-member', 'space-1');
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
+      mockActorCredentialsFromMap(
+        mocks.actorService,
         new Map([['agent-1', [cred]]])
       );
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
@@ -287,7 +310,8 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       const key = makeKey('agent-1', 'user-1', roleSet);
 
       const cred = makeCredential('space-lead', 'space-1');
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
+      mockActorCredentialsFromMap(
+        mocks.actorService,
         new Map([['agent-1', [cred]]])
       );
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
@@ -312,7 +336,8 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       const key = makeKey('agent-1', 'user-1', roleSet);
 
       // Agent exists but has no credentials
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
+      mockActorCredentialsFromMap(
+        mocks.actorService,
         new Map([['agent-1', []]])
       );
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
@@ -335,7 +360,7 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       const key = makeKey('agent-1', 'user-1', roleSet);
 
       // Agent not in the map at all
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(new Map());
+      mockActorCredentialsFromMap(mocks.actorService, new Map());
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
         [undefined]
       );
@@ -360,7 +385,8 @@ describe('RoleSetMembershipStatusDataLoader', () => {
         },
       ]);
       // Agent has NO matching credentials → triggers non-member path
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
+      mockActorCredentialsFromMap(
+        mocks.actorService,
         new Map([['agent-1', []]])
       );
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
@@ -463,7 +489,8 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       const cred1 = makeCredential('space-member', 'space-1');
       const cred2 = makeCredential('space-member', 'space-2');
 
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
+      mockActorCredentialsFromMap(
+        mocks.actorService,
         new Map([['agent-1', [cred1, cred2]]])
       );
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(
@@ -478,10 +505,8 @@ describe('RoleSetMembershipStatusDataLoader', () => {
 
       expect(result1).toBe(CommunityMembershipStatus.MEMBER);
       expect(result2).toBe(CommunityMembershipStatus.MEMBER);
-      // Credentials loaded only once
-      expect(mocks.agentService.getAgentCredentialsBatch).toHaveBeenCalledTimes(
-        1
-      );
+      // Credentials loaded once (same actorID deduplicated)
+      expect(mocks.actorService.getActorCredentials).toHaveBeenCalledTimes(1);
     });
 
     it('should mix cached and uncached results in the same batch', async () => {
@@ -499,7 +524,8 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       ]);
 
       const cred = makeCredential('space-member', 'space-2');
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
+      mockActorCredentialsFromMap(
+        mocks.actorService,
         new Map([['agent-1', [cred]]])
       );
       // First key is cached, second is not
@@ -521,7 +547,7 @@ describe('RoleSetMembershipStatusDataLoader', () => {
   /* ─── Cache key function ─── */
 
   describe('DataLoader cache key', () => {
-    it('should differentiate keys by agentID + roleSetID', async () => {
+    it('should differentiate keys by actorID + roleSetID', async () => {
       const rs1 = makeRoleSet('rs-1', [
         {
           name: RoleName.MEMBER,
@@ -536,7 +562,8 @@ describe('RoleSetMembershipStatusDataLoader', () => {
       ]);
 
       const cred1 = makeCredential('space-member', 'space-1');
-      mocks.agentService.getAgentCredentialsBatch.mockResolvedValue(
+      mockActorCredentialsFromMap(
+        mocks.actorService,
         new Map([['agent-1', [cred1]]])
       );
       mocks.roleSetCacheService.getMembershipStatusBatchFromCache.mockResolvedValue(

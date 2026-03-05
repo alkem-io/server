@@ -1,12 +1,12 @@
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
 import { UUID } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
+  AuthorizationActorHasPrivilege,
+  CurrentActor,
 } from '@src/common/decorators';
 import { IDocument } from '../document/document.interface';
 import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
@@ -18,7 +18,7 @@ import { StorageBucketService } from './storage.bucket.service';
 export class StorageBucketResolverFields {
   constructor(private storageBucketService: StorageBucketService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('document', () => IDocument, {
     nullable: true,
@@ -26,7 +26,7 @@ export class StorageBucketResolverFields {
   })
   async document(
     @Parent() storageBucket: IStorageBucket,
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args({
       name: 'ID',
       nullable: false,
@@ -38,12 +38,12 @@ export class StorageBucketResolverFields {
     const results = await this.storageBucketService.getFilteredDocuments(
       storageBucket,
       { IDs: [ID] },
-      agentInfo
+      actorContext
     );
     return results[0];
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('documents', () => [IDocument], {
     nullable: false,
@@ -51,17 +51,17 @@ export class StorageBucketResolverFields {
   })
   async documents(
     @Parent() storageBucket: IStorageBucket,
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args({ nullable: true }) args: StorageBucketArgsDocuments
   ) {
     return await this.storageBucketService.getFilteredDocuments(
       storageBucket,
       args,
-      agentInfo
+      actorContext
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('size', () => Number, {
     nullable: false,
@@ -71,7 +71,7 @@ export class StorageBucketResolverFields {
     return await this.storageBucketService.size(storageBucket);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('parentEntity', () => IStorageBucketParent, {
     nullable: true,

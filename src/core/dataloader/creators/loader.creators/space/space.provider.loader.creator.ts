@@ -1,6 +1,6 @@
 import { DataLoaderCreator } from '@core/dataloader/creators/base';
 import { ILoader } from '@core/dataloader/loader.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Space } from '@domain/space/space/space.entity';
@@ -19,12 +19,12 @@ import { EntityManager, In } from 'typeorm';
  */
 @Injectable()
 export class SpaceProviderLoaderCreator
-  implements DataLoaderCreator<IContributor | null>
+  implements DataLoaderCreator<IActor | null>
 {
   constructor(@InjectEntityManager() private manager: EntityManager) {}
 
-  public create(): ILoader<IContributor | null> {
-    return new DataLoader<string, IContributor | null>(
+  public create(): ILoader<IActor | null> {
+    return new DataLoader<string, IActor | null>(
       async spaceAboutIds => this.batchLoad(spaceAboutIds),
       { cache: true, name: 'SpaceProviderLoader' }
     );
@@ -32,7 +32,7 @@ export class SpaceProviderLoaderCreator
 
   private async batchLoad(
     spaceAboutIds: readonly string[]
-  ): Promise<(IContributor | null)[]> {
+  ): Promise<(IActor | null)[]> {
     if (spaceAboutIds.length === 0) {
       return [];
     }
@@ -93,7 +93,7 @@ export class SpaceProviderLoaderCreator
         : [[], []];
 
     // Build accountID → contributor map (user takes precedence)
-    const hostByAccountId = new Map<string, IContributor>();
+    const hostByAccountId = new Map<string, IActor>();
     for (const org of organizations) {
       hostByAccountId.set(org.accountID, org);
     }

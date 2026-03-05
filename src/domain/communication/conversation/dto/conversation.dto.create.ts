@@ -26,10 +26,10 @@ export class CreateConversationInput {
  * Either invitedAgentId OR wellKnownVirtualContributor must be provided.
  */
 export interface CreateConversationData {
-  /** Agent ID of the caller (creator of the conversation) */
+  /** Actor ID of the caller (creator of the conversation) */
   callerAgentId: string;
 
-  /** Agent ID of the invited party (user or VC). Required if wellKnownVirtualContributor is not set. */
+  /** Actor ID of the invited party (user or VC). Required if wellKnownVirtualContributor is not set. */
   invitedAgentId?: string;
 
   /** Well-known VC enum. Required if invitedAgentId is not set. Service will resolve to agent ID. */

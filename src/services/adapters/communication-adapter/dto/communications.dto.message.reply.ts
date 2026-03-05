@@ -1,5 +1,5 @@
 export class CommunicationSendMessageReplyInput {
-  actorId!: string;
+  actorID!: string;
 
   message!: string;
 

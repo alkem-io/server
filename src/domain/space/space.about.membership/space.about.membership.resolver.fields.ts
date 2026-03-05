@@ -1,8 +1,8 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleName } from '@common/enums/role.name';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import {
   LeadOrganizationsByRoleSetLoaderCreator,
   LeadUsersByRoleSetLoaderCreator,
@@ -35,13 +35,13 @@ export class SpaceAboutMembershipResolverFields {
       'The privileges granted to the current user based on the Space membership policy.',
   })
   myPrivileges(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() membership: SpaceAboutMembership
   ): AuthorizationPrivilege[] {
     const authorization = membership.roleSet.authorization;
 
     return this.authorizationPolicyService.getAgentPrivileges(
-      agentInfo,
+      actorContext,
       this.authorizationPolicyService.validateAuthorization(authorization)
     );
   }
@@ -78,12 +78,12 @@ export class SpaceAboutMembershipResolverFields {
     description: 'The membership status of the currently logged in user.',
   })
   async myMembershipStatus(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() membership: SpaceAboutMembership
   ): Promise<CommunityMembershipStatus> {
     const roleSet = membership.roleSet;
     // Uses the DataLoader to batch load membership statuses
-    return this.membershipStatusLoader.loader.load({ agentInfo, roleSet });
+    return this.membershipStatusLoader.loader.load({ actorContext, roleSet });
   }
 
   @ResolveField('leadUsers', () => [IUser], {

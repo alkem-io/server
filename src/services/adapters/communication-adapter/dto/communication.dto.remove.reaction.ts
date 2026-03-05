@@ -1,7 +1,7 @@
 export class CommunicationRemoveReactionToMessageInput {
   alkemioRoomId!: string;
 
-  actorId!: string;
+  actorID!: string;
 
   reactionId!: string;
 }

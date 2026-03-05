@@ -6,7 +6,7 @@ import { MessageDetailsService } from '@domain/communication/message.details/mes
 import { ISpace } from '@domain/space/space/space.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
-import { InAppNotificationPayloadSpaceCommunityContributor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.contributor';
+import { InAppNotificationPayloadSpaceCommunityActor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.actor';
 import { InAppNotificationPayloadSpaceCommunityInvitation } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.invitation';
 import { InAppNotificationPayloadUser } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user';
 import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.direct';
@@ -136,7 +136,7 @@ export class NotificationUserAdapter {
     const recipients = await this.getNotificationRecipientsUser(
       event,
       eventData,
-      eventData.contributorID
+      eventData.actorID
     );
 
     const payload =
@@ -145,7 +145,7 @@ export class NotificationUserAdapter {
         eventData.triggeredBy,
         recipients.emailRecipients,
         space,
-        eventData.contributorID
+        eventData.actorID
       );
     this.notificationExternalAdapter.sendExternalNotifications(event, payload);
 
@@ -154,11 +154,11 @@ export class NotificationUserAdapter {
       recipient => recipient.id
     );
     if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCommunityContributor = {
-        type: NotificationEventPayload.SPACE_COMMUNITY_CONTRIBUTOR,
+      const inAppPayload: InAppNotificationPayloadSpaceCommunityActor = {
+        type: NotificationEventPayload.SPACE_COMMUNITY_ACTOR,
         spaceID: space.id,
-        contributorID: eventData.contributorID,
-        contributorType: eventData.contributorType,
+        actorID: eventData.actorID,
+        actorType: eventData.actorType,
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(

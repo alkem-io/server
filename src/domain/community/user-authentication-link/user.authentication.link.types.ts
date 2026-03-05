@@ -1,3 +1,7 @@
+/**
+ * @deprecated These types are retained for backwards compatibility.
+ * The user-authentication-link module has been replaced by user-identity.
+ */
 import { FindOneOptions } from 'typeorm';
 import { User } from '../user/user.entity';
 import { IUser } from '../user/user.interface';

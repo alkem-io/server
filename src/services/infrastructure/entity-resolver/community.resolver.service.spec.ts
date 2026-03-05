@@ -56,6 +56,27 @@ describe('CommunityResolverService', () => {
     });
   });
 
+  describe('getLevelZeroSpaceIdForMediaGallery', () => {
+    it('should return levelZeroSpaceID when space exists', async () => {
+      entityManager.findOne.mockResolvedValue({
+        id: 'space-1',
+        levelZeroSpaceID: 'level0-space-1',
+      } as any);
+
+      const result = await service.getLevelZeroSpaceIdForMediaGallery('mg-1');
+
+      expect(result).toBe('level0-space-1');
+    });
+
+    it('should throw EntityNotFoundException when no space found for media gallery', async () => {
+      entityManager.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getLevelZeroSpaceIdForMediaGallery('missing-mg')
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+  });
+
   describe('getCommunityForRoleSet', () => {
     it('should return community when found via roleSet', async () => {
       const community = { id: 'community-1' };
