@@ -235,6 +235,50 @@ describe('SpaceService', () => {
       expect(revokeUrlCacheSpy).toHaveBeenCalledTimes(2);
     });
 
+    it('should update visibility to INACTIVE on L0 space', async () => {
+      // Arrange
+      const spaceId = 'space-1';
+      const nameID = 'space-name';
+
+      const mockSpace = {
+        id: spaceId,
+        nameID: nameID,
+        level: SpaceLevel.L0,
+        levelZeroSpaceID: spaceId,
+        visibility: SpaceVisibility.ACTIVE,
+      } as Space;
+
+      const updateData: UpdateSpacePlatformSettingsInput = {
+        spaceID: spaceId,
+        visibility: SpaceVisibility.INACTIVE,
+      };
+
+      vi.spyOn(spaceRepository, 'findOne').mockImplementation(options => {
+        const { where } = options ?? {};
+        if (!Array.isArray(where) && where?.id) {
+          const result = [mockSpace].find(space => space.id === where.id);
+          if (result) {
+            return Promise.resolve(result);
+          }
+        }
+        return Promise.resolve(null);
+      });
+      vi.spyOn(service, 'save').mockResolvedValue(mockSpace);
+      vi.spyOn(
+        service,
+        'updateSpaceVisibilityAllSubspaces' as any
+      ).mockResolvedValue(undefined);
+
+      const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
+      urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
+
+      // Act
+      await service.updateSpacePlatformSettings(mockSpace, updateData);
+
+      // Assert
+      expect(mockSpace.visibility).toBe(SpaceVisibility.INACTIVE);
+    });
+
     it('should not invalidate URL cache when nameID is not changed', async () => {
       // Arrange
       const spaceId = 'space-1';
@@ -419,6 +463,18 @@ describe('SpacesSorting', () => {
       '["6","2","1","5","9","3","8","4","10"]'
     );
   });
+  it('Sorting test with INACTIVE spaces deprioritized alongside DEMO', () => {
+    const activeDemoInactiveSpaces = getFilteredSpaces(spaceTestData, [
+      SpaceVisibility.ACTIVE,
+      SpaceVisibility.DEMO,
+      SpaceVisibility.INACTIVE,
+    ]);
+    const result = service['sortSpacesDefault'](activeDemoInactiveSpaces);
+    // Active spaces first (sorted by public-first, then subspace count), then Demo + Inactive deprioritized
+    expect(JSON.stringify(result)).toBe(
+      '["6","2","1","5","9","3","11","8","4","10","12"]'
+    );
+  });
   it('Filtering test 1', () => {
     const activeSpaces = getFilteredSpaces(spaceTestData, [
       SpaceVisibility.ACTIVE,
@@ -438,6 +494,13 @@ describe('SpacesSorting', () => {
     ]);
     const result = service['sortSpacesDefault'](archivedSpaces);
     expect(JSON.stringify(result)).toBe('["7"]');
+  });
+  it('Filtering INACTIVE spaces only', () => {
+    const inactiveSpaces = getFilteredSpaces(spaceTestData, [
+      SpaceVisibility.INACTIVE,
+    ]);
+    const result = service['sortSpacesDefault'](inactiveSpaces);
+    expect(JSON.stringify(result)).toBe('["11","12"]');
   });
 });
 
@@ -994,6 +1057,32 @@ const spaceTestData: Space[] = [
     visibility: SpaceVisibility.DEMO,
     challengesCount: 3,
     opportunitiesCounts: [1, 2, 0],
+    settings: {
+      ...spaceSettings,
+      privacy: {
+        mode: SpacePrivacyMode.PRIVATE,
+        allowPlatformSupportAsAdmin: false,
+      },
+    },
+  }),
+  getSpaceMock({
+    id: '11',
+    visibility: SpaceVisibility.INACTIVE,
+    challengesCount: 2,
+    opportunitiesCounts: [3, 1],
+    settings: {
+      ...spaceSettings,
+      privacy: {
+        mode: SpacePrivacyMode.PUBLIC,
+        allowPlatformSupportAsAdmin: false,
+      },
+    },
+  }),
+  getSpaceMock({
+    id: '12',
+    visibility: SpaceVisibility.INACTIVE,
+    challengesCount: 1,
+    opportunitiesCounts: [2],
     settings: {
       ...spaceSettings,
       privacy: {
