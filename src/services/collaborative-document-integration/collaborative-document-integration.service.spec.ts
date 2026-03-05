@@ -269,20 +269,17 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
       await service.memoContributions({
         memoId: 'memo-1',
-        users: [
-          { id: 'user-1', email: 'user1@test.com' },
-          { id: 'user-2', email: 'user2@test.com' },
-        ],
+        users: [{ id: 'user-1' }, { id: 'user-2' }],
       } as any);
 
       expect(contributionReporter.memoContribution).toHaveBeenCalledTimes(2);
       expect(contributionReporter.memoContribution).toHaveBeenCalledWith(
         { id: 'memo-1', name: 'My Memo', space: 'space-root' },
-        { id: 'user-1', email: 'user1@test.com' }
+        { actorID: 'user-1' }
       );
       expect(contributionReporter.memoContribution).toHaveBeenCalledWith(
         { id: 'memo-1', name: 'My Memo', space: 'space-root' },
-        { id: 'user-2', email: 'user2@test.com' }
+        { actorID: 'user-2' }
       );
     });
   });

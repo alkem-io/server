@@ -295,10 +295,7 @@ export class RoomServiceEvents {
           name: post.profile.displayName,
           space: levelZeroSpaceID,
         },
-        {
-          id: actorContext.actorID,
-          email: actorContext.actorID,
-        }
+        actorContext
       );
     } else {
       this.logger.debug?.(
@@ -364,10 +361,7 @@ export class RoomServiceEvents {
           name: '',
           space: levelZeroSpaceID,
         },
-        {
-          id: actorContext.actorID,
-          email: actorContext.actorID,
-        }
+        actorContext
       );
     } else {
       this.logger.debug?.(
@@ -438,10 +432,7 @@ export class RoomServiceEvents {
           name: callout.nameID,
           space: levelZeroSpaceID,
         },
-        {
-          id: actorContext.actorID,
-          email: actorContext.actorID,
-        }
+        actorContext
       );
     } else {
       this.logger.debug?.(

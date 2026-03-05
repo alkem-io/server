@@ -190,7 +190,9 @@ export class CollaborativeDocumentIntegrationService {
           name: displayName,
           space: levelZeroSpaceID,
         },
-        { id }
+        {
+          actorID: id,
+        }
       );
     });
   }

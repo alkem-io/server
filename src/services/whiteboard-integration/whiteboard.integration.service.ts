@@ -200,7 +200,7 @@ export class WhiteboardIntegrationService {
           name: wb.displayName,
           space: levelZeroSpaceID,
         },
-        { id }
+        { actorID: id }
       );
     });
   }

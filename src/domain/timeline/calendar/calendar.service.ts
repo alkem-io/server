@@ -276,10 +276,7 @@ export class CalendarService {
           name: calendarEvent.profile.displayName,
           space: spaceID,
         },
-        {
-          id: actorContext.actorID,
-          email: actorContext.actorID,
-        }
+        actorContext
       );
     }
   }
