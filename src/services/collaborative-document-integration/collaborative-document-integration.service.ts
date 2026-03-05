@@ -109,9 +109,15 @@ export class CollaborativeDocumentIntegrationService {
   }
 
   public async who(data: WhoInputData): Promise<string> {
-    const authCtx = await this.authenticationService.getActorContext(data.auth);
+    const actorContext = await this.authenticationService.getActorContext(
+      data.auth
+    );
 
-    return authCtx.actorID;
+    if (actorContext.isAnonymous) {
+      return '';
+    }
+
+    return actorContext.actorID;
   }
 
   public async save({
@@ -185,7 +191,7 @@ export class CollaborativeDocumentIntegrationService {
           space: levelZeroSpaceID,
         },
         {
-          actorID: id
+          actorID: id,
         }
       );
     });
