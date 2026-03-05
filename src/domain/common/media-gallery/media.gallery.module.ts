@@ -4,6 +4,8 @@ import { VisualModule } from '@domain/common/visual/visual.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter/contribution.reporter.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { MediaGallery } from './media.gallery.entity';
 import { MediaGalleryResolverFields } from './media.gallery.resolver.fields';
 import { MediaGalleryResolverMutations } from './media.gallery.resolver.mutations';
@@ -15,6 +17,8 @@ import { MediaGalleryAuthorizationService } from './media.gallery.service.author
     TypeOrmModule.forFeature([MediaGallery]),
     AuthorizationModule,
     AuthorizationPolicyModule,
+    ContributionReporterModule,
+    EntityResolverModule,
     StorageBucketModule,
     VisualModule,
   ],
