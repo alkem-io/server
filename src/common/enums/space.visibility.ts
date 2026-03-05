@@ -4,6 +4,7 @@ export enum SpaceVisibility {
   ACTIVE = 'active',
   ARCHIVED = 'archived',
   DEMO = 'demo',
+  INACTIVE = 'inactive',
 }
 
 registerEnumType(SpaceVisibility, {
