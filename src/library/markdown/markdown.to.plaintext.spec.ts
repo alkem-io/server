@@ -201,6 +201,7 @@ describe('convertMarkdownToPlainText', () => {
       // Should not throw, and script content should be stripped or inert
       const result = convertMarkdownToPlainText(md);
       expect(result).toContain('Safe text');
+      expect(result).not.toContain('throw new Error("xss")');
     });
 
     it('strips event handlers from HTML attributes', () => {

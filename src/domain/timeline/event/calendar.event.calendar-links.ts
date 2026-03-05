@@ -34,27 +34,48 @@ export const generateCalendarUrls = (
 
   const encodedDescription = encodeURIComponent(plainTextDescription);
   const encodedLocation = encodeURIComponent(event.location ?? '');
-  const dates = formatDatesForCalendar(event.startDate, event.endDate);
+  const dates = formatDatesForCalendar(
+    event.startDate,
+    event.endDate,
+    event.wholeDay
+  );
+
+  const outlookAllDay = event.wholeDay ? '&allday=true' : '';
 
   return {
     googleCalendarUrl: `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodedTitle}&dates=${dates.google}&details=${encodedDescription}&location=${encodedLocation}`,
-    outlookCalendarUrl: `https://outlook.live.com/calendar/deeplink/compose?subject=${encodedTitle}&startTime=${dates.outlookStart}&endTime=${dates.outlookEnd}&body=${encodedDescription}`,
+    outlookCalendarUrl: `https://outlook.live.com/calendar/deeplink/compose?subject=${encodedTitle}&startTime=${dates.outlookStart}&endTime=${dates.outlookEnd}&body=${encodedDescription}${outlookAllDay}`,
     icsDownloadUrl: icsRestUrl,
   };
 };
 
 export const formatDatesForCalendar = (
   start: string,
-  end: string
+  end: string,
+  wholeDay = false
 ): {
   google: string;
   outlookStart: string;
   outlookEnd: string;
   icalStart: string;
   icalEnd: string;
+  wholeDay: boolean;
 } => {
   const startIso = toIsoString(start, 'startDate');
   const endIso = toIsoString(end, 'endDate');
+
+  if (wholeDay) {
+    const dateStart = formatDateOnly(startIso);
+    const dateEnd = formatDateOnly(endIso);
+    return {
+      google: `${dateStart}/${dateEnd}`,
+      outlookStart: startIso.slice(0, 10),
+      outlookEnd: endIso.slice(0, 10),
+      icalStart: dateStart,
+      icalEnd: dateEnd,
+      wholeDay: true,
+    };
+  }
 
   const googleStart = formatDateForCalendar(startIso);
   const googleEnd = formatDateForCalendar(endIso);
@@ -65,6 +86,7 @@ export const formatDatesForCalendar = (
     outlookEnd: endIso,
     icalStart: googleStart,
     icalEnd: googleEnd,
+    wholeDay: false,
   };
 };
 
@@ -84,8 +106,8 @@ export const generateICS = (
     'BEGIN:VEVENT',
     `UID:${event.id}@alkem.io`,
     `DTSTAMP:${formatDateForCalendar(new Date().toISOString())}`,
-    `DTSTART:${start}`,
-    `DTEND:${end}`,
+    event.wholeDay ? `DTSTART;VALUE=DATE:${start}` : `DTSTART:${start}`,
+    event.wholeDay ? `DTEND;VALUE=DATE:${end}` : `DTEND:${end}`,
     `SUMMARY:${escapeIcsText(event.title)}`,
     ...(plainTextDescription.length > 0
       ? [`DESCRIPTION:${escapeIcsText(plainTextDescription)}`]
@@ -102,6 +124,7 @@ export const generateICS = (
 export const escapeIcsText = (value: string): string =>
   value
     .replace(/\\/g, '\\\\')
+    .replace(/\r\n?/g, '\n')
     .replace(/\n/g, '\\n')
     .replace(/;/g, '\\;')
     .replace(/,/g, '\\,');
@@ -165,6 +188,10 @@ const sliceByBytes = (
 
 export const formatDateForCalendar = (iso: string): string =>
   iso.replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
+
+/** Extracts a date-only iCal value (YYYYMMDD) from an ISO-8601 string. */
+export const formatDateOnly = (iso: string): string =>
+  iso.slice(0, 10).replace(/-/g, '');
 
 export const calculateCalendarEventEndDate = (event: ICalendarEvent): Date => {
   const start = toDate(event.startDate, 'startDate');

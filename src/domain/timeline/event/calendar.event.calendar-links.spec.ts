@@ -1,11 +1,12 @@
 import {
   foldIcsLine,
+  formatDateOnly,
   formatDatesForCalendar,
   generateCalendarUrls,
   generateICS,
 } from './calendar.event.calendar-links';
 
-describe('NotificationExternalAdapter', () => {
+describe('CalendarEventCalendarLinks', () => {
   it('formats calendar dates for Google and Outlook', () => {
     const result = formatDatesForCalendar(
       '2026-02-20T10:00:00Z',
@@ -17,6 +18,25 @@ describe('NotificationExternalAdapter', () => {
     expect(result.outlookEnd).toBe('2026-02-20T11:00:00.000Z');
     expect(result.icalStart).toBe('20260220T100000Z');
     expect(result.icalEnd).toBe('20260220T110000Z');
+  });
+
+  it('formats whole-day dates as date-only values', () => {
+    const result = formatDatesForCalendar(
+      '2026-02-20T00:00:00Z',
+      '2026-02-21T00:00:00Z',
+      true
+    );
+
+    expect(result.google).toBe('20260220/20260221');
+    expect(result.outlookStart).toBe('2026-02-20');
+    expect(result.outlookEnd).toBe('2026-02-21');
+    expect(result.icalStart).toBe('20260220');
+    expect(result.icalEnd).toBe('20260221');
+    expect(result.wholeDay).toBe(true);
+  });
+
+  it('formatDateOnly extracts YYYYMMDD from ISO string', () => {
+    expect(formatDateOnly('2026-02-20T10:00:00.000Z')).toBe('20260220');
   });
 
   it('generates calendar URLs with encoded fields', () => {
@@ -45,6 +65,29 @@ describe('NotificationExternalAdapter', () => {
     expect(urls.icsDownloadUrl).toBe(icsRestUrl);
   });
 
+  it('generates whole-day calendar URLs with allday flag', () => {
+    const icsRestUrl =
+      'https://alkem.io/api/private/rest/calendar/event/event-2/ics';
+    const urls = generateCalendarUrls(
+      {
+        id: 'event-2',
+        title: 'All-Day Workshop',
+        url: 'https://alkem.io/events/2',
+        startDate: '2026-03-10T00:00:00Z',
+        endDate: '2026-03-11T00:00:00Z',
+        wholeDay: true,
+        description: 'Full day event',
+        location: 'Berlin',
+      },
+      icsRestUrl
+    );
+
+    expect(urls.googleCalendarUrl).toContain('dates=20260310/20260311');
+    expect(urls.outlookCalendarUrl).toContain('allday=true');
+    expect(urls.outlookCalendarUrl).toContain('startTime=2026-03-10');
+    expect(urls.outlookCalendarUrl).toContain('endTime=2026-03-11');
+  });
+
   it('generates RFC5545 iCalendar content', () => {
     const ics = generateICS(
       {
@@ -71,6 +114,28 @@ describe('NotificationExternalAdapter', () => {
     expect(ics).toContain('URL:https://alkem.io/events/1');
     expect(ics).toContain('END:VEVENT');
     expect(ics).toContain('END:VCALENDAR');
+  });
+
+  it('generates whole-day ICS with VALUE=DATE properties', () => {
+    const ics = generateICS(
+      {
+        id: 'event-allday',
+        title: 'All-Day Workshop',
+        url: 'https://alkem.io/events/allday',
+        startDate: '2026-03-10T00:00:00Z',
+        endDate: '2026-03-11T00:00:00Z',
+        wholeDay: true,
+        description: 'Full day',
+        location: 'Berlin',
+      },
+      '20260310',
+      '20260311'
+    );
+
+    expect(ics).toContain('DTSTART;VALUE=DATE:20260310');
+    expect(ics).toContain('DTEND;VALUE=DATE:20260311');
+    expect(ics).not.toContain('DTSTART:2026');
+    expect(ics).not.toContain('DTEND:2026');
   });
 
   describe('foldIcsLine', () => {

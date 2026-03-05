@@ -71,7 +71,7 @@ export class CalendarEventIcsService {
       location,
     };
 
-    const dates = formatDatesForCalendar(startDateIso, endDateIso);
+    const dates = formatDatesForCalendar(startDateIso, endDateIso, event.wholeDay);
     const content = generateICS(
       calendarEventData,
       dates.icalStart,
