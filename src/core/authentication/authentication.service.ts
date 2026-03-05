@@ -118,7 +118,16 @@ export class AuthenticationService {
     }
 
     // Load credentials (actorID already known from token)
-    await this.actorContextService.populateFromActorID(ctx, actorID);
+    try {
+      await this.actorContextService.populateFromActorID(ctx, actorID);
+    } catch {
+      // Actor not found in DB (e.g. stale alkemio_actor_id after DB reset)
+      this.logger.warn?.(
+        `Actor not found for actorID from token, falling back to anonymous`,
+        LogContext.AUTH
+      );
+      return this.actorContextService.createAnonymous();
+    }
 
     // Cache the result using actorID
     await this.actorContextCacheService.setByActorID(ctx);

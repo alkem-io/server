@@ -1173,7 +1173,7 @@ export class RoleSetService {
       }
       if (actorCount >= policy.maximum) {
         throw new RoleSetPolicyRoleLimitsException(
-          `Max limit of ${actorType} reached for role '${roleType}': ${policy.maximum}`,
+          `Max limit of ${actorType}s reached for role '${roleType}': ${policy.maximum}, cannot assign new ${actorType}.`,
           LogContext.COMMUNITY
         );
       }
@@ -1186,7 +1186,7 @@ export class RoleSetService {
       }
       if (actorCount <= policy.minimum) {
         throw new RoleSetPolicyRoleLimitsException(
-          `Min limit of ${actorType} reached for role '${roleType}': ${policy.minimum}`,
+          `Min limit of ${actorType}s reached for role '${roleType}': ${policy.minimum}, cannot remove ${actorType}.`,
           LogContext.COMMUNITY
         );
       }

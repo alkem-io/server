@@ -57,20 +57,24 @@ export abstract class IActor extends INameable {
  */
 @InterfaceType('ActorFull', {
   resolveType(actor) {
-    // Use lazy imports to avoid circular dependencies
-    // These imports are resolved at runtime when the function is called
+    // Use lazy imports to avoid circular dependencies.
+    // These imports are resolved at runtime when the function is called.
+    // IMPORTANT: Use relative paths (not @domain aliases) because tsc does
+    // not rewrite dynamic require() paths — only static import paths are
+    // resolved. Using @domain here would rely on module-alias which
+    // computes an incorrect base path in dist/src/ output structures.
     // Using the discriminator type field (not instanceof) so this works
     // even if TypeORM materialises a base Actor instance rather than a child class.
     /* eslint-disable @typescript-eslint/no-require-imports */
-    const { IUser } = require('@domain/community/user/user.interface');
+    const { IUser } = require('../../community/user/user.interface');
     const {
       IOrganization,
-    } = require('@domain/community/organization/organization.interface');
+    } = require('../../community/organization/organization.interface');
     const {
       IVirtualContributor,
-    } = require('@domain/community/virtual-contributor/virtual.contributor.interface');
-    const { ISpace } = require('@domain/space/space/space.interface');
-    const { IAccount } = require('@domain/space/account/account.interface');
+    } = require('../../community/virtual-contributor/virtual.contributor.interface');
+    const { ISpace } = require('../../space/space/space.interface');
+    const { IAccount } = require('../../space/account/account.interface');
     /* eslint-enable @typescript-eslint/no-require-imports */
 
     switch (actor.type) {

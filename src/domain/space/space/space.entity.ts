@@ -1,23 +1,18 @@
-import { randomUUID } from 'node:crypto';
 import { ENUM_LENGTH } from '@common/constants';
 import { ActorType } from '@common/enums/actor.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { Actor } from '@domain/actor/actor/actor.entity';
-import { Credential } from '@domain/actor/credential/credential.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
-import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { License } from '@domain/common/license/license.entity';
-import { Profile } from '@domain/common/profile/profile.entity';
 import { Community } from '@domain/community/community/community.entity';
 import { ISpace } from '@domain/space/space/space.interface';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { TemplatesManager } from '@domain/template/templates-manager';
 import {
+  ChildEntity,
   Column,
-  Entity,
   Generated,
   JoinColumn,
   ManyToOne,
@@ -28,54 +23,12 @@ import { Account } from '../account/account.entity';
 import { SpaceAbout } from '../space.about';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 
-@Entity('space')
-export class Space extends BaseAlkemioEntity implements ISpace {
-  // Actor relation — shared primary key (space.id = actor.id)
-  @OneToOne(() => Actor, {
-    eager: true,
-    cascade: true,
-    onDelete: 'CASCADE',
-    nullable: false,
-  })
-  @JoinColumn({ name: 'id', referencedColumnName: 'id' })
-  actor?: Actor;
+@ChildEntity({ discriminatorValue: ActorType.SPACE, tableName: 'space' })
+export class Space extends Actor implements ISpace {
+  // Inherited from Actor (on actor table):
+  //   id, type, nameID, profile, authorization, credentials, createdDate, updatedDate, version
 
-  // Transparent getters delegating to actor
-  get type(): ActorType {
-    return this.actor?.type as ActorType;
-  }
-
-  get authorization(): AuthorizationPolicy | undefined {
-    return this.actor?.authorization;
-  }
-
-  set authorization(auth: AuthorizationPolicy | undefined) {
-    if (!this.actor) this.actor = new Actor();
-    this.actor.authorization = auth;
-  }
-
-  get credentials(): Credential[] | undefined {
-    return this.actor?.credentials;
-  }
-
-  get profile(): Profile {
-    return this.actor?.profile as Profile;
-  }
-
-  set profile(p: Profile) {
-    if (!this.actor) this.actor = new Actor();
-    this.actor.profile = p;
-  }
-
-  get nameID(): string {
-    return this.actor?.nameID as string;
-  }
-
-  set nameID(val: string) {
-    if (!this.actor) this.actor = new Actor();
-    this.actor.nameID = val;
-  }
-
+  // Self-referential — both sides in the space table
   @OneToMany(
     () => Space,
     space => space.parentSpace,
@@ -96,6 +49,7 @@ export class Space extends BaseAlkemioEntity implements ISpace {
   )
   parentSpace?: Space;
 
+  // Cross-child reference — Space → Account (both CTI children)
   @ManyToOne(
     () => Account,
     account => account.spaces,
@@ -138,7 +92,7 @@ export class Space extends BaseAlkemioEntity implements ISpace {
   community?: Community;
 
   @Column('jsonb', { nullable: false })
-  settings: ISpaceSettings;
+  settings!: ISpaceSettings;
 
   // Calculated field to make the authorization logic clearer
   @Column('jsonb', { nullable: false })
@@ -185,13 +139,6 @@ export class Space extends BaseAlkemioEntity implements ISpace {
 
   constructor() {
     super();
-    const id = randomUUID();
-    this.id = id;
-    const actor = new Actor();
-    actor.type = ActorType.SPACE;
-    actor.id = id;
-    this.actor = actor;
-    actor.nameID = '';
     this.settings = {} as ISpaceSettings;
     this.platformRolesAccess = { roles: [] } as IPlatformRolesAccess;
   }

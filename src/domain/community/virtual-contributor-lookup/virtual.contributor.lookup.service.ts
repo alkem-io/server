@@ -31,9 +31,8 @@ export class VirtualContributorLookupService {
     private actorLookupService: ActorLookupService
   ) {}
 
-  // Note: VirtualContributor has credentials via the actor relation.
-  // This method returns both the virtualContributor and the actorID/credentials.
-  // Callers should prefer using virtualContributor.id and virtualContributor.credentials directly.
+  // Loads the VirtualContributor with its credentials (inherited from Actor via CTI).
+  // Returns actorID and credentials alongside the entity for legacy callers.
   public async getVirtualContributorAndActor(virtualID: string): Promise<{
     virtualContributor: IVirtualContributor;
     actorID: string;
@@ -42,7 +41,7 @@ export class VirtualContributorLookupService {
     const virtualContributor = await this.getVirtualContributorByIdOrFail(
       virtualID,
       {
-        relations: { actor: { credentials: true } },
+        relations: { credentials: true },
       }
     );
 
@@ -93,7 +92,7 @@ export class VirtualContributorLookupService {
         ...options,
         where: {
           ...options?.where,
-          actor: { nameID: virtualContributorNameID },
+          nameID: virtualContributorNameID,
         },
       });
     if (!virtualContributor)
@@ -105,7 +104,7 @@ export class VirtualContributorLookupService {
     return virtualContributor;
   }
 
-  // Credentials are accessed via the actor relation
+  // Credentials are inherited from Actor (CTI) and queried directly on VirtualContributor.
   async virtualContributorsWithCredentials(
     credentialCriteria: CredentialsSearchInput,
     limit?: number
@@ -114,15 +113,13 @@ export class VirtualContributorLookupService {
 
     return this.entityManager.find(VirtualContributor, {
       where: {
-        actor: {
-          credentials: {
-            type: credentialCriteria.type,
-            resourceID: credResourceID,
-          },
+        credentials: {
+          type: credentialCriteria.type,
+          resourceID: credResourceID,
         },
       },
       relations: {
-        actor: { credentials: true },
+        credentials: true,
       },
       take: limit,
     });
@@ -156,13 +153,11 @@ export class VirtualContributorLookupService {
       );
     const qb = this.virtualContributorRepository
       .createQueryBuilder('virtual_contributor')
-      .leftJoinAndSelect('virtual_contributor.actor', 'actor')
-      .leftJoinAndSelect('actor.authorization', 'authorization')
+      .leftJoinAndSelect('virtual_contributor.authorization', 'authorization')
       .select();
 
     if (entryRoleCredentials.parentRoleSetRole) {
-      // Credentials are on the actor relation
-      qb.leftJoin('actor.credentials', 'credential')
+      qb.leftJoin('virtual_contributor.credentials', 'credential')
         .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
