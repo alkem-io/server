@@ -31,7 +31,7 @@ export class CalendarEventIcsRedirectFilter implements ExceptionFilter {
     const request = httpArguments.getRequest<Request>();
 
     if (response.headersSent) {
-      return exception;
+      return;
     }
 
     if (
@@ -43,12 +43,12 @@ export class CalendarEventIcsRedirectFilter implements ExceptionFilter {
         302,
         `/restricted?returnUrl=${encodeURIComponent(origin)}`
       );
-      return exception;
+      return;
     }
 
     const returnUrl = this.getReturnUrl(request);
     response.redirect(302, `/login?returnUrl=${encodeURIComponent(returnUrl)}`);
-    return exception;
+    return;
   }
 
   private getReturnUrl(request: Request): string {
@@ -68,9 +68,11 @@ export class CalendarEventIcsRedirectFilter implements ExceptionFilter {
       return parsed.pathname || request.path || '/';
     } catch (error) {
       this.logger.debug?.(
-        `Unable to resolve calendar event origin path. Falling back to request path.`,
+        {
+          message: 'Unable to resolve calendar event origin path. Falling back to request path.',
+          error,
+        },
         LogContext.CALENDAR,
-        { error }
       );
       return request.path ?? '/';
     }

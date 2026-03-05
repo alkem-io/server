@@ -31,7 +31,6 @@ export class CalendarEventResolverFields {
     private calendarEventService: CalendarEventService,
     private userLookupService: UserLookupService,
     private urlGeneratorService: UrlGeneratorService,
-    private configService: ConfigService<AlkemioConfig, true>
   ) {}
 
   private calendarUrlCache = new WeakMap<

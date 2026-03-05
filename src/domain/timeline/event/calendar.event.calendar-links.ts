@@ -84,7 +84,7 @@ export const generateICS = (
     'VERSION:2.0',
     'PRODID:-//Alkemio//Calendar Event//EN',
     'BEGIN:VEVENT',
-    `UID:${event.id}@alkemio.local`,
+    `UID:${event.id}@alkem.io`,
     `DTSTAMP:${formatDateForCalendar(new Date().toISOString())}`,
     `DTSTART:${start}`,
     `DTEND:${end}`,
@@ -131,7 +131,7 @@ export const toIsoString = (
     if (Number.isNaN(value.getTime())) {
       throw new ValidationException(
         'Invalid calendar event date',
-        LogContext.NOTIFICATIONS,
+        LogContext.CALENDAR,
         {
           field: fieldName,
           value,
@@ -144,7 +144,7 @@ export const toIsoString = (
   if (!isIsoDateString(value)) {
     throw new ValidationException(
       'Invalid calendar event date format',
-      LogContext.NOTIFICATIONS,
+      LogContext.CALENDAR,
       {
         field: fieldName,
         value,
@@ -156,7 +156,7 @@ export const toIsoString = (
   if (Number.isNaN(parsed.getTime())) {
     throw new ValidationException(
       'Invalid calendar event date',
-      LogContext.NOTIFICATIONS,
+      LogContext.CALENDAR,
       {
         field: fieldName,
         value,
@@ -173,7 +173,7 @@ export const toDate = (value: string | Date, fieldName: string): Date => {
   if (Number.isNaN(parsed.getTime())) {
     throw new ValidationException(
       'Invalid calendar event date',
-      LogContext.NOTIFICATIONS,
+      LogContext.CALENDAR,
       {
         field: fieldName,
         value,
@@ -197,7 +197,7 @@ export const validateCalendarDateRange = (
   if (Number.isNaN(start) || Number.isNaN(end) || start >= end) {
     throw new ValidationException(
       'Invalid calendar event date range',
-      LogContext.NOTIFICATIONS,
+      LogContext.CALENDAR,
       {
         eventId,
         startDate: startIso,

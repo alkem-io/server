@@ -270,6 +270,7 @@ http:
         - strip-api-private-prefix
       entryPoints:
         - 'web'
+      priority: 150
 
     kratos-public:
       rule: 'PathPrefix(`/ory/kratos/public`)'

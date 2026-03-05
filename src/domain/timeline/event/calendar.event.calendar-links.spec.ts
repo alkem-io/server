@@ -2,11 +2,9 @@ import {
   formatDatesForCalendar,
   generateCalendarUrls,
   generateICS,
-} from '../../../domain/timeline/event/calendar.event.calendar-links';
+} from './calendar.event.calendar-links';
 
 describe('NotificationExternalAdapter', () => {
-  beforeEach(async () => {});
-
   it('formats calendar dates for Google and Outlook', () => {
     const result = formatDatesForCalendar(
       '2026-02-20T10:00:00Z',
