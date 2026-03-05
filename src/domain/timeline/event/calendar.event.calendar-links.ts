@@ -98,7 +98,7 @@ export const generateICS = (
     'END:VCALENDAR',
   ];
 
-  return lines.join('\r\n');
+  return lines.map(foldIcsLine).join('\r\n');
 };
 
 export const escapeIcsText = (value: string): string =>
@@ -107,6 +107,63 @@ export const escapeIcsText = (value: string): string =>
     .replace(/\n/g, '\\n')
     .replace(/;/g, '\\;')
     .replace(/,/g, '\\,');
+
+/**
+ * Folds a content line per RFC 5545 §3.1.
+ * Lines SHOULD NOT exceed 75 octets (bytes). Long lines are split by
+ * inserting CRLF followed by a single SPACE continuation character.
+ * Operates on UTF-8 byte length to handle multi-byte characters correctly.
+ */
+export const foldIcsLine = (line: string): string => {
+  const MAX_OCTETS = 75;
+  const encoder = new TextEncoder();
+  const bytes = encoder.encode(line);
+
+  if (bytes.length <= MAX_OCTETS) {
+    return line;
+  }
+
+  const parts: string[] = [];
+  let offset = 0;
+
+  // First line: up to 75 octets
+  parts.push(sliceByBytes(line, offset, MAX_OCTETS));
+  offset += parts[0].length;
+
+  // Continuation lines: CRLF + SPACE prefix counts as overhead,
+  // so each continuation carries up to 74 octets of content
+  const CONTINUATION_MAX = MAX_OCTETS - 1;
+  while (offset < line.length) {
+    const chunk = sliceByBytes(line, offset, CONTINUATION_MAX);
+    parts.push('\r\n ' + chunk);
+    offset += chunk.length;
+  }
+
+  return parts.join('');
+};
+
+/**
+ * Returns the longest substring starting at `charOffset` whose
+ * UTF-8 encoding does not exceed `maxBytes`.
+ */
+const sliceByBytes = (
+  str: string,
+  charOffset: number,
+  maxBytes: number
+): string => {
+  const encoder = new TextEncoder();
+  let end = charOffset;
+
+  while (end < str.length) {
+    const candidate = str.slice(charOffset, end + 1);
+    if (encoder.encode(candidate).length > maxBytes) {
+      break;
+    }
+    end++;
+  }
+
+  return str.slice(charOffset, end);
+};
 
 export const formatDateForCalendar = (iso: string): string =>
   iso.replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');

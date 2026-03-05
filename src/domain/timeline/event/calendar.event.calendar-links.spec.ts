@@ -1,4 +1,5 @@
 import {
+  foldIcsLine,
   formatDatesForCalendar,
   generateCalendarUrls,
   generateICS,
@@ -71,5 +72,98 @@ describe('NotificationExternalAdapter', () => {
     expect(ics).toContain('URL:https://alkem.io/events/1');
     expect(ics).toContain('END:VEVENT');
     expect(ics).toContain('END:VCALENDAR');
+  });
+
+  describe('foldIcsLine', () => {
+    it('returns short lines unchanged', () => {
+      const line = 'SUMMARY:Short title';
+      expect(foldIcsLine(line)).toBe(line);
+    });
+
+    it('returns a line of exactly 75 bytes unchanged', () => {
+      const line = 'DESCRIPTION:' + 'A'.repeat(63); // 12 + 63 = 75
+      expect(foldIcsLine(line)).toBe(line);
+      expect(new TextEncoder().encode(foldIcsLine(line)).length).toBe(75);
+    });
+
+    it('folds a line exceeding 75 bytes with CRLF + SPACE', () => {
+      const line = 'DESCRIPTION:' + 'A'.repeat(100); // 112 bytes total
+      const folded = foldIcsLine(line);
+
+      // First line is 75 chars, then CRLF + SPACE + continuation
+      const parts = folded.split('\r\n ');
+      expect(parts.length).toBeGreaterThan(1);
+
+      // First part is exactly 75 bytes
+      expect(new TextEncoder().encode(parts[0]).length).toBe(75);
+
+      // Continuation parts are at most 74 bytes each
+      for (let i = 1; i < parts.length; i++) {
+        expect(new TextEncoder().encode(parts[i]).length).toBeLessThanOrEqual(
+          74
+        );
+      }
+
+      // Roundtrip: unfolding by removing CRLF+SPACE recovers the original
+      const unfolded = folded.replace(/\r\n /g, '');
+      expect(unfolded).toBe(line);
+    });
+
+    it('handles multi-byte UTF-8 characters without splitting them', () => {
+      // 'é' is 2 bytes in UTF-8; build a line that forces a fold near the boundary
+      const line = 'SUMMARY:' + 'é'.repeat(40); // 8 + 80 = 88 bytes
+      const folded = foldIcsLine(line);
+      const parts = folded.split('\r\n ');
+
+      expect(parts.length).toBeGreaterThan(1);
+      expect(new TextEncoder().encode(parts[0]).length).toBeLessThanOrEqual(75);
+
+      // Verify no broken characters — unfolding produces the original
+      const unfolded = folded.replace(/\r\n /g, '');
+      expect(unfolded).toBe(line);
+    });
+
+    it('handles emoji (4-byte UTF-8 characters)', () => {
+      // '🎉' is 4 bytes in UTF-8
+      const line = 'SUMMARY:' + '🎉'.repeat(20); // 8 + 80 = 88 bytes
+      const folded = foldIcsLine(line);
+      const parts = folded.split('\r\n ');
+
+      expect(parts.length).toBeGreaterThan(1);
+      expect(new TextEncoder().encode(parts[0]).length).toBeLessThanOrEqual(75);
+
+      const unfolded = folded.replace(/\r\n /g, '');
+      expect(unfolded).toBe(line);
+    });
+  });
+
+  it('generateICS folds long DESCRIPTION lines per RFC 5545', () => {
+    const longDescription = 'A'.repeat(200);
+    const ics = generateICS(
+      {
+        id: 'event-long',
+        title: 'Short',
+        url: 'https://alkem.io/events/long',
+        startDate: '2026-02-20T10:00:00Z',
+        endDate: '2026-02-20T11:00:00Z',
+        wholeDay: false,
+        description: longDescription,
+        location: 'Amsterdam',
+      },
+      '20260220T100000Z',
+      '20260220T110000Z'
+    );
+
+    // Split the ICS into physical lines (CRLF separated)
+    const physicalLines = ics.split('\r\n');
+
+    // Every physical line must be at most 75 bytes
+    for (const physLine of physicalLines) {
+      expect(new TextEncoder().encode(physLine).length).toBeLessThanOrEqual(75);
+    }
+
+    // Unfolding should recover the full DESCRIPTION
+    const unfolded = ics.replace(/\r\n /g, '');
+    expect(unfolded).toContain(`DESCRIPTION:${'A'.repeat(200)}`);
   });
 });
