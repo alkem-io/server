@@ -314,7 +314,12 @@ export class ContributionReporterService {
           }
         } catch (e) {
           this.logger.error(
-            `Unable to fetch user details for actor with id (${actor.id}) in ContributionReporterService, ${e}`,
+            {
+              message: 'Unable to fetch user details for actor in ContributionReporterService',
+              actorContext,
+              actorId: actor.id,
+              error: e
+            },
             undefined,
             LogContext.CONTRIBUTION_REPORTER
           );
@@ -335,6 +340,20 @@ export class ContributionReporterService {
         guestName: actorContext.guestName,
       }
     }
+    if (actorContext.isAnonymous) {
+      return {
+        alkemio: false,
+        anonymous: true,
+        guest: false,
+      }
+    }
+
+    this.logger.verbose?.({
+        message: 'Unknown actor context for contribution, defaulting to anonymous',
+        actorContext,
+      },
+      LogContext.CONTRIBUTION_REPORTER
+    );
     return {
       alkemio: false,
       anonymous: true,
