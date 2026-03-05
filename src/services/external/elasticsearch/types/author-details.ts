@@ -1,4 +1,4 @@
 export type AuthorDetails = {
   id: string;
-  email: string;
+  email?: string;
 };

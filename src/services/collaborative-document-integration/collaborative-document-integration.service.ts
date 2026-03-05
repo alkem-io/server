@@ -109,9 +109,15 @@ export class CollaborativeDocumentIntegrationService {
   }
 
   public async who(data: WhoInputData): Promise<string> {
-    const authCtx = await this.authenticationService.getActorContext(data.auth);
+    const actorContext = await this.authenticationService.getActorContext(
+      data.auth
+    );
 
-    return authCtx.actorID;
+    if (actorContext.isAnonymous) {
+      return '';
+    }
+
+    return actorContext.actorID;
   }
 
   public async save({
@@ -177,14 +183,14 @@ export class CollaborativeDocumentIntegrationService {
       );
     const { displayName } = await this.memoService.getProfile(memoId);
 
-    users.forEach(({ id, email }) => {
+    users.forEach(({ id }) => {
       this.contributionReporter.memoContribution(
         {
           id: memoId,
           name: displayName,
           space: levelZeroSpaceID,
         },
-        { id, email }
+        { id }
       );
     });
   }

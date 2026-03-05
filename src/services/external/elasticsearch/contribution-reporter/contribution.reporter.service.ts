@@ -303,7 +303,7 @@ export class ContributionReporterService {
     const document: ContributionDocument = {
       ...contribution,
       '@timestamp': new Date(timestamp), // todo: is this UTC?
-      alkemio: isFromAlkemioTeam(details.email),
+      alkemio: details.email ? isFromAlkemioTeam(details.email) : false,
       environment: this.environment,
     };
 
@@ -341,7 +341,7 @@ export class ContributionReporterService {
     const document: ContributionDocument = {
       ...contribution,
       '@timestamp': new Date(),
-      alkemio: isFromAlkemioTeam(details.email),
+      alkemio: details.email ? isFromAlkemioTeam(details.email) : false,
       environment: this.environment,
     };
 
