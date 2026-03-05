@@ -109,15 +109,6 @@ export class CalendarEventResolverFields {
     return urls.outlookCalendarUrl;
   }
 
-  @ResolveField('appleCalendarUrl', () => String, {
-    nullable: true,
-    description: 'Apple Calendar data URL for this CalendarEvent.',
-  })
-  async appleCalendarUrl(@Parent() event: ICalendarEvent): Promise<string> {
-    const urls = await this.getCalendarUrls(event);
-    return urls.appleCalendarUrl;
-  }
-
   @ResolveField('icsDownloadUrl', () => String, {
     nullable: true,
     description: 'ICS file download data URL for this CalendarEvent.',

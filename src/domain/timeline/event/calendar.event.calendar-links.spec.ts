@@ -42,7 +42,6 @@ describe('NotificationExternalAdapter', () => {
     expect(urls.outlookCalendarUrl).toContain(
       'subject=Team%20Sync%20%26%20Review'
     );
-    expect(urls.appleCalendarUrl).toBe(icsRestUrl);
     expect(urls.icsDownloadUrl).toBe(icsRestUrl);
   });
 

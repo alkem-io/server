@@ -20,7 +20,6 @@ export interface CalendarEventCalendarData {
 export interface CalendarUrls {
   googleCalendarUrl: string;
   outlookCalendarUrl: string;
-  appleCalendarUrl: string;
   icsDownloadUrl: string;
 }
 
@@ -40,7 +39,6 @@ export const generateCalendarUrls = (
   return {
     googleCalendarUrl: `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodedTitle}&dates=${dates.google}&details=${encodedDescription}&location=${encodedLocation}`,
     outlookCalendarUrl: `https://outlook.live.com/calendar/deeplink/compose?subject=${encodedTitle}&startTime=${dates.outlookStart}&endTime=${dates.outlookEnd}&body=${encodedDescription}`,
-    appleCalendarUrl: icsRestUrl,
     icsDownloadUrl: icsRestUrl,
   };
 };

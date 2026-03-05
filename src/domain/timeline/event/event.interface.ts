@@ -63,13 +63,6 @@ export abstract class ICalendarEvent extends INameable {
 
   @Field(() => String, {
     nullable: true,
-    description:
-      'ICS download URL for adding this CalendarEvent to Apple Calendar.',
-  })
-  appleCalendarUrl?: string;
-
-  @Field(() => String, {
-    nullable: true,
     description: 'ICS download URL for this CalendarEvent.',
   })
   icsDownloadUrl?: string;

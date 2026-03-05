@@ -86,7 +86,6 @@ interface CalendarEventPayload {
   location?: string;
   googleCalendarUrl: string;
   outlookCalendarUrl: string;
-  appleCalendarUrl: string;
   icsDownloadUrl: string;
 }
 

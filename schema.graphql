@@ -1506,8 +1506,6 @@ type Calendar {
 }
 
 type CalendarEvent {
-  """ICS download URL for adding this CalendarEvent to Apple Calendar."""
-  appleCalendarUrl: String
   """The authorization rules for the entity"""
   authorization: Authorization
   """The comments for this CalendarEvent"""
