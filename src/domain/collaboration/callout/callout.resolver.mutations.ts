@@ -434,10 +434,7 @@ export class CalloutResolverMutations {
         name: link.profile.displayName,
         space: levelZeroSpaceID,
       },
-      {
-        id: actorContext.actorID,
-        email: actorContext.actorID,
-      }
+      actorContext
     );
   }
 
@@ -471,10 +468,7 @@ export class CalloutResolverMutations {
         name: whiteboard.nameID,
         space: levelZeroSpaceID,
       },
-      {
-        id: actorContext.actorID,
-        email: actorContext.actorID,
-      }
+      actorContext
     );
   }
 
@@ -509,10 +503,7 @@ export class CalloutResolverMutations {
         name: post.profile.displayName,
         space: levelZeroSpaceID,
       },
-      {
-        id: actorContext.actorID,
-        email: actorContext.actorID,
-      }
+      actorContext
     );
   }
 
@@ -547,10 +538,7 @@ export class CalloutResolverMutations {
         name: memo.nameID,
         space: levelZeroSpaceID,
       },
-      {
-        id: actorContext.actorID,
-        email: actorContext.actorID,
-      }
+      actorContext
     );
   }
 

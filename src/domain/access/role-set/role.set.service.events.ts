@@ -77,7 +77,9 @@ export class RoleSetEventsService {
             name: communityDisplayName,
             space: levelZeroSpaceID,
           },
-          { id: actorID, email: '' }
+          {
+            actorID,
+          }
         );
         break;
       }
@@ -89,7 +91,9 @@ export class RoleSetEventsService {
             name: communityDisplayName,
             space: levelZeroSpaceID,
           },
-          { id: actorID, email: '' }
+          {
+            actorID,
+          }
         );
         break;
       }
