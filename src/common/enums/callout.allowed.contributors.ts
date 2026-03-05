@@ -10,7 +10,7 @@ registerEnumType(CalloutAllowedActors, {
   name: 'CalloutAllowedActors',
 });
 
-/** @deprecated Use CalloutAllowedActors instead */
+/** @deprecated REMOVE_AFTER=2026-09-01 | Use CalloutAllowedActors instead */
 export const CalloutAllowedContributors = CalloutAllowedActors;
-/** @deprecated Use CalloutAllowedActors instead */
+/** @deprecated REMOVE_AFTER=2026-09-01 | Use CalloutAllowedActors instead */
 export type CalloutAllowedContributors = CalloutAllowedActors;

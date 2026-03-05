@@ -588,7 +588,7 @@ export class RoleSetResolverMutationsMembership {
         {
           message:
             'Unable to invalidate invitation cache because of missing relations',
-          cause: 'Invited Contributor or role set is null',
+          cause: 'Invited Actor or role set is null',
           invitationID: invitation.id,
           invitedActorID,
         },

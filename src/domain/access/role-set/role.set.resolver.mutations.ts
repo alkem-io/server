@@ -407,6 +407,11 @@ export class RoleSetResolverMutations {
           roleData.actorID
         );
         break;
+      default:
+        throw new ValidationException(
+          'Unsupported actor type for role assignment',
+          LogContext.ROLES
+        );
     }
 
     // Assign the role (generic for all actor types)
@@ -465,6 +470,11 @@ export class RoleSetResolverMutations {
           roleData.actorID
         );
         break;
+      default:
+        throw new ValidationException(
+          'Unsupported actor type for role removal',
+          LogContext.ROLES
+        );
     }
 
     // Remove the role (generic for all actor types)
@@ -472,7 +482,7 @@ export class RoleSetResolverMutations {
       roleSet,
       roleData.role,
       roleData.actorID,
-      actor.type === ActorType.USER // triggerNewMemberEvents only for users
+      true // triggerNewMemberEvents for all actor types
     );
 
     // Type-specific post-actions

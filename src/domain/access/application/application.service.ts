@@ -119,8 +119,9 @@ export class ApplicationService {
     const user = application.user;
     if (!user)
       throw new RelationshipNotFoundException(
-        `Unable to load Actor for Application ${applicationID} `,
-        LogContext.COMMUNITY
+        'Unable to load Actor for Application',
+        LogContext.COMMUNITY,
+        { applicationID }
       );
     return user;
   }

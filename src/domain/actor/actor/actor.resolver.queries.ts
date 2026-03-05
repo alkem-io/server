@@ -33,7 +33,7 @@ export class ActorResolverQueries {
       actorContext,
       actor.authorization,
       AuthorizationPrivilege.READ,
-      `actor query ${actor.type}: ${id}`
+      'actor query'
     );
 
     return actor;

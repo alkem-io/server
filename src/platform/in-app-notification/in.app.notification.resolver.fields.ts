@@ -1,3 +1,4 @@
+import { LogContext } from '@common/enums/logging.context';
 import { ActorLoaderCreator } from '@core/dataloader/creators/loader.creators/in-app-notification/actor.loader.creator';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -42,7 +43,8 @@ export class InAppNotificationResolverFields {
     const triggeredBy = await loader.load(triggeredByID);
     if (!triggeredBy) {
       this.logger.warn(
-        `InAppNotification ${id} unable to resolve the actor that triggered it ${triggeredByID}`
+        `InAppNotification ${id} unable to resolve the actor that triggered it ${triggeredByID}`,
+        LogContext.IN_APP_NOTIFICATION
       );
       return null;
     }

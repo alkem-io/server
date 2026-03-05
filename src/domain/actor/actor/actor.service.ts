@@ -28,7 +28,11 @@ import { IActor } from './actor.interface';
  */
 export const getActorType = (actor: IActor): ActorType => {
   if (!actor.type) {
-    throw new Error(`Unable to determine actor type for ${actor.id}`);
+    throw new EntityNotInitializedException(
+      'Unable to determine actor type',
+      LogContext.COMMUNITY,
+      { actorID: actor.id }
+    );
   }
   return actor.type;
 };
