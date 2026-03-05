@@ -272,6 +272,37 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED:
       case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:
         return notificationSettings.space.communityCalendarEvents;
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL:
+        return (
+          notificationSettings.space.collaborationPollVoteCastOnOwnPoll ?? {
+            email: false,
+            inApp: true,
+          }
+        );
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON:
+        return (
+          notificationSettings.space
+            .collaborationPollVoteCastOnPollIVotedOn ?? {
+            email: false,
+            inApp: true,
+          }
+        );
+      case NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON:
+        return (
+          notificationSettings.space
+            .collaborationPollModifiedOnPollIVotedOn ?? {
+            email: false,
+            inApp: true,
+          }
+        );
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE:
+        return (
+          notificationSettings.space
+            .collaborationPollVoteAffectedByOptionChange ?? {
+            email: false,
+            inApp: true,
+          }
+        );
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
         return notificationSettings.space.admin.communityNewMember;
       case NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION:
@@ -368,8 +399,12 @@ export class NotificationRecipientsService {
         credentialCriteria = this.getSpaceCredentialCriteria(spaceID);
         break;
       }
-      case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT: {
-        // Only notify the calendar event creator
+      case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL:
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON:
+      case NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON:
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE: {
+        // Only notify the targeted user (poll creator or prior voter)
         credentialCriteria = this.getUserSelfCriteria(userID);
         break;
       }
@@ -479,6 +514,10 @@ export class NotificationRecipientsService {
       }
 
       case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL:
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON:
+      case NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON:
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE:
       case NotificationEvent.USER_SIGN_UP_WELCOME:
       case NotificationEvent.USER_MESSAGE:
       case NotificationEvent.ORGANIZATION_MESSAGE_SENDER:

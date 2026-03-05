@@ -153,6 +153,7 @@ enum AuthorizationPolicyType {
   ORGANIZATION
   ORGANIZATION_VERIFICATION
   PLATFORM
+  POLL
   POST
   PROFILE
   REFERENCE
@@ -261,6 +262,7 @@ enum CalloutFramingType {
   MEDIA_GALLERY
   MEMO
   NONE
+  POLL
   WHITEBOARD
 }
 
@@ -481,6 +483,10 @@ enum NotificationEvent {
   SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT
   SPACE_COLLABORATION_CALLOUT_PUBLISHED
+  SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON
+  SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE
+  SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL
+  SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON
   SPACE_COMMUNICATION_UPDATE
   SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT
   SPACE_COMMUNITY_CALENDAR_EVENT_CREATED
@@ -522,6 +528,7 @@ enum NotificationEventPayload {
   SPACE_COLLABORATION_CALLOUT
   SPACE_COLLABORATION_CALLOUT_COMMENT
   SPACE_COLLABORATION_CALLOUT_POST_COMMENT
+  SPACE_COLLABORATION_POLL
   SPACE_COMMUNICATION_MESSAGE_DIRECT
   SPACE_COMMUNICATION_UPDATE
   SPACE_COMMUNITY_ACTOR
@@ -580,7 +587,40 @@ enum PlatformFeatureFlagName {
   WHITEBOARDS
 }
 
+"""Controls the level of detail shown in poll results."""
+enum PollResultsDetail {
+  """Vote count per option; no voter identities."""
+  COUNT
+  """Counts and voter list per option — fully transparent (default)."""
+  FULL
+  """Only percentage per option; no vote counts or voter identities."""
+  PERCENTAGE
+}
+
+"""Controls when poll results become visible to voters."""
+enum PollResultsVisibility {
+  """Results hidden until the viewer has cast their own vote."""
+  HIDDEN
+  """
+  Only the total vote count is shown before voting; full detail after voting.
+  """
+  TOTAL_ONLY
+  """
+  Full results always visible regardless of whether the viewer has voted (default).
+  """
+  VISIBLE
+}
+
+"""
+Lifecycle status of a Poll. Only OPEN is enforced in this iteration; CLOSED is reserved for future use.
+"""
+enum PollStatus {
+  CLOSED
+  OPEN
+}
+
 enum ProfileType {
+  ACCOUNT
   CALENDAR_EVENT
   CALLOUT_FRAMING
   COMMUNITY_GUIDELINES
@@ -593,6 +633,7 @@ enum ProfileType {
   MEMO
   ORGANIZATION
   POST
+  SPACE
   SPACE_ABOUT
   TEMPLATE
   USER
@@ -868,7 +909,7 @@ interface ActorFull {
   id: UUID!
   """A name identifier of the Actor, unique within a given scope."""
   nameID: NameID!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The type of Actor"""
   type: ActorType!
@@ -929,7 +970,7 @@ type Account implements ActorFull {
   license: License!
   """A name identifier of the Account, unique within the platform."""
   nameID: NameID!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The Spaces within this Account."""
   spaces: [Space!]!
@@ -1320,8 +1361,12 @@ type Actor {
   authorization: Authorization
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """The credentials held by this Actor."""
+  credentials: [Credential!]
   """The ID of the entity"""
   id: UUID!
+  """A name identifier of the entity, unique within a given scope."""
+  nameID: NameID!
   """The profile for this Actor."""
   profile: Profile
   """The type of Actor"""
@@ -1657,6 +1702,10 @@ type CalloutFraming {
   mediaGallery: MediaGallery
   """The Memo for framing the associated Callout."""
   memo: Memo
+  """
+  The Poll attached to this Callout Framing, if any. Present when framing.type = POLL.
+  """
+  poll: Poll
   """The Profile for framing the associated Callout."""
   profile: Profile!
   """
@@ -2094,6 +2143,10 @@ type CreateCalloutData {
 type CreateCalloutFramingData {
   link: CreateLinkData
   memo: CreateMemoData
+  """
+  Poll definition to attach to this Callout Framing. Required when type = POLL. Ignored for all other framing types.
+  """
+  poll: CreatePollData
   profile: CreateProfileData!
   tags: [String!]
   """
@@ -2187,6 +2240,19 @@ type CreateLocationData {
 type CreateMemoData {
   markdown: Markdown
   profile: CreateProfileData
+}
+
+type CreatePollData {
+  """
+  Initial options for the poll. Minimum 2 options required. Options appear in the order provided.
+  """
+  options: [String!]!
+  """
+  Poll configuration settings (all immutable after creation). Optional; uses defaults for any unspecified settings.
+  """
+  settings: PollSettingsData
+  """Poll title. Must not be empty. Maximum length 512 characters."""
+  title: String!
 }
 
 type CreatePostData {
@@ -2534,6 +2600,15 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
   type: NotificationEventPayload!
 }
 
+type InAppNotificationPayloadSpaceCollaborationPoll implements InAppNotificationPayload {
+  """The Callout that contains the poll."""
+  callout: Callout!
+  """Where the callout is located."""
+  space: Space!
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
 type InAppNotificationPayloadSpaceCommunicationMessageDirect implements InAppNotificationPayload {
   """The message content."""
   message: String!
@@ -2614,7 +2689,7 @@ type InAppNotificationPayloadUserMessageDirect implements InAppNotificationPaylo
 }
 
 type InAppNotificationPayloadVirtualContributor implements InAppNotificationPayload {
-  contributor: VirtualContributor!
+  actor: VirtualContributor!
   """The Space related to the notification"""
   space: Space!
   """The payload type."""
@@ -3393,6 +3468,10 @@ type Mutation {
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Adds a full email address to the platform notification blacklist"""
   addNotificationEmailToBlacklist(input: NotificationEmailAddressInput!): [String!]!
+  """
+  Add a new option to a Poll. Requires UPDATE privilege on the Poll. The new option is appended with the next available sort order.
+  """
+  addPollOption(optionData: AddPollOptionInput!): Poll!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
   """Adds a new visual to the specified media gallery."""
@@ -3479,6 +3558,10 @@ type Mutation {
   authorizationPolicyResetOnUser(authorizationResetData: UserAuthorizationResetInput!): User!
   """Reset the specified Authorization Policy to global admin privileges"""
   authorizationPolicyResetToGlobalAdminsAccess(authorizationID: String!): Authorization!
+  """
+  Cast or update a vote on a Poll. Requires CONTRIBUTE privilege on the Poll (space member). If the calling user has already voted, their vote is REPLACED ENTIRELY with the new selection set.
+  """
+  castPollVote(voteData: CastPollVoteInput!): Poll!
   """Deletes collections nameID-..."""
   cleanupCollections: MigrateEmbeddings!
   """Move an L1 Space up in the hierarchy, to be a L0 Space."""
@@ -3647,6 +3730,10 @@ type Mutation {
   removeNotificationEmailFromBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Removes a User from a Role on the Platform."""
   removePlatformRoleFromUser(roleData: RemovePlatformRoleInput!): User!
+  """
+  Remove an option from a Poll. Requires UPDATE privilege. Poll must retain at least 2 options. Votes that selected this option are deleted and affected voters are notified.
+  """
+  removePollOption(optionData: RemovePollOptionInput!): Poll!
   """Remove a reaction on a message from the specified Room."""
   removeReactionToMessageInRoom(reactionData: RoomRemoveReactionToMessageInput!): Boolean!
   """
@@ -3661,6 +3748,10 @@ type Mutation {
   removeRoleFromVirtualContributor(roleData: RemoveRoleOnRoleSetInput!): VirtualContributor!
   """Removes the specified User from specified user group"""
   removeUserFromGroup(membershipData: RemoveUserGroupMemberInput!): UserGroup!
+  """
+  Reorder Poll options. Requires UPDATE privilege. The provided list must contain exactly the same option IDs as the current poll options.
+  """
+  reorderPollOptions(optionData: ReorderPollOptionsInput!): Poll!
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
@@ -3765,6 +3856,10 @@ type Mutation {
   updateOrganizationSettings(settingsData: UpdateOrganizationSettingsInput!): Organization!
   """Updates one of the Setting on the Platform"""
   updatePlatformSettings(settingsData: UpdatePlatformSettingsInput!): PlatformSettings!
+  """
+  Update the text of an existing Poll option. Requires UPDATE privilege. Votes that selected this option are deleted and affected voters are notified.
+  """
+  updatePollOption(optionData: UpdatePollOptionInput!): Poll!
   """Updates the specified Post."""
   updatePost(postData: UpdatePostInput!): Post!
   """Updates the specified Profile."""
@@ -3883,7 +3978,7 @@ type Organization implements ActorFull & Groupable {
   metrics: [NVP!]
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The RoleSet for this Organization."""
   roleSet: RoleSet!
@@ -4255,6 +4350,111 @@ type PlatformWellKnownVirtualContributors {
   mappings: [PlatformWellKnownVirtualContributorMapping!]!
 }
 
+type Poll {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """
+  Whether the current user can see detailed results (visibility gate passed).
+  """
+  canSeeDetailedResults: Boolean!
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """
+  [Future] Date/time after which the poll automatically closes. Always null in this iteration.
+  """
+  deadline: DateTime
+  """The ID of the entity"""
+  id: UUID!
+  """
+  The current user's vote on this poll, or null if the current user has not voted.
+  """
+  myVote: PollVote
+  """
+  The selectable options for this poll, ordered by vote count (most votes first), with ties broken by sortOrder ascending.
+  """
+  options: [PollOption!]!
+  """Configuration settings for this poll (immutable after creation)."""
+  settings: PollSettings!
+  """
+  Current lifecycle status of this poll. Always OPEN in this iteration; CLOSED reserved for future use.
+  """
+  status: PollStatus!
+  """Poll title."""
+  title: String!
+  """
+  Total number of votes cast on this poll. Null when resultsVisibility = HIDDEN and the current user has not voted.
+  """
+  totalVotes: Int
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+type PollOption {
+  createdDate: DateTime!
+  id: UUID!
+  """
+  Position of this option in the creation order (used for tie-breaking in results).
+  """
+  sortOrder: Int!
+  text: String!
+  updatedDate: DateTime!
+  """
+  Number of votes this option has received. Null when results are hidden or resultsDetail = PERCENTAGE.
+  """
+  voteCount: Int
+  """
+  Percentage of total votes this option has received (0–100). Null when results are hidden or resultsDetail = COUNT. Null when totalVotes = 0.
+  """
+  votePercentage: Float
+  """
+  List of space members who voted for this option. Null when results are hidden or resultsDetail is not FULL.
+  """
+  voters: [User!]
+}
+
+type PollSettings {
+  """
+  Maximum number of options a voter may select (0 = unlimited). Immutable after poll creation.
+  """
+  maxResponses: Int!
+  """
+  Minimum number of options a voter must select (≥ 1). Immutable after poll creation.
+  """
+  minResponses: Int!
+  """
+  Controls how much detail is shown in results. Immutable after poll creation.
+  """
+  resultsDetail: PollResultsDetail!
+  """
+  Controls when results become visible to voters. Immutable after poll creation.
+  """
+  resultsVisibility: PollResultsVisibility!
+}
+
+type PollSettingsData {
+  """Maximum selections allowed. Defaults to 1. Set to 0 for unlimited."""
+  maxResponses: Int
+  """Minimum selections required. Defaults to 1."""
+  minResponses: Int
+  """How much detail is shown. Defaults to FULL."""
+  resultsDetail: PollResultsDetail
+  """When results become visible. Defaults to VISIBLE."""
+  resultsVisibility: PollResultsVisibility
+}
+
+type PollVote {
+  """ID of the user who cast this vote."""
+  createdBy: UUID!
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The options selected in this vote."""
+  selectedOptions: [PollOption!]!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
 type Post {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -4623,7 +4823,7 @@ type RelayPaginatedSpace implements ActorFull {
   nameID: NameID!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
@@ -5139,7 +5339,7 @@ type Space implements ActorFull {
   nameID: NameID!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
@@ -5717,7 +5917,7 @@ type User implements ActorFull {
   nameID: NameID!
   """The phone number for this User."""
   phone: String
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """The settings for this User."""
   settings: UserSettings!
@@ -5856,6 +6056,18 @@ type UserSettingsNotificationSpace {
   collaborationCalloutPostContributionComment: UserSettingsNotificationChannels!
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: UserSettingsNotificationChannels!
+  """Receive a notification when a poll you voted on is modified"""
+  collaborationPollModifiedOnPollIVotedOn: UserSettingsNotificationChannels!
+  """
+  Receive a notification when a poll option you voted for is changed or removed
+  """
+  collaborationPollVoteAffectedByOptionChange: UserSettingsNotificationChannels!
+  """Receive a notification when a vote is cast on a poll you created"""
+  collaborationPollVoteCastOnOwnPoll: UserSettingsNotificationChannels!
+  """
+  Receive a notification when another user votes on a poll you already voted on
+  """
+  collaborationPollVoteCastOnPollIVotedOn: UserSettingsNotificationChannels!
   """Receive a notification for community updates"""
   communicationUpdates: UserSettingsNotificationChannels!
   """Receive a notification when a calendar event is created"""
@@ -5964,7 +6176,7 @@ type VirtualContributor implements ActorFull {
   Platform-level settings of this Virtual Contributor, modifiable only by platform admins.
   """
   platformSettings: VirtualContributorPlatformSettings!
-  """The profile for this Actor. Note: Not all actor types have profiles."""
+  """The profile for this Actor."""
   profile: Profile
   """Prompt graph definition for this Virtual Contributor."""
   promptGraphDefinition: PromptGraphDefinition
@@ -6206,6 +6418,11 @@ input ActorFilterInput {
   credentials: [AuthorizationCredential!]
 }
 
+input AddPollOptionInput {
+  pollID: UUID!
+  text: String!
+}
+
 input AddVisualToMediaGalleryInput {
   """The ID of the media gallery."""
   mediaGalleryID: String!
@@ -6259,6 +6476,15 @@ input AssignRoleOnRoleSetInput {
 input AssignUserGroupMemberInput {
   groupID: UUID!
   userID: UUID!
+}
+
+input CastPollVoteInput {
+  """The ID of the Poll to vote on."""
+  pollID: UUID!
+  """
+  The complete set of selected PollOption IDs. When updating an existing vote, the entire selection set must be provided. Count must be ≥ poll.minResponses and ≤ poll.maxResponses (0 = unlimited). All IDs must belong to the specified poll.
+  """
+  selectedOptionIDs: [UUID!]!
 }
 
 input CommunicationAdminEnsureAccessInput {
@@ -6386,6 +6612,10 @@ input CreateCalloutContributionInput {
 input CreateCalloutFramingInput {
   link: CreateLinkInput
   memo: CreateMemoInput
+  """
+  Poll definition to attach to this Callout Framing. Required when type = POLL. Ignored for all other framing types.
+  """
+  poll: CreatePollInput
   profile: CreateProfileInput!
   tags: [String!]
   """
@@ -6628,6 +6858,19 @@ input CreateOrganizationInput {
   nameID: NameID
   profileData: CreateProfileInput!
   website: String
+}
+
+input CreatePollInput {
+  """
+  Initial options for the poll. Minimum 2 options required. Options appear in the order provided.
+  """
+  options: [String!]!
+  """
+  Poll configuration settings (all immutable after creation). Optional; uses defaults for any unspecified settings.
+  """
+  settings: PollSettingsInput
+  """Poll title. Must not be empty. Maximum length 512 characters."""
+  title: String!
 }
 
 input CreatePostInput {
@@ -7151,6 +7394,17 @@ input OrganizationVerificationEventInput {
   organizationVerificationID: UUID!
 }
 
+input PollSettingsInput {
+  """Maximum selections allowed. Defaults to 1. Set to 0 for unlimited."""
+  maxResponses: Int
+  """Minimum selections required. Defaults to 1."""
+  minResponses: Int
+  """How much detail is shown. Defaults to FULL."""
+  resultsDetail: PollResultsDetail
+  """When results become visible. Defaults to VISIBLE."""
+  resultsVisibility: PollResultsVisibility
+}
+
 input PromptGraphDataPointInput {
   description: String
   items: PromptGraphDataStructInput
@@ -7205,6 +7459,11 @@ input RemovePlatformRoleInput {
   role: RoleName!
 }
 
+input RemovePollOptionInput {
+  optionID: UUID!
+  pollID: UUID!
+}
+
 input RemoveRoleOnRoleSetInput {
   actorID: UUID!
   role: RoleName!
@@ -7214,6 +7473,11 @@ input RemoveRoleOnRoleSetInput {
 input RemoveUserGroupMemberInput {
   groupID: UUID!
   userID: UUID!
+}
+
+input ReorderPollOptionsInput {
+  optionIDs: [UUID!]!
+  pollID: UUID!
 }
 
 input RevokeAuthorizationCredentialInput {
@@ -7828,6 +8092,12 @@ input UpdatePlatformSettingsIntegrationInput {
   Update the list of email addresses blocked from receiving notifications.
   """
   notificationEmailBlacklist: [String!]
+}
+
+input UpdatePollOptionInput {
+  optionID: UUID!
+  pollID: UUID!
+  text: String!
 }
 
 input UpdatePostInput {

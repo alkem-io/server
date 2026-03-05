@@ -34,7 +34,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { cloneDeep, keyBy, merge } from 'lodash';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import {
+  DeepPartial,
+  FindManyOptions,
+  FindOneOptions,
+  Repository,
+} from 'typeorm';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
@@ -78,7 +83,9 @@ export class CalloutService {
       calloutData.sortOrder = 10;
     }
 
-    const callout: ICallout = Callout.create(calloutData);
+    const callout: ICallout = Callout.create(
+      calloutData as DeepPartial<Callout>
+    ) as unknown as Callout;
     callout.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT
     );

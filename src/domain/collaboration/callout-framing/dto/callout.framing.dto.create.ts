@@ -1,6 +1,7 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { VisualType } from '@common/enums/visual.type';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
+import { CreatePollInput } from '@domain/collaboration/poll/dto/poll.dto.create';
 import { CreateMemoInput } from '@domain/common/memo/types';
 import { CreateProfileInput } from '@domain/common/profile/dto/profile.dto.create';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/types';
@@ -45,6 +46,16 @@ export class CreateCalloutFramingInput {
   @Field(() => [String], { nullable: true })
   @IsOptional()
   tags?: string[];
+
+  @Field(() => CreatePollInput, {
+    nullable: true,
+    description:
+      'Poll definition to attach to this Callout Framing. Required when type = POLL. Ignored for all other framing types.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreatePollInput)
+  poll?: CreatePollInput;
 
   // Don't expose in the GraphQL schema
   // Used to create associated MediaGallery and Visuals from templates, but it's not sendable from the clients

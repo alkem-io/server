@@ -6,6 +6,7 @@ export enum CalloutFramingType {
   LINK = 'link',
   MEMO = 'memo',
   MEDIA_GALLERY = 'media_gallery',
+  POLL = 'poll',
 }
 
 registerEnumType(CalloutFramingType, {

@@ -50,4 +50,31 @@ export class CreateUserSettingsNotificationSpaceInput {
     description: 'Receive a notification when a calendar event is created',
   })
   communityCalendarEvents!: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: false,
+    description:
+      'Receive a notification when a vote is cast on a poll you created',
+  })
+  collaborationPollVoteCastOnOwnPoll!: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: false,
+    description:
+      'Receive a notification when another user votes on a poll you already voted on',
+  })
+  collaborationPollVoteCastOnPollIVotedOn!: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: false,
+    description: 'Receive a notification when a poll you voted on is modified',
+  })
+  collaborationPollModifiedOnPollIVotedOn!: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: false,
+    description:
+      'Receive a notification when a poll option you voted for is changed or removed',
+  })
+  collaborationPollVoteAffectedByOptionChange!: CreateUserSettingsNotificationChannelsInput;
 }
