@@ -98,6 +98,23 @@ export class RoomService {
     return this.save(room);
   }
 
+  /**
+   * Update the room avatar in Matrix.
+   * Avatar is a Matrix-only property — not stored locally.
+   */
+  async updateRoomAvatar(
+    room: IRoom,
+    avatarUrl: string
+  ): Promise<void> {
+    await this.communicationAdapter.updateRoom(
+      room.id,
+      undefined, // name
+      undefined, // topic
+      undefined, // isPublic
+      avatarUrl
+    );
+  }
+
   async save(room: IRoom): Promise<IRoom> {
     return await this.roomRepository.save(room);
   }
@@ -194,7 +211,9 @@ export class RoomService {
         room.id,
         roomData.type,
         roomData.displayName,
-        initialMembers
+        initialMembers,
+        undefined, // parentContextId
+        roomData.avatarUrl
       );
     } catch (error: unknown) {
       const err = error as Error;

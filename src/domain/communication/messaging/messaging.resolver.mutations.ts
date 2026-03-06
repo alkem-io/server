@@ -65,10 +65,14 @@ export class MessagingResolverMutations {
     }
 
     // memberIDs are actor IDs (User extends Actor — user.id IS actor.id)
+    const isGroup =
+      conversationData.type === ConversationCreationType.GROUP;
     const internalData: CreateConversationData = {
       type: conversationData.type,
       callerAgentId,
       memberAgentIds: conversationData.memberIDs,
+      displayName: isGroup ? conversationData.displayName : undefined,
+      avatarUrl: isGroup ? conversationData.avatarUrl : undefined,
     };
 
     return await this.messagingService.createConversation(internalData);

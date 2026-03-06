@@ -110,13 +110,6 @@ Winston logger signatures:
 - Generate migrations after schema changes
 - The `actor.type` discriminator uses a PostgreSQL enum (`actor_type_enum`), declared via `@TableInheritance({ column: { type: 'enum', enum: ActorType } })`
 
-### Known `migration:generate` Noise
-
-Running `pnpm run migration:generate` will always produce a non-empty diff due to two TypeORM CTI limitations. **Do not apply these changes** — they are false positives:
-
-1. **Hand-written partial indexes** — TypeORM cannot represent indexes with WHERE clauses, so it always wants to drop `IDX_actor_type` and the four `UQ_actor_nameID_*` conditional unique indexes. These are managed by hand-written migrations and must stay.
-
-2. **CTI child column nullability** — TypeORM's CTI implementation forces all child-table columns to nullable in generated migrations (e.g., `ALTER TABLE "user" ALTER COLUMN "email" DROP NOT NULL`), even when entities declare `nullable: false`. This affects ~30 columns across `user`, `organization`, `space`, `virtual_contributor`, and `account` tables. The DB correctly has these as NOT NULL; ignore the generated `DROP NOT NULL` statements.
 
 ### GraphQL API Conventions
 

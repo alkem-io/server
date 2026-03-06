@@ -72,7 +72,9 @@ export class ConversationService {
   public async createConversation(
     creatorAgentId: string,
     memberAgentIds: string[],
-    roomType: RoomType
+    roomType: RoomType,
+    displayName?: string,
+    avatarUrl?: string
   ): Promise<IConversation> {
     const allMemberIds = [...new Set([creatorAgentId, ...memberAgentIds])];
 
@@ -92,7 +94,9 @@ export class ConversationService {
     // Create room
     conversation.room = await this.createConversationRoom(
       allMemberIds,
-      roomType
+      roomType,
+      displayName,
+      avatarUrl
     );
 
     // Save conversation to get ID
@@ -123,7 +127,9 @@ export class ConversationService {
    */
   private async createConversationRoom(
     memberActorIDs: string[],
-    roomType: RoomType
+    roomType: RoomType,
+    displayName?: string,
+    avatarUrl?: string
   ): Promise<IRoom> {
     if (roomType === RoomType.CONVERSATION_DIRECT) {
       return await this.roomService.createRoom({
@@ -134,9 +140,12 @@ export class ConversationService {
       });
     }
     return await this.roomService.createRoom({
-      displayName: `group-conversation-${memberActorIDs.length}-members`,
+      displayName:
+        displayName ||
+        `group-conversation-${memberActorIDs.length}-members`,
       type: roomType,
       memberActorIDs,
+      avatarUrl,
     });
   }
 

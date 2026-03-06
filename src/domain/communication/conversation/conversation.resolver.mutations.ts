@@ -2,11 +2,13 @@ import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { RoomService } from '@domain/communication/room/room.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { InstrumentResolver } from '@src/apm/decorators';
@@ -18,6 +20,7 @@ import { AddConversationMemberInput } from './dto/conversation.dto.add-member';
 import { DeleteConversationInput } from './dto/conversation.dto.delete';
 import { LeaveConversationInput } from './dto/conversation.dto.leave';
 import { RemoveConversationMemberInput } from './dto/conversation.dto.remove-member';
+import { UpdateConversationInput } from './dto/conversation.dto.update';
 import { ConversationVcResetInput } from './dto/conversation.vc.dto.reset.input';
 
 @InstrumentResolver()
@@ -29,6 +32,7 @@ export class ConversationResolverMutations {
     private conversationService: ConversationService,
     private conversationAuthorizationService: ConversationAuthorizationService,
     private actorService: ActorService,
+    private roomService: RoomService,
     private subscriptionPublishService: SubscriptionPublishService
   ) {}
 
@@ -233,6 +237,56 @@ export class ConversationResolverMutations {
       leaveData.conversationID,
       actorContext.actorID,
       AuthorizationPrivilege.READ
+    );
+  }
+
+  @Mutation(() => IConversation, {
+    description:
+      'Update a group conversation (display name, avatar). Only GROUP conversations support these properties.',
+  })
+  async updateConversation(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('updateData') updateData: UpdateConversationInput
+  ): Promise<IConversation> {
+    const conversation = await this.conversationService.getConversationOrFail(
+      updateData.conversationID,
+      { relations: { authorization: true, room: true } }
+    );
+
+    if (
+      !conversation.room ||
+      conversation.room.type !== RoomType.CONVERSATION_GROUP
+    ) {
+      throw new ValidationException(
+        'Only group conversations can be updated',
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      conversation.authorization,
+      AuthorizationPrivilege.CONTRIBUTE,
+      `update conversation: ${conversation.id}`
+    );
+
+    if (updateData.displayName !== undefined) {
+      await this.roomService.updateRoomDisplayName(
+        conversation.room,
+        updateData.displayName
+      );
+    }
+
+    if (updateData.avatarUrl !== undefined) {
+      await this.roomService.updateRoomAvatar(
+        conversation.room,
+        updateData.avatarUrl
+      );
+    }
+
+    return await this.conversationService.getConversationOrFail(
+      updateData.conversationID,
+      { relations: { authorization: true, room: true } }
     );
   }
 

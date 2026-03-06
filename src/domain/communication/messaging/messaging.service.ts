@@ -148,7 +148,9 @@ export class MessagingService {
     const conversation = await this.conversationService.createConversation(
       conversationData.callerAgentId,
       conversationData.memberAgentIds,
-      roomType
+      roomType,
+      conversationData.displayName,
+      conversationData.avatarUrl
     );
 
     conversation.messaging = messaging as Messaging;

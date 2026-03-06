@@ -242,7 +242,8 @@ export class CommunicationAdapter {
     roomType: AlkemioRoomType,
     name?: string,
     initialMembers?: AlkemioActorID[],
-    parentContextId?: AlkemioContextID
+    parentContextId?: AlkemioContextID,
+    avatarUrl?: string
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
@@ -263,6 +264,7 @@ export class CommunicationAdapter {
         name,
         initial_members: initialMembers,
         parent_context_id: parentContextId,
+        avatar_url: avatarUrl,
       } satisfies CreateRoomRequest,
       errorContext: { alkemioRoomId, roomType },
     });
@@ -284,7 +286,8 @@ export class CommunicationAdapter {
     alkemioRoomId: AlkemioRoomID,
     name?: string,
     topic?: string,
-    isPublic?: boolean
+    isPublic?: boolean,
+    avatarUrl?: string
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
@@ -296,6 +299,7 @@ export class CommunicationAdapter {
         name,
         topic,
         is_public: isPublic,
+        avatar_url: avatarUrl,
       } satisfies UpdateRoomRequest,
       errorContext: { alkemioRoomId },
     });

@@ -1,6 +1,8 @@
+import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { ConversationCreationType } from '@common/enums/conversation.creation.type';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
+import { MaxLength } from 'class-validator';
 
 /**
  * GraphQL input for creating a conversation.
@@ -21,6 +23,21 @@ export class CreateConversationInput {
       'IDs of members to add. For DIRECT: exactly 1 ID. For GROUP: 1+ IDs. Creator is auto-included.',
   })
   memberIDs!: string[];
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'Optional display name for GROUP conversations. Ignored for DIRECT conversations (Synapse uses the other member name automatically).',
+  })
+  @MaxLength(SMALL_TEXT_LENGTH)
+  displayName?: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'Optional avatar URL for GROUP conversations. Ignored for DIRECT conversations. Accepts mxc:// or https:// URLs.',
+  })
+  avatarUrl?: string;
 }
 
 /**
@@ -36,4 +53,10 @@ export interface CreateConversationData {
 
   /** Actor IDs of the invited members (excluding the caller) */
   memberAgentIds: string[];
+
+  /** Optional display name for GROUP conversations */
+  displayName?: string;
+
+  /** Optional avatar URL for GROUP conversations (mxc:// or https://) */
+  avatarUrl?: string;
 }
