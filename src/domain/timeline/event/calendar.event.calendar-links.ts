@@ -6,6 +6,7 @@ import { ICalendarEvent } from './event.interface';
 
 const MAX_DESCRIPTION_IN_URL_LENGTH = 1000;
 const MAX_DESCRIPTION_IN_ICS_LENGTH = 8000;
+
 export interface CalendarEventCalendarData {
   id: string;
   title: string;
@@ -44,7 +45,7 @@ export const generateCalendarUrls = (
 
   return {
     googleCalendarUrl: `https://calendar.google.com/calendar/render?action=TEMPLATE&text=${encodedTitle}&dates=${dates.google}&details=${encodedDescription}&location=${encodedLocation}`,
-    outlookCalendarUrl: `https://outlook.live.com/calendar/deeplink/compose?subject=${encodedTitle}&startTime=${dates.outlookStart}&endTime=${dates.outlookEnd}&body=${encodedDescription}${outlookAllDay}`,
+    outlookCalendarUrl: `https://outlook.office.com/calendar/deeplink/compose?subject=${encodedTitle}&startdt=${dates.outlookStart}&enddt=${dates.outlookEnd}&body=${encodedDescription}&location=${encodedLocation}${outlookAllDay}`,
     icsDownloadUrl: icsRestUrl,
   };
 };
@@ -199,12 +200,9 @@ export const formatDateOnly = (iso: string): string =>
 
 export const calculateCalendarEventEndDate = (event: ICalendarEvent): Date => {
   const start = toDate(event.startDate, 'startDate');
-  if (event.durationDays && event.durationDays > 0) {
-    const end = new Date(start.getTime());
-    end.setUTCDate(end.getUTCDate() + event.durationDays);
-    return end;
-  }
-
+  // durationMinutes always holds the full event duration (including days
+  // converted to minutes), so plain millisecond arithmetic is sufficient
+  // and avoids the month-boundary pitfalls of setUTCDate().
   const durationMinutes = event.durationMinutes ?? 0;
   return new Date(start.getTime() + durationMinutes * 60 * 1000);
 };
