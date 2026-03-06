@@ -66,9 +66,13 @@ export const formatDatesForCalendar = (
 
   if (wholeDay) {
     const dateStart = formatDateOnly(startIso);
+    // For Google Calendar, end date must be exclusive for all-day events, so add 1 day
+    const endDateObj = new Date(endIso);
+    endDateObj.setUTCDate(endDateObj.getUTCDate() + 1);
+    const dateEndGoogle = formatDateOnly(endDateObj.toISOString());
     const dateEnd = formatDateOnly(endIso);
     return {
-      google: `${dateStart}/${dateEnd}`,
+      google: `${dateStart}/${dateEndGoogle}`,
       outlookStart: startIso.slice(0, 10),
       outlookEnd: endIso.slice(0, 10),
       icalStart: dateStart,

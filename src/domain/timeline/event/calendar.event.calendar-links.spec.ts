@@ -27,7 +27,7 @@ describe('CalendarEventCalendarLinks', () => {
       true
     );
 
-    expect(result.google).toBe('20260220/20260221');
+    expect(result.google).toBe('20260220/20260222');
     expect(result.outlookStart).toBe('2026-02-20');
     expect(result.outlookEnd).toBe('2026-02-21');
     expect(result.icalStart).toBe('20260220');
@@ -82,7 +82,7 @@ describe('CalendarEventCalendarLinks', () => {
       icsRestUrl
     );
 
-    expect(urls.googleCalendarUrl).toContain('dates=20260310/20260311');
+    expect(urls.googleCalendarUrl).toContain('dates=20260310/20260312');
     expect(urls.outlookCalendarUrl).toContain('allday=true');
     expect(urls.outlookCalendarUrl).toContain('startTime=2026-03-10');
     expect(urls.outlookCalendarUrl).toContain('endTime=2026-03-11');
