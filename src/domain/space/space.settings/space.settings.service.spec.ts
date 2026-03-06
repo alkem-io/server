@@ -1,5 +1,6 @@
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -39,6 +40,7 @@ describe('SpaceSettingsService', () => {
         allowMembersToVideoCall: false,
         allowGuestContributions: false,
       },
+      sortMode: SpaceSortMode.ALPHABETICAL,
     };
 
     const cloneSettings = (): ISpaceSettings =>
@@ -201,6 +203,48 @@ describe('SpaceSettingsService', () => {
       // Assert
       expect(result.privacy.allowPlatformSupportAsAdmin).toBe(false);
       expect(result.privacy.mode).toBe(SpacePrivacyMode.PUBLIC);
+    });
+
+    it('should update sortMode to CUSTOM when provided', () => {
+      // Arrange
+      const settings = cloneSettings();
+      const updateData: UpdateSpaceSettingsEntityInput = {
+        sortMode: SpaceSortMode.CUSTOM,
+      };
+
+      // Act
+      const result = service.updateSettings(settings, updateData);
+
+      // Assert
+      expect(result.sortMode).toBe(SpaceSortMode.CUSTOM);
+    });
+
+    it('should update sortMode to ALPHABETICAL when provided', () => {
+      // Arrange
+      const settings = cloneSettings();
+      settings.sortMode = SpaceSortMode.CUSTOM;
+      const updateData: UpdateSpaceSettingsEntityInput = {
+        sortMode: SpaceSortMode.ALPHABETICAL,
+      };
+
+      // Act
+      const result = service.updateSettings(settings, updateData);
+
+      // Assert
+      expect(result.sortMode).toBe(SpaceSortMode.ALPHABETICAL);
+    });
+
+    it('should not change sortMode when not provided in updateData', () => {
+      // Arrange
+      const settings = cloneSettings();
+      settings.sortMode = SpaceSortMode.CUSTOM;
+      const updateData: UpdateSpaceSettingsEntityInput = {};
+
+      // Act
+      const result = service.updateSettings(settings, updateData);
+
+      // Assert
+      expect(result.sortMode).toBe(SpaceSortMode.CUSTOM);
     });
   });
 });

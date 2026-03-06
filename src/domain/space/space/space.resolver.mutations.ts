@@ -20,6 +20,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
+import { UpdateSubspacePinnedInput } from './dto/space.dto.update.subspace.pinned';
 import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
 import { ISpace } from './space.interface';
 import { SpaceService } from './space.service';
@@ -254,5 +255,29 @@ export class SpaceResolverMutations {
     );
 
     return this.spaceService.updateSubspacesSortOrder(space, sortOrderData);
+  }
+
+  @Mutation(() => ISpace, {
+    description:
+      'Updates the pinned state of a Subspace within the specified Space.',
+  })
+  async updateSubspacePinned(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('pinnedData') pinnedData: UpdateSubspacePinnedInput
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(pinnedData.spaceID);
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      space.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `update subspace pinned on space: ${space.id}`
+    );
+
+    return this.spaceService.updateSubspacePinned(
+      pinnedData.spaceID,
+      pinnedData.subspaceID,
+      pinnedData.pinned
+    );
   }
 }

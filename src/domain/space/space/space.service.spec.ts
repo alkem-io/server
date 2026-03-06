@@ -7,6 +7,7 @@ import { CommunityMembershipPolicy } from '@common/enums/community.membership.po
 import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
@@ -556,6 +557,7 @@ const spaceSettings = {
     allowMembersToVideoCall: false,
     allowGuestContributions: false,
   },
+  sortMode: SpaceSortMode.ALPHABETICAL,
 };
 
 const getSubspacesMock = (
@@ -573,6 +575,7 @@ const getSubspacesMock = (
       settings: spaceSettings,
       levelZeroSpaceID: spaceId,
       sortOrder: i,
+      pinned: false,
       platformRolesAccess: {
         roles: [],
       },
@@ -719,6 +722,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       settings: spaceSettings,
       levelZeroSpaceID: subsubspaceId,
       sortOrder: i,
+      pinned: false,
       platformRolesAccess: {
         roles: [],
       },
@@ -873,6 +877,7 @@ const getSpaceMock = ({
     settings: settings,
     levelZeroSpaceID: '',
     sortOrder: 0,
+    pinned: false,
     platformRolesAccess: {
       roles: [],
     },

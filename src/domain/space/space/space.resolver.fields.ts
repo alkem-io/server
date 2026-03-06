@@ -1,4 +1,5 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
@@ -153,6 +154,15 @@ export class SpaceResolverFields {
   })
   async storageAggregator(@Parent() space: Space): Promise<IStorageAggregator> {
     return await this.spaceService.getStorageAggregatorOrFail(space.id);
+  }
+
+  @ResolveField('sortMode', () => SpaceSortMode, {
+    nullable: false,
+    description:
+      'The sort mode for subspaces of this Space: Alphabetical or Custom. Accessible without READ privilege.',
+  })
+  sortMode(@Parent() space: ISpace): SpaceSortMode {
+    return space.settings?.sortMode ?? SpaceSortMode.ALPHABETICAL;
   }
 
   @ResolveField('subspaces', () => [ISpace], {
