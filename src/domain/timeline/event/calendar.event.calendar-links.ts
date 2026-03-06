@@ -6,7 +6,6 @@ import { ICalendarEvent } from './event.interface';
 
 const MAX_DESCRIPTION_IN_URL_LENGTH = 1000;
 const MAX_DESCRIPTION_IN_ICS_LENGTH = 8000;
-
 export interface CalendarEventCalendarData {
   id: string;
   title: string;
