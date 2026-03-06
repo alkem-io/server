@@ -1,0 +1,52 @@
+# GraphQL Schema Additions for Subspace Sorting & Pinning
+# All changes are ADDITIVE (non-breaking)
+
+# ─── New Enum ──────────────────────────────────────────────
+
+enum SpaceSortMode {
+  ALPHABETICAL
+  CUSTOM
+}
+
+# ─── Modified Types (new fields only) ─────────────────────
+
+# Added to existing Space type:
+# type Space {
+#   ...existing fields...
+#   pinned: Boolean!                    # NEW
+# }
+
+# Added to existing SpaceSettings type:
+# type SpaceSettings {
+#   ...existing fields...
+#   sortMode: SpaceSortMode!            # NEW
+# }
+
+# ─── New Input Type ───────────────────────────────────────
+
+input UpdateSubspacePinnedInput {
+  """The ID of the parent Space containing the subspace."""
+  spaceID: UUID!
+
+  """The ID of the subspace to pin or unpin."""
+  subspaceID: UUID!
+
+  """Whether the subspace should be pinned (true) or unpinned (false)."""
+  pinned: Boolean!
+}
+
+# ─── Modified Input Type (new optional field) ─────────────
+
+# Added to existing UpdateSpaceSettingsEntityInput:
+# input UpdateSpaceSettingsEntityInput {
+#   ...existing fields...
+#   sortMode: SpaceSortMode             # NEW (nullable/optional)
+# }
+
+# ─── New Mutation ─────────────────────────────────────────
+
+# Added to existing Mutation type:
+# type Mutation {
+#   ...existing mutations...
+#   updateSubspacePinned(pinnedData: UpdateSubspacePinnedInput!): Space!
+# }
