@@ -17,6 +17,9 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
   @Column('jsonb', { nullable: false })
   notification!: IUserSettingsNotification;
 
-  @Column('jsonb', { nullable: false, default: { spaceID: null, autoRedirect: false } })
+  @Column('jsonb', {
+    nullable: false,
+    default: { spaceID: null, autoRedirect: false },
+  })
   homeSpace!: IUserSettingsHomeSpace;
 }

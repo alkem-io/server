@@ -143,8 +143,7 @@ export class ConversationService {
     }
     return await this.roomService.createRoom({
       displayName:
-        displayName ||
-        `group-conversation-${memberActorIDs.length}-members`,
+        displayName || `group-conversation-${memberActorIDs.length}-members`,
       type: roomType,
       memberActorIDs,
       avatarUrl,

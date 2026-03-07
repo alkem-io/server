@@ -452,9 +452,7 @@ export class CommunicationAdapterEventService {
     createQueueIfNotExists: true,
     queueOptions: { durable: true },
   })
-  async onRoomUpdated(
-    payload: MatrixRoomUpdatedEvent
-  ): Promise<void | Nack> {
+  async onRoomUpdated(payload: MatrixRoomUpdatedEvent): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
         `[${MatrixAdapterEventType.COMMUNICATION_ROOM_UPDATED}] - Event received: roomId=${payload.alkemio_room_id}, displayName=${payload.display_name}, avatarUrl=${payload.avatar_url}`,

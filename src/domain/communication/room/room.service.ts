@@ -100,10 +100,7 @@ export class RoomService {
    * Update the room avatar in Matrix.
    * Avatar is a Matrix-only property — not stored locally.
    */
-  async updateRoomAvatar(
-    room: IRoom,
-    avatarUrl: string
-  ): Promise<void> {
+  async updateRoomAvatar(room: IRoom, avatarUrl: string): Promise<void> {
     await this.communicationAdapter.updateRoom(
       room.id,
       undefined, // name

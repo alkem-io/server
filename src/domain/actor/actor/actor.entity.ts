@@ -5,7 +5,10 @@ import { Entity, Index, OneToMany, TableInheritance } from 'typeorm';
 import { IActor } from './actor.interface';
 
 @Entity('actor')
-@TableInheritance({ pattern: 'CTI', column: { type: 'enum', enum: ActorType, name: 'type' } })
+@TableInheritance({
+  pattern: 'CTI',
+  column: { type: 'enum', enum: ActorType, name: 'type' },
+})
 @Index('IDX_actor_type', ['type'])
 @Index('UQ_actor_nameID_user', ['nameID'], {
   unique: true,

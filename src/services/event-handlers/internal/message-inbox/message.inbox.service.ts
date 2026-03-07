@@ -433,11 +433,10 @@ export class MessageInboxService {
       );
 
     // Persist membership removal, get remaining count
-    const remainingCount =
-      await this.conversationService.persistMemberRemoved(
-        conversationId,
-        memberActorId
-      );
+    const remainingCount = await this.conversationService.persistMemberRemoved(
+      conversationId,
+      memberActorId
+    );
 
     // Load conversation for event payload
     const conversation =
@@ -637,9 +636,7 @@ export class MessageInboxService {
     });
   }
 
-  private async publishConversationUpdatedEvent(
-    room: IRoom
-  ): Promise<void> {
+  private async publishConversationUpdatedEvent(room: IRoom): Promise<void> {
     const conversation =
       await this.conversationService.findConversationByRoomId(room.id);
 

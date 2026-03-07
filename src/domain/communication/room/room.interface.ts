@@ -20,7 +20,8 @@ export abstract class IRoom extends IAuthorizable {
 
   @Field(() => String, {
     nullable: true,
-    description: 'The avatar URL of the Room (mxc:// or https://). Fetched from Matrix.',
+    description:
+      'The avatar URL of the Room (mxc:// or https://). Fetched from Matrix.',
   })
   avatarUrl?: string;
 

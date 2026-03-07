@@ -64,6 +64,8 @@ describe('RoomService', () => {
         'room-1',
         RoomType.CALLOUT,
         'Test Room',
+        undefined,
+        undefined,
         undefined
       );
     });
@@ -87,7 +89,9 @@ describe('RoomService', () => {
         'room-1',
         RoomType.CALLOUT,
         'Test Room',
-        ['agent-1']
+        ['agent-1'],
+        undefined,
+        undefined
       );
     });
 
@@ -111,7 +115,9 @@ describe('RoomService', () => {
         'room-1',
         RoomType.CONVERSATION_DIRECT,
         'DM Room',
-        ['agent-1', 'agent-2']
+        ['agent-1', 'agent-2'],
+        undefined,
+        undefined
       );
     });
 
@@ -189,38 +195,29 @@ describe('RoomService', () => {
   });
 
   describe('updateRoomDisplayName', () => {
-    it('should update display name in both database and Matrix', async () => {
+    it('should send RPC to Matrix when display name changed', async () => {
       const mockRoom = {
         id: 'room-1',
         displayName: 'Old Name',
       } as unknown as IRoom;
 
-      roomRepo.save.mockResolvedValue({
-        ...mockRoom,
-        displayName: 'New Name',
-      } as Room);
+      await service.updateRoomDisplayName(mockRoom, 'New Name');
 
-      const _result = await service.updateRoomDisplayName(mockRoom, 'New Name');
-
-      expect(mockRoom.displayName).toBe('New Name');
       expect(communicationAdapter.updateRoom).toHaveBeenCalledWith(
         'room-1',
         'New Name'
       );
-      expect(roomRepo.save).toHaveBeenCalled();
     });
 
-    it('should skip update when display name has not changed', async () => {
+    it('should skip RPC when display name has not changed', async () => {
       const mockRoom = {
         id: 'room-1',
         displayName: 'Same Name',
       } as unknown as IRoom;
 
-      const result = await service.updateRoomDisplayName(mockRoom, 'Same Name');
+      await service.updateRoomDisplayName(mockRoom, 'Same Name');
 
-      expect(result).toBe(mockRoom);
       expect(communicationAdapter.updateRoom).not.toHaveBeenCalled();
-      expect(roomRepo.save).not.toHaveBeenCalled();
     });
   });
 
