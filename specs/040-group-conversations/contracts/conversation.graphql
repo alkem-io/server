@@ -14,6 +14,7 @@ enum ConversationEventType {
   MEMBER_ADDED     # NEW
   MEMBER_REMOVED   # NEW
   CONVERSATION_DELETED  # NEW
+  CONVERSATION_UPDATED # NEW — room property changes (displayName, avatarUrl)
 }
 
 # Input enum for createConversation mutation (maps to RoomType internally)
@@ -63,6 +64,15 @@ input LeaveConversationInput {
   conversationID: UUID!
 }
 
+## Input Types (update mutation)
+
+# NEW: Update group conversation properties
+input UpdateConversationInput {
+  conversationID: UUID!
+  displayName: String              # Optional new display name
+  avatarUrl: String                # Optional new avatar URL
+}
+
 ## Mutations
 
 type Mutation {
@@ -73,10 +83,14 @@ type Mutation {
   deleteConversation(deleteData: DeleteConversationInput!): Conversation!
   resetConversationVc(resetData: ConversationVcResetInput!): Conversation!
 
-  # NEW: Group membership management
-  addConversationMember(memberData: AddConversationMemberInput!): Conversation!
-  removeConversationMember(memberData: RemoveConversationMemberInput!): Conversation  # nullable — returns null if conversation was auto-deleted (0 members)
-  leaveConversation(leaveData: LeaveConversationInput!): Conversation               # nullable — returns null if conversation was auto-deleted (0 members)
+  # NEW: Group membership management — fire-and-forget (RPC to Matrix only).
+  # Actual state changes arrive via subscription events.
+  addConversationMember(memberData: AddConversationMemberInput!): Boolean!
+  removeConversationMember(memberData: RemoveConversationMemberInput!): Boolean!
+  leaveConversation(leaveData: LeaveConversationInput!): Boolean!
+
+  # NEW: Update group conversation properties — fire-and-forget
+  updateConversation(updateData: UpdateConversationInput!): Boolean!
 }
 
 ## Queries (via Me)
@@ -101,6 +115,7 @@ type ConversationEventSubscriptionResult {
   memberAdded: ConversationMemberAddedEvent            # NEW
   memberRemoved: ConversationMemberRemovedEvent        # NEW
   conversationDeleted: ConversationDeletedEvent        # NEW
+  conversationUpdated: ConversationUpdatedEvent        # NEW — room property changes
 }
 
 # NEW event types
@@ -119,4 +134,9 @@ type ConversationMemberRemovedEvent {
 # NEW: Conversation deleted event
 type ConversationDeletedEvent {
   conversationID: UUID!               # UUID only — conversation no longer exists after deletion
+}
+
+# NEW: Conversation updated event (room properties changed)
+type ConversationUpdatedEvent {
+  conversation: Conversation!         # Full conversation with updated room properties
 }

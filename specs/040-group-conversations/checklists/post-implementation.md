@@ -6,7 +6,7 @@
 
 ## API Contract Quality
 
-- [x] CHK001 Are mutation return types for `removeConversationMember` and `leaveConversation` documented as nullable (`Conversation` or `null` on auto-delete)? [Completeness, Contract §Mutations] — Fixed: contract updated to nullable returns
+- [x] CHK001 Are mutation return types for `addConversationMember`, `removeConversationMember`, `leaveConversation`, and `updateConversation` documented as `Boolean!` (fire-and-forget)? [Completeness, Contract §Mutations] — Fixed: contract updated to Boolean returns
 - [x] CHK002 Is the `deleteConversation` mutation's input argument name (`deleteData`) consistent with the naming convention used by other mutations (`conversationData`, `memberData`, `leaveData`)? [Consistency, Contract §Mutations] — All follow `[purpose]Data` pattern
 - [x] CHK003 Are error response semantics specified for all mutation failure modes (e.g., add member to DIRECT conversation, remove non-existent member, leave conversation you're not in)? [Completeness, Gap] — Fixed: added FR-013
 - [x] CHK004 Is it specified whether `addConversationMember` is idempotent (no error when member already exists)? [Clarity, Spec §Edge Cases] — Covered in Edge Cases + FR-013
@@ -24,7 +24,7 @@
 - [x] CHK013 Are the spec's acceptance scenarios for US3 (§3.4 — self-removal) consistent with the implementation where `leaveConversation` delegates to `removeMember` via a shared resolver helper? [Consistency, Spec §US3] — Spec describes observable behavior which matches
 - [x] CHK014 Does the tasks.md unification notes section accurately describe all three unification rounds with correct method signatures? [Consistency, Tasks §Post-Implementation] — Verified accurate
 - [x] CHK015 Is the plan.md `conversation.service.ts` description updated to reflect the unified `createConversation(creatorAgentId, memberAgentIds[], roomType)` signature? [Consistency, Plan §Project Structure] — Updated in previous retrofit
-- [x] CHK016 Does the contract document specify the same nullable return for `removeConversationMember` / `leaveConversation` as implemented? [Consistency, Contract §Mutations vs Implementation] — Fixed: contract updated to nullable
+- [x] CHK016 Does the contract document specify `Boolean!` return for `addConversationMember` / `removeConversationMember` / `leaveConversation` / `updateConversation` as implemented? [Consistency, Contract §Mutations vs Implementation] — Fixed: contract updated to Boolean
 
 ## Lifecycle & Edge Cases
 
@@ -56,9 +56,19 @@
 - [x] CHK036 Is the maximum member count for group conversations explicitly documented as "no limit" with rationale, or left as an unstated assumption? [Clarity, Spec §Assumptions] — Documented in Assumptions
 - [x] CHK037 Are authorization re-application costs documented for membership changes (each add/remove triggers `applyAuthorizationPolicy`)? [Gap] — Fixed: added NFR-002
 
+## Event-Driven Architecture
+
+- [x] CHK038 Is the event-driven pattern documented — mutations send RPCs only, inbound Matrix events trigger DB persistence? [Completeness, Spec §FR-014, FR-019] — Fixed: FR-014 and FR-019 updated
+- [x] CHK039 Is the `CONVERSATION_UPDATED` subscription event type documented in contract, data-model, and spec? [Consistency] — Fixed: added to all artifacts
+- [x] CHK040 Is the `avatarUrl` column on Room entity documented in data-model.md? [Completeness, Data Model] — Fixed: added to Room table
+- [x] CHK041 Is the `updateConversation` mutation documented in the contract with `UpdateConversationInput`? [Completeness, Contract] — Fixed: added
+- [x] CHK042 Are the new FRs (FR-021 through FR-023) for updateConversation, avatarUrl, and CONVERSATION_UPDATED added to spec.md? [Completeness] — Fixed: added
+- [x] CHK043 Is `message.inbox.service.ts` listed in quickstart.md key files? [Completeness] — Fixed: added
+- [x] CHK044 Are the event-driven tasks (Phase 10) documented in tasks.md? [Completeness] — Fixed: added T042-T054
+
 ## Notes
 
-- All 37 items validated and resolved on 2026-03-04
-- 17 items passed on first validation, 20 fixed via spec/contract/plan/research updates
-- Items marked [Gap] were resolved by adding new FRs (FR-013 through FR-020), NFRs (NFR-001, NFR-002), and Edge Cases
-- Items marked [Consistency] were resolved by updating plan.md, research.md, and contract
+- All 44 items validated and resolved
+- Original 37 items validated on 2026-03-04, 7 new items added on 2026-03-07 for event-driven refactoring
+- Items marked [Gap] were resolved by adding new FRs (FR-013 through FR-023), NFRs (NFR-001, NFR-002), and Edge Cases
+- Items marked [Consistency] were resolved by updating plan.md, research.md, contract, and data-model

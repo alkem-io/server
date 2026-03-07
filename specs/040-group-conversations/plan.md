@@ -17,7 +17,7 @@ Extend the conversation domain to support group conversations alongside existing
 **Project Type**: Single NestJS monolith
 **Performance Goals**: Same latency as existing direct conversations for group operations
 **Constraints**: Matrix Synapse integration via RabbitMQ (group rooms vs DM rooms are distinct)
-**Scale/Scope**: ~20 files modified, 1 lightweight migration (enum value only), 3 new DTOs, 1 new enum, 3 new mutations, enum removal + cleanup
+**Scale/Scope**: ~25 files modified, 2 migrations (enum value + avatarUrl column), 4 new DTOs, 1 new enum, 4 new mutations (add/remove/leave/update), enum removal + cleanup, event-driven refactoring for membership and room property changes
 
 ## Constitution Check
 
@@ -28,7 +28,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | 1. Domain-Centric Design | ✅ Pass | All logic in `src/domain/communication/`. No business logic in resolvers. |
 | 2. Modular NestJS Boundaries | ✅ Pass | Changes within existing communication module. No new module needed. |
 | 3. GraphQL Schema as Stable Contract | ⚠️ Justified Deviation | BREAKING: removing `user`/`virtualContributor`/`type` fields from Conversation, removing `CommunicationConversationType` enum. Justified by spec clarification — coordinated change, frontend adapts simultaneously. Requires BREAKING-APPROVED on PR. |
-| 4. Explicit Data & Event Flow | ✅ Pass | New mutations follow validation → auth → domain op → event → persistence. Membership changes emit subscription events. |
+| 4. Explicit Data & Event Flow | ✅ Pass | Membership and room property mutations follow fire-and-forget RPC pattern: mutation → auth → RPC to Matrix → return Boolean. Inbound Matrix events (via RabbitMQ) → DB persistence → auth re-application → subscription publish. |
 | 5. Observability & Operational Readiness | ✅ Pass | New mutations use existing LogContext patterns. No new external surfaces requiring health checks. |
 | 6. Code Quality with Pragmatic Testing | ✅ Pass | Unit tests for new service methods, validation logic. Risk-based — no snapshot tests. |
 | 7. API Consistency & Evolution | ✅ Pass | Mutations: imperative (`createConversation`, `addConversationMember`). Inputs end with `Input`. |
@@ -92,11 +92,16 @@ src/
 │   │   └── dto/me.conversations.result.ts       # MODIFY: replace users/virtualContributors/virtualContributor(wellKnown:) with flat `conversations` field
 │   ├── adapters/communication-adapter/
 │   │   └── communication.adapter.ts              # MODIFY: map CONVERSATION_GROUP → RoomTypeCommunity
+│   ├── event-handlers/internal/message-inbox/
+│   │   ├── message.inbox.service.ts              # MODIFY: event-driven membership + room property handling
+│   │   ├── message.inbox.module.ts               # MODIFY: add ActorModule, AuthorizationPolicyModule
+│   │   └── room.updated.event.ts                 # NEW: room updated event DTO
 │   └── subscriptions/
 │       └── subscription-service/dto/
-│           └── conversation.event.subscription.payload.ts  # MODIFY: add membership events
+│           └── conversation.event.subscription.payload.ts  # MODIFY: add membership + update events
 └── migrations/
-    └── <timestamp>-AddConversationGroupRoomType.ts  # NEW (enum value only)
+    ├── <timestamp>-AddConversationGroupRoomType.ts  # NEW (enum value only)
+    └── <timestamp>-AddAvatarUrlToRoom.ts            # NEW (avatarUrl column on room)
 ```
 
 **Structure Decision**: Existing NestJS monolith structure. All changes within the `src/domain/communication/` domain module and related API/subscription layers. Net reduction in code complexity: removing `CommunicationConversationType` enum and `inferConversationType` method, replacing 2 field resolvers (user, virtualContributor) with 1 (members).

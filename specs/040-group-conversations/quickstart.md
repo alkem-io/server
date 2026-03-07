@@ -49,8 +49,12 @@ open http://localhost:3000/graphiql
 | **Me Resolver** | `src/services/api/me/me.conversations.resolver.fields.ts` — replace categorized resolvers with flat `conversations` |
 | **Me DTO** | `src/services/api/me/dto/me.conversations.result.ts` — flat `conversations` field replaces users/virtualContributors |
 | **Adapter** | `src/services/adapters/communication-adapter/communication.adapter.ts` |
+| **Adapter Events** | `src/services/adapters/communication-adapter/communication.adapter.event.service.ts` |
+| **Event Handler** | `src/services/event-handlers/internal/message-inbox/message.inbox.service.ts` — event-driven membership + room updates |
+| **Event Handler Module** | `src/services/event-handlers/internal/message-inbox/message.inbox.module.ts` |
 | **Interface** | `src/domain/communication/conversation/conversation.interface.ts` |
 | **Migration** | `src/migrations/<timestamp>-AddConversationGroupRoomType.ts` |
+| **Migration** | `src/migrations/<timestamp>-AddAvatarUrlToRoom.ts` |
 
 ## Testing
 
@@ -101,11 +105,39 @@ mutation {
   addConversationMember(memberData: {
     conversationID: "conversation-uuid"
     memberID: "user-uuid-3"
-  }) {
-    id
-    members { id type }
-  }
+  })
 }
+# Returns: true (RPC sent). Actual change arrives via MEMBER_ADDED subscription event.
+```
+
+### Update Group Conversation
+```graphql
+mutation {
+  updateConversation(updateData: {
+    conversationID: "conversation-uuid"
+    displayName: "New Group Name"
+    avatarUrl: "https://example.com/avatar.png"
+  })
+}
+# Returns: true (RPC sent). Actual change arrives via CONVERSATION_UPDATED subscription event.
+```
+
+### Remove Member / Leave
+```graphql
+mutation {
+  removeConversationMember(memberData: {
+    conversationID: "conversation-uuid"
+    memberID: "user-uuid-3"
+  })
+}
+# Returns: true (RPC sent). Actual change arrives via MEMBER_REMOVED subscription event.
+
+mutation {
+  leaveConversation(leaveData: {
+    conversationID: "conversation-uuid"
+  })
+}
+# Returns: true (RPC sent).
 ```
 
 ### Query My Conversations

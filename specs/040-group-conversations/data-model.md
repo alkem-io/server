@@ -37,11 +37,12 @@ No changes needed. Already supports N members per conversation.
 
 Platform singleton container. No structural changes.
 
-### Room (modified — enum only)
+### Room (modified — enum + new column)
 
 | Field | Type | Change | Notes |
 |-------|------|--------|-------|
 | type | RoomType | **EXTENDED** | Add `CONVERSATION_GROUP` value. Existing `CONVERSATION_DIRECT` unchanged. |
+| avatarUrl | varchar, nullable | **NEW** | Avatar URL for group conversations. Synced from Matrix via `room.updated` events. |
 
 The room type is the **single source of truth** for conversation kind:
 - `CONVERSATION_DIRECT` → Matrix DM room, exactly 2 members, unique per pair
@@ -68,6 +69,7 @@ All code referencing this enum (`inferConversationType`, `type` field resolver, 
 | `MEMBER_ADDED` | **NEW** | Member added to group conversation |
 | `MEMBER_REMOVED` | **NEW** | Member removed from / left group conversation |
 | `CONVERSATION_DELETED` | **NEW** | Conversation deleted — all members notified |
+| `CONVERSATION_UPDATED` | **NEW** | Room properties changed (displayName, avatarUrl) |
 
 ### RoomType (modified)
 
