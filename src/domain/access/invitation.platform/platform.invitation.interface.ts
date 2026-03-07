@@ -45,7 +45,7 @@ export class IPlatformInvitation extends IAuthorizable {
   @Field(() => [RoleName], {
     nullable: false,
     description:
-      'Additional roles to assign to the Contributor, in addition to the entry Role.',
+      'Additional roles to assign to the Actor, in addition to the entry Role.',
   })
   roleSetExtraRoles!: RoleName[];
 

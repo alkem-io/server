@@ -1,4 +1,4 @@
-import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
+import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 
 export const DefaultCalloutSettings = {
@@ -7,7 +7,7 @@ export const DefaultCalloutSettings = {
   },
   contribution: {
     enabled: false,
-    canAddContributions: CalloutAllowedContributors.MEMBERS,
+    canAddContributions: CalloutAllowedActors.MEMBERS,
     allowedTypes: [],
     commentsEnabled: true,
   },

@@ -1,7 +1,7 @@
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { getContributorType } from '@domain/actor/actor/actor.service';
+import { getActorType } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { LinkService } from '@domain/collaboration/link/link.service';
@@ -62,15 +62,15 @@ export default class ActivityLogBuilderService implements IActivityLogBuilder {
     const community = await this.communityService.getCommunityOrFail(
       rawActivity.parentID
     );
-    const contributorJoining = await this.actorLookupService.getActorByIdOrFail(
+    const joiningActor = await this.actorLookupService.getActorByIdOrFail(
       rawActivity.resourceID
     );
 
-    const actorType = getContributorType(contributorJoining);
+    const actorType = getActorType(joiningActor);
     const activityMemberJoined: IActivityLogEntryMemberJoined = {
       ...this.activityLogEntryBase,
       community: community,
-      contributor: contributorJoining,
+      actor: joiningActor,
       actorType: actorType,
     };
     return activityMemberJoined;

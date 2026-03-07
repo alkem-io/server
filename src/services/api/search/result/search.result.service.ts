@@ -127,7 +127,7 @@ export class SearchResultService {
       SearchCategory,
       SearchFilterInput[]
     >;
-    const contributorResults = buildResults(
+    const actorResults = buildResults(
       filtersByCategory.contributors?.[0],
       users,
       organizations
@@ -156,7 +156,7 @@ export class SearchResultService {
     );
 
     return {
-      contributorResults,
+      actorResults,
       contributionResults,
       framingResults,
       spaceResults,

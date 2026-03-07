@@ -17,13 +17,13 @@ export class ApplicationResolverFields {
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('contributor', () => IActor, {
+  @ResolveField('actor', () => IActor, {
     nullable: false,
-    description: 'The User for this Application.',
+    description: 'The Actor for this Application.',
   })
   @Profiling.api
-  async contributor(@Parent() application: Application): Promise<IActor> {
-    return await this.applicationService.getContributor(application.id);
+  async actor(@Parent() application: Application): Promise<IActor> {
+    return await this.applicationService.getActor(application.id);
   }
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)

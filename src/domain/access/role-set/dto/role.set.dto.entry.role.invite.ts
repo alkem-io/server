@@ -16,9 +16,9 @@ export class InviteForEntryRoleOnRoleSetInput {
 
   @Field(() => [UUID], {
     nullable: false,
-    description: 'The identifiers for the contributors being invited.',
+    description: 'The identifiers for the actors being invited.',
   })
-  invitedContributorIDs!: string[];
+  invitedActorIDs!: string[];
 
   @Field(() => [String], {
     nullable: false,

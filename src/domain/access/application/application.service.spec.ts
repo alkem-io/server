@@ -270,7 +270,7 @@ describe('ApplicationService', () => {
     });
   });
 
-  describe('getContributor', () => {
+  describe('getActor', () => {
     it('should return user when application has a loaded user relation', async () => {
       const mockUser = { id: 'user-1', email: 'user@test.com' } as any;
       const mockApplication = {
@@ -282,7 +282,7 @@ describe('ApplicationService', () => {
         mockApplication
       );
 
-      const result = await service.getContributor('app-1');
+      const result = await service.getActor('app-1');
 
       expect(result).toBe(mockUser);
     });
@@ -297,7 +297,7 @@ describe('ApplicationService', () => {
         mockApplication
       );
 
-      await expect(service.getContributor('app-1')).rejects.toThrow(
+      await expect(service.getActor('app-1')).rejects.toThrow(
         RelationshipNotFoundException
       );
     });

@@ -263,6 +263,15 @@ http:
         - 'web'
       priority: 200
 
+    calendar-event-ics:
+      rule: 'PathPrefix(`/api/private/rest/calendar`)'
+      service: 'oathkeeper-proxy'
+      middlewares:
+        - strip-api-private-prefix
+      entryPoints:
+        - 'web'
+      priority: 150
+
     kratos-public:
       rule: 'PathPrefix(`/ory/kratos/public`)'
       service: 'kratos-public'
