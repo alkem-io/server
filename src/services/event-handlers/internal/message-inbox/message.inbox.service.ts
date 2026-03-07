@@ -2,7 +2,10 @@ import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { MutationType } from '@common/enums/subscriptions';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ConversationService } from '@domain/communication/conversation/conversation.service';
+import { ConversationAuthorizationService } from '@domain/communication/conversation/conversation.service.authorization';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
@@ -21,9 +24,9 @@ import { ReactionAddedEvent } from './reaction.added.event';
 import { ReactionRemovedEvent } from './reaction.removed.event';
 import { RoomCreatedEvent } from './room.created.event';
 import { RoomDmRequestedEvent } from './room.dm.requested.event';
-import { RoomMemberLeftEvent } from './room.member.left.event';
 import { RoomMemberUpdatedEvent } from './room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from './room.receipt.updated.event';
+import { RoomUpdatedEvent } from './room.updated.event';
 import { VcInvocationService } from './vc.invocation.service';
 
 /**
@@ -32,7 +35,8 @@ import { VcInvocationService } from './vc.invocation.service';
 function isConversationRoom(room: IRoom): boolean {
   return (
     room.type === RoomType.CONVERSATION ||
-    room.type === RoomType.CONVERSATION_DIRECT
+    room.type === RoomType.CONVERSATION_DIRECT ||
+    room.type === RoomType.CONVERSATION_GROUP
   );
 }
 
@@ -56,6 +60,9 @@ export class MessageInboxService {
     private readonly messageNotificationService: MessageNotificationService,
     private readonly vcInvocationService: VcInvocationService,
     private readonly conversationService: ConversationService,
+    private readonly conversationAuthorizationService: ConversationAuthorizationService,
+    private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly actorService: ActorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -320,18 +327,6 @@ export class MessageInboxService {
     // TODO: Consider auto-creating Alkemio conversation when DM is requested from Matrix
   }
 
-  @OnEvent('room.member.left')
-  async handleRoomMemberLeft(event: RoomMemberLeftEvent): Promise<void> {
-    const { payload } = event;
-
-    this.logger.verbose?.(
-      `Processing room member left: roomId=${payload.roomId}, actorID=${payload.actorID}, reason=${payload.reason || 'none'}`,
-      LogContext.COMMUNICATION
-    );
-
-    // TODO: Consider syncing membership changes back to Alkemio
-  }
-
   @OnEvent('room.member.updated')
   async handleRoomMemberUpdated(event: RoomMemberUpdatedEvent): Promise<void> {
     const { payload } = event;
@@ -341,7 +336,152 @@ export class MessageInboxService {
       LogContext.COMMUNICATION
     );
 
-    // TODO: Consider syncing membership changes back to Alkemio
+    const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+
+    // Only process membership changes for conversation rooms
+    if (!isConversationRoom(room)) {
+      return;
+    }
+
+    const conversation =
+      await this.conversationService.findConversationByRoomId(room.id);
+
+    if (!conversation) {
+      this.logger.warn(
+        `Could not find conversation for room ${room.id} - skipping membership event`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
+    if (payload.membership === 'join') {
+      await this.handleConversationMemberJoined(
+        conversation.id,
+        payload.memberActorID
+      );
+    } else if (payload.membership === 'leave') {
+      await this.handleConversationMemberLeft(
+        conversation.id,
+        payload.memberActorID
+      );
+    }
+  }
+
+  /**
+   * Handle a member joining a conversation room.
+   * Persists membership → re-applies auth policy → publishes MEMBER_ADDED event.
+   */
+  private async handleConversationMemberJoined(
+    conversationId: string,
+    memberActorId: string
+  ): Promise<void> {
+    // Persist membership (idempotent)
+    await this.conversationService.persistMemberAdded(
+      conversationId,
+      memberActorId
+    );
+
+    // Re-apply authorization policy
+    const authorizations =
+      await this.conversationAuthorizationService.applyAuthorizationPolicy(
+        conversationId
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
+
+    // Resolve the added member actor for the event
+    const addedActor = await this.actorService.getActorOrFail(memberActorId);
+
+    // Reload conversation for subscription payload
+    const conversation =
+      await this.conversationService.getConversationOrFail(conversationId);
+
+    // Publish MEMBER_ADDED to all members (including the new one)
+    const memberAgentIds =
+      await this.conversationService.getConversationMemberAgentIds(
+        conversationId
+      );
+
+    this.subscriptionPublishService.publishConversationEvent({
+      eventID: `conversation-event-${randomUUID()}`,
+      memberAgentIds,
+      memberAdded: {
+        conversation,
+        addedMember: addedActor,
+      },
+    });
+
+    this.logger.verbose?.(
+      `Published MEMBER_ADDED event for conversation ${conversationId}, member ${memberActorId}`,
+      LogContext.COMMUNICATION
+    );
+  }
+
+  /**
+   * Handle a member leaving a conversation room.
+   * Collects members before removal → persists removal → publishes MEMBER_REMOVED →
+   * if 0 remaining: publishes CONVERSATION_DELETED + deletes conversation,
+   * else: re-applies auth policy.
+   */
+  private async handleConversationMemberLeft(
+    conversationId: string,
+    memberActorId: string
+  ): Promise<void> {
+    // Collect member IDs before removal (so removed member also receives the event)
+    const memberAgentIdsBefore =
+      await this.conversationService.getConversationMemberAgentIds(
+        conversationId
+      );
+
+    // Persist membership removal, get remaining count
+    const remainingCount =
+      await this.conversationService.persistMemberRemoved(
+        conversationId,
+        memberActorId
+      );
+
+    // Load conversation for event payload
+    const conversation =
+      await this.conversationService.getConversationOrFail(conversationId);
+
+    // Publish MEMBER_REMOVED to all members (including the removed one)
+    this.subscriptionPublishService.publishConversationEvent({
+      eventID: `conversation-event-${randomUUID()}`,
+      memberAgentIds: memberAgentIdsBefore,
+      memberRemoved: {
+        conversation,
+        removedMemberID: memberActorId,
+      },
+    });
+
+    this.logger.verbose?.(
+      `Published MEMBER_REMOVED event for conversation ${conversationId}, member ${memberActorId}, remaining=${remainingCount}`,
+      LogContext.COMMUNICATION
+    );
+
+    if (remainingCount === 0) {
+      // Auto-delete empty conversation
+      this.subscriptionPublishService.publishConversationEvent({
+        eventID: `conversation-event-${randomUUID()}`,
+        memberAgentIds: memberAgentIdsBefore,
+        conversationDeleted: {
+          conversationID: conversationId,
+        },
+      });
+
+      await this.conversationService.deleteConversation(conversationId);
+
+      this.logger.verbose?.(
+        `Auto-deleted empty conversation ${conversationId}`,
+        LogContext.COMMUNICATION
+      );
+    } else {
+      // Re-apply authorization policy with updated membership
+      const authorizations =
+        await this.conversationAuthorizationService.applyAuthorizationPolicy(
+          conversationId
+        );
+      await this.authorizationPolicyService.saveAll(authorizations);
+    }
   }
 
   @OnEvent('room.receipt.updated')
@@ -367,6 +507,43 @@ export class MessageInboxService {
     // Publish conversation events for direct messaging rooms
     if (isConversationRoom(room)) {
       await this.publishReadReceiptConversationEvent(room, payload);
+    }
+  }
+
+  @OnEvent('room.updated')
+  async handleRoomUpdated(event: RoomUpdatedEvent): Promise<void> {
+    const { payload } = event;
+
+    this.logger.verbose?.(
+      `Processing room updated: roomId=${payload.roomId}, displayName=${payload.displayName}, avatarUrl=${payload.avatarUrl}`,
+      LogContext.COMMUNICATION
+    );
+
+    const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
+    let changed = false;
+
+    if (
+      payload.displayName !== undefined &&
+      room.displayName !== payload.displayName
+    ) {
+      room.displayName = payload.displayName;
+      changed = true;
+    }
+
+    if (
+      payload.avatarUrl !== undefined &&
+      room.avatarUrl !== payload.avatarUrl
+    ) {
+      room.avatarUrl = payload.avatarUrl;
+      changed = true;
+    }
+
+    if (changed) {
+      await this.roomLookupService.save(room);
+
+      if (isConversationRoom(room)) {
+        await this.publishConversationUpdatedEvent(room);
+      }
     }
   }
 
@@ -456,6 +633,34 @@ export class MessageInboxService {
       readReceiptUpdated: {
         roomId: room.id,
         lastReadMessageId: payload.eventId,
+      },
+    });
+  }
+
+  private async publishConversationUpdatedEvent(
+    room: IRoom
+  ): Promise<void> {
+    const conversation =
+      await this.conversationService.findConversationByRoomId(room.id);
+
+    if (!conversation) {
+      this.logger.warn(
+        `Could not find conversation for room ${room.id} - skipping updated event`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
+    const memberAgentIds =
+      await this.conversationService.getConversationMemberAgentIds(
+        conversation.id
+      );
+
+    this.subscriptionPublishService.publishConversationEvent({
+      eventID: `conversation-event-${randomUUID()}`,
+      memberAgentIds,
+      conversationUpdated: {
+        conversation,
       },
     });
   }

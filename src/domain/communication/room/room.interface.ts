@@ -18,6 +18,12 @@ export abstract class IRoom extends IAuthorizable {
   })
   displayName!: string;
 
+  @Field(() => String, {
+    nullable: true,
+    description: 'The avatar URL of the Room (mxc:// or https://). Fetched from Matrix.',
+  })
+  avatarUrl?: string;
+
   // Internal storage (JSON column)
   vcInteractionsByThread!: VcInteractionsByThread;
 

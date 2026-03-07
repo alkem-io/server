@@ -6,7 +6,6 @@ import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RoomService } from '@domain/communication/room/room.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -31,7 +30,6 @@ export class ConversationResolverMutations {
     private authorizationPolicyService: AuthorizationPolicyService,
     private conversationService: ConversationService,
     private conversationAuthorizationService: ConversationAuthorizationService,
-    private actorService: ActorService,
     private roomService: RoomService,
     private subscriptionPublishService: SubscriptionPublishService
   ) {}
@@ -149,13 +147,15 @@ export class ConversationResolverMutations {
     return result;
   }
 
-  @Mutation(() => IConversation, {
-    description: 'Add a member to a group conversation.',
+  @Mutation(() => Boolean, {
+    description:
+      'Add a member to a group conversation. Returns true when the RPC is sent. ' +
+      'Actual membership change arrives via MEMBER_ADDED subscription event.',
   })
   async addConversationMember(
     @CurrentActor() actorContext: ActorContext,
     @Args('memberData') memberData: AddConversationMemberInput
-  ): Promise<IConversation> {
+  ): Promise<boolean> {
     const conversation = await this.conversationService.getConversationOrFail(
       memberData.conversationID,
       { relations: { authorization: true } }
@@ -168,54 +168,24 @@ export class ConversationResolverMutations {
       `add member to conversation: ${conversation.id}`
     );
 
-    const updatedConversation = await this.conversationService.addMember(
+    await this.conversationService.addMember(
       memberData.conversationID,
       memberData.memberID
     );
 
-    // Re-apply authorization policy after membership change
-    const authorizations =
-      await this.conversationAuthorizationService.applyAuthorizationPolicy(
-        updatedConversation.id
-      );
-    await this.authorizationPolicyService.saveAll(authorizations);
-
-    // Resolve added member actor for the event
-    const addedActor = await this.actorService.getActorOrFail(
-      memberData.memberID
-    );
-
-    // Publish MEMBER_ADDED event to all current members
-    const memberAgentIds =
-      await this.conversationService.getConversationMemberAgentIds(
-        updatedConversation.id
-      );
-
-    await this.subscriptionPublishService.publishConversationEvent({
-      eventID: `conversation-event-${randomUUID()}`,
-      memberAgentIds,
-      memberAdded: {
-        conversation: updatedConversation,
-        addedMember: addedActor,
-      },
-    });
-
-    return await this.conversationService.getConversationOrFail(
-      updatedConversation.id,
-      { relations: { authorization: true, room: true } }
-    );
+    return true;
   }
 
-  @Mutation(() => IConversation, {
-    nullable: true,
+  @Mutation(() => Boolean, {
     description:
-      'Remove a member from a group conversation. Returns null if the conversation was auto-deleted (0 members).',
+      'Remove a member from a group conversation. Returns true when the RPC is sent. ' +
+      'Actual membership change arrives via MEMBER_REMOVED subscription event.',
   })
   async removeConversationMember(
     @CurrentActor() actorContext: ActorContext,
     @Args('memberData') memberData: RemoveConversationMemberInput
-  ): Promise<IConversation | null> {
-    return this.removeMemberAndPublish(
+  ): Promise<boolean> {
+    return this.removeMemberAndSendRpc(
       actorContext,
       memberData.conversationID,
       memberData.memberID,
@@ -223,16 +193,16 @@ export class ConversationResolverMutations {
     );
   }
 
-  @Mutation(() => IConversation, {
-    nullable: true,
+  @Mutation(() => Boolean, {
     description:
-      'Leave a group conversation. Returns null if the conversation was auto-deleted (0 members).',
+      'Leave a group conversation. Returns true when the RPC is sent. ' +
+      'Actual membership change arrives via MEMBER_REMOVED subscription event.',
   })
   async leaveConversation(
     @CurrentActor() actorContext: ActorContext,
     @Args('leaveData') leaveData: LeaveConversationInput
-  ): Promise<IConversation | null> {
-    return this.removeMemberAndPublish(
+  ): Promise<boolean> {
+    return this.removeMemberAndSendRpc(
       actorContext,
       leaveData.conversationID,
       actorContext.actorID,
@@ -240,14 +210,15 @@ export class ConversationResolverMutations {
     );
   }
 
-  @Mutation(() => IConversation, {
+  @Mutation(() => Boolean, {
     description:
-      'Update a group conversation (display name, avatar). Only GROUP conversations support these properties.',
+      'Update a group conversation (display name, avatar). Returns true when the RPC is sent. ' +
+      'Actual changes arrive via CONVERSATION_UPDATED subscription event.',
   })
   async updateConversation(
     @CurrentActor() actorContext: ActorContext,
     @Args('updateData') updateData: UpdateConversationInput
-  ): Promise<IConversation> {
+  ): Promise<boolean> {
     const conversation = await this.conversationService.getConversationOrFail(
       updateData.conversationID,
       { relations: { authorization: true, room: true } }
@@ -284,22 +255,20 @@ export class ConversationResolverMutations {
       );
     }
 
-    return await this.conversationService.getConversationOrFail(
-      updateData.conversationID,
-      { relations: { authorization: true, room: true } }
-    );
+    return true;
   }
 
   /**
    * Shared logic for removing a member (or self) from a group conversation.
-   * Handles auth check, removal, re-applying auth policy, and publishing MEMBER_REMOVED event.
+   * Sends RPC to Matrix only — DB persistence and subscription events
+   * happen via room.member.updated event handler.
    */
-  private async removeMemberAndPublish(
+  private async removeMemberAndSendRpc(
     actorContext: ActorContext,
     conversationId: string,
     memberIdToRemove: string,
     requiredPrivilege: AuthorizationPrivilege
-  ): Promise<IConversation | null> {
+  ): Promise<boolean> {
     const conversation = await this.conversationService.getConversationOrFail(
       conversationId,
       { relations: { authorization: true } }
@@ -312,40 +281,11 @@ export class ConversationResolverMutations {
       `remove member from conversation: ${conversation.id}`
     );
 
-    // Collect member IDs before removal for event publishing
-    const memberAgentIdsBefore =
-      await this.conversationService.getConversationMemberAgentIds(
-        conversationId
-      );
-
-    const updatedConversation = await this.conversationService.removeMember(
+    await this.conversationService.removeMember(
       conversationId,
       memberIdToRemove
     );
 
-    if (updatedConversation) {
-      const authorizations =
-        await this.conversationAuthorizationService.applyAuthorizationPolicy(
-          updatedConversation.id
-        );
-      await this.authorizationPolicyService.saveAll(authorizations);
-    }
-
-    // Publish MEMBER_REMOVED event to all members (including the removed one)
-    await this.subscriptionPublishService.publishConversationEvent({
-      eventID: `conversation-event-${randomUUID()}`,
-      memberAgentIds: memberAgentIdsBefore,
-      memberRemoved: {
-        conversation,
-        removedMemberID: memberIdToRemove,
-      },
-    });
-
-    return updatedConversation
-      ? await this.conversationService.getConversationOrFail(
-          updatedConversation.id,
-          { relations: { authorization: true, room: true } }
-        )
-      : null;
+    return true;
   }
 }

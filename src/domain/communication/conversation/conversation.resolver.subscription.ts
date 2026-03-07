@@ -59,6 +59,8 @@ export class ConversationEventResolverSubscription {
         let eventType: ConversationEventType;
         if (payload.conversationCreated) {
           eventType = ConversationEventType.CONVERSATION_CREATED;
+        } else if (payload.conversationUpdated) {
+          eventType = ConversationEventType.CONVERSATION_UPDATED;
         } else if (payload.messageReceived) {
           eventType = ConversationEventType.MESSAGE_RECEIVED;
         } else if (payload.messageRemoved) {
@@ -76,6 +78,7 @@ export class ConversationEventResolverSubscription {
         return {
           eventType,
           conversationCreated: payload.conversationCreated,
+          conversationUpdated: payload.conversationUpdated,
           messageReceived: payload.messageReceived,
           messageRemoved: payload.messageRemoved,
           readReceiptUpdated: payload.readReceiptUpdated

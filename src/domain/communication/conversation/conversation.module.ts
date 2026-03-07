@@ -7,6 +7,7 @@ import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
+import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { ConversationMembershipModule } from '../conversation-membership/conversation.membership.module';
 import { Conversation } from './conversation.entity';
@@ -21,6 +22,7 @@ import { ConversationAuthorizationService } from './conversation.service.authori
     ActorCoreModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
+    CommunicationAdapterModule,
     RoomModule,
     UserLookupModule,
     VirtualActorLookupModule,

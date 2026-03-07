@@ -22,6 +22,7 @@ import { VirtualActorLookupService } from '@domain/community/virtual-contributor
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { FindOneOptions, In, Repository } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
@@ -47,6 +48,7 @@ export class ConversationService {
     private userLookupService: UserLookupService,
     private virtualActorLookupService: VirtualActorLookupService,
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
+    private communicationAdapter: CommunicationAdapter,
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>,
     @InjectRepository(ConversationMembership)
@@ -173,8 +175,7 @@ export class ConversationService {
 
   /**
    * Add a member to a group conversation.
-   * Validates conversation is GROUP type and member is not already present (idempotent).
-   * @returns The updated conversation
+   * Sends RPC to Matrix only — DB persistence happens via room.member.updated event.
    */
   public async addMember(
     conversationId: string,
@@ -203,14 +204,13 @@ export class ConversationService {
       return conversation;
     }
 
-    const membership = this.conversationMembershipRepository.create({
-      conversationId,
-      actorID: memberActorId,
-    });
-    await this.conversationMembershipRepository.save(membership);
+    // Send to Matrix only — DB will be updated when room.member.updated event arrives
+    await this.communicationAdapter.batchAddMember(memberActorId, [
+      conversation.room.id,
+    ]);
 
     this.logger.verbose?.(
-      `Added member ${memberActorId} to group conversation ${conversationId}`,
+      `Sent add-member RPC for ${memberActorId} to group conversation ${conversationId}`,
       LogContext.COMMUNICATION_CONVERSATION
     );
 
@@ -219,13 +219,12 @@ export class ConversationService {
 
   /**
    * Remove a member from a group conversation.
-   * If 0 members remain after removal, auto-deletes the conversation + room.
-   * @returns The updated conversation, or null if auto-deleted
+   * Sends RPC to Matrix only — DB persistence and auto-delete happen via room.member.updated event.
    */
   public async removeMember(
     conversationId: string,
     memberActorId: string
-  ): Promise<IConversation | null> {
+  ): Promise<IConversation> {
     const conversation = await this.getConversationOrFail(conversationId, {
       relations: { room: true },
     });
@@ -240,7 +239,6 @@ export class ConversationService {
       );
     }
 
-    // Check member exists
     const isMember = await this.isConversationMember(
       conversationId,
       memberActorId
@@ -252,32 +250,67 @@ export class ConversationService {
       );
     }
 
-    // Delete the membership record
+    // Send to Matrix only — DB will be updated when room.member.updated event arrives
+    await this.communicationAdapter.batchRemoveMember(memberActorId, [
+      conversation.room.id,
+    ]);
+
+    this.logger.verbose?.(
+      `Sent remove-member RPC for ${memberActorId} from group conversation ${conversationId}`,
+      LogContext.COMMUNICATION_CONVERSATION
+    );
+
+    return conversation;
+  }
+
+  /**
+   * Persist a membership addition. Called from the event handler when
+   * a room.member.updated event with membership=join is received.
+   */
+  public async persistMemberAdded(
+    conversationId: string,
+    memberActorId: string
+  ): Promise<void> {
+    const alreadyMember = await this.isConversationMember(
+      conversationId,
+      memberActorId
+    );
+    if (alreadyMember) return;
+
+    const membership = this.conversationMembershipRepository.create({
+      conversationId,
+      actorID: memberActorId,
+    });
+    await this.conversationMembershipRepository.save(membership);
+
+    this.logger.verbose?.(
+      `Persisted member ${memberActorId} added to conversation ${conversationId}`,
+      LogContext.COMMUNICATION_CONVERSATION
+    );
+  }
+
+  /**
+   * Persist a membership removal. Called from the event handler when
+   * a room.member.updated event with membership=leave is received.
+   * @returns The remaining member count.
+   */
+  public async persistMemberRemoved(
+    conversationId: string,
+    memberActorId: string
+  ): Promise<number> {
     await this.conversationMembershipRepository.delete({
       conversationId,
       actorID: memberActorId,
     });
 
     this.logger.verbose?.(
-      `Removed member ${memberActorId} from group conversation ${conversationId}`,
+      `Persisted member ${memberActorId} removed from conversation ${conversationId}`,
       LogContext.COMMUNICATION_CONVERSATION
     );
 
-    // Check remaining members — auto-delete if empty
-    const remainingCount = await this.conversationMembershipRepository.count({
+    return this.conversationMembershipRepository.count({
       where: { conversationId },
     });
-
-    if (remainingCount === 0) {
-      this.logger.verbose?.(
-        `Group conversation ${conversationId} has no remaining members — auto-deleting`,
-        LogContext.COMMUNICATION_CONVERSATION
-      );
-      await this.deleteConversation(conversationId);
-      return null;
-    }
-
-    return conversation;
   }
 
   public async deleteConversation(

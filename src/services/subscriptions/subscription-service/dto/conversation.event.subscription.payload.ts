@@ -10,6 +10,9 @@ export interface ConversationEventSubscriptionPayload
     conversation: IConversation;
     message?: IMessage;
   };
+  conversationUpdated?: {
+    conversation: IConversation;
+  };
   messageReceived?: {
     roomId: string;
     message: IMessage;

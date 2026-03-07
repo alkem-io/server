@@ -1198,6 +1198,7 @@ export class CommunicationAdapter {
       members: response.member_actor_ids ?? [],
       messages,
       messagesCount: messages.length,
+      avatarUrl: response.avatar_url,
     };
   }
 
@@ -1216,6 +1217,7 @@ export class CommunicationAdapter {
       members: response.member_actor_ids ?? [],
       messages,
       messagesCount: messages.length,
+      avatarUrl: response.avatar_url,
       lastReadEventId: response.last_read_event_id,
       unreadCount: response.unread_count,
     };

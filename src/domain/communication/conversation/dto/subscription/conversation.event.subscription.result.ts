@@ -10,6 +10,7 @@ import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
  */
 export enum ConversationEventType {
   CONVERSATION_CREATED = 'CONVERSATION_CREATED',
+  CONVERSATION_UPDATED = 'CONVERSATION_UPDATED',
   MESSAGE_RECEIVED = 'MESSAGE_RECEIVED',
   MESSAGE_REMOVED = 'MESSAGE_REMOVED',
   READ_RECEIPT_UPDATED = 'READ_RECEIPT_UPDATED',
@@ -39,6 +40,17 @@ export class ConversationCreatedEvent {
       'The first message in the conversation. Null when conversation is created without an initial message.',
   })
   message?: IMessage;
+}
+
+@ObjectType('ConversationUpdatedEvent', {
+  description:
+    'Event fired when a conversation is updated (displayName, avatarUrl).',
+})
+export class ConversationUpdatedEvent {
+  @Field(() => IConversation, {
+    description: 'The conversation that was updated.',
+  })
+  conversation!: IConversation;
 }
 
 @ObjectType('ConversationMessageReceivedEvent', {
@@ -143,6 +155,12 @@ export class ConversationEventSubscriptionResult {
     description: 'Present when eventType is CONVERSATION_CREATED.',
   })
   conversationCreated?: ConversationCreatedEvent;
+
+  @Field(() => ConversationUpdatedEvent, {
+    nullable: true,
+    description: 'Present when eventType is CONVERSATION_UPDATED.',
+  })
+  conversationUpdated?: ConversationUpdatedEvent;
 
   @Field(() => ConversationMessageReceivedEvent, {
     nullable: true,

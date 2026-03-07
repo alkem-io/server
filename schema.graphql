@@ -305,6 +305,7 @@ enum ConversationCreationType {
 enum ConversationEventType {
   CONVERSATION_CREATED
   CONVERSATION_DELETED
+  CONVERSATION_UPDATED
   MEMBER_ADDED
   MEMBER_REMOVED
   MESSAGE_RECEIVED
@@ -2033,6 +2034,8 @@ type ConversationEventSubscriptionResult {
   conversationCreated: ConversationCreatedEvent
   """Present when eventType is CONVERSATION_DELETED."""
   conversationDeleted: ConversationDeletedEvent
+  """Present when eventType is CONVERSATION_UPDATED."""
+  conversationUpdated: ConversationUpdatedEvent
   """
   The type of event. Use this to determine which payload field is populated.
   """
@@ -2091,6 +2094,12 @@ type ConversationReadReceiptUpdatedEvent {
   lastReadEventId: MessageID!
   """The room ID where the read receipt was updated."""
   roomId: UUID!
+}
+
+"""Event fired when a conversation is updated (displayName, avatarUrl)."""
+type ConversationUpdatedEvent {
+  """The conversation that was updated."""
+  conversation: Conversation!
 }
 
 type CreateCalloutContributionData {
@@ -3422,8 +3431,10 @@ type ModelCardSpaceUsageResult {
 }
 
 type Mutation {
-  """Add a member to a group conversation."""
-  addConversationMember(memberData: AddConversationMemberInput!): Conversation!
+  """
+  Add a member to a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_ADDED subscription event.
+  """
+  addConversationMember(memberData: AddConversationMemberInput!): Boolean!
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Adds a full email address to the platform notification blacklist"""
@@ -3653,9 +3664,9 @@ type Mutation {
   """
   joinRoleSet(joinData: JoinAsEntryRoleOnRoleSetInput!): RoleSet!
   """
-  Leave a group conversation. Returns null if the conversation was auto-deleted (0 members).
+  Leave a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_REMOVED subscription event.
   """
-  leaveConversation(leaveData: LeaveConversationInput!): Conversation
+  leaveConversation(leaveData: LeaveConversationInput!): Boolean!
   """Reset the License with Entitlements on the specified Account."""
   licenseResetOnAccount(resetData: AccountLicenseResetInput!): Account!
   """Marks a message as read for the current user."""
@@ -3679,9 +3690,9 @@ type Mutation {
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
   """
-  Remove a member from a group conversation. Returns null if the conversation was auto-deleted (0 members).
+  Remove a member from a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_REMOVED subscription event.
   """
-  removeConversationMember(memberData: RemoveConversationMemberInput!): Conversation
+  removeConversationMember(memberData: RemoveConversationMemberInput!): Boolean!
   """Remove the default callout template from an InnovationFlowState."""
   removeDefaultCalloutTemplateOnInnovationFlowState(removeData: RemoveDefaultCalloutTemplateOnInnovationFlowStateInput!): InnovationFlowState!
   """Removes an Iframe Allowed URL from the Platform Settings"""
@@ -3777,9 +3788,9 @@ type Mutation {
   """Update the sortOrder field of the Contributions of s Callout."""
   updateContributionsSortOrder(sortOrderData: UpdateContributionCalloutsSortOrderInput!): [CalloutContribution!]!
   """
-  Update a group conversation (display name, avatar). Only GROUP conversations support these properties.
+  Update a group conversation (display name, avatar). Returns true when the RPC is sent. Actual changes arrive via CONVERSATION_UPDATED subscription event.
   """
-  updateConversation(updateData: UpdateConversationInput!): Conversation!
+  updateConversation(updateData: UpdateConversationInput!): Boolean!
   """Updates the specified Discussion."""
   updateDiscussion(updateData: UpdateDiscussionInput!): Discussion!
   """Updates the specified Document."""
@@ -4935,6 +4946,8 @@ type RolesResultSpace {
 type Room {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """The avatar URL of the Room (mxc:// or https://). Fetched from Matrix."""
+  avatarUrl: String
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The display name of the Room."""

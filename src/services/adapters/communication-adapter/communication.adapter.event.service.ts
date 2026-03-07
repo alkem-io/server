@@ -9,6 +9,7 @@ import {
   RoomCreatedEvent as MatrixRoomCreatedEvent,
   RoomMemberLeftEvent as MatrixRoomMemberLeftEvent,
   RoomMemberUpdatedEvent as MatrixRoomMemberUpdatedEvent,
+  RoomUpdatedEvent as MatrixRoomUpdatedEvent,
   MessageReceivedPayload,
 } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
@@ -25,6 +26,7 @@ import { RoomDmRequestedEvent } from '@services/event-handlers/internal/message-
 import { RoomMemberLeftEvent } from '@services/event-handlers/internal/message-inbox/room.member.left.event';
 import { RoomMemberUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.receipt.updated.event';
+import { RoomUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.updated.event';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 /**
@@ -65,7 +67,7 @@ export class CommunicationAdapterEventService {
   ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
-        `Received RabbitMQ event: roomId=${payload.roomId}, messageId=${payload.message.id}, actorID=${payload.actorID}`,
+        `[${MatrixAdapterEventType.COMMUNICATION_MESSAGE_RECEIVED}] - Event received: roomId=${payload.roomId}, messageId=${payload.message.id}, actorID=${payload.actorID}`,
         LogContext.COMMUNICATION
       );
 
@@ -103,7 +105,7 @@ export class CommunicationAdapterEventService {
   ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
-        `Received reaction added event: roomId=${payload.alkemio_room_id}, messageId=${payload.message_id}, reactionId=${payload.reaction_id}`,
+        `[${MatrixAdapterEventType.COMMUNICATION_REACTION_ADDED}] - Event received: roomId=${payload.alkemio_room_id}, messageId=${payload.message_id}, reactionId=${payload.reaction_id}`,
         LogContext.COMMUNICATION
       );
 
@@ -143,7 +145,7 @@ export class CommunicationAdapterEventService {
   ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
-        `Received reaction removed event: roomId=${payload.alkemio_room_id}, messageId=${payload.message_id}, reactionId=${payload.reaction_id}`,
+        `[${MatrixAdapterEventType.COMMUNICATION_REACTION_REMOVED}] - Event received: roomId=${payload.alkemio_room_id}, messageId=${payload.message_id}, reactionId=${payload.reaction_id}`,
         LogContext.COMMUNICATION
       );
 
@@ -181,7 +183,7 @@ export class CommunicationAdapterEventService {
   ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
-        `Received message edited event: roomId=${payload.alkemio_room_id}, originalMessageId=${payload.original_message_id}, newMessageId=${payload.new_message_id}`,
+        `[${MatrixAdapterEventType.COMMUNICATION_MESSAGE_EDITED}] - Event received: roomId=${payload.alkemio_room_id}, originalMessageId=${payload.original_message_id}, newMessageId=${payload.new_message_id}`,
         LogContext.COMMUNICATION
       );
 
@@ -222,7 +224,7 @@ export class CommunicationAdapterEventService {
   ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
-        `Received message redacted event: roomId=${payload.alkemio_room_id}, redactedMessageId=${payload.redacted_message_id}`,
+        `[${MatrixAdapterEventType.COMMUNICATION_MESSAGE_REDACTED}] - Event received: roomId=${payload.alkemio_room_id}, redactedMessageId=${payload.redacted_message_id}`,
         LogContext.COMMUNICATION
       );
 
@@ -261,7 +263,7 @@ export class CommunicationAdapterEventService {
   async onRoomCreated(payload: MatrixRoomCreatedEvent): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
-        `Received room created event: roomId=${payload.alkemio_room_id}, roomType=${payload.room_type}`,
+        `[${MatrixAdapterEventType.COMMUNICATION_ROOM_CREATED}] - Event received: roomId=${payload.alkemio_room_id}, roomType=${payload.room_type}`,
         LogContext.COMMUNICATION
       );
 
@@ -301,7 +303,7 @@ export class CommunicationAdapterEventService {
   ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
-        `Received DM requested event: initiator=${payload.initiator_actor_id}, target=${payload.target_actor_id}`,
+        `[${MatrixAdapterEventType.COMMUNICATION_ROOM_DM_REQUESTED}] - Event received: initiator=${payload.initiator_actor_id}, target=${payload.target_actor_id}`,
         LogContext.COMMUNICATION
       );
 
@@ -338,7 +340,7 @@ export class CommunicationAdapterEventService {
   ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
-        `Received room member left event: roomId=${payload.alkemio_room_id}, actorID=${payload.actor_id}`,
+        `[${MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_LEFT}] - Event received: roomId=${payload.alkemio_room_id}, actorID=${payload.actor_id}`,
         LogContext.COMMUNICATION
       );
 
@@ -376,7 +378,7 @@ export class CommunicationAdapterEventService {
   ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
-        `Received room member updated event: roomId=${payload.alkemio_room_id}, memberActorID=${payload.member_actor_id}, membership=${payload.membership}`,
+        `[${MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_UPDATED}] - Event received: roomId=${payload.alkemio_room_id}, memberActorID=${payload.member_actor_id}, membership=${payload.membership}`,
         LogContext.COMMUNICATION
       );
 
@@ -415,7 +417,7 @@ export class CommunicationAdapterEventService {
   ): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
-        `Received read receipt updated event: roomId=${payload.alkemio_room_id}, actorID=${payload.actor_id}, eventId=${payload.event_id}`,
+        `[${MatrixAdapterEventType.COMMUNICATION_ROOM_RECEIPT_UPDATED}] - Event received: roomId=${payload.alkemio_room_id}, actorID=${payload.actor_id}, eventId=${payload.event_id}`,
         LogContext.COMMUNICATION
       );
 
@@ -432,6 +434,46 @@ export class CommunicationAdapterEventService {
     } catch (error) {
       this.logger.error(
         `Error handling read receipt updated event: ${error}`,
+        error instanceof Error ? error.stack : undefined,
+        LogContext.COMMUNICATION
+      );
+      return new Nack(true);
+    }
+  }
+
+  /**
+   * Receives room updated events from Matrix Adapter via RabbitMQ.
+   *
+   * Fired when room properties (name, avatar, topic) change in Matrix.
+   * Publishes internal 'room.updated' event for domain processing.
+   */
+  @RabbitSubscribe({
+    queue: MatrixAdapterEventType.COMMUNICATION_ROOM_UPDATED,
+    createQueueIfNotExists: true,
+    queueOptions: { durable: true },
+  })
+  async onRoomUpdated(
+    payload: MatrixRoomUpdatedEvent
+  ): Promise<void | Nack> {
+    try {
+      this.logger.verbose?.(
+        `[${MatrixAdapterEventType.COMMUNICATION_ROOM_UPDATED}] - Event received: roomId=${payload.alkemio_room_id}, displayName=${payload.display_name}, avatarUrl=${payload.avatar_url}`,
+        LogContext.COMMUNICATION
+      );
+
+      this.eventEmitter.emit(
+        'room.updated',
+        new RoomUpdatedEvent({
+          roomId: payload.alkemio_room_id,
+          displayName: payload.display_name,
+          avatarUrl: payload.avatar_url,
+          topic: payload.topic,
+          timestamp: payload.timestamp,
+        })
+      );
+    } catch (error) {
+      this.logger.error(
+        `Error handling room updated event: ${error}`,
         error instanceof Error ? error.stack : undefined,
         LogContext.COMMUNICATION
       );

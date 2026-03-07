@@ -87,15 +87,13 @@ export class RoomService {
   async updateRoomDisplayName(
     room: IRoom,
     newDisplayName: string
-  ): Promise<IRoom> {
+  ): Promise<void> {
     if (room.displayName === newDisplayName) {
-      return room;
+      return;
     }
 
-    room.displayName = newDisplayName;
+    // Send to Matrix only — DB will be updated when room.updated event arrives
     await this.communicationAdapter.updateRoom(room.id, newDisplayName);
-
-    return this.save(room);
   }
 
   /**
