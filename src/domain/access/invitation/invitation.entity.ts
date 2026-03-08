@@ -32,8 +32,8 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   invitedActor?: Actor;
 
   @Index()
-  @Column('uuid', { nullable: false })
-  createdBy!: string;
+  @Column('uuid', { nullable: true })
+  createdBy?: string;
 
   @ManyToOne(() => Actor, {
     eager: false,

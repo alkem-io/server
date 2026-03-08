@@ -650,6 +650,18 @@ enum RoleSetType {
   SPACE
 }
 
+"""The type of room."""
+enum RoomType {
+  CALENDAR_EVENT
+  CALLOUT
+  CONVERSATION
+  CONVERSATION_DIRECT
+  CONVERSATION_GROUP
+  DISCUSSION_FORUM
+  POST
+  UPDATES
+}
+
 """
 The category in which to search. A category may include a couple of entity types, e.g. "contributions" include posts, whiteboard, etc.
 """
@@ -4966,6 +4978,10 @@ type Room {
   messages: [Message!]!
   """The number of messages in the Room."""
   messagesCount: Int!
+  """
+  The type of room (e.g., post, callout, conversation_direct, conversation_group).
+  """
+  type: RoomType!
   """
   Simple unread message count for the current user. Use unreadCounts for per-thread breakdown.
   """

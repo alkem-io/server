@@ -1,3 +1,5 @@
+import { registerEnumType } from '@nestjs/graphql';
+
 export enum RoomType {
   POST = 'post',
   CALENDAR_EVENT = 'calendar_event',
@@ -8,3 +10,8 @@ export enum RoomType {
   CONVERSATION_DIRECT = 'conversation_direct',
   CONVERSATION_GROUP = 'conversation_group',
 }
+
+registerEnumType(RoomType, {
+  name: 'RoomType',
+  description: 'The type of room.',
+});

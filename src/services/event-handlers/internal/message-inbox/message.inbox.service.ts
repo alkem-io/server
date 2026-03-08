@@ -674,7 +674,7 @@ export class MessageInboxService {
         conversation.id
       );
 
-    this.subscriptionPublishService.publishConversationEvent({
+    await this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
       memberActorIds,
       conversationUpdated: {

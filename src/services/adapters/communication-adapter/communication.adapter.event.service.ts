@@ -23,7 +23,6 @@ import { ReactionAddedEvent } from '@services/event-handlers/internal/message-in
 import { ReactionRemovedEvent } from '@services/event-handlers/internal/message-inbox/reaction.removed.event';
 import { RoomCreatedEvent } from '@services/event-handlers/internal/message-inbox/room.created.event';
 import { RoomDmRequestedEvent } from '@services/event-handlers/internal/message-inbox/room.dm.requested.event';
-import { RoomMemberLeftEvent } from '@services/event-handlers/internal/message-inbox/room.member.left.event';
 import { RoomMemberUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.receipt.updated.event';
 import { RoomUpdatedEvent } from '@services/event-handlers/internal/message-inbox/room.updated.event';
@@ -339,19 +338,11 @@ export class CommunicationAdapterEventService {
     payload: MatrixRoomMemberLeftEvent
   ): Promise<void | Nack> {
     try {
+      // Log-only: room.member.updated with membership=leave handles all removal logic.
+      // Keeping the subscriber to drain the RabbitMQ queue.
       this.logger.verbose?.(
-        `[${MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_LEFT}] - Event received: roomId=${payload.alkemio_room_id}, actorID=${payload.actor_id}`,
+        `[${MatrixAdapterEventType.COMMUNICATION_ROOM_MEMBER_LEFT}] - Event received (log-only, handled via room.member.updated): roomId=${payload.alkemio_room_id}, actorID=${payload.actor_id}`,
         LogContext.COMMUNICATION
-      );
-
-      this.eventEmitter.emit(
-        'room.member.left',
-        new RoomMemberLeftEvent({
-          roomId: payload.alkemio_room_id,
-          actorID: payload.actor_id,
-          reason: payload.reason,
-          timestamp: payload.timestamp,
-        })
       );
     } catch (error) {
       this.logger.error(

@@ -6,6 +6,10 @@ import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 
 @ObjectType('Room')
 export abstract class IRoom extends IAuthorizable {
+  @Field(() => RoomType, {
+    description:
+      'The type of room (e.g., post, callout, conversation_direct, conversation_group).',
+  })
   type!: RoomType;
 
   @Field(() => Int, {
