@@ -318,7 +318,7 @@ describe('ConversationService', () => {
       expect(result).toBe(mockUser);
     });
 
-    it('should exclude specified agent when excludeAgentId is provided', async () => {
+    it('should exclude specified actor when excludeActorId is provided', async () => {
       const mockUser2 = { id: 'user-2' } as any;
       membershipRepo.find.mockResolvedValue([
         { conversationId: 'conv-1', actorID: 'agent-1' },
@@ -560,14 +560,14 @@ describe('ConversationService', () => {
     });
   });
 
-  describe('getConversationMemberAgentIds', () => {
-    it('should return array of agent IDs from memberships', async () => {
+  describe('getConversationMemberActorIds', () => {
+    it('should return array of actor IDs from memberships', async () => {
       membershipRepo.find.mockResolvedValue([
         { actorID: 'agent-1' },
         { actorID: 'agent-2' },
       ] as any);
 
-      const result = await service.getConversationMemberAgentIds('conv-1');
+      const result = await service.getConversationMemberActorIds('conv-1');
 
       expect(result).toEqual(['agent-1', 'agent-2']);
     });
@@ -575,7 +575,7 @@ describe('ConversationService', () => {
     it('should return empty array when no memberships exist', async () => {
       membershipRepo.find.mockResolvedValue([]);
 
-      const result = await service.getConversationMemberAgentIds('conv-1');
+      const result = await service.getConversationMemberActorIds('conv-1');
 
       expect(result).toEqual([]);
     });

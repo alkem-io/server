@@ -220,8 +220,8 @@ describe('MessagingService', () => {
       await expect(
         service.createConversation({
           type: 'direct' as any,
-          callerAgentId: 'agent-1',
-          memberAgentIds: ['agent-2', 'agent-3'],
+          callerActorId: 'agent-1',
+          memberActorIds: ['agent-2', 'agent-3'],
         })
       ).rejects.toThrow(ValidationException);
     });
@@ -230,7 +230,7 @@ describe('MessagingService', () => {
       const existingConversation = {
         id: 'conv-1',
       } as unknown as IConversation;
-      conversationService.findConversationBetweenAgents.mockResolvedValue(
+      conversationService.findConversationBetweenActors.mockResolvedValue(
         existingConversation
       );
       conversationService.getConversationOrFail.mockResolvedValue(
@@ -239,12 +239,12 @@ describe('MessagingService', () => {
 
       const result = await service.createConversation({
         type: 'direct' as any,
-        callerAgentId: 'agent-caller',
-        memberAgentIds: ['agent-invited'],
+        callerActorId: 'agent-caller',
+        memberActorIds: ['agent-invited'],
       });
 
       expect(
-        conversationService.findConversationBetweenAgents
+        conversationService.findConversationBetweenActors
       ).toHaveBeenCalledWith('agent-caller', 'agent-invited');
       expect(result).toBe(existingConversation);
       expect(conversationService.createConversation).not.toHaveBeenCalled();

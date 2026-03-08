@@ -110,11 +110,16 @@ export class MessagingService {
    * Create a conversation on the platform messaging.
    * DIRECT: dedup check (returns existing if found), exactly 1 member required.
    * GROUP: always creates new, N members.
-   * Works with agent IDs — callers resolve user/VC IDs to agent IDs.
+   * Works with actor IDs — callers resolve user/VC IDs to actor IDs.
    */
   public async createConversation(
     conversationData: CreateConversationData
   ): Promise<IConversation> {
+    // Normalize: deduplicate and remove self from member list
+    const normalizedMemberActorIds = [
+      ...new Set(conversationData.memberActorIds),
+    ].filter(id => id !== conversationData.callerActorId);
+
     const isDirect = conversationData.type === ConversationCreationType.DIRECT;
     const roomType = isDirect
       ? RoomType.CONVERSATION_DIRECT
@@ -122,7 +127,7 @@ export class MessagingService {
 
     // DIRECT-specific: validate member count + dedup
     if (isDirect) {
-      if (conversationData.memberAgentIds.length !== 1) {
+      if (normalizedMemberActorIds.length !== 1) {
         throw new ValidationException(
           'DIRECT conversations require exactly 1 memberID',
           LogContext.COMMUNICATION_CONVERSATION
@@ -130,9 +135,9 @@ export class MessagingService {
       }
 
       const existing =
-        await this.conversationService.findConversationBetweenAgents(
-          conversationData.callerAgentId,
-          conversationData.memberAgentIds[0]
+        await this.conversationService.findConversationBetweenActors(
+          conversationData.callerActorId,
+          normalizedMemberActorIds[0]
         );
       if (existing) {
         return await this.conversationService.getConversationOrFail(
@@ -140,14 +145,19 @@ export class MessagingService {
           { relations: { authorization: true, room: true } }
         );
       }
+    } else if (normalizedMemberActorIds.length < 1) {
+      throw new ValidationException(
+        'GROUP conversations require at least 1 memberID',
+        LogContext.COMMUNICATION_CONVERSATION
+      );
     }
 
     // Create conversation, assign to platform messaging, apply auth, publish event
     const messaging = await this.getPlatformMessaging();
 
     const conversation = await this.conversationService.createConversation(
-      conversationData.callerAgentId,
-      conversationData.memberAgentIds,
+      conversationData.callerActorId,
+      normalizedMemberActorIds,
       roomType,
       conversationData.displayName,
       conversationData.avatarUrl
@@ -168,10 +178,7 @@ export class MessagingService {
       });
 
     const allMemberIds = [
-      ...new Set([
-        conversationData.callerAgentId,
-        ...conversationData.memberAgentIds,
-      ]),
+      ...new Set([conversationData.callerActorId, ...normalizedMemberActorIds]),
     ];
 
     await this.publishConversationCreatedEvents(fullConversation, allMemberIds);
@@ -189,37 +196,37 @@ export class MessagingService {
    */
   private async publishConversationCreatedEvents(
     conversation: IConversation,
-    memberAgentIds: string[]
+    memberActorIds: string[]
   ): Promise<void> {
     await this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
-      memberAgentIds,
+      memberActorIds,
       conversationCreated: {
         conversation,
       },
     });
 
     this.logger.verbose?.(
-      `Published conversationCreated event for conversation ${conversation.id} to ${memberAgentIds.length} members`,
+      `Published conversationCreated event for conversation ${conversation.id} to ${memberActorIds.length} members`,
       LogContext.COMMUNICATION
     );
   }
 
   /**
    * Create a direct conversation with a well-known virtual contributor.
-   * Resolves the well-known VC to its agent ID, then delegates to createConversation.
+   * Resolves the well-known VC to its actor ID, then delegates to createConversation.
    */
   public async createConversationWithWellKnownVC(
-    callerAgentId: string,
+    callerActorId: string,
     wellKnownVC: VirtualContributorWellKnown
   ): Promise<IConversation> {
-    const vcAgentId =
-      await this.conversationService.resolveWellKnownVCAgentId(wellKnownVC);
+    const vcActorId =
+      await this.conversationService.resolveWellKnownVCActorId(wellKnownVC);
 
     return this.createConversation({
       type: ConversationCreationType.DIRECT,
-      callerAgentId,
-      memberAgentIds: [vcAgentId],
+      callerActorId,
+      memberActorIds: [vcActorId],
     });
   }
 

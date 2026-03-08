@@ -2,7 +2,15 @@ import { SMALL_TEXT_LENGTH } from '@common/constants';
 import { ConversationCreationType } from '@common/enums/conversation.creation.type';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
-import { MaxLength } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsArray,
+  IsEnum,
+  IsOptional,
+  IsUUID,
+  Matches,
+  MaxLength,
+} from 'class-validator';
 
 /**
  * GraphQL input for creating a conversation.
@@ -16,12 +24,16 @@ export class CreateConversationInput {
     description:
       'The type of conversation to create: DIRECT for 1-on-1, GROUP for multi-party.',
   })
+  @IsEnum(ConversationCreationType)
   type!: ConversationCreationType;
 
   @Field(() => [UUID], {
     description:
       'IDs of members to add. For DIRECT: exactly 1 ID. For GROUP: 1+ IDs. Creator is auto-included.',
   })
+  @IsArray()
+  @ArrayMinSize(1)
+  @IsUUID('4', { each: true })
   memberIDs!: string[];
 
   @Field(() => String, {
@@ -29,6 +41,7 @@ export class CreateConversationInput {
     description:
       'Optional display name for GROUP conversations. Ignored for DIRECT conversations (Synapse uses the other member name automatically).',
   })
+  @IsOptional()
   @MaxLength(SMALL_TEXT_LENGTH)
   displayName?: string;
 
@@ -37,22 +50,26 @@ export class CreateConversationInput {
     description:
       'Optional avatar URL for GROUP conversations. Ignored for DIRECT conversations. Accepts mxc:// or https:// URLs.',
   })
+  @IsOptional()
+  @Matches(/^(mxc:\/\/|https:\/\/).+$/, {
+    message: 'avatarUrl must be an mxc:// or https:// URL',
+  })
   avatarUrl?: string;
 }
 
 /**
  * Internal DTO for creating a conversation.
- * Uses pure agent IDs — callers are responsible for resolution.
+ * Uses actor IDs — callers are responsible for resolution.
  */
 export interface CreateConversationData {
   /** The type of conversation to create */
   type: ConversationCreationType;
 
   /** Actor ID of the caller (creator of the conversation) */
-  callerAgentId: string;
+  callerActorId: string;
 
   /** Actor IDs of the invited members (excluding the caller) */
-  memberAgentIds: string[];
+  memberActorIds: string[];
 
   /** Optional display name for GROUP conversations */
   displayName?: string;

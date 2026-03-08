@@ -42,13 +42,12 @@ export class ConversationResolverFields {
   ): Promise<IActor[]> {
     const memberships = await convoMembershipsLoader.load(conversation.id);
 
-    const actors: IActor[] = [];
-    for (const membership of memberships) {
-      const actor = await contributorByAgentLoader.load(membership.actorID);
-      if (actor) {
-        actors.push(actor);
-      }
-    }
-    return actors;
+    const actors = await Promise.all(
+      memberships.map(membership =>
+        contributorByAgentLoader.load(membership.actorID)
+      )
+    );
+
+    return actors.filter((actor): actor is IActor => actor !== null);
   }
 }

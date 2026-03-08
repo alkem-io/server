@@ -45,7 +45,7 @@ export class ConversationEventResolverSubscription {
         }
 
         // User must be a member of the conversation
-        const isMember = payload.memberAgentIds.includes(actorContext.actorID);
+        const isMember = payload.memberActorIds.includes(actorContext.actorID);
 
         this.logger.verbose?.(
           `[Conversation Events] Filtering event ${payload.eventID} for user ${actorContext.actorID}: member=${isMember}`,

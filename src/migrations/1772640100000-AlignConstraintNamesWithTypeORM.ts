@@ -97,8 +97,9 @@ export class AlignConstraintNamesWithTypeORM1772640100000
     await queryRunner.query(
       `ALTER TABLE "conversation_membership" DROP CONSTRAINT "FK_conversation_membership_actorId"`
     );
-    // TypeORM does not generate an explicit FK for conversation_membership.actorId
-    // (it's a composite PK member without @ManyToOne to actor), so just drop the old one.
+    await queryRunner.query(
+      `ALTER TABLE "conversation_membership" ADD CONSTRAINT "FK_01cf61a0048fa466394a9e47c2" FOREIGN KEY ("actorId") REFERENCES "actor"("id") ON DELETE CASCADE ON UPDATE NO ACTION`
+    );
 
     // --- Indexes ---
 
@@ -199,6 +200,9 @@ export class AlignConstraintNamesWithTypeORM1772640100000
     );
 
     // Restore FKs with original names
+    await queryRunner.query(
+      `ALTER TABLE "conversation_membership" DROP CONSTRAINT "FK_01cf61a0048fa466394a9e47c2"`
+    );
     await queryRunner.query(
       `ALTER TABLE "conversation_membership" ADD CONSTRAINT "FK_conversation_membership_actorId" FOREIGN KEY ("actorId") REFERENCES "actor"("id") ON DELETE CASCADE ON UPDATE NO ACTION`
     );

@@ -396,14 +396,14 @@ export class MessageInboxService {
       await this.conversationService.getConversationOrFail(conversationId);
 
     // Publish MEMBER_ADDED to all members (including the new one)
-    const memberAgentIds =
-      await this.conversationService.getConversationMemberAgentIds(
+    const memberActorIds =
+      await this.conversationService.getConversationMemberActorIds(
         conversationId
       );
 
     this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
-      memberAgentIds,
+      memberActorIds,
       memberAdded: {
         conversation,
         addedMember: addedActor,
@@ -427,8 +427,8 @@ export class MessageInboxService {
     memberActorId: string
   ): Promise<void> {
     // Collect member IDs before removal (so removed member also receives the event)
-    const memberAgentIdsBefore =
-      await this.conversationService.getConversationMemberAgentIds(
+    const memberActorIdsBefore =
+      await this.conversationService.getConversationMemberActorIds(
         conversationId
       );
 
@@ -442,26 +442,21 @@ export class MessageInboxService {
     const conversation =
       await this.conversationService.getConversationOrFail(conversationId);
 
-    // Publish MEMBER_REMOVED to all members (including the removed one)
-    this.subscriptionPublishService.publishConversationEvent({
-      eventID: `conversation-event-${randomUUID()}`,
-      memberAgentIds: memberAgentIdsBefore,
-      memberRemoved: {
-        conversation,
-        removedMemberID: memberActorId,
-      },
-    });
-
-    this.logger.verbose?.(
-      `Published MEMBER_REMOVED event for conversation ${conversationId}, member ${memberActorId}, remaining=${remainingCount}`,
-      LogContext.COMMUNICATION
-    );
-
     if (remainingCount === 0) {
+      // Publish MEMBER_REMOVED before deleting
+      this.subscriptionPublishService.publishConversationEvent({
+        eventID: `conversation-event-${randomUUID()}`,
+        memberActorIds: memberActorIdsBefore,
+        memberRemoved: {
+          conversation,
+          removedMemberID: memberActorId,
+        },
+      });
+
       // Auto-delete empty conversation
       this.subscriptionPublishService.publishConversationEvent({
         eventID: `conversation-event-${randomUUID()}`,
-        memberAgentIds: memberAgentIdsBefore,
+        memberActorIds: memberActorIdsBefore,
         conversationDeleted: {
           conversationID: conversationId,
         },
@@ -470,16 +465,31 @@ export class MessageInboxService {
       await this.conversationService.deleteConversation(conversationId);
 
       this.logger.verbose?.(
-        `Auto-deleted empty conversation ${conversationId}`,
+        `Auto-deleted empty conversation ${conversationId}, published MEMBER_REMOVED + CONVERSATION_DELETED`,
         LogContext.COMMUNICATION
       );
     } else {
-      // Re-apply authorization policy with updated membership
+      // Re-apply authorization policy BEFORE publishing event
       const authorizations =
         await this.conversationAuthorizationService.applyAuthorizationPolicy(
           conversationId
         );
       await this.authorizationPolicyService.saveAll(authorizations);
+
+      // Publish MEMBER_REMOVED after auth is updated
+      this.subscriptionPublishService.publishConversationEvent({
+        eventID: `conversation-event-${randomUUID()}`,
+        memberActorIds: memberActorIdsBefore,
+        memberRemoved: {
+          conversation,
+          removedMemberID: memberActorId,
+        },
+      });
+
+      this.logger.verbose?.(
+        `Published MEMBER_REMOVED event for conversation ${conversationId}, member ${memberActorId}, remaining=${remainingCount}`,
+        LogContext.COMMUNICATION
+      );
     }
   }
 
@@ -569,14 +579,14 @@ export class MessageInboxService {
       return;
     }
 
-    const memberAgentIds =
-      await this.conversationService.getConversationMemberAgentIds(
+    const memberActorIds =
+      await this.conversationService.getConversationMemberActorIds(
         conversation.id
       );
 
     this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
-      memberAgentIds,
+      memberActorIds,
       messageReceived: {
         roomId: room.id,
         message,
@@ -603,14 +613,14 @@ export class MessageInboxService {
       return;
     }
 
-    const memberAgentIds =
-      await this.conversationService.getConversationMemberAgentIds(
+    const memberActorIds =
+      await this.conversationService.getConversationMemberActorIds(
         conversation.id
       );
 
     this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
-      memberAgentIds,
+      memberActorIds,
       messageRemoved: {
         roomId: room.id,
         messageId,
@@ -628,7 +638,7 @@ export class MessageInboxService {
   ): Promise<void> {
     this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
-      memberAgentIds: [payload.actorID], // Only the reader receives this event
+      memberActorIds: [payload.actorID], // Only the reader receives this event
       readReceiptUpdated: {
         roomId: room.id,
         lastReadMessageId: payload.eventId,
@@ -648,14 +658,14 @@ export class MessageInboxService {
       return;
     }
 
-    const memberAgentIds =
-      await this.conversationService.getConversationMemberAgentIds(
+    const memberActorIds =
+      await this.conversationService.getConversationMemberActorIds(
         conversation.id
       );
 
     this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
-      memberAgentIds,
+      memberActorIds,
       conversationUpdated: {
         conversation,
       },

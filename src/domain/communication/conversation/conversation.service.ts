@@ -64,21 +64,21 @@ export class ConversationService {
    * Deduplicates member IDs. Validates at least 2 members.
    *
    * For DIRECT conversations, the caller is responsible for dedup checks
-   * (see findConversationBetweenAgents).
+   * (see findConversationBetweenActors).
    *
-   * @param creatorAgentId - Actor ID of the creator (auto-included as member)
-   * @param memberAgentIds - Actor IDs of the other members
+   * @param creatorActorId - Actor ID of the creator (auto-included as member)
+   * @param memberActorIds - Actor IDs of the other members
    * @param roomType - CONVERSATION_DIRECT or CONVERSATION_GROUP
    * @returns The created conversation
    */
   public async createConversation(
-    creatorAgentId: string,
-    memberAgentIds: string[],
+    creatorActorId: string,
+    memberActorIds: string[],
     roomType: RoomType,
     displayName?: string,
     avatarUrl?: string
   ): Promise<IConversation> {
-    const allMemberIds = [...new Set([creatorAgentId, ...memberAgentIds])];
+    const allMemberIds = [...new Set([creatorActorId, ...memberActorIds])];
 
     if (allMemberIds.length < 2) {
       throw new ValidationException(
@@ -514,10 +514,10 @@ export class ConversationService {
   }
 
   /**
-   * Check if an agent is a member of a conversation.
+   * Check if an actor is a member of a conversation.
    * @param conversationId - UUID of the conversation
-   * @param actorID - UUID of the agent
-   * @returns true if the agent is a member, false otherwise
+   * @param actorID - UUID of the actor
+   * @returns true if the actor is a member, false otherwise
    */
   async isConversationMember(
     conversationId: string,
@@ -530,17 +530,17 @@ export class ConversationService {
   }
 
   /**
-   * Find an existing conversation between two agents.
-   * Uses the pivot table to find conversations where both agents are members.
+   * Find an existing conversation between two actors.
+   * Uses the pivot table to find conversations where both actors are members.
    * Performance: Self-join on pivot table with indexed foreign keys provides efficient lookups.
    * Query execution: < 10ms typical for indexed actor_id columns.
-   * @param agentId1 - UUID of first agent
-   * @param agentId2 - UUID of second agent
+   * @param actorId1 - UUID of first actor
+   * @param actorId2 - UUID of second actor
    * @returns The conversation if found, null otherwise
    */
-  async findConversationBetweenAgents(
-    agentId1: string,
-    agentId2: string
+  async findConversationBetweenActors(
+    actorId1: string,
+    actorId2: string
   ): Promise<IConversation | null> {
     const result = await this.conversationMembershipRepository
       .createQueryBuilder('m1')
@@ -551,8 +551,8 @@ export class ConversationService {
       )
       .innerJoinAndSelect('m1.conversation', 'conversation')
       .leftJoinAndSelect('conversation.authorization', 'authorization')
-      .where('m1.actorID = :agentId1', { agentId1 })
-      .andWhere('m2.actorID = :agentId2', { agentId2 })
+      .where('m1.actorID = :actorId1', { actorId1 })
+      .andWhere('m2.actorID = :actorId2', { actorId2 })
       .getOne();
 
     return result?.conversation || null;
@@ -560,7 +560,7 @@ export class ConversationService {
 
   /**
    * Find a conversation between a user and a well-known virtual contributor.
-   * Uses the efficient findConversationBetweenAgents query.
+   * Uses the efficient findConversationBetweenActors query.
    * @param userID - UUID of the user
    * @param wellKnown - The well-known VC enum value
    * @returns The conversation if found, null otherwise
@@ -568,7 +568,7 @@ export class ConversationService {
   /**
    * Resolve a well-known VC to its agent ID.
    */
-  async resolveWellKnownVCAgentId(
+  async resolveWellKnownVCActorId(
     wellKnown: VirtualContributorWellKnown
   ): Promise<string> {
     const vcId =
@@ -603,17 +603,17 @@ export class ConversationService {
 
     // Get user's actor ID (user.id IS the actor ID in the new model)
     const user = await this.userLookupService.getUserByIdOrFail(userID);
-    const userAgentId = user.id;
+    const userActorId = user.id;
 
     // Get VC's actor ID (vc.id IS the actor ID in the new model)
     const vc =
       await this.virtualActorLookupService.getVirtualContributorByIdOrFail(
         vcId
       );
-    const vcAgentId = vc.id;
+    const vcActorId = vc.id;
 
     // Use efficient self-join query
-    return this.findConversationBetweenAgents(userAgentId, vcAgentId);
+    return this.findConversationBetweenActors(userActorId, vcActorId);
   }
 
   /**
@@ -646,20 +646,20 @@ export class ConversationService {
    * T075: Get the user from a conversation via membership resolution.
    * Replaces direct access to conversation.userID (column dropped).
    * @param conversationId - UUID of the conversation
-   * @param excludeAgentId - Optional agent ID to exclude (for finding "the other user")
+   * @param excludeActorId - Optional actor ID to exclude (for finding "the other user")
    * @returns The user if found, null if conversation has no user member (or only excluded user)
    */
   async getUserFromConversation(
     conversationId: string,
-    excludeAgentId?: string
+    excludeActorId?: string
   ): Promise<IUser | null> {
     const members = await this.getConversationMembers(conversationId);
 
-    // Find a user member, excluding the specified agent if provided
+    // Find a user member, excluding the specified actor if provided
     const userMember = members.find(
       m =>
         m.actorType === ActorType.USER &&
-        (!excludeAgentId || m.actorID !== excludeAgentId)
+        (!excludeActorId || m.actorID !== excludeActorId)
     );
 
     if (!userMember) {
@@ -718,13 +718,13 @@ export class ConversationService {
   }
 
   /**
-   * Get all member agent IDs for a conversation.
+   * Get all member actor IDs for a conversation.
    * Lightweight version of getConversationMembers that returns only IDs.
    * Used for subscription event filtering.
    * @param conversationId - UUID of the conversation
-   * @returns Array of agent IDs
+   * @returns Array of actor IDs
    */
-  async getConversationMemberAgentIds(
+  async getConversationMemberActorIds(
     conversationId: string
   ): Promise<string[]> {
     const memberships = await this.conversationMembershipRepository.find({

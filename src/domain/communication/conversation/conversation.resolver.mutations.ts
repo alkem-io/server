@@ -126,8 +126,8 @@ export class ConversationResolverMutations {
     );
 
     // Collect all member IDs before deletion for event publishing
-    const memberAgentIds =
-      await this.conversationService.getConversationMemberAgentIds(
+    const memberActorIds =
+      await this.conversationService.getConversationMemberActorIds(
         conversation.id
       );
 
@@ -138,7 +138,7 @@ export class ConversationResolverMutations {
     // Publish CONVERSATION_DELETED event to all former members
     await this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
-      memberAgentIds,
+      memberActorIds,
       conversationDeleted: {
         conversationID: conversation.id,
       },

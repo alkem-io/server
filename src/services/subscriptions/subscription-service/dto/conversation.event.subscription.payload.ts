@@ -5,7 +5,7 @@ import { IMessage } from '@domain/communication/message/message.interface';
 
 export interface ConversationEventSubscriptionPayload
   extends BaseSubscriptionPayload {
-  memberAgentIds: string[];
+  memberActorIds: string[];
   conversationCreated?: {
     conversation: IConversation;
     message?: IMessage;

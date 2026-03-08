@@ -4,6 +4,7 @@ import { ConversationCreationType } from '@common/enums/conversation.creation.ty
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { MessagingNotEnabledException } from '@common/exceptions/messaging.not.enabled.exception';
+import { ValidationException } from '@common/exceptions/validation.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
@@ -47,12 +48,12 @@ export class MessagingResolverMutations {
       `create conversation on messaging: ${messaging.id}`
     );
 
-    const callerAgentId = actorContext.actorID;
+    const callerActorId = actorContext.actorID;
 
     // For DIRECT conversations with a user, check messaging settings
     if (conversationData.type === ConversationCreationType.DIRECT) {
       if (conversationData.memberIDs.length !== 1) {
-        throw new EntityNotInitializedException(
+        throw new ValidationException(
           'DIRECT conversations require exactly 1 memberID',
           LogContext.COMMUNICATION_CONVERSATION
         );
@@ -68,8 +69,8 @@ export class MessagingResolverMutations {
     const isGroup = conversationData.type === ConversationCreationType.GROUP;
     const internalData: CreateConversationData = {
       type: conversationData.type,
-      callerAgentId,
-      memberAgentIds: conversationData.memberIDs,
+      callerActorId,
+      memberActorIds: conversationData.memberIDs,
       displayName: isGroup ? conversationData.displayName : undefined,
       avatarUrl: isGroup ? conversationData.avatarUrl : undefined,
     };
