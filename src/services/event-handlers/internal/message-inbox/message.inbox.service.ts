@@ -595,7 +595,7 @@ export class MessageInboxService {
         conversation.id
       );
 
-    this.subscriptionPublishService.publishConversationEvent({
+    await this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
       memberActorIds,
       messageReceived: {
@@ -629,7 +629,7 @@ export class MessageInboxService {
         conversation.id
       );
 
-    this.subscriptionPublishService.publishConversationEvent({
+    await this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
       memberActorIds,
       messageRemoved: {
@@ -647,7 +647,7 @@ export class MessageInboxService {
     room: IRoom,
     payload: RoomReceiptUpdatedEvent['payload']
   ): Promise<void> {
-    this.subscriptionPublishService.publishConversationEvent({
+    await this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
       memberActorIds: [payload.actorID], // Only the reader receives this event
       readReceiptUpdated: {
