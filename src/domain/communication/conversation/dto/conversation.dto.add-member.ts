@@ -2,7 +2,7 @@ import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
 
 @InputType()
-export class AddConversationMemberInput {
+export class AssignConversationMemberInput {
   @Field(() => UUID, {
     description: 'The ID of the conversation to add a member to.',
   })

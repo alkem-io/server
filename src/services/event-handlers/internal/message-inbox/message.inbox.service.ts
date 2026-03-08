@@ -354,6 +354,17 @@ export class MessageInboxService {
       return;
     }
 
+    // Only process membership changes for GROUP conversations.
+    // DIRECT rooms have a fixed 2-member invariant — Matrix should never
+    // send join/leave for them, but guard defensively.
+    if (room.type !== RoomType.CONVERSATION_GROUP) {
+      this.logger.verbose?.(
+        `Ignoring membership event for non-group conversation room ${room.id} (type=${room.type})`,
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
     if (payload.membership === 'join') {
       await this.handleConversationMemberJoined(
         conversation.id,
@@ -401,7 +412,7 @@ export class MessageInboxService {
         conversationId
       );
 
-    this.subscriptionPublishService.publishConversationEvent({
+    await this.subscriptionPublishService.publishConversationEvent({
       eventID: `conversation-event-${randomUUID()}`,
       memberActorIds,
       memberAdded: {
@@ -444,7 +455,7 @@ export class MessageInboxService {
 
     if (remainingCount === 0) {
       // Publish MEMBER_REMOVED before deleting
-      this.subscriptionPublishService.publishConversationEvent({
+      await this.subscriptionPublishService.publishConversationEvent({
         eventID: `conversation-event-${randomUUID()}`,
         memberActorIds: memberActorIdsBefore,
         memberRemoved: {
@@ -453,16 +464,16 @@ export class MessageInboxService {
         },
       });
 
-      // Auto-delete empty conversation
-      this.subscriptionPublishService.publishConversationEvent({
+      // Delete first, then notify — so clients never see a deletion that didn't commit
+      await this.conversationService.deleteConversation(conversationId);
+
+      await this.subscriptionPublishService.publishConversationEvent({
         eventID: `conversation-event-${randomUUID()}`,
         memberActorIds: memberActorIdsBefore,
         conversationDeleted: {
           conversationID: conversationId,
         },
       });
-
-      await this.conversationService.deleteConversation(conversationId);
 
       this.logger.verbose?.(
         `Auto-deleted empty conversation ${conversationId}, published MEMBER_REMOVED + CONVERSATION_DELETED`,
@@ -477,7 +488,7 @@ export class MessageInboxService {
       await this.authorizationPolicyService.saveAll(authorizations);
 
       // Publish MEMBER_REMOVED after auth is updated
-      this.subscriptionPublishService.publishConversationEvent({
+      await this.subscriptionPublishService.publishConversationEvent({
         eventID: `conversation-event-${randomUUID()}`,
         memberActorIds: memberActorIdsBefore,
         memberRemoved: {

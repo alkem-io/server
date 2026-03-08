@@ -577,8 +577,9 @@ export class ConversationService {
       );
     if (!vcId) {
       throw new ValidationException(
-        `Well-known virtual contributor not found: ${wellKnown}`,
-        LogContext.COMMUNICATION_CONVERSATION
+        'Well-known virtual contributor not found',
+        LogContext.COMMUNICATION_CONVERSATION,
+        { wellKnown }
       );
     }
     const vc =

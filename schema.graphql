@@ -3437,10 +3437,6 @@ type ModelCardSpaceUsageResult {
 }
 
 type Mutation {
-  """
-  Add a member to a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_ADDED subscription event.
-  """
-  addConversationMember(memberData: AddConversationMemberInput!): Boolean!
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Adds a full email address to the platform notification blacklist"""
@@ -3499,6 +3495,10 @@ type Mutation {
   aiServerUpdateAiPersona(aiPersonaData: UpdateAiPersonaInput!): AiPersona!
   """Apply to join the specified RoleSet in the entry Role."""
   applyForEntryRoleOnRoleSet(applicationData: ApplyForEntryRoleOnRoleSetInput!): Application!
+  """
+  Assign a member to a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_ADDED subscription event.
+  """
+  assignConversationMember(memberData: AssignConversationMemberInput!): Boolean!
   """Assign the specified LicensePlan to an Account."""
   assignLicensePlanToAccount(planData: AssignLicensePlanToAccount!): Account!
   """Assign the specified LicensePlan to a Space."""
@@ -6274,13 +6274,6 @@ input ActorFilterInput {
   credentials: [AuthorizationCredential!]
 }
 
-input AddConversationMemberInput {
-  """The ID of the conversation to add a member to."""
-  conversationID: UUID!
-  """The ID of the member (user or VC) to add."""
-  memberID: UUID!
-}
-
 input AddVisualToMediaGalleryInput {
   """The ID of the media gallery."""
   mediaGalleryID: String!
@@ -6300,6 +6293,13 @@ input ApplicationEventInput {
 input ApplyForEntryRoleOnRoleSetInput {
   questions: [CreateNVPInput!]!
   roleSetID: UUID!
+}
+
+input AssignConversationMemberInput {
+  """The ID of the conversation to add a member to."""
+  conversationID: UUID!
+  """The ID of the member (user or VC) to add."""
+  memberID: UUID!
 }
 
 input AssignLicensePlanToAccount {

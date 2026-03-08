@@ -15,7 +15,7 @@ import { randomUUID } from 'crypto';
 import { IConversation } from './conversation.interface';
 import { ConversationService } from './conversation.service';
 import { ConversationAuthorizationService } from './conversation.service.authorization';
-import { AddConversationMemberInput } from './dto/conversation.dto.add-member';
+import { AssignConversationMemberInput } from './dto/conversation.dto.add-member';
 import { DeleteConversationInput } from './dto/conversation.dto.delete';
 import { LeaveConversationInput } from './dto/conversation.dto.leave';
 import { RemoveConversationMemberInput } from './dto/conversation.dto.remove-member';
@@ -149,12 +149,12 @@ export class ConversationResolverMutations {
 
   @Mutation(() => Boolean, {
     description:
-      'Add a member to a group conversation. Returns true when the RPC is sent. ' +
+      'Assign a member to a group conversation. Returns true when the RPC is sent. ' +
       'Actual membership change arrives via MEMBER_ADDED subscription event.',
   })
-  async addConversationMember(
+  async assignConversationMember(
     @CurrentActor() actorContext: ActorContext,
-    @Args('memberData') memberData: AddConversationMemberInput
+    @Args('memberData') memberData: AssignConversationMemberInput
   ): Promise<boolean> {
     const conversation = await this.conversationService.getConversationOrFail(
       memberData.conversationID,

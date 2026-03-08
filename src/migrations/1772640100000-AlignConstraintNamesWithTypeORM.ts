@@ -98,7 +98,7 @@ export class AlignConstraintNamesWithTypeORM1772640100000
       `ALTER TABLE "conversation_membership" DROP CONSTRAINT "FK_conversation_membership_actorId"`
     );
     await queryRunner.query(
-      `ALTER TABLE "conversation_membership" ADD CONSTRAINT "FK_01cf61a0048fa466394a9e47c2" FOREIGN KEY ("actorId") REFERENCES "actor"("id") ON DELETE CASCADE ON UPDATE NO ACTION`
+      `ALTER TABLE "conversation_membership" ADD CONSTRAINT "FK_01cf61a0048fa466394a9e47c2c" FOREIGN KEY ("actorId") REFERENCES "actor"("id") ON DELETE CASCADE ON UPDATE NO ACTION`
     );
 
     // --- Indexes ---
@@ -116,9 +116,15 @@ export class AlignConstraintNamesWithTypeORM1772640100000
       `DROP INDEX "public"."IDX_conversation_membership_actorId"`
     );
 
-    // TypeORM auto-generates this index name for conversation_membership.actorId
+    // Recreate indexes with TypeORM-generated names (same hash as FK)
     await queryRunner.query(
-      `CREATE INDEX "IDX_01cf61a0048fa466394a9e47c2" ON "conversation_membership" ("actorId")`
+      `CREATE INDEX "IDX_f4a4d364457d7cb4c31a0a64b5" ON "credential" ("actorId")`
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_48cd51e911d1d7e13661ba4a05" ON "in_app_notification" ("contributorActorId")`
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_01cf61a0048fa466394a9e47c2c" ON "conversation_membership" ("actorId")`
     );
 
     // Note: IDX_actor_type and UQ_actor_nameID_* are partial/conditional indexes
@@ -130,6 +136,9 @@ export class AlignConstraintNamesWithTypeORM1772640100000
     // ===================================================================
     await queryRunner.query(
       `ALTER TABLE "invitation" ADD CONSTRAINT "FK_82cb26926bb13032087af2b116a" FOREIGN KEY ("createdBy") REFERENCES "actor"("id") ON DELETE SET NULL ON UPDATE NO ACTION`
+    );
+    await queryRunner.query(
+      `CREATE INDEX "IDX_82cb26926bb13032087af2b116" ON "invitation" ("createdBy")`
     );
 
     // ===================================================================
@@ -177,14 +186,23 @@ export class AlignConstraintNamesWithTypeORM1772640100000
       `ALTER TABLE "actor" DROP CONSTRAINT "UQ_a2afa3851ea733de932251b3a1f"`
     );
 
-    // Remove invitation.createdBy FK
+    // Remove invitation.createdBy FK + index
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_82cb26926bb13032087af2b116"`
+    );
     await queryRunner.query(
       `ALTER TABLE "invitation" DROP CONSTRAINT "FK_82cb26926bb13032087af2b116a"`
     );
 
-    // Restore indexes
+    // Restore indexes with original hand-written names
     await queryRunner.query(
-      `DROP INDEX "public"."IDX_01cf61a0048fa466394a9e47c2"`
+      `DROP INDEX "public"."IDX_01cf61a0048fa466394a9e47c2c"`
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_48cd51e911d1d7e13661ba4a05"`
+    );
+    await queryRunner.query(
+      `DROP INDEX "public"."IDX_f4a4d364457d7cb4c31a0a64b5"`
     );
     await queryRunner.query(
       `CREATE INDEX "IDX_conversation_membership_actorId" ON "conversation_membership" ("actorId")`
@@ -201,7 +219,7 @@ export class AlignConstraintNamesWithTypeORM1772640100000
 
     // Restore FKs with original names
     await queryRunner.query(
-      `ALTER TABLE "conversation_membership" DROP CONSTRAINT "FK_01cf61a0048fa466394a9e47c2"`
+      `ALTER TABLE "conversation_membership" DROP CONSTRAINT "FK_01cf61a0048fa466394a9e47c2c"`
     );
     await queryRunner.query(
       `ALTER TABLE "conversation_membership" ADD CONSTRAINT "FK_conversation_membership_actorId" FOREIGN KEY ("actorId") REFERENCES "actor"("id") ON DELETE CASCADE ON UPDATE NO ACTION`
