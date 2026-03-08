@@ -331,6 +331,11 @@ export class MessageInboxService {
   async handleRoomMemberUpdated(event: RoomMemberUpdatedEvent): Promise<void> {
     const { payload } = event;
 
+    // Only process join/leave — ignore invite, ban, etc.
+    if (payload.membership !== 'join' && payload.membership !== 'leave') {
+      return;
+    }
+
     this.logger.verbose?.(
       `Processing room member updated: roomId=${payload.roomId}, memberActorID=${payload.memberActorID}, membership=${payload.membership}`,
       LogContext.COMMUNICATION
