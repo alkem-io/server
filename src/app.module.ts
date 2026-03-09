@@ -266,7 +266,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
             'graphql-ws': {
               onNext: (ctx, message, args, result) => {
                 const context = args.contextValue as IGraphQLContext;
-                const expiry = context.req.user.expiry;
+                const expiry = context.req?.user?.expiry;
                 // if the session has expired, close the socket
                 if (expiry && expiry < Date.now()) {
                   (ctx as WebsocketContext).extra.socket.close(
