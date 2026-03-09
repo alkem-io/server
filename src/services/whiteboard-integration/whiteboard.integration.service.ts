@@ -108,8 +108,12 @@ export class WhiteboardIntegrationService {
     // Anonymous users without a guest name are viewing via the normal space
     // route (not the public whiteboard URL). They should not receive write
     // access from the whiteboard's guest-access credential rule.
-    const isAnonymousWithoutGuestName =
-      this.isGuestUserIdentifier(userId) && !guestName?.trim();
+    // A `guest-*` userId (assigned by `who()`) indicates a legitimate guest
+    // who provided a name, so only block truly anonymous identifiers.
+    const normalizedUserId = userId?.trim().toLowerCase() ?? '';
+    const isTrulyAnonymous =
+      normalizedUserId.length === 0 || normalizedUserId === 'n/a';
+    const isAnonymousWithoutGuestName = isTrulyAnonymous && !guestName?.trim();
 
     const update = isAnonymousWithoutGuestName
       ? false

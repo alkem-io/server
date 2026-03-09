@@ -148,4 +148,54 @@ describe('WhiteboardIntegrationService - guest handling', () => {
       'Guest collaborator'
     );
   });
+
+  describe('info() – anonymous vs guest write access', () => {
+    beforeEach(() => {
+      whiteboardService.isMultiUser = vi.fn().mockResolvedValue(true);
+    });
+
+    it('denies write access for truly anonymous users (empty userId, no guestName)', async () => {
+      const result = await service.info({
+        userId: '',
+        whiteboardId: 'whiteboard-1',
+        guestName: '',
+      } as any);
+
+      expect(result.read).toBe(true);
+      expect(result.update).toBe(false);
+    });
+
+    it('denies write access for N/A userId without guestName', async () => {
+      const result = await service.info({
+        userId: 'N/A',
+        whiteboardId: 'whiteboard-1',
+        guestName: '',
+      } as any);
+
+      expect(result.read).toBe(true);
+      expect(result.update).toBe(false);
+    });
+
+    it('grants write access for guest-<uuid> userId even without guestName in info()', async () => {
+      const result = await service.info({
+        userId: 'guest-abc-123',
+        whiteboardId: 'whiteboard-1',
+        guestName: '',
+      } as any);
+
+      expect(result.read).toBe(true);
+      expect(result.update).toBe(true);
+    });
+
+    it('grants write access when guestName is provided with empty userId', async () => {
+      const result = await service.info({
+        userId: '',
+        whiteboardId: 'whiteboard-1',
+        guestName: 'Nick',
+      } as any);
+
+      expect(result.read).toBe(true);
+      expect(result.update).toBe(true);
+    });
+  });
 });
