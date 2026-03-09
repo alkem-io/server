@@ -193,14 +193,14 @@ export class WhiteboardIntegrationService {
       );
     const wb = await this.whiteboardService.getProfile(whiteboardId);
 
-    users.forEach(({ id, email }) => {
+    users.forEach(({ id }) => {
       this.contributionReporter.whiteboardContribution(
         {
           id: whiteboardId,
           name: wb.displayName,
           space: levelZeroSpaceID,
         },
-        { id, email }
+        { actorID: id }
       );
     });
   }

@@ -1,6 +1,6 @@
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
+import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
@@ -262,7 +262,7 @@ export class CalloutResolverMutations {
     if (
       !callout.settings.contribution.enabled ||
       callout.settings.contribution.canAddContributions ===
-        CalloutAllowedContributors.NONE
+        CalloutAllowedActors.NONE
     ) {
       throw new CalloutClosedException(
         `New contributions to a closed Callout with id: '${callout.id}' are not allowed!`
@@ -271,7 +271,7 @@ export class CalloutResolverMutations {
 
     if (
       callout.settings.contribution.canAddContributions ===
-      CalloutAllowedContributors.ADMINS
+      CalloutAllowedActors.ADMINS
     ) {
       if (
         !this.authorizationService.isAccessGranted(
@@ -434,10 +434,7 @@ export class CalloutResolverMutations {
         name: link.profile.displayName,
         space: levelZeroSpaceID,
       },
-      {
-        id: actorContext.actorID,
-        email: actorContext.actorID,
-      }
+      actorContext
     );
   }
 
@@ -471,10 +468,7 @@ export class CalloutResolverMutations {
         name: whiteboard.nameID,
         space: levelZeroSpaceID,
       },
-      {
-        id: actorContext.actorID,
-        email: actorContext.actorID,
-      }
+      actorContext
     );
   }
 
@@ -509,10 +503,7 @@ export class CalloutResolverMutations {
         name: post.profile.displayName,
         space: levelZeroSpaceID,
       },
-      {
-        id: actorContext.actorID,
-        email: actorContext.actorID,
-      }
+      actorContext
     );
   }
 
@@ -547,10 +538,7 @@ export class CalloutResolverMutations {
         name: memo.nameID,
         space: levelZeroSpaceID,
       },
-      {
-        id: actorContext.actorID,
-        email: actorContext.actorID,
-      }
+      actorContext
     );
   }
 

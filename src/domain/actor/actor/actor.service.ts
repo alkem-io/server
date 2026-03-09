@@ -26,12 +26,19 @@ import { IActor } from './actor.interface';
  * Determines the ActorType of a given actor.
  * Uses the type discriminator field on IActor.
  */
-export const getContributorType = (actor: IActor): ActorType => {
+export const getActorType = (actor: IActor): ActorType => {
   if (!actor.type) {
-    throw new Error(`Unable to determine contributor type for ${actor.id}`);
+    throw new EntityNotInitializedException(
+      'Unable to determine actor type',
+      LogContext.COMMUNITY,
+      { actorID: actor.id }
+    );
   }
   return actor.type;
 };
+
+/** @deprecated Use getActorType instead */
+export const getContributorType = getActorType;
 
 /** @deprecated Use ActorAuthorizationService instead */
 export {

@@ -439,7 +439,9 @@ type ActivityLogEntryCalloutWhiteboardCreated implements ActivityLogEntry {
 }
 
 type ActivityLogEntryMemberJoined implements ActivityLogEntry {
-  """The type of the Contributor that joined the Community."""
+  """The Actor that joined the Community."""
+  actor: Actor!
+  """The type of the Actor that joined the Community."""
   actorType: ActorType!
   """
   Indicates if this Activity happened on a child Collaboration. Child results can be included via the "includeChild" parameter.
@@ -451,8 +453,6 @@ type ActivityLogEntryMemberJoined implements ActivityLogEntry {
   collaborationID: UUID!
   """The community that was joined."""
   community: Community!
-  """The Contributor that joined the Community."""
-  contributor: Actor!
   """The timestamp for the Activity."""
   createdDate: DateTime!
   """The text details for this Activity."""
@@ -606,7 +606,7 @@ type ActorRoles {
     """The state names you want to filter on"""
     states: [String!]
   ): [CommunityInvitationForRoleResult!]!
-  """Details of the roles the contributor has in Organizations"""
+  """Details of the roles the actor has in Organizations"""
   organizations: [RolesResultOrganization!]!
   """
   Details of Spaces the User or Organization is a member of, with child memberships - if Space is accessible for the current user.
@@ -684,10 +684,10 @@ type AiServer {
 }
 
 type Application {
+  """The Actor for this Application."""
+  actor: Actor!
   """The authorization rules for the entity"""
   authorization: Authorization
-  """The User for this Application."""
-  contributor: Actor!
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
@@ -994,12 +994,18 @@ type CalendarEvent {
   durationDays: Float
   """The length of the event in minutes."""
   durationMinutes: Float!
+  """Google Calendar add-event URL for this CalendarEvent."""
+  googleCalendarUrl: String
+  """ICS download URL for this CalendarEvent."""
+  icsDownloadUrl: String
   """The ID of the entity"""
   id: UUID!
   """Flag to indicate if this event is for multiple days."""
   multipleDays: Boolean!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
+  """Outlook Calendar add-event URL for this CalendarEvent."""
+  outlookCalendarUrl: String
   """The Profile for this Post."""
   profile: Profile!
   """The start time for this CalendarEvent."""
@@ -1081,7 +1087,7 @@ type Callout {
   updatedDate: DateTime!
 }
 
-enum CalloutAllowedContributors {
+enum CalloutAllowedActors {
   ADMINS
   MEMBERS
   NONE
@@ -1200,7 +1206,7 @@ type CalloutSettingsContribution {
   """The allowed contribution types for this callout."""
   allowedTypes: [CalloutContributionType!]!
   """Indicate who can add more contributions to the callout."""
-  canAddContributions: CalloutAllowedContributors!
+  canAddContributions: CalloutAllowedActors!
   """Can comment to contributions callout."""
   commentsEnabled: Boolean!
   """
@@ -1825,7 +1831,7 @@ type CreateCalloutSettingsContributionData {
   """Allowed Contribution types."""
   allowedTypes: [CalloutContributionType!]
   """Indicate who can add more contributions to the callout."""
-  canAddContributions: CalloutAllowedContributors
+  canAddContributions: CalloutAllowedActors
   """Can comment to contributions callout."""
   commentsEnabled: Boolean
   """
@@ -1838,7 +1844,7 @@ input CreateCalloutSettingsContributionInput {
   """Allowed Contribution types."""
   allowedTypes: [CalloutContributionType!]
   """Indicate who can add more contributions to the callout."""
-  canAddContributions: CalloutAllowedContributors
+  canAddContributions: CalloutAllowedActors
   """Can comment to contributions callout."""
   commentsEnabled: Boolean
   """
@@ -2826,12 +2832,12 @@ type ISearchCategoryResult {
 }
 
 type ISearchResults {
+  """The search results for actors (Users, Organizations)."""
+  actorResults: ISearchCategoryResult!
   """The search results for Callouts."""
   calloutResults: ISearchCategoryResult!
   """The search results for contributions (Posts, Whiteboards, Memos)."""
   contributionResults: ISearchCategoryResult!
-  """The search results for contributors (Users, Organizations)."""
-  contributorResults: ISearchCategoryResult!
   """
   The search results callout framings (Whiteboards, Memos as additional content).
   """
@@ -2862,7 +2868,7 @@ type InAppNotification {
   state: NotificationEventInAppState!
   """The triggered date of the notification event."""
   triggeredAt: DateTime!
-  """The Contributor who triggered the notification."""
+  """The Actor who triggered the notification."""
   triggeredBy: Actor
   """The type of the notification event."""
   type: NotificationEvent!
@@ -3209,21 +3215,21 @@ type InputCreatorQueryResults {
 }
 
 type Invitation {
+  """The Actor who is invited."""
+  actor: Actor!
   """The authorization rules for the entity"""
   authorization: Authorization
-  """The Actor who is invited."""
-  contributor: Actor!
   """The User who triggered the invitation."""
   createdBy: User
   """The date at which the entity was created."""
   createdDate: DateTime!
   """
-  Additional roles to assign to the Contributor, in addition to the entry Role.
+  Additional roles to assign to the Actor, in addition to the entry Role.
   """
   extraRoles: [RoleName!]!
   """The ID of the entity"""
   id: UUID!
-  """Whether to also add the invited contributor to the parent community."""
+  """Whether to also add the invited actor to the parent community."""
   invitedToParent: Boolean!
   """Is this lifecycle in a final state (done)."""
   isFinalized: Boolean!
@@ -3245,8 +3251,8 @@ input InvitationEventInput {
 input InviteForEntryRoleOnRoleSetInput {
   """Additional roles to assign in addition to the entry Role."""
   extraRoles: [RoleName!]!
-  """The identifiers for the contributors being invited."""
-  invitedContributorIDs: [UUID!]!
+  """The identifiers for the actors being invited."""
+  invitedActorIDs: [UUID!]!
   invitedUserEmails: [String!]!
   roleSetID: UUID!
   """The welcome message to send"""
@@ -4020,7 +4026,7 @@ type Mutation {
   """Assigns a User to a role on the Platform."""
   assignPlatformRoleToUser(roleData: AssignPlatformRoleInput!): User!
   """
-  Assigns a Contributor (User, Organization, or Virtual Contributor) to a role in the specified RoleSet.
+  Assigns an Actor (User, Organization, or Virtual Contributor) to a role in the specified RoleSet.
   """
   assignRole(roleData: AssignRoleOnRoleSetInput!): Actor!
   """Assigns an Organization a Role in the specified Community."""
@@ -4216,7 +4222,7 @@ type Mutation {
   """Remove a reaction on a message from the specified Room."""
   removeReactionToMessageInRoom(reactionData: RoomRemoveReactionToMessageInput!): Boolean!
   """
-  Removes a Contributor (User, Organization, or Virtual Contributor) from a role in the specified RoleSet.
+  Removes an Actor (User, Organization, or Virtual Contributor) from a role in the specified RoleSet.
   """
   removeRole(roleData: RemoveRoleOnRoleSetInput!): Actor!
   """Removes an Organization from a Role in the specified Community."""
@@ -4914,7 +4920,7 @@ type PlatformInvitation {
   """Whether a new user profile has been created."""
   profileCreated: Boolean!
   """
-  Additional roles to assign to the Contributor, in addition to the entry Role.
+  Additional roles to assign to the Actor, in addition to the entry Role.
   """
   roleSetExtraRoles: [RoleName!]!
   """Whether to also add the invited user to the parent community."""
@@ -5749,7 +5755,7 @@ type RolesResult {
   id: String!
   """Name Identifier of the entity"""
   nameID: NameID!
-  """The roles held by the contributor"""
+  """The roles held by the actor"""
   roles: [String!]!
 }
 
@@ -5762,7 +5768,7 @@ type RolesResultCommunity {
   level: SpaceLevel!
   """Name Identifier of the entity"""
   nameID: NameID!
-  """The roles held by the contributor"""
+  """The roles held by the actor"""
   roles: [String!]!
 }
 
@@ -5775,7 +5781,7 @@ type RolesResultOrganization {
   nameID: NameID!
   """The Organization ID."""
   organizationID: String!
-  """The roles held by the contributor"""
+  """The roles held by the actor"""
   roles: [String!]!
   """Details of the Groups in the Organizations the user is a member of"""
   userGroups: [RolesResult!]!
@@ -5790,7 +5796,7 @@ type RolesResultSpace {
   level: SpaceLevel!
   """Name Identifier of the entity"""
   nameID: NameID!
-  """The roles held by the contributor"""
+  """The roles held by the actor"""
   roles: [String!]!
   """The Space ID"""
   spaceID: String!
@@ -6350,6 +6356,7 @@ enum SpaceVisibility {
   ACTIVE
   ARCHIVED
   DEMO
+  INACTIVE
 }
 
 type StorageAggregator {
@@ -6898,7 +6905,7 @@ input UpdateCalloutPublishInfoInput {
 
 input UpdateCalloutSettingsContributionInput {
   """Indicate who can add more contributions to the callout."""
-  canAddContributions: CalloutAllowedContributors
+  canAddContributions: CalloutAllowedActors
   """Can comment to contributions callout."""
   commentsEnabled: Boolean
   """

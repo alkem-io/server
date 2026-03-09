@@ -71,10 +71,7 @@ export class SpaceResolverMutations {
         name: updatedSpace.about.profile.displayName,
         space: updatedSpace.id,
       },
-      {
-        id: actorContext.actorID,
-        email: actorContext.actorID,
-      }
+      actorContext
     );
 
     return updatedSpace;
@@ -208,10 +205,7 @@ export class SpaceResolverMutations {
         name: displayName,
         space: space.id, //TODO: should this be a root space ID?
       },
-      {
-        id: actorContext.actorID,
-        email: actorContext.actorID,
-      }
+      actorContext
     );
 
     const level0Space = await this.spaceService.getSpaceOrFail(

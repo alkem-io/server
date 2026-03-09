@@ -472,8 +472,7 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.8.0
-    platform: linux/amd64
+    image: alkemio/whiteboard-collaboration-service:v0.10.1
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -493,8 +492,7 @@ services:
   file-service:
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.2.0
-    platform: linux/amd64
+    image: alkemio/file-service:v0.2.1
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -517,8 +515,7 @@ services:
   collaborative-document:
     container_name: alkemio_dev_collaborative-document
     hostname: collaborative-document
-    image: alkemio/collaborative-document-service:v0.0.1
-    platform: linux/amd64
+    image: alkemio/collaborative-document-service:v0.3.0
     depends_on:
       rabbitmq:
         condition: service_healthy

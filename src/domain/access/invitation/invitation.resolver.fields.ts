@@ -17,7 +17,7 @@ export class InvitationResolverFields {
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
-  @ResolveField('contributor', () => IActor, {
+  @ResolveField('actor', () => IActor, {
     nullable: false,
     description: 'The Actor who is invited.',
   })

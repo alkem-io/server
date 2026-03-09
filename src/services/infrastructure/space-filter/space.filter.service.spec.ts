@@ -50,6 +50,28 @@ describe('SpaceFilterService', () => {
       });
       expect(result).toEqual([SpaceVisibility.DEMO]);
     });
+
+    it('should return INACTIVE visibility from filter', () => {
+      const result = service.getAllowedVisibilities({
+        visibilities: [SpaceVisibility.INACTIVE],
+      });
+      expect(result).toEqual([SpaceVisibility.INACTIVE]);
+    });
+
+    it('should return ACTIVE, DEMO and INACTIVE visibilities from filter', () => {
+      const result = service.getAllowedVisibilities({
+        visibilities: [
+          SpaceVisibility.ACTIVE,
+          SpaceVisibility.DEMO,
+          SpaceVisibility.INACTIVE,
+        ],
+      });
+      expect(result).toEqual([
+        SpaceVisibility.ACTIVE,
+        SpaceVisibility.DEMO,
+        SpaceVisibility.INACTIVE,
+      ]);
+    });
   });
 
   describe('isVisible', () => {
@@ -64,6 +86,22 @@ describe('SpaceFilterService', () => {
     it('should return false when visibility is not in the allowed list', () => {
       const result = service.isVisible(SpaceVisibility.DEMO, [
         SpaceVisibility.ACTIVE,
+      ]);
+      expect(result).toBe(false);
+    });
+
+    it('should return true when INACTIVE is in the allowed list', () => {
+      const result = service.isVisible(SpaceVisibility.INACTIVE, [
+        SpaceVisibility.ACTIVE,
+        SpaceVisibility.INACTIVE,
+      ]);
+      expect(result).toBe(true);
+    });
+
+    it('should return false when INACTIVE is not in the allowed list', () => {
+      const result = service.isVisible(SpaceVisibility.INACTIVE, [
+        SpaceVisibility.ACTIVE,
+        SpaceVisibility.DEMO,
       ]);
       expect(result).toBe(false);
     });

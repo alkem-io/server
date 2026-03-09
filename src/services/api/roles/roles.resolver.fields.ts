@@ -20,7 +20,7 @@ export class RolesResolverFields {
   ) {}
 
   @ResolveField('organizations', () => [RolesResultOrganization], {
-    description: 'Details of the roles the contributor has in Organizations',
+    description: 'Details of the roles the actor has in Organizations',
   })
   public async organizations(
     @Parent() roles: ActorRoles
@@ -36,7 +36,7 @@ export class RolesResolverFields {
     @CurrentActor() actorContext: ActorContext,
     @Parent() roles: ActorRoles
   ): Promise<RolesResultSpace[]> {
-    return this.rolesService.getSpaceRolesForContributor(roles, actorContext);
+    return this.rolesService.getSpaceRolesForActor(roles, actorContext);
   }
 
   @ResolveField('invitations', () => [CommunityInvitationForRoleResult], {
