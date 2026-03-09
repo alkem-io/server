@@ -47,8 +47,8 @@ input CreateConversationInput {
   # REMOVED: wellKnownVirtualContributor
 }
 
-# NEW: Add member to group conversation
-input AddConversationMemberInput {
+# NEW: Assign member to group conversation
+input AssignConversationMemberInput {
   conversationID: UUID!
   memberID: UUID!
 }
@@ -85,7 +85,7 @@ type Mutation {
 
   # NEW: Group membership management — fire-and-forget (RPC to Matrix only).
   # Actual state changes arrive via subscription events.
-  addConversationMember(memberData: AddConversationMemberInput!): Boolean!
+  assignConversationMember(memberData: AssignConversationMemberInput!): Boolean!
   removeConversationMember(memberData: RemoveConversationMemberInput!): Boolean!
   leaveConversation(leaveData: LeaveConversationInput!): Boolean!
 

@@ -544,31 +544,29 @@ export class MessageInboxService {
       LogContext.COMMUNICATION
     );
 
+    // Build a partial update with only the fields that changed.
+    // Using a partial update avoids a read-modify-write race when
+    // Matrix fires separate room.updated events for displayName and
+    // avatarUrl nearly simultaneously.
+    const updates: Record<string, string> = {};
+    if (payload.displayName !== undefined) {
+      updates.displayName = payload.displayName;
+    }
+    if (payload.avatarUrl !== undefined) {
+      updates.avatarUrl = payload.avatarUrl;
+    }
+
+    if (Object.keys(updates).length === 0) {
+      return;
+    }
+
+    await this.roomLookupService.updatePartial(payload.roomId, updates);
+
+    // Re-read room for subscription event (cheap read, after atomic write)
     const room = await this.roomLookupService.getRoomOrFail(payload.roomId);
-    let changed = false;
 
-    if (
-      payload.displayName !== undefined &&
-      room.displayName !== payload.displayName
-    ) {
-      room.displayName = payload.displayName;
-      changed = true;
-    }
-
-    if (
-      payload.avatarUrl !== undefined &&
-      room.avatarUrl !== payload.avatarUrl
-    ) {
-      room.avatarUrl = payload.avatarUrl;
-      changed = true;
-    }
-
-    if (changed) {
-      await this.roomLookupService.save(room);
-
-      if (isConversationRoom(room)) {
-        await this.publishConversationUpdatedEvent(room);
-      }
+    if (isConversationRoom(room)) {
+      await this.publishConversationUpdatedEvent(room);
     }
   }
 

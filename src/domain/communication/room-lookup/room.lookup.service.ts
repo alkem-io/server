@@ -118,6 +118,17 @@ export class RoomLookupService {
   }
 
   /**
+   * Atomically update specific fields on a room.
+   * Avoids read-modify-write races when multiple events arrive concurrently.
+   */
+  async updatePartial(
+    roomId: string,
+    fields: Partial<Pick<IRoom, 'displayName' | 'avatarUrl'>>
+  ): Promise<void> {
+    await this.roomRepository.update(roomId, fields);
+  }
+
+  /**
    * Atomically increment the messages count for a room.
    * Uses database-level increment to avoid race conditions.
    */

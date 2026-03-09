@@ -38,6 +38,9 @@ export class RoomService {
     room.authorization = new AuthorizationPolicy(AuthorizationPolicyType.ROOM);
     room.messagesCount = 0;
     room.vcInteractionsByThread = {};
+    if (roomData.avatarUrl) {
+      room.avatarUrl = roomData.avatarUrl;
+    }
 
     // Save first to get the ID assigned by the database
     const savedRoom = await this.save(room);
