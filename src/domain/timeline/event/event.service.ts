@@ -207,7 +207,7 @@ export class CalendarEventService {
     const calendarEventLoaded = await this.getCalendarEventOrFail(
       calendarEvent.id,
       {
-        relations: { profile: true },
+        relations: { profile: { location: true } },
       }
     );
     if (!calendarEventLoaded.profile)
