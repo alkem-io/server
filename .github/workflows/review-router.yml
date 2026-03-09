@@ -7,7 +7,7 @@ on:
 
 jobs:
   pr_metrics:
-    runs-on: arc-runner-set
+    runs-on: [self-hosted, macOS, ARM64, apple-silicon, m4]
     steps:
     # 1. Checkout the repository code
     - name: Checkout Code
