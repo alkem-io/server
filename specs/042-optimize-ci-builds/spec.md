@@ -59,7 +59,7 @@ As a developer, I want CI to cache build artifacts and dependency installations 
 
 As a platform team member, I want only one Docker release workflow to exist, so that releases are not built and pushed twice and maintenance burden is reduced.
 
-**Why this priority**: Two Docker release workflows (`build-release-docker-hub.yml` and `build-release-docker-hub-new.yml`) both trigger on release events. The newer workflow is cleaner and should be the sole workflow. Lower priority because releases happen less frequently than PR builds.
+**Why this priority**: ✅ DONE — Previously, two Docker release workflows (`build-release-docker-hub.yml` and `build-release-docker-hub-new.yml`) both triggered on release events. The legacy workflow was deleted and the `-new` variant was renamed to `build-release-docker-hub.yml`.
 
 **Independent Test**: Can be verified by creating a release and confirming a single Docker image is built and pushed with correct tags.
 
@@ -81,12 +81,12 @@ As a platform team member, I want only one Docker release workflow to exist, so 
 
 ### Functional Requirements
 
-- **FR-001**: CI MUST run the test suite exactly once per PR, with coverage enabled, within a single unified workflow. A `test` job produces coverage artifacts, and a dependent `sonarqube` job downloads and analyzes them — no separate workflow files or duplicate test runs.
+- **FR-001** ✅ IMPLEMENTED: CI runs the test suite exactly once per PR, with coverage enabled, within `ci-tests.yml`. The `test` job produces coverage artifacts, and the dependent `sonarqube` job (via `needs: test`) downloads and analyzes them. `trigger-sonarqube.yml` was merged and deleted.
 - **FR-002**: CI test and build workflows MUST execute on the Apple Silicon runner using the runner labels `[self-hosted, macOS, ARM64, apple-silicon, m4]`.
 - **FR-003**: CI MUST cache the pnpm dependency store and restore it on subsequent runs. Cache keys MUST be scoped per-branch with a fallback restore key from `develop`, so new branches benefit from a warm cache on their first run.
 - **FR-004**: CI MUST cache TypeScript build output (compilation artifacts) and restore it for incremental builds. The same per-branch-with-`develop`-fallback key strategy applies.
 - **FR-005**: CI MUST produce a single set of test results and coverage data consumed by both the pass/fail gate and SonarQube analysis. The SonarQube quality gate remains **advisory** (non-blocking) — its steps use `continue-on-error: true` so a quality gate failure does not fail the CI workflow.
-- **FR-006**: The legacy Docker release workflow (`build-release-docker-hub.yml`) MUST be removed, and the newer workflow (`build-release-docker-hub-new.yml`) MUST be renamed to `build-release-docker-hub.yml` to maintain a clean naming convention.
+- **FR-006** ✅ IMPLEMENTED: The legacy Docker release workflow was removed and `build-release-docker-hub-new.yml` was renamed to `build-release-docker-hub.yml`. Only one Docker release workflow exists.
 - **FR-007**: CI MUST fall back to a clean (uncached) build if cached artifacts are missing or invalid, without manual intervention.
 - **FR-008**: Docker release and Kubernetes deployment workflows MUST remain on their current runners (not moved to Apple Silicon) since they require Linux Docker builds.
 - **FR-009**: Schema contract and schema baseline workflows MUST be migrated to the Apple Silicon runner where applicable (they are Node.js workloads).
@@ -123,4 +123,4 @@ As a platform team member, I want only one Docker release workflow to exist, so 
 - SonarQube scanner (SonarScanner) has native ARM64 support and runs on macOS Apple Silicon.
 - The `arc-runner-set` label currently used in workflows will be replaced with `[self-hosted, macOS, ARM64, apple-silicon, m4]`.
 - Docker release workflows must remain on Linux runners because they build Linux container images.
-- The `build-release-docker-hub-new.yml` workflow is the intended replacement for `build-release-docker-hub.yml` and produces equivalent or better output. After removal of the legacy file, the newer workflow will be renamed to `build-release-docker-hub.yml`.
+- The Docker release workflow consolidation is complete: `build-release-docker-hub.yml` is the sole remaining workflow (the legacy file was deleted and the `-new` variant was renamed).

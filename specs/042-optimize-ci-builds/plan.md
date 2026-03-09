@@ -5,7 +5,7 @@
 
 ## Summary
 
-Optimize CI builds by: (1) eliminating duplicate test execution between `ci-tests.yml` and `trigger-sonarqube.yml` by merging into a single workflow with test→sonarqube job dependency, (2) migrating Node.js-based CI workflows from `arc-runner-set` to Apple Silicon runners (`[self-hosted, macOS, ARM64, apple-silicon, m4]`), (3) adding pnpm store and TypeScript build output caching with per-branch keys and `develop` fallback, and (4) removing the legacy Docker release workflow.
+Optimize CI builds by: (1) ~~eliminating duplicate test execution~~ (DONE — `ci-tests.yml` now contains unified `test` → `sonarqube` jobs; `trigger-sonarqube.yml` was merged and deleted), (2) migrating Node.js-based CI workflows from `arc-runner-set` to Apple Silicon runners (`[self-hosted, macOS, ARM64, apple-silicon, m4]`), (3) adding pnpm store and TypeScript build output caching with per-branch keys and `develop` fallback, and (4) ~~removing the legacy Docker release workflow~~ (DONE — only `build-release-docker-hub.yml` remains).
 
 ## Technical Context
 
@@ -17,7 +17,7 @@ Optimize CI builds by: (1) eliminating duplicate test execution between `ci-test
 **Project Type**: CI/CD configuration (workflow YAML files only)
 **Performance Goals**: ≥30% reduction in CI wall-clock time; cached dependency restore <30s; zero duplicate test runs
 **Constraints**: macOS runners do not support Docker container actions (but all actions used are Node.js or composite — no Docker actions remain); Docker release and K8s deploy workflows must remain on Linux runners
-**Scale/Scope**: 10 workflow files affected; 4–5 files modified, 1 file deleted, 1 file renamed
+**Scale/Scope**: 8 workflow files total; 4 files to modify (runner migration + caching), completed items: `trigger-sonarqube.yml` merged into `ci-tests.yml` and deleted, `build-release-docker-hub-new.yml` renamed to `build-release-docker-hub.yml`
 
 ## Constitution Check
 
@@ -54,10 +54,8 @@ specs/042-optimize-ci-builds/
 
 ```text
 .github/workflows/
-├── ci-tests.yml                         # MODIFY: Merge with SonarQube, add caching, migrate runner
-├── trigger-sonarqube.yml                # DELETE: Merged into ci-tests.yml
-├── build-release-docker-hub.yml         # DELETE: Legacy workflow replaced by -new variant
-├── build-release-docker-hub-new.yml     # RENAME → build-release-docker-hub.yml
+├── ci-tests.yml                         # DONE: Unified test→sonarqube workflow; REMAINING: add caching, migrate runner
+├── build-release-docker-hub.yml         # DONE: Sole Docker release workflow (legacy deleted, -new renamed)
 ├── schema-contract.yml                  # MODIFY: Migrate runner to Apple Silicon
 ├── schema-baseline.yml                  # MODIFY: Migrate runner to Apple Silicon
 ├── review-router.yml                    # MODIFY: Migrate runner to Apple Silicon

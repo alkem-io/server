@@ -30,7 +30,7 @@
 
 6. **Create a release** and verify:
    - [ ] Only one Docker build-and-push workflow triggers
-   - [ ] The workflow is named `build-release-docker-hub.yml` (renamed from `-new`)
+   - [ ] The workflow is named `build-release-docker-hub.yml` (the sole Docker release workflow)
    - [ ] Docker image is built and pushed with correct tags
    - [ ] Image is built on `ubuntu-latest` (not Apple Silicon)
 
@@ -49,9 +49,8 @@ If SonarQube scan/quality-gate actions fail on macOS:
 | File | Change |
 |------|--------|
 | `.github/workflows/ci-tests.yml` | Unified test + SonarQube, caching, Apple Silicon runner |
-| `.github/workflows/trigger-sonarqube.yml` | Deleted (merged into ci-tests.yml) |
-| `.github/workflows/build-release-docker-hub.yml` | Deleted (legacy) |
-| `.github/workflows/build-release-docker-hub-new.yml` | Renamed to `build-release-docker-hub.yml` |
+| `.github/workflows/trigger-sonarqube.yml` | DONE: Deleted (merged into ci-tests.yml) |
+| `.github/workflows/build-release-docker-hub.yml` | DONE: Sole remaining Docker release workflow (legacy deleted, `-new` variant renamed here) |
 | `.github/workflows/schema-contract.yml` | Runner migration to Apple Silicon |
 | `.github/workflows/schema-baseline.yml` | Runner migration to Apple Silicon |
 | `.github/workflows/review-router.yml` | Runner migration to Apple Silicon |

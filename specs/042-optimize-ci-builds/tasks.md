@@ -34,7 +34,7 @@
 
 ## Phase 3: User Story 1 — Eliminate Duplicate Test Execution (Priority: P1) 🎯 MVP
 
-**Goal**: Merge `ci-tests.yml` and `trigger-sonarqube.yml` into a single workflow with two jobs (`test` → `sonarqube`), so tests run exactly once per PR with coverage enabled.
+**Goal**: ~~Merge `ci-tests.yml` and `trigger-sonarqube.yml`~~ DONE — `ci-tests.yml` now contains unified `test` → `sonarqube` jobs; `trigger-sonarqube.yml` was merged and deleted.
 
 **Independent Test**: Open a PR, confirm tests execute once (with coverage), SonarQube consumes the coverage artifact, and both CI gate and SonarQube status report correctly.
 
@@ -86,14 +86,14 @@
 
 ## Phase 6: User Story 4 — Remove Duplicate Docker Release Workflow (Priority: P4)
 
-**Goal**: Delete the legacy Docker release workflow and rename the newer one to maintain clean naming.
+**Goal**: ~~Delete the legacy Docker release workflow and rename the newer one~~ DONE — only `build-release-docker-hub.yml` remains (legacy deleted, `-new` variant renamed).
 
 **Independent Test**: Create a release and confirm exactly one Docker build-and-push workflow triggers with correct tags.
 
 ### Implementation for User Story 4
 
-- [x] T014 [US4] Delete `.github/workflows/build-release-docker-hub.yml` (legacy workflow with outdated action versions and manual tag parsing)
-- [x] T015 [US4] Rename `.github/workflows/build-release-docker-hub-new.yml` to `.github/workflows/build-release-docker-hub.yml` (use `git mv`)
+- [x] T014 [US4] DONE: Deleted legacy `.github/workflows/build-release-docker-hub.yml` (had outdated action versions and manual tag parsing)
+- [x] T015 [US4] DONE: Renamed `.github/workflows/build-release-docker-hub-new.yml` to `.github/workflows/build-release-docker-hub.yml` — this is now the sole Docker release workflow
 
 **Checkpoint**: Single Docker release workflow exists with clean naming. Verify triggers and tag generation are correct.
 

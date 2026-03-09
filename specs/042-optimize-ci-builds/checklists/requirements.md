@@ -32,5 +32,5 @@
 ## Notes
 
 - All items passed validation on first iteration.
-- The spec references specific workflow filenames (e.g., `ci-tests.yml`, `trigger-sonarqube.yml`) which is acceptable as these are existing artifacts being described, not implementation prescriptions.
-- The Apple Silicon runner label name is left unspecified (to be determined from the infrastructure-provisioning PR during planning).
+- The spec references specific workflow filenames (e.g., `ci-tests.yml`, `schema-contract.yml`, `review-router.yml`, `schema-baseline.yml`) which is acceptable as these are existing artifacts being described, not implementation prescriptions.
+- The Apple Silicon runner label is `[self-hosted, macOS, ARM64, apple-silicon, m4]` (from infrastructure-provisioning PR #13).
