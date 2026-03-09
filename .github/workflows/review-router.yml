@@ -8,6 +8,9 @@ on:
 jobs:
   pr_metrics:
     runs-on: [self-hosted, macOS, ARM64, apple-silicon, m4]
+    env:
+      # Self-hosted macOS runner tool cache (setup-python, setup-node, etc.)
+      RUNNER_TOOL_CACHE: /tmp/runner-tool-cache
     steps:
     # 1. Checkout the repository code
     - name: Checkout Code
@@ -24,7 +27,7 @@ jobs:
     - name: Cache Python dependencies
       uses: actions/cache@v4
       with:
-        path: ~/.cache/pip
+        path: ~/Library/Caches/pip
         key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
         restore-keys: |
           ${{ runner.os }}-pip-
