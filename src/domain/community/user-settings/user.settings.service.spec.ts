@@ -287,6 +287,23 @@ describe('UserSettingsService', () => {
 
       expect(result.notification.space.communicationUpdates.inApp).toBe(true);
     });
+
+    it('should update collaborationPollVoteCastOnOwnPoll notification', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          space: {
+            collaborationPollVoteCastOnOwnPoll: { email: true },
+          },
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(
+        result.notification.space.collaborationPollVoteCastOnOwnPoll.email
+      ).toBe(true);
+    });
   });
 
   describe('updateSettings - notification.user', () => {

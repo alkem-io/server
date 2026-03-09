@@ -110,7 +110,7 @@ export class InnovationHubService {
   }
 
   public save(hub: IInnovationHub): Promise<IInnovationHub> {
-    return this.innovationHubRepository.save(hub as InnovationHub);
+    return this.innovationHubRepository.save(hub);
   }
 
   public async updateOrFail(

@@ -24,6 +24,7 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationRecipientsInput } from './dto/notification.recipients.dto.input';
 import { NotificationRecipientResult } from './dto/notification.recipients.dto.result';
+
 @Injectable()
 export class NotificationRecipientsService {
   constructor(
@@ -273,36 +274,16 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:
         return notificationSettings.space.communityCalendarEvents;
       case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL:
-        return (
-          notificationSettings.space.collaborationPollVoteCastOnOwnPoll ?? {
-            email: false,
-            inApp: true,
-          }
-        );
+        return notificationSettings.space.collaborationPollVoteCastOnOwnPoll;
       case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON:
-        return (
-          notificationSettings.space
-            .collaborationPollVoteCastOnPollIVotedOn ?? {
-            email: false,
-            inApp: true,
-          }
-        );
+        return notificationSettings.space
+          .collaborationPollVoteCastOnPollIVotedOn;
       case NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON:
-        return (
-          notificationSettings.space
-            .collaborationPollModifiedOnPollIVotedOn ?? {
-            email: false,
-            inApp: true,
-          }
-        );
+        return notificationSettings.space
+          .collaborationPollModifiedOnPollIVotedOn;
       case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE:
-        return (
-          notificationSettings.space
-            .collaborationPollVoteAffectedByOptionChange ?? {
-            email: false,
-            inApp: true,
-          }
-        );
+        return notificationSettings.space
+          .collaborationPollVoteAffectedByOptionChange;
       case NotificationEvent.SPACE_ADMIN_VIRTUAL_COMMUNITY_INVITATION_DECLINED:
         return notificationSettings.space.admin.communityNewMember;
       case NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION:
