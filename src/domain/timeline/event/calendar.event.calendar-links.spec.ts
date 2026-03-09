@@ -1,10 +1,12 @@
 import {
+  calculateCalendarEventEndDate,
   foldIcsLine,
   formatDateOnly,
   formatDatesForCalendar,
   generateCalendarUrls,
   generateICS,
 } from './calendar.event.calendar-links';
+import { ICalendarEvent } from './event.interface';
 
 describe('CalendarEventCalendarLinks', () => {
   it('formats calendar dates for Google and Outlook', () => {
@@ -84,8 +86,8 @@ describe('CalendarEventCalendarLinks', () => {
 
     expect(urls.googleCalendarUrl).toContain('dates=20260310/20260312');
     expect(urls.outlookCalendarUrl).toContain('allday=true');
-    expect(urls.outlookCalendarUrl).toContain('startTime=2026-03-10');
-    expect(urls.outlookCalendarUrl).toContain('endTime=2026-03-11');
+    expect(urls.outlookCalendarUrl).toContain('startdt=2026-03-10');
+    expect(urls.outlookCalendarUrl).toContain('enddt=2026-03-11');
   });
 
   it('generates RFC5545 iCalendar content', () => {
@@ -229,5 +231,116 @@ describe('CalendarEventCalendarLinks', () => {
     // Unfolding should recover the full DESCRIPTION
     const unfolded = ics.replace(/\r\n /g, '');
     expect(unfolded).toContain(`DESCRIPTION:${'A'.repeat(200)}`);
+  });
+
+  describe('calculateCalendarEventEndDate', () => {
+    const makeEvent = (
+      overrides: Partial<ICalendarEvent> &
+        Pick<ICalendarEvent, 'startDate' | 'durationMinutes'>
+    ): ICalendarEvent =>
+      ({
+        startDate: overrides.startDate,
+        durationMinutes: overrides.durationMinutes,
+        durationDays: overrides.durationDays,
+      }) as unknown as ICalendarEvent;
+
+    it('calculates end date for a same-day event using durationMinutes', () => {
+      const event = makeEvent({
+        startDate: new Date('2026-03-15T10:00:00Z'),
+        durationMinutes: 90,
+      });
+
+      const result = calculateCalendarEventEndDate(event);
+      expect(result).toEqual(new Date('2026-03-15T11:30:00Z'));
+    });
+
+    it('calculates end date for a multi-day event via durationMinutes', () => {
+      // 2 days = 2880 minutes
+      const event = makeEvent({
+        startDate: new Date('2026-03-15T10:00:00Z'),
+        durationMinutes: 2880,
+        durationDays: 2,
+      });
+
+      const result = calculateCalendarEventEndDate(event);
+      expect(result).toEqual(new Date('2026-03-17T10:00:00Z'));
+    });
+
+    it('crosses month boundary correctly (start at beginning of month)', () => {
+      // 3 days = 4320 minutes, starting March 1st
+      const event = makeEvent({
+        startDate: new Date('2026-03-01T09:00:00Z'),
+        durationMinutes: 4320,
+        durationDays: 3,
+      });
+
+      const result = calculateCalendarEventEndDate(event);
+      expect(result).toEqual(new Date('2026-03-04T09:00:00Z'));
+    });
+
+    it('crosses month boundary from end of short month (Feb → Mar)', () => {
+      // 2 days + 3 hours = 2880 + 180 = 3060 minutes
+      const event = makeEvent({
+        startDate: new Date('2026-02-27T14:00:00Z'),
+        durationMinutes: 3060,
+        durationDays: 2,
+      });
+
+      const result = calculateCalendarEventEndDate(event);
+      expect(result).toEqual(new Date('2026-03-01T17:00:00Z'));
+    });
+
+    it('crosses year boundary (Dec 31 → Jan next year)', () => {
+      // 2 days = 2880 minutes
+      const event = makeEvent({
+        startDate: new Date('2026-12-31T20:00:00Z'),
+        durationMinutes: 2880,
+        durationDays: 2,
+      });
+
+      const result = calculateCalendarEventEndDate(event);
+      expect(result).toEqual(new Date('2027-01-02T20:00:00Z'));
+    });
+
+    it('handles multi-day event with fractional day remainder in minutes', () => {
+      // 1 day + 2.5 hours = 1440 + 150 = 1590 minutes
+      const event = makeEvent({
+        startDate: new Date('2026-01-31T22:00:00Z'),
+        durationMinutes: 1590,
+        durationDays: 1,
+      });
+
+      const result = calculateCalendarEventEndDate(event);
+      expect(result).toEqual(new Date('2026-02-02T00:30:00Z'));
+    });
+
+    it('returns start date when durationMinutes is 0', () => {
+      const event = makeEvent({
+        startDate: new Date('2026-06-15T08:00:00Z'),
+        durationMinutes: 0,
+      });
+
+      const result = calculateCalendarEventEndDate(event);
+      expect(result).toEqual(new Date('2026-06-15T08:00:00Z'));
+    });
+
+    it('defaults to 0 minutes when durationMinutes is undefined', () => {
+      const event = {
+        startDate: new Date('2026-06-15T08:00:00Z'),
+      } as unknown as ICalendarEvent;
+
+      const result = calculateCalendarEventEndDate(event);
+      expect(result).toEqual(new Date('2026-06-15T08:00:00Z'));
+    });
+
+    it('accepts ISO string startDate', () => {
+      const event = makeEvent({
+        startDate: '2026-04-10T14:00:00Z' as unknown as Date,
+        durationMinutes: 60,
+      });
+
+      const result = calculateCalendarEventEndDate(event);
+      expect(result).toEqual(new Date('2026-04-10T15:00:00Z'));
+    });
   });
 });
