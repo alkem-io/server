@@ -465,19 +465,41 @@ export class UserService {
     // an external system call. Uses authenticationID (the Kratos identity
     // UUID) which is more reliable than email lookup. If authenticationID
     // is absent the user was never linked to Kratos — skip silently.
-    if (deleteData.deleteIdentity && user.authenticationID) {
+    if (user.authenticationID) {
+      // Always clear actor metadata first to prevent stale alkemio_actor_id
+      // on re-registration, regardless of whether full deletion succeeds
       try {
-        await this.kratosService.deleteIdentityById(user.authenticationID);
+        await this.kratosService.clearIdentityActorMetadata(
+          user.authenticationID
+        );
       } catch (error: any) {
-        this.logger.warn?.(
+        this.logger.error?.(
           {
-            message: 'Failed to delete Kratos identity during user deletion',
+            message: 'Failed to clear actor metadata from Kratos identity',
             userID: id,
             authenticationID: user.authenticationID,
             error: error?.message,
           },
+          undefined,
           LogContext.AUTH
         );
+      }
+
+      if (deleteData.deleteIdentity) {
+        try {
+          await this.kratosService.deleteIdentityById(user.authenticationID);
+        } catch (error: any) {
+          this.logger.error?.(
+            {
+              message: 'Failed to delete Kratos identity during user deletion',
+              userID: id,
+              authenticationID: user.authenticationID,
+              error: error?.message,
+            },
+            undefined,
+            LogContext.AUTH
+          );
+        }
       }
     }
 

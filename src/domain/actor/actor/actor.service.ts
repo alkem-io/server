@@ -5,6 +5,7 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
+import { ActorTypeCacheService } from '@domain/actor/actor-lookup/actor.lookup.service.cache';
 import {
   CreateCredentialInput,
   CredentialService,
@@ -66,7 +67,8 @@ export class ActorService {
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER)
     private readonly cacheManager: Cache,
-    private actorContextCacheService: ActorContextCacheService
+    private actorContextCacheService: ActorContextCacheService,
+    private actorTypeCacheService: ActorTypeCacheService
   ) {
     this.cache_ttl = this.configService.get(
       'identity.authentication.cache_ttl',
@@ -118,6 +120,8 @@ export class ActorService {
    */
   async deleteActorById(actorID: string): Promise<void> {
     await this.actorRepository.delete(actorID);
+    // Invalidate all actor-related caches to prevent stale data
+    await this.invalidateAllActorCaches(actorID);
   }
 
   // =========================================================================
@@ -290,7 +294,7 @@ export class ActorService {
   }
 
   /**
-   * Invalidate the actor cache.
+   * Invalidate the actor entity and context caches (used on credential changes).
    */
   private async invalidateActorCache(actorID: string): Promise<void> {
     const cacheKey = this.getActorCacheKey(actorID);
@@ -298,6 +302,15 @@ export class ActorService {
     // Also invalidate the ActorContext cache so subsequent requests
     // pick up the updated credentials for myPrivileges evaluation
     await this.actorContextCacheService.deleteByActorID(actorID);
+  }
+
+  /**
+   * Invalidate all actor-related caches (used on actor deletion).
+   */
+  private async invalidateAllActorCaches(actorID: string): Promise<void> {
+    await this.cacheManager.del(this.getActorCacheKey(actorID));
+    await this.actorContextCacheService.deleteByActorID(actorID);
+    await this.actorTypeCacheService.deleteActorType(actorID);
   }
 }
 

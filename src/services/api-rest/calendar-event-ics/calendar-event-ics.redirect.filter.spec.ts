@@ -50,8 +50,7 @@ describe('CalendarEventIcsRedirectFilter', () => {
           },
         },
       ],
-    })
-      .compile();
+    }).compile();
 
     filter = module.get(CalendarEventIcsRedirectFilter);
     urlGeneratorService = module.get(UrlGeneratorService);
@@ -130,9 +129,10 @@ describe('CalendarEventIcsRedirectFilter', () => {
     it('should fallback to request path when event URL resolution fails', async () => {
       const exception = createForbiddenAuthorizationPolicyException();
 
-      vi.spyOn(urlGeneratorService, 'getCalendarEventUrlPath').mockRejectedValue(
-        new Error('Event not found')
-      );
+      vi.spyOn(
+        urlGeneratorService,
+        'getCalendarEventUrlPath'
+      ).mockRejectedValue(new Error('Event not found'));
 
       await filter.catch(exception, mockHost);
 
@@ -159,9 +159,10 @@ describe('CalendarEventIcsRedirectFilter', () => {
       const exception = createForbiddenAuthorizationPolicyException();
 
       const error = new Error('Event not found');
-      vi.spyOn(urlGeneratorService, 'getCalendarEventUrlPath').mockRejectedValue(
-        error
-      );
+      vi.spyOn(
+        urlGeneratorService,
+        'getCalendarEventUrlPath'
+      ).mockRejectedValue(error);
 
       await filter.catch(exception, mockHost);
 
@@ -178,7 +179,10 @@ describe('CalendarEventIcsRedirectFilter', () => {
 
   describe('catch - ForbiddenException', () => {
     it('should redirect to /restricted with returnUrl for ForbiddenException', async () => {
-      const exception = new ForbiddenException('Forbidden', LogContext.CALENDAR);
+      const exception = new ForbiddenException(
+        'Forbidden',
+        LogContext.CALENDAR
+      );
 
       vi.spyOn(
         urlGeneratorService,
@@ -196,7 +200,10 @@ describe('CalendarEventIcsRedirectFilter', () => {
 
   describe('catch - ForbiddenHttpException', () => {
     it('should redirect to /login with returnUrl for ForbiddenHttpException', async () => {
-      const exception = new ForbiddenHttpException('Authentication required', LogContext.CALENDAR);
+      const exception = new ForbiddenHttpException(
+        'Authentication required',
+        LogContext.CALENDAR
+      );
 
       await filter.catch(exception, mockHost);
 
@@ -209,7 +216,10 @@ describe('CalendarEventIcsRedirectFilter', () => {
     it('should use originalUrl when available', async () => {
       mockRequest.originalUrl = '/custom/original/url';
 
-      const exception = new ForbiddenHttpException('Authentication required', LogContext.CALENDAR);
+      const exception = new ForbiddenHttpException(
+        'Authentication required',
+        LogContext.CALENDAR
+      );
 
       await filter.catch(exception, mockHost);
 
@@ -223,7 +233,10 @@ describe('CalendarEventIcsRedirectFilter', () => {
       mockRequest.originalUrl = undefined;
       mockRequest.url = '/fallback/url';
 
-      const exception = new ForbiddenHttpException('Authentication required', LogContext.CALENDAR);
+      const exception = new ForbiddenHttpException(
+        'Authentication required',
+        LogContext.CALENDAR
+      );
 
       await filter.catch(exception, mockHost);
 
@@ -237,7 +250,10 @@ describe('CalendarEventIcsRedirectFilter', () => {
       mockRequest.originalUrl = undefined;
       mockRequest.url = undefined;
 
-      const exception = new ForbiddenHttpException('Authentication required', LogContext.CALENDAR);
+      const exception = new ForbiddenHttpException(
+        'Authentication required',
+        LogContext.CALENDAR
+      );
 
       await filter.catch(exception, mockHost);
 
@@ -252,7 +268,10 @@ describe('CalendarEventIcsRedirectFilter', () => {
     it('should not redirect when headers are already sent', async () => {
       mockResponse.headersSent = true;
 
-      const exception = new ForbiddenHttpException('Authentication required', LogContext.CALENDAR);
+      const exception = new ForbiddenHttpException(
+        'Authentication required',
+        LogContext.CALENDAR
+      );
 
       await filter.catch(exception, mockHost);
 
@@ -266,7 +285,7 @@ describe('CalendarEventIcsRedirectFilter', () => {
         'Access denied',
         AuthorizationPrivilege.READ,
         '',
-        '',
+        ''
       );
 
       await filter.catch(exception, mockHost);
@@ -283,7 +302,7 @@ describe('CalendarEventIcsRedirectFilter', () => {
         'Access denied',
         AuthorizationPrivilege.READ,
         '',
-        '',
+        ''
       );
 
       const getUrlSpy = vi
@@ -328,7 +347,10 @@ describe('CalendarEventIcsRedirectFilter', () => {
 
       const exception = createForbiddenAuthorizationPolicyException();
 
-      const getUrlSpy = vi.spyOn(urlGeneratorService, 'getCalendarEventUrlPath');
+      const getUrlSpy = vi.spyOn(
+        urlGeneratorService,
+        'getCalendarEventUrlPath'
+      );
 
       await filter.catch(exception, mockHost);
 
@@ -405,7 +427,10 @@ describe('CalendarEventIcsRedirectFilter', () => {
     it('should properly encode returnUrl with special characters', async () => {
       mockRequest.originalUrl = '/event/test event/ics';
 
-      const exception = new ForbiddenHttpException('Authentication required', LogContext.CALENDAR);
+      const exception = new ForbiddenHttpException(
+        'Authentication required',
+        LogContext.CALENDAR
+      );
 
       await filter.catch(exception, mockHost);
 
