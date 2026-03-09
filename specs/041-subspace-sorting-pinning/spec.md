@@ -29,14 +29,14 @@ A space administrator pins or unpins individual subspaces via the API. When a su
 
 **Why this priority**: Pinning is the core new capability that enhances the existing sorting system. Without it, the feature delivers no new user value.
 
-**Independent Test**: Can be tested by calling the pin/unpin mutations and verifying the subspace query returns the updated pinned status.
+**Independent Test**: Can be tested by calling `updateSubspacePinned(pinnedData: { spaceID, subspaceID, pinned: true|false })` and verifying the subspace query returns the updated pinned status.
 
 **Acceptance Scenarios**:
 
-1. **Given** a space administrator calls the pin subspace mutation for a subspace, **When** a client queries the subspaces, **Then** the targeted subspace has `pinned: true`.
-2. **Given** a pinned subspace exists, **When** the administrator calls the unpin mutation, **Then** the subspace has `pinned: false`.
+1. **Given** a space administrator calls `updateSubspacePinned` with `pinned: true` for a subspace, **When** a client queries the subspaces, **Then** the targeted subspace has `pinned: true`.
+2. **Given** a pinned subspace exists, **When** the administrator calls `updateSubspacePinned` with `pinned: false`, **Then** the subspace has `pinned: false`.
 3. **Given** multiple subspaces are pinned, **When** querying subspaces, **Then** each pinned subspace returns its `pinned` status and `sortOrder`, enabling the client to sort pinned items first by sort order.
-4. **Given** a non-admin user attempts to pin a subspace, **When** the mutation is called, **Then** the server returns an authorization error.
+4. **Given** a non-admin user attempts to call `updateSubspacePinned`, **Then** the server returns an authorization error.
 
 ---
 
@@ -88,7 +88,7 @@ The existing `updateSubspacesSortOrder` mutation continues to work as before, ac
 - **FR-002**: System MUST default the `sortMode` to "Alphabetical" for all spaces, including existing ones that have no value set.
 - **FR-003**: System MUST provide a mutation to update the `sortMode` of a space, restricted to space administrators.
 - **FR-004**: System MUST provide a `pinned` boolean field on subspaces, defaulting to `false`.
-- **FR-005**: System MUST provide mutations to pin and unpin individual subspaces, restricted to space administrators.
+- **FR-005**: System MUST provide an `updateSubspacePinned` mutation to pin or unpin individual subspaces (via `pinned: true|false`), restricted to space administrators.
 - **FR-006**: Pin and unpin operations MUST be idempotent (pinning an already-pinned subspace or unpinning a non-pinned subspace succeeds without error).
 - **FR-007**: System MUST return the `pinned` status and `sortOrder` for each subspace in query responses.
 - **FR-008**: System MUST return the `sortMode` setting when querying space settings.

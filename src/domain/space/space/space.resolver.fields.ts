@@ -161,8 +161,12 @@ export class SpaceResolverFields {
     description:
       'The sort mode for subspaces of this Space: Alphabetical or Custom. Accessible without READ privilege.',
   })
-  sortMode(@Parent() space: ISpace): SpaceSortMode {
-    return space.settings?.sortMode ?? SpaceSortMode.ALPHABETICAL;
+  async sortMode(@Parent() space: Space): Promise<SpaceSortMode> {
+    if (space.settings?.sortMode) {
+      return space.settings.sortMode;
+    }
+    const loaded = await this.spaceService.getSpaceOrFail(space.id);
+    return loaded.settings?.sortMode ?? SpaceSortMode.ALPHABETICAL;
   }
 
   @ResolveField('subspaces', () => [ISpace], {
@@ -228,6 +232,9 @@ export class SpaceResolverFields {
     description: 'The settings for this Space.',
   })
   settings(@Parent() space: ISpace): ISpaceSettings {
+    if (!space.settings.sortMode) {
+      space.settings.sortMode = SpaceSortMode.ALPHABETICAL;
+    }
     return space.settings;
   }
 

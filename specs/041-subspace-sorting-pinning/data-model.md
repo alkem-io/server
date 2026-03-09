@@ -31,7 +31,7 @@ The `ISpaceSettings` JSONB gains a new top-level field:
 
 ### `ISpaceSettings` (GraphQL ObjectType `SpaceSettings`)
 
-```
+```text
 Before:
   privacy: ISpaceSettingsPrivacy
   membership: ISpaceSettingsMembership
@@ -46,7 +46,7 @@ After:
 
 ### `ISpace` (GraphQL ObjectType `Space`)
 
-```
+```text
 Existing fields (unchanged):
   sortOrder: Int!
 

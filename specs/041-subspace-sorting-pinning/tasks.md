@@ -76,7 +76,7 @@
 
 **Purpose**: Schema regeneration, backward compatibility verification, and final validation
 
-- [x] T014 Regenerate and sort GraphQL schema: run `pnpm run schema:print && pnpm run schema:sort`
+- [x] T014 Regenerate and sort GraphQL schema: run `pnpm run schema:print && pnpm run schema:sort`, then `pnpm run schema:diff` to validate contract gate. Note: BREAKING changes require CODEOWNER approval with `BREAKING-APPROVED` label.
 - [x] T015 Verify `updateSubspacesSortOrder` mutation still works unchanged (US4 backward compatibility): review that no changes affect `src/domain/space/space/space.service.ts` `updateSubspacesSortOrder` method
 - [x] T016 Run full lint check: `pnpm lint`
 - [x] T017 Run test suite: `pnpm test:ci:no:coverage`

@@ -24,6 +24,7 @@ enum SpaceSortMode {
 
 # ─── New Input Type ───────────────────────────────────────
 
+"""Input for pinning or unpinning a subspace within a parent Space."""
 input UpdateSubspacePinnedInput {
   """The ID of the parent Space containing the subspace."""
   spaceID: UUID!
@@ -48,5 +49,6 @@ input UpdateSubspacePinnedInput {
 # Added to existing Mutation type:
 # type Mutation {
 #   ...existing mutations...
+#   """Updates the pinned state of a Subspace within the specified Space."""
 #   updateSubspacePinned(pinnedData: UpdateSubspacePinnedInput!): Space!
 # }

@@ -15,9 +15,10 @@ export class AddPinnedAndSortModeToSpace1771100000000
     `);
   }
 
-  public async down(queryRunner: QueryRunner): Promise<void> {
+  public async down(_queryRunner: QueryRunner): Promise<void> {
+    // Rollback intentionally disabled: removing pinned column and sortMode
+    // would cause data loss. These fields are additive and safe to leave in place.
     // await queryRunner.query(`ALTER TABLE "space" DROP COLUMN "pinned"`);
-
     // await queryRunner.query(
     //   `UPDATE "space" SET "settings" = "settings" - 'sortMode'`
     // );

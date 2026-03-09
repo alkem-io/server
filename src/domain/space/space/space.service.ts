@@ -1117,6 +1117,10 @@ export class SpaceService {
       );
     }
 
+    if (subspace.pinned === pinned) {
+      return subspace;
+    }
+
     subspace.pinned = pinned;
     return await this.save(subspace);
   }
