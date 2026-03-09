@@ -339,8 +339,9 @@ export class KratosService {
 
   /**
    * Clears alkemio_actor_id from a Kratos identity's metadata_public.
-   * Used as a fallback when full identity deletion fails, to prevent
-   * stale actor references on re-registration.
+   * Used before identity deletion to prevent stale actor references
+   * on re-registration. Uses "add" op which creates-or-replaces,
+   * avoiding RFC 6902 "remove" failures on missing paths.
    */
   public async clearIdentityActorMetadata(
     kratosIdentityId: string
@@ -349,12 +350,9 @@ export class KratosService {
       id: kratosIdentityId,
       jsonPatch: [
         {
-          op: 'remove',
-          path: '/metadata_public/alkemio_actor_id',
-        },
-        {
-          op: 'remove',
-          path: '/metadata_public/alkemio_user_id',
+          op: 'add',
+          path: '/metadata_public',
+          value: {},
         },
       ],
     });
