@@ -36,7 +36,6 @@ jobs:
       - name: Install pnpm
         uses: pnpm/action-setup@v4
         with:
-          standalone: true
           dest: ${{ runner.temp }}/setup-pnpm
 
       - name: Setup Node.js
