@@ -77,7 +77,7 @@ The existing `updateSubspacesSortOrder` mutation continues to work as before, ac
 - What happens when an already-pinned subspace is pinned again? The operation is idempotent; the subspace remains pinned with no error.
 - What happens when an already-unpinned subspace is unpinned? The operation is idempotent; no error is returned.
 - What happens when a subspace is deleted while pinned? The subspace and its pinned state are removed; no orphaned pin data remains.
-- What happens when a new subspace is created? It defaults to `pinned: false` with a sort order placing it at the end of the list.
+- What happens when a new subspace is created? It defaults to `pinned: false` with a sort order placing it at the front of the list (lowest sortOrder value), matching the existing server behavior.
 - What happens when the sort mode is updated from Custom to Alphabetical? The persisted sort orders remain unchanged, but the client renders non-pinned subspaces alphabetically. Pinned subspaces continue to appear first, ordered by their sort order.
 
 ## Requirements _(mandatory)_
@@ -93,7 +93,7 @@ The existing `updateSubspacesSortOrder` mutation continues to work as before, ac
 - **FR-007**: System MUST return the `pinned` status and `sortOrder` for each subspace in query responses.
 - **FR-008**: System MUST return the `sortMode` setting when querying space settings.
 - **FR-009**: The existing `updateSubspacesSortOrder` mutation MUST continue to function unchanged, updating sort order values for the provided subspace IDs.
-- **FR-010**: When a new subspace is created, it MUST default to `pinned: false`.
+- **FR-010**: When a new subspace is created, it MUST default to `pinned: false` with a sortOrder placing it at the front (lowest value), matching existing behavior.
 - **FR-011**: When a subspace is deleted, its pinned state MUST be removed with no orphaned data.
 - **FR-012**: The server MUST NOT enforce client-side sorting logic (e.g., which subspaces can be reordered in which mode); it only persists and returns sortMode, pinned, and sortOrder data.
 

@@ -231,11 +231,15 @@ export class SpaceResolverFields {
     nullable: false,
     description: 'The settings for this Space.',
   })
-  settings(@Parent() space: ISpace): ISpaceSettings {
-    if (!space.settings.sortMode) {
-      space.settings.sortMode = SpaceSortMode.ALPHABETICAL;
-    }
-    return space.settings;
+  async settings(@Parent() space: ISpace): Promise<ISpaceSettings> {
+    const settings =
+      space.settings ??
+      (await this.spaceService.getSpaceOrFail(space.id)).settings;
+
+    return {
+      ...settings,
+      sortMode: settings.sortMode ?? SpaceSortMode.ALPHABETICAL,
+    };
   }
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
