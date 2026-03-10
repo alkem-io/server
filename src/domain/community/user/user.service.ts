@@ -466,8 +466,9 @@ export class UserService {
     // UUID) which is more reliable than email lookup. If authenticationID
     // is absent the user was never linked to Kratos — skip silently.
     if (user.authenticationID) {
-      // Always clear actor metadata first to prevent stale alkemio_actor_id
-      // on re-registration, regardless of whether full deletion succeeds
+      // Intentionally clear actor metadata even when deleteIdentity is false:
+      // the actor no longer exists in the DB, so any surviving Kratos identity
+      // must not carry a stale alkemio_actor_id that would break re-registration.
       try {
         await this.kratosService.clearIdentityActorMetadata(
           user.authenticationID

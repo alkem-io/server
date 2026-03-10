@@ -120,8 +120,16 @@ export class ActorService {
    */
   async deleteActorById(actorID: string): Promise<void> {
     await this.actorRepository.delete(actorID);
-    // Invalidate all actor-related caches to prevent stale data
-    await this.invalidateAllActorCaches(actorID);
+    // Best-effort cache invalidation — DB delete already committed,
+    // so a Redis failure should not break the caller's flow
+    try {
+      await this.invalidateAllActorCaches(actorID);
+    } catch (error: any) {
+      this.logger.warn?.(
+        `Failed to invalidate caches for deleted actor ${actorID}: ${error?.message}`,
+        LogContext.AUTH
+      );
+    }
   }
 
   // =========================================================================
