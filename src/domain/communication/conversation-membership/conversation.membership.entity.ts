@@ -34,6 +34,6 @@ export class ConversationMembership implements IConversationMembership {
   )
   conversation!: Conversation;
 
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }
