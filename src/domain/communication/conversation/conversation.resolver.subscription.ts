@@ -8,10 +8,31 @@ import { SubscriptionReadService } from '@services/subscriptions/subscription-se
 import { ConversationEventSubscriptionPayload } from '@services/subscriptions/subscription-service/dto';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { IConversation } from './conversation.interface';
 import {
   ConversationEventSubscriptionResult,
   ConversationEventType,
 } from './dto/subscription';
+
+/**
+ * Rehydrate Date fields on a conversation (and its room) that were
+ * stringified during AMQP serialization. NestJS's DateTime scalar
+ * requires actual Date instances — plain ISO strings cause serialize() to return null.
+ */
+const rehydrateConversationDates = (
+  conversation: IConversation
+): IConversation => ({
+  ...conversation,
+  createdDate: new Date(conversation.createdDate),
+  updatedDate: new Date(conversation.updatedDate),
+  room: conversation.room
+    ? {
+        ...conversation.room,
+        createdDate: new Date(conversation.room.createdDate),
+        updatedDate: new Date(conversation.room.updatedDate),
+      }
+    : conversation.room,
+});
 
 @InstrumentResolver()
 @Resolver()
@@ -77,8 +98,22 @@ export class ConversationEventResolverSubscription {
 
         return {
           eventType,
-          conversationCreated: payload.conversationCreated,
-          conversationUpdated: payload.conversationUpdated,
+          conversationCreated: payload.conversationCreated
+            ? {
+                ...payload.conversationCreated,
+                conversation: rehydrateConversationDates(
+                  payload.conversationCreated.conversation
+                ),
+              }
+            : undefined,
+          conversationUpdated: payload.conversationUpdated
+            ? {
+                ...payload.conversationUpdated,
+                conversation: rehydrateConversationDates(
+                  payload.conversationUpdated.conversation
+                ),
+              }
+            : undefined,
           messageReceived: payload.messageReceived,
           messageRemoved: payload.messageRemoved,
           readReceiptUpdated: payload.readReceiptUpdated
@@ -87,8 +122,22 @@ export class ConversationEventResolverSubscription {
                 lastReadEventId: payload.readReceiptUpdated.lastReadMessageId,
               }
             : undefined,
-          memberAdded: payload.memberAdded,
-          memberRemoved: payload.memberRemoved,
+          memberAdded: payload.memberAdded
+            ? {
+                ...payload.memberAdded,
+                conversation: rehydrateConversationDates(
+                  payload.memberAdded.conversation
+                ),
+              }
+            : undefined,
+          memberRemoved: payload.memberRemoved
+            ? {
+                ...payload.memberRemoved,
+                conversation: rehydrateConversationDates(
+                  payload.memberRemoved.conversation
+                ),
+              }
+            : undefined,
           conversationDeleted: payload.conversationDeleted,
         };
       },

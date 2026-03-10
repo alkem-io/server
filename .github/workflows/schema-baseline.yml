@@ -13,7 +13,7 @@ concurrency:
 jobs:
   regenerate:
     name: Regenerate Baseline
-    runs-on: arc-runner-set
+    runs-on: [self-hosted, macOS, ARM64, apple-silicon, m4]
     permissions:
       actions: read
       contents: write
@@ -35,6 +35,8 @@ jobs:
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
 
       - name: Setup Node.js
         uses: actions/setup-node@v6.2.0
