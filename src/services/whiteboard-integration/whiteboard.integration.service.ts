@@ -105,12 +105,24 @@ export class WhiteboardIntegrationService {
       };
     }
 
-    const update = await this.accessGranted({
-      userId,
-      whiteboardId,
-      privilege: AuthorizationPrivilege.UPDATE_CONTENT,
-      guestName,
-    });
+    // Anonymous users without a guest name are viewing via the normal space
+    // route (not the public whiteboard URL). They should not receive write
+    // access from the whiteboard's guest-access credential rule.
+    // A `guest-*` userId (assigned by `who()`) indicates a legitimate guest
+    // who provided a name, so only block truly anonymous identifiers.
+    const normalizedUserId = userId?.trim().toLowerCase() ?? '';
+    const isTrulyAnonymous =
+      normalizedUserId.length === 0 || normalizedUserId === 'n/a';
+    const isAnonymousWithoutGuestName = isTrulyAnonymous && !guestName?.trim();
+
+    const update = isAnonymousWithoutGuestName
+      ? false
+      : await this.accessGranted({
+          userId,
+          whiteboardId,
+          privilege: AuthorizationPrivilege.UPDATE_CONTENT,
+          guestName,
+        });
 
     const maxCollaborators = (await this.whiteboardService.isMultiUser(
       whiteboardId
