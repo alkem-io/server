@@ -160,6 +160,23 @@ export class AlignConstraintNamesWithTypeORM1772640100000
     );
 
     // ===================================================================
+    // #9: Add DEFAULT '' for organization text columns
+    //     Matches entity @Column({ default: '' }) so bootstrap inserts work.
+    // ===================================================================
+    await queryRunner.query(
+      `ALTER TABLE "organization" ALTER COLUMN "legalEntityName" SET DEFAULT ''`
+    );
+    await queryRunner.query(
+      `ALTER TABLE "organization" ALTER COLUMN "domain" SET DEFAULT ''`
+    );
+    await queryRunner.query(
+      `ALTER TABLE "organization" ALTER COLUMN "website" SET DEFAULT ''`
+    );
+    await queryRunner.query(
+      `ALTER TABLE "organization" ALTER COLUMN "contactEmail" SET DEFAULT ''`
+    );
+
+    // ===================================================================
     // #5: Add column comment for in_app_notification.contributorActorId
     // ===================================================================
     await queryRunner.query(
@@ -171,6 +188,20 @@ export class AlignConstraintNamesWithTypeORM1772640100000
     // Remove comment
     await queryRunner.query(
       `COMMENT ON COLUMN "in_app_notification"."contributorActorId" IS NULL`
+    );
+
+    // Remove organization text column defaults
+    await queryRunner.query(
+      `ALTER TABLE "organization" ALTER COLUMN "contactEmail" DROP DEFAULT`
+    );
+    await queryRunner.query(
+      `ALTER TABLE "organization" ALTER COLUMN "website" DROP DEFAULT`
+    );
+    await queryRunner.query(
+      `ALTER TABLE "organization" ALTER COLUMN "domain" DROP DEFAULT`
+    );
+    await queryRunner.query(
+      `ALTER TABLE "organization" ALTER COLUMN "legalEntityName" DROP DEFAULT`
     );
 
     // Restore actor.version DEFAULT

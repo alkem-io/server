@@ -123,9 +123,9 @@ export class RoomLookupService {
    */
   async updatePartial(
     roomId: string,
-    fields: Partial<Pick<IRoom, 'displayName' | 'avatarUrl'>>
+    fields: Partial<Record<'displayName' | 'avatarUrl', string | null>>
   ): Promise<void> {
-    await this.roomRepository.update(roomId, fields);
+    await this.roomRepository.update(roomId, fields as any);
   }
 
   /**

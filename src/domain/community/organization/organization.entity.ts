@@ -47,16 +47,16 @@ export class Organization extends Actor implements IOrganization, IGroupable {
   )
   groups?: UserGroup[];
 
-  @Column({ nullable: false })
+  @Column({ nullable: false, default: '' })
   legalEntityName!: string;
 
-  @Column({ nullable: false })
+  @Column({ nullable: false, default: '' })
   domain!: string;
 
-  @Column({ nullable: false })
+  @Column({ nullable: false, default: '' })
   website!: string;
 
-  @Column({ nullable: false })
+  @Column({ nullable: false, default: '' })
   contactEmail!: string;
 
   @OneToOne(() => OrganizationVerification, {

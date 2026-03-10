@@ -548,7 +548,7 @@ export class MessageInboxService {
     // Using a partial update avoids a read-modify-write race when
     // Matrix fires separate room.updated events for displayName and
     // avatarUrl nearly simultaneously.
-    const updates: Record<string, string> = {};
+    const updates: Record<string, string | null> = {};
     if (payload.displayName !== undefined) {
       updates.displayName = payload.displayName;
     }

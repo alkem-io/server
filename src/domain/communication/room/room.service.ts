@@ -84,8 +84,9 @@ export class RoomService {
   }
 
   /**
-   * Update the room's display name in both the local database and Matrix.
-   * Call this when the parent entity's displayName changes.
+   * Update the room's display name.
+   * Writes to DB immediately and sends RPC to Matrix.
+   * The inbound room.updated event will be a no-op (value already matches).
    */
   async updateRoomDisplayName(
     room: IRoom,
@@ -95,15 +96,25 @@ export class RoomService {
       return;
     }
 
-    // Send to Matrix only — DB will be updated when room.updated event arrives
+    await this.roomLookupService.updatePartial(room.id, {
+      displayName: newDisplayName,
+    });
     await this.communicationAdapter.updateRoom(room.id, newDisplayName);
   }
 
   /**
-   * Update the room avatar in Matrix.
-   * Avatar is a Matrix-only property — not stored locally.
+   * Update the room avatar.
+   * Writes to DB immediately (handles clearing via empty string → null)
+   * and sends RPC to Matrix. Matrix may not fire a room.updated event
+   * when the avatar is cleared, so the local write is essential.
    */
   async updateRoomAvatar(room: IRoom, avatarUrl: string): Promise<void> {
+    // Empty string means "remove avatar" — store as null in DB.
+    // Must pass null (not undefined) so TypeORM actually sets the column to NULL.
+    const dbValue = avatarUrl || null;
+    await this.roomLookupService.updatePartial(room.id, {
+      avatarUrl: dbValue,
+    });
     await this.communicationAdapter.updateRoom(
       room.id,
       undefined, // name
