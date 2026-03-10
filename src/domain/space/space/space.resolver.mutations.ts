@@ -259,7 +259,7 @@ export class SpaceResolverMutations {
 
   @Mutation(() => ISpace, {
     description:
-      'Updates the pinned state of a Subspace within the specified Space.',
+      'Updates the pinned state of a Subspace within the specified Space. Returns the updated Subspace.',
   })
   async updateSubspacePinned(
     @CurrentActor() actorContext: ActorContext,

@@ -3795,7 +3795,9 @@ type Mutation {
   updateSpacePlatformSettings(updateData: UpdateSpacePlatformSettingsInput!): Space!
   """Updates one of the Setting on a Space"""
   updateSpaceSettings(settingsData: UpdateSpaceSettingsInput!): Space!
-  """Updates the pinned state of a Subspace within the specified Space."""
+  """
+  Updates the pinned state of a Subspace within the specified Space. Returns the updated Subspace.
+  """
   updateSubspacePinned(pinnedData: UpdateSubspacePinnedInput!): Space!
   """
   Update the sortOrder field of the supplied Subspaces to increase as per the order that they are provided in.
