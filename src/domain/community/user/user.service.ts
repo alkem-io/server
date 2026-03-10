@@ -480,7 +480,7 @@ export class UserService {
             authenticationID: user.authenticationID,
             error: error?.message,
           },
-          undefined,
+          error?.stack,
           LogContext.AUTH
         );
       }
@@ -496,7 +496,7 @@ export class UserService {
               authenticationID: user.authenticationID,
               error: error?.message,
             },
-            undefined,
+            error?.stack,
             LogContext.AUTH
           );
         }
