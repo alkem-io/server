@@ -271,7 +271,7 @@ export class SpaceResolverMutations {
       actorContext,
       space.authorization,
       AuthorizationPrivilege.UPDATE,
-      `update subspace pinned on space: ${space.id}`
+      'update subspace pinned on space'
     );
 
     return this.spaceService.updateSubspacePinned(
