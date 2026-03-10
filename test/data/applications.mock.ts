@@ -1,8 +1,8 @@
+import { RoleName } from '@common/enums/role.name';
+import { RoleSetType } from '@common/enums/role.set.type';
 import { IApplication } from '@domain/access/application/application.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { ILifecycle } from '@domain/common/lifecycle/lifecycle.interface';
-import { RoleName } from '@common/enums/role.name';
-import { RoleSetType } from '@common/enums/role.set.type';
 import { userData } from '@test/data/user.mock';
 
 const now = new Date('2024-01-01T00:00:00.000Z');

@@ -65,9 +65,13 @@ describe('StorageAggregatorService', () => {
         mockBucket
       );
       (storageBucketService.save as Mock).mockResolvedValue(mockBucket);
-      (storageAggregatorRepository.save as Mock).mockImplementation(
-        async (entity: any) => ({ ...entity, id: 'agg-1' })
-      );
+      const mgrSave = vi.fn().mockImplementation(async (entity: any) => ({
+        ...entity,
+        id: 'agg-1',
+      }));
+      (storageAggregatorRepository as any).manager = {
+        transaction: vi.fn().mockImplementation(cb => cb({ save: mgrSave })),
+      };
 
       const result = await service.createStorageAggregator(
         StorageAggregatorType.SPACE
@@ -77,8 +81,8 @@ describe('StorageAggregatorService', () => {
       expect(result.authorization).toBeDefined();
       expect(result.directStorage).toBe(mockBucket);
       expect(storageBucketService.createStorageBucket).toHaveBeenCalledWith({});
-      expect(storageBucketService.save).toHaveBeenCalledWith(mockBucket);
-      expect(storageAggregatorRepository.save).toHaveBeenCalled();
+      expect(storageBucketService.save).toHaveBeenCalled();
+      expect(mgrSave).toHaveBeenCalled();
     });
 
     it('should link parent storage aggregator when one is provided', async () => {
@@ -91,9 +95,13 @@ describe('StorageAggregatorService', () => {
         mockBucket
       );
       (storageBucketService.save as Mock).mockResolvedValue(mockBucket);
-      (storageAggregatorRepository.save as Mock).mockImplementation(
-        async (entity: any) => ({ ...entity, id: 'agg-2' })
-      );
+      const mgrSave = vi.fn().mockImplementation(async (entity: any) => ({
+        ...entity,
+        id: 'agg-2',
+      }));
+      (storageAggregatorRepository as any).manager = {
+        transaction: vi.fn().mockImplementation(cb => cb({ save: mgrSave })),
+      };
 
       const result = await service.createStorageAggregator(
         StorageAggregatorType.ACCOUNT,
@@ -109,9 +117,13 @@ describe('StorageAggregatorService', () => {
         mockBucket
       );
       (storageBucketService.save as Mock).mockResolvedValue(mockBucket);
-      (storageAggregatorRepository.save as Mock).mockImplementation(
-        async (entity: any) => ({ ...entity, id: 'agg-3' })
-      );
+      const mgrSave = vi.fn().mockImplementation(async (entity: any) => ({
+        ...entity,
+        id: 'agg-3',
+      }));
+      (storageAggregatorRepository as any).manager = {
+        transaction: vi.fn().mockImplementation(cb => cb({ save: mgrSave })),
+      };
 
       const result = await service.createStorageAggregator(
         StorageAggregatorType.USER

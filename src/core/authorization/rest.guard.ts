@@ -1,10 +1,10 @@
 import { LogContext } from '@common/enums/logging.context';
 import { ForbiddenHttpException } from '@common/exceptions/http';
+import { ActorContext } from '@core/actor-context/actor.context';
 import {
   AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
   AUTH_STRATEGY_OATHKEEPER_JWT,
 } from '@core/authentication';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { AuthGuard } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -26,9 +26,9 @@ export class RestGuard extends AuthGuard([
      *handleRequest* is used to extend the error handling or how the request iis handled
      Based on the GraphqlGuard, this guard must also execute an authorization rule against the access resource
    */
-  handleRequest<T extends AgentInfo>(
+  handleRequest<T extends ActorContext>(
     err: any,
-    agentInfo: T,
+    actorContext: T,
     _: any,
     _context: any,
     _status?: any
@@ -42,6 +42,6 @@ export class RestGuard extends AuthGuard([
 
     // authorize the access to the requested resource...
 
-    return agentInfo;
+    return actorContext;
   }
 }

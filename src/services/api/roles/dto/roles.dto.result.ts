@@ -19,7 +19,7 @@ export class RolesResult {
   displayName: string;
 
   @Field(() => [String], {
-    description: 'The roles held by the contributor',
+    description: 'The roles held by the actor',
   })
   roles: string[];
 

@@ -1,9 +1,8 @@
 import { RoomType } from '@common/enums/room.type';
-import { EntityNotInitializedException } from '@common/exceptions';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationOrganizationAdapter } from '@services/adapters/notification-adapter/notification.organization.adapter';
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
@@ -25,7 +24,7 @@ describe('RoomMentionsService', () => {
   let communityResolverService: Mocked<CommunityResolverService>;
   let roomLookupService: Mocked<RoomLookupService>;
   let virtualContributorMessageService: Mocked<VirtualContributorMessageService>;
-  let virtualContributorLookupService: Mocked<VirtualContributorLookupService>;
+  let virtualActorLookupService: Mocked<VirtualActorLookupService>;
   let userLookupService: Mocked<UserLookupService>;
   let organizationLookupService: Mocked<OrganizationLookupService>;
 
@@ -46,9 +45,7 @@ describe('RoomMentionsService', () => {
     virtualContributorMessageService = module.get(
       VirtualContributorMessageService
     );
-    virtualContributorLookupService = module.get(
-      VirtualContributorLookupService
-    );
+    virtualActorLookupService = module.get(VirtualActorLookupService);
     userLookupService = module.get(UserLookupService);
     organizationLookupService = module.get(OrganizationLookupService);
   });
@@ -78,8 +75,8 @@ describe('RoomMentionsService', () => {
 
       expect(result).toEqual([
         {
-          contributorID: 'user-uuid-1',
-          contributorType: MentionedEntityType.USER,
+          actorID: 'user-uuid-1',
+          actorType: MentionedEntityType.USER,
         },
       ]);
     });
@@ -96,15 +93,15 @@ describe('RoomMentionsService', () => {
 
       expect(result).toEqual([
         {
-          contributorID: 'org-uuid-1',
-          contributorType: MentionedEntityType.ORGANIZATION,
+          actorID: 'org-uuid-1',
+          actorType: MentionedEntityType.ORGANIZATION,
         },
       ]);
     });
 
     it('should extract virtual contributor mention from text', async () => {
       const mockVC = { id: 'vc-uuid-1' } as any;
-      virtualContributorLookupService.getVirtualContributorByNameIdOrFail = vi
+      virtualActorLookupService.getVirtualContributorByNameIdOrFail = vi
         .fn()
         .mockResolvedValue(mockVC);
 
@@ -114,8 +111,8 @@ describe('RoomMentionsService', () => {
 
       expect(result).toEqual([
         {
-          contributorID: 'vc-uuid-1',
-          contributorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
+          actorID: 'vc-uuid-1',
+          actorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
         },
       ]);
     });
@@ -136,8 +133,8 @@ describe('RoomMentionsService', () => {
       const result = await service.getMentionsFromText(text);
 
       expect(result).toHaveLength(2);
-      expect(result[0].contributorType).toBe(MentionedEntityType.USER);
-      expect(result[1].contributorType).toBe(MentionedEntityType.ORGANIZATION);
+      expect(result[0].actorType).toBe(MentionedEntityType.USER);
+      expect(result[1].actorType).toBe(MentionedEntityType.ORGANIZATION);
     });
 
     it('should handle mentions with http protocol', async () => {
@@ -152,8 +149,8 @@ describe('RoomMentionsService', () => {
 
       expect(result).toEqual([
         {
-          contributorID: 'user-uuid-1',
-          contributorType: MentionedEntityType.USER,
+          actorID: 'user-uuid-1',
+          actorType: MentionedEntityType.USER,
         },
       ]);
     });
@@ -170,8 +167,8 @@ describe('RoomMentionsService', () => {
 
       expect(result).toEqual([
         {
-          contributorID: 'user-uuid-1',
-          contributorType: MentionedEntityType.USER,
+          actorID: 'user-uuid-1',
+          actorType: MentionedEntityType.USER,
         },
       ]);
     });
@@ -235,9 +232,9 @@ describe('RoomMentionsService', () => {
       type: RoomType.CALLOUT,
     } as unknown as IRoom;
 
-    const mockAgentInfo = {
-      userID: 'user-1',
-    } as AgentInfo;
+    const mockActorContext = {
+      actorID: 'user-1',
+    } as ActorContext;
 
     beforeEach(() => {
       communityResolverService.getCommunityFromRoom.mockResolvedValue({
@@ -251,8 +248,8 @@ describe('RoomMentionsService', () => {
     it('should create VC interaction and invoke VC for first mention in thread', async () => {
       const vcMentions: Mention[] = [
         {
-          contributorID: 'vc-entity-1',
-          contributorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
+          actorID: 'vc-entity-1',
+          actorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
         },
       ];
 
@@ -262,38 +259,37 @@ describe('RoomMentionsService', () => {
         vcInteractionsByThread: {},
       } as any);
 
-      virtualContributorLookupService.getVirtualContributorOrFail.mockResolvedValue(
+      virtualActorLookupService.getVirtualContributorByIdOrFail.mockResolvedValue(
         {
           id: 'vc-entity-1',
-          agent: { id: 'vc-agent-1' },
         } as any
       );
 
       roomLookupService.addVcInteractionToRoom.mockResolvedValue({
         threadID: 'thread-1',
-        virtualContributorID: 'vc-agent-1',
+        virtualContributorID: 'vc-entity-1',
       });
 
       await service.processVirtualContributorMentions(
         vcMentions,
         'Hello VC',
         'thread-1',
-        mockAgentInfo,
+        mockActorContext,
         mockRoom
       );
 
       expect(roomLookupService.addVcInteractionToRoom).toHaveBeenCalledWith({
-        virtualContributorActorID: 'vc-agent-1',
+        virtualContributorActorID: 'vc-entity-1',
         roomID: 'room-1',
         threadID: 'thread-1',
       });
       expect(
         virtualContributorMessageService.invokeVirtualContributor
       ).toHaveBeenCalledWith(
-        'vc-agent-1',
+        'vc-entity-1',
         'Hello VC',
         'thread-1',
-        mockAgentInfo,
+        mockActorContext,
         'space-1',
         mockRoom
       );
@@ -302,12 +298,12 @@ describe('RoomMentionsService', () => {
     it('should skip non-VC mentions', async () => {
       const mentions: Mention[] = [
         {
-          contributorID: 'user-1',
-          contributorType: MentionedEntityType.USER,
+          actorID: 'user-1',
+          actorType: MentionedEntityType.USER,
         },
         {
-          contributorID: 'org-1',
-          contributorType: MentionedEntityType.ORGANIZATION,
+          actorID: 'org-1',
+          actorType: MentionedEntityType.ORGANIZATION,
         },
       ];
 
@@ -321,7 +317,7 @@ describe('RoomMentionsService', () => {
         mentions,
         'Hello',
         'thread-1',
-        mockAgentInfo,
+        mockActorContext,
         mockRoom
       );
 
@@ -333,8 +329,8 @@ describe('RoomMentionsService', () => {
     it('should reuse existing VC interaction for subsequent mentions in same thread', async () => {
       const vcMentions: Mention[] = [
         {
-          contributorID: 'vc-entity-1',
-          contributorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
+          actorID: 'vc-entity-1',
+          actorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
         },
       ];
 
@@ -350,7 +346,7 @@ describe('RoomMentionsService', () => {
         vcMentions,
         'Another message',
         'thread-1',
-        mockAgentInfo,
+        mockActorContext,
         mockRoom
       );
 
@@ -363,41 +359,10 @@ describe('RoomMentionsService', () => {
         'vc-agent-1',
         'Another message',
         'thread-1',
-        mockAgentInfo,
+        mockActorContext,
         'space-1',
         mockRoom
       );
-    });
-
-    it('should throw EntityNotInitializedException when VC has no agent', async () => {
-      const vcMentions: Mention[] = [
-        {
-          contributorID: 'vc-entity-1',
-          contributorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
-        },
-      ];
-
-      roomLookupService.getRoomOrFail.mockResolvedValue({
-        id: 'room-1',
-        vcInteractionsByThread: {},
-      } as any);
-
-      virtualContributorLookupService.getVirtualContributorOrFail.mockResolvedValue(
-        {
-          id: 'vc-entity-1',
-          agent: undefined,
-        } as any
-      );
-
-      await expect(
-        service.processVirtualContributorMentions(
-          vcMentions,
-          'Hello',
-          'thread-1',
-          mockAgentInfo,
-          mockRoom
-        )
-      ).rejects.toThrow(EntityNotInitializedException);
     });
   });
 
@@ -410,13 +375,13 @@ describe('RoomMentionsService', () => {
       timestamp: Date.now(),
       reactions: [],
     };
-    const mockAgentInfo = { userID: 'user-1' } as AgentInfo;
+    const mockActorContext = { actorID: 'user-1' } as ActorContext;
 
     it('should send user mention notification for USER type mentions', async () => {
       const mentions: Mention[] = [
         {
-          contributorID: 'user-uuid-1',
-          contributorType: MentionedEntityType.USER,
+          actorID: 'user-uuid-1',
+          actorType: MentionedEntityType.USER,
         },
       ];
 
@@ -424,7 +389,7 @@ describe('RoomMentionsService', () => {
         mentions,
         mockRoom,
         mockMessage,
-        mockAgentInfo
+        mockActorContext
       );
 
       expect(notificationUserAdapter.userMention).toHaveBeenCalledWith({
@@ -438,8 +403,8 @@ describe('RoomMentionsService', () => {
     it('should send organization mention notification for ORGANIZATION type mentions', async () => {
       const mentions: Mention[] = [
         {
-          contributorID: 'org-uuid-1',
-          contributorType: MentionedEntityType.ORGANIZATION,
+          actorID: 'org-uuid-1',
+          actorType: MentionedEntityType.ORGANIZATION,
         },
       ];
 
@@ -447,7 +412,7 @@ describe('RoomMentionsService', () => {
         mentions,
         mockRoom,
         mockMessage,
-        mockAgentInfo
+        mockActorContext
       );
 
       expect(
@@ -463,12 +428,12 @@ describe('RoomMentionsService', () => {
     it('should handle mixed mention types', async () => {
       const mentions: Mention[] = [
         {
-          contributorID: 'user-uuid-1',
-          contributorType: MentionedEntityType.USER,
+          actorID: 'user-uuid-1',
+          actorType: MentionedEntityType.USER,
         },
         {
-          contributorID: 'org-uuid-1',
-          contributorType: MentionedEntityType.ORGANIZATION,
+          actorID: 'org-uuid-1',
+          actorType: MentionedEntityType.ORGANIZATION,
         },
       ];
 
@@ -476,7 +441,7 @@ describe('RoomMentionsService', () => {
         mentions,
         mockRoom,
         mockMessage,
-        mockAgentInfo
+        mockActorContext
       );
 
       expect(notificationUserAdapter.userMention).toHaveBeenCalledTimes(1);
@@ -490,7 +455,7 @@ describe('RoomMentionsService', () => {
         [],
         mockRoom,
         mockMessage,
-        mockAgentInfo
+        mockActorContext
       );
 
       expect(notificationUserAdapter.userMention).not.toHaveBeenCalled();

@@ -1,5 +1,5 @@
 export class CommunicationDeleteMessageInput {
-  actorId!: string;
+  actorID!: string;
 
   messageId!: string;
 

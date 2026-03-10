@@ -24,8 +24,8 @@ import { RegistrationService } from './registration.service';
 describe('RegistrationService', () => {
   let service: RegistrationService;
   let userService: {
-    createOrLinkUserFromAgentInfo: Mock;
-    getUserOrFail: Mock;
+    createUser: Mock;
+    getUserByIdOrFail: Mock;
     getAccount: Mock;
     deleteUser: Mock;
   };
@@ -40,8 +40,8 @@ describe('RegistrationService', () => {
     getOrganizationOrFail: Mock;
   };
   let roleSetService: {
-    assignUserToRole: Mock;
-    createInvitationExistingContributor: Mock;
+    assignActorToRole: Mock;
+    createInvitationExistingActor: Mock;
   };
   let platformInvitationService: {
     findPlatformInvitationsForUser: Mock;
@@ -49,7 +49,7 @@ describe('RegistrationService', () => {
   };
   let invitationService: {
     save: Mock;
-    findInvitationsForContributor: Mock;
+    findInvitationsForActor: Mock;
     deleteInvitation: Mock;
   };
   let invitationAuthorizationService: { applyAuthorizationPolicy: Mock };
@@ -92,48 +92,33 @@ describe('RegistrationService', () => {
 
   describe('registerNewUser', () => {
     it('should throw UserNotVerifiedException when email is not verified', async () => {
-      const agentInfo = {
+      const kratosData = {
         email: 'test@example.com',
         emailVerified: false,
-      } as any;
+        authenticationID: 'auth-1',
+        firstName: '',
+        lastName: '',
+        avatarURL: '',
+      };
 
-      await expect(service.registerNewUser(agentInfo)).rejects.toThrow(
+      await expect(service.registerNewUser(kratosData)).rejects.toThrow(
         UserNotVerifiedException
       );
     });
 
-    it('should return existing user without finalization when user is linked (not new)', async () => {
-      const existingUser = { id: 'user-1', email: 'test@example.com' };
-      const agentInfo = {
-        email: 'test@example.com',
-        emailVerified: true,
-      } as any;
-
-      userService.createOrLinkUserFromAgentInfo.mockResolvedValue({
-        user: existingUser,
-        isNew: false,
-      });
-
-      const result = await service.registerNewUser(agentInfo);
-
-      expect(result).toBe(existingUser);
-      expect(
-        userAuthorizationService.grantCredentialsAllUsersReceive
-      ).not.toHaveBeenCalled();
-    });
-
-    it('should finalize registration and assign org for new user', async () => {
+    it('should create user and finalize registration for new user', async () => {
       const newUser = { id: 'user-2', email: 'test@company.com' };
-      const agentInfo = {
+      const kratosData = {
         email: 'test@company.com',
         emailVerified: true,
-      } as any;
+        authenticationID: 'auth-1',
+        firstName: 'Test',
+        lastName: 'User',
+        avatarURL: '',
+      };
       const finalizedUser = { id: 'user-2', email: 'test@company.com' };
 
-      userService.createOrLinkUserFromAgentInfo.mockResolvedValue({
-        user: newUser,
-        isNew: true,
-      });
+      userService.createUser.mockResolvedValue(newUser);
       // Mock org lookup to return no org (so assignUserToOrganizationByDomain returns false)
       organizationLookupService.getOrganizationByDomain.mockResolvedValue(
         undefined
@@ -155,7 +140,7 @@ describe('RegistrationService', () => {
         undefined
       );
 
-      const result = await service.registerNewUser(agentInfo);
+      const result = await service.registerNewUser(kratosData);
 
       expect(result).toBe(finalizedUser);
       expect(
@@ -228,12 +213,12 @@ describe('RegistrationService', () => {
         },
         roleSet,
       });
-      roleSetService.assignUserToRole.mockResolvedValue(undefined);
+      roleSetService.assignActorToRole.mockResolvedValue(undefined);
 
       const result = await service.assignUserToOrganizationByDomain(user);
 
       expect(result).toBe(true);
-      expect(roleSetService.assignUserToRole).toHaveBeenCalledWith(
+      expect(roleSetService.assignActorToRole).toHaveBeenCalledWith(
         roleSet,
         expect.any(String),
         'user-1'
@@ -266,7 +251,7 @@ describe('RegistrationService', () => {
         [{ id: 'pi-1', roleSet: undefined }, invitationWithRoleSet]
       );
       const savedInvitation = { id: 'inv-1', invitedToParent: false };
-      roleSetService.createInvitationExistingContributor.mockResolvedValue(
+      roleSetService.createInvitationExistingActor.mockResolvedValue(
         savedInvitation
       );
       invitationService.save.mockResolvedValue(savedInvitation);
@@ -282,7 +267,7 @@ describe('RegistrationService', () => {
 
       expect(result).toHaveLength(1);
       expect(
-        roleSetService.createInvitationExistingContributor
+        roleSetService.createInvitationExistingActor
       ).toHaveBeenCalledTimes(1);
     });
   });
@@ -290,7 +275,7 @@ describe('RegistrationService', () => {
   describe('deleteUserWithPendingMemberships', () => {
     it('should delete invitations, applications, user and account', async () => {
       const deleteData = { ID: 'user-1' };
-      invitationService.findInvitationsForContributor.mockResolvedValue([
+      invitationService.findInvitationsForActor.mockResolvedValue([
         { id: 'inv-1' },
         { id: 'inv-2' },
       ]);
@@ -301,7 +286,7 @@ describe('RegistrationService', () => {
       applicationService.deleteApplication.mockResolvedValue(undefined);
       const user = { id: 'user-1' };
       const account = { id: 'account-1' };
-      userService.getUserOrFail.mockResolvedValue(user);
+      userService.getUserByIdOrFail.mockResolvedValue(user);
       userService.getAccount.mockResolvedValue(account);
       userService.deleteUser.mockResolvedValue(user);
       accountService.deleteAccountOrFail.mockResolvedValue(undefined);

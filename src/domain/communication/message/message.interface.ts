@@ -19,7 +19,7 @@ export class IMessage {
   })
   message!: string;
 
-  // Agent ID of the sender - resolved to Contributor by field resolver
+  // Actor ID of the sender - resolved to Contributor by field resolver
   sender!: string;
 
   @Field(() => Number, {

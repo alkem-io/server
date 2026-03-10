@@ -5,7 +5,7 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { BaseSubscriptionPayload } from '@interfaces/index';
 
 export interface ReadReceiptData {
-  actorId: string;
+  actorID: string;
   eventId: string;
   threadId?: string;
   timestamp: number;

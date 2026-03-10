@@ -786,6 +786,7 @@ export class SearchIngestService {
           profile: profileRelationOptions,
         },
         select: {
+          id: true,
           profile: profileSelectOptions,
         },
         skip: start,
@@ -818,6 +819,7 @@ export class SearchIngestService {
           profile: profileRelationOptions,
         },
         select: {
+          id: true,
           profile: profileSelectOptions,
         },
         skip: start,

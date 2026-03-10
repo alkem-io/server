@@ -1,9 +1,9 @@
 export enum MessagingQueue {
-  VIRTUAL_CONTRIBUTOR_ENGINE_GUIDANCE = 'virtual-contributor-engine-guidance',
-  VIRTUAL_CONTRIBUTOR_ENGINE_COMMUNITY_MANAGER = 'virtual-contributor-engine-community-manager',
-  VIRTUAL_CONTRIBUTOR_ENGINE_EXPERT = 'virtual-contributor-engine-expert',
-  VIRTUAL_CONTRIBUTOR_ENGINE_GENERIC = 'virtual-contributor-engine-generic',
-  VIRTUAL_CONTRIBUTOR_ENGINE_OPENAI_ASSISTANT = 'virtual-contributor-engine-openai-assistant',
+  VIRTUAL_ENGINE_GUIDANCE = 'virtual-contributor-engine-guidance',
+  VIRTUAL_ENGINE_COMMUNITY_MANAGER = 'virtual-contributor-engine-community-manager',
+  VIRTUAL_ENGINE_EXPERT = 'virtual-contributor-engine-expert',
+  VIRTUAL_ENGINE_GENERIC = 'virtual-contributor-engine-generic',
+  VIRTUAL_ENGINE_OPENAI_ASSISTANT = 'virtual-contributor-engine-openai-assistant',
   //
   NOTIFICATIONS = 'alkemio-notifications',
   MATRIX_ADAPTER = 'alkemio-matrix-adapter',
@@ -11,7 +11,7 @@ export enum MessagingQueue {
   AUTH_RESET = 'alkemio-auth-reset',
   //
   SUBSCRIPTION_WHITEBOARD_CONTENT = 'alkemio-subscriptions-whiteboard-content',
-  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED = 'alkemio-subscriptions-virtual-contributor-updated',
+  SUBSCRIPTION_VIRTUAL_UPDATED = 'alkemio-subscriptions-virtual-contributor-updated',
   SUBSCRIPTION_WHITEBOARD_SAVED = 'alkemio-subscriptions-whiteboard-saved',
   SUBSCRIPTION_PROFILE_VERIFIED_CREDENTIAL = 'alkemio-subscriptions-profile-verified-credential',
   SUBSCRIPTION_CALLOUT_POST_CREATED = 'alkemio-subscriptions-callout-post-created',

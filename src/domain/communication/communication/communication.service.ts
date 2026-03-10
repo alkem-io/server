@@ -10,7 +10,6 @@ import {
   Communication,
   ICommunication,
 } from '@domain/communication/communication';
-import { IUser } from '@domain/community/user/user.interface';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
@@ -102,14 +101,14 @@ export class CommunicationService {
 
   async addContributorToCommunications(
     communication: ICommunication,
-    contributorActorId: string
+    contributorActorID: string
   ): Promise<boolean> {
-    if (!contributorActorId) {
+    if (!contributorActorID) {
       // no actor ID to manage, just return
       return true;
     }
     const roomIds = this.getRoomIds(communication);
-    await this.communicationAdapter.batchAddMember(contributorActorId, roomIds);
+    await this.communicationAdapter.batchAddMember(contributorActorID, roomIds);
     return true;
   }
 
@@ -129,16 +128,12 @@ export class CommunicationService {
     return results.map(r => r.id);
   }
 
-  async removeUserFromCommunications(
+  async removeActorFromCommunications(
     communication: ICommunication,
-    user: IUser
+    actorID: string
   ): Promise<boolean> {
-    if (!user.agent?.id) {
-      // no agent ID to manage, just return
-      return true;
-    }
     const roomIds = this.getRoomIds(communication);
-    await this.communicationAdapter.batchRemoveMember(user.agent.id, roomIds);
+    await this.communicationAdapter.batchRemoveMember(actorID, roomIds);
     return true;
   }
 }

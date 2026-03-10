@@ -4,8 +4,8 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
-import { IContributor } from '@domain/community/contributor/contributor.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -84,8 +84,9 @@ export class SpaceLookupService {
     if (!space) {
       if (!space)
         throw new EntityNotFoundException(
-          `Unable to find L0 Space with nameID: ${spaceNameID}`,
-          LogContext.SPACES
+          'L0 Space not found',
+          LogContext.SPACES,
+          { spaceNameID }
         );
     }
     return space;
@@ -210,9 +211,7 @@ export class SpaceLookupService {
     return collaboration;
   }
 
-  public async getProvider(
-    spaceAbout: ISpaceAbout
-  ): Promise<IContributor | null> {
+  public async getProvider(spaceAbout: ISpaceAbout): Promise<IActor | null> {
     const space = await this.spaceRepository.findOne({
       where: {
         about: {
@@ -234,9 +233,7 @@ export class SpaceLookupService {
    * Gets the provider for a space that has already been loaded.
    * For L0 spaces (levelZeroSpaceID === space.id), skips the redundant L0 lookup.
    */
-  public async getProviderForSpace(
-    space: ISpace
-  ): Promise<IContributor | null> {
+  public async getProviderForSpace(space: ISpace): Promise<IActor | null> {
     let l0Space: ISpace | null;
 
     if (space.levelZeroSpaceID === space.id) {

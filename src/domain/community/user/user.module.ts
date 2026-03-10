@@ -1,7 +1,8 @@
-import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
@@ -18,8 +19,6 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { PlatformAuthorizationPolicyModule } from '@src/platform/authorization/platform.authorization.policy.module';
-import { ContributorModule } from '../contributor/contributor.module';
-import { UserAuthenticationLinkModule } from '../user-authentication-link/user.authentication.link.module';
 import { UserLookupModule } from '../user-lookup/user.lookup.module';
 import { UserSettingsModule } from '../user-settings/user.settings.module';
 import { UserResolverFields } from './user.resolver.fields';
@@ -30,15 +29,15 @@ import { UserAuthorizationService } from './user.service.authorization';
 
 @Module({
   imports: [
+    ActorModule,
+    ActorLookupModule,
     ProfileModule,
     UserSettingsModule,
     CommunicationAdapterModule,
-    AgentModule,
-    AuthenticationAgentInfoModule,
+    ActorContextModule,
     AccountHostModule,
     AccountLookupModule,
     UserLookupModule,
-    UserAuthenticationLinkModule,
     NamingModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
@@ -49,7 +48,6 @@ import { UserAuthorizationService } from './user.service.authorization';
     StorageBucketModule,
     DocumentModule,
     KratosModule,
-    ContributorModule,
     MessagingModule,
     TypeOrmModule.forFeature([User]),
   ],

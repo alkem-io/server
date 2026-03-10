@@ -40,6 +40,11 @@ http:
         servers:
           - url: 'http://oidc-service:8080/'
 
+    kratos-hooks:
+      loadBalancer:
+        servers:
+          - url: 'http://kratos-hooks:8080/'
+
     kratos-public:
       loadBalancer:
         servers:
@@ -248,6 +253,16 @@ http:
       entryPoints:
         - 'web'
 
+    # Login backoff proxy: intercepts login submissions for brute-force protection
+    kratos-login-backoff:
+      rule: 'PathPrefix(`/ory/kratos/public/self-service/login`)'
+      service: 'kratos-hooks'
+      middlewares:
+        - strip-kratos-public-prefix
+      entryPoints:
+        - 'web'
+      priority: 200
+
     kratos-public:
       rule: 'PathPrefix(`/ory/kratos/public`)'
       service: 'kratos-public'
@@ -275,6 +290,13 @@ http:
       service: 'alkemio-web-client'
       entryPoints:
         - 'web'
+
+    kratos-hooks:
+      rule: 'PathPrefix(`/api/v1/webhooks`)'
+      service: 'kratos-hooks'
+      entryPoints:
+        - 'web'
+      priority: 140
 
     oathkeeper-jwks:
       rule: 'PathPrefix(`/jwks`)'

@@ -1,6 +1,6 @@
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { DeletePostInput } from '@domain/collaboration/post/dto/post.dto.delete';
 import { UpdatePostInput } from '@domain/collaboration/post/dto/post.dto.update';
@@ -21,12 +21,12 @@ export class PostResolverMutations {
     description: 'Deletes the specified Post.',
   })
   async deletePost(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('deleteData') deleteData: DeletePostInput
   ): Promise<IPost> {
     const post = await this.postService.getPostOrFail(deleteData.ID);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       post.authorization,
       AuthorizationPrivilege.DELETE,
       `delete post: ${post.id}`
@@ -38,12 +38,12 @@ export class PostResolverMutations {
     description: 'Updates the specified Post.',
   })
   async updatePost(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('postData') postData: UpdatePostInput
   ): Promise<IPost> {
     const post = await this.postService.getPostOrFail(postData.ID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       post.authorization,
       AuthorizationPrivilege.UPDATE,
       `update post: ${post.id}`

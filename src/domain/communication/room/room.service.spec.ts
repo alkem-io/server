@@ -1,9 +1,9 @@
 import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
@@ -19,7 +19,7 @@ describe('RoomService', () => {
   let service: RoomService;
   let communicationAdapter: Mocked<CommunicationAdapter>;
   let roomLookupService: Mocked<RoomLookupService>;
-  let contributorLookupService: Mocked<ContributorLookupService>;
+  let _actorLookupService: Mocked<ActorLookupService>;
   let roomRepo: Mocked<Repository<Room>>;
 
   beforeEach(async () => {
@@ -36,7 +36,7 @@ describe('RoomService', () => {
     service = module.get(RoomService);
     communicationAdapter = module.get(CommunicationAdapter);
     roomLookupService = module.get(RoomLookupService);
-    contributorLookupService = module.get(ContributorLookupService);
+    _actorLookupService = module.get(ActorLookupService);
     roomRepo = module.get(getRepositoryToken(Room));
   });
 
@@ -68,7 +68,7 @@ describe('RoomService', () => {
       );
     });
 
-    it('should pass senderActorId as initial member for non-direct rooms', async () => {
+    it('should pass senderActorID as initial member for non-direct rooms', async () => {
       const savedRoom = {
         id: 'room-1',
         displayName: 'Test Room',
@@ -80,7 +80,7 @@ describe('RoomService', () => {
       await service.createRoom({
         displayName: 'Test Room',
         type: RoomType.CALLOUT,
-        senderActorId: 'agent-1',
+        senderActorID: 'agent-1',
       });
 
       expect(communicationAdapter.createRoom).toHaveBeenCalledWith(
@@ -103,8 +103,8 @@ describe('RoomService', () => {
       await service.createRoom({
         displayName: 'DM Room',
         type: RoomType.CONVERSATION_DIRECT,
-        senderActorId: 'agent-1',
-        receiverActorId: 'agent-2',
+        senderActorID: 'agent-1',
+        receiverActorID: 'agent-2',
       });
 
       expect(communicationAdapter.createRoom).toHaveBeenCalledWith(
@@ -115,7 +115,7 @@ describe('RoomService', () => {
       );
     });
 
-    it('should throw Error when direct room is missing senderActorId', async () => {
+    it('should throw Error when direct room is missing senderActorID', async () => {
       roomRepo.save.mockResolvedValue({
         id: 'room-1',
         displayName: 'DM Room',
@@ -126,12 +126,12 @@ describe('RoomService', () => {
         service.createRoom({
           displayName: 'DM Room',
           type: RoomType.CONVERSATION_DIRECT,
-          receiverActorId: 'agent-2',
+          receiverActorID: 'agent-2',
         })
       ).rejects.toThrow(Error);
     });
 
-    it('should throw Error when direct room is missing receiverActorId', async () => {
+    it('should throw Error when direct room is missing receiverActorID', async () => {
       roomRepo.save.mockResolvedValue({
         id: 'room-1',
         displayName: 'DM Room',
@@ -142,7 +142,7 @@ describe('RoomService', () => {
         service.createRoom({
           displayName: 'DM Room',
           type: RoomType.CONVERSATION_DIRECT,
-          senderActorId: 'agent-1',
+          senderActorID: 'agent-1',
         })
       ).rejects.toThrow(Error);
     });
@@ -244,7 +244,7 @@ describe('RoomService', () => {
         messageId: 'msg-1',
       });
       expect(communicationAdapter.deleteMessage).toHaveBeenCalledWith({
-        actorId: 'sender-actor-1',
+        actorID: 'sender-actor-1',
         messageId: 'msg-1',
         roomID: 'room-1',
       });
@@ -281,7 +281,7 @@ describe('RoomService', () => {
       expect(result).toBe(true);
       expect(communicationAdapter.removeReaction).toHaveBeenCalledWith({
         alkemioRoomId: 'room-1',
-        actorId: 'reactor-actor-1',
+        actorID: 'reactor-actor-1',
         reactionId: 'reaction-1',
       });
     });
@@ -306,32 +306,15 @@ describe('RoomService', () => {
       communicationAdapter.getMessageSenderActor.mockResolvedValue(
         'sender-actor-1'
       );
-      contributorLookupService.getUserIdByAgentId.mockResolvedValue(
-        'user-uuid-1'
-      );
 
       const result = await service.getUserIdForMessage(mockRoom, 'msg-1');
 
-      expect(result).toBe('user-uuid-1');
+      expect(result).toBe('sender-actor-1');
     });
 
     it('should return empty string when sender actor is empty', async () => {
       const mockRoom = { id: 'room-1' } as unknown as IRoom;
       communicationAdapter.getMessageSenderActor.mockResolvedValue('');
-
-      const result = await service.getUserIdForMessage(mockRoom, 'msg-1');
-
-      expect(result).toBe('');
-    });
-
-    it('should return empty string when user cannot be resolved from agent', async () => {
-      const mockRoom = { id: 'room-1' } as unknown as IRoom;
-      communicationAdapter.getMessageSenderActor.mockResolvedValue(
-        'sender-actor-1'
-      );
-      contributorLookupService.getUserIdByAgentId.mockResolvedValue(
-        undefined as any
-      );
 
       const result = await service.getUserIdForMessage(mockRoom, 'msg-1');
 
@@ -345,13 +328,10 @@ describe('RoomService', () => {
       communicationAdapter.getReactionSenderActor.mockResolvedValue(
         'reactor-actor-1'
       );
-      contributorLookupService.getUserIdByAgentId.mockResolvedValue(
-        'user-uuid-1'
-      );
 
       const result = await service.getUserIdForReaction(mockRoom, 'reaction-1');
 
-      expect(result).toBe('user-uuid-1');
+      expect(result).toBe('reactor-actor-1');
     });
   });
 

@@ -26,8 +26,7 @@ export class NotificationVirtualContributorAdapter {
   public async spaceCommunityInvitationVirtualContributorCreated(
     eventData: NotificationInputCommunityInvitationVirtualContributor
   ): Promise<void> {
-    const event =
-      NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION;
+    const event = NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION;
     const space =
       await this.communityResolverService.getSpaceForCommunityOrFail(
         eventData.community.id
@@ -63,7 +62,7 @@ export class NotificationVirtualContributorAdapter {
       };
 
       await this.notificationInAppAdapter.sendInAppNotifications(
-        NotificationEvent.VIRTUAL_CONTRIBUTOR_ADMIN_SPACE_COMMUNITY_INVITATION,
+        NotificationEvent.VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION,
         NotificationEventCategory.VIRTUAL_CONTRIBUTOR,
         eventData.triggeredBy,
         inAppReceiverIDs,

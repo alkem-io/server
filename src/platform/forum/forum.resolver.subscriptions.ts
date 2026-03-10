@@ -1,11 +1,11 @@
 import { UUID_LENGTH } from '@common/constants';
 import { SUBSCRIPTION_DISCUSSION_UPDATED } from '@common/constants/providers';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { SubscriptionUserNotAuthenticated } from '@common/exceptions/subscription.user.not.authenticated';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Inject, LoggerService } from '@nestjs/common';
@@ -39,9 +39,9 @@ export class ForumResolverSubscriptions {
       _: any,
       context: any
     ): Promise<IDiscussion> {
-      const agentInfo = context.req?.user;
+      const actorContext = context.req?.user;
       this.logger.verbose?.(
-        `[User (${agentInfo.email}) Discussion Update] - Sending out event: ${payload.eventID} `,
+        `[User (${actorContext.actorID}) Discussion Update] - Sending out event: ${payload.eventID} `,
         LogContext.SUBSCRIPTIONS
       );
       return await this.discussionService.getDiscussionOrFail(
@@ -55,20 +55,20 @@ export class ForumResolverSubscriptions {
       variables: any,
       context: any
     ) {
-      const agentInfo = context.req?.user;
+      const actorContext = context.req?.user;
       const isMatch = await this.discussionService.isDiscussionInForum(
         payload.discussionID,
         variables.forumID
       );
       this.logger.verbose?.(
-        `[User (${agentInfo.email}) Discussion Update] - Filtering event id '${payload.eventID}' - match? ${isMatch}`,
+        `[User (${actorContext.actorID}) Discussion Update] - Filtering event id '${payload.eventID}' - match? ${isMatch}`,
         LogContext.SUBSCRIPTIONS
       );
       return isMatch;
     },
   })
   async forumDiscussionUpdated(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args({
       name: 'forumID',
       type: () => UUID,
@@ -77,13 +77,13 @@ export class ForumResolverSubscriptions {
     forumID: string
   ) {
     // Only allow subscriptions for logged in users
-    if (agentInfo.userID.length !== UUID_LENGTH) {
+    if (actorContext.actorID.length !== UUID_LENGTH) {
       throw new SubscriptionUserNotAuthenticated(
         'Subscription attempted to DiscussionsUpdated for non-authenticated user',
         LogContext.SUBSCRIPTIONS
       );
     }
-    const logMsgPrefix = `[User (${agentInfo.email}) Discussion Update] - `;
+    const logMsgPrefix = `[User (${actorContext.actorID}) Discussion Update] - `;
     this.logger.verbose?.(
       `${logMsgPrefix} Subscribing to Discussions on Forum: ${forumID}`,
       LogContext.SUBSCRIPTIONS
@@ -91,7 +91,7 @@ export class ForumResolverSubscriptions {
 
     const forum = await this.forumService.getForumOrFail(forumID);
     await this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       forum.authorization,
       AuthorizationPrivilege.READ,
       `subscription to discussion updates on: ${forum.id}`

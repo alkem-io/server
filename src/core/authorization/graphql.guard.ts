@@ -1,62 +1,168 @@
-import { AuthorizationPrivilege } from '@common/enums';
-import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthenticationException } from '@common/exceptions';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import {
-  CanActivate,
+  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
+  AUTH_STRATEGY_OATHKEEPER_JWT,
+} from '@core/authentication';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import {
+  ContextType,
   ExecutionContext,
+  Inject,
   Injectable,
+  LoggerService,
 } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { AuthGuard } from '@nestjs/passport';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { EntityManager } from 'typeorm';
+import { AuthorizationRuleActorPrivilege } from './authorization.rule.actor.privilege';
 
-/**
- * Synchronous authorization guard for GraphQL resolvers.
- *
- * Authentication is handled once per request by the global AuthInterceptor
- * which sets `req.user` via passport. This guard reads the already-authenticated
- * agent and checks the required privilege against the parent entity's
- * authorization policy.
- *
- * Keeping this guard synchronous is critical: an async guard (e.g. one that
- * re-runs passport per field) breaks DataLoader batching because each
- * resolver awaits independently, causing loads to dispatch in separate ticks.
- */
 @Injectable()
-export class GraphqlGuard implements CanActivate {
+export class GraphqlGuard extends AuthGuard([
+  AUTH_STRATEGY_OATHKEEPER_JWT,
+  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
+]) {
+  instanceId: string;
+
   constructor(
     private reflector: Reflector,
     private authorizationService: AuthorizationService,
-    private agentInfoService: AgentInfoService
-  ) {}
+    private actorContextService: ActorContextService,
+    @InjectEntityManager('default')
+    private entityManager: EntityManager,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+  ) {
+    super();
+    // Note: instanceID can be useful for debugging purposes, but by default not enabled.
+    this.instanceId = '';
+    //this.instanceId = Math.floor(Math.random() * 10000).toString();
+  }
 
-  canActivate(context: ExecutionContext): boolean {
-    // Read the privilege set by @AuthorizationAgentPrivilege decorator; skip if none
-    const privilege = this.reflector.get<AuthorizationPrivilege>(
-      'privilege',
-      context.getHandler()
-    );
-    if (!privilege) {
-      return true;
+  // Need to override base method for graphql requests
+  getRequest(context: ExecutionContext) {
+    if (context.getType<ContextType | 'graphql'>() === 'graphql') {
+      const ctx = GqlExecutionContext.create(context).getContext();
+
+      // required for passport.js for websocket grapqhl subscriptions
+      if (ctx.websocketHeader?.connectionParams) {
+        const websocketHeader = ctx.websocketHeader?.connectionParams || {};
+
+        return { headers: { ...websocketHeader } };
+      }
+
+      return ctx.req;
+    }
+    return context.switchToHttp().getRequest();
+  }
+
+  /**
+   if *canActive* is defined the authorization WILL NOT GO through the defined strategies, and use the code here instead.
+   if **handleRequest* is defined WILL USE the defined strategies
+
+   *handleRequest* is used to extend the error handling or how the request is handled
+ */
+  handleRequest(
+    err: any,
+    actorContext: any,
+    info: any,
+    _context: any,
+    _status?: any
+  ) {
+    if (err) {
+      throw new AuthenticationException(
+        err?.message ?? String(err),
+        LogContext.AUTH
+      );
     }
 
-    const gqlContext = GqlExecutionContext.create(context);
-    // req.user is set once per request by the global AuthInterceptor (passport)
-    const req = gqlContext.getContext<IGraphQLContext>().req;
-    // Fall back to anonymous credentials for unauthenticated requests
-    const agentInfo =
-      req?.user ?? this.agentInfoService.createAnonymousAgentInfo();
+    const gqlContext = GqlExecutionContext.create(_context);
+    const graphqlInfo = gqlContext.getInfo();
+    const fieldName = graphqlInfo.fieldName;
 
-    // The parent entity whose authorization policy protects this field
-    const fieldParent = gqlContext.getRoot();
-    const fieldName = gqlContext.getInfo().fieldName;
+    // Ensure there is always an ActorContext
+    let resultActorContext = actorContext;
 
-    // Check privilege against the parent's authorization policy;
-    // throws ForbiddenAuthorizationPolicyException with full diagnostics on failure
-    return this.authorizationService.grantAccessOrFail(
-      agentInfo,
-      fieldParent.authorization,
-      privilege,
-      `${fieldParent.constructor?.name}.${fieldName}`
+    if (actorContext) {
+      this.authorizationService.logActorContext(actorContext);
+    } else {
+      this.logger.warn?.(
+        `[${this.instanceId}] - ActorContext NOT present or false: ${actorContext}`,
+        LogContext.AUTH
+      );
+      // Create anonymous actor context as fallback
+      resultActorContext = this.actorContextService.createAnonymous();
+    }
+
+    // Apply any rules
+    const privilege = this.reflector.get<AuthorizationPrivilege>(
+      'privilege',
+      _context.getHandler()
     );
+    if (privilege) {
+      const fieldParent = gqlContext.getRoot();
+      if (fieldParent.authorizationId && !fieldParent.authorization) {
+        this.logger.error(
+          {
+            message: 'No authorization policy present in Guard',
+            fieldName,
+            fieldParent,
+            authorizationId: fieldParent.authorizationId,
+          },
+          undefined,
+          LogContext.CODE_ERRORS
+        );
+        this.entityManager
+          .findOne(AuthorizationPolicy, {
+            where: { id: fieldParent.authorizationId },
+          })
+          .then((authorization: any) => {
+            fieldParent.authorization = authorization;
+          })
+          .catch((error: any) => {
+            this.logger.error(
+              `Error loading authorization with id ${fieldParent.authorizationId}: ${error}`,
+              undefined,
+              LogContext.AUTH_GUARD
+            );
+          })
+          .finally(() => {
+            this.executeAuthorizationRule(
+              privilege,
+              fieldParent,
+              fieldName,
+              resultActorContext
+            );
+          });
+      } else {
+        this.executeAuthorizationRule(
+          privilege,
+          fieldParent,
+          fieldName,
+          resultActorContext
+        );
+      }
+    }
+
+    return resultActorContext;
+  }
+
+  private executeAuthorizationRule(
+    privilege: AuthorizationPrivilege,
+    fieldParent: any,
+    fieldName: any,
+    resultActorContext: any
+  ) {
+    const rule = new AuthorizationRuleActorPrivilege(
+      this.authorizationService,
+      privilege,
+      fieldParent,
+      fieldName
+    );
+    rule.execute(resultActorContext);
   }
 }

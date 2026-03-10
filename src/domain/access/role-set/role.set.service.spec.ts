@@ -1,5 +1,5 @@
 import { RoleName } from '@common/enums/role.name';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -19,7 +19,7 @@ function makeRoleSet(
 
 describe('RoleSetService', () => {
   let service: RoleSetService;
-  let agentService: Mocked<AgentService>;
+  let actorService: Mocked<ActorService>;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -34,9 +34,9 @@ describe('RoleSetService', () => {
       .compile();
 
     service = module.get<RoleSetService>(RoleSetService);
-    agentService = module.get<AgentService>(
-      AgentService
-    ) as Mocked<AgentService>;
+    actorService = module.get<ActorService>(
+      ActorService
+    ) as Mocked<ActorService>;
   });
 
   it('should be defined', () => {
@@ -48,7 +48,7 @@ describe('RoleSetService', () => {
       const result = await service.getMembersCountBatch([]);
       expect(result).toEqual(new Map());
       expect(
-        agentService.countAgentsWithMatchingCredentialsBatch
+        actorService.countActorsWithMatchingCredentialsBatch
       ).not.toHaveBeenCalled();
     });
 
@@ -57,7 +57,7 @@ describe('RoleSetService', () => {
       const result = await service.getMembersCountBatch([roleSet]);
       expect(result).toEqual(new Map());
       expect(
-        agentService.countAgentsWithMatchingCredentialsBatch
+        actorService.countActorsWithMatchingCredentialsBatch
       ).not.toHaveBeenCalled();
     });
 
@@ -71,7 +71,7 @@ describe('RoleSetService', () => {
       const result = await service.getMembersCountBatch([roleSet]);
       expect(result).toEqual(new Map());
       expect(
-        agentService.countAgentsWithMatchingCredentialsBatch
+        actorService.countActorsWithMatchingCredentialsBatch
       ).not.toHaveBeenCalled();
     });
 
@@ -101,7 +101,7 @@ describe('RoleSetService', () => {
         },
       ]);
 
-      agentService.countAgentsWithMatchingCredentialsBatch.mockResolvedValue(
+      actorService.countActorsWithMatchingCredentialsBatch.mockResolvedValue(
         new Map([
           ['res-A', 5],
           ['res-B', 12],
@@ -111,7 +111,7 @@ describe('RoleSetService', () => {
       const result = await service.getMembersCountBatch([rs1, rs2]);
 
       expect(
-        agentService.countAgentsWithMatchingCredentialsBatch
+        actorService.countActorsWithMatchingCredentialsBatch
       ).toHaveBeenCalledOnce();
       expect(result.get('rs-1')).toBe(5);
       expect(result.get('rs-2')).toBe(12);
@@ -125,7 +125,7 @@ describe('RoleSetService', () => {
         },
       ]);
 
-      agentService.countAgentsWithMatchingCredentialsBatch.mockResolvedValue(
+      actorService.countActorsWithMatchingCredentialsBatch.mockResolvedValue(
         new Map()
       );
 
@@ -142,7 +142,7 @@ describe('RoleSetService', () => {
       ]);
       const skippedRs = makeRoleSet('rs-skipped', undefined);
 
-      agentService.countAgentsWithMatchingCredentialsBatch.mockResolvedValue(
+      actorService.countActorsWithMatchingCredentialsBatch.mockResolvedValue(
         new Map([['res-V', 7]])
       );
 
@@ -151,7 +151,7 @@ describe('RoleSetService', () => {
       expect(result.get('rs-valid')).toBe(7);
       expect(result.has('rs-skipped')).toBe(false);
       expect(
-        agentService.countAgentsWithMatchingCredentialsBatch
+        actorService.countActorsWithMatchingCredentialsBatch
       ).toHaveBeenCalledWith([{ type: 'space-member', resourceID: 'res-V' }]);
     });
   });

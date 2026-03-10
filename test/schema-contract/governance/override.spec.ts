@@ -1,11 +1,11 @@
+import fs from 'fs';
+import { applyOverrides } from '../../../src/schema-contract/governance/apply-overrides';
 import {
-  ChangeReport,
   ChangeEntry,
+  ChangeReport,
   ChangeType,
   ElementType,
 } from '../../../src/schema-contract/model';
-import { applyOverrides } from '../../../src/schema-contract/governance/apply-overrides';
-import fs from 'fs';
 
 // T045: Override governance flow tests
 

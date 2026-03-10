@@ -1,11 +1,10 @@
-import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
+import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { CommunicationModule } from '@domain/communication/communication/communication.module';
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
-import { ContributorModule } from '@domain/community/contributor/contributor.module';
 import { OrganizationModule } from '@domain/community/organization/organization.module';
 import { OrganizationLookupModule } from '@domain/community/organization-lookup/organization.lookup.module';
 import { UserModule } from '@domain/community/user/user.module';
@@ -34,16 +33,14 @@ import { BootstrapService } from './bootstrap.service';
   imports: [
     AiServerModule,
     AiPersonaModule,
-    AgentModule,
-    AuthenticationAgentInfoModule,
+    ActorModule,
+    ActorContextModule,
     AuthorizationPolicyModule,
     LicenseModule,
-    ContributorModule,
     SpaceModule,
     OrganizationModule,
     OrganizationLookupModule,
     AccountModule,
-    SpaceModule,
     UserModule,
     UserLookupModule,
     AdminAuthorizationModule,

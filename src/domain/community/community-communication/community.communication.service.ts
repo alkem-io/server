@@ -1,11 +1,8 @@
 import { LogContext } from '@common/enums';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { ICommunication } from '@domain/communication/communication';
 import { CommunicationService } from '@domain/communication/communication/communication.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
-import { IContributor } from '../contributor/contributor.interface';
-import { IUser } from '../user/user.interface';
 
 @Injectable()
 export class CommunityCommunicationService {
@@ -16,16 +13,10 @@ export class CommunityCommunicationService {
 
   public async addMemberToCommunication(
     communication: ICommunication,
-    contributor: IContributor
+    actorID: string
   ): Promise<void> {
-    if (!contributor.agent?.id) {
-      throw new EntityNotInitializedException(
-        `Contributor ${contributor.id} does not have an agent`,
-        LogContext.COMMUNICATION
-      );
-    }
     this.communicationService
-      .addContributorToCommunications(communication, contributor.agent.id)
+      .addContributorToCommunications(communication, actorID)
       .catch(error =>
         this.logger.error(
           {
@@ -41,10 +32,10 @@ export class CommunityCommunicationService {
 
   public async removeMemberFromCommunication(
     communication: ICommunication,
-    user: IUser
+    actorID: string
   ): Promise<void> {
     this.communicationService
-      .removeUserFromCommunications(communication, user)
+      .removeActorFromCommunications(communication, actorID)
       .catch(error =>
         this.logger.error(
           {

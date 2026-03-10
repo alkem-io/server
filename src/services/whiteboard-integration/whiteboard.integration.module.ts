@@ -1,5 +1,5 @@
+import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
-import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { WhiteboardModule } from '@domain/common/whiteboard';
 import { Module } from '@nestjs/common';
@@ -13,7 +13,7 @@ import { WhiteboardIntegrationService } from './whiteboard.integration.service';
   imports: [
     AuthorizationModule,
     WhiteboardModule,
-    AuthenticationAgentInfoModule,
+    ActorContextModule,
     AuthenticationModule,
     ContributionReporterModule,
     EntityResolverModule,
