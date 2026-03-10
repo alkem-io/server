@@ -7,6 +7,7 @@ import { CommunityMembershipPolicy } from '@common/enums/community.membership.po
 import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { TagsetType } from '@common/enums/tagset.type';
 import { CalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.entity';
@@ -410,6 +411,88 @@ describe('SpaceService', () => {
       ).rejects.toThrow('Space not found');
     });
   });
+
+  describe('updateSubspacePinned', () => {
+    const parentSpaceId = 'parent-space-1';
+    const subspaceId = 'subspace-1';
+
+    const createMockSubspace = (id: string, pinned: boolean) =>
+      ({
+        id,
+        pinned,
+        settings: spaceSettings,
+        platformRolesAccess: { roles: [] },
+      }) as unknown as Space;
+
+    it('should pin a subspace that is currently unpinned', async () => {
+      const mockSubspace = createMockSubspace(subspaceId, false);
+      const mockParent = {
+        id: parentSpaceId,
+        subspaces: [mockSubspace],
+      } as unknown as Space;
+
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(mockParent);
+      const saveSpy = vi
+        .spyOn(service, 'save')
+        .mockResolvedValue({ ...mockSubspace, pinned: true } as Space);
+
+      const result = await service.updateSubspacePinned(
+        parentSpaceId,
+        subspaceId,
+        true
+      );
+
+      expect(saveSpy).toHaveBeenCalled();
+      expect(result.pinned).toBe(true);
+    });
+
+    it('should short-circuit when pinned value is unchanged', async () => {
+      const mockSubspace = createMockSubspace(subspaceId, true);
+      const mockParent = {
+        id: parentSpaceId,
+        subspaces: [mockSubspace],
+      } as unknown as Space;
+
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(mockParent);
+      const saveSpy = vi.spyOn(service, 'save');
+
+      const result = await service.updateSubspacePinned(
+        parentSpaceId,
+        subspaceId,
+        true
+      );
+
+      expect(saveSpy).not.toHaveBeenCalled();
+      expect(result.pinned).toBe(true);
+    });
+
+    it('should throw when parent space has no subspaces', async () => {
+      const mockParent = {
+        id: parentSpaceId,
+        subspaces: undefined,
+      } as unknown as Space;
+
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(mockParent);
+
+      await expect(
+        service.updateSubspacePinned(parentSpaceId, subspaceId, true)
+      ).rejects.toThrow();
+    });
+
+    it('should throw when subspace is not found within parent', async () => {
+      const otherSubspace = createMockSubspace('other-subspace', false);
+      const mockParent = {
+        id: parentSpaceId,
+        subspaces: [otherSubspace],
+      } as unknown as Space;
+
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(mockParent);
+
+      await expect(
+        service.updateSubspacePinned(parentSpaceId, subspaceId, true)
+      ).rejects.toThrow();
+    });
+  });
 });
 
 /**
@@ -556,6 +639,7 @@ const spaceSettings = {
     allowMembersToVideoCall: false,
     allowGuestContributions: false,
   },
+  sortMode: SpaceSortMode.ALPHABETICAL,
 };
 
 const getSubspacesMock = (
@@ -573,6 +657,7 @@ const getSubspacesMock = (
       settings: spaceSettings,
       levelZeroSpaceID: spaceId,
       sortOrder: i,
+      pinned: false,
       platformRolesAccess: {
         roles: [],
       },
@@ -719,6 +804,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
       settings: spaceSettings,
       levelZeroSpaceID: subsubspaceId,
       sortOrder: i,
+      pinned: false,
       platformRolesAccess: {
         roles: [],
       },
@@ -873,6 +959,7 @@ const getSpaceMock = ({
     settings: settings,
     levelZeroSpaceID: '',
     sortOrder: 0,
+    pinned: false,
     platformRolesAccess: {
       roles: [],
     },

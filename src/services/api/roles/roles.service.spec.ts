@@ -4,6 +4,7 @@ import { CommunityMembershipPolicy } from '@common/enums/community.membership.po
 import { ProfileType } from '@common/enums/profile.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ApplicationService } from '@domain/access/application/application.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
@@ -224,6 +225,7 @@ const spaceSettings = {
     allowMembersToVideoCall: false,
     allowGuestContributions: false,
   },
+  sortMode: SpaceSortMode.ALPHABETICAL,
 };
 
 const getSpaceRoleResultMock = ({
@@ -254,6 +256,7 @@ const getSpaceRoleResultMock = ({
       nameID: `space-${id}`,
       levelZeroSpaceID: '',
       sortOrder: 0,
+      pinned: false,
       profile: {
         id: `profile-space-${id}`,
         displayName: `Space ${id}`,

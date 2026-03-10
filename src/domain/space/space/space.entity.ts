@@ -115,6 +115,9 @@ export class Space extends Actor implements ISpace {
   @Column('int', { nullable: false })
   sortOrder!: number;
 
+  @Column('boolean', { nullable: false, default: false })
+  pinned!: boolean;
+
   @Column('varchar', {
     length: ENUM_LENGTH,
     nullable: false,

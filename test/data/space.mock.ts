@@ -9,6 +9,7 @@ import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
@@ -129,6 +130,7 @@ export const spaceData: { space: ISpace } = {
     visibility: SpaceVisibility.ACTIVE,
     levelZeroSpaceID: '00655835-4d15-4546-801e-1ab80ac3078a',
     sortOrder: 0,
+    pinned: false,
     createdDate: new Date('2024-01-01T00:00:00.000Z'),
     updatedDate: new Date('2024-01-01T00:00:00.000Z'),
     // Add a minimal settings mock for ISpace
@@ -150,6 +152,7 @@ export const spaceData: { space: ISpace } = {
         allowMembersToVideoCall: false,
         allowGuestContributions: false,
       },
+      sortMode: SpaceSortMode.ALPHABETICAL,
     },
   },
 };
