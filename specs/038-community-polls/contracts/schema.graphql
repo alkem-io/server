@@ -143,8 +143,7 @@ type Poll implements IAuthorizable {
   canSeeDetailedResults: Boolean!
 
   """
-  The selectable options for this poll, ordered by vote count (most votes first),
-  with ties broken by the option's original creation order (sortOrder ascending).
+  The selectable options for this poll, always ordered by sortOrder ascending.
   """
   options: [PollOption!]!
 
@@ -164,7 +163,7 @@ type PollOption {
   """The display text of this option."""
   text: String!
 
-  """Position of this option in the creation order (used for tie-breaking in results)."""
+  """Position of this option in the configured option order."""
   sortOrder: Int!
 
   """

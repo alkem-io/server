@@ -3,7 +3,7 @@
 **Feature Branch**: `038-community-polls`
 **Created**: 2026-02-28
 **Status**: Draft
-**Input**: User description: "Create polls to gather community input — opinions on decisions, preferences, or availability. Contributors vote single or multiple selections based on facilitator settings. Poll creators receive notifications on new votes. Everyone can see who voted for what. Voters can update their selections. Poll creators can edit poll options. Results are ranked by most votes."
+**Input**: User description: "Create polls to gather community input — opinions on decisions, preferences, or availability. Contributors vote single or multiple selections based on facilitator settings. Poll creators receive notifications on new votes. Everyone can see who voted for what. Voters can update their selections. Poll creators can edit poll options. Results remain in the configured option order."
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -44,17 +44,17 @@ A community member wants to express their preference or availability by voting o
 
 ### User Story 3 - Viewing Results with Vote Transparency (Priority: P3)
 
-A poll creator or community member wants to see how the community has voted, including which members voted for each option and a ranking of options by number of votes.
+A poll creator or community member wants to see how the community has voted, including which members voted for each option, while keeping options in the configured order.
 
 **Why this priority**: Transparency and ranked results are what make a poll actionable. Without visible results, the poll data cannot be used to inform decisions.
 
-**Independent Test**: After votes are cast, any space member can view the full results including ranked options by vote count and the list of voters per option.
+**Independent Test**: After votes are cast, any space member can view the full results including vote counts and the list of voters per option, with options returned in `sortOrder`.
 
 **Acceptance Scenarios**:
 
-1. **Given** at least one vote has been cast on a poll, **When** any space member views the poll results, **Then** they see all options ordered from most to least votes, with the vote count displayed for each option.
+1. **Given** at least one vote has been cast on a poll, **When** any space member views the poll results, **Then** they see all options in `sortOrder` (ascending), with the vote count displayed for each option.
 2. **Given** a poll has received votes, **When** a space member views an option's voter list, **Then** they can see the names (or identities) of all members who voted for that option.
-3. **Given** two or more options have the same number of votes, **When** results are displayed, **Then** those tied options are shown with equal prominence (e.g., same position with a tie indicator or their original order preserved).
+3. **Given** two or more options have the same number of votes, **When** results are displayed, **Then** options still remain in `sortOrder` (ascending), without any vote-based reordering.
 4. **Given** a poll has zero votes, **When** any member views it, **Then** all options are shown with zero counts and no voter list is shown.
 5. **Given** a space member has not yet voted, **When** they view the results, **Then** they can still see the current results before casting their own vote.
 
@@ -154,7 +154,7 @@ Community members who have already voted on a poll want to stay informed about a
 - **FR-004**: Any user with Callout edit permissions MUST be able to add new options to a published poll at any time.
 - **FR-005**: Any user with Callout edit permissions MUST be able to edit the text of any existing poll option. When the text of an option is changed, all votes containing that option MUST be deleted entirely, and each affected voter MUST receive a notification informing them their vote has been removed due to the option text change and inviting them to re-vote.
 - **FR-006**: Any user with Callout edit permissions MUST be able to remove a poll option; the system MUST prevent removal if the poll would have fewer than 2 remaining options (polls must always contain at least 2 options). When an option with existing votes is removed, all votes containing that option MUST be deleted entirely, and each affected voter MUST receive a notification informing them their vote has been removed and inviting them to re-vote.
-- **FR-007**: Any user with Callout edit permissions MUST be able to reorder poll options; reordering does not affect vote counts or results ranking.
+- **FR-007**: Any user with Callout edit permissions MUST be able to reorder poll options; reordering does not affect vote counts and changes only option display order.
 
 **Voting**
 
@@ -168,7 +168,7 @@ Community members who have already voted on a poll want to stay informed about a
 **Results & Transparency**
 
 - **FR-014**: Poll results visibility MUST be governed by the poll's `settings.resultsVisibility` setting: `HIDDEN` (results hidden until the viewer has voted), `TOTAL_ONLY` (only total vote count before voting), or `VISIBLE` (always visible, default).
-- **FR-015**: Poll options MUST be displayed ranked from most to least votes received when the viewer is permitted to see detailed results. When the viewer is NOT permitted to see results (i.e., `resultsVisibility = HIDDEN` and the viewer has not yet voted), options MUST be returned in their original creation order (`sortOrder ASC`) — the ranked position of options in the API response MUST NOT implicitly reveal vote counts when results are hidden from the viewer.
+- **FR-015**: Poll options MUST always be returned in `sortOrder ASC` (configured option order), regardless of result visibility or whether the viewer has voted. Vote counts, percentages, and voters are visibility/detail-gated independently from ordering.
 - **FR-016**: The level of detail shown in results MUST be governed by the poll's `settings.resultsDetail` setting: `PERCENTAGE` (only percentage per option), `COUNT` (vote count per option, no voter identities), or `FULL` (counts + voter list, default).
 - **FR-017**: When `resultsDetail = FULL`, any space member MUST be able to view the list of members who voted for a specific option.
 - **FR-018**: A member's current vote selections MUST be visually distinguishable from unselected options when they view a poll they have already voted on.
@@ -210,7 +210,7 @@ Community members who have already voted on a poll want to stay informed about a
 - **SC-001**: A facilitator can create a new poll with at least two options and publish it in under 2 minutes, with no additional steps required before members can vote.
 - **SC-002**: A community member can find, read, and cast their vote on an open poll in under 60 seconds.
 - **SC-003**: 100% of votes are immediately reflected in the displayed results — no vote is lost or misattributed.
-- **SC-004**: Poll results always display options in rank order (most votes first). Results reflect the current state at the time the poll is loaded or the page is refreshed; live push updates are out of scope for this iteration (deferred to a dedicated subscriptions spec).
+- **SC-004**: Poll results always display options in `sortOrder` order (ascending). Results reflect the current state at the time the poll is loaded or the page is refreshed; live push updates are out of scope for this iteration (deferred to a dedicated subscriptions spec).
 - **SC-005**: Poll creators receive a notification within 60 seconds of a vote being cast on their poll.
 - **SC-006**: A voter can successfully update their vote and see their previous selection removed and new selection recorded, all within a single interaction.
 - **SC-007**: When `resultsDetail = FULL`, all space members can view the full voter list per option without additional permissions or steps.
@@ -227,7 +227,7 @@ Community members who have already voted on a poll want to stay informed about a
 - Deleting an entire poll also deletes all associated votes permanently.
 - When a member leaves a space, their votes remain in the poll results but their displayed identity follows the platform's standard handling of former-member identities.
 - When a member's account is deleted from the platform, their poll votes are removed from poll results.
-- Poll option ordering in the creation form determines the default display order; results view reorders by vote count, but ties preserve the original creation order.
+- Poll option ordering in the creation form determines the display order, and results keep the same `sortOrder` ordering.
 - The notification requirement ("poll creator notified on new vote") applies to both the initial vote and any subsequent vote update by the same voter.
 - Polls are not time-limited in this iteration; they remain open indefinitely until manually closed (future feature).
 

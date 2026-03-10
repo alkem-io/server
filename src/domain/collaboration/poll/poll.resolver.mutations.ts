@@ -53,13 +53,11 @@ export class PollMutationsResolver {
     );
 
     // Dispatch notifications fire-and-forget
-    this.dispatchVoteNotifications(
+    void this.dispatchVoteNotifications(
       poll.id,
       actorContext.actorID,
       priorVoterIds
-    ).catch(() => {
-      /* errors logged inside */
-    });
+    );
 
     return updatedPoll;
   }
@@ -216,13 +214,11 @@ export class PollMutationsResolver {
     );
 
     // Notify all prior voters that the poll was modified
-    this.dispatchModifiedNotifications(
+    void this.dispatchModifiedNotifications(
       poll.id,
       actorContext.actorID,
       voterIds
-    ).catch(() => {
-      /* errors logged inside */
-    });
+    );
 
     return updatedPoll;
   }

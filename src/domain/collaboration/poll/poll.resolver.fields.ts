@@ -70,7 +70,7 @@ export class PollFieldsResolver {
   @ResolveField('options', () => [IPollOption], {
     nullable: false,
     description:
-      'The selectable options for this poll, ordered by vote count (most votes first).',
+      'The selectable options for this poll, always ordered by sortOrder ascending.',
   })
   async options(
     @Parent() poll: Poll,

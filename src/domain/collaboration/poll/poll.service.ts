@@ -174,23 +174,8 @@ export class PollService {
       return enrichedOpt;
     });
 
-    // Sort based on visibility gate (FR-015)
-    const isHiddenAndNotVoted =
-      poll.settings.resultsVisibility === PollResultsVisibility.HIDDEN &&
-      !hasVoted;
-
-    if (isHiddenAndNotVoted) {
-      // Return in sortOrder ASC (creation order) — do NOT sort by vote rank
-      // (position must not reveal vote counts)
-      enriched.sort((a, b) => a.sortOrder - b.sortOrder);
-    } else {
-      // Sort voteCount DESC, sortOrder ASC for ties
-      enriched.sort((a, b) => {
-        const countDiff = (b.voteCount ?? 0) - (a.voteCount ?? 0);
-        if (countDiff !== 0) return countDiff;
-        return a.sortOrder - b.sortOrder;
-      });
-    }
+    // FR-015: options are always returned in sortOrder ASC.
+    enriched.sort((a, b) => a.sortOrder - b.sortOrder);
 
     return enriched as unknown as PollOption[];
   }

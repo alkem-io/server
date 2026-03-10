@@ -228,7 +228,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
     return poll;
   }
 
-  it('(a) VISIBLE: options sorted voteCount DESC, sortOrder ASC for ties', () => {
+  it('(a) VISIBLE: options are returned in sortOrder ASC', () => {
     const [optA, optB, optC] = [
       makeOption('a', 1),
       makeOption('b', 2),
@@ -246,10 +246,10 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       votes
     );
     const enriched = service.computePollResults(poll, 'u1', true);
-    expect(enriched.map(o => o.id)).toEqual(['b', 'c', 'a']);
+    expect(enriched.map(o => o.id)).toEqual(['a', 'b', 'c']);
   });
 
-  it('(a) ties broken by sortOrder ASC', () => {
+  it('(a) order is unaffected by ties and remains sortOrder ASC', () => {
     const [optA, optB, optC] = [
       makeOption('a', 1),
       makeOption('b', 2),
@@ -263,7 +263,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       votes
     );
     const enriched = service.computePollResults(poll, 'u1', true);
-    expect(enriched.map(o => o.id)).toEqual(['a', 'c', 'b']);
+    expect(enriched.map(o => o.id)).toEqual(['a', 'b', 'c']);
   });
 
   it('(b) HIDDEN + not voted: all result fields nulled', () => {
@@ -308,7 +308,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
     expect(enriched.map(o => o.id)).toEqual(['a', 'b', 'c']);
   });
 
-  it('(c) HIDDEN + voted: full results sorted by voteCount DESC', () => {
+  it('(c) HIDDEN + voted: full results remain in sortOrder ASC', () => {
     const [optA, optB] = [makeOption('a', 1), makeOption('b', 2)];
     const votes = [makeVote('u1', ['b']), makeVote('u2', ['b'])];
     const poll = makePoll(
@@ -319,9 +319,9 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
     );
     const enriched = service.computePollResults(poll, 'u1', true);
     const filtered = service.applyVisibilityRules(enriched, poll, true);
-    expect(filtered.map(o => o.id)).toEqual(['b', 'a']);
-    expect((filtered[0] as any).voteCount).toBe(2);
-    expect((filtered[1] as any).voteCount).toBe(0);
+    expect(filtered.map(o => o.id)).toEqual(['a', 'b']);
+    expect((filtered[0] as any).voteCount).toBe(0);
+    expect((filtered[1] as any).voteCount).toBe(2);
   });
 
   it('(d) TOTAL_ONLY + not voted: all per-option fields are null', () => {
@@ -341,7 +341,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
     }
   });
 
-  it('(e) VISIBLE: results sorted voteCount DESC regardless of hasVoted', () => {
+  it('(e) VISIBLE: order remains sortOrder ASC regardless of hasVoted', () => {
     const [optA, optB] = [makeOption('a', 1), makeOption('b', 2)];
     const poll = makePoll(
       PollResultsVisibility.VISIBLE,
@@ -350,8 +350,8 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       [makeVote('u2', ['b'])]
     );
     const enriched = service.computePollResults(poll, 'u1', false);
-    expect(enriched[0].id).toBe('b');
-    expect((enriched[0] as any).voteCount).toBe(1);
+    expect(enriched[0].id).toBe('a');
+    expect((enriched[1] as any).voteCount).toBe(1);
   });
 
   it('(f) resultsDetail = PERCENTAGE: voteCount and voterIds are null, votePercentage is set', () => {

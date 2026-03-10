@@ -49,7 +49,7 @@ export abstract class IPoll extends IAuthorizable {
   @Field(() => [IPollOption], {
     nullable: false,
     description:
-      'The selectable options for this poll, ordered by vote count (most votes first), with ties broken by sortOrder ascending.',
+      'The selectable options for this poll, always ordered by sortOrder ascending.',
   })
   options?: IPollOption[];
 

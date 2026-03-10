@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add a Poll composition object to CalloutFraming that lets space members vote on community questions (single-select or multi-select), view transparent ranked results, and change their vote at any time. Polls are created as part of the existing `createCallout` mutation by extending `CreateCalloutFramingInput` with an optional `poll` field (same pattern as `whiteboard`/`link`/`memo`) — no separate creation mutation is exposed. Poll option management and voting are four new mutations. Poll notifications are delivered through the existing dual-channel notification infrastructure for both Callout creators and existing voters, with four dedicated preference fields (`collaborationPollVoteCastOnOwnPoll`, `collaborationPollVoteCastOnPollIVotedOn`, `collaborationPollModifiedOnPollIVotedOn`, `collaborationPollVoteAffectedByOptionChange`). Visibility/detail settings (`resultsVisibility`, `resultsDetail`) and future `status`/`deadline` compatibility are modeled explicitly. Poll votes authored by a deleted user account are removed automatically via a DB-level `ON DELETE CASCADE` constraint on `poll_vote.createdBy` (FK → `user.id`) — no application-level cleanup listener is required.
+Add a Poll composition object to CalloutFraming that lets space members vote on community questions (single-select or multi-select), view transparent results, and change their vote at any time. Polls are created as part of the existing `createCallout` mutation by extending `CreateCalloutFramingInput` with an optional `poll` field (same pattern as `whiteboard`/`link`/`memo`) — no separate creation mutation is exposed. Poll option management and voting are four new mutations. Poll notifications are delivered through the existing dual-channel notification infrastructure for both Callout creators and existing voters, with four dedicated preference fields (`collaborationPollVoteCastOnOwnPoll`, `collaborationPollVoteCastOnPollIVotedOn`, `collaborationPollModifiedOnPollIVotedOn`, `collaborationPollVoteAffectedByOptionChange`). Visibility/detail settings (`resultsVisibility`, `resultsDetail`) and future `status`/`deadline` compatibility are modeled explicitly. Poll votes authored by a deleted user account are removed automatically via a DB-level `ON DELETE CASCADE` constraint on `poll_vote.createdBy` (FK → `user.id`) — no application-level cleanup listener is required.
 
 ## Technical Context
 
@@ -16,7 +16,7 @@ Add a Poll composition object to CalloutFraming that lets space members vote on 
 **Target Platform**: Linux server — same deployment target as existing service
 **Project Type**: Single NestJS monolith (`src/`)
 **Performance Goals**: Results queries must be < 200 ms p95 for polls with up to 20 options and 500 voters (SC-008 scaled)
-**Constraints**: No real-time push in this iteration (SC-004 deferred to subscriptions spec); results sorted in-query
+**Constraints**: No real-time push in this iteration (SC-004 deferred to subscriptions spec); options returned in `sortOrder ASC`
 **Account Deletion Handling**: Poll votes are removed when a user is deleted via Foreign Key Cascade.
 **Scale/Scope**: Polls are per-Callout; typical poll has 2–20 options and 5–200 voters per space; no sharding needed
 

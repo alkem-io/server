@@ -302,7 +302,7 @@ Vote counts and voter lists are computed in `PollService` by:
 2. Building a `Map<optionId, PollVote[]>` in memory.
 3. Computing `totalVotes` (count of distinct `PollVote` rows) and per-option `voteCount`.
 4. Computing `votePercentage` per option: `(optionVoteCount / totalVotes) * 100`, rounded to 0 decimal places (integer percentage), or `null` when `totalVotes === 0`.
-5. **Sort order depends on the visibility gate**: when `resultsVisibility === HIDDEN` and the current user has not voted, options are returned in `sortOrder ASC` (original creation order) — sorting by vote count is skipped to prevent the ranked position from leaking vote information (FR-015). In all other cases (`TOTAL_ONLY`, `VISIBLE`, or `HIDDEN` after the user has voted), options are sorted `voteCount DESC, sortOrder ASC` (ties broken by creation order).
+5. Options are always returned in `sortOrder ASC` (configured option order), regardless of visibility gate state (FR-015).
 6. Returning enriched `IPollOption` objects (with `voteCount`, `votePercentage`, and `voterIds`).
 
 Field resolvers on `IPollOption.voters` resolve `voterIds` to `IUser` objects via the user lookup service.
