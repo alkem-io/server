@@ -28,6 +28,9 @@ export class SpaceSettingsService {
     if (updateData.collaboration) {
       settings.collaboration = updateData.collaboration;
     }
+    if (updateData.sortMode) {
+      settings.sortMode = updateData.sortMode;
+    }
     return settings;
   }
 }

@@ -11,6 +11,7 @@ import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
@@ -144,12 +145,16 @@ export class SpaceService {
     // default to demo space
     space.visibility = SpaceVisibility.ACTIVE;
     space.sortOrder = 0;
+    space.pinned = false;
 
     space.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.SPACE
     );
 
     space.settings = templateContentSpace.settings;
+    if (!space.settings.sortMode) {
+      space.settings.sortMode = SpaceSortMode.ALPHABETICAL;
+    }
     space.platformRolesAccess =
       this.spacePlatformRolesAccessService.createPlatformRolesAccess(
         space,
@@ -1083,6 +1088,41 @@ export class SpaceService {
     await this.spaceRepository.save(modifiedSubspaces);
 
     return subspacesInOrder;
+  }
+
+  public async updateSubspacePinned(
+    spaceId: string,
+    subspaceId: string,
+    pinned: boolean
+  ): Promise<ISpace> {
+    const space = await this.getSpaceOrFail(spaceId, {
+      relations: { subspaces: true },
+    });
+
+    const subspaces = space.subspaces;
+    if (!subspaces) {
+      throw new EntityNotFoundException(
+        'Space not initialized, no subspaces',
+        LogContext.SPACES,
+        { spaceId }
+      );
+    }
+
+    const subspace = subspaces.find(s => s.id === subspaceId);
+    if (!subspace) {
+      throw new EntityNotFoundException(
+        'Subspace not found within parent Space',
+        LogContext.SPACES,
+        { subspaceId, parentSpaceId: spaceId }
+      );
+    }
+
+    if (subspace.pinned === pinned) {
+      return subspace;
+    }
+
+    subspace.pinned = pinned;
+    return await this.save(subspace);
   }
 
   async getSubscriptions(spaceInput: ISpace): Promise<ISpaceSubscription[]> {
