@@ -18,6 +18,10 @@ import {
   NotificationEventPayloadSpaceCommunityInvitation,
   NotificationEventPayloadSpaceCommunityInvitationPlatform,
   NotificationEventPayloadSpaceCommunityInvitationVirtualContributor,
+  NotificationEventPayloadSpacePollModifiedOnPollIVotedOn,
+  NotificationEventPayloadSpacePollVoteAffectedByOptionChange,
+  NotificationEventPayloadSpacePollVoteCastOnOwnPoll,
+  NotificationEventPayloadSpacePollVoteCastOnPollIVotedOn,
   NotificationEventPayloadUserMessageDirect,
   NotificationEventPayloadUserMessageRoom,
   NotificationEventPayloadUserMessageRoomReply,
@@ -37,6 +41,7 @@ import { IActor } from '@domain/actor/actor/actor.interface';
 import { getActorType } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { IPoll } from '@domain/collaboration/poll/poll.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
@@ -626,11 +631,17 @@ export class NotificationExternalAdapter {
     calendarEvent: ICalendarEvent,
     comment: IMessage
   ): Promise<any> {
+    //!!
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
       recipients,
       space
+    );
+
+    // Load the user who created the calendar event
+    const createdByUser = await this.getUserPayloadOrFail(
+      calendarEvent.createdBy
     );
 
     const commenter = await this.getUserPayloadOrFail(comment.sender);
@@ -643,9 +654,18 @@ export class NotificationExternalAdapter {
     return {
       ...spacePayload,
       calendarEvent: {
-        id: calendarEvent.id,
+        ...calendarEvent,
         title: calendarEvent.profile.displayName,
         url: calendarEventUrl,
+        startDate: toIsoString(calendarEvent.startDate, 'startDate'),
+        endDate: toIsoString(
+          calculateCalendarEventEndDate(calendarEvent).toISOString(),
+          'endDate'
+        ),
+        createdBy: createdByUser,
+        googleCalendarUrl: calendarEvent.googleCalendarUrl ?? '',
+        outlookCalendarUrl: calendarEvent.outlookCalendarUrl ?? '',
+        icsDownloadUrl: calendarEvent.icsDownloadUrl ?? '',
       },
       comment: {
         text: commentPreview,
@@ -659,9 +679,14 @@ export class NotificationExternalAdapter {
     triggeredBy: string,
     recipients: IUser[],
     space: ISpace,
-    calloutID: string,
-    pollID: string
-  ): Promise<any> {
+    callout: ICallout,
+    poll: { id: string; title: string } | undefined
+  ): Promise<
+    | NotificationEventPayloadSpacePollVoteCastOnOwnPoll
+    | NotificationEventPayloadSpacePollModifiedOnPollIVotedOn
+    | NotificationEventPayloadSpacePollVoteAffectedByOptionChange
+    | NotificationEventPayloadSpacePollVoteCastOnOwnPoll
+  > {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
@@ -669,15 +694,18 @@ export class NotificationExternalAdapter {
       space
     );
 
-    const calloutURL =
-      await this.urlGeneratorService.getCalloutUrlPath(calloutID);
+    const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
+      callout.id
+    );
 
     return {
       ...spacePayload,
       poll: {
-        id: pollID,
-        calloutID,
-        calloutURL,
+        id: poll?.id ?? '',
+        title: poll?.title ?? '',
+        calloutId: callout.id,
+        calloutTitle: callout.framing.profile.displayName,
+        calloutUrl: calloutURL,
       },
     };
   }
@@ -1063,7 +1091,7 @@ export class NotificationExternalAdapter {
         relations: {
           profile: true,
         },
-      } as any
+      }
     );
 
     if (!contributor || !contributor.profile) {
@@ -1097,7 +1125,7 @@ export class NotificationExternalAdapter {
         relations: {
           profile: true,
         },
-      } as any
+      }
     );
 
     if (!contributor || !contributor.profile) {

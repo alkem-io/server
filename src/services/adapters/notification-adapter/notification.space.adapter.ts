@@ -4,6 +4,7 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { CalloutLookupService } from '@domain/collaboration/callout/callout.lookup/callout.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -54,7 +55,8 @@ export class NotificationSpaceAdapter {
     private notificationAdapter: NotificationAdapter,
     private notificationUserAdapter: NotificationUserAdapter,
     private communityResolverService: CommunityResolverService,
-    private spaceLookupService: SpaceLookupService
+    private spaceLookupService: SpaceLookupService,
+    private calloutLookupService: CalloutLookupService
   ) {}
 
   public async spaceCollaborationCalloutPublished(
@@ -891,6 +893,18 @@ export class NotificationSpaceAdapter {
     const event =
       NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL;
 
+    const callout = await this.calloutLookupService.getCalloutOrFail(
+      dto.calloutID,
+      {
+        relations: {
+          framing: {
+            profile: true,
+            poll: true,
+          },
+        },
+      }
+    );
+
     const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
       relations: {
         about: {
@@ -917,8 +931,8 @@ export class NotificationSpaceAdapter {
           dto.triggeredBy,
           emailRecipientsWithoutTrigger,
           space,
-          dto.calloutID,
-          dto.pollID
+          callout,
+          callout.framing.poll
         );
       this.notificationExternalAdapter.sendExternalNotifications(
         event,
@@ -960,6 +974,18 @@ export class NotificationSpaceAdapter {
       },
     });
 
+    const callout = await this.calloutLookupService.getCalloutOrFail(
+      dto.calloutID,
+      {
+        relations: {
+          framing: {
+            profile: true,
+            poll: true,
+          },
+        },
+      }
+    );
+
     const recipients = await this.getNotificationRecipientsSpace(
       event,
       dto,
@@ -978,8 +1004,8 @@ export class NotificationSpaceAdapter {
           dto.triggeredBy,
           emailRecipientsWithoutTrigger,
           space,
-          dto.calloutID,
-          dto.pollID
+          callout,
+          callout.framing.poll
         );
       this.notificationExternalAdapter.sendExternalNotifications(
         event,
@@ -1021,6 +1047,18 @@ export class NotificationSpaceAdapter {
       },
     });
 
+    const callout = await this.calloutLookupService.getCalloutOrFail(
+      dto.calloutID,
+      {
+        relations: {
+          framing: {
+            profile: true,
+            poll: true,
+          },
+        },
+      }
+    );
+
     const recipients = await this.getNotificationRecipientsSpace(
       event,
       dto,
@@ -1039,8 +1077,8 @@ export class NotificationSpaceAdapter {
           dto.triggeredBy,
           emailRecipientsWithoutTrigger,
           space,
-          dto.calloutID,
-          dto.pollID
+          callout,
+          callout.framing.poll
         );
       this.notificationExternalAdapter.sendExternalNotifications(
         event,
@@ -1082,6 +1120,18 @@ export class NotificationSpaceAdapter {
       },
     });
 
+    const callout = await this.calloutLookupService.getCalloutOrFail(
+      dto.calloutID,
+      {
+        relations: {
+          framing: {
+            profile: true,
+            poll: true,
+          },
+        },
+      }
+    );
+
     const recipients = await this.getNotificationRecipientsSpace(
       event,
       dto,
@@ -1100,8 +1150,8 @@ export class NotificationSpaceAdapter {
           dto.triggeredBy,
           emailRecipientsWithoutTrigger,
           space,
-          dto.calloutID,
-          dto.pollID
+          callout,
+          callout.framing.poll
         );
       this.notificationExternalAdapter.sendExternalNotifications(
         event,
