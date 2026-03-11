@@ -1,3 +1,4 @@
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdateSpaceSettingsEntityInput } from './dto/space.settings.dto.update';
@@ -32,8 +33,11 @@ export class SpaceSettingsService {
       settings.sortMode = updateData.sortMode;
     }
     if (updateData.layout) {
+      const currentLayout = settings.layout ?? {
+        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+      };
       settings.layout = {
-        ...settings.layout,
+        ...currentLayout,
         ...updateData.layout,
       };
     }

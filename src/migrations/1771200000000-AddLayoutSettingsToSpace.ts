@@ -46,20 +46,14 @@ export class AddLayoutSettingsToSpace1771200000000
     }
   }
 
-  public async down(_queryRunner: QueryRunner): Promise<void> {
-    // Rollback intentionally disabled: the layout key defaults to EXPANDED via
-    // the GraphQL resolver fallback, so removing it would restore equivalent
-    // behaviour without a data migration. Matches the precedent in
-    // AddPinnedAndSortModeToSpace. Re-enable the block below only if the full
-    // feature branch is being reverted and data hygiene requires it.
-    //
-    // await _queryRunner.query(`
-    //   UPDATE "space"
-    //   SET "settings" = "settings" - 'layout'
-    //   WHERE "settings" ->> 'layout' IS NOT NULL
-    // `);
+  public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
+      UPDATE "space"
+      SET "settings" = "settings" - 'layout'
+      WHERE "settings" ->> 'layout' IS NOT NULL
+    `);
     console.log(
-      `[Migration] AddLayoutSettingsToSpace down(): rollback is a no-op — resolver fallback handles absent layout safely`
+      `[Migration] AddLayoutSettingsToSpace down(): removed layout key from all spaces`
     );
   }
 }

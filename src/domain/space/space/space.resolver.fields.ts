@@ -177,15 +177,14 @@ export class SpaceResolverFields {
       'The layout settings for this Space. Accessible without READ privilege.',
   })
   async layout(@Parent() space: Space): Promise<ISpaceSettingsLayout> {
-    if (space.settings?.layout?.calloutDescriptionDisplayMode) {
-      return space.settings.layout;
-    }
-    const loaded = await this.spaceService.getSpaceOrFail(space.id);
-    return (
-      loaded.settings?.layout ?? {
-        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
-      }
-    );
+    const layout =
+      space.settings?.layout ??
+      (await this.spaceService.getSpaceOrFail(space.id)).settings?.layout;
+    return {
+      calloutDescriptionDisplayMode:
+        layout?.calloutDescriptionDisplayMode ??
+        CalloutDescriptionDisplayMode.EXPANDED,
+    };
   }
 
   @ResolveField('subspaces', () => [ISpace], {
@@ -258,8 +257,10 @@ export class SpaceResolverFields {
     return {
       ...settings,
       sortMode: settings.sortMode ?? SpaceSortMode.ALPHABETICAL,
-      layout: settings.layout ?? {
-        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+      layout: {
+        calloutDescriptionDisplayMode:
+          settings.layout?.calloutDescriptionDisplayMode ??
+          CalloutDescriptionDisplayMode.EXPANDED,
       },
     };
   }

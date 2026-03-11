@@ -320,7 +320,7 @@ describe('Callout collapse — migration AddLayoutSettingsToSpace1771200000000',
     expect(callIndex).toBe(3);
   });
 
-  it('down() is a no-op or safe (does not throw and executes no destructive SQL)', async () => {
+  it('down() removes the layout key from all spaces', async () => {
     const queriedSql: string[] = [];
     const mockQueryRunner = {
       query: (sql: string) => {
@@ -331,7 +331,9 @@ describe('Callout collapse — migration AddLayoutSettingsToSpace1771200000000',
 
     // Should not throw
     await expect(migration.down(mockQueryRunner)).resolves.not.toThrow();
-    // The down migration is commented out — no SQL should be executed
-    expect(queriedSql).toHaveLength(0);
+    // The down migration removes the layout key
+    expect(queriedSql).toHaveLength(1);
+    expect(queriedSql[0]).toContain('"settings" - \'layout\'');
+    expect(queriedSql[0]).toContain('IS NOT NULL');
   });
 });

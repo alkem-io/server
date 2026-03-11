@@ -153,6 +153,13 @@ export class SpaceService {
     );
 
     space.settings = templateContentSpace.settings;
+    // Merge any user-provided settings on top of the template defaults
+    if (spaceData.settings) {
+      space.settings = this.spaceSettingsService.updateSettings(
+        space.settings,
+        spaceData.settings
+      );
+    }
     if (!space.settings.sortMode) {
       space.settings.sortMode = SpaceSortMode.ALPHABETICAL;
     }

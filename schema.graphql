@@ -6772,7 +6772,7 @@ input CreateSpaceSettingsInput {
 
 input CreateSpaceSettingsLayoutInput {
   """The default display mode for callout descriptions."""
-  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode
+  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode!
 }
 
 input CreateSpaceSettingsMembershipInput {
@@ -7994,7 +7994,7 @@ input UpdateSpaceSettingsInput {
 
 input UpdateSpaceSettingsLayoutInput {
   """The default display mode for callout descriptions."""
-  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode
+  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode!
 }
 
 input UpdateSpaceSettingsMembershipInput {
