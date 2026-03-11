@@ -1,7 +1,6 @@
 import { UUID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseType } from '@common/enums/license.type';
@@ -12,7 +11,6 @@ import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
@@ -160,15 +158,9 @@ export class SpaceService {
         spaceData.settings
       );
     }
-    if (!space.settings.sortMode) {
-      space.settings.sortMode = SpaceSortMode.ALPHABETICAL;
-    }
-    if (!space.settings.layout?.calloutDescriptionDisplayMode) {
-      space.settings.layout = {
-        ...space.settings.layout,
-        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
-      };
-    }
+    space.settings = this.spaceSettingsService.applyCreationDefaults(
+      space.settings
+    );
     space.platformRolesAccess =
       this.spacePlatformRolesAccessService.createPlatformRolesAccess(
         space,

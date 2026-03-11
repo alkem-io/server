@@ -1,4 +1,5 @@
 import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UpdateSpaceSettingsEntityInput } from './dto/space.settings.dto.update';
@@ -9,6 +10,19 @@ export class SpaceSettingsService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  public applyCreationDefaults(settings: ISpaceSettings): ISpaceSettings {
+    if (!settings.sortMode) {
+      settings.sortMode = SpaceSortMode.ALPHABETICAL;
+    }
+    if (!settings.layout?.calloutDescriptionDisplayMode) {
+      settings.layout = {
+        ...settings.layout,
+        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+      };
+    }
+    return settings;
+  }
 
   public updateSettings(
     settings: ISpaceSettings,

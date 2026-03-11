@@ -153,96 +153,85 @@ describe('Callout collapse — GraphQL mutation path (SpaceSettingsService)', ()
 });
 
 // ---------------------------------------------------------------------------
-// 2. New-Space defaults
+// 2. New-Space defaults — exercises SpaceSettingsService.applyCreationDefaults()
 // ---------------------------------------------------------------------------
 
-describe('Callout collapse — new Space creation defaults', () => {
-  it('space created without specifying calloutDescriptionDisplayMode defaults to COLLAPSED', () => {
-    // Mirrors the logic in SpaceService.createSpace():
-    //   if (!space.settings.layout?.calloutDescriptionDisplayMode) {
-    //     space.settings.layout = { ...space.settings.layout, calloutDescriptionDisplayMode: COLLAPSED }
-    //   }
-    const templateSettings: ISpaceSettings = {
-      privacy: {
-        mode: SpacePrivacyMode.PUBLIC,
-        allowPlatformSupportAsAdmin: false,
-      },
-      membership: {
-        policy: CommunityMembershipPolicy.OPEN,
-        trustedOrganizations: [],
-        allowSubspaceAdminsToInviteMembers: false,
-      },
-      collaboration: {
-        inheritMembershipRights: true,
-        allowMembersToCreateSubspaces: true,
-        allowMembersToCreateCallouts: true,
-        allowEventsFromSubspaces: true,
-        allowMembersToVideoCall: false,
-        allowGuestContributions: false,
-      },
-      sortMode: SpaceSortMode.ALPHABETICAL,
-      // Intentionally omit layout to simulate a template without calloutDescriptionDisplayMode
+describe('Callout collapse — new Space creation defaults (applyCreationDefaults)', () => {
+  let service: SpaceSettingsService;
+  let module: TestingModule;
+
+  beforeAll(async () => {
+    module = await Test.createTestingModule({
+      providers: [SpaceSettingsService, MockWinstonProvider],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+
+    service = module.get<SpaceSettingsService>(SpaceSettingsService);
+  });
+
+  afterAll(async () => {
+    await module.close();
+  });
+
+  it('space created without calloutDescriptionDisplayMode defaults to COLLAPSED', () => {
+    const settings: ISpaceSettings = {
+      ...baseSettings(),
       layout: {} as any,
     };
 
-    // Apply the same defaulting logic used in SpaceService.createSpace()
-    if (!templateSettings.layout?.calloutDescriptionDisplayMode) {
-      templateSettings.layout = {
-        ...templateSettings.layout,
-        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
-      };
-    }
+    const result = service.applyCreationDefaults(settings);
 
-    expect(templateSettings.layout.calloutDescriptionDisplayMode).toBe(
+    expect(result.layout.calloutDescriptionDisplayMode).toBe(
       CalloutDescriptionDisplayMode.COLLAPSED
     );
   });
 
   it('explicitly provided EXPANDED is not overridden by the creation default', () => {
-    const templateSettings: ISpaceSettings = {
+    const settings: ISpaceSettings = {
       ...baseSettings(),
       layout: {
         calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
       },
     };
 
-    // The guard in SpaceService.createSpace() is: if (!...calloutDescriptionDisplayMode)
-    if (!templateSettings.layout?.calloutDescriptionDisplayMode) {
-      templateSettings.layout = {
-        ...templateSettings.layout,
-        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
-      };
-    }
+    const result = service.applyCreationDefaults(settings);
 
-    expect(templateSettings.layout.calloutDescriptionDisplayMode).toBe(
+    expect(result.layout.calloutDescriptionDisplayMode).toBe(
       CalloutDescriptionDisplayMode.EXPANDED
     );
   });
 
   it('settings layout for a new subspace is independent of any parent space value', () => {
-    // Each space/subspace has its own JSONB settings row — no inheritance.
     const parentSettings = baseSettings();
     parentSettings.layout.calloutDescriptionDisplayMode =
       CalloutDescriptionDisplayMode.EXPANDED;
 
-    // Simulate a new subspace seeded from a template (no parent inheritance)
     const subspaceSettings: ISpaceSettings = {
       ...baseSettings(),
       layout: {} as any,
     };
-    if (!subspaceSettings.layout?.calloutDescriptionDisplayMode) {
-      subspaceSettings.layout = {
-        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
-      };
-    }
 
-    expect(subspaceSettings.layout.calloutDescriptionDisplayMode).toBe(
+    const result = service.applyCreationDefaults(subspaceSettings);
+
+    expect(result.layout.calloutDescriptionDisplayMode).toBe(
       CalloutDescriptionDisplayMode.COLLAPSED
     );
     // Parent unchanged
     expect(parentSettings.layout.calloutDescriptionDisplayMode).toBe(
       CalloutDescriptionDisplayMode.EXPANDED
     );
+  });
+
+  it('missing sortMode defaults to ALPHABETICAL', () => {
+    const settings: ISpaceSettings = {
+      ...baseSettings(),
+      sortMode: undefined as any,
+    };
+
+    const result = service.applyCreationDefaults(settings);
+
+    expect(result.sortMode).toBe(SpaceSortMode.ALPHABETICAL);
   });
 });
 
