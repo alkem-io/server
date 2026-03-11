@@ -1,8 +1,8 @@
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { ActorType } from '@common/enums';
-import { Test, TestingModule } from '@nestjs/testing';
 import { ActorService } from '@domain/actor';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { Test, TestingModule } from '@nestjs/testing';
 import { MockConfigService, MockWinstonProvider } from '@test/mocks';
 import { vi } from 'vitest';
 import { ContributionReporterService } from './contribution.reporter.service';

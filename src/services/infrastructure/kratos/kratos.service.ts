@@ -338,6 +338,27 @@ export class KratosService {
   }
 
   /**
+   * Clears alkemio_actor_id from a Kratos identity's metadata_public.
+   * Used before identity deletion to prevent stale actor references
+   * on re-registration. Uses "add" op which creates-or-replaces,
+   * avoiding RFC 6902 "remove" failures on missing paths.
+   */
+  public async clearIdentityActorMetadata(
+    kratosIdentityId: string
+  ): Promise<void> {
+    await this.kratosIdentityClient.patchIdentity({
+      id: kratosIdentityId,
+      jsonPatch: [
+        {
+          op: 'add',
+          path: '/metadata_public',
+          value: {},
+        },
+      ],
+    });
+  }
+
+  /**
    * Retrieves all identities that have not been verified.
    *
    * @returns A promise that resolves to an array of unverified identities.
