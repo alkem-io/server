@@ -493,6 +493,159 @@ export abstract class IPollVote extends IBaseAlkemio {
 | Cast / update vote | `CONTRIBUTE` on Poll | Space member credential |
 | Create poll (via createCallout) | `CREATE` on CalloutsSet | Callout create/edit permission |
 | Add / edit / remove / reorder options | `UPDATE` on Callout | Callout edit permission |
+| Subscribe to poll events | `READ` on Poll | Same as viewing poll |
+
+---
+
+## Real-Time Subscription Infrastructure
+
+### Overview
+
+Two GraphQL subscriptions push live poll updates to connected clients via the platform's existing PubSub infrastructure (`graphql-subscriptions` + RabbitMQ-backed `PubSubEngine`). No new infrastructure is introduced — the subscriptions follow the same pattern as `calloutPostCreated` and `virtualContributorUpdated`.
+
+### New Enum
+
+```typescript
+// src/common/enums/poll.event.type.ts
+import { registerEnumType } from '@nestjs/graphql';
+
+export enum PollEventType {
+  POLL_VOTE_UPDATED = 'pollVoteUpdated',
+  POLL_OPTIONS_CHANGED = 'pollOptionsChanged',
+}
+
+registerEnumType(PollEventType, {
+  name: 'PollEventType',
+  description: 'The type of event that occurred on a poll subscription.',
+});
+```
+
+### SubscriptionType Additions
+
+```typescript
+// Added to src/common/enums/subscription.type.ts
+POLL_VOTE_UPDATED = 'pollVoteUpdated',
+POLL_OPTIONS_CHANGED = 'pollOptionsChanged',
+```
+
+### PubSub Provider Constants
+
+```typescript
+// Added to src/common/constants/providers.ts
+export const SUBSCRIPTION_POLL_VOTE_UPDATED = Symbol('SUBSCRIPTION_POLL_VOTE_UPDATED');
+export const SUBSCRIPTION_POLL_OPTIONS_CHANGED = Symbol('SUBSCRIPTION_POLL_OPTIONS_CHANGED');
+```
+
+### Subscription Payload Interfaces
+
+```typescript
+// src/services/subscriptions/subscription-service/dto/poll.vote.updated.subscription.payload.ts
+import { BaseSubscriptionPayload } from '@common/interfaces';
+import { IPoll } from '@domain/collaboration/poll/poll.interface';
+import { PollEventType } from '@common/enums/poll.event.type';
+
+export interface PollVoteUpdatedSubscriptionPayload extends BaseSubscriptionPayload {
+  pollEventType: PollEventType;
+  pollID: string;
+  poll: IPoll;
+}
+```
+
+```typescript
+// src/services/subscriptions/subscription-service/dto/poll.options.changed.subscription.payload.ts
+import { BaseSubscriptionPayload } from '@common/interfaces';
+import { IPoll } from '@domain/collaboration/poll/poll.interface';
+import { PollEventType } from '@common/enums/poll.event.type';
+
+export interface PollOptionsChangedSubscriptionPayload extends BaseSubscriptionPayload {
+  pollEventType: PollEventType;
+  pollID: string;
+  poll: IPoll;
+}
+```
+
+### Subscription Result Types (GraphQL ObjectType)
+
+```typescript
+// src/domain/collaboration/poll/dto/poll.vote.updated.subscription.result.ts
+@ObjectType('PollVoteUpdatedSubscriptionResult')
+export class PollVoteUpdatedSubscriptionResult {
+  @Field(() => PollEventType, { description: 'The type of poll event.' })
+  pollEventType!: PollEventType;
+
+  @Field(() => IPoll, { description: 'The updated Poll.', nullable: false })
+  poll!: IPoll;
+}
+```
+
+```typescript
+// src/domain/collaboration/poll/dto/poll.options.changed.subscription.result.ts
+@ObjectType('PollOptionsChangedSubscriptionResult')
+export class PollOptionsChangedSubscriptionResult {
+  @Field(() => PollEventType, { description: 'The type of poll event.' })
+  pollEventType!: PollEventType;
+
+  @Field(() => IPoll, { description: 'The updated Poll.', nullable: false })
+  poll!: IPoll;
+}
+```
+
+### Subscription Args (shared)
+
+```typescript
+// src/domain/collaboration/poll/dto/poll.subscription.args.ts
+@ArgsType()
+export class PollSubscriptionArgs {
+  @Field(() => UUID, { description: 'The ID of the Poll to subscribe to.' })
+  @MaxLength(UUID_LENGTH)
+  pollID!: string;
+}
+```
+
+### Subscription Filter Behavior (Visibility Gate)
+
+The `pollVoteUpdated` subscription filter MUST check whether the subscriber has voted before delivering vote events when `resultsVisibility = HIDDEN`:
+
+```
+filter(payload, variables, context):
+  1. Match pollID: payload.pollID === variables.pollID → if false, skip
+  2. If poll.settings.resultsVisibility === HIDDEN:
+     a. Load subscriber's vote: PollVoteService.getVoteForUser(pollID, subscriberID)
+     b. If subscriber has NOT voted → return false (suppress event)
+  3. Return true (deliver event)
+```
+
+The `pollOptionsChanged` subscription filter does NOT suppress events — option changes are always delivered (though vote data within the payload is filtered by field resolvers per visibility/detail settings).
+
+### Subscription Visibility Matrix
+
+The subscription payloads reuse the existing field resolvers (from `PollFieldsResolver`) which apply per-subscriber visibility/detail filtering based on `@CurrentActor()`. The subscription's `resolve()` function returns the `Poll` entity, and GraphQL's field resolution applies the visibility rules automatically.
+
+**Vote event suppression (filter level):**
+
+| `resultsVisibility` | Subscriber voted? | `pollVoteUpdated` filter | `pollOptionsChanged` filter |
+|---------------------|-------------------|--------------------------|-----------------------------|
+| `HIDDEN`            | No                | **SUPPRESS** (return false) | DELIVER (options only, no vote data via field resolvers) |
+| `HIDDEN`            | Yes               | DELIVER                  | DELIVER |
+| `TOTAL_ONLY`        | No                | DELIVER                  | DELIVER |
+| `TOTAL_ONLY`        | Yes               | DELIVER                  | DELIVER |
+| `VISIBLE`           | Either            | DELIVER                  | DELIVER |
+
+**Field-level filtering (resolve level — handled by existing `PollFieldsResolver`):**
+
+The field resolvers already implement the full visibility/detail matrix from the Results Computation section above. No duplication is needed. Each subscriber's GraphQL query resolves `options`, `totalVotes`, `myVote`, `canSeeDetailedResults` according to their own context.
+
+### Publishing Points
+
+Events are published from mutation resolvers (fire-and-forget pattern):
+
+| Mutation | PubSub Channel | Event |
+|----------|---------------|-------|
+| `castPollVote` | `POLL_VOTE_UPDATED` | After vote persist |
+| `addPollOption` | `POLL_OPTIONS_CHANGED` | After option persist |
+| `updatePollOption` | `POLL_OPTIONS_CHANGED` | After option text update + vote cleanup |
+| `removePollOption` | `POLL_OPTIONS_CHANGED` | After option removal + vote cleanup |
+| `reorderPollOptions` | `POLL_OPTIONS_CHANGED` | After reorder persist |
 
 ---
 

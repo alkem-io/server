@@ -1,5 +1,6 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { PollEventType } from '@common/enums/poll.event.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CastPollVoteInput } from '@domain/collaboration/poll-vote/dto/poll.vote.dto.cast';
@@ -7,12 +8,14 @@ import { PollVoteService } from '@domain/collaboration/poll-vote/poll.vote.servi
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import {
   AddPollOptionInput,
   RemovePollOptionInput,
   ReorderPollOptionsInput,
   UpdatePollOptionInput,
 } from './dto/poll.dto.option';
+import { PollSubscriptionPayload } from './dto/poll.subscription.payload';
 import { IPoll } from './poll.interface';
 import { PollService } from './poll.service';
 
@@ -23,7 +26,8 @@ export class PollMutationsResolver {
     private readonly communityResolverService: CommunityResolverService,
     private readonly notificationSpaceAdapter: NotificationSpaceAdapter,
     private readonly pollService: PollService,
-    private readonly pollVoteService: PollVoteService
+    private readonly pollVoteService: PollVoteService,
+    private readonly subscriptionPublishService: SubscriptionPublishService
   ) {}
 
   @Mutation(() => IPoll, {
@@ -58,6 +62,9 @@ export class PollMutationsResolver {
       actorContext.actorID,
       priorVoterIds
     );
+
+    // Publish subscription event
+    void this.publishPollEvent(PollEventType.POLL_VOTE_UPDATED, updatedPoll);
 
     return updatedPoll;
   }
@@ -95,6 +102,9 @@ export class PollMutationsResolver {
     ).catch(() => {
       /* errors logged inside */
     });
+
+    // Publish subscription event
+    void this.publishPollEvent(PollEventType.POLL_OPTIONS_CHANGED, updatedPoll);
 
     return updatedPoll;
   }
@@ -141,6 +151,9 @@ export class PollMutationsResolver {
       /* errors logged inside */
     });
 
+    // Publish subscription event
+    void this.publishPollEvent(PollEventType.POLL_OPTIONS_CHANGED, updatedPoll);
+
     return updatedPoll;
   }
 
@@ -185,6 +198,9 @@ export class PollMutationsResolver {
       /* errors logged inside */
     });
 
+    // Publish subscription event
+    void this.publishPollEvent(PollEventType.POLL_OPTIONS_CHANGED, updatedPoll);
+
     return updatedPoll;
   }
 
@@ -220,7 +236,26 @@ export class PollMutationsResolver {
       voterIds
     );
 
+    // Publish subscription event
+    void this.publishPollEvent(PollEventType.POLL_OPTIONS_CHANGED, updatedPoll);
+
     return updatedPoll;
+  }
+
+  private publishPollEvent(
+    pollEventType: PollEventType,
+    poll: IPoll
+  ): Promise<void> {
+    const payload: PollSubscriptionPayload = {
+      eventID: `${pollEventType}-${Math.round(Math.random() * 1000)}`,
+      pollEventType,
+      poll,
+    };
+
+    if (pollEventType === PollEventType.POLL_VOTE_UPDATED) {
+      return this.subscriptionPublishService.publishPollVoteUpdated(payload);
+    }
+    return this.subscriptionPublishService.publishPollOptionsChanged(payload);
   }
 
   /** Notify poll creator + prior voters when a new vote is cast (T061). */

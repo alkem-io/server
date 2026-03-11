@@ -130,6 +130,29 @@ Community members who have already voted on a poll want to stay informed about a
 
 ---
 
+### User Story 7 - Real-Time Poll Subscriptions (Priority: P7)
+
+A community member viewing a poll in their browser wants the poll display to update in real time when another member votes or when a facilitator modifies poll options — without requiring a manual page refresh.
+
+**Why this priority**: Real-time updates close the feedback loop for active viewers, making polls feel collaborative and live. Without subscriptions, users must refresh manually and may miss activity, reducing engagement.
+
+**Independent Test**: Member A opens a poll in their browser and subscribes via GraphQL subscription. Member B casts a vote. Member A's subscription receives the updated poll with new vote counts (respecting visibility settings). Separately: a facilitator adds an option to the poll; Member A's subscription receives the updated option list.
+
+**Acceptance Scenarios**:
+
+1. **Given** Member A is viewing a poll and subscribed to `pollVoteUpdated`, **When** Member B casts a vote, **Then** Member A receives the updated Poll object with new vote counts, percentages, and voter lists as permitted by the poll's `resultsVisibility` and `resultsDetail` settings.
+2. **Given** Member A is viewing a poll with `resultsVisibility = HIDDEN` and has NOT voted, **When** Member B casts a vote, **Then** Member A's subscription does NOT fire — no event is received (vote events are suppressed for non-voters when visibility is HIDDEN).
+3. **Given** Member A is viewing a poll with `resultsVisibility = HIDDEN` and HAS voted, **When** Member B casts a vote, **Then** Member A receives the updated Poll object with results visible (because they have voted, the visibility gate is passed).
+4. **Given** Member A is viewing a poll with `resultsVisibility = TOTAL_ONLY` and has NOT voted, **When** Member B casts a vote, **Then** Member A receives the updated Poll with only `totalVotes` populated; per-option counts, percentages, and voters remain null.
+5. **Given** Member A is subscribed to `pollOptionsChanged` on a poll, **When** the facilitator adds a new option, **Then** Member A receives the updated Poll with the new option in the options list.
+6. **Given** Member A is subscribed to `pollOptionsChanged` on a poll, **When** the facilitator edits option text (which revokes affected votes), **Then** Member A receives the updated Poll with the new option text and updated vote data; if Member A's own vote was revoked, `myVote` is null.
+7. **Given** Member A is subscribed to `pollOptionsChanged` on a poll, **When** the facilitator removes an option, **Then** Member A receives the updated Poll with the option removed from the list; if Member A's own vote was revoked, `myVote` is null.
+8. **Given** Member A is subscribed to `pollOptionsChanged` on a poll, **When** the facilitator reorders options, **Then** Member A receives the updated Poll with options in the new `sortOrder`.
+9. **Given** a user without READ access to the poll attempts to subscribe, **When** they send the subscription request, **Then** the server rejects the subscription with an authorization error.
+10. **Given** Member A subscribes to a poll, **When** no events have occurred yet, **Then** no initial catch-up payload is sent — only future events are delivered (consistent with all other subscriptions in the platform).
+
+---
+
 ### Edge Cases
 
 - What happens if a poll option is removed while a member is in the process of voting? The system should prevent submission with the removed option and inform the member the option is no longer available, prompting them to review their selections.
@@ -196,6 +219,17 @@ Community members who have already voted on a poll want to stay informed about a
 
 - **FR-027**: The poll data model MUST support a "deadline" field per poll (even if auto-close by deadline is not implemented in this iteration), to avoid future breaking changes.
 
+**Real-Time Subscriptions**
+
+- **FR-028**: The system MUST expose a `pollVoteUpdated(pollID: UUID!)` GraphQL subscription that fires whenever a vote is cast or updated on the specified poll. The subscription MUST return the updated `Poll` object. Authorization: the subscriber MUST have `READ` privilege on the poll.
+- **FR-029**: The system MUST expose a `pollOptionsChanged(pollID: UUID!)` GraphQL subscription that fires whenever poll options are added, edited, removed, or reordered. The subscription MUST return the updated `Poll` object. Authorization: the subscriber MUST have `READ` privilege on the poll.
+- **FR-030**: Subscription payloads MUST respect the poll's `resultsVisibility` and `resultsDetail` settings per subscriber. The existing field resolvers (which apply visibility/detail filtering based on the current user's context) MUST be reused — no separate filtering logic. Specifically:
+  - When `resultsVisibility = HIDDEN` and the subscriber has NOT voted: vote events (`pollVoteUpdated`) MUST be suppressed entirely (the subscriber receives nothing); option change events (`pollOptionsChanged`) MUST deliver updated options only with no vote status data.
+  - When `resultsVisibility = TOTAL_ONLY` and the subscriber has NOT voted: vote events deliver only `totalVotes`; option change events deliver updated options and `totalVotes`.
+  - When `resultsVisibility = VISIBLE` or the subscriber HAS voted: events deliver data according to `resultsDetail` (PERCENTAGE, COUNT, or FULL).
+  - When the subscriber's own vote is revoked by an option change, `myVote` MUST be null in the delivered payload.
+- **FR-031**: Each subscription event payload MUST include an `eventID` string (unique per event) for traceability, following the `BaseSubscriptionPayload` pattern used by all other subscriptions in the platform. Each subscription result type MUST include a `pollEventType` field indicating the event category (`POLL_VOTE_UPDATED` or `POLL_OPTIONS_CHANGED`) for client-side routing.
+
 ### Key Entities
 
 - **Callout (Post)**: An existing collaboration artifact in a space. A poll is optional additional content attached to a Callout's Framing — a Callout may or may not have a poll.
@@ -210,7 +244,7 @@ Community members who have already voted on a poll want to stay informed about a
 - **SC-001**: A facilitator can create a new poll with at least two options and publish it in under 2 minutes, with no additional steps required before members can vote.
 - **SC-002**: A community member can find, read, and cast their vote on an open poll in under 60 seconds.
 - **SC-003**: 100% of votes are immediately reflected in the displayed results — no vote is lost or misattributed.
-- **SC-004**: Poll results always display options in `sortOrder` order (ascending). Results reflect the current state at the time the poll is loaded or the page is refreshed; live push updates are out of scope for this iteration (deferred to a dedicated subscriptions spec).
+- **SC-004**: Poll results always display options in `sortOrder` order (ascending). Results reflect the current state at the time the poll is loaded, the page is refreshed, or a real-time subscription event is received. Subscribers viewing a poll receive live updates when votes are cast or options change, respecting the poll's `resultsVisibility` and `resultsDetail` settings.
 - **SC-005**: Poll creators receive a notification within 60 seconds of a vote being cast on their poll.
 - **SC-006**: A voter can successfully update their vote and see their previous selection removed and new selection recorded, all within a single interaction.
 - **SC-007**: When `resultsDetail = FULL`, all space members can view the full voter list per option without additional permissions or steps.
@@ -235,11 +269,21 @@ Community members who have already voted on a poll want to stay informed about a
 
 ### Session 2026-03-02
 
-- Q: How should poll results update after a new vote is cast — on-demand (manual refresh), background polling, or push subscription? → A: Results update on page load / manual refresh only. Real-time push subscriptions are deferred to a separate future spec.
+- Q: How should poll results update after a new vote is cast — on-demand (manual refresh), background polling, or push subscription? → A: Results update on page load, manual refresh, and via real-time GraphQL subscriptions. Two subscriptions are exposed: `pollVoteUpdated` (fires on vote cast/update) and `pollOptionsChanged` (fires on option add/edit/remove/reorder). Subscription payloads respect the poll's visibility and detail settings per subscriber.
 - Q: Who can create polls — facilitators/admins only, any member, or configurable? → A: Any user who can create a Callout (Post) in a space can add a poll to it. Polls are additional content on a Callout's Framing (Post), not a standalone entity; poll creation permissions follow existing callout creation permissions for the space.
 - Q: Who can edit poll options — original creator only, or anyone with Callout edit permissions? → A: Poll editing follows parent Callout edit permissions. Anyone who can edit the Callout can edit its poll (consistent with existing Callout management).
 - Q: Which notification channels deliver poll vote notifications? → A: Reuse the platform's existing notification channel infrastructure (in-app, email, or both per the user's existing notification preferences). No new channel is introduced.
 - Q: Vote record pattern — in-place update or append-with-delete? → A: Single Vote record per member per Poll, updated in place when selections change. No vote history is retained. Change events may still be emitted for future subscription use without requiring stored history.
+
+---
+
+### Session 2026-03-11
+
+- Q: Should subscriptions return the full Poll object or a lightweight payload? → A: Full Poll object. The existing field resolvers already apply visibility/detail filtering per user context (via `@CurrentActor()`), so each subscriber automatically receives appropriately filtered data without reimplementing the visibility matrix.
+- Q: Should we have one combined subscription or separate ones? → A: Two separate subscriptions (`pollVoteUpdated` and `pollOptionsChanged`) — different event frequencies (votes: high, options: low) and different client interests.
+- Q: Should new subscribers receive catch-up with current state? → A: No, future events only — consistent with all other subscriptions in the platform (PubSub delivers only after subscription starts).
+- Q: What logging level for subscription events? → A: Debug level (not verbose).
+- Q: Should payloads include an event type field? → A: Yes, include `pollEventType` with values `POLL_VOTE_UPDATED` and `POLL_OPTIONS_CHANGED` — consistent with other subscriptions that include event context.
 
 ---
 
@@ -250,4 +294,3 @@ The following items were identified as future enhancements. The data model and a
 - **Poll closing**: Ability to manually close a poll, preventing further votes.
 - **Poll deadline**: A date/time at which the poll automatically closes.
 - **Creator-initiated close with notification**: Closing a poll and notifying all voters of the final result.
-- **Real-time vote subscriptions**: Live updates pushed to all viewers when votes are cast or changed.

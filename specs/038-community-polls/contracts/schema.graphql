@@ -417,6 +417,62 @@ extend type Mutation {
 }
 
 # ─────────────────────────────────────────────────────────────────────────────
+# SUBSCRIPTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+"""
+The type of event that occurred on a poll.
+"""
+enum PollEventType {
+  """A vote was cast or updated on the poll."""
+  POLL_VOTE_UPDATED
+  """Options were added, removed, updated, or reordered on the poll."""
+  POLL_OPTIONS_CHANGED
+}
+
+"""
+Subscription result for vote updates on a poll.
+Returned by the pollVoteUpdated subscription.
+"""
+type PollVoteUpdatedSubscriptionResult {
+  """The type of poll event."""
+  pollEventType: PollEventType!
+  """The updated Poll. Fields are filtered per subscriber's visibility context."""
+  poll: Poll!
+}
+
+"""
+Subscription result for option changes on a poll.
+Returned by the pollOptionsChanged subscription.
+"""
+type PollOptionsChangedSubscriptionResult {
+  """The type of poll event."""
+  pollEventType: PollEventType!
+  """The updated Poll. Fields are filtered per subscriber's visibility context."""
+  poll: Poll!
+}
+
+extend type Subscription {
+  """
+  Subscribe to vote changes on a specific Poll.
+  Fires when a user casts, updates, or (indirectly via option change) loses a vote.
+  When resultsVisibility = HIDDEN and the subscriber has not voted, vote events are
+  suppressed entirely (the subscriber receives nothing).
+  The returned Poll is filtered per subscriber context: field resolvers apply the
+  visibility/detail matrix so each subscriber sees only what they are entitled to.
+  """
+  pollVoteUpdated(pollID: UUID!): PollVoteUpdatedSubscriptionResult!
+
+  """
+  Subscribe to option changes on a specific Poll.
+  Fires when options are added, removed, updated (text change), or reordered.
+  Always delivered regardless of resultsVisibility — option structure is not secret.
+  Vote data within the returned Poll is still filtered per subscriber context.
+  """
+  pollOptionsChanged(pollID: UUID!): PollOptionsChangedSubscriptionResult!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
 # NOTIFICATION EVENTS (informational — not part of GraphQL schema)
 # ─────────────────────────────────────────────────────────────────────────────
 #

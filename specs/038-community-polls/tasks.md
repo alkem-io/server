@@ -211,6 +211,70 @@
 
 ---
 
+## Phase 9: User Story 7 — Real-Time Subscriptions (P7) (added after phase 8 bellow)
+
+**Goal**: Two GraphQL subscriptions (`pollVoteUpdated`, `pollOptionsChanged`) push live poll state to connected clients using the platform's existing PubSub infrastructure. No new infrastructure — follows `calloutPostCreated` / `virtualContributorUpdated` patterns.
+
+**Independent Test**: Subscribe to `pollVoteUpdated(pollID)` with two browser sessions. Member A casts a vote; Member B's subscription receives the updated poll with results filtered by B's visibility context. When `resultsVisibility = HIDDEN` and Member C has not voted, Member C receives no event. Subscribe to `pollOptionsChanged(pollID)`; admin adds an option; all subscribers receive the updated option list.
+
+### Infrastructure (parallel, no inter-dependencies)
+
+- [ ] T074 [P] [US7] Create `PollEventType` enum in `src/common/enums/poll.event.type.ts` with values `POLL_VOTE_UPDATED = 'pollVoteUpdated'` and `POLL_OPTIONS_CHANGED = 'pollOptionsChanged'`; register with `registerEnumType`. Export from `src/common/enums/index.ts`.
+- [ ] T075 [P] [US7] Add two values to `SubscriptionType` enum in `src/common/enums/subscription.type.ts`: `POLL_VOTE_UPDATED = 'pollVoteUpdated'` and `POLL_OPTIONS_CHANGED = 'pollOptionsChanged'`.
+- [ ] T076 [P] [US7] Add two Symbol constants to `src/common/constants/providers.ts`: `SUBSCRIPTION_POLL_VOTE_UPDATED` and `SUBSCRIPTION_POLL_OPTIONS_CHANGED`.
+
+### Payload & DTO (after T074–T076)
+
+- [ ] T077 [P] [US7] Create subscription payload interface `PollVoteUpdatedSubscriptionPayload` in `src/services/subscriptions/subscription-service/dto/poll.vote.updated.subscription.payload.ts` — extends `BaseSubscriptionPayload` with fields `pollEventType: PollEventType`, `pollID: string`, `poll: IPoll`.
+- [ ] T078 [P] [US7] Create subscription payload interface `PollOptionsChangedSubscriptionPayload` in `src/services/subscriptions/subscription-service/dto/poll.options.changed.subscription.payload.ts` — extends `BaseSubscriptionPayload` with fields `pollEventType: PollEventType`, `pollID: string`, `poll: IPoll`.
+- [ ] T079 [P] [US7] Create `PollVoteUpdatedSubscriptionResult` ObjectType in `src/domain/collaboration/poll/dto/poll.vote.updated.subscription.result.ts` — fields: `pollEventType: PollEventType`, `poll: IPoll` (non-nullable). Follow `VirtualContributorUpdatedSubscriptionResult` pattern.
+- [ ] T080 [P] [US7] Create `PollOptionsChangedSubscriptionResult` ObjectType in `src/domain/collaboration/poll/dto/poll.options.changed.subscription.result.ts` — fields: `pollEventType: PollEventType`, `poll: IPoll` (non-nullable). Same pattern as T079.
+- [ ] T081 [P] [US7] Create `PollSubscriptionArgs` ArgsType in `src/domain/collaboration/poll/dto/poll.subscription.args.ts` — single field `pollID: UUID!` with `@MaxLength(UUID_LENGTH)`.
+
+### Service Methods (after T076)
+
+- [ ] T082 [US7] Add `subscribeToVoteUpdated(pollID: string): Promise<AsyncIterableIterator<PollVoteUpdatedSubscriptionPayload>>` method to `SubscriptionReadService` — injects `SUBSCRIPTION_POLL_VOTE_UPDATED` PubSubEngine, returns `asyncIterator(pollID)`. Follow `subscribeToVirtualContributorUpdated` pattern.
+- [ ] T083 [US7] Add `subscribeToOptionsChanged(pollID: string): Promise<AsyncIterableIterator<PollOptionsChangedSubscriptionPayload>>` method to `SubscriptionReadService` — injects `SUBSCRIPTION_POLL_OPTIONS_CHANGED` PubSubEngine, returns `asyncIterator(pollID)`.
+- [ ] T084 [US7] Add `publishPollVoteUpdated(payload: PollVoteUpdatedSubscriptionPayload): Promise<void>` to `SubscriptionPublishService` — publishes to `SUBSCRIPTION_POLL_VOTE_UPDATED` engine using `payload.pollID` as topic. Add `publishPollOptionsChanged(payload: PollOptionsChangedSubscriptionPayload): Promise<void>` — publishes to `SUBSCRIPTION_POLL_OPTIONS_CHANGED`.
+
+### Subscription Resolver (after T079–T084)
+
+- [ ] T085 [US7] Create `PollResolverSubscriptions` in `src/domain/collaboration/poll/poll.resolver.subscriptions.ts`:
+  - `pollVoteUpdated(args: PollSubscriptionArgs)` — uses `@TypedSubscription` decorator with `subscribe` → `subscriptionReadService.subscribeToVoteUpdated(args.pollID)`, `filter` → matches `payload.pollID === args.pollID`; for `HIDDEN` visibility with non-voted subscriber → return false (suppress event); `resolve` → returns `PollVoteUpdatedSubscriptionResult` with `pollEventType` and `poll` entity (field resolvers handle per-subscriber visibility).
+  - `pollOptionsChanged(args: PollSubscriptionArgs)` — same pattern with `subscribeToOptionsChanged`, no HIDDEN suppression (option events always delivered); `resolve` → returns `PollOptionsChangedSubscriptionResult`.
+  - Inject `PollVoteService` for voter-status check in filter.
+
+### Mutation Wiring (after T084)
+
+- [ ] T086 [US7] Wire publish calls in `poll.resolver.mutations.ts`:
+  - `castPollVote` → after vote persist, publish `PollVoteUpdatedSubscriptionPayload` with `pollEventType = POLL_VOTE_UPDATED`.
+  - `addPollOption` → after option persist, publish `PollOptionsChangedSubscriptionPayload` with `pollEventType = POLL_OPTIONS_CHANGED`.
+  - `updatePollOption` → after option text update + vote cleanup, publish `PollOptionsChangedSubscriptionPayload`.
+  - `removePollOption` → after option removal + vote cleanup, publish `PollOptionsChangedSubscriptionPayload`.
+  - `reorderPollOptions` → after reorder persist, publish `PollOptionsChangedSubscriptionPayload`.
+  - Each publish builds the payload by loading the full Poll entity (for field resolvers) and generating `eventID` via `uuid()`.
+
+### Module Wiring (after T085–T086)
+
+- [ ] T087 [US7] Update `poll.module.ts` to:
+  - Register `PollResolverSubscriptions` as a provider.
+  - Add two `PubSubEngine` factory providers for `SUBSCRIPTION_POLL_VOTE_UPDATED` and `SUBSCRIPTION_POLL_OPTIONS_CHANGED` — follow pattern in existing subscription modules (e.g., `virtual.contributor.module.ts` or the callout subscription wiring).
+  - Import `SubscriptionServiceModule` if not already imported.
+
+### Tests & Schema (after T085–T087)
+
+- [ ] T088 [US7] Add unit tests for `PollResolverSubscriptions`:
+  - (a) Filter returns false when `resultsVisibility = HIDDEN` and subscriber has not voted (for `pollVoteUpdated`).
+  - (b) Filter returns true when `resultsVisibility = HIDDEN` and subscriber has voted.
+  - (c) Filter returns true for all `resultsVisibility` values other than `HIDDEN`.
+  - (d) `pollOptionsChanged` filter always returns true regardless of visibility settings.
+  - (e) Resolve functions return correct `pollEventType` and `poll` entity.
+- [ ] T089 [US7] Run `pnpm run schema:print && pnpm run schema:sort && pnpm run schema:diff`; verify `PollEventType` enum, subscription result types, and `Subscription.pollVoteUpdated` / `Subscription.pollOptionsChanged` fields appear in `change-report.json` as additive (non-breaking).
+
+**Checkpoint**: Two subscription channels functional. HIDDEN visibility suppresses vote events for non-voters. Option events always delivered. Field resolvers filter results per subscriber context. Schema contract passes.
+
+---
+
 ## Phase 8: Polish & Cross-Cutting Concerns
 
 **Purpose**: Documentation fixes, schema contract generation, lint/test verification, migration validation, quickstart smoke test.
@@ -236,8 +300,9 @@ Phase 1 (Setup)
                                ├─► Phase 4 (US2+US4 - Vote)       ← depends on US1 data to test
                                ├─► Phase 5 (US3 - Results)         ← depends on US2 votes to test
                                ├─► Phase 6 (US5 - Options)         ← depends on US1 data to test
-                               └─► Phase 7 (US6 - Notifications)   ← depends on US2+US5 hooks
-Phase 8 (Polish) ← depends on all phases complete
+                               ├─► Phase 7 (US6 - Notifications)   ← depends on US2+US5 hooks
+                               └─► Phase 9 (US7 - Subscriptions)   ← depends on US2+US5 mutations
+Phase 8 (Polish) ← depends on all phases complete (including Phase 9)
 ```
 
 ### User Story Dependencies
@@ -248,6 +313,7 @@ Phase 8 (Polish) ← depends on all phases complete
 - **US4 (P4)**: Implemented as the update branch in US2's `castVote()` — no additional story phase needed
 - **US5 (P5)**: Requires US1 data; notification stubs reference US6 but mutations work without notifications
 - **US6 (P6)**: Wires into US2 (`castVote`) and US5 (option mutations); must be done after US2 and US5 service methods exist
+- **US7 (P7)**: Wires into US2 (`castVote`) and US5 (option mutations) for publishing events; requires Poll entities and mutations to be functional. Independent of US6 (notifications)
 
 ### Within Each Phase: Execution Order
 
@@ -294,6 +360,19 @@ Sequential:       T061, T062, T063, T064      (wiring — after T060; one mutati
 Sequential:       T065                        (tests — after T061–T064)
 ```
 
+### Phase 9 — US7
+
+```
+Parallel batch 1: T074, T075, T076            (enum, subscription type, symbols — fully parallel)
+Parallel batch 2: T077, T078, T079, T080, T081 (payloads, result types, args — after batch 1)
+Parallel batch 3: T082, T083, T084            (read/publish service methods — after T076)
+Sequential:       T085                        (subscription resolver — after T079–T084)
+Sequential:       T086                        (mutation wiring — after T084)
+Sequential:       T087                        (module wiring — after T085, T086)
+Sequential:       T088                        (unit tests — after T085)
+Sequential:       T089                        (schema contract — after T087)
+```
+
 ---
 
 ## Implementation Strategy
@@ -315,11 +394,12 @@ Sequential:       T065                        (tests — after T061–T064)
 4. Phase 5 → Results visible to all members → core value delivered
 5. Phase 6 → Option editing works → editorial controls complete
 6. Phase 7 → Notifications → engagement loop closed
-7. Phase 8 → Polish → production-ready
+7. Phase 9 → Subscriptions → real-time updates delivered to browsers
+8. Phase 8 → Polish → production-ready
 
 ### Single-Developer Sequence
 
-Complete phases in order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 8. Stop at each **Checkpoint** to validate the story independently before proceeding.
+Complete phases in order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 9 → 8. Stop at each **Checkpoint** to validate the story independently before proceeding.
 
 ---
 

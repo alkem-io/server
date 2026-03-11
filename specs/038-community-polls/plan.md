@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add a Poll composition object to CalloutFraming that lets space members vote on community questions (single-select or multi-select), view transparent results, and change their vote at any time. Polls are created as part of the existing `createCallout` mutation by extending `CreateCalloutFramingInput` with an optional `poll` field (same pattern as `whiteboard`/`link`/`memo`) — no separate creation mutation is exposed. Poll option management and voting are four new mutations. Poll notifications are delivered through the existing dual-channel notification infrastructure for both Callout creators and existing voters, with four dedicated preference fields (`collaborationPollVoteCastOnOwnPoll`, `collaborationPollVoteCastOnPollIVotedOn`, `collaborationPollModifiedOnPollIVotedOn`, `collaborationPollVoteAffectedByOptionChange`). Visibility/detail settings (`resultsVisibility`, `resultsDetail`) and future `status`/`deadline` compatibility are modeled explicitly. Poll votes authored by a deleted user account are removed automatically via a DB-level `ON DELETE CASCADE` constraint on `poll_vote.createdBy` (FK → `user.id`) — no application-level cleanup listener is required.
+Add a Poll composition object to CalloutFraming that lets space members vote on community questions (single-select or multi-select), view transparent results, and change their vote at any time. Polls are created as part of the existing `createCallout` mutation by extending `CreateCalloutFramingInput` with an optional `poll` field (same pattern as `whiteboard`/`link`/`memo`) — no separate creation mutation is exposed. Poll option management and voting are four new mutations. Poll notifications are delivered through the existing dual-channel notification infrastructure for both Callout creators and existing voters, with four dedicated preference fields (`collaborationPollVoteCastOnOwnPoll`, `collaborationPollVoteCastOnPollIVotedOn`, `collaborationPollModifiedOnPollIVotedOn`, `collaborationPollVoteAffectedByOptionChange`). Visibility/detail settings (`resultsVisibility`, `resultsDetail`) and future `status`/`deadline` compatibility are modeled explicitly. Poll votes authored by a deleted user account are removed automatically via a DB-level `ON DELETE CASCADE` constraint on `poll_vote.createdBy` (FK → `user.id`) — no application-level cleanup listener is required. Two real-time GraphQL subscriptions (`pollVoteUpdated`, `pollOptionsChanged`) push live updates to viewers, respecting visibility/detail settings per subscriber by reusing existing field resolver filtering logic.
 
 ## Technical Context
 
@@ -16,7 +16,7 @@ Add a Poll composition object to CalloutFraming that lets space members vote on 
 **Target Platform**: Linux server — same deployment target as existing service
 **Project Type**: Single NestJS monolith (`src/`)
 **Performance Goals**: Results queries must be < 200 ms p95 for polls with up to 20 options and 500 voters (SC-008 scaled)
-**Constraints**: No real-time push in this iteration (SC-004 deferred to subscriptions spec); options returned in `sortOrder ASC`
+**Constraints**: Options returned in `sortOrder ASC`; real-time subscriptions deliver poll updates via PubSub (same infrastructure as existing callout/VC subscriptions)
 **Account Deletion Handling**: Poll votes are removed when a user is deleted via Foreign Key Cascade.
 **Scale/Scope**: Polls are per-Callout; typical poll has 2–20 options and 5–200 voters per space; no sharding needed
 
@@ -123,6 +123,29 @@ src/platform/in-app-notification-payload/dto/space/
 src/domain/community/user-settings/
 └── user.settings.notification.space.interface.ts  # + collaborationPollVoteCastOnOwnPoll, collaborationPollVoteCastOnPollIVotedOn, collaborationPollModifiedOnPollIVotedOn, collaborationPollVoteAffectedByOptionChange
 
+src/common/enums/
+└── subscription.type.ts  # + POLL_VOTE_UPDATED, POLL_OPTIONS_CHANGED
+
+src/common/constants/
+└── providers.ts  # + SUBSCRIPTION_POLL_VOTE_UPDATED, SUBSCRIPTION_POLL_OPTIONS_CHANGED
+
+src/services/subscriptions/subscription-service/
+├── subscription.read.service.ts     # + subscribeToPollVoteUpdated(), subscribeToPollOptionsChanged()
+├── subscription.publish.service.ts  # + publishPollVoteUpdated(), publishPollOptionsChanged()
+└── dto/
+    ├── poll.vote.updated.subscription.payload.ts     # NEW
+    └── poll.options.changed.subscription.payload.ts  # NEW
+
+src/domain/collaboration/poll/
+├── poll.resolver.subscriptions.ts   # NEW — pollVoteUpdated, pollOptionsChanged subscription resolvers
+└── dto/
+    ├── poll.subscription.args.ts               # NEW — PollSubscriptionArgs (shared by both subscriptions)
+    ├── poll.vote.updated.subscription.result.ts      # NEW — PollVoteUpdatedSubscriptionResult GraphQL ObjectType
+    └── poll.options.changed.subscription.result.ts   # NEW — PollOptionsChangedSubscriptionResult GraphQL ObjectType
+
+src/common/enums/
+└── poll.event.type.ts  # NEW — PollEventType enum (POLL_VOTE_UPDATED, POLL_OPTIONS_CHANGED)
+
 src/migrations/
 └── {TIMESTAMP}-CommunityPolls.ts  # NEW — creates poll, poll_option, poll_vote tables; adds pollId to callout_framing
 ```
@@ -149,3 +172,11 @@ src/migrations/
 - **Impact on option removal**: When an option is removed, all votes containing that option are deleted entirely—no re-validation or partial preservation.
 - **Affected files**: `spec.md` (FR-006, FR-012, User Stories 4 & 5), `data-model.md` (vote casting validation, option removal logic, state transitions), `contracts/schema.graphql` (mutation comments, input descriptions), `research.md` (option removal decision), `quickstart.md` (examples), `checklists/requirements.md` (notes).
 - **Resolves**: Specification issue H3 (underspecification of vote cleanup when remaining selections fall below minResponses).
+
+**2026-03-11**: Added real-time GraphQL subscriptions (User Story 7).
+- **Change**: Two new GraphQL subscriptions (`pollVoteUpdated`, `pollOptionsChanged`) push live poll updates to viewers. Subscription payloads return the full `Poll` object; existing field resolvers handle per-subscriber visibility/detail filtering — no separate filtering logic.
+- **Rationale**: Completes the real-time collaboration experience; previously deferred to future scope (SC-004). The design reuses the established PubSub infrastructure (`graphql-subscriptions`, `SubscriptionReadService`, `SubscriptionPublishService`, `TypedSubscription` decorator) and publishes events from the existing mutation resolvers.
+- **Key design decisions**: (1) Two separate subscriptions (not combined) — different event frequencies and client interests. (2) Full `Poll` return type — field resolvers apply visibility/detail filtering per subscriber's `@CurrentActor()` context. (3) Vote events suppressed entirely for `HIDDEN + not-voted` subscribers in the subscription filter. (4) Debug-level logging. (5) Future-events-only (no catch-up), consistent with all platform subscriptions. (6) `pollEventType` field included in subscription result types for client routing.
+- **Affected files**: `spec.md` (US7, FR-028..FR-031, SC-004, clarifications, future scope), `plan.md` (summary, constraints, project structure, revision history), `data-model.md` (subscription infrastructure), `tasks.md` (Phase 9), `contracts/schema.graphql` (subscription types).
+- **New source files**: `poll.resolver.subscriptions.ts`, `poll.subscription.args.ts`, `poll.vote.updated.subscription.result.ts`, `poll.options.changed.subscription.result.ts`, `poll.vote.updated.subscription.payload.ts`, `poll.options.changed.subscription.payload.ts`, `poll.event.type.ts`.
+- **Modified source files**: `subscription.type.ts`, `providers.ts` (constants), `subscription.read.service.ts`, `subscription.publish.service.ts`, `poll.resolver.mutations.ts`, `poll.module.ts`.

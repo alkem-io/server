@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { MutationType } from '@common/enums/subscriptions';
+import { PollSubscriptionPayload } from '@domain/collaboration/poll/dto/poll.subscription.payload';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { IMessageReaction } from '@domain/communication/message.reaction/message.reaction.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
@@ -14,6 +15,8 @@ import {
   SUBSCRIPTION_CONVERSATION_EVENT,
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
+  SUBSCRIPTION_POLL_OPTIONS_CHANGED,
+  SUBSCRIPTION_POLL_VOTE_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_UPDATED,
 } from '@src/common/constants';
@@ -43,6 +46,10 @@ export class SubscriptionPublishService {
     private inAppNotificationCounterSubscription: TypedPubSubEngine,
     @Inject(SUBSCRIPTION_CONVERSATION_EVENT)
     private conversationEventsSubscription: TypedPubSubEngine<ConversationEventSubscriptionPayload>,
+    @Inject(SUBSCRIPTION_POLL_VOTE_UPDATED)
+    private pollVoteUpdatedSubscription: TypedPubSubEngine<PollSubscriptionPayload>,
+    @Inject(SUBSCRIPTION_POLL_OPTIONS_CHANGED)
+    private pollOptionsChangedSubscription: TypedPubSubEngine<PollSubscriptionPayload>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -176,6 +183,24 @@ export class SubscriptionPublishService {
 
     return this.conversationEventsSubscription.publish(
       SubscriptionType.CONVERSATION_EVENTS,
+      payload
+    );
+  }
+
+  public publishPollVoteUpdated(
+    payload: PollSubscriptionPayload
+  ): Promise<void> {
+    return this.pollVoteUpdatedSubscription.publish(
+      SubscriptionType.POLL_VOTE_UPDATED,
+      payload
+    );
+  }
+
+  public publishPollOptionsChanged(
+    payload: PollSubscriptionPayload
+  ): Promise<void> {
+    return this.pollOptionsChangedSubscription.publish(
+      SubscriptionType.POLL_OPTIONS_CHANGED,
       payload
     );
   }
