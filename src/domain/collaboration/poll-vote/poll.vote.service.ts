@@ -14,21 +14,6 @@ export class PollVoteService {
     private pollVoteRepository: Repository<PollVote>
   ) {}
 
-  async castVote(
-    pollId: string,
-    voterId: string,
-    selectedOptionIds: string[]
-  ): Promise<Poll> {
-    // Load poll with options and votes (injected via PollService at call site)
-    // This method receives a pre-loaded poll from the caller
-    // Implementation relies on caller passing poll via context
-    throw new EntityNotFoundException(
-      'castVote requires poll context — call via PollVoteService.castVoteOnPoll()',
-      LogContext.COLLABORATION,
-      { pollId, voterId }
-    );
-  }
-
   async castVoteOnPoll(
     poll: Poll,
     voterId: string,

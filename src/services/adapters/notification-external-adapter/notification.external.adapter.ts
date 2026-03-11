@@ -654,6 +654,34 @@ export class NotificationExternalAdapter {
     };
   }
 
+  async buildSpaceCollaborationPollPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    space: ISpace,
+    calloutID: string,
+    pollID: string
+  ): Promise<any> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+
+    const calloutURL =
+      await this.urlGeneratorService.getCalloutUrlPath(calloutID);
+
+    return {
+      ...spacePayload,
+      poll: {
+        id: pollID,
+        calloutID,
+        calloutURL,
+      },
+    };
+  }
+
   async buildPlatformSpaceCreatedPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
