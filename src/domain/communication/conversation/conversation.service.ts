@@ -551,8 +551,12 @@ export class ConversationService {
       )
       .innerJoinAndSelect('m1.conversation', 'conversation')
       .leftJoinAndSelect('conversation.authorization', 'authorization')
+      .innerJoin('conversation.room', 'room')
       .where('m1.actorID = :actorId1', { actorId1 })
       .andWhere('m2.actorID = :actorId2', { actorId2 })
+      .andWhere('room.type = :roomType', {
+        roomType: RoomType.CONVERSATION_DIRECT,
+      })
       .getOne();
 
     return result?.conversation || null;
