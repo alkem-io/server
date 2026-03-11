@@ -20,6 +20,7 @@ As a space administrator, I want to set a space-level callout description displa
 1. **Given** a space admin calls `updateSpaceSettings` with `layout: { calloutDescriptionDisplayMode: COLLAPSED }`, **When** any user queries that space's settings, **Then** the response includes `settings.layout.calloutDescriptionDisplayMode: COLLAPSED`.
 2. **Given** a space admin calls `updateSpaceSettings` with `layout: { calloutDescriptionDisplayMode: EXPANDED }`, **When** any user queries that space's settings, **Then** the response includes `settings.layout.calloutDescriptionDisplayMode: EXPANDED`.
 3. **Given** a space admin updates the display mode, **When** a subsequent GraphQL query fetches the space settings, **Then** the new value is returned immediately (no caching delay).
+4. **Given** a user without the `UPDATE` privilege on the space calls `updateSpaceSettings` with `layout: { calloutDescriptionDisplayMode: COLLAPSED }`, **When** the mutation is executed, **Then** the server rejects the request with an authorization error and `settings.layout.calloutDescriptionDisplayMode` remains unchanged _(traceable to FR-009)_.
 
 ---
 
@@ -90,6 +91,8 @@ As a space administrator with subspaces, I want each space and subspace to have 
 - **FR-008**: Each space and subspace MUST store its own `layout.calloutDescriptionDisplayMode` independently; no inheritance from parent to child.
 - **FR-009**: Updating the layout settings MUST require the same `UPDATE` authorization privilege as other space settings mutations.
 - **FR-010**: The migration MUST be reversible (revert removes the `layout` key from JSONB settings without affecting other settings data).
+- **FR-011**: Updates to `calloutDescriptionDisplayMode` MUST be immediately reflected in subsequent GraphQL queries without caching delay.
+- **FR-012**: The GraphQL API MUST reject any mutation that supplies a value for `calloutDescriptionDisplayMode` that is not a member of the `CalloutDescriptionDisplayMode` enum, and MUST return a validation error to the caller.
 
 ### Key Entities
 

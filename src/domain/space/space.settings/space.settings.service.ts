@@ -31,6 +31,12 @@ export class SpaceSettingsService {
     if (updateData.sortMode) {
       settings.sortMode = updateData.sortMode;
     }
+    if (updateData.layout) {
+      settings.layout = {
+        ...settings.layout,
+        ...updateData.layout,
+      };
+    }
     return settings;
   }
 }

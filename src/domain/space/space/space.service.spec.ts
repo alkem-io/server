@@ -2,6 +2,7 @@ import { AuthorizationPrivilege, ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { RoleName } from '@common/enums/role.name';
@@ -640,6 +641,9 @@ const spaceSettings = {
     allowGuestContributions: false,
   },
   sortMode: SpaceSortMode.ALPHABETICAL,
+  layout: {
+    calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+  },
 };
 
 const getSubspacesMock = (

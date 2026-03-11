@@ -2,6 +2,7 @@ import { ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
 import { ActivityEventType } from '@common/enums/activity.event.type';
 import { ActorType } from '@common/enums/actor.type';
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { SpaceSortMode } from '@common/enums/space.sort.mode';
@@ -46,6 +47,9 @@ const spaceSettings = {
     allowGuestContributions: false,
   },
   sortMode: SpaceSortMode.ALPHABETICAL,
+  layout: {
+    calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+  },
 };
 
 const createTestSpace = (id: string): ISpace => {

@@ -1,6 +1,7 @@
 import { UUID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { LicenseType } from '@common/enums/license.type';
@@ -154,6 +155,12 @@ export class SpaceService {
     space.settings = templateContentSpace.settings;
     if (!space.settings.sortMode) {
       space.settings.sortMode = SpaceSortMode.ALPHABETICAL;
+    }
+    if (!space.settings.layout?.calloutDescriptionDisplayMode) {
+      space.settings.layout = {
+        ...space.settings.layout,
+        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+      };
     }
     space.platformRolesAccess =
       this.spacePlatformRolesAccessService.createPlatformRolesAccess(

@@ -21,13 +21,13 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T001 [P] Create `CalloutDescriptionDisplayMode` enum with values `COLLAPSED` and `EXPANDED` in `src/common/enums/callout.description.display.mode.ts` — follow the `SpaceSortMode` pattern: lowercase string values, `registerEnumType()` call
-- [ ] T002 [P] Create `ISpaceSettingsLayout` GraphQL ObjectType interface in `src/domain/space/space.settings/space.settings.layout.interface.ts` — abstract class with `@ObjectType('SpaceSettingsLayout')`, single field `calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode` (non-null)
-- [ ] T003 [P] Create `CreateSpaceSettingsLayoutInput` DTO in `src/domain/space/space.settings/dto/space.settings.layout.dto.create.ts` — `@InputType()` with optional `calloutDescriptionDisplayMode` field
-- [ ] T004 [P] Create `UpdateSpaceSettingsLayoutInput` DTO in `src/domain/space/space.settings/dto/space.settings.layout.dto.update.ts` — `@InputType()` with optional `calloutDescriptionDisplayMode` field
-- [ ] T005 Add `layout` field (`ISpaceSettingsLayout`, non-null) to `ISpaceSettings` in `src/domain/space/space.settings/space.settings.interface.ts` — import and add `@Field` with description `'The layout settings for this Space.'`
-- [ ] T006 [P] Add optional `layout` field (`CreateSpaceSettingsLayoutInput`) to `CreateSpaceSettingsInput` in `src/domain/space/space.settings/dto/space.settings.dto.create.ts`
-- [ ] T007 [P] Add optional `layout` field (`UpdateSpaceSettingsLayoutInput`) to `UpdateSpaceSettingsEntityInput` in `src/domain/space/space.settings/dto/space.settings.dto.update.ts`
+- [x] T001 [P] Create `CalloutDescriptionDisplayMode` enum with values `COLLAPSED` and `EXPANDED` in `src/common/enums/callout.description.display.mode.ts` — follow the `SpaceSortMode` pattern: lowercase string values, `registerEnumType()` call
+- [x] T002 [P] Create `ISpaceSettingsLayout` GraphQL ObjectType interface in `src/domain/space/space.settings/space.settings.layout.interface.ts` — abstract class with `@ObjectType('SpaceSettingsLayout')`, single field `calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode` (non-null)
+- [x] T003 [P] Create `CreateSpaceSettingsLayoutInput` DTO in `src/domain/space/space.settings/dto/space.settings.layout.dto.create.ts` — `@InputType()` with optional `calloutDescriptionDisplayMode` field
+- [x] T004 [P] Create `UpdateSpaceSettingsLayoutInput` DTO in `src/domain/space/space.settings/dto/space.settings.layout.dto.update.ts` — `@InputType()` with optional `calloutDescriptionDisplayMode` field
+- [x] T005 Add `layout` field (`ISpaceSettingsLayout`, non-null) to `ISpaceSettings` in `src/domain/space/space.settings/space.settings.interface.ts` — import and add `@Field` with description `'The layout settings for this Space.'`
+- [x] T006 [P] Add optional `layout` field (`CreateSpaceSettingsLayoutInput`) to `CreateSpaceSettingsInput` in `src/domain/space/space.settings/dto/space.settings.dto.create.ts`
+- [x] T007 [P] Add optional `layout` field (`UpdateSpaceSettingsLayoutInput`) to `UpdateSpaceSettingsEntityInput` in `src/domain/space/space.settings/dto/space.settings.dto.update.ts`
 
 **Checkpoint**: All types compile. `pnpm build` succeeds. No runtime behavior changes yet.
 
@@ -41,9 +41,9 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Add layout merge logic to `updateSettings()` in `src/domain/space/space.settings/space.settings.service.ts` — add `if (updateData.layout) { settings.layout = updateData.layout; }` block following the `membership`/`collaboration` full-replacement pattern
-- [ ] T009 [US1] Add `layout` field resolver on `Space` (public, no READ privilege) in `src/domain/space/space/space.resolver.fields.ts` — follow the `sortMode` resolver pattern: `@ResolveField('layout', () => ISpaceSettingsLayout)`, lazy-load space if needed, return `EXPANDED` as default fallback
-- [ ] T010 [US1] Update the `settings` field resolver in `src/domain/space/space/space.resolver.fields.ts` — ensure the returned settings object includes `layout` with a defensive default of `{ calloutDescriptionDisplayMode: EXPANDED }` when the field is missing, following the `sortMode` spread pattern
+- [x] T008 [US1] Add layout merge logic to `updateSettings()` in `src/domain/space/space.settings/space.settings.service.ts` — add `if (updateData.layout) { settings.layout = updateData.layout; }` block following the `membership`/`collaboration` full-replacement pattern
+- [x] T009 [US1] Add `layout` field resolver on `Space` (public, no READ privilege) in `src/domain/space/space/space.resolver.fields.ts` — follow the `sortMode` resolver pattern: `@ResolveField('layout', () => ISpaceSettingsLayout)`, lazy-load space if needed, return `EXPANDED` as default fallback
+- [x] T010 [US1] Update the `settings` field resolver in `src/domain/space/space/space.resolver.fields.ts` — ensure the returned settings object includes `layout` with a defensive default of `{ calloutDescriptionDisplayMode: EXPANDED }` when the field is missing, following the `sortMode` spread pattern
 
 **Checkpoint**: `updateSpaceSettings` mutation accepts `layout` input and persists it. Both `space.layout` and `space.settings.layout` resolvers return the value with correct defaults. Verify via GraphQL Playground.
 
@@ -57,7 +57,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Add layout default initialization in `createSpace()` in `src/domain/space/space/space.service.ts` — after template settings are applied, set `space.settings.layout = { calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED }` if not already present, following the `sortMode` default pattern
+- [x] T011 [US2] Add layout default initialization in `createSpace()` in `src/domain/space/space/space.service.ts` — after template settings are applied, set `space.settings.layout = { calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED }` if not already present, following the `sortMode` default pattern
 
 **Checkpoint**: New spaces and subspaces are created with `layout.calloutDescriptionDisplayMode = COLLAPSED`. Verify via creating a space and querying settings.
 
@@ -71,7 +71,7 @@
 
 ### Implementation for User Story 3
 
-- [ ] T012 [US3] Create migration `AddLayoutSettingsToSpace` in `src/migrations/` — `up`: use `jsonb_set("settings", '{layout}', '{"calloutDescriptionDisplayMode": "expanded"}')` where `"settings" ->> 'layout' IS NULL`; `down`: use `"settings" - 'layout'` where `"settings" ->> 'layout' IS NOT NULL`
+- [x] T012 [US3] Create migration `AddLayoutSettingsToSpace` in `src/migrations/` — `up`: use `jsonb_set("settings", '{layout}', '{"calloutDescriptionDisplayMode": "expanded"}')` where `"settings" ->> 'layout' IS NULL`; `down`: use `"settings" - 'layout'` where `"settings" ->> 'layout' IS NOT NULL`
 
 **Checkpoint**: Migration applies cleanly on existing database. All existing spaces have `layout.calloutDescriptionDisplayMode = "expanded"` in their JSONB settings. Migration reverts cleanly.
 
@@ -95,10 +95,10 @@
 
 **Purpose**: Schema validation, build verification, and cleanup.
 
-- [ ] T013 Regenerate and sort the GraphQL schema by running `pnpm run schema:print && pnpm run schema:sort` — verify `CalloutDescriptionDisplayMode` enum, `SpaceSettingsLayout` type, and `layout` fields appear correctly
-- [ ] T014 Run `pnpm lint` to verify no lint errors
-- [ ] T015 Run `pnpm build` to verify clean compilation
-- [ ] T016 Run `pnpm test:ci:no:coverage` to verify no existing tests are broken
+- [x] T013 Regenerate and sort the GraphQL schema by running `pnpm run schema:print && pnpm run schema:sort` — verify `CalloutDescriptionDisplayMode` enum, `SpaceSettingsLayout` type, and `layout` fields appear correctly
+- [x] T014 Run `pnpm lint` to verify no lint errors
+- [x] T015 Run `pnpm build` to verify clean compilation
+- [x] T016 Run `pnpm test:ci:no:coverage` to verify no existing tests are broken
 
 ---
 

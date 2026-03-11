@@ -1,5 +1,6 @@
 import { AccountType } from '@common/enums/account.type';
 import { ActorType } from '@common/enums/actor.type';
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { ProfileType } from '@common/enums/profile.type';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -226,6 +227,9 @@ const spaceSettings = {
     allowGuestContributions: false,
   },
   sortMode: SpaceSortMode.ALPHABETICAL,
+  layout: {
+    calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+  },
 };
 
 const getSpaceRoleResultMock = ({
