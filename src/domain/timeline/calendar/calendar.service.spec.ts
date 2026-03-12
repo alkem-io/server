@@ -603,12 +603,12 @@ describe('CalendarService', () => {
           space: 'space-1',
         },
         {
-          "actorID": "user-1",
-          "authenticationID": undefined,
-          "credentials": [],
-          "expiry": undefined,
-          "guestName": undefined,
-          "isAnonymous": false,
+          actorID: 'user-1',
+          authenticationID: undefined,
+          credentials: [],
+          expiry: undefined,
+          guestName: undefined,
+          isAnonymous: false,
         }
       );
     });
