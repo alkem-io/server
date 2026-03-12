@@ -96,7 +96,11 @@ export default defineConfig({
         'src/app.controller.ts',
         'src/config/**',
         'src/apm/**',
-        'src/tools/**',
+        // src/tools is now covered by unit tests
+        'src/tools/schema/diff-schema.ts',
+        'src/tools/schema/sort-sdl.ts',
+        'src/tools/schema/print-schema.ts',
+        'src/tools/schema/validate-artifacts.ts',
       ],
 
       // Coverage thresholds (matching current Jest config)
