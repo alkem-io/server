@@ -95,7 +95,6 @@ export default defineConfig({
         'src/app.module.ts',
         'src/app.controller.ts',
         'src/config/**',
-        'src/apm/**',
         'src/tools/**',
       ],
 
