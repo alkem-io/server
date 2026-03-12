@@ -7,6 +7,7 @@ import {
   NotFoundHttpException,
 } from '@common/exceptions/http';
 import { UserNotVerifiedException } from '@common/exceptions/user/user.not.verified.exception';
+import { UserService } from '@domain/community/user/user.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { RegistrationService } from '@services/api/registration/registration.service';
@@ -19,6 +20,7 @@ import { IdentityResolveService } from './identity-resolve.service';
 describe('IdentityResolveService', () => {
   let service: IdentityResolveService;
   let userLookupService: Record<string, Mock>;
+  let userService: Record<string, Mock>;
   let kratosService: Record<string, Mock>;
   let registrationService: Record<string, Mock>;
 
@@ -44,6 +46,7 @@ describe('IdentityResolveService', () => {
       string,
       Mock
     >;
+    userService = module.get(UserService) as unknown as Record<string, Mock>;
   });
 
   describe('resolveUser', () => {
@@ -204,6 +207,154 @@ describe('IdentityResolveService', () => {
       } as any);
 
       await expect(service.resolveUser('auth-id-1', meta)).rejects.toThrow(
+        BadRequestHttpException
+      );
+    });
+
+    it('should rethrow unexpected errors from registration', async () => {
+      vi.mocked(userLookupService.getUserByAuthenticationID).mockResolvedValue(
+        null
+      );
+      vi.mocked(kratosService.getIdentityById).mockResolvedValue({
+        id: 'auth-id-1',
+        traits: {
+          email: 'test@example.com',
+        },
+      });
+      vi.mocked(userLookupService.getUserByEmail).mockResolvedValue(null);
+
+      const unexpectedError = new Error('Database connection lost');
+      vi.mocked(registrationService.registerNewUser).mockRejectedValue(
+        unexpectedError
+      );
+
+      await expect(service.resolveUser('auth-id-1', meta)).rejects.toThrow(
+        'Database connection lost'
+      );
+    });
+  });
+
+  describe('linkAuthenticationToExistingUser (via resolveUser)', () => {
+    const kratosIdentity = {
+      id: 'auth-id-new',
+      traits: {
+        email: 'existing@example.com',
+      },
+    };
+
+    beforeEach(() => {
+      // First call: no user by authenticationID
+      vi.mocked(userLookupService.getUserByAuthenticationID).mockResolvedValue(
+        null
+      );
+      vi.mocked(kratosService.getIdentityById).mockResolvedValue(
+        kratosIdentity
+      );
+    });
+
+    it('should return existing user already linked to same auth ID', async () => {
+      const existingUser = {
+        id: 'user-existing',
+        authenticationID: 'auth-id-new',
+        email: 'existing@example.com',
+      };
+      vi.mocked(userLookupService.getUserByEmail).mockResolvedValue(
+        existingUser as any
+      );
+
+      const result = await service.resolveUser('auth-id-new', meta);
+
+      expect(result).toEqual(existingUser);
+      expect(userService.save).not.toHaveBeenCalled();
+    });
+
+    it('should link auth ID to user with no existing authenticationID', async () => {
+      const existingUser = {
+        id: 'user-existing',
+        authenticationID: undefined,
+        email: 'existing@example.com',
+      };
+      vi.mocked(userLookupService.getUserByEmail).mockResolvedValue(
+        existingUser as any
+      );
+      // No other user claims this auth ID
+      vi.mocked(userLookupService.getUserByAuthenticationID)
+        .mockResolvedValueOnce(null) // first call in resolveUser
+        .mockResolvedValueOnce(null); // second call in linkAuthentication
+      vi.mocked(userService.save).mockResolvedValue({
+        ...existingUser,
+        authenticationID: 'auth-id-new',
+      } as any);
+
+      const result = await service.resolveUser('auth-id-new', meta);
+
+      expect(userService.save).toHaveBeenCalled();
+      expect(result.authenticationID).toBe('auth-id-new');
+    });
+
+    it('should allow relinking when old Kratos identity no longer exists', async () => {
+      const existingUser = {
+        id: 'user-existing',
+        authenticationID: 'old-auth-id',
+        email: 'existing@example.com',
+      };
+      vi.mocked(userLookupService.getUserByEmail).mockResolvedValue(
+        existingUser as any
+      );
+      // Old identity no longer exists
+      vi.mocked(kratosService.getIdentityById)
+        .mockResolvedValueOnce(kratosIdentity) // first call: resolve new identity
+        .mockResolvedValueOnce(null); // second call: check old identity
+      // No other user claims this auth ID
+      vi.mocked(userLookupService.getUserByAuthenticationID)
+        .mockResolvedValueOnce(null) // first call in resolveUser
+        .mockResolvedValueOnce(null); // second call in linkAuthentication
+
+      vi.mocked(userService.save).mockResolvedValue({
+        ...existingUser,
+        authenticationID: 'auth-id-new',
+      } as any);
+
+      const result = await service.resolveUser('auth-id-new', meta);
+
+      expect(userService.save).toHaveBeenCalled();
+      expect(result.authenticationID).toBe('auth-id-new');
+    });
+
+    it('should throw when user linked to different still-valid Kratos identity', async () => {
+      const existingUser = {
+        id: 'user-existing',
+        authenticationID: 'old-auth-id',
+        email: 'existing@example.com',
+      };
+      vi.mocked(userLookupService.getUserByEmail).mockResolvedValue(
+        existingUser as any
+      );
+      // Old identity still exists in Kratos
+      vi.mocked(kratosService.getIdentityById)
+        .mockResolvedValueOnce(kratosIdentity) // first call: resolve new identity
+        .mockResolvedValueOnce({ id: 'old-auth-id' }); // second call: old identity still exists
+
+      await expect(service.resolveUser('auth-id-new', meta)).rejects.toThrow(
+        BadRequestHttpException
+      );
+    });
+
+    it('should throw when new auth ID already claimed by another user', async () => {
+      const existingUser = {
+        id: 'user-existing',
+        authenticationID: undefined,
+        email: 'existing@example.com',
+      };
+      vi.mocked(userLookupService.getUserByEmail).mockResolvedValue(
+        existingUser as any
+      );
+      // Another user already claims this auth ID
+      vi.mocked(userLookupService.getUserByAuthenticationID)
+        .mockResolvedValueOnce(null) // first call in resolveUser
+        .mockResolvedValueOnce({ id: 'other-user' } as any); // second call in linkAuthentication
+
+      await expect(service.resolveUser('auth-id-new', meta)).rejects.toThrow(
         BadRequestHttpException
       );
     });
