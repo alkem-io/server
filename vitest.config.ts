@@ -94,7 +94,7 @@ export default defineConfig({
         'src/main.ts',
         'src/app.module.ts',
         'src/app.controller.ts',
-        'src/config/**',
+        // src/config/** coverage enabled
         'src/apm/**',
         'src/tools/**',
       ],
