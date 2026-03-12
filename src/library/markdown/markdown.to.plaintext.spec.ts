@@ -26,7 +26,11 @@ describe('convertMarkdownToPlainText', () => {
     it.each([
       { md: '**bold**', expected: 'bold', label: 'bold' },
       { md: '*italic*', expected: 'italic', label: 'italic' },
-      { md: '~~strikethrough~~', expected: 'strikethrough', label: 'strikethrough' },
+      {
+        md: '~~strikethrough~~',
+        expected: 'strikethrough',
+        label: 'strikethrough',
+      },
       { md: '`inline code`', expected: 'inline code', label: 'inline code' },
       {
         md: 'Use **bold** and *italic* together',
@@ -176,7 +180,7 @@ describe('convertMarkdownToPlainText', () => {
       expect(result).toContain('Bring your ideas.');
       expect(result).toContain('register()');
       // No leftover markdown syntax
-      expect(result).not.toMatch(/[#*`>\[\]]/);
+      expect(result).not.toMatch(/[#*`>[\]]/);
     });
 
     it('handles markdown with HTML entities', () => {
