@@ -1,0 +1,24 @@
+# Requirements Checklist
+
+- [ ] Statement coverage >= 80% for src/domain/communication
+- [ ] All new test files follow co-location pattern (*.spec.ts next to source)
+- [ ] All tests use Vitest 4.x globals (describe, it, expect, vi)
+- [ ] All tests use NestJS Test.createTestingModule
+- [ ] MockWinstonProvider used for logger injection
+- [ ] repositoryProviderMockFactory used for TypeORM repositories
+- [ ] defaultMockerFactory used for remaining DI tokens
+- [ ] No skipped or pending tests
+- [ ] All tests pass (npx vitest run src/domain/communication)
+- [ ] Lint passes (pnpm lint)
+- [ ] Type check passes (pnpm exec tsc --noEmit)
+- [ ] CommunicationService fully tested
+- [ ] CommunicationAuthorizationService fully tested
+- [ ] CommunicationResolverMutations fully tested
+- [ ] RoomAuthorizationService fully tested
+- [ ] RoomServiceEvents fully tested
+- [ ] RoomDataLoader fully tested
+- [ ] ConversationAuthorizationService fully tested
+- [ ] MessagingResolverMutations fully tested
+- [ ] MessagingService coverage expanded
+- [ ] MessageResolverFields fully tested
+- [ ] MessageReactionResolverFields fully tested
