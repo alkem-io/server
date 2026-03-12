@@ -188,6 +188,7 @@ Key rules:
 - N/A (no data model changes — test-only feature) (034-unit-tests)
 - PostgreSQL 17.5
 - PostgreSQL 17.5 (conversation, conversation_membership, room tables) (040-group-conversations)
+- PostgreSQL 17.5 (space table + JSONB settings column) (041-subspace-sorting-pinning)
 
 ## Recent Changes
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting

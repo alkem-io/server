@@ -1,4 +1,5 @@
 import { SpaceLevel } from '@common/enums/space.level';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IActor, IActorFull } from '@domain/actor/actor/actor.interface';
@@ -67,6 +68,14 @@ export class ISpace extends IActor implements IActorFull {
     description: 'The sorting order for this Space within its parent.',
   })
   sortOrder!: number;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Whether this Space is pinned in its parent Space.',
+  })
+  pinned!: boolean;
+
+  sortMode?: SpaceSortMode;
 
   templatesManager?: ITemplatesManager;
   license?: ILicense;

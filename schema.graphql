@@ -702,6 +702,11 @@ enum SpacePrivacyMode {
   PUBLIC
 }
 
+enum SpaceSortMode {
+  ALPHABETICAL
+  CUSTOM
+}
+
 enum SpaceVisibility {
   ACTIVE
   ARCHIVED
@@ -3856,6 +3861,10 @@ type Mutation {
   """Updates one of the Setting on a Space"""
   updateSpaceSettings(settingsData: UpdateSpaceSettingsInput!): Space!
   """
+  Updates the pinned state of a Subspace within the specified Space. Returns the updated Subspace.
+  """
+  updateSubspacePinned(pinnedData: UpdateSubspacePinnedInput!): Space!
+  """
   Update the sortOrder field of the supplied Subspaces to increase as per the order that they are provided in.
   """
   updateSubspacesSortOrder(sortOrderData: UpdateSubspacesSortOrderInput!): [Space!]!
@@ -4699,12 +4708,18 @@ type RelayPaginatedSpace implements ActorFull {
   license: License!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
+  """Whether this Space is pinned in its parent Space."""
+  pinned: Boolean!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
   """The profile for this Actor."""
   profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
+  """
+  The sort mode for subspaces of this Space: Alphabetical or Custom. Accessible without READ privilege.
+  """
+  sortMode: SpaceSortMode!
   """The sorting order for this Space within its parent."""
   sortOrder: Int!
   """The StorageAggregator in use by this Space"""
@@ -5221,12 +5236,18 @@ type Space implements ActorFull {
   license: License!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
+  """Whether this Space is pinned in its parent Space."""
+  pinned: Boolean!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
   """The profile for this Actor."""
   profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
+  """
+  The sort mode for subspaces of this Space: Alphabetical or Custom. Accessible without READ privilege.
+  """
+  sortMode: SpaceSortMode!
   """The sorting order for this Space within its parent."""
   sortOrder: Int!
   """The StorageAggregator in use by this Space"""
@@ -5320,6 +5341,8 @@ type SpaceSettings {
   membership: SpaceSettingsMembership!
   """The privacy settings for this Space"""
   privacy: SpaceSettingsPrivacy!
+  """The sort mode for subspaces of this Space: Alphabetical or Custom."""
+  sortMode: SpaceSortMode!
 }
 
 type SpaceSettingsCollaboration {
@@ -6816,6 +6839,8 @@ input CreateSpaceSettingsInput {
   membership: CreateSpaceSettingsMembershipInput
   """"""
   privacy: CreateSpaceSettingsPrivacyInput
+  """The sort mode for subspaces: Alphabetical or Custom."""
+  sortMode: SpaceSortMode
 }
 
 input CreateSpaceSettingsMembershipInput {
@@ -8047,6 +8072,8 @@ input UpdateSpaceSettingsEntityInput {
   membership: UpdateSpaceSettingsMembershipInput
   """"""
   privacy: UpdateSpaceSettingsPrivacyInput
+  """The sort mode for subspaces: Alphabetical or Custom."""
+  sortMode: SpaceSortMode
 }
 
 input UpdateSpaceSettingsInput {
@@ -8070,6 +8097,15 @@ input UpdateSpaceSettingsPrivacyInput {
   allowPlatformSupportAsAdmin: Boolean
   """"""
   mode: SpacePrivacyMode
+}
+
+input UpdateSubspacePinnedInput {
+  """Whether the subspace should be pinned (true) or unpinned (false)."""
+  pinned: Boolean!
+  """The ID of the parent Space containing the subspace."""
+  spaceID: UUID!
+  """The ID of the subspace to pin or unpin."""
+  subspaceID: UUID!
 }
 
 input UpdateSubspacesSortOrderInput {

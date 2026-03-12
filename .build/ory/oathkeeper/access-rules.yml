@@ -65,7 +65,7 @@
   mutators:
     - handler: id_token
 
-- id: 'alkemio:api:private:rest:calendar'
+- id: 'alkemio:api:rest:calendar:private'
   upstream:
     preserve_host: true
     url: 'http://host.docker.internal:4000'
