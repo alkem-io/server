@@ -17,6 +17,8 @@ describe('TagsetTemplateService', () => {
   let tagsetTemplateRepository: MockType<Repository<TagsetTemplate>>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TagsetTemplateService,

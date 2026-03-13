@@ -10,6 +10,8 @@ describe('InnovationPackDefaultsService', () => {
   let namingService: NamingService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InnovationPackDefaultsService,

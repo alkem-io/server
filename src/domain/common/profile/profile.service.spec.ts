@@ -39,6 +39,8 @@ describe('ProfileService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Profile.create to avoid DataSource requirement
     vi.spyOn(Profile, 'create').mockImplementation((input: any) => {
       const entity = new Profile();
@@ -719,6 +721,165 @@ describe('ProfileService', () => {
       await expect(service.getLocation({ id: 'p-1' } as any)).rejects.toThrow(
         EntityNotInitializedException
       );
+    });
+  });
+
+  describe('getVisual', () => {
+    it('should return the visual matching the type', async () => {
+      const visuals = [
+        { id: 'v-1', name: VisualType.AVATAR },
+        { id: 'v-2', name: VisualType.BANNER },
+      ];
+      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+        id: 'p-1',
+        visuals,
+      } as any);
+
+      const result = await service.getVisual(
+        { id: 'p-1' } as any,
+        VisualType.AVATAR
+      );
+
+      expect(result).toEqual({ id: 'v-1', name: VisualType.AVATAR });
+    });
+
+    it('should return undefined when visual type not found', async () => {
+      const visuals = [{ id: 'v-1', name: VisualType.AVATAR }];
+      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+        id: 'p-1',
+        visuals,
+      } as any);
+
+      const result = await service.getVisual(
+        { id: 'p-1' } as any,
+        VisualType.BANNER
+      );
+
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('getTagset', () => {
+    it('should return tagset by name from profile', async () => {
+      const tagsets = [
+        { id: 'ts-1', name: 'skills', tags: ['ts'] },
+        { id: 'ts-2', name: 'keywords', tags: ['kw'] },
+      ];
+      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+        id: 'p-1',
+        tagsets,
+      } as any);
+      vi.mocked(tagsetService.getTagsetByNameOrFail).mockReturnValue(
+        tagsets[0] as any
+      );
+
+      const result = await service.getTagset('p-1', 'skills');
+
+      expect(result).toEqual(tagsets[0]);
+      expect(tagsetService.getTagsetByNameOrFail).toHaveBeenCalledWith(
+        tagsets,
+        'skills'
+      );
+    });
+
+    it('should throw EntityNotInitializedException when tagsets not initialized', async () => {
+      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+        id: 'p-1',
+        tagsets: undefined,
+      } as any);
+
+      await expect(service.getTagset('p-1', 'skills')).rejects.toThrow(
+        EntityNotInitializedException
+      );
+    });
+  });
+
+  describe('deleteAllReferencesFromProfile', () => {
+    it('should delete all references on the profile', async () => {
+      const profile = {
+        id: 'p-1',
+        references: [{ id: 'ref-1' }, { id: 'ref-2' }],
+      } as unknown as Profile;
+
+      vi.spyOn(Profile, 'findOne').mockResolvedValue(profile);
+      vi.mocked(referenceService.deleteReference).mockResolvedValue({} as any);
+
+      await service.deleteAllReferencesFromProfile('p-1');
+
+      expect(referenceService.deleteReference).toHaveBeenCalledTimes(2);
+      expect(referenceService.deleteReference).toHaveBeenCalledWith({
+        ID: 'ref-1',
+      });
+      expect(referenceService.deleteReference).toHaveBeenCalledWith({
+        ID: 'ref-2',
+      });
+    });
+
+    it('should throw EntityNotInitializedException when references not initialized', async () => {
+      vi.spyOn(Profile, 'findOne').mockResolvedValue({
+        id: 'p-1',
+        references: undefined,
+      } as any);
+
+      await expect(
+        service.deleteAllReferencesFromProfile('p-1')
+      ).rejects.toThrow(EntityNotInitializedException);
+    });
+  });
+
+  describe('addVisualsOnProfile - additional visual types', () => {
+    it('should create WHITEBOARD_PREVIEW, BANNER_WIDE, MEDIA_GALLERY_IMAGE, MEDIA_GALLERY_VIDEO visuals', async () => {
+      const wbPreview = {
+        id: 'wb-1',
+        name: VisualType.WHITEBOARD_PREVIEW,
+        uri: '',
+      };
+      const bannerWide = { id: 'bw-1', name: VisualType.BANNER_WIDE, uri: '' };
+      const galleryImage = {
+        id: 'gi-1',
+        name: VisualType.MEDIA_GALLERY_IMAGE,
+        uri: '',
+      };
+      const galleryVideo = {
+        id: 'gv-1',
+        name: VisualType.MEDIA_GALLERY_VIDEO,
+        uri: '',
+      };
+
+      vi.mocked(visualService.createVisualWhiteboardPreview).mockReturnValue(
+        wbPreview as any
+      );
+      vi.mocked(visualService.createVisualBannerWide).mockReturnValue(
+        bannerWide as any
+      );
+      vi.mocked(visualService.createVisualMediaGalleryImage).mockReturnValue(
+        galleryImage as any
+      );
+      vi.mocked(visualService.createVisualMediaGalleryVideo).mockReturnValue(
+        galleryVideo as any
+      );
+      vi.mocked(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).mockResolvedValue(undefined as any);
+
+      const profile = {
+        id: 'p-1',
+        visuals: [],
+        storageBucket: { id: 'sb-1' },
+      } as unknown as Profile;
+
+      const result = await service.addVisualsOnProfile(profile, undefined, [
+        VisualType.WHITEBOARD_PREVIEW,
+        VisualType.BANNER_WIDE,
+        VisualType.MEDIA_GALLERY_IMAGE,
+        VisualType.MEDIA_GALLERY_VIDEO,
+      ]);
+
+      expect(result.visuals).toHaveLength(4);
+      expect(visualService.createVisualWhiteboardPreview).toHaveBeenCalled();
+      expect(visualService.createVisualBannerWide).toHaveBeenCalled();
+      expect(visualService.createVisualMediaGalleryImage).toHaveBeenCalled();
+      expect(visualService.createVisualMediaGalleryVideo).toHaveBeenCalled();
     });
   });
 

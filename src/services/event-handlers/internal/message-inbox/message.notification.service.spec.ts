@@ -37,6 +37,8 @@ describe('MessageNotificationService', () => {
     ({ actorID: 'actor-1' }) as ActorContext;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [MessageNotificationService, MockWinstonProvider],
     })
@@ -256,6 +258,133 @@ describe('MessageNotificationService', () => {
       expect(
         roomServiceEvents.processActivityCalloutCommentCreated
       ).not.toHaveBeenCalled();
+    });
+
+    it('should process CALENDAR_EVENT room type with calendar event notifications', async () => {
+      const room = mockRoom(RoomType.CALENDAR_EVENT);
+      const message = mockMessage();
+      const actorContext = mockActorContext();
+
+      roomMentionsService.getMentionsFromText.mockResolvedValue([]);
+      roomResolverService.getCalendarEventForRoom.mockResolvedValue({
+        id: 'cal-event-1',
+      } as any);
+      roomServiceEvents.processNotificationCalendarEventComment.mockResolvedValue(
+        undefined as any
+      );
+
+      await service.processMessageNotifications(room, message, actorContext);
+
+      expect(
+        roomServiceEvents.processNotificationCalendarEventComment
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'cal-event-1' }),
+        room,
+        message,
+        actorContext
+      );
+    });
+
+    it('should process DISCUSSION_FORUM room type with discussion notifications', async () => {
+      const room = mockRoom(RoomType.DISCUSSION_FORUM);
+      const message = mockMessage();
+      const actorContext = mockActorContext();
+
+      roomMentionsService.getMentionsFromText.mockResolvedValue([]);
+      roomResolverService.getDiscussionForRoom.mockResolvedValue({
+        id: 'discussion-1',
+      } as any);
+      roomServiceEvents.processNotificationForumDiscussionComment.mockResolvedValue(
+        undefined as any
+      );
+
+      await service.processMessageNotifications(room, message, actorContext);
+
+      expect(
+        roomServiceEvents.processNotificationForumDiscussionComment
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'discussion-1' }),
+        message,
+        actorContext
+      );
+    });
+
+    it('should not process reply notification when parent message sender is not found', async () => {
+      const room = mockRoom(RoomType.UPDATES);
+      const message = mockMessage();
+      const actorContext = mockActorContext();
+
+      roomMentionsService.getMentionsFromText.mockResolvedValue([]);
+      communicationAdapter.getMessageSenderActor.mockResolvedValue(
+        undefined as any
+      );
+      roomServiceEvents.processNotificationUpdateSent.mockResolvedValue(
+        undefined as any
+      );
+      roomServiceEvents.processActivityUpdateSent.mockResolvedValue(
+        undefined as any
+      );
+
+      await service.processMessageNotifications(
+        room,
+        message,
+        actorContext,
+        'parent-thread-1'
+      );
+
+      expect(
+        roomServiceEvents.processNotificationCommentReply
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getMentionsFromText', () => {
+    it('should delegate to roomMentionsService.getMentionsFromText', async () => {
+      const mentions = [
+        { actorID: 'user-1', actorType: MentionedEntityType.USER },
+      ];
+      roomMentionsService.getMentionsFromText.mockResolvedValue(mentions);
+
+      const result = await service.getMentionsFromText('Hello @user');
+
+      expect(roomMentionsService.getMentionsFromText).toHaveBeenCalledWith(
+        'Hello @user'
+      );
+      expect(result).toEqual(mentions);
+    });
+  });
+
+  describe('processVirtualContributorMentions', () => {
+    it('should delegate to roomMentionsService.processVirtualContributorMentions', async () => {
+      const mentions = [
+        {
+          actorID: 'vc-1',
+          actorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
+        },
+      ];
+      const actorContext = mockActorContext();
+      const room = mockRoom(RoomType.CALLOUT);
+      roomMentionsService.processVirtualContributorMentions.mockResolvedValue(
+        undefined as any
+      );
+
+      await service.processVirtualContributorMentions(
+        mentions,
+        'Hello @vc',
+        'thread-1',
+        actorContext,
+        room
+      );
+
+      expect(
+        roomMentionsService.processVirtualContributorMentions
+      ).toHaveBeenCalledWith(
+        mentions,
+        'Hello @vc',
+        'thread-1',
+        actorContext,
+        room
+      );
     });
   });
 });

@@ -11,6 +11,8 @@ describe('DomainPlatformSettingsService', () => {
   let organizationService: Record<string, Mock>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DomainPlatformSettingsService,

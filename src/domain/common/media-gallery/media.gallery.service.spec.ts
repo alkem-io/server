@@ -27,6 +27,8 @@ describe('MediaGalleryService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static MediaGallery.create to avoid DataSource requirement
     vi.spyOn(MediaGallery, 'create').mockImplementation((input: any) => {
       const entity = new MediaGallery();

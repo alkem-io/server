@@ -16,6 +16,8 @@ describe('RoomServiceMentions', () => {
   let organizationLookupService: OrganizationLookupService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MockWinstonProvider,
@@ -190,15 +192,11 @@ describe('RoomServiceMentions', () => {
     const organization = testData.organization;
     const virtualContributor = testData.virtualContributor;
     // Direct assignment to avoid proxy issues with vi.spyOn
-    userLookupService.getUserByNameIdOrFail = vi.fn().mockResolvedValue(user);
+    userLookupService.getUserByNameIdOrFail.mockResolvedValue(user);
 
-    organizationLookupService.getOrganizationByNameIdOrFail = vi
-      .fn()
-      .mockResolvedValue(organization);
+    organizationLookupService.getOrganizationByNameIdOrFail.mockResolvedValue(organization);
 
-    virtualActorLookupService.getVirtualContributorByNameIdOrFail = vi
-      .fn()
-      .mockResolvedValue(virtualContributor);
+    virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(virtualContributor);
 
     const result = await roomMentionsService.getMentionsFromText(text);
     expect(result.length).toBe(expected.length);

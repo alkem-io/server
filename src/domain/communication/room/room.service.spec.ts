@@ -23,6 +23,8 @@ describe('RoomService', () => {
   let roomRepo: Mocked<Repository<Room>>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoomService,

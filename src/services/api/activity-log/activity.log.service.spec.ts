@@ -62,6 +62,8 @@ describe('ActivityLogService', () => {
   let logger: any;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [ActivityLogService, MockWinstonProvider],
     })

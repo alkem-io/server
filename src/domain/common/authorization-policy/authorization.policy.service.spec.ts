@@ -31,6 +31,8 @@ describe('AuthorizationPolicyService', () => {
   let authorizationPolicyRepository: MockType<Repository<AuthorizationPolicy>>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthorizationPolicyService,

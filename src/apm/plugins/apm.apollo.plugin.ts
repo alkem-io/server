@@ -107,13 +107,13 @@ export const ApmApolloPlugin: ApolloServerPlugin<any> = {
   },
 };
 
-const assignOperationName = (
+export const assignOperationName = (
   requestContext: GraphQLRequestContextDidResolveOperation<any>
 ) => {
   return requestContext.operationName ?? requestContext.queryHash;
 };
 
-const assignOperationType = (parentType: GraphQLObjectType) => {
+export const assignOperationType = (parentType: GraphQLObjectType) => {
   const { name } = parentType;
 
   if (name === 'Query') {

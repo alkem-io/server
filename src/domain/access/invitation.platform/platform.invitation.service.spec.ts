@@ -26,6 +26,8 @@ describe('PlatformInvitationService', () => {
   let userLookupService: UserLookupService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static PlatformInvitation.create to avoid DataSource requirement
     vi.spyOn(PlatformInvitation, 'create').mockImplementation((input: any) => {
       const entity = new PlatformInvitation();
