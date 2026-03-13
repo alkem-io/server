@@ -545,6 +545,14 @@ export class NotificationExternalAdapter {
         type: calendarEvent.type,
         createdBy: createdByUser,
         url: calendarEventUrl,
+        startDate: calendarEvent.startDate.toISOString(),
+        endDate: '',
+        wholeDay: calendarEvent.wholeDay,
+        description: calendarEvent.profile?.description ?? undefined,
+        googleCalendarUrl: '',
+        outlookCalendarUrl: '',
+        appleCalendarUrl: '',
+        icsDownloadUrl: '',
       },
     };
   }

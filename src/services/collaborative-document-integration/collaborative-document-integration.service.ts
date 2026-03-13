@@ -185,7 +185,7 @@ export class CollaborativeDocumentIntegrationService {
           space: levelZeroSpaceID,
         },
         {
-          actorID: id
+          actorID: id,
         }
       );
     });

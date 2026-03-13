@@ -1,5 +1,8 @@
 import { LogContext } from '@common/enums';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorService } from '@domain/actor';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Client as ElasticClient } from '@elastic/elasticsearch';
 import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -13,15 +16,14 @@ import {
   ContributionDetails,
   ContributionDocument,
 } from '../types';
-import { isElasticError, isElasticResponseError } from '../utils';
-import { ActorContext } from '@core/actor-context/actor.context';
-import { ActorService } from '@domain/actor';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ContributionAuthorDetails } from '../types/contribution.author.details';
+import { isElasticError, isElasticResponseError } from '../utils';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
 
-type ContributionActorContext = Partial<Pick<ActorContext, 'actorID' | 'isAnonymous' | 'guestName'>>;
+type ContributionActorContext = Partial<
+  Pick<ActorContext, 'actorID' | 'isAnonymous' | 'guestName'>
+>;
 
 @Injectable()
 export class ContributionReporterService {
@@ -302,23 +304,26 @@ export class ContributionReporterService {
     actorContext: ContributionActorContext
   ): Promise<ContributionAuthorDetails> {
     if (actorContext.actorID) {
-      const actor = await this.actorService.getActorOrNull(actorContext.actorID);
+      const actor = await this.actorService.getActorOrNull(
+        actorContext.actorID
+      );
       if (actor && actor.type === 'user') {
         try {
-          const user = await this.userLookupService.getUserByIdOrFail(actor.id)
+          const user = await this.userLookupService.getUserByIdOrFail(actor.id);
           return {
             author: actor.id,
             anonymous: false,
             alkemio: isFromAlkemioTeam(user.email),
-            guest: false
-          }
+            guest: false,
+          };
         } catch (e) {
           this.logger.error(
             {
-              message: 'Unable to fetch user details for actor in ContributionReporterService',
+              message:
+                'Unable to fetch user details for actor in ContributionReporterService',
               actorContext,
               actorId: actor.id,
-              error: e
+              error: e,
             },
             undefined,
             LogContext.CONTRIBUTION_REPORTER
@@ -328,7 +333,7 @@ export class ContributionReporterService {
             anonymous: false,
             alkemio: false,
             guest: false,
-          }
+          };
         }
       }
     }
@@ -338,18 +343,20 @@ export class ContributionReporterService {
         anonymous: false,
         guest: true,
         guestName: actorContext.guestName,
-      }
+      };
     }
     if (actorContext.isAnonymous) {
       return {
         alkemio: false,
         anonymous: true,
         guest: false,
-      }
+      };
     }
 
-    this.logger.verbose?.({
-        message: 'Unknown actor context for contribution, defaulting to anonymous',
+    this.logger.verbose?.(
+      {
+        message:
+          'Unknown actor context for contribution, defaulting to anonymous',
         actorContext,
       },
       LogContext.CONTRIBUTION_REPORTER
@@ -358,7 +365,7 @@ export class ContributionReporterService {
       alkemio: false,
       anonymous: true,
       guest: false,
-    }
+    };
   }
 
   private async createDocumentTest<TObject extends BaseContribution>(
@@ -409,7 +416,6 @@ export class ContributionReporterService {
     }
 
     try {
-
       const document: ContributionDocument = {
         ...contribution,
         ...(await this.getAuthorDetails(actorContext)),

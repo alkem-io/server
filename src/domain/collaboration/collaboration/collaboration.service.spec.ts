@@ -1,5 +1,6 @@
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -328,6 +329,163 @@ describe('CollaborationService', () => {
 
       await expect(service.getTimelineOrFail('collab-1')).rejects.toThrow(
         EntityNotFoundException
+      );
+    });
+  });
+
+  describe('getChildCollaborationsOrFail', () => {
+    let entityManager: any;
+
+    beforeEach(() => {
+      entityManager = {
+        findOne: vi.fn(),
+        find: vi.fn(),
+        connection: { query: vi.fn() },
+      };
+      // Access the private entityManager via the service
+      (service as any).entityManager = entityManager;
+    });
+
+    it('should throw EntityNotFoundException when space is not found', async () => {
+      entityManager.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getChildCollaborationsOrFail('collab-1')
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('should return collaborations for L0 space', async () => {
+      const space = { id: 'space-1', level: 0 };
+      entityManager.findOne.mockResolvedValue(space);
+      entityManager.find.mockResolvedValue([
+        { id: 'sub-1', level: 1, collaboration: { id: 'collab-sub-1' } },
+        { id: 'sub-2', level: 1, collaboration: { id: 'collab-sub-2' } },
+      ]);
+
+      const result = await service.getChildCollaborationsOrFail('collab-1');
+
+      expect(result).toHaveLength(2);
+      expect(result[0]).toEqual({ id: 'collab-sub-1' });
+    });
+
+    it('should throw EntityNotInitializedException when L0 subspace has no collaboration', async () => {
+      const space = { id: 'space-1', level: 0 };
+      entityManager.findOne.mockResolvedValue(space);
+      entityManager.find.mockResolvedValue([
+        { id: 'sub-1', level: 1, collaboration: undefined },
+      ]);
+
+      await expect(
+        service.getChildCollaborationsOrFail('collab-1')
+      ).rejects.toThrow(EntityNotInitializedException);
+    });
+
+    it('should return collaborations for L1 space with subspaces', async () => {
+      const space = {
+        id: 'space-1',
+        level: 1,
+        subspaces: [
+          { id: 'ss-1', collaboration: { id: 'collab-ss-1' } },
+          { id: 'ss-2', collaboration: { id: 'collab-ss-2' } },
+        ],
+      };
+      entityManager.findOne.mockResolvedValue(space);
+
+      const result = await service.getChildCollaborationsOrFail('collab-1');
+
+      expect(result).toHaveLength(2);
+    });
+
+    it('should throw EntityNotInitializedException when L1 subspaces are missing', async () => {
+      const space = {
+        id: 'space-1',
+        level: 1,
+        subspaces: undefined,
+      };
+      entityManager.findOne.mockResolvedValue(space);
+
+      await expect(
+        service.getChildCollaborationsOrFail('collab-1')
+      ).rejects.toThrow(EntityNotInitializedException);
+    });
+
+    it('should throw EntityNotInitializedException when L1 subsubspace has no collaboration', async () => {
+      const space = {
+        id: 'space-1',
+        level: 1,
+        subspaces: [{ id: 'ss-1', collaboration: undefined }],
+      };
+      entityManager.findOne.mockResolvedValue(space);
+
+      await expect(
+        service.getChildCollaborationsOrFail('collab-1')
+      ).rejects.toThrow(EntityNotInitializedException);
+    });
+
+    it('should return empty array for space level other than L0 or L1', async () => {
+      const space = {
+        id: 'space-1',
+        level: 2,
+        subspaces: [],
+      };
+      entityManager.findOne.mockResolvedValue(space);
+
+      const result = await service.getChildCollaborationsOrFail('collab-1');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('getPostsCount', () => {
+    let entityManager: any;
+
+    beforeEach(() => {
+      entityManager = {
+        findOne: vi.fn(),
+        find: vi.fn(),
+        connection: { query: vi.fn() },
+      };
+      (service as any).entityManager = entityManager;
+    });
+
+    it('should return the posts count from raw query', async () => {
+      entityManager.connection.query.mockResolvedValue([{ postsCount: 5 }]);
+
+      const result = await service.getPostsCount({ id: 'cs-1' } as any);
+
+      expect(result).toBe(5);
+      expect(entityManager.connection.query).toHaveBeenCalledWith(
+        expect.stringContaining('callout_contribution'),
+        expect.arrayContaining(['cs-1'])
+      );
+    });
+  });
+
+  describe('getWhiteboardsCount', () => {
+    let entityManager: any;
+
+    beforeEach(() => {
+      entityManager = {
+        findOne: vi.fn(),
+        find: vi.fn(),
+        connection: { query: vi.fn() },
+      };
+      (service as any).entityManager = entityManager;
+    });
+
+    it('should return the whiteboards count from raw query', async () => {
+      entityManager.connection.query.mockResolvedValue([
+        { whiteboardsCount: 3 },
+      ]);
+
+      const result = await service.getWhiteboardsCount({
+        id: 'cs-1',
+      } as any);
+
+      expect(result).toBe(3);
+      expect(entityManager.connection.query).toHaveBeenCalledWith(
+        expect.stringContaining('whiteboardId'),
+        expect.arrayContaining(['cs-1'])
       );
     });
   });

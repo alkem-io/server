@@ -709,4 +709,240 @@ describe('VirtualContributorService', () => {
       expect(result).toBe(lastUpdated);
     });
   });
+
+  describe('getAiPersonaOrFail', () => {
+    it('should delegate to aiPersonaService.getAiPersonaOrFail', async () => {
+      const mockPersona = { id: 'persona-1', engine: 'openai' };
+      aiPersonaService.getAiPersonaOrFail.mockResolvedValue(mockPersona);
+
+      const result = await service.getAiPersonaOrFail({
+        aiPersonaID: 'persona-1',
+      } as any);
+
+      expect(aiPersonaService.getAiPersonaOrFail).toHaveBeenCalledWith(
+        'persona-1'
+      );
+      expect(result).toBe(mockPersona);
+    });
+  });
+
+  describe('save', () => {
+    it('should delegate to repository save', async () => {
+      const vc = { id: 'vc-1' } as any;
+      repository.save.mockResolvedValue(vc);
+      const result = await service.save(vc);
+      expect(result).toBe(vc);
+      expect(repository.save).toHaveBeenCalledWith(vc);
+    });
+  });
+
+  describe('getVirtualContributors', () => {
+    it('should return all virtual contributors when no filter', async () => {
+      const vcs = [{ id: 'vc-1' }, { id: 'vc-2' }];
+      repository.find.mockResolvedValue(vcs);
+      const result = await service.getVirtualContributors({});
+      expect(result).toHaveLength(2);
+    });
+
+    it('should filter by credentials when provided', async () => {
+      const mockQb = {
+        leftJoinAndSelect: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        setParameters: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue([]),
+      };
+      repository.createQueryBuilder.mockReturnValue(mockQb);
+
+      await service.getVirtualContributors({
+        filter: { credentials: ['cred-type'] },
+      } as any);
+      expect(mockQb.leftJoinAndSelect).toHaveBeenCalled();
+      expect(mockQb.getMany).toHaveBeenCalled();
+    });
+
+    it('should respect limit parameter', async () => {
+      const vcs = Array.from({ length: 10 }, (_, i) => ({
+        id: `vc-${i}`,
+      }));
+      repository.find.mockResolvedValue(vcs);
+      const result = await service.getVirtualContributors({
+        limit: 3,
+      } as any);
+      expect(result).toHaveLength(3);
+    });
+  });
+
+  describe('getVirtualContributor', () => {
+    it('should return null when not found', async () => {
+      repository.findOne.mockResolvedValue(null);
+      const result = await service.getVirtualContributor('nonexistent');
+      expect(result).toBeNull();
+    });
+
+    it('should merge options with where clause', async () => {
+      repository.findOne.mockResolvedValue(null);
+      await service.getVirtualContributor('vc-1', {
+        relations: { profile: true },
+      } as any);
+      expect(repository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: expect.objectContaining({ id: 'vc-1' }),
+          relations: { profile: true },
+        })
+      );
+    });
+  });
+
+  describe('getVirtualContributorWithCredentials', () => {
+    it('should load VC with credentials relation', async () => {
+      const mockVC = { id: 'vc-1', credentials: [{ id: 'cred-1' }] };
+      repository.findOne.mockResolvedValue(mockVC);
+
+      const result = await service.getVirtualContributorWithCredentials('vc-1');
+      expect(result).toBe(mockVC);
+      expect(repository.findOne).toHaveBeenCalledWith(
+        expect.objectContaining({
+          where: { id: 'vc-1' },
+          relations: { credentials: true },
+        })
+      );
+    });
+  });
+
+  describe('refreshAllBodiesOfKnowledge', () => {
+    it('should iterate over all VCs and refresh their bodies of knowledge', async () => {
+      const vcs = [
+        {
+          id: 'vc-1',
+          bodyOfKnowledgeType: 'alkemio_space',
+          bodyOfKnowledgeID: 'bok-1',
+          aiPersonaID: 'p-1',
+        },
+        {
+          id: 'vc-2',
+          bodyOfKnowledgeType: 'none',
+          bodyOfKnowledgeID: undefined,
+          aiPersonaID: 'p-2',
+        },
+      ];
+      repository.find.mockResolvedValue(vcs);
+      aiServerAdapter.refreshBodyOfKnowledge.mockResolvedValue(true);
+
+      const actorContext = { actorID: 'user-1' } as any;
+      const result = await service.refreshAllBodiesOfKnowledge(actorContext);
+
+      expect(result).toBe(true);
+    });
+
+    it('should continue processing when a single VC refresh fails', async () => {
+      const vcs = [
+        {
+          id: 'vc-1',
+          bodyOfKnowledgeType: 'alkemio_space',
+          bodyOfKnowledgeID: 'bok-1',
+          aiPersonaID: 'p-1',
+        },
+        {
+          id: 'vc-2',
+          bodyOfKnowledgeType: 'alkemio_space',
+          bodyOfKnowledgeID: 'bok-2',
+          aiPersonaID: 'p-2',
+        },
+      ];
+      repository.find.mockResolvedValue(vcs);
+      aiServerAdapter.refreshBodyOfKnowledge
+        .mockRejectedValueOnce(new Error('fail'))
+        .mockResolvedValueOnce(true);
+
+      const actorContext = { actorID: 'user-1' } as any;
+      const result = await service.refreshAllBodiesOfKnowledge(actorContext);
+
+      expect(result).toBe(true);
+      expect(aiServerAdapter.refreshBodyOfKnowledge).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('countVirtualContributorsWithCredentials', () => {
+    it('should return count from query builder', async () => {
+      const mockQb = {
+        leftJoinAndSelect: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        setParameters: vi.fn().mockReturnThis(),
+        getCount: vi.fn().mockResolvedValue(3),
+      };
+      repository.createQueryBuilder.mockReturnValue(mockQb);
+
+      const result = await service.countVirtualContributorsWithCredentials({
+        type: 'space_member',
+        resourceID: 'resource-1',
+      } as any);
+
+      expect(result).toBe(3);
+    });
+
+    it('should default resourceID to empty string when not provided', async () => {
+      const mockQb = {
+        leftJoinAndSelect: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        setParameters: vi.fn().mockReturnThis(),
+        getCount: vi.fn().mockResolvedValue(0),
+      };
+      repository.createQueryBuilder.mockReturnValue(mockQb);
+
+      await service.countVirtualContributorsWithCredentials({
+        type: 'space_member',
+      } as any);
+
+      expect(mockQb.setParameters).toHaveBeenCalledWith(
+        expect.objectContaining({
+          resourceID: '',
+        })
+      );
+    });
+  });
+
+  describe('updateVirtualContributor edge cases', () => {
+    it('should throw ValidationException when new displayName is already taken', async () => {
+      const mockVC = {
+        id: 'vc-1',
+        nameID: 'test-vc',
+        profile: { id: 'profile-1', displayName: 'Old Name' },
+        knowledgeBase: { profile: {} },
+      };
+      repository.findOne.mockResolvedValue(mockVC);
+      // countBy for displayName check returns 1 (taken)
+      // Need to use the repository mock properly
+      (repository as any).countBy = vi.fn().mockResolvedValue(1);
+
+      await expect(
+        service.updateVirtualContributor({
+          ID: 'vc-1',
+          profileData: { displayName: 'Taken Name' },
+        } as any)
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('should update dataAccessMode when provided and different', async () => {
+      const mockVC = {
+        id: 'vc-1',
+        nameID: 'test-vc',
+        dataAccessMode: 'reader',
+        profile: { id: 'profile-1', displayName: 'Test' },
+        knowledgeBase: { profile: {} },
+      };
+      repository.findOne.mockResolvedValue(mockVC);
+      repository.save.mockImplementation((entity: any) =>
+        Promise.resolve(entity)
+      );
+
+      const result = await service.updateVirtualContributor({
+        ID: 'vc-1',
+        dataAccessMode: 'writer',
+      } as any);
+
+      expect(result.dataAccessMode).toBe('writer');
+    });
+  });
 });
