@@ -1,4 +1,7 @@
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  InvalidStateTransitionException,
+} from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -8,6 +11,7 @@ import { repositoryProviderMockFactory } from '@test/utils/repository.provider.m
 import { Repository } from 'typeorm';
 import { vi } from 'vitest';
 import { Lifecycle } from './lifecycle.entity';
+import { ILifecycle } from './lifecycle.interface';
 import { LifecycleService } from './lifecycle.service';
 
 describe('LifecycleService', () => {
@@ -196,6 +200,130 @@ describe('LifecycleService', () => {
 
       expect(lifecycleRepository.save).toHaveBeenCalledWith(lifecycle);
       expect(result).toEqual(lifecycle);
+    });
+  });
+
+  describe('event', () => {
+    it('should throw InvalidStateTransitionException when actor is in error state', async () => {
+      vi.spyOn(service as any, 'getActorWithState').mockReturnValue({
+        getSnapshot: () => ({ status: 'error', value: 'someState' }),
+      });
+
+      const lifecycle = { id: 'lc-1', machineState: '{}' } as ILifecycle;
+      const machine = {} as any;
+
+      await expect(
+        service.event({
+          lifecycle,
+          machine,
+          eventName: 'APPROVE',
+        } as any)
+      ).rejects.toThrow(InvalidStateTransitionException);
+    });
+
+    it('should throw InvalidStateTransitionException when event is not in next events (no next events)', async () => {
+      vi.spyOn(service as any, 'getActorWithState').mockReturnValue({
+        getSnapshot: () => ({
+          status: 'active',
+          value: 'new',
+          _nodes: [],
+        }),
+      });
+
+      const lifecycle = { id: 'lc-1', machineState: '{}' } as ILifecycle;
+
+      await expect(
+        service.event({
+          lifecycle,
+          machine: {} as any,
+          eventName: 'APPROVE',
+        } as any)
+      ).rejects.toThrow(InvalidStateTransitionException);
+    });
+
+    it('should throw InvalidStateTransitionException when event is not in valid next events', async () => {
+      vi.spyOn(service as any, 'getActorWithState').mockReturnValue({
+        getSnapshot: () => ({
+          status: 'active',
+          value: 'new',
+          _nodes: [{ ownEvents: ['REJECT'] }],
+        }),
+      });
+
+      const lifecycle = { id: 'lc-1', machineState: '{}' } as ILifecycle;
+
+      await expect(
+        service.event({
+          lifecycle,
+          machine: {} as any,
+          eventName: 'APPROVE',
+        } as any)
+      ).rejects.toThrow(InvalidStateTransitionException);
+    });
+
+    it('should process valid event and update lifecycle machineState', async () => {
+      const mockActor = {
+        getSnapshot: vi
+          .fn()
+          .mockReturnValueOnce({
+            status: 'active',
+            value: 'new',
+            _nodes: [{ ownEvents: ['APPROVE'] }],
+          })
+          .mockReturnValueOnce({ value: 'approved' })
+          .mockReturnValueOnce({ value: 'approved' }),
+        start: vi.fn(),
+        send: vi.fn(),
+        getPersistedSnapshot: vi.fn().mockReturnValue({ value: 'approved' }),
+        subscribe: vi.fn(),
+      };
+
+      vi.spyOn(service as any, 'getActorWithState').mockReturnValue(mockActor);
+
+      const lifecycle = { id: 'lc-1', machineState: '{}' } as ILifecycle;
+      vi.spyOn(lifecycleRepository, 'save').mockResolvedValue(lifecycle as any);
+
+      await service.event({
+        lifecycle,
+        machine: {} as any,
+        eventName: 'APPROVE',
+      } as any);
+
+      expect(mockActor.start).toHaveBeenCalled();
+      expect(mockActor.send).toHaveBeenCalledWith(
+        expect.objectContaining({ type: 'APPROVE' })
+      );
+      expect(lifecycle.machineState).toBe(
+        JSON.stringify({ value: 'approved' })
+      );
+      expect(lifecycleRepository.save).toHaveBeenCalledWith(lifecycle);
+    });
+
+    it('should throw InvalidStateTransitionException when actor.send throws', async () => {
+      const mockActor = {
+        getSnapshot: vi.fn().mockReturnValue({
+          status: 'active',
+          value: 'new',
+          _nodes: [{ ownEvents: ['APPROVE'] }],
+        }),
+        start: vi.fn(),
+        send: vi.fn().mockImplementation(() => {
+          throw new Error('Machine error');
+        }),
+        subscribe: vi.fn(),
+      };
+
+      vi.spyOn(service as any, 'getActorWithState').mockReturnValue(mockActor);
+
+      const lifecycle = { id: 'lc-1', machineState: '{}' } as ILifecycle;
+
+      await expect(
+        service.event({
+          lifecycle,
+          machine: {} as any,
+          eventName: 'APPROVE',
+        } as any)
+      ).rejects.toThrow(InvalidStateTransitionException);
     });
   });
 });

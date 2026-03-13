@@ -1,10 +1,18 @@
 import { TagsetType } from '@common/enums/tagset.type';
+import {
+  EntityNotFoundException,
+  EntityNotInitializedException,
+} from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MockType } from '@test/utils/mock.type';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { CreateTagsetInput } from '../tagset/dto/tagset.dto.create';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
@@ -15,6 +23,8 @@ import { ClassificationService } from './classification.service';
 describe('ClassificationService', () => {
   let service: ClassificationService;
   let tagsetService: TagsetService;
+  let classificationRepository: MockType<Repository<Classification>>;
+  let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
     // Mock static Classification.create to avoid DataSource requirement
@@ -37,6 +47,8 @@ describe('ClassificationService', () => {
 
     service = module.get(ClassificationService);
     tagsetService = module.get(TagsetService);
+    classificationRepository = module.get(getRepositoryToken(Classification));
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
   });
 
   describe('createClassification', () => {
@@ -184,6 +196,278 @@ describe('ClassificationService', () => {
 
       expect(result).toHaveLength(2);
       expect(result[1].name).toBe('extra');
+    });
+
+    it('should not override tags when provided input has no tags', () => {
+      const additional: CreateTagsetInput[] = [
+        { name: 'skills', tags: ['original'], type: TagsetType.FREEFORM },
+      ];
+      const provided: CreateTagsetInput[] = [
+        { name: 'skills', type: TagsetType.FREEFORM },
+      ];
+
+      const result = service.updateClassificationTagsetInputs(
+        provided,
+        additional
+      );
+
+      expect(result[0].tags).toEqual(['original']);
+    });
+  });
+
+  describe('deleteClassification', () => {
+    it('should delete tagsets, authorization, and remove the classification', async () => {
+      const classification = {
+        id: 'cls-1',
+        tagsets: [{ id: 'ts-1' }, { id: 'ts-2' }],
+        authorization: { id: 'auth-1' },
+      } as unknown as Classification;
+
+      vi.spyOn(Classification, 'findOne').mockResolvedValue(
+        classification as any
+      );
+      (tagsetService.removeTagset as Mock).mockResolvedValue({} as any);
+      (authorizationPolicyService.delete as Mock).mockResolvedValue({} as any);
+      classificationRepository.remove!.mockResolvedValue(classification);
+
+      await service.deleteClassification('cls-1');
+
+      expect(tagsetService.removeTagset).toHaveBeenCalledTimes(2);
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('ts-1');
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('ts-2');
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        classification.authorization
+      );
+    });
+
+    it('should throw EntityNotInitializedException when tagsets or authorization not loaded', async () => {
+      const classification = {
+        id: 'cls-1',
+        tagsets: undefined,
+        authorization: undefined,
+      } as unknown as Classification;
+
+      vi.spyOn(Classification, 'findOne').mockResolvedValue(
+        classification as any
+      );
+
+      await expect(service.deleteClassification('cls-1')).rejects.toThrow(
+        EntityNotInitializedException
+      );
+    });
+
+    it('should throw EntityNotFoundException when classification not found', async () => {
+      vi.spyOn(Classification, 'findOne').mockResolvedValue(null as any);
+
+      await expect(service.deleteClassification('missing')).rejects.toThrow(
+        EntityNotFoundException
+      );
+    });
+  });
+
+  describe('getClassificationOrFail', () => {
+    it('should return classification when found', async () => {
+      const classification = { id: 'cls-1' } as Classification;
+      vi.spyOn(Classification, 'findOne').mockResolvedValue(
+        classification as any
+      );
+
+      const result = await service.getClassificationOrFail('cls-1');
+
+      expect(result).toBe(classification);
+    });
+
+    it('should throw EntityNotFoundException when not found', async () => {
+      vi.spyOn(Classification, 'findOne').mockResolvedValue(null as any);
+
+      await expect(service.getClassificationOrFail('missing')).rejects.toThrow(
+        EntityNotFoundException
+      );
+    });
+  });
+
+  describe('getTagsets', () => {
+    it('should return tagsets when initialized', async () => {
+      const tagsets = [{ id: 'ts-1', name: 'skills' }];
+      vi.spyOn(Classification, 'findOne').mockResolvedValue({
+        id: 'cls-1',
+        tagsets,
+      } as any);
+
+      const result = await service.getTagsets('cls-1');
+
+      expect(result).toEqual(tagsets);
+    });
+
+    it('should throw EntityNotInitializedException when tagsets not initialized', async () => {
+      vi.spyOn(Classification, 'findOne').mockResolvedValue({
+        id: 'cls-1',
+        tagsets: undefined,
+      } as any);
+
+      await expect(service.getTagsets('cls-1')).rejects.toThrow(
+        EntityNotInitializedException
+      );
+    });
+  });
+
+  describe('save', () => {
+    it('should persist classification to repository', async () => {
+      const classification = { id: 'cls-1' } as IClassification;
+      classificationRepository.save!.mockResolvedValue(classification);
+
+      const result = await service.save(classification);
+
+      expect(result).toBe(classification);
+    });
+  });
+
+  describe('addTagsetOnClassification', () => {
+    it('should create and save a tagset on the classification', async () => {
+      const classification = {
+        id: 'cls-1',
+        tagsets: [{ id: 'ts-1', name: 'skills' }],
+      } as unknown as IClassification;
+
+      const newTagset = { id: 'ts-new', name: 'keywords', tags: [] };
+      (tagsetService.createTagsetWithName as Mock).mockReturnValue(
+        newTagset as any
+      );
+      (tagsetService.save as Mock).mockResolvedValue(newTagset as any);
+
+      const result = await service.addTagsetOnClassification(classification, {
+        name: 'keywords',
+        tags: [],
+      });
+
+      expect(result).toBe(newTagset);
+      expect(tagsetService.createTagsetWithName).toHaveBeenCalledWith(
+        classification.tagsets,
+        { name: 'keywords', tags: [] }
+      );
+    });
+
+    it('should load tagsets if not initialized', async () => {
+      const classification = {
+        id: 'cls-1',
+        tagsets: undefined,
+      } as unknown as IClassification;
+
+      vi.spyOn(Classification, 'findOne').mockResolvedValue({
+        id: 'cls-1',
+        tagsets: [{ id: 'ts-1', name: 'skills' }],
+      } as any);
+
+      const newTagset = { id: 'ts-new', name: 'keywords', tags: [] };
+      (tagsetService.createTagsetWithName as Mock).mockReturnValue(
+        newTagset as any
+      );
+      (tagsetService.save as Mock).mockResolvedValue(newTagset as any);
+
+      await service.addTagsetOnClassification(classification, {
+        name: 'keywords',
+        tags: [],
+      });
+
+      expect(Classification.findOne).toHaveBeenCalled();
+    });
+  });
+
+  describe('updateSelectTagsetValue', () => {
+    it('should update the tagset with the selected value', async () => {
+      const tagsets = [{ id: 'ts-1', name: 'category', tags: ['old'] }];
+      vi.spyOn(Classification, 'findOne').mockResolvedValue({
+        id: 'cls-1',
+        tagsets,
+      } as any);
+      (tagsetService.getTagsetByNameOrFail as Mock).mockReturnValue(tagsets[0]);
+      (tagsetService.updateTagset as Mock).mockResolvedValue({
+        id: 'ts-1',
+        tags: ['new-value'],
+      } as any);
+
+      const result = await service.updateSelectTagsetValue({
+        classificationID: 'cls-1',
+        tagsetName: 'category',
+        selectedValue: 'new-value',
+      });
+
+      expect(tagsetService.updateTagset).toHaveBeenCalledWith({
+        ID: 'ts-1',
+        tags: ['new-value'],
+      });
+      expect(result.tags).toEqual(['new-value']);
+    });
+  });
+
+  describe('updateTagsetTemplateOnSelectTagset', () => {
+    it('should update existing tagset with new template and default tags', async () => {
+      const existingTagset = { id: 'ts-1', name: 'category', tags: ['old'] };
+      vi.spyOn(Classification, 'findOne').mockResolvedValue({
+        id: 'cls-1',
+        tagsets: [existingTagset],
+      } as any);
+      (tagsetService.getTagsetByName as Mock).mockReturnValue(existingTagset);
+      (tagsetService.save as Mock).mockResolvedValue(existingTagset as any);
+
+      const template = {
+        name: 'category',
+        type: TagsetType.SELECT_ONE,
+        defaultSelectedValue: 'default-val',
+      } as unknown as ITagsetTemplate;
+
+      const result = await service.updateTagsetTemplateOnSelectTagset(
+        'cls-1',
+        template
+      );
+
+      expect(existingTagset.tags).toEqual(['default-val']);
+      expect(result).toBe(existingTagset);
+    });
+
+    it('should create new tagset when template name not found in classification', async () => {
+      vi.spyOn(Classification, 'findOne').mockResolvedValue({
+        id: 'cls-1',
+        tagsets: [],
+      } as any);
+      (tagsetService.getTagsetByName as Mock).mockReturnValue(undefined);
+
+      const newTagset = { id: 'ts-new', name: 'newCat', tags: ['default'] };
+      (tagsetService.createTagsetWithName as Mock).mockReturnValue(
+        newTagset as any
+      );
+      (tagsetService.save as Mock).mockResolvedValue(newTagset as any);
+
+      const template = {
+        name: 'newCat',
+        type: TagsetType.SELECT_ONE,
+        defaultSelectedValue: 'default',
+      } as unknown as ITagsetTemplate;
+
+      await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+      // It calls addTagsetOnClassification which calls createTagsetWithName
+      expect(tagsetService.createTagsetWithName).toHaveBeenCalled();
+    });
+
+    it('should use empty tags array when template has no defaultSelectedValue', async () => {
+      const existingTagset = { id: 'ts-1', name: 'category', tags: ['old'] };
+      vi.spyOn(Classification, 'findOne').mockResolvedValue({
+        id: 'cls-1',
+        tagsets: [existingTagset],
+      } as any);
+      (tagsetService.getTagsetByName as Mock).mockReturnValue(existingTagset);
+      (tagsetService.save as Mock).mockResolvedValue(existingTagset as any);
+
+      const template = {
+        name: 'category',
+        type: TagsetType.SELECT_ONE,
+        defaultSelectedValue: undefined,
+      } as unknown as ITagsetTemplate;
+
+      await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+      expect(existingTagset.tags).toEqual([]);
     });
   });
 });

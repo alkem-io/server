@@ -7,10 +7,12 @@ import { VisualType } from '@common/enums/visual.type';
 import { WhiteboardPreviewMode } from '@common/enums/whiteboard.preview.mode';
 import {
   EntityNotFoundException,
+  EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { ILicense } from '@domain/common/license/license.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -35,6 +37,7 @@ describe('WhiteboardService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
   let communityResolverService: CommunityResolverService;
   let licenseService: LicenseService;
+  let profileDocumentsService: ProfileDocumentsService;
 
   beforeEach(async () => {
     // Mock static Whiteboard.create to avoid DataSource requirement
@@ -61,6 +64,7 @@ describe('WhiteboardService', () => {
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     communityResolverService = module.get(CommunityResolverService);
     licenseService = module.get(LicenseService);
+    profileDocumentsService = module.get(ProfileDocumentsService);
   });
 
   describe('createWhiteboard', () => {
@@ -458,6 +462,158 @@ describe('WhiteboardService', () => {
 
       expect(result).toBe(whiteboard);
       expect(whiteboardRepository.save).toHaveBeenCalledWith(whiteboard);
+    });
+  });
+
+  describe('updateWhiteboardContent', () => {
+    it('should parse content, reupload documents, and save', async () => {
+      const whiteboard = {
+        id: 'wb-1',
+        content: '{}',
+        profile: { id: 'profile-1' },
+      } as unknown as Whiteboard;
+      whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
+      whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
+
+      // Mock getProfileOrFail on profileService
+      vi.mocked(profileService.getProfileOrFail).mockResolvedValue({
+        id: 'profile-1',
+        storageBucket: { id: 'sb-1', documents: [] },
+      } as any);
+
+      const newContent = JSON.stringify({ elements: [], files: {} });
+
+      const result = await service.updateWhiteboardContent('wb-1', newContent);
+
+      expect(result.content).toBeDefined();
+      expect(whiteboardRepository.save).toHaveBeenCalled();
+    });
+
+    it('should throw EntityNotInitializedException when profile not initialized', async () => {
+      const whiteboard = {
+        id: 'wb-1',
+        profile: undefined,
+      } as unknown as Whiteboard;
+      whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
+
+      await expect(
+        service.updateWhiteboardContent('wb-1', '{"elements":[]}')
+      ).rejects.toThrow(EntityNotInitializedException);
+    });
+
+    it('should return content unchanged when no files in whiteboard content', async () => {
+      const whiteboard = {
+        id: 'wb-1',
+        content: '{}',
+        profile: { id: 'profile-1' },
+      } as unknown as Whiteboard;
+      whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
+      whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
+
+      vi.mocked(profileService.getProfileOrFail).mockResolvedValue({
+        id: 'profile-1',
+        storageBucket: { id: 'sb-1', documents: [] },
+      } as any);
+
+      const newContent = JSON.stringify({ elements: [] });
+      const result = await service.updateWhiteboardContent('wb-1', newContent);
+
+      expect(result).toBeDefined();
+    });
+
+    it('should handle file reupload errors gracefully', async () => {
+      const whiteboard = {
+        id: 'wb-1',
+        content: '{}',
+        profile: { id: 'profile-1' },
+      } as unknown as Whiteboard;
+      whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
+      whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
+
+      vi.mocked(profileService.getProfileOrFail).mockResolvedValue({
+        id: 'profile-1',
+        storageBucket: { id: 'sb-1', documents: [] },
+      } as any);
+
+      vi.mocked(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).mockRejectedValue(
+        new EntityNotFoundException('File not found', 'test' as any)
+      );
+
+      const contentWithFiles = JSON.stringify({
+        elements: [],
+        files: {
+          'file-1': { id: 'file-1', url: 'http://old.url/file.png' },
+        },
+      });
+
+      const result = await service.updateWhiteboardContent(
+        'wb-1',
+        contentWithFiles
+      );
+
+      // Should not throw, should handle gracefully
+      expect(result).toBeDefined();
+    });
+
+    it('should update file url when reupload returns new url', async () => {
+      const whiteboard = {
+        id: 'wb-1',
+        content: '{}',
+        profile: { id: 'profile-1' },
+      } as unknown as Whiteboard;
+      whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
+      whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
+
+      vi.mocked(profileService.getProfileOrFail).mockResolvedValue({
+        id: 'profile-1',
+        storageBucket: { id: 'sb-1', documents: [] },
+      } as any);
+
+      vi.mocked(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).mockResolvedValue('http://new.url/file.png');
+
+      const contentWithFiles = JSON.stringify({
+        elements: [],
+        files: {
+          'file-1': { id: 'file-1', url: 'http://old.url/file.png' },
+        },
+      });
+
+      const result = await service.updateWhiteboardContent(
+        'wb-1',
+        contentWithFiles
+      );
+
+      const parsedContent = JSON.parse(result.content!);
+      expect(parsedContent.files['file-1'].url).toBe('http://new.url/file.png');
+    });
+
+    it('should throw EntityNotInitializedException when storageBucket not found', async () => {
+      const whiteboard = {
+        id: 'wb-1',
+        content: '{}',
+        profile: { id: 'profile-1' },
+      } as unknown as Whiteboard;
+      whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
+
+      vi.mocked(profileService.getProfileOrFail).mockResolvedValue({
+        id: 'profile-1',
+        storageBucket: undefined,
+      } as any);
+
+      const contentWithFiles = JSON.stringify({
+        elements: [],
+        files: {
+          'file-1': { id: 'file-1', url: 'http://old.url/file.png' },
+        },
+      });
+
+      await expect(
+        service.updateWhiteboardContent('wb-1', contentWithFiles)
+      ).rejects.toThrow(EntityNotInitializedException);
     });
   });
 });

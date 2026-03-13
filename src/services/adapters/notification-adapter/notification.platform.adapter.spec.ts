@@ -8,7 +8,6 @@ import { NotificationExternalAdapter } from '../notification-external-adapter/no
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
 import { NotificationAdapter } from './notification.adapter';
 import { NotificationPlatformAdapter } from './notification.platform.adapter';
-import { NotificationUserAdapter } from './notification.user.adapter';
 
 describe('NotificationPlatformAdapter', () => {
   let adapter: NotificationPlatformAdapter;
