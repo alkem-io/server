@@ -7,7 +7,7 @@ import { SearchIngestService } from '@services/api/search/ingest/search.ingest.s
 import { TaskService } from '@services/task';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { type Mock } from 'vitest';
+import { type Mock, vi } from 'vitest';
 import { AdminSearchIngestResolverMutations } from './admin.search.ingest.resolver.mutations';
 
 describe('AdminSearchIngestResolverMutations', () => {
@@ -20,6 +20,8 @@ describe('AdminSearchIngestResolverMutations', () => {
   const actorContext = { actorID: 'actor-1' } as any as ActorContext;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AdminSearchIngestResolverMutations, MockWinstonProvider],
     })
@@ -33,6 +35,10 @@ describe('AdminSearchIngestResolverMutations', () => {
     ) as any;
     searchIngestService = module.get(SearchIngestService) as any;
     taskService = module.get(TaskService) as any;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

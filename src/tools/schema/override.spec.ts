@@ -1,4 +1,7 @@
-import { existsSync, readFileSync } from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
+import * as overrideFetchModule from './override-fetch';
 import {
   evaluateOverride,
   loadReviewsFromEnv,
@@ -7,65 +10,52 @@ import {
   performOverrideEvaluationAsync,
 } from './override';
 
-vi.mock('node:fs', () => ({
-  existsSync: vi.fn(),
-  readFileSync: vi.fn(),
-}));
+// Use real temp files instead of mocking node:fs (incompatible with isolate: false)
+let tmpDir: string;
 
-vi.mock('./override-fetch', () => ({
-  fetchGitHubReviews: vi.fn().mockResolvedValue([]),
-}));
+beforeEach(() => {
+  vi.restoreAllMocks();
+  tmpDir = mkdtempSync(join(tmpdir(), 'override-test-'));
+});
 
-const mockedExistsSync = vi.mocked(existsSync);
-const mockedReadFileSync = vi.mocked(readFileSync);
+afterEach(() => {
+  vi.restoreAllMocks();
+  rmSync(tmpDir, { recursive: true, force: true });
+});
 
 describe('parseCodeOwners', () => {
-  beforeEach(() => {
-    vi.clearAllMocks();
-  });
-
   it('returns empty array when file does not exist', () => {
-    mockedExistsSync.mockReturnValue(false);
-    expect(parseCodeOwners('/nonexistent')).toEqual([]);
+    expect(parseCodeOwners(join(tmpDir, 'nonexistent'))).toEqual([]);
   });
 
   it('skips comment lines and blank lines', () => {
-    mockedExistsSync.mockReturnValue(true);
-    mockedReadFileSync.mockReturnValue(
-      '# This is a comment\n\n* @alice\n'
-    );
-    const owners = parseCodeOwners('CODEOWNERS');
+    const path = join(tmpDir, 'CODEOWNERS');
+    writeFileSync(path, '# This is a comment\n\n* @alice\n');
+    const owners = parseCodeOwners(path);
     expect(owners).toEqual(['alice']);
   });
 
   it('extracts multiple owners and strips @ prefix', () => {
-    mockedExistsSync.mockReturnValue(true);
-    mockedReadFileSync.mockReturnValue(
-      '*.graphql @alice @org/team @bob\n'
-    );
-    const owners = parseCodeOwners('CODEOWNERS');
+    const path = join(tmpDir, 'CODEOWNERS');
+    writeFileSync(path, '*.graphql @alice @org/team @bob\n');
+    const owners = parseCodeOwners(path);
     expect(owners).toContain('alice');
     expect(owners).toContain('org/team');
     expect(owners).toContain('bob');
   });
 
   it('strips inline comments', () => {
-    mockedExistsSync.mockReturnValue(true);
-    mockedReadFileSync.mockReturnValue(
-      '*.ts @alice # schema owners\n'
-    );
-    const owners = parseCodeOwners('CODEOWNERS');
+    const path = join(tmpDir, 'CODEOWNERS');
+    writeFileSync(path, '*.ts @alice # schema owners\n');
+    const owners = parseCodeOwners(path);
     expect(owners).toEqual(['alice']);
-    // 'schema' and 'owners' should not appear
     expect(owners).not.toContain('schema');
   });
 
   it('deduplicates owners across multiple lines', () => {
-    mockedExistsSync.mockReturnValue(true);
-    mockedReadFileSync.mockReturnValue(
-      '*.ts @alice @bob\n*.js @alice @charlie\n'
-    );
-    const owners = parseCodeOwners('CODEOWNERS');
+    const path = join(tmpDir, 'CODEOWNERS');
+    writeFileSync(path, '*.ts @alice @bob\n*.js @alice @charlie\n');
+    const owners = parseCodeOwners(path);
     const aliceCount = owners.filter(o => o === 'alice').length;
     expect(aliceCount).toBe(1);
     expect(owners).toContain('bob');
@@ -78,7 +68,6 @@ describe('loadReviewsFromEnv', () => {
 
   afterEach(() => {
     process.env = { ...origEnv };
-    vi.clearAllMocks();
   });
 
   it('returns empty array when no env vars set', () => {
@@ -98,11 +87,12 @@ describe('loadReviewsFromEnv', () => {
 
   it('reads from file when SCHEMA_OVERRIDE_REVIEWS_FILE is set', () => {
     delete process.env.SCHEMA_OVERRIDE_REVIEWS_JSON;
-    process.env.SCHEMA_OVERRIDE_REVIEWS_FILE = '/tmp/reviews.json';
-    mockedExistsSync.mockReturnValue(true);
-    mockedReadFileSync.mockReturnValue(
+    const filePath = join(tmpDir, 'reviews.json');
+    writeFileSync(
+      filePath,
       JSON.stringify([{ reviewer: 'bob', body: 'ok', state: 'APPROVED' }])
     );
+    process.env.SCHEMA_OVERRIDE_REVIEWS_FILE = filePath;
     const reviews = loadReviewsFromEnv();
     expect(reviews).toHaveLength(1);
     expect(reviews[0].reviewer).toBe('bob');
@@ -198,14 +188,13 @@ describe('performOverrideEvaluation', () => {
 
   afterEach(() => {
     process.env = { ...origEnv };
-    vi.clearAllMocks();
   });
 
   it('returns not applied with detail about no reviews when env has none', () => {
-    mockedExistsSync.mockReturnValue(false);
+    // Point CODEOWNERS to a nonexistent path so existsSync returns false naturally
+    process.env.SCHEMA_OVERRIDE_CODEOWNERS_PATH = join(tmpDir, 'no-such-file');
     delete process.env.SCHEMA_OVERRIDE_REVIEWS_JSON;
     delete process.env.SCHEMA_OVERRIDE_REVIEWS_FILE;
-    delete process.env.SCHEMA_OVERRIDE_CODEOWNERS_PATH;
     const result = performOverrideEvaluation();
     expect(result.applied).toBe(false);
     expect(result.details[0]).toMatch(/No reviews provided/);
@@ -217,23 +206,21 @@ describe('performOverrideEvaluationAsync', () => {
 
   afterEach(() => {
     process.env = { ...origEnv };
-    vi.clearAllMocks();
   });
 
   it('falls back to fetchGitHubReviews when no env reviews', async () => {
-    mockedExistsSync.mockReturnValue(false);
+    process.env.SCHEMA_OVERRIDE_CODEOWNERS_PATH = join(tmpDir, 'no-such-file');
     delete process.env.SCHEMA_OVERRIDE_REVIEWS_JSON;
     delete process.env.SCHEMA_OVERRIDE_REVIEWS_FILE;
-    delete process.env.SCHEMA_OVERRIDE_CODEOWNERS_PATH;
 
-    const { fetchGitHubReviews } = await import('./override-fetch');
-    vi.mocked(fetchGitHubReviews).mockResolvedValue([
-      { reviewer: 'alice', body: 'BREAKING-APPROVED', state: 'APPROVED' },
-    ]);
+    const fetchSpy = vi.spyOn(overrideFetchModule, 'fetchGitHubReviews')
+      .mockResolvedValue([
+        { reviewer: 'alice', body: 'BREAKING-APPROVED', state: 'APPROVED' },
+      ]);
 
     // No owners file, so even with reviews from fetch, no owners => not applied
     const result = await performOverrideEvaluationAsync();
     expect(result.applied).toBe(false);
-    expect(fetchGitHubReviews).toHaveBeenCalled();
+    expect(fetchSpy).toHaveBeenCalled();
   });
 });

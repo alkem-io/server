@@ -3,7 +3,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { type Mock } from 'vitest';
+import { type Mock, vi } from 'vitest';
 import { AdminCommunicationResolverMutations } from './admin.communication.resolver.mutations';
 import { AdminCommunicationService } from './admin.communication.service';
 
@@ -15,6 +15,8 @@ describe('AdminCommunicationResolverMutations', () => {
   const actorContext = { actorID: 'actor-1' } as any as ActorContext;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AdminCommunicationResolverMutations, MockWinstonProvider],
     })
@@ -24,6 +26,10 @@ describe('AdminCommunicationResolverMutations', () => {
     resolver = module.get(AdminCommunicationResolverMutations);
     authorizationService = module.get(AuthorizationService) as any;
     adminCommunicationService = module.get(AdminCommunicationService) as any;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

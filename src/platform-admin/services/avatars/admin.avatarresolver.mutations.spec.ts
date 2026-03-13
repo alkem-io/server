@@ -9,7 +9,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { type Mock } from 'vitest';
+import { type Mock, vi } from 'vitest';
 import { AdminSearchContributorsMutations } from './admin.avatarresolver.mutations';
 
 describe('AdminSearchContributorsMutations', () => {
@@ -24,6 +24,8 @@ describe('AdminSearchContributorsMutations', () => {
   const actorContext = { actorID: 'actor-1' } as any as ActorContext;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AdminSearchContributorsMutations, MockWinstonProvider],
     })
@@ -41,6 +43,10 @@ describe('AdminSearchContributorsMutations', () => {
       StorageBucketAuthorizationService
     ) as any;
     authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
