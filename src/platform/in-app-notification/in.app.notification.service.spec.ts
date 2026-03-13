@@ -804,6 +804,132 @@ describe('InAppNotificationService', () => {
     });
   });
 
+  describe('getPaginatedNotifications', () => {
+    const createChainableQb = () => {
+      const qb: any = {
+        where: vi.fn(),
+        andWhere: vi.fn(),
+        orderBy: vi.fn(),
+        addOrderBy: vi.fn(),
+        take: vi.fn(),
+        skip: vi.fn(),
+        clone: vi.fn(),
+        getMany: vi.fn().mockResolvedValue([]),
+        getCount: vi.fn().mockResolvedValue(0),
+        getManyAndCount: vi.fn().mockResolvedValue([[], 0]),
+        expressionMap: { orderBys: {}, wheres: [] },
+      };
+      qb.where.mockReturnValue(qb);
+      qb.andWhere.mockReturnValue(qb);
+      qb.orderBy.mockReturnValue(qb);
+      qb.addOrderBy.mockReturnValue(qb);
+      qb.take.mockReturnValue(qb);
+      qb.skip.mockReturnValue(qb);
+      qb.clone.mockReturnValue(qb);
+      return qb;
+    };
+
+    it('should build paginated query without filter', async () => {
+      const qb = createChainableQb();
+      notificationRepo.createQueryBuilder!.mockReturnValue(qb);
+
+      await service.getPaginatedNotifications('user-1', { first: 10 });
+
+      expect(qb.where).toHaveBeenCalled();
+      expect(qb.andWhere).toHaveBeenCalled(); // archived state filter
+      expect(qb.orderBy).toHaveBeenCalled();
+    });
+
+    it('should add type filter when provided', async () => {
+      const qb = createChainableQb();
+      notificationRepo.createQueryBuilder!.mockReturnValue(qb);
+
+      await service.getPaginatedNotifications(
+        'user-1',
+        { first: 10 },
+        {
+          types: [NotificationEvent.USER_MESSAGE],
+        }
+      );
+
+      // Where + archived state + types filter
+      expect(qb.andWhere).toHaveBeenCalledTimes(2);
+    });
+
+    it('should use cursor-based pagination when after is provided', async () => {
+      const qb = createChainableQb();
+      notificationRepo.createQueryBuilder!.mockReturnValue(qb);
+
+      const cursorNotification = {
+        id: 'cursor-1',
+        triggeredAt: new Date('2024-01-01'),
+      } as any;
+      notificationRepo.findOne!.mockResolvedValue(cursorNotification);
+
+      await service.getPaginatedNotifications('user-1', {
+        first: 10,
+        after: 'cursor-1',
+      });
+
+      expect(qb.addOrderBy).toHaveBeenCalled();
+      expect(notificationRepo.findOne).toHaveBeenCalled();
+    });
+
+    it('should use cursor-based pagination when before is provided', async () => {
+      const qb = createChainableQb();
+      notificationRepo.createQueryBuilder!.mockReturnValue(qb);
+
+      const cursorNotification = {
+        id: 'cursor-1',
+        triggeredAt: new Date('2024-01-15'),
+      } as any;
+      notificationRepo.findOne!.mockResolvedValue(cursorNotification);
+
+      await service.getPaginatedNotifications('user-1', {
+        last: 5,
+        before: 'cursor-1',
+      });
+
+      expect(notificationRepo.findOne).toHaveBeenCalled();
+    });
+
+    it('should handle cursor not found gracefully', async () => {
+      const qb = createChainableQb();
+      notificationRepo.createQueryBuilder!.mockReturnValue(qb);
+      notificationRepo.findOne!.mockResolvedValue(null);
+
+      // Should not throw
+      await service.getPaginatedNotifications('user-1', {
+        first: 10,
+        after: 'nonexistent',
+      });
+
+      expect(qb.take).toHaveBeenCalled();
+    });
+
+    it('should determine hasNextPage when more items than limit', async () => {
+      const qb = createChainableQb();
+      const items = Array.from({ length: 11 }, (_, i) => ({ id: `n-${i}` }));
+      qb.getMany.mockResolvedValue(items);
+      qb.getCount.mockResolvedValue(20);
+      notificationRepo.createQueryBuilder!.mockReturnValue(qb);
+
+      const cursorNotification = {
+        id: 'cursor-1',
+        triggeredAt: new Date(),
+      } as any;
+      notificationRepo.findOne!.mockResolvedValue(cursorNotification);
+
+      const result = await service.getPaginatedNotifications('user-1', {
+        first: 10,
+        after: 'cursor-1',
+      });
+
+      expect(result.pageInfo.hasNextPage).toBe(true);
+      expect(result.items).toHaveLength(10);
+    });
+  });
+
   describe('bulkUpdateNotificationStateByTypes', () => {
     it('should include type filter when types are provided', async () => {
       notificationRepo.update!.mockResolvedValue({ affected: 5 });

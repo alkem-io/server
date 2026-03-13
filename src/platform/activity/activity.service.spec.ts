@@ -279,14 +279,236 @@ describe('ActivityService', () => {
   });
 
   describe('getGroupedActivity', () => {
-    it('should execute raw query and return activities', async () => {
-      // The entityManager is auto-mocked, so we test the repository find call
+    let entityManager: any;
+
+    beforeEach(() => {
+      entityManager = (service as any).entityManager;
+    });
+
+    it('should execute raw query with visibility and collaborationIDs and return activities', async () => {
+      entityManager.connection = {
+        query: vi.fn().mockResolvedValue([{ latest: '1' }, { latest: '2' }]),
+      };
+      activityRepository.find!.mockResolvedValue([
+        { id: 'a1' },
+        { id: 'a2' },
+      ] as any);
+
+      const result = await service.getGroupedActivity(['c1', 'c2']);
+
+      expect(entityManager.connection.query).toHaveBeenCalled();
+      expect(result).toHaveLength(2);
+    });
+
+    it('should include types condition when types provided', async () => {
+      entityManager.connection = {
+        query: vi.fn().mockResolvedValue([]),
+      };
       activityRepository.find!.mockResolvedValue([]);
 
-      // This tests the path where the raw query returns results
-      // The entityManager.connection.query is auto-mocked
-      // We can at least verify the method doesn't throw
-      // and that the final find call shape is correct
+      await service.getGroupedActivity(['c1'], {
+        types: [ActivityEventType.CALLOUT_PUBLISHED],
+      });
+
+      const queryParams = entityManager.connection.query.mock.calls[0][1];
+      expect(queryParams).toContain(ActivityEventType.CALLOUT_PUBLISHED);
+    });
+
+    it('should include triggeredBy condition when userID provided', async () => {
+      entityManager.connection = {
+        query: vi.fn().mockResolvedValue([]),
+      };
+      activityRepository.find!.mockResolvedValue([]);
+
+      await service.getGroupedActivity(['c1'], {
+        userID: 'user-1',
+      });
+
+      const queryParams = entityManager.connection.query.mock.calls[0][1];
+      expect(queryParams).toContain('user-1');
+    });
+
+    it('should apply limit when specified', async () => {
+      entityManager.connection = {
+        query: vi.fn().mockResolvedValue([]),
+      };
+      activityRepository.find!.mockResolvedValue([]);
+
+      await service.getGroupedActivity(['c1'], { limit: 5 });
+
+      const queryStr = entityManager.connection.query.mock.calls[0][0];
+      expect(queryStr).toContain('LIMIT 5');
+    });
+
+    it('should use ASC ordering when specified', async () => {
+      entityManager.connection = {
+        query: vi.fn().mockResolvedValue([]),
+      };
+      activityRepository.find!.mockResolvedValue([]);
+
+      await service.getGroupedActivity(['c1'], { orderBy: 'ASC' });
+
+      const queryStr = entityManager.connection.query.mock.calls[0][0];
+      expect(queryStr).toContain('ASC');
+    });
+
+    it('should handle empty collaborationIDs', async () => {
+      entityManager.connection = {
+        query: vi.fn().mockResolvedValue([]),
+      };
+      activityRepository.find!.mockResolvedValue([]);
+
+      await service.getGroupedActivity([]);
+
+      expect(entityManager.connection.query).toHaveBeenCalled();
+    });
+  });
+
+  describe('getMySpacesActivity', () => {
+    let entityManager: any;
+
+    beforeEach(() => {
+      entityManager = (service as any).entityManager;
+    });
+
+    it('should return latest activities per collaboration limited by limit', async () => {
+      const activities = [
+        {
+          id: 'a1',
+          collaborationID: 'c1',
+          createdDate: new Date('2024-01-02'),
+        },
+        {
+          id: 'a2',
+          collaborationID: 'c1',
+          createdDate: new Date('2024-01-01'),
+        },
+        {
+          id: 'a3',
+          collaborationID: 'c2',
+          createdDate: new Date('2024-01-03'),
+        },
+      ];
+
+      const qb = {
+        select: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue(activities),
+      };
+      activityRepository.createQueryBuilder!.mockReturnValue(qb);
+
+      const collabQb = {
+        select: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue([{ id: 'c1' }, { id: 'c2' }]),
+      };
+      entityManager.getRepository = vi
+        .fn()
+        .mockReturnValue({
+          createQueryBuilder: vi.fn().mockReturnValue(collabQb),
+        });
+
+      const result = await service.getMySpacesActivity('user-1', 10);
+
+      // Should return 2 activities (one per collaboration)
+      expect(result).toHaveLength(2);
+    });
+
+    it('should filter out activities whose collaboration no longer exists', async () => {
+      const activities = [
+        { id: 'a1', collaborationID: 'deleted-c', createdDate: new Date() },
+      ];
+
+      const qb = {
+        select: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue(activities),
+      };
+      activityRepository.createQueryBuilder!.mockReturnValue(qb);
+
+      const collabQb = {
+        select: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue([]),
+      };
+      entityManager.getRepository = vi
+        .fn()
+        .mockReturnValue({
+          createQueryBuilder: vi.fn().mockReturnValue(collabQb),
+        });
+
+      const result = await service.getMySpacesActivity('user-1', 10);
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('should respect the limit parameter', async () => {
+      const activities = [
+        {
+          id: 'a1',
+          collaborationID: 'c1',
+          createdDate: new Date('2024-01-03'),
+        },
+        {
+          id: 'a2',
+          collaborationID: 'c2',
+          createdDate: new Date('2024-01-02'),
+        },
+        {
+          id: 'a3',
+          collaborationID: 'c3',
+          createdDate: new Date('2024-01-01'),
+        },
+      ];
+
+      const qb = {
+        select: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue(activities),
+      };
+      activityRepository.createQueryBuilder!.mockReturnValue(qb);
+
+      const collabQb = {
+        select: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        getMany: vi
+          .fn()
+          .mockResolvedValue([{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }]),
+      };
+      entityManager.getRepository = vi
+        .fn()
+        .mockReturnValue({
+          createQueryBuilder: vi.fn().mockReturnValue(collabQb),
+        });
+
+      const result = await service.getMySpacesActivity('user-1', 1);
+
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('getLatestActivitiesPerSpaceMembership', () => {
+    it('should query activities for collaboration IDs from membership info', async () => {
+      const qb = {
+        select: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        orderBy: vi.fn().mockReturnThis(),
+        getMany: vi.fn().mockResolvedValue([]),
+      };
+      activityRepository.createQueryBuilder!.mockReturnValue(qb);
+
+      const spaceMembershipInfo = new Map([['c1', { spaceId: 's1' }]]) as any;
+
+      const result = await service.getLatestActivitiesPerSpaceMembership(
+        'user-1',
+        spaceMembershipInfo
+      );
+
+      expect(result).toBeDefined();
+      expect(qb.where).toHaveBeenCalled();
     });
   });
 });
