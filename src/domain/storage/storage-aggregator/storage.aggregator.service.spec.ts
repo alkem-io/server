@@ -29,6 +29,8 @@ describe('StorageAggregatorService', () => {
   let urlGeneratorService: UrlGeneratorService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StorageAggregatorService,

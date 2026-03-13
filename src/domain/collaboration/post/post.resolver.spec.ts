@@ -8,6 +8,8 @@ describe('PostResolver', () => {
   let resolver: PostResolverMutations;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [PostResolverMutations, MockCacheManager, MockWinstonProvider],
     })

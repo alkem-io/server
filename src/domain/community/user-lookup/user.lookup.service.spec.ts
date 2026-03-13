@@ -19,6 +19,8 @@ describe('UserLookupService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     entityManager = {
       findOne: vi.fn(),
       find: vi.fn(),

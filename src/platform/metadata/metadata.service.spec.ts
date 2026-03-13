@@ -8,6 +8,8 @@ describe('MetadataService', () => {
   let service: MetadataService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [MetadataService, MockCacheManager, MockWinstonProvider],
     })

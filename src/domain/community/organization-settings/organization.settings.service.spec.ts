@@ -10,6 +10,8 @@ describe('OrganizationSettingsService', () => {
   let service: OrganizationSettingsService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrganizationSettingsService,

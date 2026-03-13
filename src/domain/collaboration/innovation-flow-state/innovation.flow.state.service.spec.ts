@@ -20,6 +20,8 @@ describe('InnovationFlowStateService', () => {
   let templateRepository: Repository<Template>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static InnovationFlowState.create to avoid DataSource requirement
     vi.spyOn(InnovationFlowState, 'create').mockImplementation((input: any) => {
       const entity = new InnovationFlowState();

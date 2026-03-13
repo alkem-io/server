@@ -24,6 +24,8 @@ describe('LibraryService', () => {
   let innovationPackService: InnovationPackService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LibraryService,

@@ -25,6 +25,8 @@ describe('NotificationRecipientsService', () => {
   let platformAuthorizationService: PlatformAuthorizationPolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationRecipientsService,

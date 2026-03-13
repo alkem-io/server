@@ -6,6 +6,8 @@ describe('WingbackWebhookService', () => {
   let service: WingbackWebhookService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [WingbackWebhookService],
     })

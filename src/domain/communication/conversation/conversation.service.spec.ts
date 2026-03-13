@@ -37,6 +37,8 @@ describe('ConversationService', () => {
   let mockManagerFind: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Conversation.create to avoid DataSource requirement
     vi.spyOn(Conversation, 'create').mockImplementation((input: any) => {
       const entity = new Conversation();

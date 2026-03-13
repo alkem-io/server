@@ -18,6 +18,8 @@ describe('ConversionService', () => {
   let _namingService: Record<string, Mock>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [ConversionService, MockWinstonProvider],
     })

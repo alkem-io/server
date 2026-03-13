@@ -11,6 +11,8 @@ describe('AvatarCreatorService', () => {
   let service: AvatarCreatorService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AvatarCreatorService, MockWinstonProvider],
     })

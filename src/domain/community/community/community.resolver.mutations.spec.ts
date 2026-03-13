@@ -9,6 +9,8 @@ describe('CommunityResolver', () => {
   let resolver: CommunityResolverMutations;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CommunityResolverMutations,

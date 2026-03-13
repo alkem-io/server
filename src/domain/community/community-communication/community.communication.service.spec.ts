@@ -14,6 +14,8 @@ describe('CommunityCommunicationService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CommunityCommunicationService,
