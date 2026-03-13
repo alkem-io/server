@@ -1,7 +1,7 @@
 # Specification Quality Checklist: Community Polls & Voting
 
 **Purpose**: Validate specification completeness and quality before proceeding to planning
-**Created**: 2026-02-27
+**Created**: 2026-03-13
 **Feature**: [spec.md](../spec.md)
 
 ## Content Quality
@@ -13,7 +13,7 @@
 
 ## Requirement Completeness
 
-- [x] No [NEEDS CLARIFICATION] markers remain — resolved: voters are notified and prompted to re-vote when their selected option is removed
+- [x] No [NEEDS CLARIFICATION] markers remain — resolved for notifications, subscriptions, and Kibana reporting scope
 - [x] Requirements are testable and unambiguous
 - [x] Success criteria are measurable
 - [x] Success criteria are technology-agnostic (no implementation details)
@@ -35,3 +35,4 @@
 - Option removal behavior: when an option is removed, all votes containing that option are deleted entirely (no re-validation), and affected voters are notified that their vote has been removed with a prompt to re-vote.
 - Vote updates always require the complete new selection set—partial modifications (adding/removing individual options) are not supported. This ensures validation is consistently applied and prevents invalid vote states.
 - Future compatibility requirements (FR-027) are explicitly noted as data-model reservations, not implemented behavior. These are intentional placeholders.
+- Poll analytics scope is explicitly in-spec: vote cast/update, poll response addition, and poll callout creation must each emit contribution events using existing fire-and-forget reporting behavior.

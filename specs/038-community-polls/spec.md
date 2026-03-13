@@ -3,7 +3,7 @@
 **Feature Branch**: `038-community-polls`
 **Created**: 2026-02-28
 **Status**: Draft
-**Input**: User description: "Create polls to gather community input — opinions on decisions, preferences, or availability. Contributors vote single or multiple selections based on facilitator settings. Poll creators receive notifications on new votes. Everyone can see who voted for what. Voters can update their selections. Poll creators can edit poll options. Results remain in the configured option order."
+**Input**: User description: "Create polls to gather community input — opinions on decisions, preferences, or availability. Contributors vote single or multiple selections based on facilitator settings. Poll creators receive notifications on new votes. Everyone can see who voted for what. Voters can update their selections. Poll creators can edit poll options. Results remain in the configured option order. Also add Kibana/Elasticsearch contribution reporting for poll votes, poll custom response additions, and poll creation as part of a callout."
 
 ## User Scenarios & Testing _(mandatory)_
 
@@ -153,6 +153,23 @@ A community member viewing a poll in their browser wants the poll display to upd
 
 ---
 
+### User Story 8 - Kibana Contribution Reporting for Poll Activity (Priority: P8)
+
+A platform administrator wants poll activity to appear in Kibana dashboards, so poll engagement is measurable in the same way as other collaboration contributions.
+
+**Why this priority**: Polls are now a major collaboration surface. Without contribution reporting, poll engagement is invisible in platform-level analytics and cannot be compared against existing contribution types.
+
+**Independent Test**: (a) A member casts a vote and a poll-vote contribution document is written to Elasticsearch. (b) A facilitator adds a new option to an existing poll and a poll-response-added contribution document is written. (c) A callout is created with poll framing and a callout-poll-created contribution document is written. In all three cases, failures in reporting do not fail the user mutation.
+
+**Acceptance Scenarios**:
+
+1. **Given** a member casts or updates a vote on a poll, **When** the vote is successfully persisted, **Then** a poll vote contribution event is recorded in Elasticsearch with poll ID, actor, space, and timestamp metadata.
+2. **Given** a facilitator adds a new option to an existing poll, **When** the option is successfully persisted, **Then** a poll response added contribution event is recorded in Elasticsearch with poll ID, actor, space, and timestamp metadata.
+3. **Given** a user creates a callout whose framing type is `POLL`, **When** the callout is successfully created, **Then** a callout poll created contribution event is recorded in Elasticsearch with callout ID, poll ID, actor, space, and timestamp metadata.
+4. **Given** Elasticsearch reporting is unavailable, **When** any of the above poll events occur, **Then** the failure is logged with contribution reporter context and the original user action still succeeds.
+
+---
+
 ### Edge Cases
 
 - What happens if a poll option is removed while a member is in the process of voting? The system should prevent submission with the removed option and inform the member the option is no longer available, prompting them to review their selections.
@@ -162,6 +179,7 @@ A community member viewing a poll in their browser wants the poll display to upd
 - What happens if a member's account is deleted from the platform after voting? Their votes are removed from the poll results.
 - What happens if a poll is created with duplicate option text? The system should warn the creator that two options have identical text (via a validation warning message returned in the GraphQL response) but allow creation at the creator's discretion.
 - What happens in multi-select mode if a voter selects no options and submits? The system should require at least one selection before allowing submission.
+- What happens if Elasticsearch indexing is delayed or temporarily unavailable? Poll actions (vote, add option, create poll callout) still complete successfully; contribution indexing failures are logged and retried only by existing Elasticsearch infrastructure policies.
 
 ---
 
@@ -230,6 +248,14 @@ A community member viewing a poll in their browser wants the poll display to upd
   - When the subscriber's own vote is revoked by an option change, `myVote` MUST be null in the delivered payload.
 - **FR-031**: Each subscription event payload MUST include an `eventID` string (unique per event) for traceability, following the `BaseSubscriptionPayload` pattern used by all other subscriptions in the platform. Each subscription result type MUST include a `pollEventType` field indicating the event category (`POLL_VOTE_UPDATED` or `POLL_OPTIONS_CHANGED`) for client-side routing.
 
+**Kibana / Elasticsearch Contribution Reporting**
+
+- **FR-032**: The system MUST report a `POLL_VOTE_CONTRIBUTION` event to the Elasticsearch contribution index whenever `castPollVote` successfully creates or updates a member vote.
+- **FR-033**: The system MUST report a `POLL_RESPONSE_ADDED_CONTRIBUTION` event to the Elasticsearch contribution index whenever `addPollOption` successfully adds a new option to an existing poll.
+- **FR-034**: The system MUST report a `CALLOUT_POLL_CREATED` event to the Elasticsearch contribution index whenever a callout is successfully created with framing type `POLL`.
+- **FR-035**: Poll-related contribution events MUST include consistent metadata with existing contribution events: contribution entity ID, contribution display name, actor identity, level-zero space ID, environment, and timestamp.
+- **FR-036**: Contribution reporting for poll events MUST follow the existing fire-and-forget pattern: failures MUST be logged with contribution reporter context and MUST NOT fail user-facing poll operations.
+
 ### Key Entities
 
 - **Callout (Post)**: An existing collaboration artifact in a space. A poll is optional additional content attached to a Callout's Framing — a Callout may or may not have a poll.
@@ -249,6 +275,8 @@ A community member viewing a poll in their browser wants the poll display to upd
 - **SC-006**: A voter can successfully update their vote and see their previous selection removed and new selection recorded, all within a single interaction.
 - **SC-007**: When `resultsDetail = FULL`, all space members can view the full voter list per option without additional permissions or steps.
 - **SC-008**: Polls support a minimum of 20 options without degradation in display or voting performance.
+- **SC-009**: 100% of successful poll votes, successful poll option additions, and successful poll callout creations generate corresponding contribution events in Elasticsearch within standard ingestion latency.
+- **SC-010**: Poll contribution reporting introduces no user-visible regression to mutation completion behavior; poll actions complete successfully even when contribution indexing fails.
 
 ## Assumptions
 
@@ -264,6 +292,7 @@ A community member viewing a poll in their browser wants the poll display to upd
 - Poll option ordering in the creation form determines the display order, and results keep the same `sortOrder` ordering.
 - The notification requirement ("poll creator notified on new vote") applies to both the initial vote and any subsequent vote update by the same voter.
 - Polls are not time-limited in this iteration; they remain open indefinitely until manually closed (future feature).
+- Kibana dashboards consume the shared contribution index and automatically surface new poll contribution types without additional API changes.
 
 ## Clarifications
 

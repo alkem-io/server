@@ -3,7 +3,7 @@
 **Input**: Design documents from `specs/038-community-polls/`
 **Prerequisites**: plan.md ✅, spec.md ✅, research.md ✅, data-model.md ✅, contracts/schema.graphql ✅
 
-**Tests**: Unit tests included for domain invariants (PollService validation, vote constraints) per constitution Principle 6 and plan.md directive — no full integration or e2e tests required.
+**Tests**: Unit tests included for domain invariants (PollService validation, vote constraints) and contribution reporting wiring/reporter methods per constitution Principle 6 and plan.md directive — no full integration or e2e tests required.
 
 **Organization**: Tasks grouped by user story; each phase is independently testable.
 
@@ -12,7 +12,7 @@
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Parallelizable — different files, no incomplete task dependencies
-- **[Story]**: User story this task belongs to (US1…US6 from spec.md)
+- **[Story]**: User story this task belongs to (US1…US8 from spec.md)
 - File paths follow `src/domain/collaboration/` conventions per plan.md
 
 ---
@@ -275,6 +275,31 @@
 
 ---
 
+## Phase 10: User Story 8 — Kibana Contribution Reporting for Poll Activity (Priority: P8)
+
+**Goal**: Report poll lifecycle engagement into Elasticsearch/Kibana for three events: (1) vote cast/updated, (2) custom response (new option) added to an existing poll, (3) callout created with poll framing.
+
+**Independent Test**: (a) Execute `castPollVote` and verify one `POLL_VOTE_CONTRIBUTION` document is written. (b) Execute `addPollOption` and verify one `POLL_RESPONSE_ADDED_CONTRIBUTION` document is written. (c) Create a callout with `framing.type = POLL` and verify one `CALLOUT_POLL_CREATED` document is written. In all three flows, if reporting fails, the mutation still succeeds.
+
+### Implementation
+
+- [X] T090 [P] [US8] Add three contribution type constants to `src/services/external/elasticsearch/types/contribution.type.ts`: `POLL_VOTE_CONTRIBUTION`, `POLL_RESPONSE_ADDED_CONTRIBUTION`, `CALLOUT_POLL_CREATED`
+- [X] T091 [US8] Add three methods to `src/services/external/elasticsearch/contribution-reporter/contribution.reporter.service.ts` following existing fire-and-forget pattern (`whiteboardContribution`, `memoContribution`, `mediaGalleryContribution`):
+  - `pollVoteContribution(contribution, actorContext)`
+  - `pollResponseAddedContribution(contribution, actorContext)`
+  - `calloutPollCreated(contribution, actorContext)`
+- [X] T092 [US8] Wire poll vote reporting in `src/domain/collaboration/poll/poll.resolver.mutations.ts`: after successful `castPollVote`, resolve level-zero space and call `contributionReporter.pollVoteContribution(...)`; keep reporting non-blocking.
+- [X] T093 [US8] Wire custom poll response reporting in `src/domain/collaboration/poll/poll.resolver.mutations.ts`: after successful `addPollOption`, resolve level-zero space and call `contributionReporter.pollResponseAddedContribution(...)`; keep reporting non-blocking.
+- [X] T094 [US8] Wire callout poll creation reporting in `src/domain/collaboration/callouts-set/callouts.set.resolver.mutations.ts`: after successful callout creation, when `callout.framing.type === POLL` and poll exists, call `contributionReporter.calloutPollCreated(...)` with callout/poll metadata and level-zero space ID.
+- [X] T095 [US8] Add unit tests for reporter methods in `src/services/external/elasticsearch/contribution-reporter/contribution.reporter.service.spec.ts` verifying emitted type, id/name/space mapping, and fire-and-forget behavior for each of the three new methods.
+- [X] T096 [US8] Add resolver-level unit tests covering contribution reporter invocation and failure isolation:
+  - `src/domain/collaboration/poll/poll.resolver.mutations.spec.ts` for `castPollVote` and `addPollOption`
+  - `src/domain/collaboration/callouts-set/callouts.set.resolver.mutations.spec.ts` for callout poll creation path
+
+**Checkpoint**: All three poll analytics events are emitted to Elasticsearch/Kibana, and user-facing poll mutations remain resilient when reporting fails.
+
+---
+
 ## Phase 8: Polish & Cross-Cutting Concerns
 
 **Purpose**: Documentation fixes, schema contract generation, lint/test verification, migration validation, quickstart smoke test.
@@ -301,8 +326,9 @@ Phase 1 (Setup)
                                ├─► Phase 5 (US3 - Results)         ← depends on US2 votes to test
                                ├─► Phase 6 (US5 - Options)         ← depends on US1 data to test
                                ├─► Phase 7 (US6 - Notifications)   ← depends on US2+US5 hooks
-                               └─► Phase 9 (US7 - Subscriptions)   ← depends on US2+US5 mutations
-Phase 8 (Polish) ← depends on all phases complete (including Phase 9)
+                               ├─► Phase 9 (US7 - Subscriptions)   ← depends on US2+US5 mutations
+                               └─► Phase 10 (US8 - Kibana reporting) ← depends on US1 + US2 + US5 wiring points
+Phase 8 (Polish) ← depends on all phases complete (including Phase 9 and Phase 10)
 ```
 
 ### User Story Dependencies
@@ -314,6 +340,7 @@ Phase 8 (Polish) ← depends on all phases complete (including Phase 9)
 - **US5 (P5)**: Requires US1 data; notification stubs reference US6 but mutations work without notifications
 - **US6 (P6)**: Wires into US2 (`castVote`) and US5 (option mutations); must be done after US2 and US5 service methods exist
 - **US7 (P7)**: Wires into US2 (`castVote`) and US5 (option mutations) for publishing events; requires Poll entities and mutations to be functional. Independent of US6 (notifications)
+- **US8 (P8)**: Wires into US2 (`castPollVote`), US5 (`addPollOption`), and callout creation flow (poll framing) for contribution reporting; independent of US6/US7 but depends on existing mutation paths.
 
 ### Within Each Phase: Execution Order
 
@@ -395,11 +422,12 @@ Sequential:       T089                        (schema contract — after T087)
 5. Phase 6 → Option editing works → editorial controls complete
 6. Phase 7 → Notifications → engagement loop closed
 7. Phase 9 → Subscriptions → real-time updates delivered to browsers
-8. Phase 8 → Polish → production-ready
+8. Phase 10 → Kibana reporting → poll analytics signals available
+9. Phase 8 → Polish → production-ready
 
 ### Single-Developer Sequence
 
-Complete phases in order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 9 → 8. Stop at each **Checkpoint** to validate the story independently before proceeding.
+Complete phases in order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 9 → 10 → 8. Stop at each **Checkpoint** to validate the story independently before proceeding.
 
 ---
 

@@ -199,4 +199,111 @@ describe('ContributionReporterService', () => {
       );
     });
   });
+
+  describe('pollContribution reporting', () => {
+    it('should index a POLL_VOTE_CONTRIBUTION document', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'user-1',
+        type: ActorType.USER,
+      });
+      mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
+        email: 'user@example.com',
+      });
+
+      service.pollVoteContribution(
+        {
+          id: 'poll-1',
+          name: 'Weekly planning poll',
+          space: 'space-root',
+        },
+        { actorID: 'user-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockIndex).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: expect.objectContaining({
+            type: 'POLL_VOTE_CONTRIBUTION',
+            id: 'poll-1',
+            name: 'Weekly planning poll',
+            space: 'space-root',
+            author: 'user-1',
+          }),
+        })
+      );
+    });
+
+    it('should index a POLL_RESPONSE_ADDED_CONTRIBUTION document', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'user-1',
+        type: ActorType.USER,
+      });
+      mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
+        email: 'user@example.com',
+      });
+
+      service.pollResponseAddedContribution(
+        {
+          id: 'poll-2',
+          name: 'Roadmap priorities poll',
+          space: 'space-root',
+        },
+        { actorID: 'user-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockIndex).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: expect.objectContaining({
+            type: 'POLL_RESPONSE_ADDED_CONTRIBUTION',
+            id: 'poll-2',
+            name: 'Roadmap priorities poll',
+            space: 'space-root',
+            author: 'user-1',
+          }),
+        })
+      );
+    });
+
+    it('should index a CALLOUT_POLL_CREATED document', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'user-1',
+        type: ActorType.USER,
+      });
+      mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
+        email: 'user@example.com',
+      });
+
+      service.calloutPollCreated(
+        {
+          id: 'callout-1',
+          name: 'Q2 planning poll',
+          space: 'space-root',
+        },
+        { actorID: 'user-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockIndex).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: expect.objectContaining({
+            type: 'CALLOUT_POLL_CREATED',
+            id: 'callout-1',
+            name: 'Q2 planning poll',
+            space: 'space-root',
+            author: 'user-1',
+          }),
+        })
+      );
+    });
+  });
 });

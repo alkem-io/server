@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add a Poll composition object to CalloutFraming that lets space members vote on community questions (single-select or multi-select), view transparent results, and change their vote at any time. Polls are created as part of the existing `createCallout` mutation by extending `CreateCalloutFramingInput` with an optional `poll` field (same pattern as `whiteboard`/`link`/`memo`) — no separate creation mutation is exposed. Poll option management and voting are four new mutations. Poll notifications are delivered through the existing dual-channel notification infrastructure for both Callout creators and existing voters, with four dedicated preference fields (`collaborationPollVoteCastOnOwnPoll`, `collaborationPollVoteCastOnPollIVotedOn`, `collaborationPollModifiedOnPollIVotedOn`, `collaborationPollVoteAffectedByOptionChange`). Visibility/detail settings (`resultsVisibility`, `resultsDetail`) and future `status`/`deadline` compatibility are modeled explicitly. Poll votes authored by a deleted user account are removed automatically via a DB-level `ON DELETE CASCADE` constraint on `poll_vote.createdBy` (FK → `user.id`) — no application-level cleanup listener is required. Two real-time GraphQL subscriptions (`pollVoteUpdated`, `pollOptionsChanged`) push live updates to viewers, respecting visibility/detail settings per subscriber by reusing existing field resolver filtering logic.
+Add a Poll composition object to CalloutFraming that lets space members vote on community questions (single-select or multi-select), view transparent results, and change their vote at any time. Polls are created as part of the existing `createCallout` mutation by extending `CreateCalloutFramingInput` with an optional `poll` field (same pattern as `whiteboard`/`link`/`memo`) — no separate creation mutation is exposed. Poll option management and voting are four new mutations. Poll notifications are delivered through the existing dual-channel notification infrastructure for both Callout creators and existing voters, with four dedicated preference fields (`collaborationPollVoteCastOnOwnPoll`, `collaborationPollVoteCastOnPollIVotedOn`, `collaborationPollModifiedOnPollIVotedOn`, `collaborationPollVoteAffectedByOptionChange`). Visibility/detail settings (`resultsVisibility`, `resultsDetail`) and future `status`/`deadline` compatibility are modeled explicitly. Poll votes authored by a deleted user account are removed automatically via a DB-level `ON DELETE CASCADE` constraint on `poll_vote.createdBy` (FK → `user.id`) — no application-level cleanup listener is required. Two real-time GraphQL subscriptions (`pollVoteUpdated`, `pollOptionsChanged`) push live updates to viewers, respecting visibility/detail settings per subscriber by reusing existing field resolver filtering logic. In addition, poll analytics are reported to Elasticsearch/Kibana via three new contribution signals: vote cast/updated, poll response added, and poll callout created.
 
 ## Technical Context
 
@@ -18,7 +18,7 @@ Add a Poll composition object to CalloutFraming that lets space members vote on 
 **Performance Goals**: Results queries must be < 200 ms p95 for polls with up to 20 options and 500 voters (SC-008 scaled)
 **Constraints**: Options returned in `sortOrder ASC`; real-time subscriptions deliver poll updates via PubSub (same infrastructure as existing callout/VC subscriptions)
 **Account Deletion Handling**: Poll votes are removed when a user is deleted via Foreign Key Cascade.
-**Scale/Scope**: Polls are per-Callout; typical poll has 2–20 options and 5–200 voters per space; no sharding needed
+**Scale/Scope**: Polls are per-Callout; typical poll has 2–20 options and 5–200 voters per space; no sharding needed. Contribution reporting adds three fire-and-forget Elasticsearch events.
 
 ## Constitution Check
 
@@ -146,6 +146,19 @@ src/domain/collaboration/poll/
 src/common/enums/
 └── poll.event.type.ts  # NEW — PollEventType enum (POLL_VOTE_UPDATED, POLL_OPTIONS_CHANGED)
 
+src/services/external/elasticsearch/
+├── types/
+│   └── contribution.type.ts  # + POLL_VOTE_CONTRIBUTION, POLL_RESPONSE_ADDED_CONTRIBUTION, CALLOUT_POLL_CREATED
+└── contribution-reporter/
+    ├── contribution.reporter.service.ts  # + pollVoteContribution(), pollResponseAddedContribution(), calloutPollCreated()
+    └── contribution.reporter.service.spec.ts  # + unit tests for the three new reporter methods
+
+src/domain/collaboration/poll/
+└── poll.resolver.mutations.ts  # + trigger contribution reporting on castPollVote/addPollOption
+
+src/domain/collaboration/callouts-set/
+└── callouts.set.resolver.mutations.ts  # + trigger contribution reporting when creating a callout with POLL framing
+
 src/migrations/
 └── {TIMESTAMP}-CommunityPolls.ts  # NEW — creates poll, poll_option, poll_vote tables; adds pollId to callout_framing
 ```
@@ -180,3 +193,9 @@ src/migrations/
 - **Affected files**: `spec.md` (US7, FR-028..FR-031, SC-004, clarifications, future scope), `plan.md` (summary, constraints, project structure, revision history), `data-model.md` (subscription infrastructure), `tasks.md` (Phase 9), `contracts/schema.graphql` (subscription types).
 - **New source files**: `poll.resolver.subscriptions.ts`, `poll.subscription.args.ts`, `poll.vote.updated.subscription.result.ts`, `poll.options.changed.subscription.result.ts`, `poll.vote.updated.subscription.payload.ts`, `poll.options.changed.subscription.payload.ts`, `poll.event.type.ts`.
 - **Modified source files**: `subscription.type.ts`, `providers.ts` (constants), `subscription.read.service.ts`, `subscription.publish.service.ts`, `poll.resolver.mutations.ts`, `poll.module.ts`.
+
+**2026-03-13**: Added Kibana/Elasticsearch reporting scope for poll activity (User Story 8).
+- **Change**: Added contribution reporting for three poll events: vote cast/updated, custom response added to an existing poll, and poll callout creation.
+- **Rationale**: Align poll feature observability with existing collaboration contribution tracking, reusing the same reporter pattern introduced for media gallery contributions.
+- **Affected files**: `spec.md`, `plan.md`, `tasks.md`, `checklists/requirements.md`.
+- **Planned source files**: `contribution.type.ts`, `contribution.reporter.service.ts`, `contribution.reporter.service.spec.ts`, `poll.resolver.mutations.ts`, `callouts.set.resolver.mutations.ts`.

@@ -7,6 +7,7 @@ import { CastPollVoteInput } from '@domain/collaboration/poll-vote/dto/poll.vote
 import { PollVoteService } from '@domain/collaboration/poll-vote/poll.vote.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter/contribution.reporter.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import {
@@ -24,6 +25,7 @@ export class PollMutationsResolver {
   constructor(
     private readonly authorizationService: AuthorizationService,
     private readonly communityResolverService: CommunityResolverService,
+    private readonly contributionReporterService: ContributionReporterService,
     private readonly notificationSpaceAdapter: NotificationSpaceAdapter,
     private readonly pollService: PollService,
     private readonly pollVoteService: PollVoteService,
@@ -66,6 +68,14 @@ export class PollMutationsResolver {
     // Publish subscription event
     void this.publishPollEvent(PollEventType.POLL_VOTE_UPDATED, updatedPoll);
 
+    // Report contribution event (fire-and-forget)
+    void this.reportPollVoteContribution(
+      updatedPoll,
+      actorContext.actorID
+    ).catch(() => {
+      /* fire-and-forget */
+    });
+
     return updatedPoll;
   }
 
@@ -105,6 +115,14 @@ export class PollMutationsResolver {
 
     // Publish subscription event
     void this.publishPollEvent(PollEventType.POLL_OPTIONS_CHANGED, updatedPoll);
+
+    // Report contribution event (fire-and-forget)
+    void this.reportPollResponseAddedContribution(
+      updatedPoll,
+      actorContext.actorID
+    ).catch(() => {
+      /* fire-and-forget */
+    });
 
     return updatedPoll;
   }
@@ -371,5 +389,57 @@ export class PollMutationsResolver {
         spaceID
       );
     }
+  }
+
+  private async reportPollVoteContribution(
+    poll: IPoll,
+    actorId: string
+  ): Promise<void> {
+    const { calloutID } = await this.pollService.getCalloutContextForPoll(
+      poll.id
+    );
+    const community =
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
+        calloutID
+      );
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
+
+    this.contributionReporterService.pollVoteContribution(
+      {
+        id: poll.id,
+        name: poll.title,
+        space: space.levelZeroSpaceID,
+      },
+      { actorID: actorId }
+    );
+  }
+
+  private async reportPollResponseAddedContribution(
+    poll: IPoll,
+    actorId: string
+  ): Promise<void> {
+    const { calloutID } = await this.pollService.getCalloutContextForPoll(
+      poll.id
+    );
+    const community =
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
+        calloutID
+      );
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
+
+    this.contributionReporterService.pollResponseAddedContribution(
+      {
+        id: poll.id,
+        name: poll.title,
+        space: space.levelZeroSpaceID,
+      },
+      { actorID: actorId }
+    );
   }
 }
