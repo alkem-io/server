@@ -1,101 +1,97 @@
 import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
+import { LoggerService } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { GraphQLError } from 'graphql';
-import { vi } from 'vitest';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { GraphqlExceptionFilter } from './graphql.exception.filter';
 
 describe('GraphqlExceptionFilter', () => {
   let filter: GraphqlExceptionFilter;
-  let mockLogger: any;
+  let logger: LoggerService;
 
-  beforeEach(() => {
-    mockLogger = {
-      error: vi.fn(),
-      warn: vi.fn(),
-      verbose: vi.fn(),
-    };
-    filter = new GraphqlExceptionFilter(mockLogger);
-  });
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [GraphqlExceptionFilter, MockWinstonProvider],
+    }).compile();
 
-  const createMockHost = (userActorID?: string) => ({
-    switchToHttp: () => ({
-      getNext: () => ({
-        req: {
-          user: userActorID ? { actorID: userActorID } : undefined,
-        },
-      }),
-    }),
+    filter = module.get(GraphqlExceptionFilter);
+    logger = module.get(WINSTON_MODULE_NEST_PROVIDER);
   });
 
   it('should be defined', () => {
     expect(filter).toBeDefined();
   });
 
-  describe('catch', () => {
-    it('should log the exception', () => {
-      const exception = new BaseException(
-        'Test error',
-        LogContext.API,
-        AlkemioErrorStatus.UNSPECIFIED
-      );
-      const host = createMockHost('user-1');
+  const createMockHost = (userId?: string) => ({
+    switchToHttp: vi.fn().mockReturnValue({
+      getNext: vi.fn().mockReturnValue({
+        req: {
+          user: { actorID: userId ?? 'test-user-id' },
+        },
+      }),
+    }),
+  });
 
-      filter.catch(exception, host as any);
+  it('should log the exception with userId from actorID', () => {
+    const exception = new BaseException(
+      'test error',
+      LogContext.AUTH,
+      AlkemioErrorStatus.FORBIDDEN
+    );
+    const host = createMockHost('user-123');
 
-      expect(mockLogger.error).toHaveBeenCalled();
-    });
+    filter.catch(exception, host as any);
 
-    it('should set userId from actorContext when available', () => {
-      const exception = new BaseException(
-        'Test error',
-        LogContext.API,
-        AlkemioErrorStatus.UNSPECIFIED
-      );
-      const host = createMockHost('user-1');
+    expect(logger.error).toHaveBeenCalledOnce();
+    expect(exception.details?.userId).toBe('user-123');
+  });
 
-      filter.catch(exception, host as any);
+  it('should use userId from exception details if present', () => {
+    const exception = new BaseException(
+      'test error',
+      LogContext.AUTH,
+      AlkemioErrorStatus.FORBIDDEN,
+      { userId: 'detail-user' }
+    );
+    const host = createMockHost('actor-user');
 
-      expect(exception.details?.userId).toBe('user-1');
-    });
+    filter.catch(exception, host as any);
 
-    it('should use "unknown" when no user available', () => {
-      const exception = new BaseException(
-        'Test error',
-        LogContext.API,
-        AlkemioErrorStatus.UNSPECIFIED
-      );
-      const host = createMockHost();
+    expect(exception.details?.userId).toBe('detail-user');
+  });
 
-      filter.catch(exception, host as any);
+  it('should use "unknown" when no userId is available', () => {
+    const exception = new BaseException(
+      'test error',
+      LogContext.AUTH,
+      AlkemioErrorStatus.FORBIDDEN
+    );
+    const host = {
+      switchToHttp: vi.fn().mockReturnValue({
+        getNext: vi.fn().mockReturnValue({
+          req: {
+            user: { actorID: undefined },
+          },
+        }),
+      }),
+    };
 
-      expect(exception.details?.userId).toBe('unknown');
-    });
+    filter.catch(exception, host as any);
 
-    it('should return exception in non-production', () => {
-      const originalEnv = process.env.NODE_ENV;
-      process.env.NODE_ENV = 'development';
+    expect(exception.details?.userId).toBe('unknown');
+  });
 
-      const exception = new BaseException(
-        'Test error',
-        LogContext.API,
-        AlkemioErrorStatus.UNSPECIFIED
-      );
-      const host = createMockHost();
-
-      const result = filter.catch(exception, host as any);
-
-      expect(result).toBe(exception);
-      process.env.NODE_ENV = originalEnv;
-    });
-
-    it('should return sanitized GraphQLError in production', () => {
+  describe('production mode', () => {
+    it('should return a sanitized GraphQLError in production', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
 
       const exception = new BaseException(
-        'Test error',
-        LogContext.API,
-        AlkemioErrorStatus.UNSPECIFIED,
+        'secret error',
+        LogContext.AUTH,
+        AlkemioErrorStatus.FORBIDDEN,
         undefined,
         'error-id-123'
       );
@@ -104,23 +100,33 @@ describe('GraphqlExceptionFilter', () => {
       const result = filter.catch(exception, host as any);
 
       expect(result).toBeInstanceOf(GraphQLError);
-      expect(result.message).toBe('Test error');
-      expect((result as GraphQLError).extensions?.errorId).toBe('error-id-123');
+      expect((result as GraphQLError).message).toBe('secret error');
+      expect((result as GraphQLError).extensions.errorId).toBe('error-id-123');
+      expect((result as GraphQLError).extensions.code).toBe(
+        String(AlkemioErrorStatus.FORBIDDEN)
+      );
+
       process.env.NODE_ENV = originalEnv;
     });
+  });
 
-    it('should use exception details userId when present', () => {
+  describe('non-production mode', () => {
+    it('should return the original exception in non-production', () => {
+      const originalEnv = process.env.NODE_ENV;
+      process.env.NODE_ENV = 'development';
+
       const exception = new BaseException(
-        'Test error',
-        LogContext.API,
-        AlkemioErrorStatus.UNSPECIFIED,
-        { userId: 'from-details' }
+        'dev error',
+        LogContext.AUTH,
+        AlkemioErrorStatus.FORBIDDEN
       );
-      const host = createMockHost('from-context');
+      const host = createMockHost();
 
-      filter.catch(exception, host as any);
+      const result = filter.catch(exception, host as any);
 
-      expect(exception.details?.userId).toBe('from-details');
+      expect(result).toBe(exception);
+
+      process.env.NODE_ENV = originalEnv;
     });
   });
 });

@@ -1,133 +1,199 @@
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { UserService } from '@domain/community/user/user.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
-import { createMock } from '@golevelup/ts-vitest';
+import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { type Mock } from 'vitest';
 import { RegistrationResolverMutations } from './registration.resolver.mutations';
 import { RegistrationService } from './registration.service';
 
-const actorContext = { actorID: 'user-1' } as any;
-
 describe('RegistrationResolverMutations', () => {
   let resolver: RegistrationResolverMutations;
-  let registrationService: ReturnType<typeof createMock<RegistrationService>>;
-  let userService: ReturnType<typeof createMock<UserService>>;
-  let orgService: ReturnType<typeof createMock<OrganizationService>>;
-  let authService: ReturnType<typeof createMock<AuthorizationService>>;
-  let platformAuthService: ReturnType<
-    typeof createMock<PlatformAuthorizationPolicyService>
-  >;
-  let notificationAdapter: ReturnType<
-    typeof createMock<NotificationPlatformAdapter>
-  >;
+  let authorizationService: { grantAccessOrFail: Mock };
+  let platformAuthorizationService: {
+    getPlatformAuthorizationPolicy: Mock;
+  };
+  let userService: { createUser: Mock; getUserByIdOrFail: Mock };
+  let registrationService: {
+    finalizeUserRegistration: Mock;
+    deleteUserWithPendingMemberships: Mock;
+    deleteOrganizationWithPendingMemberships: Mock;
+  };
+  let organizationService: {
+    createOrganization: Mock;
+    getOrganizationOrFail: Mock;
+    getAccount: Mock;
+  };
+  let organizationAuthorizationService: { applyAuthorizationPolicy: Mock };
+  let accountAuthorizationService: { applyAuthorizationPolicy: Mock };
+  let authorizationPolicyService: { saveAll: Mock };
+  let notificationPlatformAdapter: { platformUserRemoved: Mock };
 
-  beforeEach(() => {
-    notificationAdapter = createMock<NotificationPlatformAdapter>();
-    registrationService = createMock<RegistrationService>();
-    userService = createMock<UserService>();
-    orgService = createMock<OrganizationService>();
-    const orgAuthService = createMock<OrganizationAuthorizationService>();
-    authService = createMock<AuthorizationService>();
-    platformAuthService = createMock<PlatformAuthorizationPolicyService>();
-    const accountAuthService = createMock<AccountAuthorizationService>();
-    const authPolicyService = createMock<AuthorizationPolicyService>();
-    const logger = { verbose: vi.fn(), warn: vi.fn(), error: vi.fn() };
+  const actorContext = { actorID: 'actor-1', credentials: [] } as any;
 
-    platformAuthService.getPlatformAuthorizationPolicy.mockResolvedValue(
-      {} as any
-    );
-    userService.createUser.mockResolvedValue({ id: 'new-user' } as any);
-    userService.getUserByIdOrFail.mockResolvedValue({
-      id: 'new-user',
-      authorization: { id: 'auth-1' },
-      profile: { displayName: 'Test' },
-    } as any);
-    registrationService.finalizeUserRegistration.mockResolvedValue(
-      undefined as any
-    );
-    registrationService.deleteUserWithPendingMemberships.mockResolvedValue({
-      id: 'deleted-user',
-    } as any);
-    registrationService.deleteOrganizationWithPendingMemberships.mockResolvedValue(
-      { id: 'deleted-org' } as any
-    );
-    orgService.createOrganization.mockResolvedValue({
-      id: 'new-org',
-    } as any);
-    orgService.getOrganizationOrFail.mockResolvedValue({
-      id: 'new-org',
-      authorization: { id: 'auth-org' },
-    } as any);
-    orgService.getAccount.mockResolvedValue({ id: 'account-1' } as any);
-    orgAuthService.applyAuthorizationPolicy.mockResolvedValue([]);
-    accountAuthService.applyAuthorizationPolicy.mockResolvedValue([]);
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [RegistrationResolverMutations, MockWinstonProvider],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
 
-    resolver = new RegistrationResolverMutations(
-      notificationAdapter,
-      registrationService,
-      userService,
-      orgService,
-      orgAuthService,
-      authService,
-      platformAuthService,
-      accountAuthService,
-      authPolicyService,
-      logger as any
-    );
+    resolver = module.get(RegistrationResolverMutations);
+    authorizationService = module.get(AuthorizationService) as any;
+    platformAuthorizationService = module.get(
+      PlatformAuthorizationPolicyService
+    ) as any;
+    userService = module.get(UserService) as any;
+    registrationService = module.get(RegistrationService) as any;
+    organizationService = module.get(OrganizationService) as any;
+    organizationAuthorizationService = module.get(
+      OrganizationAuthorizationService
+    ) as any;
+    accountAuthorizationService = module.get(
+      AccountAuthorizationService
+    ) as any;
+    authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
+    notificationPlatformAdapter = module.get(
+      NotificationPlatformAdapter
+    ) as any;
   });
 
   it('should be defined', () => {
     expect(resolver).toBeDefined();
   });
 
-  it('should create a user with authorization check', async () => {
-    const userData = { nameID: 'test-user', email: 'test@test.com' } as any;
-    const result = await resolver.createUser(actorContext, userData);
+  describe('createUser', () => {
+    it('should check CREATE privilege and create user', async () => {
+      const platformAuth = { id: 'platform-auth' };
+      platformAuthorizationService.getPlatformAuthorizationPolicy.mockResolvedValue(
+        platformAuth
+      );
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      const createdUser = { id: 'user-1' };
+      userService.createUser.mockResolvedValue(createdUser);
+      registrationService.finalizeUserRegistration.mockResolvedValue(undefined);
+      userService.getUserByIdOrFail.mockResolvedValue(createdUser);
 
-    expect(result).toBeDefined();
-    expect(authService.grantAccessOrFail).toHaveBeenCalled();
-    expect(userService.createUser).toHaveBeenCalledWith(userData);
-    expect(registrationService.finalizeUserRegistration).toHaveBeenCalled();
+      const result = await resolver.createUser(actorContext, {
+        nameID: 'john',
+        firstName: 'John',
+        lastName: 'Doe',
+        email: 'john@example.com',
+      } as any);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        platformAuth,
+        AuthorizationPrivilege.CREATE,
+        expect.any(String)
+      );
+      expect(result).toBe(createdUser);
+      expect(registrationService.finalizeUserRegistration).toHaveBeenCalledWith(
+        createdUser
+      );
+    });
   });
 
-  it('should create an organization with authorization check', async () => {
-    const orgData = { nameID: 'test-org' } as any;
-    const result = await resolver.createOrganization(actorContext, orgData);
+  describe('createOrganization', () => {
+    it('should check CREATE_ORGANIZATION privilege and create organization', async () => {
+      const platformAuth = { id: 'platform-auth' };
+      platformAuthorizationService.getPlatformAuthorizationPolicy.mockResolvedValue(
+        platformAuth
+      );
+      authorizationService.grantAccessOrFail.mockResolvedValue(undefined);
+      const createdOrg = { id: 'org-1' };
+      organizationService.createOrganization.mockResolvedValue(createdOrg);
+      organizationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      const orgAccount = { id: 'acc-1' };
+      organizationService.getAccount.mockResolvedValue(orgAccount);
+      accountAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      organizationService.getOrganizationOrFail.mockResolvedValue(createdOrg);
 
-    expect(result).toBeDefined();
-    expect(authService.grantAccessOrFail).toHaveBeenCalled();
-    expect(orgService.createOrganization).toHaveBeenCalledWith(
-      orgData,
-      actorContext
-    );
+      const result = await resolver.createOrganization(actorContext, {
+        nameID: 'my-org',
+        profileData: { displayName: 'My Org' },
+      } as any);
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        platformAuth,
+        AuthorizationPrivilege.CREATE_ORGANIZATION,
+        expect.any(String)
+      );
+      expect(result).toBe(createdOrg);
+    });
   });
 
-  it('should delete a user with notification', async () => {
-    const deleteData = { ID: 'user-to-delete' };
-    const result = await resolver.deleteUser(actorContext, deleteData);
+  describe('deleteUser', () => {
+    it('should check DELETE privilege and delete user', async () => {
+      const user = {
+        id: 'user-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'John' },
+      };
+      userService.getUserByIdOrFail.mockResolvedValue(user);
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      registrationService.deleteUserWithPendingMemberships.mockResolvedValue(
+        user
+      );
+      notificationPlatformAdapter.platformUserRemoved.mockResolvedValue(
+        undefined
+      );
 
-    expect(result).toBeDefined();
-    expect(result.id).toBe('deleted-user');
-    expect(authService.grantAccessOrFail).toHaveBeenCalled();
-    expect(
-      registrationService.deleteUserWithPendingMemberships
-    ).toHaveBeenCalledWith(deleteData);
-    expect(notificationAdapter.platformUserRemoved).toHaveBeenCalled();
+      const result = await resolver.deleteUser(actorContext, {
+        ID: 'user-1',
+      });
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        user.authorization,
+        AuthorizationPrivilege.DELETE,
+        expect.any(String)
+      );
+      expect(result).toBe(user);
+      expect(
+        notificationPlatformAdapter.platformUserRemoved
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          triggeredBy: 'actor-1',
+          user,
+        })
+      );
+    });
   });
 
-  it('should delete an organization with authorization check', async () => {
-    const deleteData = { ID: 'org-to-delete' };
-    const result = await resolver.deleteOrganization(actorContext, deleteData);
+  describe('deleteOrganization', () => {
+    it('should check DELETE privilege and delete organization', async () => {
+      const org = { id: 'org-1', authorization: { id: 'auth-1' } };
+      organizationService.getOrganizationOrFail.mockResolvedValue(org);
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      registrationService.deleteOrganizationWithPendingMemberships.mockResolvedValue(
+        org
+      );
 
-    expect(result).toBeDefined();
-    expect(result.id).toBe('deleted-org');
-    expect(authService.grantAccessOrFail).toHaveBeenCalled();
-    expect(
-      registrationService.deleteOrganizationWithPendingMemberships
-    ).toHaveBeenCalledWith(deleteData);
+      const result = await resolver.deleteOrganization(actorContext, {
+        ID: 'org-1',
+      });
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        org.authorization,
+        AuthorizationPrivilege.DELETE,
+        expect.any(String)
+      );
+      expect(result).toBe(org);
+    });
   });
 });

@@ -1,16 +1,13 @@
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
-import {
-  EntityNotInitializedException,
-  ForbiddenException,
-} from '@common/exceptions';
-import { AuthorizationInvalidPolicyException } from '@common/exceptions/authorization.invalid.policy.exception';
-import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbidden.authorization.policy.exception';
+import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { IAuthorizationPolicyRuleCredential } from './authorization.policy.rule.credential.interface';
+import { IAuthorizationPolicyRulePrivilege } from './authorization.policy.rule.privilege.interface';
 import { AuthorizationService } from './authorization.service';
 
 describe('AuthorizationService', () => {
@@ -30,410 +27,338 @@ describe('AuthorizationService', () => {
     expect(service).toBeDefined();
   });
 
+  // --- helpers ---
+  function makeActorContext(
+    credentials: { type: string; resourceID: string }[] = []
+  ): ActorContext {
+    const ctx = new ActorContext();
+    ctx.actorID = 'actor-1';
+    ctx.credentials = credentials;
+    return ctx;
+  }
+
+  function makeCredentialRule(
+    overrides: Partial<IAuthorizationPolicyRuleCredential> = {}
+  ): IAuthorizationPolicyRuleCredential {
+    return {
+      criterias: [{ type: 'global-admin', resourceID: '' }],
+      grantedPrivileges: [AuthorizationPrivilege.READ],
+      cascade: false,
+      name: 'test-rule',
+      ...overrides,
+    } as IAuthorizationPolicyRuleCredential;
+  }
+
+  function makeAuthorization(
+    overrides: Partial<IAuthorizationPolicy> = {}
+  ): IAuthorizationPolicy {
+    return {
+      id: 'auth-1',
+      type: AuthorizationPolicyType.SPACE,
+      credentialRules: [makeCredentialRule()],
+      privilegeRules: [],
+      ...overrides,
+    } as IAuthorizationPolicy;
+  }
+
   describe('validateAuthorization', () => {
-    it('should throw ForbiddenException when authorization is undefined', () => {
+    it('throws ForbiddenException when authorization is undefined', () => {
       expect(() =>
         service.validateAuthorization(
           undefined,
           'test',
           AuthorizationPrivilege.READ
         )
-      ).toThrow(ForbiddenException);
+      ).toThrow('Authorization: no definition provided');
     });
 
-    it('should throw AuthorizationInvalidPolicyException when no credential rules', () => {
-      const auth: IAuthorizationPolicy = {
-        id: 'auth-1',
-        type: 'test',
-        credentialRules: [],
-        privilegeRules: [],
-      } as any;
-
+    it('throws AuthorizationInvalidPolicyException when credentialRules is empty', () => {
+      const auth = makeAuthorization({ credentialRules: [] });
       expect(() =>
-        service.validateAuthorization(auth, 'test', AuthorizationPrivilege.READ)
-      ).toThrow(AuthorizationInvalidPolicyException);
+        service.validateAuthorization(
+          auth,
+          'test msg',
+          AuthorizationPrivilege.READ
+        )
+      ).toThrow('AuthorizationPolicy without credential rules provided');
     });
 
-    it('should return authorization when valid', () => {
-      const auth: IAuthorizationPolicy = {
-        id: 'auth-1',
-        type: 'test',
-        credentialRules: [
-          {
-            name: 'rule-1',
-            criterias: [
-              {
-                type: AuthorizationCredential.GLOBAL_ADMIN,
-                resourceID: '',
-              },
-            ],
-            grantedPrivileges: [AuthorizationPrivilege.READ],
-          },
-        ],
-        privilegeRules: [],
-      } as any;
-
+    it('returns authorization when valid', () => {
+      const auth = makeAuthorization();
       const result = service.validateAuthorization(
         auth,
         'test',
         AuthorizationPrivilege.READ
       );
-
       expect(result).toBe(auth);
     });
   });
 
   describe('isAccessGranted', () => {
-    it('should throw when authorization is undefined', () => {
-      const actorContext = new ActorContext();
-      actorContext.credentials = [];
-
+    it('throws when authorization is undefined', () => {
+      const ctx = makeActorContext();
       expect(() =>
-        service.isAccessGranted(
-          actorContext,
-          undefined,
-          AuthorizationPrivilege.READ
-        )
-      ).toThrow(EntityNotInitializedException);
+        service.isAccessGranted(ctx, undefined, AuthorizationPrivilege.READ)
+      ).toThrow('Authorization: no definition provided');
     });
 
-    it('should return true when credential matches privilege', () => {
-      const actorContext = new ActorContext();
-      actorContext.credentials = [
-        {
-          type: AuthorizationCredential.GLOBAL_ADMIN,
-          resourceID: '',
-        },
-      ];
-
-      const auth: IAuthorizationPolicy = {
-        id: 'auth-1',
-        type: 'test',
-        credentialRules: [
-          {
-            name: 'admin-rule',
-            criterias: [
-              {
-                type: AuthorizationCredential.GLOBAL_ADMIN,
-                resourceID: '',
-              },
-            ],
-            grantedPrivileges: [AuthorizationPrivilege.READ],
-          },
-        ],
-        privilegeRules: [],
-      } as any;
-
+    it('returns true when credential matches a rule granting the privilege', () => {
+      const ctx = makeActorContext([{ type: 'global-admin', resourceID: '' }]);
+      const auth = makeAuthorization();
       expect(
-        service.isAccessGranted(actorContext, auth, AuthorizationPrivilege.READ)
+        service.isAccessGranted(ctx, auth, AuthorizationPrivilege.READ)
       ).toBe(true);
     });
 
-    it('should return false when no credential matches', () => {
-      const actorContext = new ActorContext();
-      actorContext.credentials = [
-        {
-          type: AuthorizationCredential.GLOBAL_ANONYMOUS,
-          resourceID: '',
-        },
-      ];
-
-      const auth: IAuthorizationPolicy = {
-        id: 'auth-1',
-        type: 'test',
-        credentialRules: [
-          {
-            name: 'admin-rule',
-            criterias: [
-              {
-                type: AuthorizationCredential.GLOBAL_ADMIN,
-                resourceID: '',
-              },
-            ],
-            grantedPrivileges: [AuthorizationPrivilege.READ],
-          },
-        ],
-        privilegeRules: [],
-      } as any;
-
+    it('returns false when no credential matches', () => {
+      const ctx = makeActorContext([
+        { type: 'some-other-cred', resourceID: '' },
+      ]);
+      const auth = makeAuthorization();
       expect(
-        service.isAccessGranted(actorContext, auth, AuthorizationPrivilege.READ)
+        service.isAccessGranted(ctx, auth, AuthorizationPrivilege.READ)
       ).toBe(false);
     });
 
-    it('should match with resourceID when specified', () => {
-      const actorContext = new ActorContext();
-      actorContext.credentials = [
-        {
-          type: AuthorizationCredential.SPACE_ADMIN,
-          resourceID: 'space-1',
-        },
-      ];
-
-      const auth: IAuthorizationPolicy = {
-        id: 'auth-1',
-        type: 'test',
-        credentialRules: [
-          {
-            name: 'space-admin-rule',
-            criterias: [
-              {
-                type: AuthorizationCredential.SPACE_ADMIN,
-                resourceID: 'space-1',
-              },
-            ],
-            grantedPrivileges: [AuthorizationPrivilege.UPDATE],
-          },
-        ],
-        privilegeRules: [],
-      } as any;
-
+    it('returns false when credential matches but wrong privilege requested', () => {
+      const ctx = makeActorContext([{ type: 'global-admin', resourceID: '' }]);
+      const auth = makeAuthorization();
       expect(
-        service.isAccessGranted(
-          actorContext,
+        service.isAccessGranted(ctx, auth, AuthorizationPrivilege.CREATE)
+      ).toBe(false);
+    });
+
+    it('returns true via privilege rule when source privilege is granted', () => {
+      const ctx = makeActorContext([{ type: 'global-admin', resourceID: '' }]);
+      const privRule: IAuthorizationPolicyRulePrivilege = {
+        sourcePrivilege: AuthorizationPrivilege.READ,
+        grantedPrivileges: [AuthorizationPrivilege.CREATE],
+        name: 'privilege-escalation',
+      } as IAuthorizationPolicyRulePrivilege;
+      const auth = makeAuthorization({ privilegeRules: [privRule] });
+      expect(
+        service.isAccessGranted(ctx, auth, AuthorizationPrivilege.CREATE)
+      ).toBe(true);
+    });
+
+    it('returns false via privilege rule when source privilege is NOT granted', () => {
+      const ctx = makeActorContext([
+        { type: 'some-other-cred', resourceID: '' },
+      ]);
+      const privRule: IAuthorizationPolicyRulePrivilege = {
+        sourcePrivilege: AuthorizationPrivilege.READ,
+        grantedPrivileges: [AuthorizationPrivilege.CREATE],
+        name: 'privilege-escalation',
+      } as IAuthorizationPolicyRulePrivilege;
+      const auth = makeAuthorization({ privilegeRules: [privRule] });
+      expect(
+        service.isAccessGranted(ctx, auth, AuthorizationPrivilege.CREATE)
+      ).toBe(false);
+    });
+  });
+
+  describe('isAccessGrantedForCredentials', () => {
+    it('throws when authorization is undefined', () => {
+      expect(() =>
+        service.isAccessGrantedForCredentials(
+          [],
+          undefined,
+          AuthorizationPrivilege.READ
+        )
+      ).toThrow('Authorization: no definition provided');
+    });
+
+    it('matches credential with specific resourceID', () => {
+      const auth = makeAuthorization({
+        credentialRules: [
+          makeCredentialRule({
+            criterias: [
+              { type: 'space-member', resourceID: 'space-123' },
+            ] as any,
+          }),
+        ],
+      });
+      // matching resourceID
+      expect(
+        service.isAccessGrantedForCredentials(
+          [{ type: 'space-member', resourceID: 'space-123' }],
           auth,
-          AuthorizationPrivilege.UPDATE
+          AuthorizationPrivilege.READ
+        )
+      ).toBe(true);
+      // non-matching resourceID
+      expect(
+        service.isAccessGrantedForCredentials(
+          [{ type: 'space-member', resourceID: 'space-999' }],
+          auth,
+          AuthorizationPrivilege.READ
+        )
+      ).toBe(false);
+    });
+
+    it('matches credential with empty resourceID (wildcard)', () => {
+      const auth = makeAuthorization({
+        credentialRules: [
+          makeCredentialRule({
+            criterias: [{ type: 'global-admin', resourceID: '' }] as any,
+          }),
+        ],
+      });
+      // any resourceID should match when criteria resourceID is ''
+      expect(
+        service.isAccessGrantedForCredentials(
+          [{ type: 'global-admin', resourceID: 'anything' }],
+          auth,
+          AuthorizationPrivilege.READ
         )
       ).toBe(true);
     });
 
-    it('should use privilege rules for escalation', () => {
-      const actorContext = new ActorContext();
-      actorContext.credentials = [
-        {
-          type: AuthorizationCredential.GLOBAL_ADMIN,
-          resourceID: '',
-        },
-      ];
-
-      const auth: IAuthorizationPolicy = {
-        id: 'auth-1',
-        type: 'test',
-        credentialRules: [
-          {
-            name: 'admin-rule',
-            criterias: [
-              {
-                type: AuthorizationCredential.GLOBAL_ADMIN,
-                resourceID: '',
-              },
-            ],
-            grantedPrivileges: [AuthorizationPrivilege.READ],
-          },
-        ],
-        privilegeRules: [
-          {
-            name: 'read-to-update',
-            sourcePrivilege: AuthorizationPrivilege.READ,
-            grantedPrivileges: [AuthorizationPrivilege.UPDATE],
-          },
-        ],
-      } as any;
-
-      expect(
-        service.isAccessGranted(
-          actorContext,
+    it('throws for credential rule without criterias', () => {
+      const auth = makeAuthorization({
+        credentialRules: [makeCredentialRule({ criterias: [] as any })],
+      });
+      expect(() =>
+        service.isAccessGrantedForCredentials(
+          [{ type: 'global-admin', resourceID: '' }],
           auth,
-          AuthorizationPrivilege.UPDATE
+          AuthorizationPrivilege.READ
         )
-      ).toBe(true);
+      ).toThrow('Credential rule without criteria');
     });
   });
 
   describe('grantAccessOrFail', () => {
-    it('should return true when access is granted', () => {
-      const actorContext = new ActorContext();
-      actorContext.credentials = [
-        {
-          type: AuthorizationCredential.GLOBAL_ADMIN,
-          resourceID: '',
-        },
-      ];
-
-      const auth: IAuthorizationPolicy = {
-        id: 'auth-1',
-        type: 'test',
-        credentialRules: [
-          {
-            name: 'admin-rule',
-            criterias: [
-              {
-                type: AuthorizationCredential.GLOBAL_ADMIN,
-                resourceID: '',
-              },
-            ],
-            grantedPrivileges: [AuthorizationPrivilege.READ],
-          },
-        ],
-        privilegeRules: [],
-      } as any;
-
-      expect(
-        service.grantAccessOrFail(
-          actorContext,
-          auth,
-          AuthorizationPrivilege.READ,
-          'test'
-        )
-      ).toBe(true);
+    it('returns true when access is granted', () => {
+      const ctx = makeActorContext([{ type: 'global-admin', resourceID: '' }]);
+      const auth = makeAuthorization();
+      const result = service.grantAccessOrFail(
+        ctx,
+        auth,
+        AuthorizationPrivilege.READ,
+        'test'
+      );
+      expect(result).toBe(true);
     });
 
-    it('should throw ForbiddenAuthorizationPolicyException when access denied', () => {
-      const actorContext = new ActorContext();
-      actorContext.actorID = 'user-1';
-      actorContext.credentials = [
-        {
-          type: AuthorizationCredential.GLOBAL_ANONYMOUS,
-          resourceID: '',
-        },
-      ];
-
-      const auth: IAuthorizationPolicy = {
-        id: 'auth-1',
-        type: 'test',
-        credentialRules: [
-          {
-            name: 'admin-rule',
-            criterias: [
-              {
-                type: AuthorizationCredential.GLOBAL_ADMIN,
-                resourceID: '',
-              },
-            ],
-            grantedPrivileges: [AuthorizationPrivilege.READ],
-          },
-        ],
-        privilegeRules: [],
-      } as any;
-
+    it('throws ForbiddenAuthorizationPolicyException when access is denied', () => {
+      const ctx = makeActorContext([{ type: 'other', resourceID: '' }]);
+      const auth = makeAuthorization();
       expect(() =>
         service.grantAccessOrFail(
-          actorContext,
+          ctx,
           auth,
           AuthorizationPrivilege.READ,
           'test'
         )
-      ).toThrow(ForbiddenAuthorizationPolicyException);
+      ).toThrow("unable to grant 'read' privilege");
+    });
+
+    it('throws when authorization is undefined', () => {
+      const ctx = makeActorContext();
+      expect(() =>
+        service.grantAccessOrFail(
+          ctx,
+          undefined,
+          AuthorizationPrivilege.READ,
+          'test'
+        )
+      ).toThrow('Authorization: no definition provided');
     });
   });
 
   describe('getGrantedPrivileges', () => {
-    it('should return all granted privileges from credential rules', () => {
-      const credentials = [
-        {
-          type: AuthorizationCredential.GLOBAL_ADMIN,
-          resourceID: '',
-        },
-      ];
-
-      const auth: IAuthorizationPolicy = {
-        id: 'auth-1',
-        type: 'test',
+    it('returns all privileges from matching credential rules', () => {
+      const credentials = [{ type: 'global-admin', resourceID: '' }];
+      const auth = makeAuthorization({
         credentialRules: [
-          {
-            name: 'admin-rule',
-            criterias: [
-              {
-                type: AuthorizationCredential.GLOBAL_ADMIN,
-                resourceID: '',
-              },
-            ],
+          makeCredentialRule({
             grantedPrivileges: [
               AuthorizationPrivilege.READ,
-              AuthorizationPrivilege.UPDATE,
+              AuthorizationPrivilege.CREATE,
             ],
-          },
+          }),
         ],
-        privilegeRules: [],
-      } as any;
-
+      });
       const result = service.getGrantedPrivileges(credentials, auth);
-
       expect(result).toContain(AuthorizationPrivilege.READ);
-      expect(result).toContain(AuthorizationPrivilege.UPDATE);
+      expect(result).toContain(AuthorizationPrivilege.CREATE);
     });
 
-    it('should include privileges from privilege rules', () => {
-      const credentials = [
-        {
-          type: AuthorizationCredential.GLOBAL_ADMIN,
-          resourceID: '',
-        },
-      ];
-
-      const auth: IAuthorizationPolicy = {
-        id: 'auth-1',
-        type: 'test',
-        credentialRules: [
-          {
-            name: 'admin-rule',
-            criterias: [
-              {
-                type: AuthorizationCredential.GLOBAL_ADMIN,
-                resourceID: '',
-              },
-            ],
-            grantedPrivileges: [AuthorizationPrivilege.READ],
-          },
-        ],
-        privilegeRules: [
-          {
-            name: 'read-grants-update',
-            sourcePrivilege: AuthorizationPrivilege.READ,
-            grantedPrivileges: [AuthorizationPrivilege.DELETE],
-          },
-        ],
-      } as any;
-
+    it('returns empty when no credentials match', () => {
+      const credentials = [{ type: 'unknown', resourceID: '' }];
+      const auth = makeAuthorization();
       const result = service.getGrantedPrivileges(credentials, auth);
+      expect(result).toEqual([]);
+    });
 
+    it('includes privileges from privilege rules', () => {
+      const credentials = [{ type: 'global-admin', resourceID: '' }];
+      const privRule: IAuthorizationPolicyRulePrivilege = {
+        sourcePrivilege: AuthorizationPrivilege.READ,
+        grantedPrivileges: [AuthorizationPrivilege.DELETE],
+        name: 'read-grants-delete',
+      } as IAuthorizationPolicyRulePrivilege;
+      const auth = makeAuthorization({ privilegeRules: [privRule] });
+      const result = service.getGrantedPrivileges(credentials, auth);
       expect(result).toContain(AuthorizationPrivilege.READ);
       expect(result).toContain(AuthorizationPrivilege.DELETE);
     });
 
-    it('should return empty array when no credentials match', () => {
-      const credentials = [
-        {
-          type: AuthorizationCredential.GLOBAL_ANONYMOUS,
-          resourceID: '',
-        },
-      ];
-
-      const auth: IAuthorizationPolicy = {
-        id: 'auth-1',
-        type: 'test',
+    it('deduplicates privileges', () => {
+      const credentials = [{ type: 'global-admin', resourceID: '' }];
+      const auth = makeAuthorization({
         credentialRules: [
-          {
-            name: 'admin-rule',
-            criterias: [
-              {
-                type: AuthorizationCredential.GLOBAL_ADMIN,
-                resourceID: '',
-              },
+          makeCredentialRule({
+            grantedPrivileges: [
+              AuthorizationPrivilege.READ,
+              AuthorizationPrivilege.READ,
             ],
-            grantedPrivileges: [AuthorizationPrivilege.READ],
-          },
+          }),
         ],
-        privilegeRules: [],
-      } as any;
-
+      });
       const result = service.getGrantedPrivileges(credentials, auth);
-
-      expect(result).toEqual([]);
+      const readCount = result.filter(
+        p => p === AuthorizationPrivilege.READ
+      ).length;
+      expect(readCount).toBe(1);
     });
   });
 
   describe('replacer', () => {
-    it('should filter out createdDate, updatedDate, version, and id', () => {
-      expect(service.replacer('createdDate', 'val')).toBeUndefined();
-      expect(service.replacer('updatedDate', 'val')).toBeUndefined();
-      expect(service.replacer('version', 'val')).toBeUndefined();
-      expect(service.replacer('id', 'val')).toBeUndefined();
+    it('removes createdDate, updatedDate, version, id keys', () => {
+      const obj = {
+        type: 'admin',
+        id: '123',
+        createdDate: new Date(),
+        updatedDate: new Date(),
+        version: 1,
+        resourceID: 'res-1',
+      };
+      const result = JSON.parse(JSON.stringify(obj, service.replacer));
+      expect(result.type).toBe('admin');
+      expect(result.resourceID).toBe('res-1');
+      expect(result.id).toBeUndefined();
+      expect(result.createdDate).toBeUndefined();
+      expect(result.updatedDate).toBeUndefined();
+      expect(result.version).toBeUndefined();
     });
+  });
 
-    it('should keep other keys', () => {
-      expect(service.replacer('type', 'admin')).toBe('admin');
-      expect(service.replacer('resourceID', 'res-1')).toBe('res-1');
+  describe('logCredentialCheckFailDetails', () => {
+    it('does not throw', () => {
+      const ctx = makeActorContext([{ type: 'admin', resourceID: '' }]);
+      const auth = makeAuthorization();
+      expect(() =>
+        service.logCredentialCheckFailDetails('some error', ctx, auth)
+      ).not.toThrow();
+    });
+  });
+
+  describe('logActorContext', () => {
+    it('does not throw', () => {
+      const ctx = makeActorContext([{ type: 'admin', resourceID: '' }]);
+      expect(() => service.logActorContext(ctx)).not.toThrow();
     });
   });
 });

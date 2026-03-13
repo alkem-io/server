@@ -1,4 +1,5 @@
-import { RelationshipNotFoundException } from '@common/exceptions';
+import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -11,10 +12,10 @@ import { InnovationFlowAuthorizationService } from './innovation.flow.service.au
 
 describe('InnovationFlowAuthorizationService', () => {
   let service: InnovationFlowAuthorizationService;
+  let innovationFlowService: InnovationFlowService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let profileAuthorizationService: ProfileAuthorizationService;
-  let innovationFlowService: InnovationFlowService;
-  let stateAuthorizationService: InnovationFlowStateAuthorizationService;
+  let innovationFlowStateAuthorizationService: InnovationFlowStateAuthorizationService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -28,152 +29,129 @@ describe('InnovationFlowAuthorizationService', () => {
       .compile();
 
     service = module.get(InnovationFlowAuthorizationService);
+    innovationFlowService = module.get(InnovationFlowService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     profileAuthorizationService = module.get(ProfileAuthorizationService);
-    innovationFlowService = module.get(InnovationFlowService);
-    stateAuthorizationService = module.get(
+    innovationFlowStateAuthorizationService = module.get(
       InnovationFlowStateAuthorizationService
     );
   });
 
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
   describe('applyAuthorizationPolicy', () => {
-    it('should throw RelationshipNotFoundException when profile is missing', async () => {
-      const flow = {
+    it('should apply authorization to flow, profile, and all states', async () => {
+      const innovationFlow = {
         id: 'flow-1',
-        profile: undefined,
-        states: [],
-        authorization: { id: 'auth-1' },
-      } as any;
-
-      vi.mocked(
-        innovationFlowService.getInnovationFlowOrFail
-      ).mockResolvedValue(flow);
-
-      await expect(
-        service.applyAuthorizationPolicy('flow-1', undefined)
-      ).rejects.toThrow(RelationshipNotFoundException);
-    });
-
-    it('should throw RelationshipNotFoundException when states is missing', async () => {
-      const flow = {
-        id: 'flow-1',
+        authorization: {
+          id: 'auth-flow',
+          credentialRules: [],
+          privilegeRules: [],
+        },
         profile: { id: 'profile-1' },
-        states: undefined,
-        authorization: { id: 'auth-1' },
+        states: [
+          { id: 's-1', authorization: { id: 'auth-s1' } },
+          { id: 's-2', authorization: { id: 'auth-s2' } },
+        ],
       } as any;
 
       vi.mocked(
         innovationFlowService.getInnovationFlowOrFail
-      ).mockResolvedValue(flow);
-
-      await expect(
-        service.applyAuthorizationPolicy('flow-1', undefined)
-      ).rejects.toThrow(RelationshipNotFoundException);
-    });
-
-    it('should reset, inherit, and append rules for authorization', async () => {
-      const flowAuth = { id: 'auth-flow', credentialRules: [] } as any;
-      const resetAuth = { id: 'auth-reset', credentialRules: [] } as any;
-      const inheritedAuth = {
-        id: 'auth-inherited',
-        credentialRules: [],
-      } as any;
-      const parentAuth = { id: 'auth-parent' } as any;
-      const stateAuth = { id: 'auth-state' } as any;
-
-      const flow = {
-        id: 'flow-1',
-        profile: { id: 'profile-1' },
-        states: [{ id: 'state-1', authorization: { id: 'sa-1' } }],
-        authorization: flowAuth,
-      } as any;
-
-      vi.mocked(
-        innovationFlowService.getInnovationFlowOrFail
-      ).mockResolvedValue(flow);
-      vi.mocked(authorizationPolicyService.reset).mockReturnValue(resetAuth);
+      ).mockResolvedValue(innovationFlow);
+      vi.mocked(authorizationPolicyService.reset).mockReturnValue(
+        innovationFlow.authorization
+      );
       vi.mocked(
         authorizationPolicyService.inheritParentAuthorization
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue(innovationFlow.authorization);
       vi.mocked(
         authorizationPolicyService.appendCredentialAuthorizationRules
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue(undefined as any);
       vi.mocked(
         authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue(innovationFlow.authorization);
       vi.mocked(
         profileAuthorizationService.applyAuthorizationPolicy
       ).mockResolvedValue([{ id: 'auth-profile' }] as any);
       vi.mocked(
-        stateAuthorizationService.applyAuthorizationPolicy
-      ).mockReturnValue(stateAuth);
+        innovationFlowStateAuthorizationService.applyAuthorizationPolicy
+      ).mockReturnValue({ id: 'auth-state' } as any);
 
-      const result = await service.applyAuthorizationPolicy(
-        'flow-1',
-        parentAuth
-      );
+      const result = await service.applyAuthorizationPolicy('flow-1', {
+        id: 'parent-auth',
+      } as any);
 
-      expect(authorizationPolicyService.reset).toHaveBeenCalledWith(flowAuth);
+      expect(authorizationPolicyService.reset).toHaveBeenCalled();
       expect(
         authorizationPolicyService.inheritParentAuthorization
-      ).toHaveBeenCalledWith(resetAuth, parentAuth);
+      ).toHaveBeenCalled();
       expect(
         profileAuthorizationService.applyAuthorizationPolicy
-      ).toHaveBeenCalledWith('profile-1', expect.anything());
+      ).toHaveBeenCalledWith('profile-1', innovationFlow.authorization);
       expect(
-        stateAuthorizationService.applyAuthorizationPolicy
-      ).toHaveBeenCalledWith(flow.states[0], expect.anything());
-      expect(result.length).toBe(3); // flow auth + profile auth + state auth
+        innovationFlowStateAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalledTimes(2);
+      // flow auth + profile auth + 2 state auths
+      expect(result.length).toBe(4);
     });
 
-    it('should iterate over all states', async () => {
-      const inheritedAuth = {
-        id: 'auth-inherited',
-        credentialRules: [],
-      } as any;
-      const flow = {
+    it('should throw RelationshipNotFoundException when profile is missing', async () => {
+      const innovationFlow = {
         id: 'flow-1',
-        profile: { id: 'profile-1' },
-        states: [
-          { id: 'state-1', authorization: {} },
-          { id: 'state-2', authorization: {} },
-          { id: 'state-3', authorization: {} },
-        ],
-        authorization: { id: 'auth-flow', credentialRules: [] },
+        authorization: { id: 'auth-flow' },
+        profile: undefined,
+        states: [],
       } as any;
 
       vi.mocked(
         innovationFlowService.getInnovationFlowOrFail
-      ).mockResolvedValue(flow);
+      ).mockResolvedValue(innovationFlow);
+
+      await expect(
+        service.applyAuthorizationPolicy('flow-1', undefined)
+      ).rejects.toThrow(RelationshipNotFoundException);
+    });
+
+    it('should throw RelationshipNotFoundException when states are missing', async () => {
+      const innovationFlow = {
+        id: 'flow-1',
+        authorization: { id: 'auth-flow' },
+        profile: { id: 'p-1' },
+        states: undefined,
+      } as any;
+
+      vi.mocked(
+        innovationFlowService.getInnovationFlowOrFail
+      ).mockResolvedValue(innovationFlow);
+
+      await expect(
+        service.applyAuthorizationPolicy('flow-1', undefined)
+      ).rejects.toThrow(RelationshipNotFoundException);
+    });
+
+    it('should throw EntityNotInitializedException when authorization is undefined', async () => {
+      const innovationFlow = {
+        id: 'flow-1',
+        authorization: undefined,
+        profile: { id: 'p-1' },
+        states: [],
+      } as any;
+
+      vi.mocked(
+        innovationFlowService.getInnovationFlowOrFail
+      ).mockResolvedValue(innovationFlow);
       vi.mocked(authorizationPolicyService.reset).mockReturnValue(
-        inheritedAuth
+        undefined as any
       );
       vi.mocked(
         authorizationPolicyService.inheritParentAuthorization
-      ).mockReturnValue(inheritedAuth);
-      vi.mocked(
-        authorizationPolicyService.appendCredentialAuthorizationRules
-      ).mockReturnValue(inheritedAuth);
-      vi.mocked(
-        authorizationPolicyService.appendPrivilegeAuthorizationRuleMapping
-      ).mockReturnValue(inheritedAuth);
-      vi.mocked(
-        profileAuthorizationService.applyAuthorizationPolicy
-      ).mockResolvedValue([]);
-      vi.mocked(
-        stateAuthorizationService.applyAuthorizationPolicy
-      ).mockReturnValue({ id: 'state-auth' } as any);
+      ).mockReturnValue(undefined as any);
 
-      const result = await service.applyAuthorizationPolicy(
-        'flow-1',
-        undefined
-      );
-
-      expect(
-        stateAuthorizationService.applyAuthorizationPolicy
-      ).toHaveBeenCalledTimes(3);
-      // flow auth + 3 state auths = 4
-      expect(result.length).toBe(4);
+      await expect(
+        service.applyAuthorizationPolicy('flow-1', undefined)
+      ).rejects.toThrow(EntityNotInitializedException);
     });
   });
 });

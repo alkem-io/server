@@ -1,258 +1,217 @@
 import { AuthorizationPrivilege } from '@common/enums';
-import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Space } from '@domain/space/space/space.entity';
-import { createMock } from '@golevelup/ts-vitest';
 import { getSpaceRolesForContributorQueryResult } from './get.space.roles.for.contributor.query.result';
-import {
-  type CredentialMap,
-  type CredentialRole,
-} from './group.credentials.by.entity';
+import { CredentialMap } from './group.credentials.by.entity';
 
-function makeSpace(
+const makeSpace = (
   id: string,
-  level: SpaceLevel,
-  displayName: string,
-  levelZeroSpaceID?: string
-): Space {
-  return {
+  opts: {
+    hasAuth?: boolean;
+    levelZeroSpaceID?: string;
+    level?: SpaceLevel;
+  } = {}
+): Space => {
+  const space = {
     id,
     nameID: `name-${id}`,
-    level,
-    levelZeroSpaceID: levelZeroSpaceID ?? id,
+    level: opts.level ?? SpaceLevel.L0,
+    levelZeroSpaceID: opts.levelZeroSpaceID ?? id,
     visibility: SpaceVisibility.ACTIVE,
     about: {
-      profile: {
-        displayName,
-      },
+      profile: { displayName: `Space ${id}` },
     },
-    authorization: { id: `auth-${id}` },
+    authorization: opts.hasAuth !== false ? { id: `auth-${id}` } : undefined,
   } as unknown as Space;
-}
+  return space;
+};
 
-function makeCredentialMap(
-  spaceRoles: Record<string, CredentialRole[]>
-): CredentialMap {
+const makeCredentialMap = (entries?: [string, string[]][]): CredentialMap => {
+  const spacesMap = new Map<string, string[]>(entries ?? []) as any;
   const map: CredentialMap = new Map();
-  const spacesMap = new Map<string, CredentialRole[]>();
-  for (const [spaceId, roles] of Object.entries(spaceRoles)) {
-    spacesMap.set(spaceId, roles);
-  }
-  map.set('spaces', spacesMap);
+  map.set('spaces' as any, spacesMap);
   return map;
-}
+};
 
 describe('getSpaceRolesForContributorQueryResult', () => {
-  let authService: AuthorizationService;
-  const actorContext = { actorID: 'user-1' } as ActorContext;
+  const actorContext = new ActorContext();
+  const mockAuthService = {
+    isAccessGranted: vi.fn(),
+  } as unknown as AuthorizationService;
 
   beforeEach(() => {
-    authService = createMock<AuthorizationService>();
-    (authService.isAccessGranted as any).mockReturnValue(true);
+    vi.clearAllMocks();
   });
 
-  it('should return roles for a single space', () => {
-    const spaces = [makeSpace('s1', SpaceLevel.L0, 'Space 1')];
-    const credMap = makeCredentialMap({
-      s1: [RoleName.MEMBER, RoleName.ADMIN],
-    });
-
-    const results = getSpaceRolesForContributorQueryResult(
-      credMap,
-      spaces,
+  it('should return an empty array when no spaces are provided', () => {
+    const result = getSpaceRolesForContributorQueryResult(
+      makeCredentialMap(),
+      [],
       [],
       actorContext,
-      authService
+      mockAuthService
     );
-
-    expect(results).toHaveLength(1);
-    expect(results[0].spaceID).toBe('s1');
-    expect(results[0].roles).toEqual([RoleName.MEMBER, RoleName.ADMIN]);
-  });
-
-  it('should include subspaces under their parent space', () => {
-    const spaces = [makeSpace('s1', SpaceLevel.L0, 'Space 1')];
-    const subspaces = [
-      makeSpace('sub1', SpaceLevel.L1, 'Subspace 1', 's1'),
-      makeSpace('sub2', SpaceLevel.L1, 'Subspace 2', 's1'),
-    ];
-    const credMap = makeCredentialMap({
-      s1: [RoleName.MEMBER],
-      sub1: [RoleName.MEMBER],
-      sub2: [RoleName.ADMIN],
-    });
-
-    const results = getSpaceRolesForContributorQueryResult(
-      credMap,
-      spaces,
-      subspaces,
-      actorContext,
-      authService
-    );
-
-    expect(results).toHaveLength(1);
-    expect(results[0].subspaces).toHaveLength(2);
-    expect(results[0].subspaces[0].roles).toEqual([RoleName.MEMBER]);
-    expect(results[0].subspaces[1].roles).toEqual([RoleName.ADMIN]);
-  });
-
-  it('should filter out spaces without READ_ABOUT access', () => {
-    const spaces = [
-      makeSpace('s1', SpaceLevel.L0, 'Space 1'),
-      makeSpace('s2', SpaceLevel.L0, 'Space 2'),
-    ];
-    const credMap = makeCredentialMap({
-      s1: [RoleName.MEMBER],
-      s2: [RoleName.MEMBER],
-    });
-
-    (authService.isAccessGranted as any).mockImplementation(
-      (
-        _actorContext: any,
-        authorization: any,
-        _privilege: AuthorizationPrivilege
-      ) => {
-        return authorization.id !== 'auth-s2';
-      }
-    );
-
-    const results = getSpaceRolesForContributorQueryResult(
-      credMap,
-      spaces,
-      [],
-      actorContext,
-      authService
-    );
-
-    expect(results).toHaveLength(1);
-    expect(results[0].spaceID).toBe('s1');
+    expect(result).toEqual([]);
   });
 
   it('should skip spaces without authorization', () => {
-    const spaceNoAuth = makeSpace('s1', SpaceLevel.L0, 'Space 1');
-    (spaceNoAuth as any).authorization = undefined;
-    const credMap = makeCredentialMap({ s1: [RoleName.MEMBER] });
-
-    const results = getSpaceRolesForContributorQueryResult(
-      credMap,
-      [spaceNoAuth],
+    const space = makeSpace('s1', { hasAuth: false });
+    const result = getSpaceRolesForContributorQueryResult(
+      makeCredentialMap(),
+      [space],
       [],
       actorContext,
-      authService
+      mockAuthService
+    );
+    expect(result).toEqual([]);
+  });
+
+  it('should skip spaces where read access is not granted', () => {
+    const space = makeSpace('s1');
+    vi.mocked(mockAuthService.isAccessGranted).mockReturnValue(false);
+
+    const result = getSpaceRolesForContributorQueryResult(
+      makeCredentialMap(),
+      [space],
+      [],
+      actorContext,
+      mockAuthService
+    );
+    expect(result).toEqual([]);
+    expect(mockAuthService.isAccessGranted).toHaveBeenCalledWith(
+      actorContext,
+      space.authorization,
+      AuthorizationPrivilege.READ_ABOUT
+    );
+  });
+
+  it('should return space result with roles when access is granted and no subspaces', () => {
+    const space = makeSpace('s1');
+    vi.mocked(mockAuthService.isAccessGranted).mockReturnValue(true);
+
+    const result = getSpaceRolesForContributorQueryResult(
+      makeCredentialMap([['s1', ['admin', 'member']]]),
+      [space],
+      [],
+      actorContext,
+      mockAuthService
+    );
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('s1');
+    expect(result[0].roles).toEqual(['admin', 'member']);
+    expect(result[0].subspaces).toEqual([]);
+  });
+
+  it('should include subspaces with read access', () => {
+    const space = makeSpace('s1');
+    const subspace = makeSpace('sub1', {
+      levelZeroSpaceID: 's1',
+      level: SpaceLevel.L1,
+    });
+
+    vi.mocked(mockAuthService.isAccessGranted).mockReturnValue(true);
+
+    const result = getSpaceRolesForContributorQueryResult(
+      makeCredentialMap([
+        ['s1', ['admin']],
+        ['sub1', ['member']],
+      ]),
+      [space],
+      [subspace],
+      actorContext,
+      mockAuthService
     );
 
-    // Space without authorization is filtered out (returns undefined from map, then filtered)
-    expect(results).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].subspaces).toHaveLength(1);
+    expect(result[0].subspaces[0].id).toBe('sub1');
+    expect(result[0].subspaces[0].roles).toEqual(['member']);
   });
 
   it('should skip subspaces without authorization', () => {
-    const spaces = [makeSpace('s1', SpaceLevel.L0, 'Space 1')];
-    const subNoAuth = makeSpace('sub1', SpaceLevel.L1, 'Subspace 1', 's1');
-    (subNoAuth as any).authorization = undefined;
-    const credMap = makeCredentialMap({
-      s1: [RoleName.MEMBER],
-      sub1: [RoleName.MEMBER],
+    const space = makeSpace('s1');
+    const subspace = makeSpace('sub1', {
+      hasAuth: false,
+      levelZeroSpaceID: 's1',
+      level: SpaceLevel.L1,
     });
 
-    const results = getSpaceRolesForContributorQueryResult(
-      credMap,
-      spaces,
-      [subNoAuth],
+    vi.mocked(mockAuthService.isAccessGranted).mockReturnValue(true);
+
+    const result = getSpaceRolesForContributorQueryResult(
+      makeCredentialMap(),
+      [space],
+      [subspace],
       actorContext,
-      authService
+      mockAuthService
     );
 
-    expect(results).toHaveLength(1);
-    expect(results[0].subspaces).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].subspaces).toEqual([]);
   });
 
-  it('should skip subspaces without READ_ABOUT access', () => {
-    const spaces = [makeSpace('s1', SpaceLevel.L0, 'Space 1')];
-    const subspaces = [
-      makeSpace('sub1', SpaceLevel.L1, 'Subspace 1', 's1'),
-      makeSpace('sub2', SpaceLevel.L1, 'Subspace 2', 's1'),
-    ];
-    const credMap = makeCredentialMap({
-      s1: [RoleName.MEMBER],
-      sub1: [RoleName.MEMBER],
-      sub2: [RoleName.MEMBER],
+  it('should skip subspaces where read access is not granted', () => {
+    const space = makeSpace('s1');
+    const subspace = makeSpace('sub1', {
+      levelZeroSpaceID: 's1',
+      level: SpaceLevel.L1,
     });
 
-    (authService.isAccessGranted as any).mockImplementation(
-      (
-        _actorContext: any,
-        authorization: any,
-        _privilege: AuthorizationPrivilege
-      ) => {
-        return authorization.id !== 'auth-sub2';
-      }
-    );
+    vi.mocked(mockAuthService.isAccessGranted)
+      .mockReturnValueOnce(true) // space read access
+      .mockReturnValueOnce(false); // subspace read access
 
-    const results = getSpaceRolesForContributorQueryResult(
-      credMap,
-      spaces,
-      subspaces,
+    const result = getSpaceRolesForContributorQueryResult(
+      makeCredentialMap(),
+      [space],
+      [subspace],
       actorContext,
-      authService
+      mockAuthService
     );
 
-    expect(results).toHaveLength(1);
-    expect(results[0].subspaces).toHaveLength(1);
-    expect(results[0].subspaces[0].id).toBe('sub1');
+    expect(result).toHaveLength(1);
+    expect(result[0].subspaces).toEqual([]);
   });
 
-  it('should return empty roles when credential map has no entry', () => {
-    const spaces = [makeSpace('s1', SpaceLevel.L0, 'Space 1')];
-    const credMap = makeCredentialMap({});
+  it('should default to empty roles when credential map has no entry for a space', () => {
+    const space = makeSpace('s1');
+    vi.mocked(mockAuthService.isAccessGranted).mockReturnValue(true);
 
-    const results = getSpaceRolesForContributorQueryResult(
-      credMap,
-      spaces,
+    const emptyMap: CredentialMap = new Map();
+
+    const result = getSpaceRolesForContributorQueryResult(
+      emptyMap,
+      [space],
       [],
       actorContext,
-      authService
+      mockAuthService
     );
 
-    expect(results).toHaveLength(1);
-    expect(results[0].roles).toEqual([]);
+    expect(result).toHaveLength(1);
+    expect(result[0].roles).toEqual([]);
   });
 
-  it('should return empty array when no spaces provided', () => {
-    const credMap = makeCredentialMap({});
+  it('should handle multiple spaces with mixed access', () => {
+    const space1 = makeSpace('s1');
+    const space2 = makeSpace('s2');
+    const space3 = makeSpace('s3', { hasAuth: false });
 
-    const results = getSpaceRolesForContributorQueryResult(
-      credMap,
-      [],
+    vi.mocked(mockAuthService.isAccessGranted)
+      .mockReturnValueOnce(true) // space1 granted
+      .mockReturnValueOnce(false); // space2 denied
+
+    const result = getSpaceRolesForContributorQueryResult(
+      makeCredentialMap(),
+      [space1, space2, space3],
       [],
       actorContext,
-      authService
+      mockAuthService
     );
 
-    expect(results).toHaveLength(0);
-  });
-
-  it('should handle space with no subspaces in its group', () => {
-    const spaces = [makeSpace('s1', SpaceLevel.L0, 'Space 1')];
-    const subspaces = [
-      makeSpace('sub1', SpaceLevel.L1, 'Subspace 1', 'other-space'),
-    ];
-    const credMap = makeCredentialMap({
-      s1: [RoleName.MEMBER],
-      sub1: [RoleName.MEMBER],
-    });
-
-    const results = getSpaceRolesForContributorQueryResult(
-      credMap,
-      spaces,
-      subspaces,
-      actorContext,
-      authService
-    );
-
-    expect(results).toHaveLength(1);
-    expect(results[0].subspaces).toHaveLength(0);
+    expect(result).toHaveLength(1);
+    expect(result[0].id).toBe('s1');
   });
 });

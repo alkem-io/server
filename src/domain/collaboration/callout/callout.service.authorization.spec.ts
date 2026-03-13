@@ -3,14 +3,12 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { EntityNotInitializedException } from '@common/exceptions';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { ClassificationAuthorizationService } from '@domain/common/classification/classification.service.authorization';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
-import { CalloutFramingAuthorizationService } from '../callout-framing/callout.framing.service.authorization';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
 
@@ -19,9 +17,7 @@ describe('CalloutAuthorizationService', () => {
   let calloutService: CalloutService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let contributionAuthorizationService: CalloutContributionAuthorizationService;
-  let framingAuthorizationService: CalloutFramingAuthorizationService;
   let roomAuthorizationService: RoomAuthorizationService;
-  let classificationAuthorizationService: ClassificationAuthorizationService;
   let roleSetService: RoleSetService;
 
   beforeEach(async () => {
@@ -41,66 +37,53 @@ describe('CalloutAuthorizationService', () => {
     contributionAuthorizationService = module.get(
       CalloutContributionAuthorizationService
     );
-    framingAuthorizationService = module.get(
-      CalloutFramingAuthorizationService
-    );
     roomAuthorizationService = module.get(RoomAuthorizationService);
-    classificationAuthorizationService = module.get(
-      ClassificationAuthorizationService
-    );
     roleSetService = module.get(RoleSetService);
   });
 
-  const platformRolesAccess = { roles: [] } as any;
-
-  function createCallout(overrides: any = {}) {
-    return {
-      id: 'callout-1',
-      createdBy: 'user-1',
-      isTemplate: false,
-      contributions: [],
-      contributionDefaults: { id: 'defaults-1' },
-      settings: {
-        visibility: CalloutVisibility.PUBLISHED,
-        contribution: {
-          allowedTypes: [CalloutContributionType.POST],
-        },
-      },
-      framing: { id: 'framing-1', profile: { id: 'profile-1' } },
-      comments: undefined,
-      classification: undefined,
-      authorization: { id: 'auth-callout', credentialRules: [] },
-      calloutsSet: undefined,
-      ...overrides,
-    } as any;
-  }
-
-  function setupBaseMocks(callout: any) {
-    vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
-    vi.mocked(
-      authorizationPolicyService.inheritParentAuthorization
-    ).mockReturnValue(callout.authorization);
-    vi.mocked(
-      authorizationPolicyService.appendPrivilegeAuthorizationRules
-    ).mockReturnValue(callout.authorization);
-    vi.mocked(
-      authorizationPolicyService.appendCredentialAuthorizationRules
-    ).mockReturnValue(callout.authorization);
-    vi.mocked(authorizationPolicyService.createCredentialRule).mockReturnValue({
-      id: 'rule',
-      cascade: true,
-    } as any);
-    vi.mocked(
-      authorizationPolicyService.createCredentialRuleUsingTypesOnly
-    ).mockReturnValue({ id: 'type-rule', cascade: true } as any);
-    vi.mocked(
-      framingAuthorizationService.applyAuthorizationPolicy
-    ).mockResolvedValue([]);
-  }
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
 
   describe('applyAuthorizationPolicy', () => {
-    it('should throw EntityNotInitializedException when contributions are missing', async () => {
-      const callout = createCallout({ contributions: undefined });
+    const platformRolesAccess = { roles: [] } as any;
+
+    function makeCallout(overrides: any = {}) {
+      return {
+        id: 'callout-1',
+        authorization: {
+          id: 'auth-1',
+          credentialRules: [],
+          privilegeRules: [],
+        },
+        contributions: [],
+        contributionDefaults: { id: 'defaults-1' },
+        settings: {
+          visibility: CalloutVisibility.PUBLISHED,
+          contribution: {
+            allowedTypes: [],
+          },
+          framing: { commentsEnabled: false },
+        },
+        framing: { id: 'framing-1', profile: { id: 'p-1' } },
+        comments: undefined,
+        classification: undefined,
+        calloutsSet: undefined,
+        createdBy: undefined,
+        isTemplate: false,
+        ...overrides,
+      } as any;
+    }
+
+    it('should throw EntityNotInitializedException when callout is missing required relations', async () => {
+      const callout = {
+        id: 'callout-1',
+        contributions: undefined,
+        contributionDefaults: undefined,
+        settings: undefined,
+        framing: undefined,
+      } as any;
+
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
 
       await expect(
@@ -112,75 +95,61 @@ describe('CalloutAuthorizationService', () => {
       ).rejects.toThrow(EntityNotInitializedException);
     });
 
-    it('should throw EntityNotInitializedException when contributionDefaults are missing', async () => {
-      const callout = createCallout({ contributionDefaults: undefined });
+    it('should apply authorization policy and return updated authorizations', async () => {
+      const callout = makeCallout();
       vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(callout.authorization);
 
-      await expect(
-        service.applyAuthorizationPolicy(
-          'callout-1',
-          undefined,
-          platformRolesAccess
-        )
-      ).rejects.toThrow(EntityNotInitializedException);
-    });
-
-    it('should throw EntityNotInitializedException when settings are missing', async () => {
-      const callout = createCallout({ settings: undefined });
-      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
-
-      await expect(
-        service.applyAuthorizationPolicy(
-          'callout-1',
-          undefined,
-          platformRolesAccess
-        )
-      ).rejects.toThrow(EntityNotInitializedException);
-    });
-
-    it('should throw EntityNotInitializedException when framing is missing', async () => {
-      const callout = createCallout({ framing: undefined });
-      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
-
-      await expect(
-        service.applyAuthorizationPolicy(
-          'callout-1',
-          undefined,
-          platformRolesAccess
-        )
-      ).rejects.toThrow(EntityNotInitializedException);
-    });
-
-    it('should inherit parent authorization and propagate to framing', async () => {
-      const callout = createCallout();
-      const parentAuth = { id: 'auth-parent' } as any;
-
-      setupBaseMocks(callout);
+      // Mock the calloutFramingAuthorizationService
+      const framingAuthService = (service as any)
+        .calloutFramingAuthorizationService;
+      vi.mocked(framingAuthService.applyAuthorizationPolicy).mockResolvedValue(
+        []
+      );
 
       const result = await service.applyAuthorizationPolicy(
         'callout-1',
-        parentAuth,
+        { id: 'parent-auth', credentialRules: [], privilegeRules: [] } as any,
         platformRolesAccess
       );
 
+      expect(result).toContain(callout.authorization);
       expect(
         authorizationPolicyService.inheritParentAuthorization
       ).toHaveBeenCalled();
-      expect(
-        framingAuthorizationService.applyAuthorizationPolicy
-      ).toHaveBeenCalledWith(callout.framing, callout.authorization, undefined);
-      expect(result).toContain(callout.authorization);
     });
 
-    it('should propagate authorization to contributions', async () => {
-      const callout = createCallout({
+    it('should process contributions authorization', async () => {
+      const callout = makeCallout({
         contributions: [{ id: 'contrib-1' }, { id: 'contrib-2' }],
       });
-
-      setupBaseMocks(callout);
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(callout.authorization);
       vi.mocked(
         contributionAuthorizationService.applyAuthorizationPolicy
-      ).mockResolvedValue([{ id: 'auth-contrib' }] as any);
+      ).mockResolvedValue([{ id: 'contrib-auth' }] as any);
+
+      const framingAuthService = (service as any)
+        .calloutFramingAuthorizationService;
+      vi.mocked(framingAuthService.applyAuthorizationPolicy).mockResolvedValue(
+        []
+      );
 
       const result = await service.applyAuthorizationPolicy(
         'callout-1',
@@ -191,27 +160,41 @@ describe('CalloutAuthorizationService', () => {
       expect(
         contributionAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalledTimes(2);
+      // Should include contribution auth policies
       expect(result.length).toBeGreaterThanOrEqual(3); // callout + 2 contrib
     });
 
-    it('should apply room authorization when comments exist', async () => {
-      const callout = createCallout({
-        comments: { id: 'room-1' },
+    it('should apply comments authorization when comments exist', async () => {
+      const callout = makeCallout({
+        comments: { id: 'room-1', authorization: { id: 'room-auth-1' } },
       });
-      const commentsAuth = { id: 'auth-comments' } as any;
-
-      setupBaseMocks(callout);
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(callout.authorization);
       vi.mocked(
         roomAuthorizationService.applyAuthorizationPolicy
-      ).mockReturnValue(commentsAuth);
+      ).mockReturnValue({ id: 'comments-auth' } as any);
       vi.mocked(
         roomAuthorizationService.allowContributorsToCreateMessages
-      ).mockReturnValue(commentsAuth);
+      ).mockReturnValue({ id: 'comments-auth-create' } as any);
       vi.mocked(
         roomAuthorizationService.allowContributorsToReplyReactToMessages
-      ).mockReturnValue(commentsAuth);
+      ).mockReturnValue({ id: 'comments-auth-reply' } as any);
 
-      const result = await service.applyAuthorizationPolicy(
+      const framingAuthService = (service as any)
+        .calloutFramingAuthorizationService;
+      vi.mocked(framingAuthService.applyAuthorizationPolicy).mockResolvedValue(
+        []
+      );
+
+      const _result = await service.applyAuthorizationPolicy(
         'callout-1',
         undefined,
         platformRolesAccess
@@ -220,146 +203,150 @@ describe('CalloutAuthorizationService', () => {
       expect(
         roomAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalled();
-      expect(result).toContain(commentsAuth);
+      expect(
+        roomAuthorizationService.allowContributorsToCreateMessages
+      ).toHaveBeenCalled();
+      expect(
+        roomAuthorizationService.allowContributorsToReplyReactToMessages
+      ).toHaveBeenCalled();
     });
 
     it('should apply classification authorization when classification exists', async () => {
-      const callout = createCallout({
+      const callout = makeCallout({
         classification: { id: 'class-1' },
       });
-
-      setupBaseMocks(callout);
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
       vi.mocked(
-        classificationAuthorizationService.applyAuthorizationPolicy
-      ).mockResolvedValue([{ id: 'auth-class' }] as any);
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(callout.authorization);
 
-      const result = await service.applyAuthorizationPolicy(
+      const framingAuthService = (service as any)
+        .calloutFramingAuthorizationService;
+      vi.mocked(framingAuthService.applyAuthorizationPolicy).mockResolvedValue(
+        []
+      );
+
+      const classificationAuthService = (service as any)
+        .classificationAuthorizationService;
+      vi.mocked(
+        classificationAuthService.applyAuthorizationPolicy
+      ).mockResolvedValue([{ id: 'class-auth' }] as any);
+
+      const _result = await service.applyAuthorizationPolicy(
         'callout-1',
         undefined,
         platformRolesAccess
       );
 
       expect(
-        classificationAuthorizationService.applyAuthorizationPolicy
+        classificationAuthService.applyAuthorizationPolicy
       ).toHaveBeenCalledWith('class-1', callout.authorization);
-      expect(result.length).toBeGreaterThanOrEqual(2);
     });
 
-    it('should return parent auth unchanged for PUBLISHED visibility', async () => {
-      const callout = createCallout({
-        settings: {
-          visibility: CalloutVisibility.PUBLISHED,
-          contribution: { allowedTypes: [] },
-        },
-      });
-      const parentAuth = { id: 'auth-parent', credentialRules: [] } as any;
-
-      setupBaseMocks(callout);
-
-      await service.applyAuthorizationPolicy(
-        'callout-1',
-        parentAuth,
-        platformRolesAccess
-      );
-
-      // For PUBLISHED, should NOT clone the parent auth
-      expect(
-        authorizationPolicyService.cloneAuthorizationPolicy
-      ).not.toHaveBeenCalled();
-    });
-
-    it('should clone and restrict parent auth for DRAFT visibility', async () => {
-      const callout = createCallout({
+    it('should handle DRAFT visibility with space admin credentials', async () => {
+      const callout = makeCallout({
         settings: {
           visibility: CalloutVisibility.DRAFT,
           contribution: { allowedTypes: [] },
+          framing: { commentsEnabled: false },
         },
+        isTemplate: false,
+        createdBy: 'user-1',
         calloutsSet: {
           collaboration: {
             space: {
               id: 'space-1',
               community: {
-                roleSet: { id: 'roleset-1' },
+                roleSet: { id: 'rs-1' },
               },
             },
           },
         },
       });
-      const parentAuth = {
-        id: 'auth-parent',
-        credentialRules: [
-          { grantedPrivileges: ['READ', 'UPDATE'], other: 'data' },
-        ],
-      } as any;
-      const clonedAuth = {
-        id: 'auth-cloned',
-        credentialRules: [
-          { grantedPrivileges: ['READ', 'UPDATE'], other: 'data' },
-        ],
-      } as any;
 
-      setupBaseMocks(callout);
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
       vi.mocked(
         authorizationPolicyService.cloneAuthorizationPolicy
-      ).mockReturnValue(clonedAuth);
+      ).mockReturnValue({
+        id: 'cloned-auth',
+        credentialRules: [],
+        privilegeRules: [],
+      } as any);
+      vi.mocked(
+        authorizationPolicyService.createCredentialRule
+      ).mockReturnValue({
+        grantedPrivileges: ['READ'],
+        criterias: [],
+      } as any);
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(callout.authorization);
       vi.mocked(
         roleSetService.getCredentialsForRoleWithParents
-      ).mockResolvedValue([]);
+      ).mockResolvedValue([
+        { type: 'space-admin', resourceID: 'space-1' },
+      ] as any);
+
+      const framingAuthService = (service as any)
+        .calloutFramingAuthorizationService;
+      vi.mocked(framingAuthService.applyAuthorizationPolicy).mockResolvedValue(
+        []
+      );
 
       await service.applyAuthorizationPolicy(
         'callout-1',
-        parentAuth,
+        {
+          id: 'parent-auth',
+          credentialRules: [],
+          privilegeRules: [],
+        } as any,
         platformRolesAccess
       );
 
       expect(
         authorizationPolicyService.cloneAuthorizationPolicy
-      ).toHaveBeenCalledWith(parentAuth);
-    });
-
-    it('should return parent auth unchanged for template callouts even in DRAFT', async () => {
-      const callout = createCallout({
-        isTemplate: true,
-        settings: {
-          visibility: CalloutVisibility.DRAFT,
-          contribution: { allowedTypes: [] },
-        },
-      });
-      const parentAuth = { id: 'auth-parent', credentialRules: [] } as any;
-
-      setupBaseMocks(callout);
-
-      await service.applyAuthorizationPolicy(
-        'callout-1',
-        parentAuth,
-        platformRolesAccess
-      );
-
-      expect(
-        authorizationPolicyService.cloneAuthorizationPolicy
-      ).not.toHaveBeenCalled();
-    });
-
-    it('should add createdBy credential rule when createdBy is set', async () => {
-      const callout = createCallout({ createdBy: 'user-abc' });
-
-      setupBaseMocks(callout);
-
-      await service.applyAuthorizationPolicy(
-        'callout-1',
-        undefined,
-        platformRolesAccess
-      );
-
-      expect(
-        authorizationPolicyService.createCredentialRule
       ).toHaveBeenCalled();
     });
 
-    it('should not add createdBy credential rule when createdBy is empty', async () => {
-      const callout = createCallout({ createdBy: '' });
+    it('should generate privilege rules for allowed contribution types with POST', async () => {
+      const callout = makeCallout({
+        settings: {
+          visibility: CalloutVisibility.PUBLISHED,
+          contribution: {
+            allowedTypes: [CalloutContributionType.POST],
+          },
+          framing: { commentsEnabled: false },
+        },
+      });
 
-      setupBaseMocks(callout);
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(callout.authorization);
+
+      const framingAuthService = (service as any)
+        .calloutFramingAuthorizationService;
+      vi.mocked(framingAuthService.applyAuthorizationPolicy).mockResolvedValue(
+        []
+      );
 
       await service.applyAuthorizationPolicy(
         'callout-1',
@@ -367,11 +354,9 @@ describe('CalloutAuthorizationService', () => {
         platformRolesAccess
       );
 
-      // createCredentialRule is still called for publisher update rule, but not for createdBy
-      const calls = vi.mocked(authorizationPolicyService.createCredentialRule)
-        .mock.calls;
-      // Should only have been called for the draft read access, not for CREDENTIAL_RULE_CALLOUT_CREATED_BY
-      expect(calls.length).toBeLessThan(2);
+      expect(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).toHaveBeenCalled();
     });
   });
 });

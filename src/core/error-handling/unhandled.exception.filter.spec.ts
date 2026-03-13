@@ -1,135 +1,145 @@
+import { AlkemioErrorStatus } from '@common/enums';
+import { LoggerService } from '@nestjs/common';
+import { Test, TestingModule } from '@nestjs/testing';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { GraphQLError } from 'graphql';
-import { vi } from 'vitest';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { UnhandledExceptionFilter } from './unhandled.exception.filter';
 
 describe('UnhandledExceptionFilter', () => {
   let filter: UnhandledExceptionFilter;
-  let mockLogger: any;
+  let logger: LoggerService;
 
-  beforeEach(() => {
-    mockLogger = {
-      error: vi.fn(),
-      warn: vi.fn(),
-      verbose: vi.fn(),
-    };
-    filter = new UnhandledExceptionFilter(mockLogger);
+  beforeEach(async () => {
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [UnhandledExceptionFilter, MockWinstonProvider],
+    }).compile();
+
+    filter = module.get(UnhandledExceptionFilter);
+    logger = module.get(WINSTON_MODULE_NEST_PROVIDER);
   });
 
   it('should be defined', () => {
     expect(filter).toBeDefined();
   });
 
-  describe('catch - HTTP context', () => {
-    it('should respond with 500 status in HTTP context', () => {
+  const createMockHost = (contextType: string) => {
+    const mockResponse = {
+      status: vi.fn().mockReturnThis(),
+      json: vi.fn(),
+    };
+    return {
+      getType: vi.fn().mockReturnValue(contextType),
+      switchToHttp: vi.fn().mockReturnValue({
+        getResponse: vi.fn().mockReturnValue(mockResponse),
+      }),
+      mockResponse,
+    };
+  };
+
+  describe('catch - http context', () => {
+    it('should log the error and respond with 500 in http context', () => {
+      const error = new Error('test error');
+      const host = createMockHost('http');
+
+      filter.catch(error, host as any);
+
+      expect(logger.error).toHaveBeenCalledOnce();
+      expect(host.switchToHttp).toHaveBeenCalled();
+      expect(host.mockResponse.status).toHaveBeenCalledWith(500);
+      expect(host.mockResponse.json).toHaveBeenCalledWith(
+        expect.objectContaining({
+          statusCode: 500,
+          errorId: expect.any(String),
+        })
+      );
+    });
+
+    it('should include error details in non-production mode', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
 
-      const jsonFn = vi.fn();
-      const statusFn = vi.fn().mockReturnValue({ json: jsonFn });
-      const exception = new Error('Unexpected failure');
+      const error = new Error('dev error');
+      error.name = 'TestError';
+      const host = createMockHost('http');
 
-      const host = {
-        getType: () => 'http',
-        switchToHttp: () => ({
-          getResponse: () => ({ status: statusFn }),
-        }),
-      } as any;
+      filter.catch(error, host as any);
 
-      filter.catch(exception, host);
-
-      expect(mockLogger.error).toHaveBeenCalled();
-      expect(statusFn).toHaveBeenCalledWith(500);
-      expect(jsonFn).toHaveBeenCalledWith(
-        expect.objectContaining({
-          statusCode: 500,
-          message: 'Unexpected failure',
-        })
-      );
+      const jsonArg = host.mockResponse.json.mock.calls[0][0];
+      expect(jsonArg.name).toBe('TestError');
+      expect(jsonArg.message).toBe('dev error');
+      expect(jsonArg.stack).toBeDefined();
 
       process.env.NODE_ENV = originalEnv;
     });
 
-    it('should hide details in production for HTTP context', () => {
+    it('should hide error details in production mode', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
 
-      const jsonFn = vi.fn();
-      const statusFn = vi.fn().mockReturnValue({ json: jsonFn });
-      const exception = new Error('Secret error');
+      const error = new Error('secret error');
+      const host = createMockHost('http');
 
-      const host = {
-        getType: () => 'http',
-        switchToHttp: () => ({
-          getResponse: () => ({ status: statusFn }),
-        }),
-      } as any;
+      filter.catch(error, host as any);
 
-      filter.catch(exception, host);
-
-      const jsonArg = jsonFn.mock.calls[0][0];
-      expect(jsonArg.message).toBe('Internal Server Error');
+      const jsonArg = host.mockResponse.json.mock.calls[0][0];
       expect(jsonArg.name).toBeUndefined();
+      expect(jsonArg.message).toBe('Internal Server Error');
       expect(jsonArg.stack).toBeUndefined();
 
       process.env.NODE_ENV = originalEnv;
     });
   });
 
-  describe('catch - GraphQL context', () => {
-    it('should return GraphQLError in non-production GraphQL context', () => {
+  describe('catch - graphql context', () => {
+    it('should return GraphQLError with original error in non-production', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'development';
 
-      const exception = new Error('GraphQL failure');
+      const error = new Error('graphql error');
+      const host = createMockHost('graphql');
 
-      const host = {
-        getType: () => 'graphql',
-        switchToHttp: vi.fn(),
-      } as any;
-
-      const result = filter.catch(exception, host);
+      const result = filter.catch(error, host as any);
 
       expect(result).toBeInstanceOf(GraphQLError);
-      expect((result as GraphQLError).message).toBe('GraphQL failure');
-      expect((result as GraphQLError).extensions?.errorId).toBeDefined();
+      expect((result as GraphQLError).message).toBe('graphql error');
+      expect((result as GraphQLError).extensions.code).toBe(
+        AlkemioErrorStatus.UNSPECIFIED
+      );
+      expect((result as GraphQLError).extensions.errorId).toBeDefined();
+      expect((result as GraphQLError).originalError).toBe(error);
 
       process.env.NODE_ENV = originalEnv;
     });
 
-    it('should return sanitized GraphQLError in production', () => {
+    it('should return GraphQLError without original error in production', () => {
       const originalEnv = process.env.NODE_ENV;
       process.env.NODE_ENV = 'production';
 
-      const exception = new Error('Secret error');
+      const error = new Error('secret graphql error');
+      const host = createMockHost('graphql');
 
-      const host = {
-        getType: () => 'graphql',
-        switchToHttp: vi.fn(),
-      } as any;
-
-      const result = filter.catch(exception, host);
+      const result = filter.catch(error, host as any);
 
       expect(result).toBeInstanceOf(GraphQLError);
-      // In production, originalError should not be included
+      expect((result as GraphQLError).message).toBe('secret graphql error');
+      expect((result as GraphQLError).extensions.code).toBe(
+        AlkemioErrorStatus.UNSPECIFIED
+      );
       expect((result as GraphQLError).originalError).toBeUndefined();
 
       process.env.NODE_ENV = originalEnv;
     });
   });
 
-  describe('catch - other context', () => {
+  describe('catch - unknown context', () => {
     it('should return the exception for unknown context types', () => {
-      const exception = new Error('RPC error');
+      const error = new Error('rpc error');
+      const host = createMockHost('rpc');
 
-      const host = {
-        getType: () => 'rpc',
-        switchToHttp: vi.fn(),
-      } as any;
+      const result = filter.catch(error, host as any);
 
-      const result = filter.catch(exception, host);
-
-      expect(result).toBe(exception);
-      expect(mockLogger.error).toHaveBeenCalled();
+      expect(result).toBe(error);
     });
   });
 });

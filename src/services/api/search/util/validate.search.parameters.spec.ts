@@ -1,104 +1,115 @@
-import { ValidationException } from '@common/exceptions';
+import { SearchCategory } from '../search.category';
 import { validateSearchParameters } from './validate.search.parameters';
 
 describe('validateSearchParameters', () => {
-  const defaultOptions = { maxSearchResults: 100 };
+  const validationOptions = { maxSearchResults: 50 };
 
-  it('should pass validation with valid parameters', () => {
+  it('should pass with valid parameters', () => {
     expect(() =>
       validateSearchParameters(
-        { terms: ['test'], tagsetNames: [], filters: [] } as any,
-        defaultOptions
+        {
+          terms: ['hello'],
+          filters: [{ category: SearchCategory.SPACES, size: 5 }],
+        } as any,
+        validationOptions
       )
     ).not.toThrow();
   });
 
-  it('should throw when terms exceed the limit of 10', () => {
+  it('should throw when terms exceed limit', () => {
     const terms = Array.from({ length: 11 }, (_, i) => `term${i}`);
     expect(() =>
-      validateSearchParameters({ terms, filters: [] } as any, defaultOptions)
-    ).toThrow(ValidationException);
+      validateSearchParameters({ terms, filters: [] } as any, validationOptions)
+    ).toThrow('Maximum number of search terms is 10');
   });
 
   it('should allow exactly 10 terms', () => {
     const terms = Array.from({ length: 10 }, (_, i) => `term${i}`);
     expect(() =>
-      validateSearchParameters({ terms, filters: [] } as any, defaultOptions)
+      validateSearchParameters({ terms, filters: [] } as any, validationOptions)
     ).not.toThrow();
   });
 
-  it('should throw when tagsetNames exceed the limit of 2', () => {
-    expect(() =>
-      validateSearchParameters(
-        { terms: ['a'], tagsetNames: ['a', 'b', 'c'], filters: [] } as any,
-        defaultOptions
-      )
-    ).toThrow(ValidationException);
-  });
-
-  it('should allow exactly 2 tagsetNames', () => {
-    expect(() =>
-      validateSearchParameters(
-        { terms: ['a'], tagsetNames: ['a', 'b'], filters: [] } as any,
-        defaultOptions
-      )
-    ).not.toThrow();
-  });
-
-  it('should throw when filter size is negative', () => {
+  it('should throw when tagsetNames exceed limit', () => {
     expect(() =>
       validateSearchParameters(
         {
           terms: ['a'],
-          filters: [{ size: -1, category: 'spaces' }],
+          tagsetNames: ['t1', 't2', 't3'],
+          filters: [],
         } as any,
-        defaultOptions
+        validationOptions
       )
-    ).toThrow(ValidationException);
+    ).toThrow('Maximum number of tagset names is 2');
   });
 
-  it('should throw when total filter sizes exceed maxSearchResults', () => {
+  it('should allow exactly 2 tagset names', () => {
     expect(() =>
       validateSearchParameters(
         {
           terms: ['a'],
-          filters: [
-            { size: 60, category: 'spaces' },
-            { size: 50, category: 'contributors' },
-          ],
+          tagsetNames: ['t1', 't2'],
+          filters: [],
         } as any,
-        { maxSearchResults: 100 }
+        validationOptions
       )
-    ).toThrow(ValidationException);
+    ).not.toThrow();
   });
 
-  it('should pass when total filter sizes equal maxSearchResults', () => {
+  it('should throw when size is negative', () => {
+    expect(() =>
+      validateSearchParameters(
+        {
+          terms: ['a'],
+          filters: [{ category: SearchCategory.SPACES, size: -1 }],
+        } as any,
+        validationOptions
+      )
+    ).toThrow('Size cannot be a negative number');
+  });
+
+  it('should throw when total size exceeds max search results', () => {
     expect(() =>
       validateSearchParameters(
         {
           terms: ['a'],
           filters: [
-            { size: 50, category: 'spaces' },
-            { size: 50, category: 'contributors' },
+            { category: SearchCategory.SPACES, size: 30 },
+            { category: SearchCategory.CONTRIBUTORS, size: 25 },
           ],
         } as any,
-        { maxSearchResults: 100 }
+        validationOptions
       )
-    ).not.toThrow();
+    ).toThrow('cannot exceed the maximum allowed 50');
   });
 
-  it('should handle missing filters gracefully', () => {
-    expect(() =>
-      validateSearchParameters({ terms: ['a'] } as any, defaultOptions)
-    ).not.toThrow();
-  });
-
-  it('should handle undefined tagsetNames', () => {
+  it('should allow total size equal to max', () => {
     expect(() =>
       validateSearchParameters(
-        { terms: ['a'], tagsetNames: undefined, filters: [] } as any,
-        defaultOptions
+        {
+          terms: ['a'],
+          filters: [
+            { category: SearchCategory.SPACES, size: 25 },
+            { category: SearchCategory.CONTRIBUTORS, size: 25 },
+          ],
+        } as any,
+        validationOptions
       )
+    ).not.toThrow();
+  });
+
+  it('should pass with no tagsetNames', () => {
+    expect(() =>
+      validateSearchParameters(
+        { terms: ['a'], filters: [] } as any,
+        validationOptions
+      )
+    ).not.toThrow();
+  });
+
+  it('should pass with no filters (defaults to empty)', () => {
+    expect(() =>
+      validateSearchParameters({ terms: ['a'] } as any, validationOptions)
     ).not.toThrow();
   });
 });

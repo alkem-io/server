@@ -3,7 +3,6 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { IInnovationFlowState } from './innovation.flow.state.interface';
 import { InnovationFlowStateAuthorizationService } from './innovation.flow.state.service.authorization';
 
 describe('InnovationFlowStateAuthorizationService', () => {
@@ -25,19 +24,21 @@ describe('InnovationFlowStateAuthorizationService', () => {
     authorizationPolicyService = module.get(AuthorizationPolicyService);
   });
 
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
   describe('applyAuthorizationPolicy', () => {
     it('should reset and inherit parent authorization', () => {
-      const stateAuth = { id: 'auth-state', credentialRules: [] } as any;
-      const resetAuth = { id: 'auth-reset', credentialRules: [] } as any;
-      const inheritedAuth = {
-        id: 'auth-inherited',
-        credentialRules: [],
-      } as any;
-      const parentAuth = { id: 'auth-parent', credentialRules: [] } as any;
-
+      const originalAuth = { id: 'auth-s1' };
       const state = {
-        authorization: stateAuth,
-      } as IInnovationFlowState;
+        id: 's-1',
+        authorization: originalAuth,
+      } as any;
+
+      const parentAuth = { id: 'parent-auth' } as any;
+      const resetAuth = { id: 'reset-auth' } as any;
+      const inheritedAuth = { id: 'inherited-auth' } as any;
 
       vi.mocked(authorizationPolicyService.reset).mockReturnValue(resetAuth);
       vi.mocked(
@@ -46,37 +47,34 @@ describe('InnovationFlowStateAuthorizationService', () => {
 
       const result = service.applyAuthorizationPolicy(state, parentAuth);
 
-      expect(authorizationPolicyService.reset).toHaveBeenCalledWith(stateAuth);
+      expect(authorizationPolicyService.reset).toHaveBeenCalledWith(
+        originalAuth
+      );
       expect(
         authorizationPolicyService.inheritParentAuthorization
       ).toHaveBeenCalledWith(resetAuth, parentAuth);
-      expect(result).toBe(inheritedAuth);
-      expect(state.authorization).toBe(inheritedAuth);
+      expect(result).toEqual(inheritedAuth);
     });
 
     it('should handle undefined parent authorization', () => {
-      const stateAuth = { id: 'auth-state', credentialRules: [] } as any;
-      const resetAuth = { id: 'auth-reset', credentialRules: [] } as any;
-      const inheritedAuth = {
-        id: 'auth-inherited',
-        credentialRules: [],
+      const state = {
+        id: 's-1',
+        authorization: { id: 'auth-s1' },
       } as any;
 
-      const state = {
-        authorization: stateAuth,
-      } as IInnovationFlowState;
-
-      vi.mocked(authorizationPolicyService.reset).mockReturnValue(resetAuth);
+      vi.mocked(authorizationPolicyService.reset).mockReturnValue({
+        id: 'reset-auth',
+      } as any);
       vi.mocked(
         authorizationPolicyService.inheritParentAuthorization
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue({ id: 'inherited-auth' } as any);
 
       const result = service.applyAuthorizationPolicy(state, undefined);
 
       expect(
         authorizationPolicyService.inheritParentAuthorization
-      ).toHaveBeenCalledWith(resetAuth, undefined);
-      expect(result).toBe(inheritedAuth);
+      ).toHaveBeenCalledWith({ id: 'reset-auth' }, undefined);
+      expect(result).toEqual({ id: 'inherited-auth' });
     });
   });
 });

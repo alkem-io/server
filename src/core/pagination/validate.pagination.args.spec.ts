@@ -1,78 +1,135 @@
-import { PaginationArgs } from './pagination.args';
 import { tryValidateArgs } from './validate.pagination.args';
 
 describe('tryValidateArgs', () => {
-  it('should return true for valid forward pagination', () => {
-    const args: PaginationArgs = { first: 10 };
-    expect(tryValidateArgs(args)).toBe(true);
+  it('returns true for empty pagination args', () => {
+    expect(
+      tryValidateArgs({
+        first: undefined,
+        after: undefined,
+        last: undefined,
+        before: undefined,
+      })
+    ).toBe(true);
   });
 
-  it('should return true for valid backward pagination', () => {
-    const args: PaginationArgs = { last: 10 };
-    expect(tryValidateArgs(args)).toBe(true);
+  it('returns true when only first is provided', () => {
+    expect(
+      tryValidateArgs({
+        first: 10,
+        after: undefined,
+        last: undefined,
+        before: undefined,
+      })
+    ).toBe(true);
   });
 
-  it('should return true for forward pagination with cursor', () => {
-    const args: PaginationArgs = { first: 10, after: 'cursor-id' };
-    expect(tryValidateArgs(args)).toBe(true);
+  it('returns true when first + after are provided', () => {
+    expect(
+      tryValidateArgs({
+        first: 10,
+        after: 'cursor-123',
+        last: undefined,
+        before: undefined,
+      })
+    ).toBe(true);
   });
 
-  it('should return true for backward pagination with cursor', () => {
-    const args: PaginationArgs = { last: 10, before: 'cursor-id' };
-    expect(tryValidateArgs(args)).toBe(true);
+  it('returns true when only last is provided', () => {
+    expect(
+      tryValidateArgs({
+        first: undefined,
+        after: undefined,
+        last: 5,
+        before: undefined,
+      })
+    ).toBe(true);
   });
 
-  it('should return true when no parameters are provided', () => {
-    const args: PaginationArgs = {};
-    expect(tryValidateArgs(args)).toBe(true);
+  it('returns true when last + before are provided', () => {
+    expect(
+      tryValidateArgs({
+        first: undefined,
+        after: undefined,
+        last: 5,
+        before: 'cursor-abc',
+      })
+    ).toBe(true);
   });
 
-  it('should throw when first is zero', () => {
-    const args: PaginationArgs = { first: 0 };
-    expect(() => tryValidateArgs(args)).toThrow(
-      'Parameter "first" needs to be positive.'
-    );
+  it('throws when first is <= 0', () => {
+    expect(() =>
+      tryValidateArgs({
+        first: 0,
+        after: undefined,
+        last: undefined,
+        before: undefined,
+      })
+    ).toThrow('Parameter "first" needs to be positive');
   });
 
-  it('should throw when first is negative', () => {
-    const args: PaginationArgs = { first: -1 };
-    expect(() => tryValidateArgs(args)).toThrow(
-      'Parameter "first" needs to be positive.'
-    );
+  it('throws when first is negative', () => {
+    expect(() =>
+      tryValidateArgs({
+        first: -1,
+        after: undefined,
+        last: undefined,
+        before: undefined,
+      })
+    ).toThrow('Parameter "first" needs to be positive');
   });
 
-  it('should throw when after is provided without first', () => {
-    const args: PaginationArgs = { after: 'cursor-id' };
-    expect(() => tryValidateArgs(args)).toThrow(
-      'Cursor "after" requires having "first" parameter.'
-    );
+  it('throws when after is provided without first', () => {
+    expect(() =>
+      tryValidateArgs({
+        first: undefined,
+        after: 'cursor-123',
+        last: undefined,
+        before: undefined,
+      })
+    ).toThrow('Cursor "after" requires having "first" parameter');
   });
 
-  it('should throw when last is zero', () => {
-    const args: PaginationArgs = { last: 0 };
-    expect(() => tryValidateArgs(args)).toThrow(
-      'Parameter "last" needs to be positive.'
-    );
+  it('throws when last is <= 0', () => {
+    expect(() =>
+      tryValidateArgs({
+        first: undefined,
+        after: undefined,
+        last: 0,
+        before: undefined,
+      })
+    ).toThrow('Parameter "last" needs to be positive');
   });
 
-  it('should throw when last is negative', () => {
-    const args: PaginationArgs = { last: -5 };
-    expect(() => tryValidateArgs(args)).toThrow(
-      'Parameter "last" needs to be positive.'
-    );
+  it('throws when last is negative', () => {
+    expect(() =>
+      tryValidateArgs({
+        first: undefined,
+        after: undefined,
+        last: -5,
+        before: undefined,
+      })
+    ).toThrow('Parameter "last" needs to be positive');
   });
 
-  it('should throw when before is provided without last', () => {
-    const args: PaginationArgs = { before: 'cursor-id' };
-    expect(() => tryValidateArgs(args)).toThrow(
-      'Cursor "before" requires having "last" parameter.'
-    );
+  it('throws when before is provided without last', () => {
+    expect(() =>
+      tryValidateArgs({
+        first: undefined,
+        after: undefined,
+        last: undefined,
+        before: 'cursor-abc',
+      })
+    ).toThrow('Cursor "before" requires having "last" parameter');
   });
 
-  it('should throw when both first and last are provided', () => {
-    const args: PaginationArgs = { first: 10, last: 5 };
-    expect(() => tryValidateArgs(args)).toThrow(
-      'Using both "first" and "last" parameters is discouraged.'
-    );
+  it('throws when both first and last are provided', () => {
+    expect(() =>
+      tryValidateArgs({
+        first: 10,
+        after: undefined,
+        last: 5,
+        before: undefined,
+      })
+    ).toThrow('Using both "first" and "last" parameters is discouraged');
   });
 });

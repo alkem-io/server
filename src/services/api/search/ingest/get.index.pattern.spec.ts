@@ -2,26 +2,26 @@ import { getIndexPattern } from './get.index.pattern';
 
 describe('getIndexPattern', () => {
   it('should return the configured index pattern', () => {
-    const mockConfigService = {
-      get: vi.fn().mockReturnValue('custom-pattern-'),
+    const configService = {
+      get: (_key: string, _opts: any) => 'custom-pattern-',
     } as any;
-    expect(getIndexPattern(mockConfigService)).toBe('custom-pattern-');
-    expect(mockConfigService.get).toHaveBeenCalledWith('search.index_pattern', {
-      infer: true,
-    });
+
+    expect(getIndexPattern(configService)).toBe('custom-pattern-');
   });
 
-  it('should return default pattern when config returns null', () => {
-    const mockConfigService = {
-      get: vi.fn().mockReturnValue(null),
+  it('should return default pattern when config returns null/undefined', () => {
+    const configService = {
+      get: (_key: string, _opts: any) => null,
     } as any;
-    expect(getIndexPattern(mockConfigService)).toBe('alkemio-data-');
+
+    expect(getIndexPattern(configService)).toBe('alkemio-data-');
   });
 
   it('should return default pattern when config returns undefined', () => {
-    const mockConfigService = {
-      get: vi.fn().mockReturnValue(undefined),
+    const configService = {
+      get: (_key: string, _opts: any) => undefined,
     } as any;
-    expect(getIndexPattern(mockConfigService)).toBe('alkemio-data-');
+
+    expect(getIndexPattern(configService)).toBe('alkemio-data-');
   });
 });

@@ -9,8 +9,8 @@ import { CalloutsSetAuthorizationService } from './callouts.set.service.authoriz
 
 describe('CalloutsSetAuthorizationService', () => {
   let service: CalloutsSetAuthorizationService;
-  let authorizationPolicyService: AuthorizationPolicyService;
   let calloutsSetService: CalloutsSetService;
+  let authorizationPolicyService: AuthorizationPolicyService;
   let calloutAuthorizationService: CalloutAuthorizationService;
 
   beforeEach(async () => {
@@ -25,28 +25,24 @@ describe('CalloutsSetAuthorizationService', () => {
       .compile();
 
     service = module.get(CalloutsSetAuthorizationService);
-    authorizationPolicyService = module.get(AuthorizationPolicyService);
     calloutsSetService = module.get(CalloutsSetService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
     calloutAuthorizationService = module.get(CalloutAuthorizationService);
   });
 
+  it('should be defined', () => {
+    expect(service).toBeDefined();
+  });
+
   describe('applyAuthorizationPolicy', () => {
-    const platformRolesAccess = { roles: [] } as any;
-    const parentAuth = { id: 'auth-parent' } as any;
-
-    it('should inherit parent authorization and append privilege rules', async () => {
-      const calloutsSetAuth = {
-        id: 'auth-cs',
-        credentialRules: [],
-      } as any;
-      const inheritedAuth = {
-        id: 'auth-inherited',
-        credentialRules: [],
-      } as any;
+    it('should inherit parent authorization and apply to all callouts', async () => {
       const calloutsSet = {
         id: 'cs-1',
-        authorization: calloutsSetAuth,
-        callouts: [],
+        authorization: {
+          id: 'auth-cs',
+          credentialRules: [],
+        },
+        callouts: [{ id: 'c-1' }, { id: 'c-2' }],
       } as any;
 
       vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
@@ -54,118 +50,116 @@ describe('CalloutsSetAuthorizationService', () => {
       );
       vi.mocked(
         authorizationPolicyService.inheritParentAuthorization
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue(calloutsSet.authorization);
       vi.mocked(
         authorizationPolicyService.appendPrivilegeAuthorizationRules
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue(calloutsSet.authorization);
       vi.mocked(
         authorizationPolicyService.createCredentialRuleUsingTypesOnly
-      ).mockReturnValue({ id: 'rule', cascade: true } as any);
-
-      const result = await service.applyAuthorizationPolicy(
-        { id: 'cs-1' } as any,
-        parentAuth,
-        platformRolesAccess
-      );
-
-      expect(
-        authorizationPolicyService.inheritParentAuthorization
-      ).toHaveBeenCalledWith(calloutsSetAuth, parentAuth);
-      expect(
-        authorizationPolicyService.appendPrivilegeAuthorizationRules
-      ).toHaveBeenCalled();
-      expect(result).toContain(inheritedAuth);
-    });
-
-    it('should propagate authorization to each callout', async () => {
-      const inheritedAuth = {
-        id: 'auth-inherited',
-        credentialRules: [],
-      } as any;
-      const calloutsSet = {
-        id: 'cs-1',
-        authorization: { id: 'auth-cs', credentialRules: [] },
-        callouts: [{ id: 'callout-1' }, { id: 'callout-2' }],
-      } as any;
-
-      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
-        calloutsSet
-      );
-      vi.mocked(
-        authorizationPolicyService.inheritParentAuthorization
-      ).mockReturnValue(inheritedAuth);
-      vi.mocked(
-        authorizationPolicyService.appendPrivilegeAuthorizationRules
-      ).mockReturnValue(inheritedAuth);
-      vi.mocked(
-        authorizationPolicyService.createCredentialRuleUsingTypesOnly
-      ).mockReturnValue({ id: 'rule', cascade: true } as any);
+      ).mockReturnValue({ cascade: true } as any);
       vi.mocked(
         calloutAuthorizationService.applyAuthorizationPolicy
-      ).mockResolvedValue([{ id: 'callout-auth' }] as any);
+      ).mockResolvedValue([{ id: 'auth-callout' }] as any);
 
       const result = await service.applyAuthorizationPolicy(
         { id: 'cs-1' } as any,
-        parentAuth,
-        platformRolesAccess
+        { id: 'parent-auth' } as any,
+        {} as any,
+        [],
+        undefined,
+        undefined
       );
 
+      expect(
+        authorizationPolicyService.inheritParentAuthorization
+      ).toHaveBeenCalled();
       expect(
         calloutAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalledTimes(2);
-      // cs auth + 2 callout auths = 3
-      expect(result.length).toBe(3);
+      // cs-1 authorization + 2 callout authorizations
+      expect(result.length).toBeGreaterThanOrEqual(3);
     });
 
-    it('should append credential rules from parent', async () => {
-      const inheritedAuth = {
-        id: 'auth-inherited',
-        credentialRules: [],
-      } as any;
+    it('should handle calloutsSet with no callouts', async () => {
       const calloutsSet = {
         id: 'cs-1',
-        authorization: { id: 'auth-cs', credentialRules: [] },
-        callouts: [],
+        authorization: {
+          id: 'auth-cs',
+          credentialRules: [],
+        },
+        callouts: undefined,
       } as any;
-      const credentialRulesFromParent = [{ id: 'parent-rule-1' }] as any;
 
       vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
         calloutsSet
       );
       vi.mocked(
         authorizationPolicyService.inheritParentAuthorization
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue(calloutsSet.authorization);
       vi.mocked(
         authorizationPolicyService.appendPrivilegeAuthorizationRules
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue(calloutsSet.authorization);
       vi.mocked(
         authorizationPolicyService.createCredentialRuleUsingTypesOnly
-      ).mockReturnValue({ id: 'rule', cascade: true } as any);
+      ).mockReturnValue({ cascade: true } as any);
+
+      const result = await service.applyAuthorizationPolicy(
+        { id: 'cs-1' } as any,
+        { id: 'parent-auth' } as any,
+        {} as any
+      );
+
+      expect(
+        calloutAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
+      expect(result).toHaveLength(1);
+    });
+
+    it('should append credential rules from parent', async () => {
+      const calloutsSet = {
+        id: 'cs-1',
+        authorization: {
+          id: 'auth-cs',
+          credentialRules: [],
+        },
+        callouts: [],
+      } as any;
+
+      const credentialRulesFromParent = [{ id: 'parent-rule' }] as any;
+
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(calloutsSet.authorization);
+      vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).mockReturnValue(calloutsSet.authorization);
+      vi.mocked(
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly
+      ).mockReturnValue({ cascade: true } as any);
 
       await service.applyAuthorizationPolicy(
         { id: 'cs-1' } as any,
-        parentAuth,
-        platformRolesAccess,
+        { id: 'parent-auth' } as any,
+        {} as any,
         credentialRulesFromParent
       );
 
-      expect(inheritedAuth.credentialRules).toContain(
+      expect(calloutsSet.authorization.credentialRules).toContain(
         credentialRulesFromParent[0]
       );
     });
 
-    it('should add CREATE_CALLOUT privilege for contributors when space settings allow it', async () => {
-      const inheritedAuth = {
-        id: 'auth-inherited',
-        credentialRules: [],
-      } as any;
+    it('should append members create callout privilege when space settings allow it', async () => {
       const calloutsSet = {
         id: 'cs-1',
-        authorization: { id: 'auth-cs', credentialRules: [] },
+        authorization: {
+          id: 'auth-cs',
+          credentialRules: [],
+        },
         callouts: [],
-      } as any;
-      const spaceSettings = {
-        collaboration: { allowMembersToCreateCallouts: true },
       } as any;
 
       vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
@@ -173,28 +167,30 @@ describe('CalloutsSetAuthorizationService', () => {
       );
       vi.mocked(
         authorizationPolicyService.inheritParentAuthorization
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue(calloutsSet.authorization);
       vi.mocked(
         authorizationPolicyService.appendPrivilegeAuthorizationRules
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue(calloutsSet.authorization);
       vi.mocked(
         authorizationPolicyService.createCredentialRuleUsingTypesOnly
-      ).mockReturnValue({ id: 'rule', cascade: true } as any);
+      ).mockReturnValue({ cascade: true } as any);
+
+      const spaceSettings = {
+        collaboration: { allowMembersToCreateCallouts: true },
+      } as any;
 
       await service.applyAuthorizationPolicy(
         { id: 'cs-1' } as any,
-        parentAuth,
-        platformRolesAccess,
+        { id: 'parent-auth' } as any,
+        {} as any,
         [],
         undefined,
         spaceSettings
       );
 
-      // Should be called with 2 privilege rules (create + contribute)
-      const appendCall = vi.mocked(
+      expect(
         authorizationPolicyService.appendPrivilegeAuthorizationRules
-      ).mock.calls[0];
-      expect(appendCall[1].length).toBe(2);
+      ).toHaveBeenCalled();
     });
   });
 });

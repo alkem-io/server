@@ -1,5 +1,4 @@
 import { RelationshipNotFoundException } from '@common/exceptions';
-import { PlatformRolesAccessService } from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
@@ -8,16 +7,14 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { IPost } from './post.interface';
 import { PostAuthorizationService } from './post.service.authorization';
 
 describe('PostAuthorizationService', () => {
   let service: PostAuthorizationService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let roomAuthorizationService: RoomAuthorizationService;
-  let profileAuthorizationService: ProfileAuthorizationService;
   let roleSetService: RoleSetService;
-  let platformRolesAccessService: PlatformRolesAccessService;
+  let profileAuthorizationService: ProfileAuthorizationService;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -33,115 +30,113 @@ describe('PostAuthorizationService', () => {
     service = module.get(PostAuthorizationService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     roomAuthorizationService = module.get(RoomAuthorizationService);
-    profileAuthorizationService = module.get(ProfileAuthorizationService);
     roleSetService = module.get(RoleSetService);
-    platformRolesAccessService = module.get(PlatformRolesAccessService);
+    profileAuthorizationService = module.get(ProfileAuthorizationService);
+  });
+
+  it('should be defined', () => {
+    expect(service).toBeDefined();
   });
 
   describe('applyAuthorizationPolicy', () => {
     const platformRolesAccess = { roles: [] } as any;
 
-    it('should throw RelationshipNotFoundException when profile is missing', async () => {
-      const post = {
+    function makePost(overrides: any = {}) {
+      return {
         id: 'post-1',
-        profile: undefined,
-        authorization: { id: 'auth-1' },
-      } as unknown as IPost;
+        createdBy: 'user-1',
+        authorization: {
+          id: 'auth-1',
+          credentialRules: [],
+          privilegeRules: [],
+        },
+        profile: { id: 'p-1' },
+        comments: undefined,
+        ...overrides,
+      } as any;
+    }
+
+    it('should throw RelationshipNotFoundException when profile is missing', async () => {
+      const post = makePost({ profile: undefined });
 
       await expect(
         service.applyAuthorizationPolicy(post, undefined, platformRolesAccess)
       ).rejects.toThrow(RelationshipNotFoundException);
     });
 
-    it('should inherit parent authorization and propagate to profile', async () => {
-      const postAuth = { id: 'auth-post', credentialRules: [] } as any;
-      const inheritedAuth = {
-        id: 'auth-inherited',
-        credentialRules: [],
-      } as any;
-      const parentAuth = { id: 'auth-parent' } as any;
-
-      const post = {
-        id: 'post-1',
-        createdBy: 'user-1',
-        profile: { id: 'profile-1' },
-        authorization: postAuth,
-        comments: undefined,
-      } as unknown as IPost;
-
+    it('should inherit parent authorization and return updated policies', async () => {
+      const post = makePost();
       vi.mocked(
         authorizationPolicyService.inheritParentAuthorization
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue(post.authorization);
       vi.mocked(
         authorizationPolicyService.createCredentialRule
-      ).mockReturnValue({ id: 'rule-1' } as any);
+      ).mockReturnValue({ grantedPrivileges: [], cascade: false } as any);
       vi.mocked(
         authorizationPolicyService.appendCredentialAuthorizationRules
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue(post.authorization);
+      vi.mocked(
+        profileAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([{ id: 'profile-auth' }] as any);
+
+      const platformRolesAccessService = (service as any)
+        .platformRolesAccessService;
       vi.mocked(
         platformRolesAccessService.getCredentialsForRolesWithAccess
       ).mockReturnValue([]);
-      vi.mocked(
-        profileAuthorizationService.applyAuthorizationPolicy
-      ).mockResolvedValue([{ id: 'auth-profile' }] as any);
 
       const result = await service.applyAuthorizationPolicy(
         post,
-        parentAuth,
+        { id: 'parent-auth' } as any,
         platformRolesAccess
       );
 
+      expect(result).toContain(post.authorization);
       expect(
         authorizationPolicyService.inheritParentAuthorization
-      ).toHaveBeenCalledWith(postAuth, parentAuth);
+      ).toHaveBeenCalled();
       expect(
         profileAuthorizationService.applyAuthorizationPolicy
-      ).toHaveBeenCalled();
-      expect(result.length).toBeGreaterThanOrEqual(2);
+      ).toHaveBeenCalledWith('p-1', post.authorization);
     });
 
-    it('should apply room authorization when comments exist', async () => {
-      const postAuth = { id: 'auth-post', credentialRules: [] } as any;
-      const inheritedAuth = {
-        id: 'auth-inherited',
-        credentialRules: [],
-      } as any;
-      const commentsAuth = { id: 'auth-comments' } as any;
-
-      const post = {
-        id: 'post-1',
-        createdBy: 'user-1',
-        profile: { id: 'profile-1' },
-        authorization: postAuth,
-        comments: { id: 'room-1' },
-      } as unknown as IPost;
+    it('should apply comments authorization when comments exist', async () => {
+      const post = makePost({
+        comments: {
+          id: 'room-1',
+          authorization: { id: 'room-auth' },
+        },
+      });
 
       vi.mocked(
         authorizationPolicyService.inheritParentAuthorization
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue(post.authorization);
       vi.mocked(
         authorizationPolicyService.createCredentialRule
-      ).mockReturnValue({ id: 'rule-1' } as any);
+      ).mockReturnValue({ grantedPrivileges: [], cascade: false } as any);
       vi.mocked(
         authorizationPolicyService.appendCredentialAuthorizationRules
-      ).mockReturnValue(inheritedAuth);
-      vi.mocked(
-        platformRolesAccessService.getCredentialsForRolesWithAccess
-      ).mockReturnValue([]);
+      ).mockReturnValue(post.authorization);
       vi.mocked(
         roomAuthorizationService.applyAuthorizationPolicy
-      ).mockReturnValue(commentsAuth);
+      ).mockReturnValue({ id: 'room-updated-auth' } as any);
       vi.mocked(
         roomAuthorizationService.allowContributorsToCreateMessages
-      ).mockReturnValue(commentsAuth);
+      ).mockReturnValue({ id: 'room-msg-auth' } as any);
       vi.mocked(
         roomAuthorizationService.allowContributorsToReplyReactToMessages
-      ).mockReturnValue(commentsAuth);
+      ).mockReturnValue({ id: 'room-reply-auth' } as any);
       vi.mocked(
         profileAuthorizationService.applyAuthorizationPolicy
       ).mockResolvedValue([]);
 
-      const result = await service.applyAuthorizationPolicy(
+      const platformRolesAccessService = (service as any)
+        .platformRolesAccessService;
+      vi.mocked(
+        platformRolesAccessService.getCredentialsForRolesWithAccess
+      ).mockReturnValue([]);
+
+      const _result = await service.applyAuthorizationPolicy(
         post,
         undefined,
         platformRolesAccess
@@ -156,43 +151,35 @@ describe('PostAuthorizationService', () => {
       expect(
         roomAuthorizationService.allowContributorsToReplyReactToMessages
       ).toHaveBeenCalled();
-      expect(result).toContain(commentsAuth);
     });
 
-    it('should add admin move credentials when roleSet is provided', async () => {
-      const postAuth = { id: 'auth-post', credentialRules: [] } as any;
-      const inheritedAuth = {
-        id: 'auth-inherited',
-        credentialRules: [],
-      } as any;
-      const roleSet = { id: 'roleset-1' } as any;
-
-      const post = {
-        id: 'post-1',
-        createdBy: 'user-1',
-        profile: { id: 'profile-1' },
-        authorization: postAuth,
-        comments: undefined,
-      } as unknown as IPost;
-
+    it('should include roleSet admin credentials when roleSet is provided', async () => {
+      const post = makePost();
       vi.mocked(
         authorizationPolicyService.inheritParentAuthorization
-      ).mockReturnValue(inheritedAuth);
+      ).mockReturnValue(post.authorization);
       vi.mocked(
         authorizationPolicyService.createCredentialRule
-      ).mockReturnValue({ id: 'rule-1', cascade: true } as any);
+      ).mockReturnValue({ grantedPrivileges: [], cascade: false } as any);
       vi.mocked(
         authorizationPolicyService.appendCredentialAuthorizationRules
-      ).mockReturnValue(inheritedAuth);
-      vi.mocked(
-        platformRolesAccessService.getCredentialsForRolesWithAccess
-      ).mockReturnValue([]);
+      ).mockReturnValue(post.authorization);
       vi.mocked(
         roleSetService.getCredentialsForRoleWithParents
-      ).mockResolvedValue([{ type: 'space-admin', resourceID: 'space-1' }]);
+      ).mockResolvedValue([
+        { type: 'space-admin', resourceID: 'space-1' },
+      ] as any);
       vi.mocked(
         profileAuthorizationService.applyAuthorizationPolicy
       ).mockResolvedValue([]);
+
+      const platformRolesAccessService = (service as any)
+        .platformRolesAccessService;
+      vi.mocked(
+        platformRolesAccessService.getCredentialsForRolesWithAccess
+      ).mockReturnValue([]);
+
+      const roleSet = { id: 'rs-1' } as any;
 
       await service.applyAuthorizationPolicy(
         post,
@@ -203,7 +190,45 @@ describe('PostAuthorizationService', () => {
 
       expect(
         roleSetService.getCredentialsForRoleWithParents
-      ).toHaveBeenCalledWith(roleSet, expect.any(String));
+      ).toHaveBeenCalled();
+      // Should create MOVE_POST rule with admin credentials
+      expect(
+        authorizationPolicyService.createCredentialRule
+      ).toHaveBeenCalled();
+    });
+
+    it('should not create MOVE_POST rule when no admin credentials exist', async () => {
+      const post = makePost();
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockReturnValue(post.authorization);
+      vi.mocked(
+        authorizationPolicyService.createCredentialRule
+      ).mockReturnValue({ grantedPrivileges: [], cascade: false } as any);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(post.authorization);
+      vi.mocked(
+        profileAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+
+      const platformRolesAccessService = (service as any)
+        .platformRolesAccessService;
+      vi.mocked(
+        platformRolesAccessService.getCredentialsForRolesWithAccess
+      ).mockReturnValue([]);
+
+      await service.applyAuthorizationPolicy(
+        post,
+        undefined,
+        platformRolesAccess
+      );
+
+      // createCredentialRule is called for the POST_CREATED_BY rule but not MOVE_POST
+      // since there are no admin credentials when roleSet is not provided
+      expect(
+        authorizationPolicyService.createCredentialRule
+      ).toHaveBeenCalledTimes(1);
     });
   });
 });

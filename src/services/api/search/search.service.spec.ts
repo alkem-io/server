@@ -1,107 +1,199 @@
-import { EntityNotFoundException } from '@common/exceptions';
-import { createMock } from '@golevelup/ts-vitest';
 import { ConfigService } from '@nestjs/config';
-import { EntityManager } from 'typeorm';
+import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { type Mock, vi } from 'vitest';
 import { SearchExtractService } from './extract/search.extract.service';
 import { SearchResultService } from './result/search.result.service';
+import { SearchCategory } from './search.category';
 import { SearchService } from './search.service';
 
 describe('SearchService', () => {
   let service: SearchService;
-  let extractService: ReturnType<typeof createMock<SearchExtractService>>;
-  let resultService: ReturnType<typeof createMock<SearchResultService>>;
-  let entityManager: ReturnType<typeof createMock<EntityManager>>;
+  let searchExtractService: { search: Mock };
+  let searchResultService: { resolveSearchResults: Mock };
+  let entityManager: { findOneByOrFail: Mock };
 
-  beforeEach(() => {
-    entityManager = createMock<EntityManager>();
-    extractService = createMock<SearchExtractService>();
-    resultService = createMock<SearchResultService>();
-    const configService = createMock<ConfigService>();
-    configService.get.mockReturnValue(100);
+  beforeEach(async () => {
+    entityManager = {
+      findOneByOrFail: vi.fn(),
+    };
 
-    extractService.search.mockResolvedValue([]);
-    resultService.resolveSearchResults.mockResolvedValue({
-      spaceResults: [],
-      calloutResults: [],
-    } as any);
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        SearchService,
+        {
+          provide: getEntityManagerToken('default'),
+          useValue: entityManager,
+        },
+        {
+          provide: SearchExtractService,
+          useValue: { search: vi.fn().mockResolvedValue([]) },
+        },
+        {
+          provide: SearchResultService,
+          useValue: {
+            resolveSearchResults: vi.fn().mockResolvedValue({
+              spaceResults: { results: [] },
+              actorResults: { results: [] },
+              contributionResults: { results: [] },
+              calloutResults: { results: [] },
+              framingResults: { results: [] },
+            }),
+          },
+        },
+        {
+          provide: ConfigService,
+          useValue: {
+            get: vi.fn((key: string) => {
+              if (key === 'search.max_results') return 50;
+              return undefined;
+            }),
+          },
+        },
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
 
-    service = new SearchService(
-      entityManager as any,
-      extractService,
-      resultService,
-      configService as any
-    );
+    service = module.get<SearchService>(SearchService);
+    searchExtractService = module.get(SearchExtractService) as any;
+    searchResultService = module.get(SearchResultService) as any;
   });
 
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
-  it('should search with default filters when none provided', async () => {
-    const actorContext = { actorID: 'user-1' } as any;
-    const searchData = {
-      terms: ['test'],
-      filters: [],
-    } as any;
+  describe('search', () => {
+    const actorContext = { actorID: 'user-1', credentials: [] } as any;
 
-    await service.search(searchData, actorContext);
+    it('should set default filters when none are provided', async () => {
+      const searchData = { terms: ['test'] } as any;
 
-    expect(extractService.search).toHaveBeenCalled();
-    expect(resultService.resolveSearchResults).toHaveBeenCalled();
-    // Default filters should have been set
-    expect(searchData.filters.length).toBeGreaterThan(0);
-  });
+      await service.search(searchData, actorContext);
 
-  it('should pass onlyPublicResults=true when no actorID', async () => {
-    const actorContext = { actorID: '' } as any;
-    const searchData = {
-      terms: ['test'],
-      filters: [{ category: 'spaces', size: 5 }],
-    } as any;
+      // Filters should have been populated with all categories
+      expect(searchData.filters).toBeDefined();
+      expect(searchData.filters.length).toBe(
+        Object.values(SearchCategory).length
+      );
+    });
 
-    await service.search(searchData, actorContext);
+    it('should set default filters when filters array is empty', async () => {
+      const searchData = { terms: ['test'], filters: [] } as any;
 
-    expect(extractService.search).toHaveBeenCalledWith(searchData, true);
-  });
+      await service.search(searchData, actorContext);
 
-  it('should pass onlyPublicResults=false when actorID is present', async () => {
-    const actorContext = { actorID: 'user-1' } as any;
-    const searchData = {
-      terms: ['test'],
-      filters: [{ category: 'spaces', size: 5 }],
-    } as any;
+      expect(searchData.filters.length).toBe(
+        Object.values(SearchCategory).length
+      );
+    });
 
-    await service.search(searchData, actorContext);
+    it('should keep provided filters', async () => {
+      const searchData = {
+        terms: ['test'],
+        filters: [{ category: SearchCategory.SPACES, size: 5 }],
+      } as any;
 
-    expect(extractService.search).toHaveBeenCalledWith(searchData, false);
-  });
+      await service.search(searchData, actorContext);
 
-  it('should throw when searchInSpaceFilter space not found', async () => {
-    entityManager.findOneByOrFail.mockRejectedValue(new Error('not found'));
-    const actorContext = { actorID: 'user-1' } as any;
-    const searchData = {
-      terms: ['test'],
-      filters: [{ category: 'spaces', size: 5 }],
-      searchInSpaceFilter: 'non-existent-space',
-    } as any;
+      expect(searchData.filters).toHaveLength(1);
+    });
 
-    await expect(service.search(searchData, actorContext)).rejects.toThrow(
-      EntityNotFoundException
-    );
-  });
+    it('should call searchExtractService.search with onlyPublicResults=false for authenticated users', async () => {
+      const searchData = {
+        terms: ['test'],
+        filters: [{ category: SearchCategory.SPACES, size: 5 }],
+      } as any;
 
-  it('should validate space exists when searchInSpaceFilter is provided', async () => {
-    entityManager.findOneByOrFail.mockResolvedValue({ id: 'space-1' } as any);
-    const actorContext = { actorID: 'user-1' } as any;
-    const searchData = {
-      terms: ['test'],
-      filters: [{ category: 'spaces', size: 5 }],
-      searchInSpaceFilter: 'space-1',
-    } as any;
+      await service.search(searchData, actorContext);
 
-    await service.search(searchData, actorContext);
+      expect(searchExtractService.search).toHaveBeenCalledWith(
+        searchData,
+        false
+      );
+    });
 
-    expect(entityManager.findOneByOrFail).toHaveBeenCalled();
-    expect(extractService.search).toHaveBeenCalled();
+    it('should call searchExtractService.search with onlyPublicResults=true for unauthenticated users', async () => {
+      const unauthContext = { actorID: undefined, credentials: [] } as any;
+      const searchData = {
+        terms: ['test'],
+        filters: [{ category: SearchCategory.SPACES, size: 5 }],
+      } as any;
+
+      await service.search(searchData, unauthContext);
+
+      expect(searchExtractService.search).toHaveBeenCalledWith(
+        searchData,
+        true
+      );
+    });
+
+    it('should pass results to searchResultService.resolveSearchResults', async () => {
+      const mockResults = [{ id: 'r1', score: 5 }];
+      searchExtractService.search.mockResolvedValue(mockResults);
+
+      const searchData = {
+        terms: ['test'],
+        filters: [{ category: SearchCategory.SPACES, size: 5 }],
+      } as any;
+
+      await service.search(searchData, actorContext);
+
+      expect(searchResultService.resolveSearchResults).toHaveBeenCalledWith(
+        mockResults,
+        actorContext,
+        searchData.filters,
+        undefined
+      );
+    });
+
+    it('should validate the space exists when searchInSpaceFilter is set', async () => {
+      entityManager.findOneByOrFail.mockResolvedValue({ id: 'space-1' });
+
+      const searchData = {
+        terms: ['test'],
+        filters: [{ category: SearchCategory.SPACES, size: 5 }],
+        searchInSpaceFilter: 'space-1',
+      } as any;
+
+      await service.search(searchData, actorContext);
+
+      expect(entityManager.findOneByOrFail).toHaveBeenCalled();
+    });
+
+    it('should throw EntityNotFoundException when space is not found', async () => {
+      entityManager.findOneByOrFail.mockRejectedValue(new Error('not found'));
+
+      const searchData = {
+        terms: ['test'],
+        filters: [{ category: SearchCategory.SPACES, size: 5 }],
+        searchInSpaceFilter: 'space-999',
+      } as any;
+
+      await expect(service.search(searchData, actorContext)).rejects.toThrow(
+        'Space with the given identifier not found'
+      );
+    });
+
+    it('should pass searchInSpaceFilter to resolveSearchResults', async () => {
+      entityManager.findOneByOrFail.mockResolvedValue({ id: 'space-1' });
+
+      const searchData = {
+        terms: ['test'],
+        filters: [{ category: SearchCategory.SPACES, size: 5 }],
+        searchInSpaceFilter: 'space-1',
+      } as any;
+
+      await service.search(searchData, actorContext);
+
+      expect(searchResultService.resolveSearchResults).toHaveBeenCalledWith(
+        expect.anything(),
+        actorContext,
+        searchData.filters,
+        'space-1'
+      );
+    });
   });
 });

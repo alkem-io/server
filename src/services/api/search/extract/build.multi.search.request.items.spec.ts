@@ -1,127 +1,179 @@
 import { SearchCategory } from '../search.category';
 import { SearchResultType } from '../search.result.type';
 import { buildMultiSearchRequestItems } from './build.multi.search.request.items';
+import type { SearchIndex } from './search.index';
 
 describe('buildMultiSearchRequestItems', () => {
-  const searchQuery = {
-    bool: {
-      must: [
-        {
-          multi_match: {
-            query: 'test',
-            type: 'most_fields' as const,
-            fields: ['*'],
-          },
-        },
-      ],
-    },
-  };
+  const baseQuery = { bool: { must: [{ multi_match: { query: 'test' } }] } };
 
-  it('should build request items for a single category', () => {
-    const indices = [
+  it('should build header+body pairs for each category', () => {
+    const indices: SearchIndex[] = [
       {
-        name: 'alkemio-data-spaces',
-        type: SearchResultType.SPACE,
-        category: SearchCategory.SPACES,
-      },
-    ];
-    const result = buildMultiSearchRequestItems(indices, searchQuery, {
-      defaults: { size: 10 },
-    });
-    // header + body = 2 items
-    expect(result).toHaveLength(2);
-    expect((result[0] as any).index).toEqual(['alkemio-data-spaces']);
-    expect((result[1] as any).size).toBe(20); // 10 * 2 (default sizeMultiplier)
-  });
-
-  it('should group indices by category', () => {
-    const indices = [
-      {
-        name: 'alkemio-data-spaces',
+        name: 'test-spaces',
         type: SearchResultType.SPACE,
         category: SearchCategory.SPACES,
       },
       {
-        name: 'alkemio-data-subspaces',
+        name: 'test-subspaces',
         type: SearchResultType.SUBSPACE,
         category: SearchCategory.SPACES,
       },
+    ];
+
+    const result = buildMultiSearchRequestItems(indices, baseQuery, {
+      defaults: { size: 10 },
+    });
+
+    // One category (SPACES) -> 1 header + 1 body = 2 items
+    expect(result).toHaveLength(2);
+    // Header should contain both indices
+    expect((result[0] as any).index).toEqual(['test-spaces', 'test-subspaces']);
+    // Body should contain the query
+    expect((result[1] as any).query).toBe(baseQuery);
+  });
+
+  it('should handle multiple categories', () => {
+    const indices: SearchIndex[] = [
       {
-        name: 'alkemio-data-users',
+        name: 'test-spaces',
+        type: SearchResultType.SPACE,
+        category: SearchCategory.SPACES,
+      },
+      {
+        name: 'test-users',
         type: SearchResultType.USER,
         category: SearchCategory.CONTRIBUTORS,
       },
     ];
-    const result = buildMultiSearchRequestItems(indices, searchQuery, {
-      defaults: { size: 5 },
-    });
-    // 2 categories * 2 (header+body) = 4
-    expect(result).toHaveLength(4);
-    // First category should have both space indices
-    expect((result[0] as any).index).toEqual([
-      'alkemio-data-spaces',
-      'alkemio-data-subspaces',
-    ]);
-  });
 
-  it('should use filter size and cursor when provided', () => {
-    const indices = [
-      {
-        name: 'alkemio-data-spaces',
-        type: SearchResultType.SPACE,
-        category: SearchCategory.SPACES,
-      },
-    ];
-    const result = buildMultiSearchRequestItems(indices, searchQuery, {
-      filters: [
-        {
-          category: SearchCategory.SPACES,
-          size: 15,
-          cursor: '10::550e8400-e29b-41d4-a716-446655440000',
-        },
-      ],
-      defaults: { size: 5 },
-    });
-    expect((result[1] as any).size).toBe(30); // 15 * 2
-    expect((result[1] as any).search_after).toEqual([
-      10,
-      '550e8400-e29b-41d4-a716-446655440000',
-    ]);
-  });
-
-  it('should use custom sizeMultiplier', () => {
-    const indices = [
-      {
-        name: 'alkemio-data-spaces',
-        type: SearchResultType.SPACE,
-        category: SearchCategory.SPACES,
-      },
-    ];
-    const result = buildMultiSearchRequestItems(indices, searchQuery, {
-      sizeMultiplier: 3,
+    const result = buildMultiSearchRequestItems(indices, baseQuery, {
       defaults: { size: 10 },
     });
+
+    // Two categories -> 2 headers + 2 bodies = 4 items
+    expect(result).toHaveLength(4);
+  });
+
+  it('should apply size multiplier from options', () => {
+    const indices: SearchIndex[] = [
+      {
+        name: 'test-spaces',
+        type: SearchResultType.SPACE,
+        category: SearchCategory.SPACES,
+      },
+    ];
+
+    const result = buildMultiSearchRequestItems(indices, baseQuery, {
+      defaults: { size: 10 },
+      sizeMultiplier: 3,
+    });
+
+    // Body is at index 1
     expect((result[1] as any).size).toBe(30); // 10 * 3
   });
 
-  it('should set search_after to undefined when no cursor', () => {
-    const indices = [
+  it('should use filter size when available', () => {
+    const indices: SearchIndex[] = [
       {
-        name: 'alkemio-data-spaces',
+        name: 'test-spaces',
         type: SearchResultType.SPACE,
         category: SearchCategory.SPACES,
       },
     ];
-    const result = buildMultiSearchRequestItems(indices, searchQuery, {
+
+    const result = buildMultiSearchRequestItems(indices, baseQuery, {
+      filters: [{ category: SearchCategory.SPACES, size: 8 }] as any,
+      defaults: { size: 10 },
+      sizeMultiplier: 2,
+    });
+
+    expect((result[1] as any).size).toBe(16); // 8 * 2
+  });
+
+  it('should use default sizeMultiplier of 2 when not provided', () => {
+    const indices: SearchIndex[] = [
+      {
+        name: 'test-spaces',
+        type: SearchResultType.SPACE,
+        category: SearchCategory.SPACES,
+      },
+    ];
+
+    const result = buildMultiSearchRequestItems(indices, baseQuery, {
       defaults: { size: 5 },
     });
+
+    expect((result[1] as any).size).toBe(10); // 5 * 2 (default multiplier)
+  });
+
+  it('should include search_after when cursor is provided', () => {
+    const indices: SearchIndex[] = [
+      {
+        name: 'test-spaces',
+        type: SearchResultType.SPACE,
+        category: SearchCategory.SPACES,
+      },
+    ];
+
+    const result = buildMultiSearchRequestItems(indices, baseQuery, {
+      filters: [
+        { category: SearchCategory.SPACES, size: 5, cursor: '3.5::some-id' },
+      ] as any,
+      defaults: { size: 10 },
+    });
+
+    expect((result[1] as any).search_after).toEqual([3.5, 'some-id']);
+  });
+
+  it('should not include search_after when no cursor', () => {
+    const indices: SearchIndex[] = [
+      {
+        name: 'test-spaces',
+        type: SearchResultType.SPACE,
+        category: SearchCategory.SPACES,
+      },
+    ];
+
+    const result = buildMultiSearchRequestItems(indices, baseQuery, {
+      filters: [{ category: SearchCategory.SPACES, size: 5 }] as any,
+      defaults: { size: 10 },
+    });
+
     expect((result[1] as any).search_after).toBeUndefined();
   });
 
-  it('should return empty array when no indices provided', () => {
-    const result = buildMultiSearchRequestItems([], searchQuery, {
-      defaults: { size: 5 },
+  it('should set _source to false and fields to [id, type]', () => {
+    const indices: SearchIndex[] = [
+      {
+        name: 'test-spaces',
+        type: SearchResultType.SPACE,
+        category: SearchCategory.SPACES,
+      },
+    ];
+
+    const result = buildMultiSearchRequestItems(indices, baseQuery, {
+      defaults: { size: 10 },
     });
-    expect(result).toHaveLength(0);
+
+    const body = result[1] as any;
+    expect(body._source).toBe(false);
+    expect(body.fields).toEqual(['id', 'type']);
+  });
+
+  it('should sort by _score desc and id desc', () => {
+    const indices: SearchIndex[] = [
+      {
+        name: 'test-spaces',
+        type: SearchResultType.SPACE,
+        category: SearchCategory.SPACES,
+      },
+    ];
+
+    const result = buildMultiSearchRequestItems(indices, baseQuery, {
+      defaults: { size: 10 },
+    });
+
+    const body = result[1] as any;
+    expect(body.sort).toEqual({ _score: 'desc', id: 'desc' });
   });
 });

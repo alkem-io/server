@@ -1,6 +1,7 @@
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { Cache } from 'cache-manager';
@@ -12,30 +13,29 @@ describe('ActorContextCacheService', () => {
   let service: ActorContextCacheService;
   let cacheManager: Mocked<Cache>;
 
-  beforeEach(async () => {
-    const mockCacheManager = {
-      get: vi.fn(),
-      set: vi.fn(),
-      del: vi.fn(),
-      reset: vi.fn(),
-      store: vi.fn(),
-      wrap: vi.fn(),
-    };
+  const mockActorContext: ActorContext = {
+    actorID: 'user-123',
+    credentials: [{ type: 'GlobalRegistered' as any, resourceID: '' }],
+    isAnonymous: false,
+  };
 
+  beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ActorContextCacheService,
+        MockCacheManager,
         MockWinstonProvider,
-        {
-          provide: CACHE_MANAGER,
-          useValue: mockCacheManager,
-        },
       ],
     })
       .useMocker(token => {
         if (token === ConfigService) {
           return {
-            get: vi.fn().mockReturnValue(300),
+            get: vi.fn().mockImplementation((key: string) => {
+              if (key === 'identity.authentication.cache_ttl') {
+                return 300;
+              }
+              return {};
+            }),
           };
         }
         return defaultMockerFactory(token);
@@ -46,91 +46,116 @@ describe('ActorContextCacheService', () => {
     cacheManager = module.get(CACHE_MANAGER);
   });
 
+  afterEach(() => {
+    vi.clearAllMocks();
+  });
+
   it('should be defined', () => {
     expect(service).toBeDefined();
   });
 
   describe('getByActorID', () => {
-    it('should return cached actor context', async () => {
-      const cached = new ActorContext();
-      cached.actorID = 'user-1';
-      cacheManager.get.mockResolvedValue(cached);
-
-      const result = await service.getByActorID('user-1');
-
-      expect(result).toEqual(cached);
-      expect(cacheManager.get).toHaveBeenCalledWith(
-        '@actorContext:actorID:user-1'
+    it('should retrieve cached ActorContext by actorID', async () => {
+      (cacheManager.get as ReturnType<typeof vi.fn>).mockResolvedValue(
+        mockActorContext
       );
+
+      const result = await service.getByActorID('user-123');
+
+      expect(cacheManager.get).toHaveBeenCalledWith(
+        '@actorContext:actorID:user-123'
+      );
+      expect(result).toEqual(mockActorContext);
     });
 
-    it('should return undefined when not cached', async () => {
-      cacheManager.get.mockResolvedValue(undefined);
+    it('should return undefined when no cached entry exists', async () => {
+      (cacheManager.get as ReturnType<typeof vi.fn>).mockResolvedValue(
+        undefined
+      );
 
-      const result = await service.getByActorID('user-2');
+      const result = await service.getByActorID('non-existent');
 
+      expect(cacheManager.get).toHaveBeenCalledWith(
+        '@actorContext:actorID:non-existent'
+      );
       expect(result).toBeUndefined();
     });
   });
 
   describe('deleteByActorID', () => {
-    it('should delete cached entry', async () => {
-      await service.deleteByActorID('user-1');
+    it('should delete cached entry by actorID', async () => {
+      await service.deleteByActorID('user-123');
 
       expect(cacheManager.del).toHaveBeenCalledWith(
-        '@actorContext:actorID:user-1'
+        '@actorContext:actorID:user-123'
       );
     });
   });
 
   describe('setByActorID', () => {
-    it('should cache actor context with TTL', async () => {
-      const ctx = new ActorContext();
-      ctx.actorID = 'user-1';
-      cacheManager.set.mockResolvedValue(undefined as never);
+    it('should cache ActorContext with TTL', async () => {
+      (cacheManager.set as ReturnType<typeof vi.fn>).mockResolvedValue(
+        mockActorContext
+      );
 
-      await service.setByActorID(ctx);
+      const result = await service.setByActorID(mockActorContext);
 
       expect(cacheManager.set).toHaveBeenCalledWith(
-        '@actorContext:actorID:user-1',
-        ctx,
+        '@actorContext:actorID:user-123',
+        mockActorContext,
         { ttl: 300 }
       );
+      expect(result).toEqual(mockActorContext);
     });
 
-    it('should return context without caching when no actorID', async () => {
-      const ctx = new ActorContext();
+    it('should return context without caching when actorID is empty', async () => {
+      const anonymousContext: ActorContext = {
+        actorID: '',
+        credentials: [],
+        isAnonymous: true,
+      };
 
-      const result = await service.setByActorID(ctx);
+      const result = await service.setByActorID(anonymousContext);
 
       expect(cacheManager.set).not.toHaveBeenCalled();
-      expect(result).toBe(ctx);
+      expect(result).toEqual(anonymousContext);
     });
   });
 
   describe('updateCredentialsByActorID', () => {
-    it('should update credentials when cache entry exists', async () => {
-      const cached = new ActorContext();
-      cached.actorID = 'user-1';
-      cached.credentials = [];
-      cacheManager.get.mockResolvedValue(cached);
-      cacheManager.set.mockResolvedValue(undefined as never);
-
+    it('should update credentials when cached entry exists', async () => {
+      const cachedContext = { ...mockActorContext };
       const newCredentials = [
-        { type: 'global-registered' as any, resourceID: '' },
-      ];
-      await service.updateCredentialsByActorID('user-1', newCredentials as any);
+        { type: 'GlobalAdmin' as any, resourceID: '' },
+      ] as any;
 
-      expect(cached.credentials).toEqual(newCredentials);
-      expect(cacheManager.set).toHaveBeenCalled();
-    });
-
-    it('should return undefined when no cache entry exists', async () => {
-      cacheManager.get.mockResolvedValue(undefined);
+      (cacheManager.get as ReturnType<typeof vi.fn>).mockResolvedValue(
+        cachedContext
+      );
+      (cacheManager.set as ReturnType<typeof vi.fn>).mockImplementation(
+        (_key: string, ctx: ActorContext) => Promise.resolve(ctx)
+      );
 
       const result = await service.updateCredentialsByActorID(
-        'user-1',
-        [] as any
+        'user-123',
+        newCredentials
+      );
+
+      expect(cacheManager.get).toHaveBeenCalledWith(
+        '@actorContext:actorID:user-123'
+      );
+      expect(result).toBeDefined();
+      expect(result?.credentials).toEqual(newCredentials);
+    });
+
+    it('should return undefined when no cached entry exists', async () => {
+      (cacheManager.get as ReturnType<typeof vi.fn>).mockResolvedValue(
+        undefined
+      );
+
+      const result = await service.updateCredentialsByActorID(
+        'non-existent',
+        []
       );
 
       expect(result).toBeUndefined();
