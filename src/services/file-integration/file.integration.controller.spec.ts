@@ -3,28 +3,22 @@ import { RmqContext } from '@nestjs/microservices';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import * as utilModule from '../util';
 import { FileIntegrationController } from './file.integration.controller';
 import { FileIntegrationService } from './file.integration.service';
 import { FileInfoInputData } from './inputs';
 import { FileInfoOutputData, HealthCheckOutputData } from './outputs';
 
-vi.mock('../util', () => ({
-  ack: vi.fn(),
-}));
-
-// Import after vi.mock so the mock is applied
-import { ack } from '../util';
-
 describe('FileIntegrationController', () => {
   let controller: FileIntegrationController;
   let integrationService: FileIntegrationService;
   let mockContext: RmqContext;
+  let ackSpy: ReturnType<typeof vi.spyOn>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
-
-    vi.restoreAllMocks();
     mockContext = createMock<RmqContext>();
+    ackSpy = vi.spyOn(utilModule, 'ack').mockImplementation(() => {});
 
     const module: TestingModule = await Test.createTestingModule({
       controllers: [FileIntegrationController],
@@ -52,7 +46,7 @@ describe('FileIntegrationController', () => {
 
       const result = await controller.fileInfo(input, mockContext);
 
-      expect(ack).toHaveBeenCalledWith(mockContext);
+      expect(ackSpy).toHaveBeenCalledWith(mockContext);
       expect(integrationService.fileInfo).toHaveBeenCalledWith(input);
       expect(result).toBe(expectedOutput);
     });
@@ -62,7 +56,7 @@ describe('FileIntegrationController', () => {
     it('should acknowledge the message and return healthy status', () => {
       const result = controller.health(mockContext);
 
-      expect(ack).toHaveBeenCalledWith(mockContext);
+      expect(ackSpy).toHaveBeenCalledWith(mockContext);
       expect(result).toBeInstanceOf(HealthCheckOutputData);
       expect(result.healthy).toBe(true);
       expect(result.event).toBe('health-check-output');

@@ -44,14 +44,15 @@ describe('subscriptionFactory', () => {
   });
 
   it('should return undefined when amqp connection fails', async () => {
-    // Use a port that won't have RabbitMQ running to trigger connection failure
+    // Use localhost on a port that's definitely not listening — kernel
+    // responds immediately with "connection refused" (no TCP timeout).
     const badConfigService = {
       get: vi.fn().mockReturnValue({
         connection: {
           user: 'guest',
           password: 'guest',
-          host: '127.0.0.255', // unreachable host
-          port: 1, // unlikely port
+          host: '127.0.0.1',
+          port: 1,
         },
       }),
     } as unknown as ConfigService;
@@ -72,13 +73,12 @@ describe('subscriptionFactory', () => {
   }, 15000);
 
   it('should use default isBootstrap value of false', async () => {
-    // Without the bootstrap flag, it will try to connect and fail
     const badConfigService = {
       get: vi.fn().mockReturnValue({
         connection: {
           user: 'guest',
           password: 'guest',
-          host: '127.0.0.255',
+          host: '127.0.0.1',
           port: 1,
         },
       }),
