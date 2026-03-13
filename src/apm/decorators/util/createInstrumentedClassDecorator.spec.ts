@@ -1,7 +1,9 @@
 import 'reflect-metadata';
 import { vi } from 'vitest';
+import * as apmModule from '@src/apm';
+import { createInstrumentedClassDecorator } from './createInstrumentedClassDecorator';
 
-const { mockSpan, mockTransaction, mockApmAgent } = vi.hoisted(() => {
+describe('createInstrumentedClassDecorator', () => {
   const mockSpan = {
     subtype: '',
     end: vi.fn(),
@@ -9,25 +11,25 @@ const { mockSpan, mockTransaction, mockApmAgent } = vi.hoisted(() => {
   const mockTransaction = {
     startSpan: vi.fn().mockReturnValue(mockSpan),
   };
-  const mockApmAgent = {
-    currentTransaction: mockTransaction as any,
-  };
-  return { mockSpan, mockTransaction, mockApmAgent };
-});
 
-vi.mock('@src/apm', () => ({
-  apmAgent: mockApmAgent,
-}));
-
-import { createInstrumentedClassDecorator } from './createInstrumentedClassDecorator';
-
-describe('createInstrumentedClassDecorator', () => {
   beforeEach(() => {
     mockSpan.subtype = '';
     mockSpan.end.mockClear();
     mockTransaction.startSpan.mockClear();
     mockTransaction.startSpan.mockReturnValue(mockSpan);
-    mockApmAgent.currentTransaction = mockTransaction;
+    Object.defineProperty(apmModule, 'apmAgent', {
+      value: { currentTransaction: mockTransaction },
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    Object.defineProperty(apmModule, 'apmAgent', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
   });
 
   it('should instrument eligible methods on the class prototype', () => {

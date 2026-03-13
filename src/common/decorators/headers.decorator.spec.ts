@@ -1,53 +1,71 @@
-import { vi } from 'vitest';
-
-// Mock GqlExecutionContext before imports
-vi.mock('@nestjs/graphql', async importOriginal => {
-  const actual = await importOriginal<typeof import('@nestjs/graphql')>();
-  return {
-    ...actual,
-    GqlExecutionContext: {
-      create: vi.fn(),
-    },
-  };
-});
-
-import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
+import { ExecutionContext } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
+import { vi } from 'vitest';
 import { Headers } from './headers.decorator';
 
-// Helper to extract the factory function from a createParamDecorator result
-function getParamDecoratorFactory(decorator: ParameterDecorator) {
-  class TestClass {
-    testMethod(@decorator _param: any) {}
-  }
-
-  const metadata = Reflect.getMetadata(
-    ROUTE_ARGS_METADATA,
-    TestClass,
-    'testMethod'
-  );
-  const key = Object.keys(metadata)[0];
-  return metadata[key].factory;
-}
-
+// Instead of mocking @nestjs/graphql (which doesn't work with isolate: false),
+// we spy on GqlExecutionContext.create to control its return value while
+// still providing a real ExecutionContext shape so the real .create() can work.
 describe('Headers decorator', () => {
+  let createSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    createSpy = vi.spyOn(GqlExecutionContext, 'create');
+  });
+
+  afterEach(() => {
+    createSpy.mockRestore();
+  });
+
   it('should return all headers when called without arguments', () => {
     const mockHeaders = {
       authorization: 'Bearer token',
       'content-type': 'application/json',
     };
 
-    vi.mocked(GqlExecutionContext.create).mockReturnValue({
+    createSpy.mockReturnValue({
       getContext: () => ({
         req: { headers: mockHeaders },
       }),
     } as any);
 
-    const decorator = Headers();
-    const factory = getParamDecoratorFactory(decorator);
-    const mockContext = {};
+    // Headers() creates and returns a ParameterDecorator.
+    // We can't easily extract the internal factory from createParamDecorator,
+    // but we can test by calling Headers() and verifying it creates a decorator.
+    // The factory receives (data, ctx) and the Headers function passes `header` as data.
+    // For a full integration test, we test via the actual GqlExecutionContext.create spy.
 
-    const result = factory(undefined, mockContext);
+    // Actually, the Headers function calls createParamDecorator(factory)(header)
+    // and returns a ParameterDecorator. We need to extract the factory from metadata.
+    const decorator = Headers();
+
+    // Apply decorator to extract the factory from NestJS metadata
+    class TestClass {
+      testMethod(@decorator _param: any) {}
+    }
+    const metadata = Reflect.getMetadata(
+      '__routeArguments__',
+      TestClass,
+      'testMethod'
+    );
+    const key = Object.keys(metadata)[0];
+    const factory = metadata[key].factory;
+
+    // The factory receives (data, executionContext)
+    // We pass a minimal ExecutionContext mock that has getType() so
+    // GqlExecutionContext.create can be called
+    const mockExecutionContext = {
+      getType: () => 'graphql',
+      getClass: () => TestClass,
+      getHandler: () => TestClass.prototype.testMethod,
+      getArgs: () => [],
+      getArgByIndex: () => undefined,
+      switchToHttp: () => ({} as any),
+      switchToRpc: () => ({} as any),
+      switchToWs: () => ({} as any),
+    } as unknown as ExecutionContext;
+
+    const result = factory(undefined, mockExecutionContext);
     expect(result).toBe(mockHeaders);
   });
 
@@ -57,17 +75,37 @@ describe('Headers decorator', () => {
       'x-custom': 'custom-value',
     };
 
-    vi.mocked(GqlExecutionContext.create).mockReturnValue({
+    createSpy.mockReturnValue({
       getContext: () => ({
         req: { headers: mockHeaders },
       }),
     } as any);
 
     const decorator = Headers('authorization');
-    const factory = getParamDecoratorFactory(decorator);
-    const mockContext = {};
 
-    const result = factory('authorization', mockContext);
+    class TestClass {
+      testMethod(@decorator _param: any) {}
+    }
+    const metadata = Reflect.getMetadata(
+      '__routeArguments__',
+      TestClass,
+      'testMethod'
+    );
+    const key = Object.keys(metadata)[0];
+    const factory = metadata[key].factory;
+
+    const mockExecutionContext = {
+      getType: () => 'graphql',
+      getClass: () => TestClass,
+      getHandler: () => TestClass.prototype.testMethod,
+      getArgs: () => [],
+      getArgByIndex: () => undefined,
+      switchToHttp: () => ({} as any),
+      switchToRpc: () => ({} as any),
+      switchToWs: () => ({} as any),
+    } as unknown as ExecutionContext;
+
+    const result = factory('authorization', mockExecutionContext);
     expect(result).toBe('Bearer my-token');
   });
 
@@ -76,17 +114,37 @@ describe('Headers decorator', () => {
       'content-type': 'application/json',
     };
 
-    vi.mocked(GqlExecutionContext.create).mockReturnValue({
+    createSpy.mockReturnValue({
       getContext: () => ({
         req: { headers: mockHeaders },
       }),
     } as any);
 
     const decorator = Headers('x-missing');
-    const factory = getParamDecoratorFactory(decorator);
-    const mockContext = {};
 
-    const result = factory('x-missing', mockContext);
+    class TestClass {
+      testMethod(@decorator _param: any) {}
+    }
+    const metadata = Reflect.getMetadata(
+      '__routeArguments__',
+      TestClass,
+      'testMethod'
+    );
+    const key = Object.keys(metadata)[0];
+    const factory = metadata[key].factory;
+
+    const mockExecutionContext = {
+      getType: () => 'graphql',
+      getClass: () => TestClass,
+      getHandler: () => TestClass.prototype.testMethod,
+      getArgs: () => [],
+      getArgByIndex: () => undefined,
+      switchToHttp: () => ({} as any),
+      switchToRpc: () => ({} as any),
+      switchToWs: () => ({} as any),
+    } as unknown as ExecutionContext;
+
+    const result = factory('x-missing', mockExecutionContext);
     expect(result).toBeUndefined();
   });
 });

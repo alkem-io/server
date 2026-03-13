@@ -1,6 +1,8 @@
 import { vi } from 'vitest';
+import * as apmModule from '@src/apm';
+import { instrumentMethod } from './instrument.method';
 
-const { mockSpan, mockTransaction, mockApmAgent } = vi.hoisted(() => {
+describe('instrumentMethod', () => {
   const mockSpan = {
     subtype: '',
     end: vi.fn(),
@@ -8,25 +10,27 @@ const { mockSpan, mockTransaction, mockApmAgent } = vi.hoisted(() => {
   const mockTransaction = {
     startSpan: vi.fn().mockReturnValue(mockSpan),
   };
-  const mockApmAgent = {
-    currentTransaction: mockTransaction as any,
-  };
-  return { mockSpan, mockTransaction, mockApmAgent };
-});
 
-vi.mock('@src/apm', () => ({
-  apmAgent: mockApmAgent,
-}));
-
-import { instrumentMethod } from './instrument.method';
-
-describe('instrumentMethod', () => {
   beforeEach(() => {
     mockSpan.subtype = '';
     mockSpan.end.mockClear();
     mockTransaction.startSpan.mockClear();
     mockTransaction.startSpan.mockReturnValue(mockSpan);
-    mockApmAgent.currentTransaction = mockTransaction;
+    // Override the apmAgent export for testing by using Object.defineProperty
+    Object.defineProperty(apmModule, 'apmAgent', {
+      value: { currentTransaction: mockTransaction },
+      writable: true,
+      configurable: true,
+    });
+  });
+
+  afterEach(() => {
+    // Reset apmAgent to undefined (the default when APM_ENDPOINT is not set)
+    Object.defineProperty(apmModule, 'apmAgent', {
+      value: undefined,
+      writable: true,
+      configurable: true,
+    });
   });
 
   it('should create a span and end it for synchronous return values', () => {
@@ -59,7 +63,12 @@ describe('instrumentMethod', () => {
   });
 
   it('should call the original method without span when no active transaction', () => {
-    mockApmAgent.currentTransaction = null as any;
+    Object.defineProperty(apmModule, 'apmAgent', {
+      value: { currentTransaction: null },
+      writable: true,
+      configurable: true,
+    });
+
     const original = vi.fn().mockReturnValue('no-tx');
     const instrumented = instrumentMethod(
       original,

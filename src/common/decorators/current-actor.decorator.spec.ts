@@ -1,51 +1,60 @@
-import { vi } from 'vitest';
-
-// Use globalThis to avoid TDZ - vi.mock is hoisted above const declarations
-vi.mock('@nestjs/common', async importOriginal => {
-  const actual = await importOriginal<typeof import('@nestjs/common')>();
-  return {
-    ...actual,
-    createParamDecorator: (factory: any) => {
-      (globalThis as any).__currentActorFactory = factory;
-      return actual.createParamDecorator(factory);
-    },
-  };
-});
-
-vi.mock('@nestjs/graphql', async importOriginal => {
-  const actual = await importOriginal<typeof import('@nestjs/graphql')>();
-  return {
-    ...actual,
-    GqlExecutionContext: {
-      create: vi.fn(),
-    },
-  };
-});
-
+import { ExecutionContext } from '@nestjs/common';
+import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
 import { GqlExecutionContext } from '@nestjs/graphql';
-// Importing triggers createParamDecorator and captures the factory
-import './current-actor.decorator';
+import { vi } from 'vitest';
+import { CurrentActor } from './current-actor.decorator';
+
+// Extract the factory from the createParamDecorator result via metadata.
+// createParamDecorator returns a factory: calling CurrentActor() returns a ParameterDecorator.
+function getParamDecoratorFactory(decoratorFactory: any) {
+  class TestClass {
+    // biome-ignore lint/suspicious/noExplicitAny: test helper
+    testMethod(@decoratorFactory() _param: any) {}
+  }
+
+  const metadata = Reflect.getMetadata(
+    ROUTE_ARGS_METADATA,
+    TestClass,
+    'testMethod'
+  );
+  const key = Object.keys(metadata)[0];
+  return metadata[key].factory;
+}
 
 describe('CurrentActor', () => {
-  const getFactory = () =>
-    (globalThis as any).__currentActorFactory as (
-      data: any,
-      context: any
-    ) => any;
+  let createSpy: ReturnType<typeof vi.spyOn>;
+
+  beforeEach(() => {
+    createSpy = vi.spyOn(GqlExecutionContext, 'create');
+  });
+
+  afterEach(() => {
+    createSpy.mockRestore();
+  });
 
   it('should extract user from graphql context', () => {
     const mockUser = { id: 'actor-1', email: 'test@example.com' };
-    const mockContext = {
-      getType: () => 'graphql',
-    };
 
-    vi.mocked(GqlExecutionContext.create).mockReturnValue({
+    createSpy.mockReturnValue({
       getContext: () => ({
         req: { user: mockUser },
       }),
     } as any);
 
-    const result = getFactory()(undefined, mockContext);
+    const factory = getParamDecoratorFactory(CurrentActor);
+
+    const mockContext = {
+      getType: () => 'graphql',
+      getClass: () => ({}),
+      getHandler: () => ({}),
+      getArgs: () => [],
+      getArgByIndex: () => undefined,
+      switchToHttp: () => ({} as any),
+      switchToRpc: () => ({} as any),
+      switchToWs: () => ({} as any),
+    } as unknown as ExecutionContext;
+
+    const result = factory(undefined, mockContext);
     expect(result).toBe(mockUser);
   });
 
@@ -57,18 +66,33 @@ describe('CurrentActor', () => {
       switchToHttp: () => ({
         getRequest: () => mockRequest,
       }),
-    };
+      getClass: () => ({}),
+      getHandler: () => ({}),
+      getArgs: () => [],
+      getArgByIndex: () => undefined,
+      switchToRpc: () => ({} as any),
+      switchToWs: () => ({} as any),
+    } as unknown as ExecutionContext;
 
-    const result = getFactory()(undefined, mockContext);
+    const factory = getParamDecoratorFactory(CurrentActor);
+    const result = factory(undefined, mockContext);
     expect(result).toBe(mockUser);
   });
 
   it('should return null for unknown context types', () => {
     const mockContext = {
       getType: () => 'rpc',
-    };
+      getClass: () => ({}),
+      getHandler: () => ({}),
+      getArgs: () => [],
+      getArgByIndex: () => undefined,
+      switchToHttp: () => ({} as any),
+      switchToRpc: () => ({} as any),
+      switchToWs: () => ({} as any),
+    } as unknown as ExecutionContext;
 
-    const result = getFactory()(undefined, mockContext);
+    const factory = getParamDecoratorFactory(CurrentActor);
+    const result = factory(undefined, mockContext);
     expect(result).toBeNull();
   });
 });

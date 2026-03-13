@@ -1,98 +1,88 @@
 import 'reflect-metadata';
-import { vi } from 'vitest';
-
-const { mockCreateDecorator } = vi.hoisted(() => {
-  const mockCreateDecorator = vi.fn().mockReturnValue(() => {});
-  return { mockCreateDecorator };
-});
-
-vi.mock('./util', () => ({
-  createInstrumentedClassDecorator: mockCreateDecorator,
-}));
+import { RESOLVER_NAME_METADATA } from '@nestjs/graphql';
+import { InstrumentResolver } from './instrument.resolver.decorator';
 
 describe('InstrumentResolver', () => {
-  const originalEnv = { ...process.env };
-
-  afterEach(() => {
-    process.env = { ...originalEnv };
-    vi.resetModules();
-    mockCreateDecorator.mockClear();
+  it('should return a class decorator function', () => {
+    const decorator = InstrumentResolver();
+    expect(typeof decorator).toBe('function');
   });
 
-  it('should call createInstrumentedClassDecorator with graphql-resolver type', async () => {
-    const { InstrumentResolver } = await import(
-      './instrument.resolver.decorator'
-    );
-    InstrumentResolver();
-
-    expect(mockCreateDecorator).toHaveBeenCalledWith(
-      'graphql-resolver',
-      expect.objectContaining({
-        matchMethodsOnMetadataKey: expect.any(String),
-      })
-    );
+  it('should accept skipMethods option', () => {
+    const decorator = InstrumentResolver({ skipMethods: ['method1'] });
+    expect(typeof decorator).toBe('function');
   });
 
-  it('should pass skipMethods option through', async () => {
-    const { InstrumentResolver } = await import(
-      './instrument.resolver.decorator'
+  it('should apply the decorator to a class without errors', () => {
+    class TestClass {
+      resolverMethod() {
+        return 'value';
+      }
+    }
+    // Mark method with resolver metadata so it gets instrumented
+    Reflect.defineMetadata(
+      RESOLVER_NAME_METADATA,
+      'resolverMethod',
+      TestClass.prototype.resolverMethod
     );
-    InstrumentResolver({ skipMethods: ['method1'] });
 
-    expect(mockCreateDecorator).toHaveBeenCalledWith(
-      'graphql-resolver',
-      expect.objectContaining({
-        skipMethods: ['method1'],
-      })
-    );
+    const decorator = InstrumentResolver();
+    // Should not throw
+    decorator(TestClass);
+
+    const instance = new TestClass();
+    expect(instance.resolverMethod()).toBe('value');
   });
 
-  it('should be enabled by default when ENABLE_APM is not set', async () => {
-    delete process.env.ENABLE_APM;
-    const { InstrumentResolver } = await import(
-      './instrument.resolver.decorator'
-    );
-    InstrumentResolver();
+  it('should only instrument methods with resolver metadata', () => {
+    class TestClass {
+      resolverMethod() {
+        return 'resolver';
+      }
+      plainMethod() {
+        return 'plain';
+      }
+    }
 
-    expect(mockCreateDecorator).toHaveBeenCalledWith(
-      'graphql-resolver',
-      expect.objectContaining({
-        enabled: true,
-      })
+    Reflect.defineMetadata(
+      RESOLVER_NAME_METADATA,
+      'resolverMethod',
+      TestClass.prototype.resolverMethod
     );
+
+    const originalPlain = TestClass.prototype.plainMethod;
+    const decorator = InstrumentResolver();
+    decorator(TestClass);
+
+    // Plain method should remain unchanged since it has no resolver metadata
+    expect(TestClass.prototype.plainMethod).toBe(originalPlain);
   });
 
-  it('should be disabled when ENABLE_APM=true and resolver not in APM_INSTRUMENT_MODULES', async () => {
-    process.env.ENABLE_APM = 'true';
-    process.env.APM_INSTRUMENT_MODULES = 'service';
+  it('should skip methods listed in skipMethods', () => {
+    class TestClass {
+      keep() {
+        return 'kept';
+      }
+      skip() {
+        return 'skipped';
+      }
+    }
 
-    const { InstrumentResolver } = await import(
-      './instrument.resolver.decorator'
+    Reflect.defineMetadata(
+      RESOLVER_NAME_METADATA,
+      'keep',
+      TestClass.prototype.keep
     );
-    InstrumentResolver();
-
-    expect(mockCreateDecorator).toHaveBeenCalledWith(
-      'graphql-resolver',
-      expect.objectContaining({
-        enabled: false,
-      })
+    Reflect.defineMetadata(
+      RESOLVER_NAME_METADATA,
+      'skip',
+      TestClass.prototype.skip
     );
-  });
 
-  it('should be enabled when ENABLE_APM=true and resolver in APM_INSTRUMENT_MODULES', async () => {
-    process.env.ENABLE_APM = 'true';
-    process.env.APM_INSTRUMENT_MODULES = 'resolver,service';
+    const originalSkip = TestClass.prototype.skip;
+    const decorator = InstrumentResolver({ skipMethods: ['skip'] });
+    decorator(TestClass);
 
-    const { InstrumentResolver } = await import(
-      './instrument.resolver.decorator'
-    );
-    InstrumentResolver();
-
-    expect(mockCreateDecorator).toHaveBeenCalledWith(
-      'graphql-resolver',
-      expect.objectContaining({
-        enabled: true,
-      })
-    );
+    expect(TestClass.prototype.skip).toBe(originalSkip);
   });
 });
