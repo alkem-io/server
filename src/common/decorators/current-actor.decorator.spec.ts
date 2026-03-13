@@ -49,9 +49,9 @@ describe('CurrentActor', () => {
       getHandler: () => ({}),
       getArgs: () => [],
       getArgByIndex: () => undefined,
-      switchToHttp: () => ({} as any),
-      switchToRpc: () => ({} as any),
-      switchToWs: () => ({} as any),
+      switchToHttp: () => ({}) as any,
+      switchToRpc: () => ({}) as any,
+      switchToWs: () => ({}) as any,
     } as unknown as ExecutionContext;
 
     const result = factory(undefined, mockContext);
@@ -70,8 +70,8 @@ describe('CurrentActor', () => {
       getHandler: () => ({}),
       getArgs: () => [],
       getArgByIndex: () => undefined,
-      switchToRpc: () => ({} as any),
-      switchToWs: () => ({} as any),
+      switchToRpc: () => ({}) as any,
+      switchToWs: () => ({}) as any,
     } as unknown as ExecutionContext;
 
     const factory = getParamDecoratorFactory(CurrentActor);
@@ -86,9 +86,9 @@ describe('CurrentActor', () => {
       getHandler: () => ({}),
       getArgs: () => [],
       getArgByIndex: () => undefined,
-      switchToHttp: () => ({} as any),
-      switchToRpc: () => ({} as any),
-      switchToWs: () => ({} as any),
+      switchToHttp: () => ({}) as any,
+      switchToRpc: () => ({}) as any,
+      switchToWs: () => ({}) as any,
     } as unknown as ExecutionContext;
 
     const factory = getParamDecoratorFactory(CurrentActor);

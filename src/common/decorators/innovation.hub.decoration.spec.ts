@@ -1,6 +1,6 @@
+import { INNOVATION_HUB_INJECT_TOKEN } from '@common/constants';
 import { ExecutionContext } from '@nestjs/common';
 import { ROUTE_ARGS_METADATA } from '@nestjs/common/constants';
-import { INNOVATION_HUB_INJECT_TOKEN } from '@common/constants';
 import { GqlExecutionContext } from '@nestjs/graphql';
 import { vi } from 'vitest';
 import { InnovationHub } from './innovation.hub.decoration';
@@ -50,9 +50,9 @@ describe('InnovationHub decorator', () => {
       getHandler: () => ({}),
       getArgs: () => [],
       getArgByIndex: () => undefined,
-      switchToHttp: () => ({} as any),
-      switchToRpc: () => ({} as any),
-      switchToWs: () => ({} as any),
+      switchToHttp: () => ({}) as any,
+      switchToRpc: () => ({}) as any,
+      switchToWs: () => ({}) as any,
     } as unknown as ExecutionContext;
 
     const result = factory(undefined, mockContext);
@@ -74,9 +74,9 @@ describe('InnovationHub decorator', () => {
       getHandler: () => ({}),
       getArgs: () => [],
       getArgByIndex: () => undefined,
-      switchToHttp: () => ({} as any),
-      switchToRpc: () => ({} as any),
-      switchToWs: () => ({} as any),
+      switchToHttp: () => ({}) as any,
+      switchToRpc: () => ({}) as any,
+      switchToWs: () => ({}) as any,
     } as unknown as ExecutionContext;
 
     const result = factory(undefined, mockContext);

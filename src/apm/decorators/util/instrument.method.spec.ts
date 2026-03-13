@@ -1,5 +1,5 @@
-import { vi } from 'vitest';
 import * as apmModule from '@src/apm';
+import { vi } from 'vitest';
 import { instrumentMethod } from './instrument.method';
 
 describe('instrumentMethod', () => {

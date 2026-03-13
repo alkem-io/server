@@ -60,9 +60,9 @@ describe('Headers decorator', () => {
       getHandler: () => TestClass.prototype.testMethod,
       getArgs: () => [],
       getArgByIndex: () => undefined,
-      switchToHttp: () => ({} as any),
-      switchToRpc: () => ({} as any),
-      switchToWs: () => ({} as any),
+      switchToHttp: () => ({}) as any,
+      switchToRpc: () => ({}) as any,
+      switchToWs: () => ({}) as any,
     } as unknown as ExecutionContext;
 
     const result = factory(undefined, mockExecutionContext);
@@ -100,9 +100,9 @@ describe('Headers decorator', () => {
       getHandler: () => TestClass.prototype.testMethod,
       getArgs: () => [],
       getArgByIndex: () => undefined,
-      switchToHttp: () => ({} as any),
-      switchToRpc: () => ({} as any),
-      switchToWs: () => ({} as any),
+      switchToHttp: () => ({}) as any,
+      switchToRpc: () => ({}) as any,
+      switchToWs: () => ({}) as any,
     } as unknown as ExecutionContext;
 
     const result = factory('authorization', mockExecutionContext);
@@ -139,9 +139,9 @@ describe('Headers decorator', () => {
       getHandler: () => TestClass.prototype.testMethod,
       getArgs: () => [],
       getArgByIndex: () => undefined,
-      switchToHttp: () => ({} as any),
-      switchToRpc: () => ({} as any),
-      switchToWs: () => ({} as any),
+      switchToHttp: () => ({}) as any,
+      switchToRpc: () => ({}) as any,
+      switchToWs: () => ({}) as any,
     } as unknown as ExecutionContext;
 
     const result = factory('x-missing', mockExecutionContext);

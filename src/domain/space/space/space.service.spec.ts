@@ -664,6 +664,7 @@ describe('SpaceService', () => {
     it('should throw on duplicate subspace IDs', async () => {
       await expect(
         service.updateSubspacesSortOrder({ id: 'space-1' } as any, {
+          spaceID: 'space-1',
           subspaceIDs: ['sub-1', 'sub-1'],
         })
       ).rejects.toThrow(ValidationException);
@@ -678,6 +679,7 @@ describe('SpaceService', () => {
 
       await expect(
         service.updateSubspacesSortOrder({ id: 'space-1' } as any, {
+          spaceID: 'space-1',
           subspaceIDs: ['sub-1', 'sub-missing'],
         })
       ).rejects.toThrow(EntityNotFoundException);
@@ -695,7 +697,7 @@ describe('SpaceService', () => {
 
       const result = await service.updateSubspacesSortOrder(
         { id: 'space-1' } as any,
-        { subspaceIDs: ['sub-2', 'sub-1'] }
+        { spaceID: 'space-1', subspaceIDs: ['sub-2', 'sub-1'] }
       );
 
       expect(result).toHaveLength(2);
@@ -712,6 +714,7 @@ describe('SpaceService', () => {
 
       await expect(
         service.updateSubspacesSortOrder({ id: 'space-1' } as any, {
+          spaceID: 'space-1',
           subspaceIDs: ['sub-1'],
         })
       ).rejects.toThrow(EntityNotFoundException);

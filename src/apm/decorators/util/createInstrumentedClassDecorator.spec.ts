@@ -1,6 +1,6 @@
 import 'reflect-metadata';
-import { vi } from 'vitest';
 import * as apmModule from '@src/apm';
+import { vi } from 'vitest';
 import { createInstrumentedClassDecorator } from './createInstrumentedClassDecorator';
 
 describe('createInstrumentedClassDecorator', () => {

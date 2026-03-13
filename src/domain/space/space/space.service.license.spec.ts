@@ -153,7 +153,7 @@ describe('SpaceLicenseService', () => {
         return createMockSpace({ id: 'subspace-1', subspaces: [] }) as any;
       });
       (licenseService.reset as any).mockImplementation(
-        license => license as any
+        (license: any) => license as any
       );
       (licenseEngineService.isEntitlementGranted as any).mockResolvedValue(
         false
