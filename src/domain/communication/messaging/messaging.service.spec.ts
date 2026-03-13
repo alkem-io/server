@@ -33,6 +33,8 @@ describe('MessagingService', () => {
   let configService: { get: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     configService = {
       get: vi.fn(),
     };

@@ -33,6 +33,8 @@ describe('DocumentService', () => {
   let storageService: StorageService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Document.create to avoid DataSource requirement
     vi.spyOn(Document, 'create').mockImplementation((input: any) => {
       const entity = new Document();

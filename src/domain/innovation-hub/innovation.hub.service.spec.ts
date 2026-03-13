@@ -24,6 +24,8 @@ describe('InnovationHubService', () => {
   let innovationHubRepository: Repository<InnovationHub>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock the static BaseEntity.create method to avoid DataSource requirement
     vi.spyOn(InnovationHub, 'create').mockImplementation((input: any) => {
       const hub = new InnovationHub();
@@ -244,9 +246,7 @@ describe('InnovationHubService', () => {
         spaceListFilter: ['space-1', 'space-invalid'],
         profileData: { displayName: 'List Hub' },
       };
-      (service['spaceLookupService'] as any).spacesExist = vi
-        .fn()
-        .mockResolvedValue(['space-invalid']);
+      (service['spaceLookupService'] as any).spacesExist.mockResolvedValue(['space-invalid']);
 
       // Act & Assert
       await expect(
@@ -293,9 +293,7 @@ describe('InnovationHubService', () => {
         spaceListFilter: ['space-1', 'space-2'],
         profileData: { displayName: 'List Hub' },
       };
-      (service['spaceLookupService'] as any).spacesExist = vi
-        .fn()
-        .mockResolvedValue(true);
+      (service['spaceLookupService'] as any).spacesExist.mockResolvedValue(true);
       setupSuccessfulCreateMocks();
 
       // Act
@@ -357,9 +355,7 @@ describe('InnovationHubService', () => {
     it('should update profile when profileData is provided', async () => {
       // Arrange
       const updatedProfile = { id: 'profile-1', displayName: 'Updated' };
-      (service['profileService'] as any).updateProfile = vi
-        .fn()
-        .mockResolvedValue(updatedProfile);
+      (service['profileService'] as any).updateProfile.mockResolvedValue(updatedProfile);
 
       const input: UpdateInnovationHubInput = {
         ID: 'hub-1',
@@ -457,9 +453,7 @@ describe('InnovationHubService', () => {
         spaceListFilter: ['space-old'],
       } as unknown as InnovationHub;
       vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(listHub);
-      (service['spaceLookupService'] as any).spacesExist = vi
-        .fn()
-        .mockResolvedValue(true);
+      (service['spaceLookupService'] as any).spacesExist.mockResolvedValue(true);
 
       const input: UpdateInnovationHubInput = {
         ID: 'hub-1',
@@ -499,9 +493,7 @@ describe('InnovationHubService', () => {
         type: InnovationHubType.LIST,
       } as unknown as InnovationHub;
       vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(listHub);
-      (service['spaceLookupService'] as any).spacesExist = vi
-        .fn()
-        .mockResolvedValue(['bad-id-1', 'bad-id-2']);
+      (service['spaceLookupService'] as any).spacesExist.mockResolvedValue(['bad-id-1', 'bad-id-2']);
 
       const input: UpdateInnovationHubInput = {
         ID: 'hub-1',
@@ -850,9 +842,7 @@ describe('InnovationHubService', () => {
       } as unknown as InnovationHub;
 
       vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(hub);
-      (service['accountLookupService'] as any).getHost = vi
-        .fn()
-        .mockResolvedValue(mockProvider);
+      (service['accountLookupService'] as any).getHost.mockResolvedValue(mockProvider);
 
       // Act
       const result = await service.getProvider('hub-1');
@@ -892,9 +882,7 @@ describe('InnovationHubService', () => {
         account: { id: 'account-1' },
       } as unknown as InnovationHub;
       vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(hub);
-      (service['accountLookupService'] as any).getHost = vi
-        .fn()
-        .mockResolvedValue(null);
+      (service['accountLookupService'] as any).getHost.mockResolvedValue(null);
 
       // Act & Assert
       await expect(service.getProvider('hub-1')).rejects.toThrow(
@@ -911,9 +899,7 @@ describe('InnovationHubService', () => {
       const findOneSpy = vi
         .spyOn(innovationHubRepository, 'findOne')
         .mockResolvedValue(hub);
-      (service['accountLookupService'] as any).getHost = vi
-        .fn()
-        .mockResolvedValue({ id: 'p' });
+      (service['accountLookupService'] as any).getHost.mockResolvedValue({ id: 'p' });
 
       // Act
       await service.getProvider('hub-1');

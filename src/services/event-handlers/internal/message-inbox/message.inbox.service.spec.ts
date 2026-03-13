@@ -16,6 +16,12 @@ import { MessageInboxService } from './message.inbox.service';
 import { MessageNotificationService } from './message.notification.service';
 import { MessageReceivedEvent } from './message.received.event';
 import { MessageRedactedEvent } from './message.redacted.event';
+import { ReactionAddedEvent } from './reaction.added.event';
+import { ReactionRemovedEvent } from './reaction.removed.event';
+import { RoomCreatedEvent } from './room.created.event';
+import { RoomDmRequestedEvent } from './room.dm.requested.event';
+import { RoomMemberLeftEvent } from './room.member.left.event';
+import { RoomMemberUpdatedEvent } from './room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from './room.receipt.updated.event';
 import { VcInvocationService } from './vc.invocation.service';
 
@@ -31,6 +37,8 @@ describe('MessageInboxService', () => {
   let conversationService: Mocked<ConversationService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [MessageInboxService, MockWinstonProvider],
     })
@@ -430,6 +438,190 @@ describe('MessageInboxService', () => {
       expect(
         subscriptionPublishService.publishRoomReceiptEvent
       ).toHaveBeenCalled();
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleReactionAdded', () => {
+    it('should publish CREATE event for the reaction', async () => {
+      const room = makeRoom();
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+
+      await service.handleReactionAdded(
+        new ReactionAddedEvent({
+          roomId: 'room-1',
+          messageId: 'msg-1',
+          reactionId: 'react-1',
+          emoji: '👍',
+          actorID: 'actor-1',
+          timestamp: 5000,
+        })
+      );
+
+      expect(subscriptionPublishService.publishRoomEvent).toHaveBeenCalledWith(
+        room,
+        MutationType.CREATE,
+        expect.objectContaining({
+          id: 'react-1',
+          emoji: '👍',
+          sender: 'actor-1',
+          timestamp: 5000,
+        }),
+        'msg-1'
+      );
+    });
+  });
+
+  describe('handleReactionRemoved', () => {
+    it('should publish DELETE event for the reaction', async () => {
+      const room = makeRoom();
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+
+      await service.handleReactionRemoved(
+        new ReactionRemovedEvent({
+          roomId: 'room-1',
+          messageId: 'msg-1',
+          reactionId: 'react-1',
+          timestamp: 6000,
+        })
+      );
+
+      expect(subscriptionPublishService.publishRoomEvent).toHaveBeenCalledWith(
+        room,
+        MutationType.DELETE,
+        expect.objectContaining({
+          id: 'react-1',
+          emoji: '',
+          sender: '',
+          timestamp: 6000,
+        }),
+        'msg-1'
+      );
+    });
+  });
+
+  describe('handleRoomCreated', () => {
+    it('should complete without error (logging only)', async () => {
+      await service.handleRoomCreated(
+        new RoomCreatedEvent({
+          roomId: 'room-1',
+          creatorActorID: 'actor-1',
+          roomType: 'callout',
+          timestamp: 7000,
+        })
+      );
+
+      // No service calls expected - logging only
+      expect(roomLookupService.getRoomOrFail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleRoomDmRequested', () => {
+    it('should complete without error (logging only)', async () => {
+      await service.handleRoomDmRequested(
+        new RoomDmRequestedEvent({
+          initiatorActorID: 'actor-1',
+          targetActorID: 'actor-2',
+          timestamp: 8000,
+        })
+      );
+
+      expect(roomLookupService.getRoomOrFail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleRoomMemberLeft', () => {
+    it('should complete without error (logging only)', async () => {
+      await service.handleRoomMemberLeft(
+        new RoomMemberLeftEvent({
+          roomId: 'room-1',
+          actorID: 'actor-1',
+          reason: 'left voluntarily',
+          timestamp: 9000,
+        })
+      );
+
+      expect(roomLookupService.getRoomOrFail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleRoomMemberUpdated', () => {
+    it('should complete without error (logging only)', async () => {
+      await service.handleRoomMemberUpdated(
+        new RoomMemberUpdatedEvent({
+          roomId: 'room-1',
+          memberActorID: 'actor-1',
+          senderActorID: 'actor-2',
+          membership: 'join',
+          timestamp: 10000,
+        })
+      );
+
+      expect(roomLookupService.getRoomOrFail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleMessageRedacted - conversation not found', () => {
+    it('should skip conversation event when conversation is not found for conversation room', async () => {
+      const room = makeRoom({ type: RoomType.CONVERSATION });
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+      roomLookupService.decrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
+      inAppNotificationService.deleteAllByMessageId.mockResolvedValue(
+        undefined as any
+      );
+      actorContextService.buildForActor.mockResolvedValue({} as any);
+      roomServiceEvents.processActivityMessageRemoved.mockResolvedValue(
+        undefined as any
+      );
+      conversationService.findConversationByRoomId.mockResolvedValue(null);
+
+      await service.handleMessageRedacted(
+        new MessageRedactedEvent({
+          roomId: 'room-1',
+          redactorActorID: 'actor-1',
+          redactedMessageId: 'del-msg-1',
+          redactionMessageId: 'redact-1',
+          timestamp: 3000,
+        })
+      );
+
+      // Room event should still be published
+      expect(subscriptionPublishService.publishRoomEvent).toHaveBeenCalled();
+      // Conversation event should NOT be published because conversation was not found
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleMessageReceived - conversation not found', () => {
+    it('should skip conversation event when conversation is not found for conversation room', async () => {
+      const room = makeRoom({ type: RoomType.CONVERSATION });
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+      roomLookupService.incrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
+      conversationService.findConversationByRoomId.mockResolvedValue(null);
+      vcInvocationService.processDirectConversation.mockResolvedValue(
+        undefined
+      );
+
+      await service.handleMessageReceived(
+        new MessageReceivedEvent({
+          roomId: 'room-1',
+          actorID: 'actor-1',
+          message: {
+            id: 'msg-1',
+            message: 'Hello',
+            timestamp: 1000,
+          },
+        } as any)
+      );
+
       expect(
         subscriptionPublishService.publishConversationEvent
       ).not.toHaveBeenCalled();

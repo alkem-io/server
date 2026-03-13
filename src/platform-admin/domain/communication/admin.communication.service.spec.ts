@@ -38,6 +38,8 @@ describe('AdminCommunicationService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminCommunicationService,

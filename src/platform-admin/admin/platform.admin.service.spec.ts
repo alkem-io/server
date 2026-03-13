@@ -24,6 +24,8 @@ describe('PlatformAdminService', () => {
   let mockEntityManager: { find: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     mockEntityManager = {
       find: vi.fn(),
     };

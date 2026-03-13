@@ -20,6 +20,8 @@ describe('LinkService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     vi.spyOn(Link, 'create').mockImplementation((input: any) => {
       const entity = new Link();
       Object.assign(entity, input);
