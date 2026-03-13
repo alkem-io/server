@@ -17,6 +17,8 @@ describe('InAppNotificationAdminService', () => {
   let configService: { get: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InAppNotificationAdminService,

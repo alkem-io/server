@@ -9,6 +9,8 @@ describe('AccountLicensePlanService', () => {
   let service: AccountLicensePlanService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AccountLicensePlanService, MockWinstonProvider],
     })

@@ -22,6 +22,8 @@ describe('TimelineService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TimelineService,
@@ -47,7 +49,7 @@ describe('TimelineService', () => {
     it('should return a timeline with a TIMELINE authorization policy when called', () => {
       // Arrange
       const mockCalendar = { id: 'calendar-1', events: [] };
-      calendarService.createCalendar = vi.fn().mockReturnValue(mockCalendar);
+      calendarService.createCalendar.mockReturnValue(mockCalendar);
 
       // Act
       const result = service.createTimeline();
@@ -61,7 +63,7 @@ describe('TimelineService', () => {
     it('should delegate calendar creation to CalendarService when called', () => {
       // Arrange
       const mockCalendar = { id: 'calendar-1', events: [] };
-      calendarService.createCalendar = vi.fn().mockReturnValue(mockCalendar);
+      calendarService.createCalendar.mockReturnValue(mockCalendar);
 
       // Act
       const result = service.createTimeline();
@@ -86,8 +88,8 @@ describe('TimelineService', () => {
 
       vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(mockTimeline);
       vi.spyOn(timelineRepository, 'remove').mockResolvedValue(mockTimeline);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      calendarService.deleteCalendar = vi.fn().mockResolvedValue(mockCalendar);
+      authorizationPolicyService.delete.mockResolvedValue(undefined);
+      calendarService.deleteCalendar.mockResolvedValue(mockCalendar);
 
       // Act
       await service.deleteTimeline(timelineId);
@@ -114,8 +116,8 @@ describe('TimelineService', () => {
 
       vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(mockTimeline);
       vi.spyOn(timelineRepository, 'remove').mockResolvedValue(mockTimeline);
-      authorizationPolicyService.delete = vi.fn();
-      calendarService.deleteCalendar = vi.fn().mockResolvedValue(mockCalendar);
+      authorizationPolicyService.delete.mockReset();
+      calendarService.deleteCalendar.mockResolvedValue(mockCalendar);
 
       // Act
       await service.deleteTimeline(timelineId);
@@ -139,8 +141,8 @@ describe('TimelineService', () => {
 
       vi.spyOn(timelineRepository, 'findOne').mockResolvedValue(mockTimeline);
       vi.spyOn(timelineRepository, 'remove').mockResolvedValue(mockTimeline);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      calendarService.deleteCalendar = vi.fn();
+      authorizationPolicyService.delete.mockResolvedValue(undefined);
+      calendarService.deleteCalendar.mockReset();
 
       // Act
       await service.deleteTimeline(timelineId);

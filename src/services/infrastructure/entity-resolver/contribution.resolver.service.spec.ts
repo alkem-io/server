@@ -11,6 +11,8 @@ describe('ContributionResolverService', () => {
   let entityManager: Mocked<EntityManager>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [ContributionResolverService, MockWinstonProvider],
     })

@@ -21,6 +21,8 @@ describe('VirtualContributorMessageService', () => {
   let aiServerAdapter: Mocked<AiServerAdapter>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [VirtualContributorMessageService, MockWinstonProvider],
     })

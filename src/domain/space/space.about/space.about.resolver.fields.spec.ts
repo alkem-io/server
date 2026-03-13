@@ -29,6 +29,8 @@ describe('SpaceAboutResolverFields', () => {
   let spaceAboutService: Mocked<SpaceAboutService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [SpaceAboutResolverFields, MockWinstonProvider],
     })

@@ -23,6 +23,8 @@ describe('SpaceDefaultsService', () => {
   let templatesManagerService: TemplatesManagerService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [SpaceDefaultsService, MockWinstonProvider],
     })
@@ -109,9 +111,7 @@ describe('SpaceDefaultsService', () => {
         collaboration: null,
       } as any;
 
-      inputCreatorService.buildCreateCollaborationInputFromCollaboration = vi
-        .fn()
-        .mockResolvedValue(undefined);
+      inputCreatorService.buildCreateCollaborationInputFromCollaboration.mockResolvedValue(undefined);
 
       // Act & Assert
       await expect(
@@ -136,9 +136,7 @@ describe('SpaceDefaultsService', () => {
         },
       } as any;
 
-      inputCreatorService.buildCreateCollaborationInputFromCollaboration = vi
-        .fn()
-        .mockResolvedValue({
+      inputCreatorService.buildCreateCollaborationInputFromCollaboration.mockResolvedValue({
           innovationFlowData: null,
           calloutsSetData: { calloutsData: [] },
         });
@@ -167,9 +165,7 @@ describe('SpaceDefaultsService', () => {
         },
       } as any;
 
-      inputCreatorService.buildCreateCollaborationInputFromCollaboration = vi
-        .fn()
-        .mockResolvedValue({
+      inputCreatorService.buildCreateCollaborationInputFromCollaboration.mockResolvedValue({
           innovationFlowData: {
             states: [],
             settings: {},
@@ -203,9 +199,7 @@ describe('SpaceDefaultsService', () => {
         },
       } as any;
 
-      inputCreatorService.buildCreateCollaborationInputFromCollaboration = vi
-        .fn()
-        .mockResolvedValue({
+      inputCreatorService.buildCreateCollaborationInputFromCollaboration.mockResolvedValue({
           innovationFlowData: { states: [], settings: {} },
           calloutsSetData: { calloutsData: [] },
         });
@@ -242,13 +236,11 @@ describe('SpaceDefaultsService', () => {
         },
       } as any;
 
-      inputCreatorService.buildCreateCollaborationInputFromCollaboration = vi
-        .fn()
-        .mockResolvedValue({
+      inputCreatorService.buildCreateCollaborationInputFromCollaboration.mockResolvedValue({
           innovationFlowData: { states: [], settings: {} },
           calloutsSetData: { calloutsData: [] },
         });
-      calloutsSetService.moveCalloutsToDefaultFlowState = vi.fn();
+      calloutsSetService.moveCalloutsToDefaultFlowState.mockReset();
 
       // Act
       const result = await service.createCollaborationInput(
@@ -282,9 +274,7 @@ describe('SpaceDefaultsService', () => {
         },
       } as any;
 
-      inputCreatorService.buildCreateCollaborationInputFromCollaboration = vi
-        .fn()
-        .mockResolvedValue({
+      inputCreatorService.buildCreateCollaborationInputFromCollaboration.mockResolvedValue({
           innovationFlowData: { states: [], settings: {} },
           calloutsSetData: { calloutsData: [] },
         });
@@ -315,13 +305,11 @@ describe('SpaceDefaultsService', () => {
         },
       } as any;
 
-      inputCreatorService.buildCreateCollaborationInputFromCollaboration = vi
-        .fn()
-        .mockResolvedValue({
+      inputCreatorService.buildCreateCollaborationInputFromCollaboration.mockResolvedValue({
           innovationFlowData: { states: [], settings: {} },
           calloutsSetData: { calloutsData: [{ id: 'template-callout' }] },
         });
-      calloutsSetService.moveCalloutsToDefaultFlowState = vi.fn();
+      calloutsSetService.moveCalloutsToDefaultFlowState.mockReset();
 
       // Act
       const result = await service.createCollaborationInput(
@@ -353,9 +341,7 @@ describe('SpaceDefaultsService', () => {
         },
       } as any;
 
-      inputCreatorService.buildCreateCollaborationInputFromCollaboration = vi
-        .fn()
-        .mockResolvedValue({
+      inputCreatorService.buildCreateCollaborationInputFromCollaboration.mockResolvedValue({
           innovationFlowData: { states: [], settings: {} },
           calloutsSetData: { calloutsData: [] },
         });
@@ -380,9 +366,7 @@ describe('SpaceDefaultsService', () => {
         id: 'template-1',
         contentSpace: { id: 'content-1' },
       };
-      templateService.getTemplateOrFail = vi
-        .fn()
-        .mockResolvedValue(mockTemplate);
+      templateService.getTemplateOrFail.mockResolvedValue(mockTemplate);
 
       // Act
       const result = await service.getTemplateSpaceContentToAugmentFrom(
@@ -403,9 +387,7 @@ describe('SpaceDefaultsService', () => {
         id: 'template-1',
         contentSpace: undefined,
       };
-      templateService.getTemplateOrFail = vi
-        .fn()
-        .mockResolvedValue(mockTemplate);
+      templateService.getTemplateOrFail.mockResolvedValue(mockTemplate);
 
       // Act & Assert
       await expect(
@@ -422,12 +404,8 @@ describe('SpaceDefaultsService', () => {
         id: 'platform-template',
         contentSpace: { id: 'platform-content' },
       };
-      platformTemplatesService.getPlatformDefaultTemplateByType = vi
-        .fn()
-        .mockResolvedValue(mockTemplate);
-      templateService.getTemplateOrFail = vi
-        .fn()
-        .mockResolvedValue(mockTemplate);
+      platformTemplatesService.getPlatformDefaultTemplateByType.mockResolvedValue(mockTemplate);
+      templateService.getTemplateOrFail.mockResolvedValue(mockTemplate);
 
       // Act
       const result = await service.getTemplateSpaceContentToAugmentFrom(
@@ -440,9 +418,7 @@ describe('SpaceDefaultsService', () => {
 
     it('should throw ValidationException when no template found for level', async () => {
       // Arrange
-      platformTemplatesService.getPlatformDefaultTemplateByType = vi
-        .fn()
-        .mockResolvedValue(undefined);
+      platformTemplatesService.getPlatformDefaultTemplateByType.mockResolvedValue(undefined);
 
       // Act & Assert
       await expect(
@@ -458,15 +434,9 @@ describe('SpaceDefaultsService', () => {
         contentSpace: { id: 'platform-subspace-content' },
       };
 
-      templatesManagerService.getTemplateFromTemplateDefault = vi
-        .fn()
-        .mockRejectedValue(new Error('No default template'));
-      platformTemplatesService.getPlatformDefaultTemplateByType = vi
-        .fn()
-        .mockResolvedValue(platformTemplate);
-      templateService.getTemplateOrFail = vi
-        .fn()
-        .mockResolvedValue(platformTemplate);
+      templatesManagerService.getTemplateFromTemplateDefault.mockRejectedValue(new Error('No default template'));
+      platformTemplatesService.getPlatformDefaultTemplateByType.mockResolvedValue(platformTemplate);
+      templateService.getTemplateOrFail.mockResolvedValue(platformTemplate);
 
       // Act
       const result = await service.getTemplateSpaceContentToAugmentFrom(

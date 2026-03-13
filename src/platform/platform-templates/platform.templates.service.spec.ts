@@ -17,6 +17,8 @@ describe('PlatformTemplatesService', () => {
   let inputCreatorService: InputCreatorService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [PlatformTemplatesService, MockWinstonProvider],
     })

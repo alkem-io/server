@@ -29,6 +29,8 @@ describe('LicenseService', () => {
   let _authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static License.create to avoid DataSource requirement
     vi.spyOn(License, 'create').mockImplementation((input: any) => {
       const entity = new License();
@@ -312,6 +314,186 @@ describe('LicenseService', () => {
       expect(() =>
         service.findAndCopyParentEntitlement(childEntitlement, [])
       ).toThrow(EntityNotFoundException);
+    });
+  });
+
+  describe('removeLicenseOrFail', () => {
+    it('should delete entitlements, authorization, and remove license', async () => {
+      const license = {
+        id: 'lic-1',
+        entitlements: [{ id: 'ent-1' }, { id: 'ent-2' }],
+        authorization: { id: 'auth-1' },
+      } as unknown as License;
+      licenseRepository.findOne!.mockResolvedValue(license);
+      (entitlementService.deleteEntitlementOrFail as Mock).mockResolvedValue(
+        {}
+      );
+      (_authorizationPolicyService.delete as Mock).mockResolvedValue({});
+      licenseRepository.remove!.mockResolvedValue({ ...license } as any);
+
+      const result = await service.removeLicenseOrFail('lic-1');
+
+      expect(entitlementService.deleteEntitlementOrFail).toHaveBeenCalledTimes(
+        2
+      );
+      expect(entitlementService.deleteEntitlementOrFail).toHaveBeenCalledWith(
+        'ent-1'
+      );
+      expect(entitlementService.deleteEntitlementOrFail).toHaveBeenCalledWith(
+        'ent-2'
+      );
+      expect(_authorizationPolicyService.delete).toHaveBeenCalledWith(
+        license.authorization
+      );
+      expect(result.id).toBe('lic-1');
+    });
+
+    it('should skip authorization deletion when authorization is undefined', async () => {
+      const license = {
+        id: 'lic-1',
+        entitlements: [],
+        authorization: undefined,
+      } as unknown as License;
+      licenseRepository.findOne!.mockResolvedValue(license);
+      licenseRepository.remove!.mockResolvedValue({ ...license } as any);
+
+      await service.removeLicenseOrFail('lic-1');
+
+      expect(_authorizationPolicyService.delete).not.toHaveBeenCalled();
+    });
+
+    it('should throw EntityNotFoundException when license not found', async () => {
+      licenseRepository.findOne!.mockResolvedValue(null);
+
+      await expect(service.removeLicenseOrFail('missing')).rejects.toThrow(
+        EntityNotFoundException
+      );
+    });
+  });
+
+  describe('saveAll', () => {
+    it('should save all licenses in chunks', async () => {
+      const licenses = [{ id: 'lic-1' }, { id: 'lic-2' }] as ILicense[];
+      licenseRepository.save!.mockResolvedValue(licenses);
+
+      await service.saveAll(licenses);
+
+      expect(licenseRepository.save).toHaveBeenCalledWith(licenses, {
+        chunk: 100,
+      });
+    });
+  });
+
+  describe('getEntitlements', () => {
+    it('should return entitlements when already loaded', async () => {
+      const entitlements = [
+        { id: 'ent-1', type: LicenseEntitlementType.ACCOUNT_SPACE_FREE },
+      ] as ILicenseEntitlement[];
+      const license = { id: 'lic-1', entitlements } as unknown as ILicense;
+
+      const result = await service.getEntitlements(license);
+
+      expect(result).toBe(entitlements);
+    });
+
+    it('should load entitlements when not loaded', async () => {
+      const license = {
+        id: 'lic-1',
+        entitlements: undefined,
+      } as unknown as ILicense;
+      const loadedLicense = {
+        id: 'lic-1',
+        entitlements: [{ id: 'ent-1' }],
+      } as unknown as License;
+      licenseRepository.findOne!.mockResolvedValue(loadedLicense);
+
+      const result = await service.getEntitlements(license);
+
+      expect(result).toEqual([{ id: 'ent-1' }]);
+    });
+  });
+
+  describe('getMyLicensePrivilegesOrFail', () => {
+    it('should return available entitlement types', async () => {
+      const entitlements = [
+        { id: 'ent-1', type: LicenseEntitlementType.ACCOUNT_SPACE_FREE },
+        {
+          id: 'ent-2',
+          type: LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER,
+        },
+      ] as ILicenseEntitlement[];
+      const license = { id: 'lic-1', entitlements } as unknown as ILicense;
+
+      (entitlementService.isEntitlementAvailable as Mock)
+        .mockResolvedValueOnce(true)
+        .mockResolvedValueOnce(false);
+
+      const result = await service.getMyLicensePrivilegesOrFail(license);
+
+      expect(result).toContain(LicenseEntitlementType.ACCOUNT_SPACE_FREE);
+      expect(result).not.toContain(
+        LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER
+      );
+    });
+
+    it('should load entitlements when not already loaded', async () => {
+      const license = {
+        id: 'lic-1',
+        entitlements: undefined,
+      } as unknown as ILicense;
+      const loadedLicense = {
+        id: 'lic-1',
+        entitlements: [
+          { id: 'ent-1', type: LicenseEntitlementType.ACCOUNT_SPACE_FREE },
+        ],
+      } as unknown as License;
+      licenseRepository.findOne!.mockResolvedValue(loadedLicense);
+      (entitlementService.isEntitlementAvailable as Mock).mockResolvedValue(
+        true
+      );
+
+      const result = await service.getMyLicensePrivilegesOrFail(license);
+
+      expect(result).toContain(LicenseEntitlementType.ACCOUNT_SPACE_FREE);
+    });
+  });
+
+  describe('isEntitlementAvailable', () => {
+    it('should delegate to entitlement service', async () => {
+      const license = {
+        id: 'lic-1',
+        entitlements: [
+          { id: 'ent-1', type: LicenseEntitlementType.ACCOUNT_SPACE_FREE },
+        ],
+      } as unknown as ILicense;
+
+      (
+        entitlementService.isEntitlementAvailableUsingEntities as Mock
+      ).mockResolvedValue(true);
+
+      const result = await service.isEntitlementAvailable(
+        license,
+        LicenseEntitlementType.ACCOUNT_SPACE_FREE
+      );
+
+      expect(result).toBe(true);
+      expect(
+        entitlementService.isEntitlementAvailableUsingEntities
+      ).toHaveBeenCalledWith(license, license.entitlements![0]);
+    });
+
+    it('should throw when entitlement type not found', async () => {
+      const license = {
+        id: 'lic-1',
+        entitlements: [],
+      } as unknown as ILicense;
+
+      await expect(
+        service.isEntitlementAvailable(
+          license,
+          LicenseEntitlementType.ACCOUNT_SPACE_FREE
+        )
+      ).rejects.toThrow(EntityNotFoundException);
     });
   });
 });

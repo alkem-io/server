@@ -11,6 +11,8 @@ describe('ForumDiscussionLookupService', () => {
   let entityManager: EntityManager;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [ForumDiscussionLookupService, MockWinstonProvider],
     })

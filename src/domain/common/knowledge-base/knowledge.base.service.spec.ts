@@ -23,6 +23,8 @@ describe('KnowledgeBaseService', () => {
   let calloutsSetService: CalloutsSetService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static KnowledgeBase.create to avoid DataSource requirement
     vi.spyOn(KnowledgeBase, 'create').mockImplementation((input: any) => {
       const entity = new KnowledgeBase();

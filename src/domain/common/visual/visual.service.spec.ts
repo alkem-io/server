@@ -23,6 +23,8 @@ describe('VisualService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Visual.create to avoid DataSource requirement
     vi.spyOn(Visual, 'create').mockImplementation((input: any) => {
       const entity = new Visual();

@@ -8,6 +8,8 @@ describe('PlatformResolver', () => {
   let resolver: PlatformResolverQueries;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PlatformResolverQueries,

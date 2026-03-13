@@ -34,6 +34,8 @@ describe('CalloutFramingService', () => {
   let tagsetService: TagsetService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static CalloutFraming.create to avoid DataSource requirement
     vi.spyOn(CalloutFraming, 'create').mockImplementation((input: any) => {
       const entity = new CalloutFraming();
@@ -428,6 +430,251 @@ describe('CalloutFramingService', () => {
       expect(linkService.updateLink).toHaveBeenCalledWith(updateData.link);
     });
 
+    it('should return framing unchanged when MEMO type has no content update', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.MEMO,
+        profile: { id: 'profile-1' },
+        memo: { id: 'memo-1' },
+      } as any;
+      const updateData = {} as any;
+
+      const result = await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false
+      );
+
+      expect(result).toBe(framing);
+      expect(memoService.updateMemoContent).not.toHaveBeenCalled();
+    });
+
+    it('should update memo content when MEMO type, is template, and memo content provided', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.MEMO,
+        profile: { id: 'profile-1' },
+        memo: { id: 'memo-1' },
+      } as any;
+      const updateData = {
+        memoContent: 'new content',
+      } as any;
+
+      vi.mocked(memoService.updateMemoContent).mockResolvedValue({
+        id: 'memo-1',
+      } as any);
+
+      await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        true // isParentCalloutTemplate
+      );
+
+      expect(memoService.updateMemoContent).toHaveBeenCalledWith(
+        'memo-1',
+        'new content'
+      );
+    });
+
+    it('should create new memo when MEMO type, has content, but not a template', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.MEMO,
+        profile: { id: 'profile-1' },
+        memo: undefined,
+      } as any;
+      const updateData = {
+        memoContent: 'some content',
+      } as any;
+
+      vi.mocked(
+        namingService.createNameIdAvoidingReservedNameIDs
+      ).mockReturnValue('memo-name');
+      vi.mocked(memoService.createMemo).mockResolvedValue({
+        id: 'new-memo',
+        profile: { id: 'memo-profile' },
+      } as any);
+
+      await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false,
+        'user-1'
+      );
+
+      expect(memoService.createMemo).toHaveBeenCalled();
+    });
+
+    it('should create media gallery when MEDIA_GALLERY type and no existing gallery', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.MEDIA_GALLERY,
+        profile: { id: 'profile-1' },
+        mediaGallery: undefined,
+      } as any;
+      const updateData = {} as any;
+
+      vi.mocked(mediaGalleryService.createMediaGallery).mockResolvedValue({
+        id: 'new-mg',
+      } as any);
+
+      await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false,
+        'user-1'
+      );
+
+      expect(mediaGalleryService.createMediaGallery).toHaveBeenCalled();
+    });
+
+    it('should not create media gallery when MEDIA_GALLERY type and gallery already exists', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.MEDIA_GALLERY,
+        profile: { id: 'profile-1' },
+        mediaGallery: { id: 'existing-mg' },
+      } as any;
+      const updateData = {} as any;
+
+      const result = await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false
+      );
+
+      expect(mediaGalleryService.createMediaGallery).not.toHaveBeenCalled();
+      expect(result).toBe(framing);
+    });
+
+    it('should delete inconsistent content when type changes from WHITEBOARD to NONE', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.WHITEBOARD,
+        profile: { id: 'profile-1' },
+        whiteboard: { id: 'wb-1' },
+      } as any;
+      const updateData = {
+        type: CalloutFramingType.NONE,
+      } as any;
+
+      const result = await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false
+      );
+
+      expect(whiteboardService.deleteWhiteboard).toHaveBeenCalledWith('wb-1');
+      expect(result.type).toBe(CalloutFramingType.NONE);
+    });
+
+    it('should delete inconsistent memo when type changes away from MEMO', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.MEMO,
+        profile: { id: 'profile-1' },
+        memo: { id: 'memo-1' },
+      } as any;
+      const updateData = {
+        type: CalloutFramingType.NONE,
+      } as any;
+
+      await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false
+      );
+
+      expect(memoService.deleteMemo).toHaveBeenCalledWith('memo-1');
+      expect(framing.memo).toBeUndefined();
+    });
+
+    it('should delete inconsistent link when type changes away from LINK', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.LINK,
+        profile: { id: 'profile-1' },
+        link: { id: 'link-1' },
+      } as any;
+      const updateData = {
+        type: CalloutFramingType.NONE,
+      } as any;
+
+      await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false
+      );
+
+      expect(linkService.deleteLink).toHaveBeenCalledWith('link-1');
+      expect(framing.link).toBeUndefined();
+    });
+
+    it('should delete inconsistent media gallery when type changes away from MEDIA_GALLERY', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.MEDIA_GALLERY,
+        profile: { id: 'profile-1' },
+        mediaGallery: { id: 'mg-1' },
+      } as any;
+      const updateData = {
+        type: CalloutFramingType.NONE,
+      } as any;
+
+      await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false
+      );
+
+      expect(mediaGalleryService.deleteMediaGallery).toHaveBeenCalledWith(
+        'mg-1'
+      );
+      expect(framing.mediaGallery).toBeUndefined();
+    });
+
+    it('should update whiteboard preview settings when provided with content', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.WHITEBOARD,
+        profile: { id: 'profile-1' },
+        whiteboard: { id: 'wb-1' },
+      } as any;
+      const updateData = {
+        whiteboardContent: '{"new":"content"}',
+        whiteboardPreviewSettings: { zoom: 1 },
+      } as any;
+
+      vi.mocked(whiteboardService.updateWhiteboardContent).mockResolvedValue({
+        id: 'wb-1',
+      } as any);
+      vi.mocked(whiteboardService.updateWhiteboard).mockResolvedValue({
+        id: 'wb-1',
+      } as any);
+
+      await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false
+      );
+
+      expect(whiteboardService.updateWhiteboardContent).toHaveBeenCalled();
+      expect(whiteboardService.updateWhiteboard).toHaveBeenCalledWith(
+        { id: 'wb-1' },
+        { previewSettings: { zoom: 1 } }
+      );
+    });
+
     it('should create new link when framing type is LINK but no existing link', async () => {
       const framing = {
         id: 'framing-1',
@@ -593,6 +840,56 @@ describe('CalloutFramingService', () => {
       const result = await service.getMemo({ id: 'framing-1' } as any);
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('save', () => {
+    it('should save and return framing', async () => {
+      const framing = { id: 'framing-1' } as any;
+      vi.mocked(repository.save).mockResolvedValue(framing);
+
+      const result = await service.save(framing);
+
+      expect(result).toBe(framing);
+      expect(repository.save).toHaveBeenCalledWith(framing);
+    });
+  });
+
+  describe('getLink (returns link)', () => {
+    it('should return link when it exists', async () => {
+      const link = { id: 'link-1' } as any;
+      const framing = { id: 'framing-1', link } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(framing);
+
+      const result = await service.getLink({ id: 'framing-1' } as any);
+
+      expect(result).toBe(link);
+    });
+  });
+
+  describe('getMemo (returns memo)', () => {
+    it('should return memo when it exists', async () => {
+      const memo = { id: 'memo-1' } as any;
+      const framing = { id: 'framing-1', memo } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(framing);
+
+      const result = await service.getMemo({ id: 'framing-1' } as any);
+
+      expect(result).toBe(memo);
+    });
+  });
+
+  describe('getMediaGallery (returns gallery)', () => {
+    it('should return media gallery when it exists', async () => {
+      const mediaGallery = { id: 'mg-1' } as any;
+      const framing = { id: 'framing-1', mediaGallery } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(framing);
+
+      const result = await service.getMediaGallery({
+        id: 'framing-1',
+      } as any);
+
+      expect(result).toBe(mediaGallery);
     });
   });
 

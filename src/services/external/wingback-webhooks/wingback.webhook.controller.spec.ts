@@ -24,6 +24,8 @@ describe('WingbackWebhookController', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       controllers: [WingbackWebhookController],
       providers: [MockConfigService],

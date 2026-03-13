@@ -29,6 +29,8 @@ describe('RoomMentionsService', () => {
   let organizationLookupService: Mocked<OrganizationLookupService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [RoomMentionsService, MockWinstonProvider],
     })
@@ -65,9 +67,7 @@ describe('RoomMentionsService', () => {
 
     it('should extract user mention from text', async () => {
       const mockUser = { id: 'user-uuid-1' } as any;
-      userLookupService.getUserByNameIdOrFail = vi
-        .fn()
-        .mockResolvedValue(mockUser);
+      userLookupService.getUserByNameIdOrFail.mockResolvedValue(mockUser);
 
       const result = await service.getMentionsFromText(
         'Hey, [@john-doe](https://example.com/user/john-doe) check this'
@@ -83,9 +83,7 @@ describe('RoomMentionsService', () => {
 
     it('should extract organization mention from text', async () => {
       const mockOrg = { id: 'org-uuid-1' } as any;
-      organizationLookupService.getOrganizationByNameIdOrFail = vi
-        .fn()
-        .mockResolvedValue(mockOrg);
+      organizationLookupService.getOrganizationByNameIdOrFail.mockResolvedValue(mockOrg);
 
       const result = await service.getMentionsFromText(
         'See [@acme-corp](https://example.com/organization/acme-corp) for details'
@@ -101,9 +99,7 @@ describe('RoomMentionsService', () => {
 
     it('should extract virtual contributor mention from text', async () => {
       const mockVC = { id: 'vc-uuid-1' } as any;
-      virtualActorLookupService.getVirtualContributorByNameIdOrFail = vi
-        .fn()
-        .mockResolvedValue(mockVC);
+      virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(mockVC);
 
       const result = await service.getMentionsFromText(
         'Ask [@my-vc](https://example.com/vc/my-vc) about this'
@@ -121,12 +117,8 @@ describe('RoomMentionsService', () => {
       const mockUser = { id: 'user-uuid-1' } as any;
       const mockOrg = { id: 'org-uuid-1' } as any;
 
-      userLookupService.getUserByNameIdOrFail = vi
-        .fn()
-        .mockResolvedValue(mockUser);
-      organizationLookupService.getOrganizationByNameIdOrFail = vi
-        .fn()
-        .mockResolvedValue(mockOrg);
+      userLookupService.getUserByNameIdOrFail.mockResolvedValue(mockUser);
+      organizationLookupService.getOrganizationByNameIdOrFail.mockResolvedValue(mockOrg);
 
       const text =
         'Hey, [@john](https://example.com/user/john-doe) and [@acme](https://example.com/organization/acme-corp)';
@@ -139,9 +131,7 @@ describe('RoomMentionsService', () => {
 
     it('should handle mentions with http protocol', async () => {
       const mockUser = { id: 'user-uuid-1' } as any;
-      userLookupService.getUserByNameIdOrFail = vi
-        .fn()
-        .mockResolvedValue(mockUser);
+      userLookupService.getUserByNameIdOrFail.mockResolvedValue(mockUser);
 
       const result = await service.getMentionsFromText(
         'Hey, [@john](http://example.com/user/john-doe) check this'
@@ -157,9 +147,7 @@ describe('RoomMentionsService', () => {
 
     it('should handle mentions with port in URL', async () => {
       const mockUser = { id: 'user-uuid-1' } as any;
-      userLookupService.getUserByNameIdOrFail = vi
-        .fn()
-        .mockResolvedValue(mockUser);
+      userLookupService.getUserByNameIdOrFail.mockResolvedValue(mockUser);
 
       const result = await service.getMentionsFromText(
         'Hey, [@john](http://localhost:3000/user/john-doe) check this'
