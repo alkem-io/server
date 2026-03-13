@@ -139,7 +139,7 @@ describe('MessageInboxService', () => {
       conversationService.findConversationByRoomId.mockResolvedValue({
         id: 'conv-1',
       } as any);
-      conversationService.getConversationMemberAgentIds.mockResolvedValue([
+      conversationService.getConversationMemberActorIds.mockResolvedValue([
         'agent-a',
         'agent-b',
       ]);
@@ -158,7 +158,7 @@ describe('MessageInboxService', () => {
         subscriptionPublishService.publishConversationEvent
       ).toHaveBeenCalledWith(
         expect.objectContaining({
-          memberAgentIds: ['agent-a', 'agent-b'],
+          memberActorIds: ['agent-a', 'agent-b'],
           messageReceived: expect.objectContaining({ roomId: 'room-1' }),
         })
       );
@@ -173,7 +173,7 @@ describe('MessageInboxService', () => {
       conversationService.findConversationByRoomId.mockResolvedValue({
         id: 'conv-1',
       } as any);
-      conversationService.getConversationMemberAgentIds.mockResolvedValue([]);
+      conversationService.getConversationMemberActorIds.mockResolvedValue([]);
       vcInvocationService.processDirectConversation.mockResolvedValue(
         undefined
       );
@@ -361,7 +361,7 @@ describe('MessageInboxService', () => {
       conversationService.findConversationByRoomId.mockResolvedValue({
         id: 'conv-1',
       } as any);
-      conversationService.getConversationMemberAgentIds.mockResolvedValue([
+      conversationService.getConversationMemberActorIds.mockResolvedValue([
         'agent-a',
       ]);
 
@@ -379,7 +379,7 @@ describe('MessageInboxService', () => {
         subscriptionPublishService.publishConversationEvent
       ).toHaveBeenCalledWith(
         expect.objectContaining({
-          memberAgentIds: ['agent-a'],
+          memberActorIds: ['agent-a'],
           messageRemoved: expect.objectContaining({
             roomId: 'room-1',
             messageId: 'del-msg-1',
@@ -413,7 +413,7 @@ describe('MessageInboxService', () => {
         subscriptionPublishService.publishConversationEvent
       ).toHaveBeenCalledWith(
         expect.objectContaining({
-          memberAgentIds: ['actor-1'],
+          memberActorIds: ['actor-1'],
           readReceiptUpdated: expect.objectContaining({
             roomId: 'room-1',
             lastReadMessageId: 'evt-1',

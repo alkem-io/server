@@ -1,23 +1,19 @@
 import { LogContext } from '@common/enums';
-import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
+import { ConversationCreationType } from '@common/enums/conversation.creation.type';
+import { RoomType } from '@common/enums/room.type';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { ActorService } from '@domain/actor/actor/actor.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { CreateConversationData } from '@domain/communication/conversation/dto';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { randomUUID } from 'crypto';
@@ -42,10 +38,6 @@ export class MessagingService {
     @InjectRepository(ConversationMembership)
     private readonly conversationMembershipRepository: Repository<ConversationMembership>,
     private readonly conversationService: ConversationService,
-    private readonly platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
-    private readonly userLookupService: UserLookupService,
-    private readonly virtualActorLookupService: VirtualActorLookupService,
-    private readonly actorService: ActorService,
     private readonly subscriptionPublishService: SubscriptionPublishService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -116,104 +108,82 @@ export class MessagingService {
 
   /**
    * Create a conversation on the platform messaging.
-   * Works with agent IDs - callers are responsible for resolving user/VC IDs to agent IDs.
-   *
-   * @param conversationData - Internal DTO with callerAgentId and either invitedAgentId or wellKnownVirtualContributor
+   * DIRECT: dedup check (returns existing if found), exactly 1 member required.
+   * GROUP: always creates new, N members.
+   * Works with actor IDs — callers resolve user/VC IDs to actor IDs.
    */
   public async createConversation(
     conversationData: CreateConversationData
   ): Promise<IConversation> {
-    // Always use platform messaging (singleton pattern)
-    const messaging = await this.getPlatformMessaging();
+    // Normalize: deduplicate and remove self from member list
+    const normalizedMemberActorIds = [
+      ...new Set(conversationData.memberActorIds),
+    ].filter(id => id !== conversationData.callerActorId);
 
-    // Resolve the invited party to an agent ID if wellKnown was provided
-    let invitedAgentId: string;
-    let isUserVc = false;
+    const isDirect = conversationData.type === ConversationCreationType.DIRECT;
+    const roomType = isDirect
+      ? RoomType.CONVERSATION_DIRECT
+      : RoomType.CONVERSATION_GROUP;
 
-    if (conversationData.wellKnownVirtualContributor) {
-      // Resolve wellKnown → VC ID → agent ID
-      const vcId =
-        await this.platformWellKnownVirtualContributorsService.getVirtualContributorID(
-          conversationData.wellKnownVirtualContributor
-        );
-      if (!vcId) {
+    // DIRECT-specific: validate member count + dedup
+    if (isDirect) {
+      if (normalizedMemberActorIds.length !== 1) {
         throw new ValidationException(
-          `Well-known virtual contributor not found: ${conversationData.wellKnownVirtualContributor}`,
+          'DIRECT conversations require exactly 1 memberID',
           LogContext.COMMUNICATION_CONVERSATION
         );
       }
-      const vc =
-        await this.virtualActorLookupService.getVirtualContributorByIdOrFail(
-          vcId
+
+      const existing =
+        await this.conversationService.findConversationBetweenActors(
+          conversationData.callerActorId,
+          normalizedMemberActorIds[0]
         );
-      invitedAgentId = vc.id;
-      isUserVc = true;
-    } else if (conversationData.invitedAgentId) {
-      invitedAgentId = conversationData.invitedAgentId;
-      // Determine if invited agent is a VC by checking agent type
-      const actor = await this.actorService.getActorOrFail(
-        conversationData.invitedAgentId
-      );
-      isUserVc = actor.type === ActorType.VIRTUAL_CONTRIBUTOR;
-    } else {
+      if (existing) {
+        return await this.conversationService.getConversationOrFail(
+          existing.id,
+          { relations: { authorization: true, room: true } }
+        );
+      }
+    } else if (normalizedMemberActorIds.length < 1) {
       throw new ValidationException(
-        'Either invitedAgentId or wellKnownVirtualContributor must be provided',
+        'GROUP conversations require at least 1 memberID',
         LogContext.COMMUNICATION_CONVERSATION
       );
     }
 
-    // Always create room - both USER_USER and USER_VC need rooms
-    const createRoom = true;
+    // Create conversation, assign to platform messaging, apply auth, publish event
+    const messaging = await this.getPlatformMessaging();
 
-    // createConversation handles existence check via efficient findConversationBetweenAgents query
     const conversation = await this.conversationService.createConversation(
-      conversationData.callerAgentId,
-      invitedAgentId,
-      createRoom
+      conversationData.callerActorId,
+      normalizedMemberActorIds,
+      roomType,
+      conversationData.displayName,
+      conversationData.avatarUrl
     );
 
-    // Only set messaging and apply authorization if this is a newly created conversation
-    // (createConversation returns existing conversation if found)
-    if (!conversation.messaging) {
-      conversation.messaging = messaging as Messaging;
-      await this.conversationService.save(conversation);
+    conversation.messaging = messaging as Messaging;
+    await this.conversationService.save(conversation);
 
-      // Apply authorization policy directly - no need for redundant search
-      const authorizations =
-        await this.conversationAuthorizationService.applyAuthorizationPolicy(
-          conversation.id
-        );
-      await this.authorizationPolicyService.saveAll(authorizations);
-
-      // Fetch full conversation for return value
-      const fullConversation =
-        await this.conversationService.getConversationOrFail(conversation.id, {
-          relations: {
-            authorization: true,
-            room: true,
-          },
-        });
-
-      // Publish conversation created events to each member
-      await this.publishConversationCreatedEvents(
-        fullConversation,
-        conversationData.callerAgentId,
-        invitedAgentId,
-        isUserVc
+    const authorizations =
+      await this.conversationAuthorizationService.applyAuthorizationPolicy(
+        conversation.id
       );
+    await this.authorizationPolicyService.saveAll(authorizations);
 
-      return fullConversation;
-    }
+    const fullConversation =
+      await this.conversationService.getConversationOrFail(conversation.id, {
+        relations: { authorization: true, room: true },
+      });
 
-    return await this.conversationService.getConversationOrFail(
-      conversation.id,
-      {
-        relations: {
-          authorization: true,
-          room: true,
-        },
-      }
-    );
+    const allMemberIds = [
+      ...new Set([conversationData.callerActorId, ...normalizedMemberActorIds]),
+    ];
+
+    await this.publishConversationCreatedEvents(fullConversation, allMemberIds);
+
+    return fullConversation;
   }
 
   public async save(messaging: IMessaging): Promise<IMessaging> {
@@ -221,107 +191,43 @@ export class MessagingService {
   }
 
   /**
-   * Publish conversation created events to each member.
-   * Each member receives a personalized event with the "other user" pre-resolved.
-   *
-   * - USER_USER: Two events, each with _resolvedUser set to the OTHER user
-   * - USER_VC: One event to human user with _resolvedVirtualContributor set
+   * Publish a single conversation created event to all members.
+   * The `members` field resolver handles actor resolution — no pre-resolution needed.
    */
   private async publishConversationCreatedEvents(
     conversation: IConversation,
-    callerAgentId: string,
-    invitedAgentId: string,
-    isUserVc: boolean
+    memberActorIds: string[]
   ): Promise<void> {
-    if (isUserVc) {
-      // USER_VC: Notify human user with VC pre-resolved
-      const vc =
-        await this.virtualActorLookupService.getVirtualContributorById(
-          invitedAgentId
-        );
+    await this.subscriptionPublishService.publishConversationEvent({
+      eventID: `conversation-event-${randomUUID()}`,
+      memberActorIds,
+      conversationCreated: {
+        conversation,
+      },
+    });
 
-      if (!vc) {
-        this.logger.warn(
-          `Could not resolve virtual contributor for agent ${invitedAgentId} when publishing conversationCreated event`,
-          LogContext.COMMUNICATION
-        );
-      }
+    this.logger.verbose?.(
+      `Published conversationCreated event for conversation ${conversation.id} to ${memberActorIds.length} members`,
+      LogContext.COMMUNICATION
+    );
+  }
 
-      const conversationForCaller: IConversation = {
-        ...conversation,
-        _resolvedUser: null, // No other user in USER_VC
-        _resolvedVirtualContributor: vc ?? null,
-      };
+  /**
+   * Create a direct conversation with a well-known virtual contributor.
+   * Resolves the well-known VC to its actor ID, then delegates to createConversation.
+   */
+  public async createConversationWithWellKnownVC(
+    callerActorId: string,
+    wellKnownVC: VirtualContributorWellKnown
+  ): Promise<IConversation> {
+    const vcActorId =
+      await this.conversationService.resolveWellKnownVCActorId(wellKnownVC);
 
-      await this.subscriptionPublishService.publishConversationEvent({
-        eventID: `conversation-event-${randomUUID()}`,
-        memberAgentIds: [callerAgentId],
-        conversationCreated: {
-          conversation: conversationForCaller,
-        },
-      });
-
-      this.logger.verbose?.(
-        `Published conversationCreated event (USER_VC) for conversation ${conversation.id} to user agent ${callerAgentId}`,
-        LogContext.COMMUNICATION
-      );
-    } else {
-      // USER_USER: Notify both users, each with the OTHER user pre-resolved
-      const [callerUser, invitedUser] = await Promise.all([
-        this.userLookupService.getUserById(callerAgentId),
-        this.userLookupService.getUserById(invitedAgentId),
-      ]);
-
-      if (!callerUser) {
-        this.logger.warn(
-          `Could not resolve caller user for agent ${callerAgentId} when publishing conversationCreated event`,
-          LogContext.COMMUNICATION
-        );
-      }
-      if (!invitedUser) {
-        this.logger.warn(
-          `Could not resolve invited user for agent ${invitedAgentId} when publishing conversationCreated event`,
-          LogContext.COMMUNICATION
-        );
-      }
-
-      // Event for caller: _resolvedUser = invited user (the other person)
-      const conversationForCaller: IConversation = {
-        ...conversation,
-        _resolvedUser: invitedUser ?? null,
-        _resolvedVirtualContributor: null,
-      };
-
-      // Event for invited user: _resolvedUser = caller (the other person)
-      const conversationForInvited: IConversation = {
-        ...conversation,
-        _resolvedUser: callerUser ?? null,
-        _resolvedVirtualContributor: null,
-      };
-
-      // Publish both events in parallel
-      await Promise.all([
-        this.subscriptionPublishService.publishConversationEvent({
-          eventID: `conversation-event-${randomUUID()}`,
-          memberAgentIds: [callerAgentId],
-          conversationCreated: {
-            conversation: conversationForCaller,
-          },
-        }),
-        this.subscriptionPublishService.publishConversationEvent({
-          eventID: `conversation-event-${randomUUID()}`,
-          memberAgentIds: [invitedAgentId],
-          conversationCreated: {
-            conversation: conversationForInvited,
-          },
-        }),
-      ]);
-
-      this.logger.verbose?.(
-        `Published conversationCreated events (USER_USER) for conversation ${conversation.id} to both users`,
-        LogContext.COMMUNICATION
-      );
-    }
+    return this.createConversation({
+      type: ConversationCreationType.DIRECT,
+      callerActorId,
+      memberActorIds: [vcActorId],
+    });
   }
 
   // T086: Find conversation with well-known VC using efficient membership query
@@ -376,20 +282,18 @@ export class MessagingService {
   }
 
   /**
-   * Get all conversations for a specific agent within a messaging container.
-   * Uses the pivot table to find conversations where the agent is a member.
-   * Optionally filters by conversation type.
+   * Get all conversations for a specific actor within a messaging container.
+   * Uses the pivot table to find conversations where the actor is a member.
+   * Returns a flat list — client handles categorization by room type and member types.
    * @param messagingId - UUID of the messaging container (typically platform set)
-   * @param actorID - UUID of the agent
-   * @param typeFilter - Optional filter for conversation type (USER_USER or USER_VC)
-   * @returns Array of conversations the agent is a member of
+   * @param actorID - UUID of the actor
+   * @returns Array of conversations the actor is a member of
    */
-  public async getConversationsForAgent(
+  public async getConversationsForActor(
     messagingId: string,
-    actorID: string,
-    typeFilter?: CommunicationConversationType
+    actorID: string
   ): Promise<IConversation[]> {
-    const queryBuilder = this.conversationMembershipRepository
+    const memberships = await this.conversationMembershipRepository
       .createQueryBuilder('membership')
       .innerJoinAndSelect('membership.conversation', 'conversation')
       .leftJoinAndSelect('conversation.authorization', 'authorization')
@@ -398,57 +302,9 @@ export class MessagingService {
       .leftJoinAndSelect('conversation.room', 'room')
       .leftJoinAndSelect('room.authorization', 'roomAuthorization')
       .where('membership.actorID = :actorID', { actorID })
-      .andWhere('conversation.messagingId = :messagingId', { messagingId });
+      .andWhere('conversation.messagingId = :messagingId', { messagingId })
+      .getMany();
 
-    // Filter by type using subquery - O(1) instead of O(n)
-    if (typeFilter) {
-      // Subquery checks if conversation has a VC member
-      // ConversationMembership has actorID column; join to Actor table directly
-      const vcExistsSubquery = this.conversationMembershipRepository
-        .createQueryBuilder('m2')
-        .innerJoin('actor', 'a', 'a.id = m2.actorID')
-        .where('m2.conversationId = membership.conversationId')
-        .andWhere('a.type = :vcType')
-        .select('1');
-
-      if (typeFilter === CommunicationConversationType.USER_VC) {
-        queryBuilder.andWhere(`EXISTS (${vcExistsSubquery.getQuery()})`);
-      } else {
-        // USER_USER: No VC members
-        queryBuilder.andWhere(`NOT EXISTS (${vcExistsSubquery.getQuery()})`);
-      }
-      queryBuilder.setParameter('vcType', ActorType.VIRTUAL_CONTRIBUTOR);
-    }
-
-    const memberships = await queryBuilder.getMany();
     return memberships.map(m => m.conversation);
-  }
-
-  /**
-   * Get all conversations for a user from the platform messaging.
-   * Helper method that looks up user's agent and queries platform set.
-   * @param userID - UUID of the user
-   * @param typeFilter - Optional filter for conversation type (USER_USER or USER_VC)
-   * @returns Array of conversations the user is a member of
-   */
-  public async getConversationsForUser(
-    userID: string,
-    typeFilter?: CommunicationConversationType
-  ): Promise<IConversation[]> {
-    const user = await this.userLookupService.getUserByIdOrFail(userID);
-
-    const platformMessaging = await this.getPlatformMessaging();
-    const conversations = await this.getConversationsForAgent(
-      platformMessaging.id,
-      user.id,
-      typeFilter
-    );
-
-    this.logger.verbose?.(
-      `Platform messaging query: found ${conversations.length} conversations for agent ${user.id}`,
-      LogContext.COMMUNICATION
-    );
-
-    return conversations;
   }
 }

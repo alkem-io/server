@@ -1,5 +1,7 @@
 import { ActorContextModule } from '@core/actor-context/actor.context.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
+import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ConversationModule } from '@domain/communication/conversation/conversation.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { RoomLookupModule } from '@domain/communication/room-lookup/room.lookup.module';
@@ -24,6 +26,8 @@ import { VcInvocationService } from './vc.invocation.service';
     VirtualContributorMessageModule,
     SubscriptionServiceModule,
     ActorContextModule,
+    ActorModule,
+    AuthorizationPolicyModule,
     CommunicationAdapterModule,
     ActorLookupModule,
     EntityResolverModule,
