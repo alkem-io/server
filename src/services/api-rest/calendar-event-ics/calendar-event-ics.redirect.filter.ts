@@ -69,10 +69,11 @@ export class CalendarEventIcsRedirectFilter implements ExceptionFilter {
     } catch (error) {
       this.logger.debug?.(
         {
-          message: 'Unable to resolve calendar event origin path. Falling back to request path.',
+          message:
+            'Unable to resolve calendar event origin path. Falling back to request path.',
           error,
         },
-        LogContext.CALENDAR,
+        LogContext.CALENDAR
       );
       return request.path ?? '/';
     }

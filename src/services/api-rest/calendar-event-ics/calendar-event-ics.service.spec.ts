@@ -3,9 +3,9 @@ import { ForbiddenAuthorizationPolicyException } from '@common/exceptions/forbid
 import { ValidationException } from '@common/exceptions/validation.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { CalendarEventService } from '@domain/timeline/event/event.service';
-import { ICalendarEvent } from '@domain/timeline/event/event.interface';
 import { IProfile } from '@domain/common/profile';
+import { ICalendarEvent } from '@domain/timeline/event/event.interface';
+import { CalendarEventService } from '@domain/timeline/event/event.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -69,8 +69,7 @@ describe('CalendarEventIcsService', () => {
           },
         },
       ],
-    })
-      .compile();
+    }).compile();
 
     service = module.get(CalendarEventIcsService);
     calendarEventService = module.get(CalendarEventService);
@@ -88,12 +87,11 @@ describe('CalendarEventIcsService', () => {
 
   describe('generateIcs', () => {
     it('should generate ICS file successfully for a standard event', async () => {
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        mockCalendarEvent
-      );
-      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(
-        true
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(mockCalendarEvent);
+      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(true);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'
@@ -109,7 +107,9 @@ describe('CalendarEventIcsService', () => {
       expect(result.content).toContain('BEGIN:VCALENDAR');
       expect(result.content).toContain('VERSION:2.0');
       expect(result.content).toContain('SUMMARY:Team Meeting');
-      expect(result.content).toContain('DESCRIPTION:Quarterly planning session');
+      expect(result.content).toContain(
+        'DESCRIPTION:Quarterly planning session'
+      );
       expect(result.content).toContain('LOCATION:');
       expect(result.content).toContain('URL:https://alkem.io/event/event-123');
       expect(result.content).toContain('END:VCALENDAR');
@@ -122,12 +122,11 @@ describe('CalendarEventIcsService', () => {
         startDate: new Date('2026-03-10T00:00:00Z'),
       };
 
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        wholeDayEvent
-      );
-      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(
-        true
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(wholeDayEvent);
+      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(true);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'
@@ -148,12 +147,11 @@ describe('CalendarEventIcsService', () => {
         description: undefined,
       };
 
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        mockCalendarEvent
-      );
-      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(
-        true
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(mockCalendarEvent);
+      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(true);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'
@@ -174,12 +172,11 @@ describe('CalendarEventIcsService', () => {
         location: undefined,
       };
 
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        mockCalendarEvent
-      );
-      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(
-        true
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(mockCalendarEvent);
+      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(true);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'
@@ -199,9 +196,10 @@ describe('CalendarEventIcsService', () => {
         .spyOn(authorizationService, 'grantAccessOrFail')
         .mockReturnValue(true);
 
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        mockCalendarEvent
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(mockCalendarEvent);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'
@@ -221,9 +219,10 @@ describe('CalendarEventIcsService', () => {
     });
 
     it('should throw when user lacks READ permission', async () => {
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        mockCalendarEvent
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(mockCalendarEvent);
       vi.spyOn(authorizationService, 'grantAccessOrFail').mockImplementation(
         () => {
           throw new ForbiddenAuthorizationPolicyException(
@@ -245,9 +244,7 @@ describe('CalendarEventIcsService', () => {
         .spyOn(calendarEventService, 'getCalendarEventOrFail')
         .mockResolvedValue(mockCalendarEvent);
 
-      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(
-        true
-      );
+      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(true);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'
@@ -269,12 +266,11 @@ describe('CalendarEventIcsService', () => {
         nameID: 'custom-event-name',
       };
 
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        eventWithCustomNameID
-      );
-      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(
-        true
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(eventWithCustomNameID);
+      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(true);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'
@@ -291,12 +287,11 @@ describe('CalendarEventIcsService', () => {
     it('should include event URL in ICS content', async () => {
       const customUrl = 'https://alkem.io/spaces/space-1/events/event-123';
 
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        mockCalendarEvent
-      );
-      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(
-        true
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(mockCalendarEvent);
+      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(true);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'
@@ -313,12 +308,11 @@ describe('CalendarEventIcsService', () => {
     it('should log verbose message on successful generation', async () => {
       const mockLogger = MockWinstonProvider.useValue;
 
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        mockCalendarEvent
-      );
-      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(
-        true
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(mockCalendarEvent);
+      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(true);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'
@@ -338,15 +332,15 @@ describe('CalendarEventIcsService', () => {
     it('should handle events with markdown description', async () => {
       const profileWithMarkdown = {
         ...mockProfile,
-        description: '**Bold text** and *italic* with [link](https://example.com)',
+        description:
+          '**Bold text** and *italic* with [link](https://example.com)',
       };
 
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        mockCalendarEvent
-      );
-      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(
-        true
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(mockCalendarEvent);
+      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(true);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'
@@ -370,12 +364,11 @@ describe('CalendarEventIcsService', () => {
         durationMinutes: 2880, // 2 days
       };
 
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        multiDayEvent
-      );
-      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(
-        true
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(multiDayEvent);
+      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(true);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'
@@ -397,12 +390,11 @@ describe('CalendarEventIcsService', () => {
         durationDays: 0,
       } as ICalendarEvent;
 
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        zeroDurationEvent
-      );
-      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(
-        true
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(zeroDurationEvent);
+      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(true);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'
@@ -419,12 +411,11 @@ describe('CalendarEventIcsService', () => {
         startDate: undefined,
       } as unknown as ICalendarEvent;
 
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        eventWithMissingStartDate
-      );
-      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(
-        true
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(eventWithMissingStartDate);
+      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(true);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'
@@ -441,12 +432,11 @@ describe('CalendarEventIcsService', () => {
         startDate: new Date('not-a-valid-date'),
       } as ICalendarEvent;
 
-      vi.spyOn(calendarEventService, 'getCalendarEventOrFail').mockResolvedValue(
-        eventWithInvalidStartDate
-      );
-      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(
-        true
-      );
+      vi.spyOn(
+        calendarEventService,
+        'getCalendarEventOrFail'
+      ).mockResolvedValue(eventWithInvalidStartDate);
+      vi.spyOn(authorizationService, 'grantAccessOrFail').mockReturnValue(true);
       vi.spyOn(
         urlGeneratorService,
         'getCalendarEventUrlPath'

@@ -269,10 +269,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
       await service.memoContributions({
         memoId: 'memo-1',
-        users: [
-          { id: 'user-1' },
-          { id: 'user-2' },
-        ],
+        users: [{ id: 'user-1' }, { id: 'user-2' }],
       } as any);
 
       expect(contributionReporter.memoContribution).toHaveBeenCalledTimes(2);
