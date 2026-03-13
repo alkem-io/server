@@ -1,4 +1,5 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -34,6 +35,7 @@ import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { ISpaceSettingsLayout } from '../space.settings/space.settings.layout.interface';
 import { ISpaceSubscription } from './space.license.subscription.interface';
 
 @Resolver(() => ISpace)
@@ -169,6 +171,22 @@ export class SpaceResolverFields {
     return loaded.settings?.sortMode ?? SpaceSortMode.ALPHABETICAL;
   }
 
+  @ResolveField('layout', () => ISpaceSettingsLayout, {
+    nullable: false,
+    description:
+      'The layout settings for this Space. Accessible without READ privilege.',
+  })
+  async layout(@Parent() space: Space): Promise<ISpaceSettingsLayout> {
+    const layout =
+      space.settings?.layout ??
+      (await this.spaceService.getSpaceOrFail(space.id)).settings?.layout;
+    return {
+      calloutDescriptionDisplayMode:
+        layout?.calloutDescriptionDisplayMode ??
+        CalloutDescriptionDisplayMode.EXPANDED,
+    };
+  }
+
   @ResolveField('subspaces', () => [ISpace], {
     nullable: false,
     description: 'The subspaces for the space.',
@@ -239,6 +257,11 @@ export class SpaceResolverFields {
     return {
       ...settings,
       sortMode: settings.sortMode ?? SpaceSortMode.ALPHABETICAL,
+      layout: {
+        calloutDescriptionDisplayMode:
+          settings.layout?.calloutDescriptionDisplayMode ??
+          CalloutDescriptionDisplayMode.EXPANDED,
+      },
     };
   }
 

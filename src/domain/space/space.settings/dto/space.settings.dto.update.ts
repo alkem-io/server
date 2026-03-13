@@ -1,6 +1,7 @@
 import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { Field, InputType } from '@nestjs/graphql';
 import { UpdateSpaceSettingsCollaborationInput } from './space.settings.collaboration.dto.update';
+import { UpdateSpaceSettingsLayoutInput } from './space.settings.layout.dto.update';
 import { UpdateSpaceSettingsMembershipInput } from './space.settings.membership.dto.update';
 import { UpdateSpaceSettingsPrivacyInput } from './space.settings.privacy.dto.update';
 
@@ -29,4 +30,10 @@ export class UpdateSpaceSettingsEntityInput {
     description: 'The sort mode for subspaces: Alphabetical or Custom.',
   })
   sortMode?: SpaceSortMode;
+
+  @Field(() => UpdateSpaceSettingsLayoutInput, {
+    nullable: true,
+    description: 'The layout settings for this Space.',
+  })
+  layout?: UpdateSpaceSettingsLayoutInput;
 }
