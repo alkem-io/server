@@ -28,6 +28,8 @@ describe('OrganizationVerificationService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static OrganizationVerification.create to avoid DataSource requirement
     vi.spyOn(OrganizationVerification, 'create').mockImplementation(
       (input: any) => {

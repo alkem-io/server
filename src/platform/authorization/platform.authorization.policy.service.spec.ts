@@ -18,6 +18,8 @@ describe('PlatformAuthorizationPolicyService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PlatformAuthorizationPolicyService,
@@ -31,6 +33,10 @@ describe('PlatformAuthorizationPolicyService', () => {
     service = module.get(PlatformAuthorizationPolicyService);
     platformRepository = module.get(getRepositoryToken(Platform));
     authorizationPolicyService = module.get(AuthorizationPolicyService);
+  });
+
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('getPlatformAuthorizationPolicy', () => {

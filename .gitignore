@@ -96,3 +96,4 @@ tmp/prev.schema.graphql
 # ignore pychache dirs
 **/__pycache__/
 
+coverage-tmp/

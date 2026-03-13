@@ -31,6 +31,8 @@ describe('ApplicationService', () => {
   let roleSetCacheService: RoleSetCacheService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Application.create to avoid DataSource requirement
     vi.spyOn(Application, 'create').mockImplementation((input: any) => {
       const entity = new Application();

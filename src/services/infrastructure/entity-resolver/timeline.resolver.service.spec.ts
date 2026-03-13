@@ -15,6 +15,8 @@ describe('TimelineResolverService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     entityManager = {
       findOne: vi.fn(),
     };

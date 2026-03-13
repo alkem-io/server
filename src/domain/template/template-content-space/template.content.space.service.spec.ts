@@ -28,6 +28,8 @@ describe('TemplateContentSpaceService', () => {
   let licenseService: Mocked<LicenseService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static TemplateContentSpace.create to avoid DataSource requirement
     vi.spyOn(TemplateContentSpace, 'create').mockImplementation(
       (input: any) => {

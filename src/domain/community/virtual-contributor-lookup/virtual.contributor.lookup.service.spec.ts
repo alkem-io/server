@@ -2,6 +2,7 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
@@ -9,7 +10,7 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { vi } from 'vitest';
+import { type Mock, vi } from 'vitest';
 import { VirtualActorLookupService } from './virtual.contributor.lookup.service';
 
 describe('VirtualActorLookupService', () => {
@@ -18,8 +19,11 @@ describe('VirtualActorLookupService', () => {
     findOne: ReturnType<typeof vi.fn>;
     find: ReturnType<typeof vi.fn>;
   };
+  let actorLookupService: { getActorAuthorizationOrFail: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     entityManager = {
       findOne: vi.fn(),
       find: vi.fn(),
@@ -41,6 +45,7 @@ describe('VirtualActorLookupService', () => {
       .compile();
 
     service = module.get(VirtualActorLookupService);
+    actorLookupService = module.get(ActorLookupService) as any;
   });
 
   describe('getVirtualContributorOrFail', () => {
@@ -211,6 +216,59 @@ describe('VirtualActorLookupService', () => {
       await expect(service.getAccountOrFail(validId)).rejects.toThrow(
         EntityNotInitializedException
       );
+    });
+  });
+
+  describe('getVirtualContributorAccountIdOrFail', () => {
+    it('should return the account ID when VC and account exist', async () => {
+      const validId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+      const mockVC = { id: validId, account: { id: 'account-1' } };
+      entityManager.findOne.mockResolvedValue(mockVC);
+
+      const result =
+        await service.getVirtualContributorAccountIdOrFail(validId);
+      expect(result).toBe('account-1');
+    });
+
+    it('should throw EntityNotFoundException when VC is not found', async () => {
+      const validId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+      entityManager.findOne.mockResolvedValue(null);
+
+      await expect(
+        service.getVirtualContributorAccountIdOrFail(validId)
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('should throw EntityNotInitializedException when account is not initialized', async () => {
+      const validId = 'a0eebc99-9c0b-4ef8-bb6d-6bb9bd380a11';
+      const mockVC = { id: validId, account: undefined };
+      entityManager.findOne.mockResolvedValue(mockVC);
+
+      await expect(
+        service.getVirtualContributorAccountIdOrFail(validId)
+      ).rejects.toThrow(EntityNotInitializedException);
+    });
+
+    it('should return null from getVirtualContributorById for non-UUID', async () => {
+      const result = await service.getVirtualContributorById('not-a-uuid');
+      expect(result).toBeNull();
+      expect(entityManager.findOne).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('getVirtualContributorAuthorizationOrFail', () => {
+    it('should delegate to actorLookupService.getActorAuthorizationOrFail', async () => {
+      const mockAuth = { id: 'auth-1', credentialRules: '[]' };
+      actorLookupService.getActorAuthorizationOrFail.mockResolvedValue(
+        mockAuth
+      );
+
+      const result =
+        await service.getVirtualContributorAuthorizationOrFail('vc-1');
+      expect(
+        actorLookupService.getActorAuthorizationOrFail
+      ).toHaveBeenCalledWith('vc-1');
+      expect(result).toBe(mockAuth);
     });
   });
 });

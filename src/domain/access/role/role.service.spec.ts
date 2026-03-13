@@ -49,6 +49,8 @@ describe('RoleService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Role.create to avoid DataSource requirement
     vi.spyOn(Role, 'create').mockImplementation((input: any) => {
       const entity = new Role();

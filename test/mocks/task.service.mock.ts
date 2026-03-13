@@ -7,6 +7,7 @@ export const MockTaskService: ValueProvider<PublicPart<TaskService>> = {
   provide: TaskService,
   useValue: {
     updateTaskErrors: vi.fn(),
+    updateTaskResults: vi.fn(),
     create: vi.fn(),
     get: vi.fn(),
     getAll: vi.fn(),

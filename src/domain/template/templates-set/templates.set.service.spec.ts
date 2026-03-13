@@ -31,6 +31,8 @@ describe('TemplatesSetService', () => {
   let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static TemplatesSet.create to avoid DataSource requirement
     vi.spyOn(TemplatesSet, 'create').mockImplementation((input: any) => {
       const entity = new TemplatesSet();

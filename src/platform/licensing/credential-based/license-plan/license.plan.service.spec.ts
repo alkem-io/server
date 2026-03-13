@@ -15,6 +15,8 @@ describe('LicensePlanService', () => {
   let licensePlanRepository: MockType<Repository<LicensePlan>>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     vi.spyOn(LicensePlan, 'create').mockImplementation(() => {
       return new LicensePlan() as any;
     });

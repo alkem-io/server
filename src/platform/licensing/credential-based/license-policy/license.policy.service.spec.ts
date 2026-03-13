@@ -17,6 +17,8 @@ describe('LicensePolicyService', () => {
   let entityManager: EntityManager;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LicensePolicyService,

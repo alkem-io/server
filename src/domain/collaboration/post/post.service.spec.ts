@@ -24,6 +24,8 @@ describe('PostService', () => {
   let roomService: RoomService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     vi.spyOn(Post, 'create').mockImplementation((input: any) => {
       const entity = new Post();
       Object.assign(entity, input);

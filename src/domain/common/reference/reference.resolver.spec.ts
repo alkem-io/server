@@ -9,6 +9,8 @@ describe('ReferenceResolver', () => {
   let resolver: ReferenceResolverMutations;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ReferenceResolverMutations,

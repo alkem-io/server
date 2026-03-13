@@ -9,6 +9,8 @@ describe('VisualResolver', () => {
   let resolver: VisualResolverMutations;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VisualResolverMutations,
