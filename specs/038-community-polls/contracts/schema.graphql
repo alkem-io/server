@@ -433,6 +433,7 @@ enum PollEventType {
 """
 Subscription result for vote updates on a poll.
 Returned by the pollVoteUpdated subscription.
+`eventID` is present in the internal PubSub payload for traceability and is not exposed in this GraphQL result type.
 """
 type PollVoteUpdatedSubscriptionResult {
   """The type of poll event."""
@@ -444,6 +445,7 @@ type PollVoteUpdatedSubscriptionResult {
 """
 Subscription result for option changes on a poll.
 Returned by the pollOptionsChanged subscription.
+`eventID` is present in the internal PubSub payload for traceability and is not exposed in this GraphQL result type.
 """
 type PollOptionsChangedSubscriptionResult {
   """The type of poll event."""

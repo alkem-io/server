@@ -48,6 +48,10 @@ import { IRoom } from '@domain/communication/room/room.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
+import {
+  calculateCalendarEventEndDate,
+  toIsoString,
+} from '@domain/timeline/event/calendar.event.calendar-links';
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist/config.service';
@@ -556,7 +560,6 @@ export class NotificationExternalAdapter {
         description: calendarEvent.profile?.description ?? undefined,
         googleCalendarUrl: '',
         outlookCalendarUrl: '',
-        appleCalendarUrl: '',
         icsDownloadUrl: '',
       },
     };
@@ -570,7 +573,6 @@ export class NotificationExternalAdapter {
     calendarEvent: ICalendarEvent,
     comment: IMessage
   ): Promise<any> {
-    //!!
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,

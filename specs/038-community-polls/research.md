@@ -38,11 +38,11 @@
 
 ---
 
-## 4. Results Ranking Strategy
+## 4. Results Ordering Strategy
 
-**Decision**: Load `poll_option` rows for the poll and all `PollVote` rows for the same poll, compute per-option vote counts in memory by grouping on `selectedOptionIds`, then sort by count descending with ties broken by `poll_option.sortOrder` ascending. No SQL-level aggregation query.
+**Decision**: Load `poll_option` rows for the poll and all `PollVote` rows for the same poll, compute per-option vote counts in memory by grouping on `selectedOptionIds`. Options are **always returned in `sortOrder` ASC** (the configured creation order), regardless of vote counts, visibility settings, or whether the viewer has voted (FR-015). No SQL-level aggregation query.
 
-**Rationale**: The in-memory approach is natural given that votes are already loaded as a flat list (bounded set). At the stated scale (≤20 options, ≤500 voters) this is trivially fast. No denormalized counter needed, no complex query, no risk of counter drift.
+**Rationale**: The in-memory approach is natural given that votes are already loaded as a flat list (bounded set). At the stated scale (≤20 options, ≤500 voters) this is trivially fast. No denormalized counter needed, no complex query, no risk of counter drift. Sorting by vote count was considered in early design but rejected because it changes the display order as votes accumulate, making the poll harder to scan and breaking the creator's intended option order.
 
 **Alternatives considered**:
 - SQL COUNT with JSONB unnest per option — technically feasible but more complex than in-memory grouping at this scale; adds query complexity for no benefit.

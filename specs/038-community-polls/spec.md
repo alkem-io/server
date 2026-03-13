@@ -228,7 +228,7 @@ A community member viewing a poll in their browser wants the poll display to upd
   - When `resultsVisibility = TOTAL_ONLY` and the subscriber has NOT voted: vote events deliver only `totalVotes`; option change events deliver updated options and `totalVotes`.
   - When `resultsVisibility = VISIBLE` or the subscriber HAS voted: events deliver data according to `resultsDetail` (PERCENTAGE, COUNT, or FULL).
   - When the subscriber's own vote is revoked by an option change, `myVote` MUST be null in the delivered payload.
-- **FR-031**: Each subscription event payload MUST include an `eventID` string (unique per event) for traceability, following the `BaseSubscriptionPayload` pattern used by all other subscriptions in the platform. Each subscription result type MUST include a `pollEventType` field indicating the event category (`POLL_VOTE_UPDATED` or `POLL_OPTIONS_CHANGED`) for client-side routing.
+- **FR-031**: Each internal PubSub subscription payload MUST include an `eventID` string (unique per event) for traceability, following the `BaseSubscriptionPayload` pattern used by all other subscriptions in the platform. The GraphQL subscription result types do not need to expose `eventID` and MUST include a `pollEventType` field indicating the event category (`POLL_VOTE_UPDATED` or `POLL_OPTIONS_CHANGED`) for client-side routing.
 
 ### Key Entities
 

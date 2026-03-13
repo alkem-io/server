@@ -128,6 +128,15 @@ export class PollService {
     return { poll: savedPoll, warnings };
   }
 
+  async deletePoll(pollId: string): Promise<Poll> {
+    const poll = await this.getPollOrFail(pollId);
+
+    const result = await this.pollRepository.remove(poll);
+    result.id = pollId;
+
+    return result;
+  }
+
   computePollResults(
     poll: Poll,
     currentUserId: string,
@@ -260,8 +269,6 @@ export class PollService {
 
     await this.pollOptionRepository.save(newOption);
 
-    // TODO US6: dispatch SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON to all existing voters
-
     return this.getPollOrFail(pollId);
   }
 
@@ -293,9 +300,6 @@ export class PollService {
     // Update option text
     option.text = newText;
     await this.pollOptionRepository.save(option);
-
-    // TODO US6: dispatch VOTE_AFFECTED_BY_OPTION_CHANGE to deletedVoterIds
-    // TODO US6: dispatch POLL_MODIFIED_ON_POLL_I_VOTED_ON to remaining voters
 
     const updatedPoll = await this.getPollOrFail(pollId);
     return { poll: updatedPoll, deletedVoterIds };
@@ -346,9 +350,6 @@ export class PollService {
       await this.pollOptionRepository.save(remaining[i]);
     }
 
-    // TODO US6: dispatch VOTE_AFFECTED_BY_OPTION_CHANGE to deletedVoterIds
-    // TODO US6: dispatch POLL_MODIFIED_ON_POLL_I_VOTED_ON to remaining voters
-
     const updatedPoll = await this.getPollOrFail(pollId);
     return { poll: updatedPoll, deletedVoterIds };
   }
@@ -396,8 +397,6 @@ export class PollService {
         await this.pollOptionRepository.save(opt);
       }
     }
-
-    // TODO US6: dispatch POLL_MODIFIED_ON_POLL_I_VOTED_ON to all voters
 
     return this.getPollOrFail(pollId);
   }

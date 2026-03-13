@@ -160,7 +160,7 @@ query ViewPoll($calloutID: UUID!) {
 }
 ```
 
-Verify: options are returned in descending `voteCount` order; ties preserve original `sortOrder`.
+Verify: options are returned in `sortOrder` ASC (creation order, not vote rank) — FR-015.
 
 ---
 

@@ -316,6 +316,14 @@ export class CalloutFramingService {
       );
       calloutFraming.whiteboard = undefined;
     }
+
+    if (
+      calloutFraming.poll &&
+      calloutFraming.type !== CalloutFramingType.POLL
+    ) {
+      await this.pollService.deletePoll(calloutFraming.poll.id);
+      calloutFraming.poll = undefined;
+    }
   }
 
   public async updateCalloutFraming(
