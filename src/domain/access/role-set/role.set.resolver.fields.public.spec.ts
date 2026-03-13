@@ -17,6 +17,8 @@ describe('RoleSetResolverFieldsPublic', () => {
   let membershipStatusLoader: RoleSetMembershipStatusDataLoader;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const mockActorRolesLoader = {
       loader: { load: vi.fn() },
     };

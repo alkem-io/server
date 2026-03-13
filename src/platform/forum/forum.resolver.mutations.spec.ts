@@ -28,6 +28,8 @@ describe('ForumResolverMutations', () => {
   let subscriptionPubSub: any;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     subscriptionPubSub = { publish: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({

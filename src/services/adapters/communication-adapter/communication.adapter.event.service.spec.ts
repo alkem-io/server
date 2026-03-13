@@ -11,6 +11,8 @@ describe('CommunicationAdapterEventService', () => {
   let eventEmitter: EventEmitter2;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CommunicationAdapterEventService,

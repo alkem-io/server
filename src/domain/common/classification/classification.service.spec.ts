@@ -27,6 +27,8 @@ describe('ClassificationService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Classification.create to avoid DataSource requirement
     vi.spyOn(Classification, 'create').mockImplementation((input: any) => {
       const entity = new Classification();

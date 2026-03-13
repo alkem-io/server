@@ -14,6 +14,8 @@ describe('AuthorizationService', () => {
   let service: AuthorizationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AuthorizationService, MockCacheManager, MockWinstonProvider],
     })

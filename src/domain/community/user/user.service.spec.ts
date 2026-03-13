@@ -70,6 +70,8 @@ describe('UserService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserService,

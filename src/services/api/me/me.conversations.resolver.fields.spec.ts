@@ -8,6 +8,8 @@ describe('MeConversationsResolverFields', () => {
   let resolver: MeConversationsResolverFields;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MeConversationsResolverFields,

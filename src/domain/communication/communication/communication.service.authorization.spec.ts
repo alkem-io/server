@@ -16,6 +16,8 @@ describe('CommunicationAuthorizationService', () => {
   let roomAuthorizationService: Mocked<RoomAuthorizationService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [CommunicationAuthorizationService, MockWinstonProvider],
     })

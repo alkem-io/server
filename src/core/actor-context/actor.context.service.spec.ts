@@ -17,6 +17,8 @@ describe('ActorContextService', () => {
   let module: TestingModule;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     mockEntityManager = {
       findOneOrFail: vi.fn(),
       findOne: vi.fn(),

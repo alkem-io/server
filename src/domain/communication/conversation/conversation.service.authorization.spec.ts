@@ -18,6 +18,8 @@ describe('ConversationAuthorizationService', () => {
   let userLookupService: Mocked<UserLookupService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [ConversationAuthorizationService, MockWinstonProvider],
     })

@@ -17,6 +17,8 @@ describe('InvitationAuthorizationService', () => {
   let virtualContributorLookupService: VirtualContributorLookupService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InvitationAuthorizationService,

@@ -97,6 +97,8 @@ describe('SpaceAuthorizationService', () => {
   });
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [SpaceAuthorizationService, MockWinstonProvider],
     })

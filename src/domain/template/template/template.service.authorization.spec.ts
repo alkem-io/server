@@ -29,6 +29,8 @@ describe('TemplateAuthorizationService', () => {
   let templateContentSpaceAuthorizationService: Mocked<TemplateContentSpaceAuthorizationService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TemplateAuthorizationService,

@@ -16,6 +16,8 @@ describe('CalendarEventResolverMutations', () => {
   let calendarEventService: CalendarEventService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalendarEventResolverMutations,
@@ -51,13 +53,9 @@ describe('CalendarEventResolverMutations', () => {
         id: 'event-1',
       } as unknown as ICalendarEvent;
 
-      calendarEventService.getCalendarEventOrFail = vi
-        .fn()
-        .mockResolvedValue(mockEvent);
-      authorizationService.grantAccessOrFail = vi.fn();
-      calendarEventService.deleteCalendarEvent = vi
-        .fn()
-        .mockResolvedValue(deletedEvent);
+      calendarEventService.getCalendarEventOrFail.mockResolvedValue(mockEvent);
+      authorizationService.grantAccessOrFail.mockReset();
+      calendarEventService.deleteCalendarEvent.mockResolvedValue(deletedEvent);
 
       const deleteData = { ID: 'event-1' };
 
@@ -99,13 +97,9 @@ describe('CalendarEventResolverMutations', () => {
         wholeDay: true,
       } as unknown as ICalendarEvent;
 
-      calendarEventService.getCalendarEventOrFail = vi
-        .fn()
-        .mockResolvedValue(mockEvent);
-      authorizationService.grantAccessOrFail = vi.fn();
-      calendarEventService.updateCalendarEvent = vi
-        .fn()
-        .mockResolvedValue(updatedEvent);
+      calendarEventService.getCalendarEventOrFail.mockResolvedValue(mockEvent);
+      authorizationService.grantAccessOrFail.mockReset();
+      calendarEventService.updateCalendarEvent.mockResolvedValue(updatedEvent);
 
       const eventData = { ID: 'event-1', wholeDay: true } as any;
 

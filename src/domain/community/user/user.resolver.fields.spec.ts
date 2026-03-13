@@ -31,6 +31,8 @@ describe('UserResolverFields', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [UserResolverFields, MockCacheManager, MockWinstonProvider],
     })

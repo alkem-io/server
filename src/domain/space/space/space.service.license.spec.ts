@@ -22,6 +22,8 @@ describe('SpaceLicenseService', () => {
   let collaborationLicenseService: CollaborationLicenseService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [SpaceLicenseService, MockWinstonProvider],
     })

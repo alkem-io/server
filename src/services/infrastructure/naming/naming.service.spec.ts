@@ -14,6 +14,8 @@ describe('Naming Service', () => {
   let innovationHubRepository: { countBy: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     entityManager = {
       find: vi.fn(),
       findOne: vi.fn(),

@@ -18,6 +18,8 @@ describe('StorageAggregatorAuthorizationService', () => {
   let storageBucketAuthorizationService: StorageBucketAuthorizationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StorageAggregatorAuthorizationService,

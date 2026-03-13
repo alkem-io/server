@@ -33,6 +33,8 @@ describe('VirtualContributorResolverMutations', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VirtualContributorResolverMutations,

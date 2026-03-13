@@ -9,6 +9,8 @@ describe('RestGuard', () => {
   let guard: RestGuard;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [RestGuard, MockWinstonProvider],
     })

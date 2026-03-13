@@ -18,6 +18,8 @@ describe('RoleSetResolverFields', () => {
   let virtualActorLookupService: VirtualActorLookupService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [RoleSetResolverFields, MockCacheManager, MockWinstonProvider],
     })

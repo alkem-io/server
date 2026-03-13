@@ -40,6 +40,8 @@ describe('WhiteboardService', () => {
   let profileDocumentsService: ProfileDocumentsService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Whiteboard.create to avoid DataSource requirement
     vi.spyOn(Whiteboard, 'create').mockImplementation((input: any) => {
       const entity = new Whiteboard();

@@ -73,6 +73,8 @@ describe('VirtualContributorService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     entityManager = {
       find: vi.fn(),
       remove: vi.fn(),
@@ -914,7 +916,7 @@ describe('VirtualContributorService', () => {
       repository.findOne.mockResolvedValue(mockVC);
       // countBy for displayName check returns 1 (taken)
       // Need to use the repository mock properly
-      (repository as any).countBy = vi.fn().mockResolvedValue(1);
+      (repository as any).countBy.mockResolvedValue(1);
 
       await expect(
         service.updateVirtualContributor({

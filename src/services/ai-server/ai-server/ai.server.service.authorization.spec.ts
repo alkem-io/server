@@ -14,6 +14,8 @@ describe('AiServerAuthorizationService', () => {
   let aiPersonaAuthorizationService: Record<string, Mock>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AiServerAuthorizationService],
     })

@@ -22,6 +22,8 @@ describe('StorageAggregatorResolverService', () => {
   let storageAggregatorRepository: MockType<Repository<StorageAggregator>>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     entityManager = {
       findOne: vi.fn(),
       connection: { query: vi.fn() },

@@ -25,6 +25,8 @@ describe('SubscriptionReadService', () => {
   let conversationPubSub: { asyncIterableIterator: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const activityProvider = pubSubEngineMockFactory(
       SUBSCRIPTION_ACTIVITY_CREATED
     );

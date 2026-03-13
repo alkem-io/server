@@ -29,6 +29,8 @@ describe('LicenseService', () => {
   let _authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static License.create to avoid DataSource requirement
     vi.spyOn(License, 'create').mockImplementation((input: any) => {
       const entity = new License();

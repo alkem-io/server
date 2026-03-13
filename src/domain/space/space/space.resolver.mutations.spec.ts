@@ -27,6 +27,8 @@ describe('SpaceResolverMutations', () => {
   let subspaceCreatedSubscription: any;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     subspaceCreatedSubscription = { publish: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({

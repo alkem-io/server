@@ -87,6 +87,8 @@ describe('LookupResolverFields', () => {
   const actorContext = { actorID: 'actor-1', credentials: [] } as any;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [LookupResolverFields, MockWinstonProvider],
     })
@@ -331,7 +333,7 @@ describe('LookupResolverFields', () => {
       const _calloutsSetService = { getCalloutsSetOrFail: vi.fn() } as any;
       // Re-get from module
       const csService = resolver['calloutsSetService'] as any;
-      csService.getCalloutsSetOrFail = vi.fn().mockResolvedValue(cs);
+      csService.getCalloutsSetOrFail.mockResolvedValue(cs);
       authorizationService.grantAccessOrFail.mockReturnValue(undefined);
 
       const result = await resolver.calloutsSet(actorContext, 'cs-1');
@@ -565,13 +567,9 @@ describe('LookupResolverFields', () => {
       const authPolicy = { id: 'ap-1' };
       const platformAuth = { id: 'platform-auth' };
       const apService = resolver['authorizationPolicyService'] as any;
-      apService.getAuthorizationPolicyOrFail = vi
-        .fn()
-        .mockResolvedValue(authPolicy);
+      apService.getAuthorizationPolicyOrFail.mockResolvedValue(authPolicy);
       const platformService = resolver['platformAuthorizationService'] as any;
-      platformService.getPlatformAuthorizationPolicy = vi
-        .fn()
-        .mockResolvedValue(platformAuth);
+      platformService.getPlatformAuthorizationPolicy.mockResolvedValue(platformAuth);
       authorizationService.grantAccessOrFail.mockReturnValue(undefined);
 
       const result = await resolver.authorizationPolicy(actorContext, 'ap-1');
@@ -591,18 +589,12 @@ describe('LookupResolverFields', () => {
       const authorization = { id: 'auth-1' };
       const user = { id: 'user-1', credentials: [{ id: 'cred-1' }] };
       const platformService = resolver['platformAuthorizationService'] as any;
-      platformService.getPlatformAuthorizationPolicy = vi
-        .fn()
-        .mockResolvedValue(platformAuth);
+      platformService.getPlatformAuthorizationPolicy.mockResolvedValue(platformAuth);
       authorizationService.grantAccessOrFail.mockReturnValue(undefined);
       const apService = resolver['authorizationPolicyService'] as any;
-      apService.getAuthorizationPolicyOrFail = vi
-        .fn()
-        .mockResolvedValue(authorization);
+      apService.getAuthorizationPolicyOrFail.mockResolvedValue(authorization);
       userLookupService.getUserByIdOrFail.mockResolvedValue(user);
-      (authorizationService as any).getGrantedPrivileges = vi
-        .fn()
-        .mockReturnValue([AuthorizationPrivilege.READ]);
+      (authorizationService as any).getGrantedPrivileges.mockReturnValue([AuthorizationPrivilege.READ]);
 
       const result = await resolver.authorizationPrivilegesForUser(
         actorContext,

@@ -15,6 +15,8 @@ describe('ClassificationAuthorizationService', () => {
   let classificationService: ClassificationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ClassificationAuthorizationService,

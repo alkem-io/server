@@ -11,6 +11,8 @@ describe('ApplicationLifecycleService', () => {
   let lifecycleService: LifecycleService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ApplicationLifecycleService,

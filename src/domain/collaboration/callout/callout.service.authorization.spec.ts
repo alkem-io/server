@@ -21,6 +21,8 @@ describe('CalloutAuthorizationService', () => {
   let roleSetService: RoleSetService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalloutAuthorizationService,

@@ -73,6 +73,8 @@ describe('LookupMyPrivilegesResolverFields', () => {
   const mockPrivileges = [AuthorizationPrivilege.READ];
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [LookupMyPrivilegesResolverFields, MockWinstonProvider],
     })
@@ -129,7 +131,7 @@ describe('LookupMyPrivilegesResolverFields', () => {
 
   describe('space', () => {
     it('should return empty array when space is not found', async () => {
-      spaceService.getSpace = vi.fn().mockResolvedValue(null);
+      spaceService.getSpace.mockResolvedValue(null);
 
       const result = await resolver.space(actorContext, 'space-1');
       expect(result).toEqual([]);
@@ -137,7 +139,7 @@ describe('LookupMyPrivilegesResolverFields', () => {
 
     it('should return privileges when space is found', async () => {
       const space = createEntityWithAuth('space-1');
-      spaceService.getSpace = vi.fn().mockResolvedValue(space);
+      spaceService.getSpace.mockResolvedValue(space);
       setupPrivilegesReturn();
 
       const result = await resolver.space(actorContext, 'space-1');
@@ -450,7 +452,7 @@ describe('LookupMyPrivilegesResolverFields', () => {
         id: 'entity-1',
         constructor: { name: 'TestEntity' },
       };
-      spaceService.getSpace = vi.fn().mockResolvedValue(entityNoAuth);
+      spaceService.getSpace.mockResolvedValue(entityNoAuth);
 
       await expect(resolver.space(actorContext, 'entity-1')).rejects.toThrow(
         RelationshipNotFoundException

@@ -14,6 +14,8 @@ describe('InAppNotificationResolverMutations', () => {
   let subscriptionPublishService: Mocked<SubscriptionPublishService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [InAppNotificationResolverMutations, MockWinstonProvider],
     })

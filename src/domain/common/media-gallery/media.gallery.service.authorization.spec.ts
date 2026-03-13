@@ -19,6 +19,8 @@ describe('MediaGalleryAuthorizationService', () => {
   let visualAuthorizationService: VisualAuthorizationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MediaGalleryAuthorizationService,

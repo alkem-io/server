@@ -30,6 +30,8 @@ describe('RoomServiceEvents', () => {
   const actorContextEmpty = { actorID: '' } as ActorContext;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [RoomServiceEvents, MockWinstonProvider],
     })

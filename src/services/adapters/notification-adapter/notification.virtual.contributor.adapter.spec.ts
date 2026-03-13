@@ -16,6 +16,8 @@ describe('NotificationVirtualContributorAdapter', () => {
   let communityResolverService: CommunityResolverService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [NotificationVirtualContributorAdapter],
     })

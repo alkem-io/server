@@ -16,6 +16,8 @@ describe('CalendarResolverFields', () => {
   let _spaceSettingsService: SpaceSettingsService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalendarResolverFields,
@@ -43,7 +45,7 @@ describe('CalendarResolverFields', () => {
       const mockEvent = { id: 'event-1' } as unknown as ICalendarEvent;
       const mockActorContext = new ActorContext();
 
-      calendarService.getCalendarEvent = vi.fn().mockResolvedValue(mockEvent);
+      calendarService.getCalendarEvent.mockResolvedValue(mockEvent);
 
       // Act
       const result = await resolver.event(
@@ -79,10 +81,8 @@ describe('CalendarResolverFields', () => {
         },
       };
 
-      calendarService.getSpaceFromCalendarOrFail = vi
-        .fn()
-        .mockResolvedValue(mockSpace);
-      calendarService.getCalendarEvents = vi.fn().mockResolvedValue(mockEvents);
+      calendarService.getSpaceFromCalendarOrFail.mockResolvedValue(mockSpace);
+      calendarService.getCalendarEvents.mockResolvedValue(mockEvents);
 
       // Act
       const result = await resolver.events(mockCalendar, mockActorContext);
@@ -113,10 +113,8 @@ describe('CalendarResolverFields', () => {
         },
       };
 
-      calendarService.getSpaceFromCalendarOrFail = vi
-        .fn()
-        .mockResolvedValue(mockSpace);
-      calendarService.getCalendarEvents = vi.fn().mockResolvedValue(mockEvents);
+      calendarService.getSpaceFromCalendarOrFail.mockResolvedValue(mockSpace);
+      calendarService.getCalendarEvents.mockResolvedValue(mockEvents);
 
       // Act
       const result = await resolver.events(mockCalendar, mockActorContext);

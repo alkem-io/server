@@ -18,6 +18,8 @@ describe('MemoAuthorizationService', () => {
   let memoService: MemoService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MemoAuthorizationService,

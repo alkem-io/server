@@ -20,7 +20,9 @@ describe('NotificationInAppAdapter', () => {
   };
 
   beforeEach(async () => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
+
+    vi.restoreAllMocks();
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [

@@ -16,6 +16,8 @@ describe('PlatformLicenseService', () => {
   let licenseEntitlementService: Mocked<LicenseEntitlementService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [PlatformLicenseService, MockWinstonProvider],
     })

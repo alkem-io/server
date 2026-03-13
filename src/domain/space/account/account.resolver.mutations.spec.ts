@@ -49,6 +49,8 @@ describe('AccountResolverMutations', () => {
   let temporaryStorageService: TemporaryStorageService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AccountResolverMutations, MockWinstonProvider],
     })

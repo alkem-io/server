@@ -21,6 +21,8 @@ describe('NotificationExternalAdapter', () => {
   let configService: ConfigService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     notificationsClient = { emit: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({

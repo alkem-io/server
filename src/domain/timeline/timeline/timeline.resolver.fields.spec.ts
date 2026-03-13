@@ -13,6 +13,8 @@ describe('TimelineResolverFields', () => {
   let timelineService: TimelineService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TimelineResolverFields,
@@ -40,9 +42,7 @@ describe('TimelineResolverFields', () => {
       } as unknown as ICalendar;
       const mockTimeline = { id: 'timeline-1' } as ITimeline;
 
-      timelineService.getCalendarOrFail = vi
-        .fn()
-        .mockResolvedValue(mockCalendar);
+      timelineService.getCalendarOrFail.mockResolvedValue(mockCalendar);
 
       // Act
       const result = await resolver.calendar(mockTimeline);

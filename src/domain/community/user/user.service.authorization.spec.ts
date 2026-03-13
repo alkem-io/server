@@ -42,6 +42,8 @@ describe('UserAuthorizationService', () => {
   let actorLookupService: { getActorCredentialsOrFail: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserAuthorizationService,

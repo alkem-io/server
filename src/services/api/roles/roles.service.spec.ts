@@ -39,6 +39,7 @@ import { RolesResultCommunity } from './dto/roles.dto.result.community';
 import { RolesResultSpace } from './dto/roles.dto.result.space';
 import { RolesService } from './roles.service';
 import * as getOrganizationRolesForUserEntityData from './util/get.organization.roles.for.user.entity.data';
+import * as getSpaceRolesForContributorEntityData from './util/get.space.roles.for.contributor.entity.data';
 import * as getSpaceRolesForContributorQueryResult from './util/get.space.roles.for.contributor.query.result';
 
 describe('RolesService', () => {
@@ -48,6 +49,10 @@ describe('RolesService', () => {
   let actorLookupService: ActorLookupService;
   let communityResolverService: CommunityResolverService;
   let moduleRef: any;
+
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
 
   beforeAll(async () => {
     moduleRef = await Test.createTestingModule({
@@ -108,6 +113,11 @@ describe('RolesService', () => {
       vi.spyOn(spaceFilterService, 'getAllowedVisibilities').mockReturnValue([
         SpaceVisibility.ACTIVE,
       ]);
+
+      vi.spyOn(
+        getSpaceRolesForContributorEntityData,
+        'getSpaceRolesForContributorEntityData'
+      ).mockResolvedValue({ spaces: [], subspaces: [] });
 
       vi.spyOn(
         getSpaceRolesForContributorQueryResult,

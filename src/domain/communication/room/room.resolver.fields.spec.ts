@@ -19,6 +19,8 @@ describe('RoomResolverFields', () => {
   const actorContext = { actorID: 'user-1' } as ActorContext;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // RoomDataLoader is REQUEST-scoped, so provide it manually
     roomDataLoader = {
       loadLastMessage: vi.fn(),

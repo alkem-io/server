@@ -14,6 +14,8 @@ describe('LinkAuthorizationService', () => {
   let profileAuthorizationService: ProfileAuthorizationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LinkAuthorizationService,

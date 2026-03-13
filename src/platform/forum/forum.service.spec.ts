@@ -28,6 +28,8 @@ describe('ForumService', () => {
   let storageAggregatorResolverService: StorageAggregatorResolverService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ForumService,

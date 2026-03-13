@@ -30,6 +30,8 @@ describe('AccountAuthorizationService', () => {
   let licenseAuthorizationService: LicenseAuthorizationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AccountAuthorizationService, MockWinstonProvider],
     })

@@ -8,6 +8,8 @@ describe('UserGroupResolverFields', () => {
   let resolver: UserGroupResolverFields;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserGroupResolverFields,

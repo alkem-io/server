@@ -26,6 +26,8 @@ describe('UserResolverMutations', () => {
   let homeSpaceValidationService: { validateSpaceAccess: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [UserResolverMutations, MockCacheManager, MockWinstonProvider],
     })

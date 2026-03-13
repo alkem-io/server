@@ -10,6 +10,8 @@ describe('LibraryResolverFields', () => {
   let libraryService: LibraryService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [LibraryResolverFields, MockCacheManager, MockWinstonProvider],
     })

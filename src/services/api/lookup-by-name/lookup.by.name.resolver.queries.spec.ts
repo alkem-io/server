@@ -8,6 +8,8 @@ describe('LookupByNameResolverQueries', () => {
   let resolver: LookupByNameResolverQueries;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LookupByNameResolverQueries,

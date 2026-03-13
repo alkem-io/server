@@ -22,6 +22,8 @@ describe('AdminGeoLocationMutations', () => {
   const actorContext = { actorID: 'actor-1' } as any as ActorContext;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const mockEntityManager = {
       find: vi.fn(),
     };

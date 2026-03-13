@@ -8,6 +8,8 @@ describe('RoleSetServiceLifecycleInvitation', () => {
   let service: RoleSetServiceLifecycleInvitation;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoleSetServiceLifecycleInvitation,

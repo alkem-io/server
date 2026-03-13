@@ -42,6 +42,8 @@ describe('AdminAuthorizationService', () => {
   let authorizationService: { getGrantedPrivileges: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminAuthorizationService,

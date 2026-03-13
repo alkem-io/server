@@ -11,6 +11,8 @@ describe('PlatformInvitationResolverFields', () => {
   let platformInvitationService: PlatformInvitationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PlatformInvitationResolverFields,

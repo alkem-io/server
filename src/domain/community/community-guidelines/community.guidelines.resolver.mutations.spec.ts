@@ -8,6 +8,8 @@ describe('CommunityGuidelinesResolverMutations', () => {
   let resolver: CommunityGuidelinesResolverMutations;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CommunityGuidelinesResolverMutations,

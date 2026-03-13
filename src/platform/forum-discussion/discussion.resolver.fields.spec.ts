@@ -10,6 +10,8 @@ describe('DiscussionResolverFields', () => {
   let discussionService: Mocked<DiscussionService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [DiscussionResolverFields, MockWinstonProvider],
     })

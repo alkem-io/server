@@ -13,6 +13,8 @@ describe('InnovationPackResolverMutations', () => {
   let authorizationService: AuthorizationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InnovationPackResolverMutations,

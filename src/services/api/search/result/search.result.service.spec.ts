@@ -23,6 +23,8 @@ describe('SearchResultService', () => {
   const actorContext = { credentials: [], actorID: 'actor-1' } as any;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     entityManager = {
       findBy: vi.fn().mockResolvedValue([]),
       find: vi.fn().mockResolvedValue([]),

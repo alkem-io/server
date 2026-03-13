@@ -18,6 +18,8 @@ describe('TemplatesManagerAuthorizationService', () => {
   let templatesSetAuthorizationService: Mocked<TemplatesSetAuthorizationService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TemplatesManagerAuthorizationService,

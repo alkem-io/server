@@ -11,6 +11,8 @@ describe('ConversationMembershipsLoaderCreator', () => {
   let mockEntityManager: any;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     mockEntityManager = {
       find: vi.fn().mockResolvedValue([]),
     };

@@ -17,6 +17,8 @@ describe('InputCreatorService', () => {
   let spaceLookupService: Record<string, Mock>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [InputCreatorService, MockWinstonProvider],
     })

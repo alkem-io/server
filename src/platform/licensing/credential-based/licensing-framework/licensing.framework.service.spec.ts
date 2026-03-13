@@ -18,6 +18,8 @@ describe('LicensingFrameworkService', () => {
   let licensePlanService: LicensePlanService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LicensingFrameworkService,

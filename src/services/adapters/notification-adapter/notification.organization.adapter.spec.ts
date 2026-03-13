@@ -16,6 +16,8 @@ describe('NotificationOrganizationAdapter', () => {
   let messageDetailsService: MessageDetailsService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [NotificationOrganizationAdapter],
     })

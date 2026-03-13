@@ -19,6 +19,8 @@ describe('IngestWebsiteResultHandler', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [IngestWebsiteResultHandler, MockWinstonProvider],
     })

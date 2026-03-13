@@ -8,6 +8,8 @@ describe('MeResolverQueries', () => {
   let resolver: MeResolverQueries;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [MeResolverQueries, MockCacheManager, MockWinstonProvider],
     })

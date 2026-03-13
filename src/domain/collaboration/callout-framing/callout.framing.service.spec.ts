@@ -34,6 +34,8 @@ describe('CalloutFramingService', () => {
   let tagsetService: TagsetService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static CalloutFraming.create to avoid DataSource requirement
     vi.spyOn(CalloutFraming, 'create').mockImplementation((input: any) => {
       const entity = new CalloutFraming();

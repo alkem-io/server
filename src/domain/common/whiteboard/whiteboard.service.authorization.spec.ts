@@ -20,6 +20,8 @@ describe('WhiteboardAuthorizationService', () => {
   let whiteboardGuestAccessService: WhiteboardGuestAccessService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         WhiteboardAuthorizationService,

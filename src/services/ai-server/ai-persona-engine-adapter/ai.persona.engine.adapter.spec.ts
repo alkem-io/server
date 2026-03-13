@@ -10,6 +10,8 @@ describe('AiPersonaEngineAdapter', () => {
   let eventBus: Record<string, Mock>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AiPersonaEngineAdapter],
     })

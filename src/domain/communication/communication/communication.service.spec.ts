@@ -24,6 +24,8 @@ describe('CommunicationService', () => {
   let communicationRepo: Mocked<Repository<Communication>>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CommunicationService,

@@ -33,6 +33,8 @@ describe('UserIdentityService', () => {
   let userRepository: { save: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UserIdentityService,

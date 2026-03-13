@@ -8,6 +8,8 @@ describe('NVPFactoryService', () => {
   let service: NVPFactoryService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [NVPFactoryService, MockWinstonProvider],
     })

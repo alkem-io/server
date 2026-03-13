@@ -19,6 +19,8 @@ describe('CalendarEventResolverFields', () => {
   let urlGeneratorService: UrlGeneratorService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalendarEventResolverFields,
@@ -51,7 +53,7 @@ describe('CalendarEventResolverFields', () => {
         createdBy: 'user-1',
       } as unknown as ICalendarEvent;
 
-      userLookupService.getUserById = vi.fn().mockResolvedValue(mockUser);
+      userLookupService.getUserById.mockResolvedValue(mockUser);
 
       // Act
       const result = await resolver.createdBy(mockEvent);
@@ -96,9 +98,7 @@ describe('CalendarEventResolverFields', () => {
         createdBy: 'deleted-user-id',
       } as unknown as ICalendarEvent;
 
-      userLookupService.getUserById = vi
-        .fn()
-        .mockRejectedValue(
+      userLookupService.getUserById.mockRejectedValue(
           new EntityNotFoundException('User not found', LogContext.CALENDAR)
         );
 
@@ -116,9 +116,7 @@ describe('CalendarEventResolverFields', () => {
         createdBy: 'user-1',
       } as unknown as ICalendarEvent;
 
-      userLookupService.getUserById = vi
-        .fn()
-        .mockRejectedValue(new Error('Unexpected error'));
+      userLookupService.getUserById.mockRejectedValue(new Error('Unexpected error'));
 
       // Act & Assert
       await expect(resolver.createdBy(mockEvent)).rejects.toThrow(
@@ -133,9 +131,7 @@ describe('CalendarEventResolverFields', () => {
       const mockProfile = { id: 'profile-1', displayName: 'Test' };
       const mockEvent = { id: 'event-1' } as unknown as ICalendarEvent;
 
-      calendarEventService.getProfileOrFail = vi
-        .fn()
-        .mockResolvedValue(mockProfile);
+      calendarEventService.getProfileOrFail.mockResolvedValue(mockProfile);
 
       // Act
       const result = await resolver.profile(mockEvent);
@@ -171,7 +167,7 @@ describe('CalendarEventResolverFields', () => {
       const mockSpace = { id: 'space-1' } as unknown as ISpace;
       const mockEvent = { id: 'event-1' } as unknown as ICalendarEvent;
 
-      calendarEventService.getSubspace = vi.fn().mockResolvedValue(mockSpace);
+      calendarEventService.getSubspace.mockResolvedValue(mockSpace);
 
       // Act
       const result = await resolver.subspace(mockEvent);
@@ -185,7 +181,7 @@ describe('CalendarEventResolverFields', () => {
       // Arrange
       const mockEvent = { id: 'event-1' } as unknown as ICalendarEvent;
 
-      calendarEventService.getSubspace = vi.fn().mockResolvedValue(undefined);
+      calendarEventService.getSubspace.mockResolvedValue(undefined);
 
       // Act
       const result = await resolver.subspace(mockEvent);
@@ -212,15 +208,9 @@ describe('CalendarEventResolverFields', () => {
         location: undefined,
       };
 
-      urlGeneratorService.getCalendarEventUrlPath = vi
-        .fn()
-        .mockResolvedValue('https://alkem.io/events/event-1');
-      urlGeneratorService.getCalendarEventIcsRestUrl = vi
-        .fn()
-        .mockReturnValue('https://alkem.io/api/rest/calendar/event-1/ics');
-      calendarEventService.getProfileOrFail = vi
-        .fn()
-        .mockResolvedValue(mockProfile);
+      urlGeneratorService.getCalendarEventUrlPath.mockResolvedValue('https://alkem.io/events/event-1');
+      urlGeneratorService.getCalendarEventIcsRestUrl.mockReturnValue('https://alkem.io/api/rest/calendar/event-1/ics');
+      calendarEventService.getProfileOrFail.mockResolvedValue(mockProfile);
 
       // Act
       const result = await resolver.googleCalendarUrl(mockEvent);
@@ -248,15 +238,9 @@ describe('CalendarEventResolverFields', () => {
         location: undefined,
       };
 
-      urlGeneratorService.getCalendarEventUrlPath = vi
-        .fn()
-        .mockResolvedValue('https://alkem.io/events/event-1');
-      urlGeneratorService.getCalendarEventIcsRestUrl = vi
-        .fn()
-        .mockReturnValue('https://alkem.io/api/rest/calendar/event-1/ics');
-      calendarEventService.getProfileOrFail = vi
-        .fn()
-        .mockResolvedValue(mockProfile);
+      urlGeneratorService.getCalendarEventUrlPath.mockResolvedValue('https://alkem.io/events/event-1');
+      urlGeneratorService.getCalendarEventIcsRestUrl.mockReturnValue('https://alkem.io/api/rest/calendar/event-1/ics');
+      calendarEventService.getProfileOrFail.mockResolvedValue(mockProfile);
 
       // Act
       const result = await resolver.outlookCalendarUrl(mockEvent);
@@ -285,15 +269,9 @@ describe('CalendarEventResolverFields', () => {
         location: undefined,
       };
 
-      urlGeneratorService.getCalendarEventUrlPath = vi
-        .fn()
-        .mockResolvedValue('https://alkem.io/events/event-1');
-      urlGeneratorService.getCalendarEventIcsRestUrl = vi
-        .fn()
-        .mockReturnValue(icsUrl);
-      calendarEventService.getProfileOrFail = vi
-        .fn()
-        .mockResolvedValue(mockProfile);
+      urlGeneratorService.getCalendarEventUrlPath.mockResolvedValue('https://alkem.io/events/event-1');
+      urlGeneratorService.getCalendarEventIcsRestUrl.mockReturnValue(icsUrl);
+      calendarEventService.getProfileOrFail.mockResolvedValue(mockProfile);
 
       // Act
       const result = await resolver.icsDownloadUrl(mockEvent);

@@ -10,6 +10,8 @@ describe('InvokeEngineResultHandler', () => {
   let aiServerService: { handleInvokeEngineResult: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [InvokeEngineResultHandler],
     })

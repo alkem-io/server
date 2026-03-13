@@ -37,6 +37,8 @@ describe('MessageInboxService', () => {
   let conversationService: Mocked<ConversationService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [MessageInboxService, MockWinstonProvider],
     })

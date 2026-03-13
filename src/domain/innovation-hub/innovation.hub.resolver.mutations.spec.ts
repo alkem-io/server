@@ -15,6 +15,8 @@ describe('InnovationHubResolverMutations', () => {
   let innovationHubService: InnovationHubService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InnovationHubResolverMutations,
@@ -41,15 +43,9 @@ describe('InnovationHubResolverMutations', () => {
       } as any;
       const updatedHub = { id: 'hub-1', nameID: 'new-name' } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail = vi
-        .fn()
-        .mockResolvedValue(existingHub);
-      (authorizationService as any).grantAccessOrFail = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      (innovationHubService as any).updateOrFail = vi
-        .fn()
-        .mockResolvedValue(updatedHub);
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(existingHub);
+      (authorizationService as any).grantAccessOrFail.mockResolvedValue(undefined);
+      (innovationHubService as any).updateOrFail.mockResolvedValue(updatedHub);
 
       // Act
       const result = await resolver.updateInnovationHub(
@@ -84,12 +80,8 @@ describe('InnovationHubResolverMutations', () => {
         authorization: { id: 'auth-1' },
       } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail = vi
-        .fn()
-        .mockResolvedValue(existingHub);
-      (authorizationService as any).grantAccessOrFail = vi
-        .fn()
-        .mockRejectedValue(new Error('Forbidden'));
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(existingHub);
+      (authorizationService as any).grantAccessOrFail.mockRejectedValue(new Error('Forbidden'));
 
       // Act & Assert
       await expect(
@@ -109,15 +101,9 @@ describe('InnovationHubResolverMutations', () => {
       } as any;
       const deletedHub = { id: 'hub-1' } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail = vi
-        .fn()
-        .mockResolvedValue(existingHub);
-      (authorizationService as any).grantAccessOrFail = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      (innovationHubService as any).delete = vi
-        .fn()
-        .mockResolvedValue(deletedHub);
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(existingHub);
+      (authorizationService as any).grantAccessOrFail.mockResolvedValue(undefined);
+      (innovationHubService as any).delete.mockResolvedValue(deletedHub);
 
       // Act
       const result = await resolver.deleteInnovationHub(
@@ -152,12 +138,8 @@ describe('InnovationHubResolverMutations', () => {
         authorization: { id: 'auth-1' },
       } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail = vi
-        .fn()
-        .mockResolvedValue(existingHub);
-      (authorizationService as any).grantAccessOrFail = vi
-        .fn()
-        .mockRejectedValue(new Error('Forbidden'));
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(existingHub);
+      (authorizationService as any).grantAccessOrFail.mockRejectedValue(new Error('Forbidden'));
 
       // Act & Assert
       await expect(

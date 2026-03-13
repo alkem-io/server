@@ -16,6 +16,8 @@ describe('SpaceAboutAuthorizationService', () => {
   let communityGuidelinesAuthorizationService: CommunityGuidelinesAuthorizationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [SpaceAboutAuthorizationService, MockWinstonProvider],
     })

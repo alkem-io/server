@@ -39,6 +39,8 @@ describe('ProfileService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Profile.create to avoid DataSource requirement
     vi.spyOn(Profile, 'create').mockImplementation((input: any) => {
       const entity = new Profile();

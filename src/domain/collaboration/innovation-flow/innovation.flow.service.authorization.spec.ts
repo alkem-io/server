@@ -18,6 +18,8 @@ describe('InnovationFlowAuthorizationService', () => {
   let innovationFlowStateAuthorizationService: InnovationFlowStateAuthorizationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InnovationFlowAuthorizationService,

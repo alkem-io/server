@@ -52,6 +52,8 @@ describe('OrganizationService', () => {
   let actorService: { deleteActorById: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrganizationService,

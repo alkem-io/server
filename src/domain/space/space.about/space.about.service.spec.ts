@@ -24,6 +24,8 @@ describe('SpaceAboutService', () => {
   let spaceLookupService: SpaceLookupService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SpaceAboutService,
@@ -138,7 +140,7 @@ describe('SpaceAboutService', () => {
       vi.spyOn(spaceAboutRepository, 'save').mockImplementation(
         async entity => entity as SpaceAbout
       );
-      profileService.updateProfile = vi.fn().mockResolvedValue(updatedProfile);
+      profileService.updateProfile.mockResolvedValue(updatedProfile);
 
       const updateData = {
         profile: { displayName: 'Updated' } as any,
@@ -224,11 +226,9 @@ describe('SpaceAboutService', () => {
         authorization: { id: 'auth-1' },
       } as SpaceAbout;
       vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(about);
-      profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
-      communityGuidelinesService.deleteCommunityGuidelines = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
+      profileService.deleteProfile.mockResolvedValue(undefined);
+      communityGuidelinesService.deleteCommunityGuidelines.mockResolvedValue(undefined);
+      authorizationPolicyService.delete.mockResolvedValue(undefined);
       vi.spyOn(spaceAboutRepository, 'remove').mockResolvedValue(about);
 
       // Act
@@ -254,11 +254,9 @@ describe('SpaceAboutService', () => {
         authorization: undefined,
       } as SpaceAbout;
       vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(about);
-      profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
-      communityGuidelinesService.deleteCommunityGuidelines = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
+      profileService.deleteProfile.mockResolvedValue(undefined);
+      communityGuidelinesService.deleteCommunityGuidelines.mockResolvedValue(undefined);
+      authorizationPolicyService.delete.mockResolvedValue(undefined);
       vi.spyOn(spaceAboutRepository, 'remove').mockResolvedValue(about);
 
       // Act
@@ -307,9 +305,7 @@ describe('SpaceAboutService', () => {
       const mockRoleSet = { id: 'roleset-1' };
       const mockCommunity = { id: 'community-1', roleSet: mockRoleSet };
       const mockSpace = { id: 'space-1', community: mockCommunity };
-      spaceLookupService.getSpaceForSpaceAboutOrFail = vi
-        .fn()
-        .mockResolvedValue(mockSpace);
+      spaceLookupService.getSpaceForSpaceAboutOrFail.mockResolvedValue(mockSpace);
 
       // Act
       const result = await service.getCommunityWithRoleSet('about-1');
@@ -321,9 +317,7 @@ describe('SpaceAboutService', () => {
     it('should throw RelationshipNotFoundException when community is missing', async () => {
       // Arrange
       const mockSpace = { id: 'space-1', community: undefined };
-      spaceLookupService.getSpaceForSpaceAboutOrFail = vi
-        .fn()
-        .mockResolvedValue(mockSpace);
+      spaceLookupService.getSpaceForSpaceAboutOrFail.mockResolvedValue(mockSpace);
 
       // Act & Assert
       await expect(service.getCommunityWithRoleSet('about-1')).rejects.toThrow(
@@ -337,9 +331,7 @@ describe('SpaceAboutService', () => {
         id: 'space-1',
         community: { id: 'community-1', roleSet: undefined },
       };
-      spaceLookupService.getSpaceForSpaceAboutOrFail = vi
-        .fn()
-        .mockResolvedValue(mockSpace);
+      spaceLookupService.getSpaceForSpaceAboutOrFail.mockResolvedValue(mockSpace);
 
       // Act & Assert
       await expect(service.getCommunityWithRoleSet('about-1')).rejects.toThrow(

@@ -44,6 +44,8 @@ describe('SearchIngestService', () => {
   const suffix = '20250923120000';
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     mockElasticClient = {
       indices: {
         create: vi.fn().mockResolvedValue({ acknowledged: true }),
@@ -86,10 +88,10 @@ describe('SearchIngestService', () => {
     _mockLogger = module.get(WINSTON_MODULE_NEST_PROVIDER) as any;
 
     // Mock task service methods
-    mockTaskService.complete = vi.fn().mockResolvedValue(undefined);
-    mockTaskService.completeWithError = vi.fn().mockResolvedValue(undefined);
-    mockTaskService.updateTaskResults = vi.fn().mockResolvedValue(undefined);
-    mockTaskService.updateTaskErrors = vi.fn().mockResolvedValue(undefined);
+    mockTaskService.complete.mockResolvedValue(undefined);
+    mockTaskService.completeWithError.mockResolvedValue(undefined);
+    mockTaskService.updateTaskResults.mockResolvedValue(undefined);
+    mockTaskService.updateTaskErrors.mockResolvedValue(undefined);
 
     vi.spyOn(service as any, 'generateSuffix').mockReturnValue(suffix);
   });

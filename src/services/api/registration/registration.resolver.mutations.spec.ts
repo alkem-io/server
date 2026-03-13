@@ -39,6 +39,8 @@ describe('RegistrationResolverMutations', () => {
   const actorContext = { actorID: 'actor-1', credentials: [] } as any;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [RegistrationResolverMutations, MockWinstonProvider],
     })

@@ -19,6 +19,8 @@ describe('IngestBodyOfKnowledgeResultHandler', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [IngestBodyOfKnowledgeResultHandler, MockWinstonProvider],
     })

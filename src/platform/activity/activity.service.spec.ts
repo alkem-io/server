@@ -16,6 +16,8 @@ describe('ActivityService', () => {
   let activityRepository: MockType<Repository<Activity>>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     vi.spyOn(Activity, 'create').mockImplementation((input: any) => {
       const e = new Activity();
       Object.assign(e, input);

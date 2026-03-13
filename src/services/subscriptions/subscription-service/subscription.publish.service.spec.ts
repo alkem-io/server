@@ -25,6 +25,8 @@ describe('SubscriptionPublishService', () => {
   let conversationPubSub: { publish: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     activityPubSub = { publish: vi.fn().mockResolvedValue(undefined) };
     roomPubSub = { publish: vi.fn().mockResolvedValue(undefined) };
     vcPubSub = { publish: vi.fn().mockResolvedValue(undefined) };

@@ -10,6 +10,8 @@ describe('DataLoaderInterceptor', () => {
   let interceptor: DataLoaderInterceptor;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [DataLoaderInterceptor, MockCacheManager, MockWinstonProvider],
     })

@@ -17,6 +17,8 @@ describe('InAppNotificationService', () => {
   let notificationRepo: MockType<Repository<InAppNotification>>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InAppNotificationService,

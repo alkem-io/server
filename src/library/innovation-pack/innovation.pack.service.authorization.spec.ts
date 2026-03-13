@@ -21,6 +21,8 @@ describe('InnovationPackAuthorizationService', () => {
   let templatesSetAuthorizationService: TemplatesSetAuthorizationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InnovationPackAuthorizationService,

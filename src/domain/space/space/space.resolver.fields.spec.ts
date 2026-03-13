@@ -13,6 +13,8 @@ describe('SpaceResolverFields', () => {
   let spaceLookupService: SpaceLookupService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [SpaceResolverFields, MockWinstonProvider],
     })

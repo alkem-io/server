@@ -9,6 +9,8 @@ describe('MessageResolverFields', () => {
   let resolver: MessageResolverFields;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [MessageResolverFields, MockWinstonProvider],
     })

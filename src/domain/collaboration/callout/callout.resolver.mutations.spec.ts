@@ -27,6 +27,8 @@ describe('CalloutResolverMutations', () => {
   let _calloutContributionService: CalloutContributionService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalloutResolverMutations,

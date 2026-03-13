@@ -17,6 +17,8 @@ describe('FileIntegrationService', () => {
   let storageService: { exists: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     storageService = { exists: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({

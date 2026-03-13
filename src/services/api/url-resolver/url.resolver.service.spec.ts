@@ -47,6 +47,8 @@ describe('UrlResolverService', () => {
   const actorContext = { credentials: [] } as any;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     entityManager = {
       findOneOrFail: vi.fn(),
       findOne: vi.fn(),
@@ -484,9 +486,7 @@ describe('UrlResolverService', () => {
           },
         },
       };
-      _virtualActorLookupService.getVirtualContributorByNameIdOrFail = vi
-        .fn()
-        .mockResolvedValue(mockVC);
+      _virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(mockVC);
 
       const result = await service.resolveUrl(
         'https://example.com/vc/my-vc',
@@ -513,9 +513,7 @@ describe('UrlResolverService', () => {
         id: 'vc-123',
         knowledgeBase: undefined,
       };
-      _virtualActorLookupService.getVirtualContributorByNameIdOrFail = vi
-        .fn()
-        .mockResolvedValue(mockVC);
+      _virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(mockVC);
       urlGeneratorService.generateUrlForPlatform.mockReturnValue(
         'https://example.com'
       );
@@ -547,9 +545,7 @@ describe('UrlResolverService', () => {
           },
         },
       };
-      _virtualActorLookupService.getVirtualContributorByNameIdOrFail = vi
-        .fn()
-        .mockResolvedValue(mockVC);
+      _virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(mockVC);
       entityManager.findOneOrFail.mockResolvedValue({
         id: 'callout-1',
         nameID: 'my-callout',
@@ -803,7 +799,7 @@ describe('UrlResolverService', () => {
             },
           },
         });
-      spaceLookupService.getSpaceOrFail = vi.fn().mockResolvedValue({
+      spaceLookupService.getSpaceOrFail.mockResolvedValue({
         id: 'space-l0',
         collaboration: {
           timeline: {
@@ -833,7 +829,7 @@ describe('UrlResolverService', () => {
         collaboration: { id: 'collab-1', calloutsSet: { id: 'cs-1' } },
       };
       spaceLookupService.getSpaceByNameIdOrFail.mockResolvedValue(spaceL0);
-      spaceLookupService.getSpaceOrFail = vi.fn().mockResolvedValue({
+      spaceLookupService.getSpaceOrFail.mockResolvedValue({
         id: 'space-l0',
         templatesManager: {
           templatesSet: {

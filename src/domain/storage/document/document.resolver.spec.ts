@@ -15,6 +15,8 @@ describe('DocumentResolverMutations', () => {
   let documentService: DocumentService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         DocumentResolverMutations,

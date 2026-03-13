@@ -73,6 +73,8 @@ describe('MeService', () => {
   let logger: any;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [MeService, MockWinstonProvider],
     })

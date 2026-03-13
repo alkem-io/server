@@ -18,6 +18,8 @@ describe('PlatformResolverFields', () => {
   let platformAuthorizationService: Mocked<PlatformAuthorizationPolicyService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [PlatformResolverFields, MockWinstonProvider],
     })

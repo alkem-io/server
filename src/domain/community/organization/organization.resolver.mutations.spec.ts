@@ -26,6 +26,8 @@ describe('OrganizationResolverMutations', () => {
   let userGroupAuthorizationService: { applyAuthorizationPolicy: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrganizationResolverMutations,

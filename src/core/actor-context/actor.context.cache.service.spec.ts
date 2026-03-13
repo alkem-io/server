@@ -20,6 +20,8 @@ describe('ActorContextCacheService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ActorContextCacheService,
@@ -47,7 +49,7 @@ describe('ActorContextCacheService', () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

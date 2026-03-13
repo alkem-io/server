@@ -43,7 +43,7 @@ describe('getSpaceRolesForContributorQueryResult', () => {
   } as unknown as AuthorizationService;
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should return an empty array when no spaces are provided', () => {

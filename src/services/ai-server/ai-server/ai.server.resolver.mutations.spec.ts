@@ -23,6 +23,8 @@ describe('AiServerResolverMutations', () => {
   let _platformAuthorizationService: Record<string, Mock>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AiServerResolverMutations,

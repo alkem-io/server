@@ -10,6 +10,8 @@ describe('KratosService', () => {
   let service: KratosService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         KratosService,

@@ -10,7 +10,7 @@ describe('AuthorizationRuleActorPrivilege', () => {
   };
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should throw ForbiddenException when fieldParent is falsy', () => {

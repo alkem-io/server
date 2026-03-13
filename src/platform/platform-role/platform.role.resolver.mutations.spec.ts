@@ -48,6 +48,8 @@ describe('PlatformRoleResolverMutations', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [PlatformRoleResolverMutations, MockWinstonProvider],
     })

@@ -9,6 +9,8 @@ describe('AiPersonaExternalConfigResolverFields', () => {
   let aiPersonaService: Record<string, Mock>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AiPersonaExternalConfigResolverFields],
     })

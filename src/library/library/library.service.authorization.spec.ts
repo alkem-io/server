@@ -11,6 +11,8 @@ describe('LibraryAuthorizationService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LibraryAuthorizationService,

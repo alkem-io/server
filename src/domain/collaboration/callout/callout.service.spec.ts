@@ -43,6 +43,8 @@ describe('CalloutService', () => {
   let _storageAggregatorResolverService: StorageAggregatorResolverService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Callout.create to avoid DataSource requirement
     vi.spyOn(Callout, 'create').mockImplementation((input: any) => {
       const entity = new Callout();

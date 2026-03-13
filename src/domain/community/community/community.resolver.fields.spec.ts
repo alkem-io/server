@@ -8,6 +8,8 @@ describe('CommunityResolverFields', () => {
   let resolver: CommunityResolverFields;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CommunityResolverFields,

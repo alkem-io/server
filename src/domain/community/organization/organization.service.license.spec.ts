@@ -16,6 +16,8 @@ describe('OrganizationLicenseService', () => {
   let licenseEntitlementService: { createEntitlement: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrganizationLicenseService,

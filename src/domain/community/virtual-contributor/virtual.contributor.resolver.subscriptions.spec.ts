@@ -8,6 +8,8 @@ describe('VirtualContributorResolverSubscriptions', () => {
   let resolver: VirtualContributorResolverSubscriptions;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VirtualContributorResolverSubscriptions,

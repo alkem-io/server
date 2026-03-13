@@ -12,6 +12,8 @@ describe('RoomControllerService', () => {
   let roomLookupService: Mocked<RoomLookupService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [RoomControllerService, MockWinstonProvider],
     })

@@ -28,6 +28,8 @@ describe('CollaborationService', () => {
   let licenseService: LicenseService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Collaboration.create to avoid DataSource requirement
     vi.spyOn(Collaboration, 'create').mockImplementation((input: any) => {
       const entity = new Collaboration();

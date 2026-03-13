@@ -18,6 +18,8 @@ describe('TimelineAuthorizationService', () => {
   let calendarAuthorizationService: CalendarAuthorizationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TimelineAuthorizationService,
@@ -53,15 +55,9 @@ describe('TimelineAuthorizationService', () => {
         calendar: mockCalendar,
       } as unknown as ITimeline;
 
-      timelineService.getTimelineOrFail = vi
-        .fn()
-        .mockResolvedValue(mockTimeline);
-      authorizationPolicyService.inheritParentAuthorization = vi
-        .fn()
-        .mockReturnValue(timelineAuth);
-      calendarAuthorizationService.applyAuthorizationPolicy = vi
-        .fn()
-        .mockResolvedValue([calendarAuth]);
+      timelineService.getTimelineOrFail.mockResolvedValue(mockTimeline);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(timelineAuth);
+      calendarAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([calendarAuth]);
 
       const inputTimeline = { id: 'timeline-1' } as ITimeline;
 
@@ -92,9 +88,7 @@ describe('TimelineAuthorizationService', () => {
         calendar: undefined,
       } as unknown as ITimeline;
 
-      timelineService.getTimelineOrFail = vi
-        .fn()
-        .mockResolvedValue(mockTimeline);
+      timelineService.getTimelineOrFail.mockResolvedValue(mockTimeline);
 
       const inputTimeline = { id: 'timeline-1' } as ITimeline;
 
@@ -114,15 +108,9 @@ describe('TimelineAuthorizationService', () => {
         calendar: mockCalendar,
       } as unknown as ITimeline;
 
-      timelineService.getTimelineOrFail = vi
-        .fn()
-        .mockResolvedValue(mockTimeline);
-      authorizationPolicyService.inheritParentAuthorization = vi
-        .fn()
-        .mockReturnValue(timelineAuth);
-      calendarAuthorizationService.applyAuthorizationPolicy = vi
-        .fn()
-        .mockResolvedValue([]);
+      timelineService.getTimelineOrFail.mockResolvedValue(mockTimeline);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(timelineAuth);
+      calendarAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
 
       const inputTimeline = { id: 'timeline-1' } as ITimeline;
 
@@ -144,15 +132,9 @@ describe('TimelineAuthorizationService', () => {
         calendar: { id: 'cal-1' },
       } as unknown as ITimeline;
 
-      timelineService.getTimelineOrFail = vi
-        .fn()
-        .mockResolvedValue(mockTimeline);
-      authorizationPolicyService.inheritParentAuthorization = vi
-        .fn()
-        .mockReturnValue(timelineAuth);
-      calendarAuthorizationService.applyAuthorizationPolicy = vi
-        .fn()
-        .mockResolvedValue([]);
+      timelineService.getTimelineOrFail.mockResolvedValue(mockTimeline);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(timelineAuth);
+      calendarAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
 
       const inputTimeline = { id: 'timeline-1' } as ITimeline;
 

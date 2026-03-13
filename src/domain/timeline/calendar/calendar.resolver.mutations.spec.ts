@@ -27,6 +27,8 @@ describe('CalendarResolverMutations', () => {
   let timelineResolverService: TimelineResolverService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalendarResolverMutations,
@@ -86,30 +88,18 @@ describe('CalendarResolverMutations', () => {
         profileData: { displayName: 'Test Event' },
       } as any;
 
-      calendarService.getCalendarOrFail = vi
-        .fn()
-        .mockResolvedValue(mockCalendar);
-      authorizationService.grantAccessOrFail = vi.fn();
-      calendarService.createCalendarEvent = vi
-        .fn()
-        .mockResolvedValue(mockEvent);
-      calendarEventService.save = vi.fn().mockResolvedValue(mockEvent);
-      calendarEventAuthorizationService.applyAuthorizationPolicy = vi
-        .fn()
-        .mockResolvedValue([{ id: 'event-auth' }]);
-      authorizationPolicyService.saveAll = vi.fn().mockResolvedValue(undefined);
-      calendarService.processActivityCalendarEventCreated = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      timelineResolverService.getSpaceIdForCalendar = vi
-        .fn()
-        .mockResolvedValue('space-1');
+      calendarService.getCalendarOrFail.mockResolvedValue(mockCalendar);
+      authorizationService.grantAccessOrFail.mockReset();
+      calendarService.createCalendarEvent.mockResolvedValue(mockEvent);
+      calendarEventService.save.mockResolvedValue(mockEvent);
+      calendarEventAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([{ id: 'event-auth' }]);
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      calendarService.processActivityCalendarEventCreated.mockResolvedValue(undefined);
+      timelineResolverService.getSpaceIdForCalendar.mockResolvedValue('space-1');
       notificationSpaceAdapter.spaceCommunityCalendarEventCreated = vi
         .fn()
         .mockResolvedValue(undefined);
-      calendarEventService.getCalendarEventOrFail = vi
-        .fn()
-        .mockResolvedValue(finalEvent);
+      calendarEventService.getCalendarEventOrFail.mockResolvedValue(finalEvent);
 
       // Act
       const result = await resolver.createEventOnCalendar(
@@ -154,27 +144,15 @@ describe('CalendarResolverMutations', () => {
         nameID: 'test',
       } as any;
 
-      calendarService.getCalendarOrFail = vi
-        .fn()
-        .mockResolvedValue(mockCalendar);
-      authorizationService.grantAccessOrFail = vi.fn();
-      calendarService.createCalendarEvent = vi
-        .fn()
-        .mockResolvedValue(mockEvent);
-      calendarEventService.save = vi.fn().mockResolvedValue(mockEvent);
-      calendarEventAuthorizationService.applyAuthorizationPolicy = vi
-        .fn()
-        .mockResolvedValue([]);
-      authorizationPolicyService.saveAll = vi.fn().mockResolvedValue(undefined);
-      calendarService.processActivityCalendarEventCreated = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      timelineResolverService.getSpaceIdForCalendar = vi
-        .fn()
-        .mockResolvedValue(null);
-      calendarEventService.getCalendarEventOrFail = vi
-        .fn()
-        .mockResolvedValue(mockEvent);
+      calendarService.getCalendarOrFail.mockResolvedValue(mockCalendar);
+      authorizationService.grantAccessOrFail.mockReset();
+      calendarService.createCalendarEvent.mockResolvedValue(mockEvent);
+      calendarEventService.save.mockResolvedValue(mockEvent);
+      calendarEventAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      calendarService.processActivityCalendarEventCreated.mockResolvedValue(undefined);
+      timelineResolverService.getSpaceIdForCalendar.mockResolvedValue(null);
+      calendarEventService.getCalendarEventOrFail.mockResolvedValue(mockEvent);
 
       // Act
       await resolver.createEventOnCalendar(actorContext, eventData);

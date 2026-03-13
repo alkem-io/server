@@ -30,6 +30,8 @@ describe('OryApiStrategy', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [OryApiStrategy, MockWinstonProvider],
     })
@@ -91,7 +93,7 @@ describe('OryApiStrategy', () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

@@ -52,6 +52,8 @@ describe('ActivityFeedService', () => {
   let logger: Mocked<LoggerService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [ActivityFeedService, MockWinstonProvider],
     })
@@ -80,7 +82,7 @@ describe('ActivityFeedService', () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

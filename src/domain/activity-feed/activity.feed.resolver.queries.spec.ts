@@ -17,6 +17,8 @@ describe('ActivityFeedResolverQueries', () => {
   let feedService: Mocked<ActivityFeedService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [ActivityFeedResolverQueries, MockWinstonProvider],
     })
@@ -39,7 +41,7 @@ describe('ActivityFeedResolverQueries', () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

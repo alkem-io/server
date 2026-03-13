@@ -8,6 +8,8 @@ describe('NotificationRecipientsResolverFields', () => {
   let resolver: NotificationRecipientsResolverFields;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NotificationRecipientsResolverFields,

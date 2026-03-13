@@ -10,6 +10,8 @@ describe('NotificationAdapter', () => {
   let recipientsService: NotificationRecipientsService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [NotificationAdapter],
     })

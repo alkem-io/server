@@ -17,6 +17,8 @@ describe('SpaceAboutMembershipResolverFields', () => {
   let membershipStatusLoader: RoleSetMembershipStatusDataLoader;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     membershipStatusLoader = {
       loader: { load: vi.fn() },
     } as any;

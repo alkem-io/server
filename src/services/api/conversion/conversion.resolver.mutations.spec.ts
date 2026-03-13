@@ -38,6 +38,8 @@ describe('ConversionResolverMutations', () => {
   const actorContext = { actorID: 'actor-1', credentials: [] } as any;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [ConversionResolverMutations, MockWinstonProvider],
     })
@@ -239,9 +241,7 @@ describe('ConversionResolverMutations', () => {
           calloutsSet: { id: 'cs-2', callouts: [] },
         },
       });
-      spaceService.getAccountForLevelZeroSpaceOrFail = vi
-        .fn()
-        .mockResolvedValue({ id: 'acc-2' });
+      spaceService.getAccountForLevelZeroSpaceOrFail.mockResolvedValue({ id: 'acc-2' });
 
       await expect(
         resolver.convertVirtualContributorToUseKnowledgeBase(actorContext, {

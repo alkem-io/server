@@ -21,7 +21,9 @@ describe('FileIntegrationController', () => {
   let mockContext: RmqContext;
 
   beforeEach(async () => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
+
+    vi.restoreAllMocks();
     mockContext = createMock<RmqContext>();
 
     const module: TestingModule = await Test.createTestingModule({

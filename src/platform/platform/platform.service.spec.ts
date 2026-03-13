@@ -19,6 +19,8 @@ describe('PlatformService', () => {
   let messagingService: MessagingService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PlatformService,

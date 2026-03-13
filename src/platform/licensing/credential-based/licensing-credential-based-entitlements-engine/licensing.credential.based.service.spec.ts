@@ -17,6 +17,8 @@ describe('LicensingCredentialBased.Service', () => {
   let licensePolicyService: LicensePolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         LicensingCredentialBasedService,

@@ -35,6 +35,8 @@ describe('RoleSetResolverMutations', () => {
   let licenseService: LicenseService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoleSetResolverMutations,

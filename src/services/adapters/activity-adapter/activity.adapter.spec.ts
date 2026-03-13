@@ -48,6 +48,8 @@ describe('ActivityAdapter', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     mockQueryBuilder = createQueryBuilderMock();
 
     mockEntityManager = {

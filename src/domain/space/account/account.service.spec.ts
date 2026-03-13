@@ -40,6 +40,8 @@ describe('AccountService', () => {
   let licenseService: LicenseService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccountService,
@@ -196,16 +198,12 @@ describe('AccountService', () => {
       } as unknown as Account;
 
       vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
-      storageAggregatorService.delete = vi.fn().mockResolvedValue(undefined);
-      licenseService.removeLicenseOrFail = vi.fn().mockResolvedValue(undefined);
-      virtualContributorService.deleteVirtualContributor = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      innovationPackService.deleteInnovationPack = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      innovationHubService.delete = vi.fn().mockResolvedValue(undefined);
-      spaceService.deleteSpaceOrFail = vi.fn().mockResolvedValue(undefined);
+      storageAggregatorService.delete.mockResolvedValue(undefined);
+      licenseService.removeLicenseOrFail.mockResolvedValue(undefined);
+      virtualContributorService.deleteVirtualContributor.mockResolvedValue(undefined);
+      innovationPackService.deleteInnovationPack.mockResolvedValue(undefined);
+      innovationHubService.delete.mockResolvedValue(undefined);
+      spaceService.deleteSpaceOrFail.mockResolvedValue(undefined);
       vi.spyOn(accountRepository, 'remove').mockResolvedValue({
         id: undefined,
       } as unknown as Account);

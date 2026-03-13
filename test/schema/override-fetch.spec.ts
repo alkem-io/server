@@ -1,25 +1,36 @@
-import * as fs from 'node:fs';
+import { mkdtempSync, writeFileSync, rmSync } from 'node:fs';
+import { join } from 'node:path';
+import { tmpdir } from 'node:os';
 import { vi } from 'vitest';
 import { performOverrideEvaluationAsync } from '../../src/tools/schema/override';
 
 // Simulates GitHub review fetch fallback by mocking global fetch.
 
 describe('override evaluation via GitHub fetch fallback', () => {
-  const OLD_ENV = process.env;
+  let tmpDir: string;
+  const origEnv: Record<string, string | undefined> = {};
 
   beforeEach(() => {
-    vi.resetModules();
-    process.env = { ...OLD_ENV };
-    fs.writeFileSync('CODEOWNERS', '* @alice');
+    tmpDir = mkdtempSync(join(tmpdir(), 'override-fetch-'));
+    origEnv.SCHEMA_OVERRIDE_GITHUB_TOKEN =
+      process.env.SCHEMA_OVERRIDE_GITHUB_TOKEN;
+    origEnv.SCHEMA_OVERRIDE_REPO = process.env.SCHEMA_OVERRIDE_REPO;
+    origEnv.SCHEMA_OVERRIDE_PR_NUMBER = process.env.SCHEMA_OVERRIDE_PR_NUMBER;
+    origEnv.SCHEMA_OVERRIDE_CODEOWNERS_PATH =
+      process.env.SCHEMA_OVERRIDE_CODEOWNERS_PATH;
+
+    const codeownersPath = join(tmpDir, 'CODEOWNERS');
+    writeFileSync(codeownersPath, '* @alice');
+    process.env.SCHEMA_OVERRIDE_CODEOWNERS_PATH = codeownersPath;
   });
 
   afterEach(() => {
-    process.env = OLD_ENV;
-    try {
-      fs.unlinkSync('CODEOWNERS');
-    } catch {
-      /* ignore */
+    rmSync(tmpDir, { recursive: true, force: true });
+    for (const [key, val] of Object.entries(origEnv)) {
+      if (val === undefined) delete process.env[key];
+      else process.env[key] = val;
     }
+    vi.restoreAllMocks();
   });
 
   it('applies override when fetched review contains phrase from owner', async () => {

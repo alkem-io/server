@@ -40,7 +40,10 @@ describe('AuthResetService', () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    // Explicitly reset createMock Proxy functions that had implementations set,
+    // since vi.restoreAllMocks() doesn't track Proxy-created mocks
+    entityManager.find.mockReset();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

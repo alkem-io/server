@@ -18,6 +18,8 @@ describe('CalendarAuthorizationService', () => {
   let calendarEventAuthorizationService: CalendarEventAuthorizationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalendarAuthorizationService,
@@ -56,16 +58,10 @@ describe('CalendarAuthorizationService', () => {
         events: [mockEvent],
       } as unknown as ICalendar;
 
-      calendarService.getCalendarOrFail = vi
-        .fn()
-        .mockResolvedValue(mockCalendar);
-      authorizationPolicyService.reset = vi.fn().mockReturnValue(resetAuth);
-      authorizationPolicyService.inheritParentAuthorization = vi
-        .fn()
-        .mockReturnValue(inheritedAuth);
-      calendarEventAuthorizationService.applyAuthorizationPolicy = vi
-        .fn()
-        .mockResolvedValue([eventAuth]);
+      calendarService.getCalendarOrFail.mockResolvedValue(mockCalendar);
+      authorizationPolicyService.reset.mockReturnValue(resetAuth);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(inheritedAuth);
+      calendarEventAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([eventAuth]);
 
       const inputCalendar = { id: 'calendar-1' } as ICalendar;
 
@@ -98,9 +94,7 @@ describe('CalendarAuthorizationService', () => {
         events: undefined,
       } as unknown as ICalendar;
 
-      calendarService.getCalendarOrFail = vi
-        .fn()
-        .mockResolvedValue(mockCalendar);
+      calendarService.getCalendarOrFail.mockResolvedValue(mockCalendar);
 
       const inputCalendar = { id: 'calendar-1' } as ICalendar;
 
@@ -121,13 +115,9 @@ describe('CalendarAuthorizationService', () => {
         events: [],
       } as unknown as ICalendar;
 
-      calendarService.getCalendarOrFail = vi
-        .fn()
-        .mockResolvedValue(mockCalendar);
-      authorizationPolicyService.reset = vi.fn().mockReturnValue(calendarAuth);
-      authorizationPolicyService.inheritParentAuthorization = vi
-        .fn()
-        .mockReturnValue(inheritedAuth);
+      calendarService.getCalendarOrFail.mockResolvedValue(mockCalendar);
+      authorizationPolicyService.reset.mockReturnValue(calendarAuth);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(inheritedAuth);
 
       const inputCalendar = { id: 'calendar-1' } as ICalendar;
 
@@ -157,16 +147,10 @@ describe('CalendarAuthorizationService', () => {
         events: [mockEvent1, mockEvent2],
       } as unknown as ICalendar;
 
-      calendarService.getCalendarOrFail = vi
-        .fn()
-        .mockResolvedValue(mockCalendar);
-      authorizationPolicyService.reset = vi.fn().mockReturnValue(calendarAuth);
-      authorizationPolicyService.inheritParentAuthorization = vi
-        .fn()
-        .mockReturnValue(inheritedAuth);
-      calendarEventAuthorizationService.applyAuthorizationPolicy = vi
-        .fn()
-        .mockResolvedValueOnce([eventAuth1])
+      calendarService.getCalendarOrFail.mockResolvedValue(mockCalendar);
+      authorizationPolicyService.reset.mockReturnValue(calendarAuth);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(inheritedAuth);
+      calendarEventAuthorizationService.applyAuthorizationPolicy.mockResolvedValueOnce([eventAuth1])
         .mockResolvedValueOnce([eventAuth2]);
 
       const inputCalendar = { id: 'calendar-1' } as ICalendar;
@@ -196,13 +180,9 @@ describe('CalendarAuthorizationService', () => {
         events: [],
       } as unknown as ICalendar;
 
-      calendarService.getCalendarOrFail = vi
-        .fn()
-        .mockResolvedValue(mockCalendar);
-      authorizationPolicyService.reset = vi.fn().mockReturnValue(calendarAuth);
-      authorizationPolicyService.inheritParentAuthorization = vi
-        .fn()
-        .mockReturnValue(calendarAuth);
+      calendarService.getCalendarOrFail.mockResolvedValue(mockCalendar);
+      authorizationPolicyService.reset.mockReturnValue(calendarAuth);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(calendarAuth);
 
       const inputCalendar = { id: 'calendar-1' } as ICalendar;
 

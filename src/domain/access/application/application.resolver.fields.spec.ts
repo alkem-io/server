@@ -11,6 +11,8 @@ describe('ApplicationResolverFields', () => {
   let applicationService: ApplicationService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ApplicationResolverFields,

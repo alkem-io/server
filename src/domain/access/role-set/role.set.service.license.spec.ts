@@ -18,6 +18,8 @@ describe('RoleSetLicenseService', () => {
   let roleSetService: RoleSetService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [RoleSetLicenseService, MockCacheManager, MockWinstonProvider],
     })

@@ -8,6 +8,8 @@ describe('InputCreatorResolverQueries', () => {
   let resolver: InputCreatorResolverQueries;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InputCreatorResolverQueries,

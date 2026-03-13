@@ -1,21 +1,6 @@
-import { vi } from 'vitest';
+import ConfigUtils from './config.utils';
 
 describe('ConfigUtils', () => {
-  // Use a fresh import for each test to avoid stale module references
-  // caused by vi.resetModules() in neighboring config spec files
-  // (configuration.spec.ts, typeorm.cli.config.spec.ts) under isolate: false.
-  let ConfigUtils: typeof import('./config.utils').default;
-
-  beforeEach(async () => {
-    vi.restoreAllMocks();
-    const mod = await import('./config.utils');
-    ConfigUtils = mod.default;
-  });
-
-  afterEach(() => {
-    vi.restoreAllMocks();
-  });
-
   describe('parseHMSString', () => {
     it('should parse seconds only', () => {
       expect(ConfigUtils.parseHMSString('45s')).toBe(45);

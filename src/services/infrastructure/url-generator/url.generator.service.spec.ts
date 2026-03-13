@@ -35,6 +35,8 @@ describe('UrlGeneratorService', () => {
   const ENDPOINT = 'https://app.alkem.io';
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     entityManager = {
       findOne: vi.fn(),
       connection: { query: vi.fn() },

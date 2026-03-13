@@ -36,6 +36,8 @@ describe('VirtualContributorAuthorizationService', () => {
   let aiServerAdapter: { applyAuthorizationOnAiPersona: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         VirtualContributorAuthorizationService,

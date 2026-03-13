@@ -76,7 +76,7 @@ describe('CalendarEventIcsRedirectFilter', () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

@@ -22,6 +22,8 @@ describe('VirtualActorLookupService', () => {
   let actorLookupService: { getActorAuthorizationOrFail: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     entityManager = {
       findOne: vi.fn(),
       find: vi.fn(),

@@ -69,6 +69,8 @@ describe('AuthResetController', () => {
   let taskService: Mocked<TaskService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [MockWinstonProvider],
       controllers: [AuthResetController],
@@ -117,7 +119,7 @@ describe('AuthResetController', () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {

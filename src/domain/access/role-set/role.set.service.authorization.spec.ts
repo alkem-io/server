@@ -24,6 +24,8 @@ describe('RoleSetAuthorizationService', () => {
   let virtualActorLookupService: VirtualActorLookupService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         RoleSetAuthorizationService,

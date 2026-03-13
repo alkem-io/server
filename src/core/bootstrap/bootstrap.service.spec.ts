@@ -19,6 +19,8 @@ describe('BootstrapService', () => {
   const mocks: Record<string, any> = {};
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Define mock implementations for key services
     mocks.configService = { get: vi.fn().mockReturnValue(false) };
     mocks.actorContextService = {

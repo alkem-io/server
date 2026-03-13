@@ -48,6 +48,8 @@ describe('AdminIdentityService', () => {
   });
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AdminIdentityService, MockCacheManager, MockWinstonProvider],
     })

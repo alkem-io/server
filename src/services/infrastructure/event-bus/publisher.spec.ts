@@ -10,6 +10,8 @@ describe('Publisher', () => {
   let amqpConnection: { publish: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     amqpConnection = {
       publish: vi.fn(),
     };

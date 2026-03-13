@@ -14,6 +14,8 @@ describe('TemplateContentSpaceLicenseService', () => {
   let collaborationLicenseService: Mocked<CollaborationLicenseService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TemplateContentSpaceLicenseService,

@@ -10,6 +10,8 @@ describe('AiServerAdapter', () => {
   let aiServerService: AiServerService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AiServerAdapter],
     })

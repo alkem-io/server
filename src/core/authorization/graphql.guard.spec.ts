@@ -20,6 +20,8 @@ describe('GraphqlGuard', () => {
   let mockEntityManager: any;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     mockEntityManager = {
       findOne: vi.fn().mockResolvedValue(null),
     };

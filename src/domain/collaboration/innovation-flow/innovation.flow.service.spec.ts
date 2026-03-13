@@ -29,6 +29,8 @@ describe('InnovationFlowService', () => {
   let _calloutsSetService: CalloutsSetService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static InnovationFlow.create to avoid DataSource requirement
     vi.spyOn(InnovationFlow, 'create').mockImplementation((input: any) => {
       const entity = new InnovationFlow();

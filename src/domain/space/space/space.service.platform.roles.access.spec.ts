@@ -50,6 +50,8 @@ describe('SpacePlatformRolesAccessService', () => {
     }) as ISpace;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [SpacePlatformRolesAccessService, MockWinstonProvider],
     })

@@ -28,6 +28,8 @@ describe('AdminLicensingResolverMutations', () => {
   const actorContext = { actorID: 'actor-1' } as any as ActorContext;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AdminLicensingResolverMutations, MockWinstonProvider],
     })

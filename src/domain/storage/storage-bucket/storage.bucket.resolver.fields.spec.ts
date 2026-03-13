@@ -13,6 +13,8 @@ describe('StorageBucketResolverFields', () => {
   let storageBucketService: StorageBucketService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         StorageBucketResolverFields,

@@ -11,6 +11,8 @@ describe('InvitationLifecycleResolverFields', () => {
   let invitationLifecycleService: InvitationLifecycleService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         InvitationLifecycleResolverFields,

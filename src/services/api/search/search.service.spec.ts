@@ -15,6 +15,8 @@ describe('SearchService', () => {
   let entityManager: { findOneByOrFail: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     entityManager = {
       findOneByOrFail: vi.fn(),
     };

@@ -27,6 +27,8 @@ describe('IdentityResolveService', () => {
   const meta = { ip: '127.0.0.1' };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [IdentityResolveService, MockWinstonProvider],
     })
