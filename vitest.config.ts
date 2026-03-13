@@ -94,9 +94,7 @@ export default defineConfig({
         'src/main.ts',
         'src/app.module.ts',
         'src/app.controller.ts',
-        'src/config/**',
-        'src/apm/**',
-        // src/tools is now covered by unit tests
+        // src/tools is now covered by unit tests (exclude only CLI scripts)
         'src/tools/schema/diff-schema.ts',
         'src/tools/schema/sort-sdl.ts',
         'src/tools/schema/print-schema.ts',
