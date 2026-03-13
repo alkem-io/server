@@ -56,11 +56,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       enabled: false, // Enable via CLI: vitest run --coverage
-      reporter: [
-        ['lcov', { subdir: 'lcov' }],
-        ['html-spa', { subdir: 'html-spa' }],
-      ],
-      reportsDirectory: './coverage',
+      reporter: ['lcov', ['html-spa', { subdir: 'html-spa' }]],
+      reportsDirectory: './coverage-ci',
 
       // Measure all TS files in src/ — denylist approach for broad visibility
       include: ['src/**/*.ts'],

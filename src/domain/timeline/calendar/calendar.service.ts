@@ -276,7 +276,7 @@ export class CalendarService {
           name: calendarEvent.profile.displayName,
           space: spaceID,
         },
-        actorContext,
+        actorContext
       );
     }
   }

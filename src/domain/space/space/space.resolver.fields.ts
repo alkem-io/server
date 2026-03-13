@@ -1,4 +1,5 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
@@ -155,6 +156,19 @@ export class SpaceResolverFields {
     return await this.spaceService.getStorageAggregatorOrFail(space.id);
   }
 
+  @ResolveField('sortMode', () => SpaceSortMode, {
+    nullable: false,
+    description:
+      'The sort mode for subspaces of this Space: Alphabetical or Custom. Accessible without READ privilege.',
+  })
+  async sortMode(@Parent() space: Space): Promise<SpaceSortMode> {
+    if (space.settings?.sortMode) {
+      return space.settings.sortMode;
+    }
+    const loaded = await this.spaceService.getSpaceOrFail(space.id);
+    return loaded.settings?.sortMode ?? SpaceSortMode.ALPHABETICAL;
+  }
+
   @ResolveField('subspaces', () => [ISpace], {
     nullable: false,
     description: 'The subspaces for the space.',
@@ -217,8 +231,15 @@ export class SpaceResolverFields {
     nullable: false,
     description: 'The settings for this Space.',
   })
-  settings(@Parent() space: ISpace): ISpaceSettings {
-    return space.settings;
+  async settings(@Parent() space: ISpace): Promise<ISpaceSettings> {
+    const settings =
+      space.settings ??
+      (await this.spaceService.getSpaceOrFail(space.id)).settings;
+
+    return {
+      ...settings,
+      sortMode: settings.sortMode ?? SpaceSortMode.ALPHABETICAL,
+    };
   }
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)

@@ -1,25 +1,29 @@
 name: CI Tests
 
 on:
-  # covers push / force push to these branches
   push:
     branches: [develop, main]
-  # covers PRs opened against these branches
   pull_request:
     branches: [develop, main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pull-requests: write
+  checks: write
 
 jobs:
   test:
-    runs-on: arc-runner-set
+    runs-on: [self-hosted, macOS, ARM64, apple-silicon, m4]
     env:
-      # Pod: 4 CPU request / 5 CPU limit / 3 Gi memory request / 6 Gi memory limit.
-      # 4 Gi heap leaves ~2 Gi for native allocations, worker thread stacks, and OS.
       NODE_OPTIONS: "--max-old-space-size=4096"
     steps:
       - uses: actions/checkout@v4
 
       - name: Install pnpm
         uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
 
       - name: Setup Node.js
         uses: actions/setup-node@v6.2.0
@@ -30,6 +34,58 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
-      - name: Run tests
+      - name: Run tests with coverage
         timeout-minutes: 10
-        run: pnpm run test:ci:no:coverage
+        run: pnpm run test:ci
+
+      - name: Upload coverage artifact
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: coverage
+          path: coverage-ci/
+          retention-days: 1
+
+  sonarqube:
+    needs: test
+    runs-on: [self-hosted, macOS, ARM64, apple-silicon, m4]
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Download coverage artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: coverage
+          path: coverage-ci/
+
+      - name: SonarQube Scan
+        uses: sonarsource/sonarqube-scan-action@v7
+        continue-on-error: true
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          projectBaseDir: .
+          args: >
+            -Dproject.settings=sonar-project.properties
+
+      # Note: Quality gate check is intentionally not blocking merges
+      # Results are advisory only and visible in PR checks
+      - name: SonarQube Quality Gate Check
+        uses: sonarsource/sonarqube-quality-gate-action@v1
+        timeout-minutes: 5
+        continue-on-error: true
+        env:
+          SONAR_TOKEN: ${{ secrets.SONAR_TOKEN }}
+          SONAR_HOST_URL: ${{ secrets.SONAR_HOST_URL }}
+
+      - name: Display Analysis Summary
+        if: always()
+        run: |
+          echo "✓ SonarQube analysis completed"
+          echo "View detailed results at: ${{ secrets.SONAR_HOST_URL }}/dashboard?id=alkemio-server"
+          echo "Note: Quality gate status is advisory and does not block merges"
