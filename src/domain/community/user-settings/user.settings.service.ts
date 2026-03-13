@@ -168,6 +168,22 @@ export class UserSettingsService {
         settings.notification.space.communityCalendarEvents,
         notificationSpaceData.communityCalendarEvents
       );
+      this.updateNotificationSetting(
+        settings.notification.space.collaborationPollVoteCastOnOwnPoll,
+        notificationSpaceData.collaborationPollVoteCastOnOwnPoll
+      );
+      this.updateNotificationSetting(
+        settings.notification.space.collaborationPollVoteCastOnPollIVotedOn,
+        notificationSpaceData.collaborationPollVoteCastOnPollIVotedOn
+      );
+      this.updateNotificationSetting(
+        settings.notification.space.collaborationPollModifiedOnPollIVotedOn,
+        notificationSpaceData.collaborationPollModifiedOnPollIVotedOn
+      );
+      this.updateNotificationSetting(
+        settings.notification.space.collaborationPollVoteAffectedByOptionChange,
+        notificationSpaceData.collaborationPollVoteAffectedByOptionChange
+      );
     }
 
     const notificationUserData = updateData.notification?.user;

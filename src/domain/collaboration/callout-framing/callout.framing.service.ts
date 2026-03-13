@@ -9,6 +9,8 @@ import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { LinkService } from '@domain/collaboration/link/link.service';
+import { IPoll } from '@domain/collaboration/poll/poll.interface';
+import { PollService } from '@domain/collaboration/poll/poll.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IMediaGallery } from '@domain/common/media-gallery/media.gallery.interface';
@@ -28,7 +30,12 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import {
+  DeepPartial,
+  FindOneOptions,
+  FindOptionsRelations,
+  Repository,
+} from 'typeorm';
 import { ILink } from '../link/link.interface';
 import { CalloutFraming } from './callout.framing.entity';
 import { ICalloutFraming } from './callout.framing.interface';
@@ -47,6 +54,7 @@ export class CalloutFramingService {
     private namingService: NamingService,
     private tagsetService: TagsetService,
     private mediaGalleryService: MediaGalleryService,
+    private pollService: PollService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectRepository(CalloutFraming)
@@ -58,8 +66,9 @@ export class CalloutFramingService {
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<ICalloutFraming> {
-    const calloutFraming: ICalloutFraming =
-      CalloutFraming.create(calloutFramingData);
+    const calloutFraming: ICalloutFraming = CalloutFraming.create(
+      calloutFramingData as DeepPartial<CalloutFraming>
+    ) as unknown as CalloutFraming;
 
     calloutFraming.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT_FRAMING
@@ -142,6 +151,19 @@ export class CalloutFramingService {
         storageAggregator,
         userID
       );
+    }
+
+    if (calloutFraming.type === CalloutFramingType.POLL) {
+      if (!calloutFramingData.poll) {
+        throw new ValidationException(
+          'Poll input is required when framing type is POLL',
+          LogContext.COLLABORATION
+        );
+      }
+      const { poll } = await this.pollService.createPoll(
+        calloutFramingData.poll
+      );
+      calloutFraming.poll = poll;
     }
 
     return calloutFraming;
@@ -293,6 +315,14 @@ export class CalloutFramingService {
         calloutFraming.whiteboard.id
       );
       calloutFraming.whiteboard = undefined;
+    }
+
+    if (
+      calloutFraming.poll &&
+      calloutFraming.type !== CalloutFramingType.POLL
+    ) {
+      await this.pollService.deletePoll(calloutFraming.poll.id);
+      calloutFraming.poll = undefined;
     }
   }
 
@@ -575,6 +605,12 @@ export class CalloutFramingService {
     }
 
     return calloutFraming.memo;
+  }
+
+  public async getPoll(
+    calloutFramingInput: ICalloutFraming
+  ): Promise<IPoll | null> {
+    return this.pollService.getPollForFraming(calloutFramingInput.id);
   }
 
   public async getMediaGallery(

@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { PollAuthorizationService } from '@domain/collaboration/poll/poll.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { MediaGalleryAuthorizationService } from '@domain/common/media-gallery/media.gallery.service.authorization';
@@ -19,7 +20,8 @@ export class CalloutFramingAuthorizationService {
     private profileAuthorizationService: ProfileAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private memoAuthorizationService: MemoAuthorizationService,
-    private mediaGalleryAuthorizationService: MediaGalleryAuthorizationService
+    private mediaGalleryAuthorizationService: MediaGalleryAuthorizationService,
+    private pollAuthorizationService: PollAuthorizationService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -40,7 +42,8 @@ export class CalloutFramingAuthorizationService {
             mediaGallery: {
               storageBucket: true,
             },
-          },
+            poll: true,
+          } as never,
           select: {
             id: true,
             authorization:
@@ -58,7 +61,10 @@ export class CalloutFramingAuthorizationService {
               id: true,
               storageBucket: { id: true },
             },
-          },
+            poll: {
+              id: true,
+            },
+          } as never,
         }
       );
 
@@ -110,6 +116,18 @@ export class CalloutFramingAuthorizationService {
           calloutFraming.authorization
         );
       updatedAuthorizations.push(...mediaGalleryAuthorizations);
+    }
+
+    const framingWithPoll = calloutFraming as unknown as {
+      poll?: { id: string; authorization?: unknown };
+    };
+    if (framingWithPoll.poll) {
+      const pollAuthorizations =
+        await this.pollAuthorizationService.applyAuthorizationPolicy(
+          framingWithPoll.poll as never,
+          calloutFraming.authorization
+        );
+      updatedAuthorizations.push(...pollAuthorizations);
     }
 
     return updatedAuthorizations;

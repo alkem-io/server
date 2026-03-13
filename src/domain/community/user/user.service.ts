@@ -288,6 +288,19 @@ export class UserService {
           collaborationCalloutComment: { email: false, inApp: true },
           collaborationCalloutPublished: { email: true, inApp: true },
           communityCalendarEvents: { email: true, inApp: true },
+          collaborationPollVoteCastOnOwnPoll: { email: false, inApp: true },
+          collaborationPollVoteCastOnPollIVotedOn: {
+            email: false,
+            inApp: true,
+          },
+          collaborationPollModifiedOnPollIVotedOn: {
+            email: false,
+            inApp: true,
+          },
+          collaborationPollVoteAffectedByOptionChange: {
+            email: false,
+            inApp: true,
+          },
         },
         user: {
           mentioned: { email: true, inApp: true },

@@ -452,6 +452,150 @@ describe('NotificationRecipientsService', () => {
         })
       ).rejects.toThrow(NotificationEventException);
     });
+
+    describe('poll notification events (T065)', () => {
+      it('(a) POLL_VOTE_CAST_ON_OWN_POLL uses USER_SELF_MANAGEMENT credential for the poll creator', async () => {
+        await service.getRecipients({
+          eventType:
+            NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL,
+          userID: 'creator-id',
+        });
+
+        expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: 'creator-id',
+            },
+          ],
+          undefined,
+          expect.any(Object)
+        );
+      });
+
+      it('(b) POLL_VOTE_CAST_ON_POLL_I_VOTED_ON uses USER_SELF_MANAGEMENT credential for each prior voter', async () => {
+        await service.getRecipients({
+          eventType:
+            NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON,
+          userID: 'prior-voter-id',
+        });
+
+        expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: 'prior-voter-id',
+            },
+          ],
+          undefined,
+          expect.any(Object)
+        );
+      });
+
+      it('(c) POLL_MODIFIED_ON_POLL_I_VOTED_ON uses USER_SELF_MANAGEMENT credential for each remaining voter', async () => {
+        await service.getRecipients({
+          eventType:
+            NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON,
+          userID: 'voter-id',
+        });
+
+        expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: 'voter-id',
+            },
+          ],
+          undefined,
+          expect.any(Object)
+        );
+      });
+
+      it('(d) POLL_VOTE_AFFECTED_BY_OPTION_CHANGE uses USER_SELF_MANAGEMENT credential for each affected voter', async () => {
+        await service.getRecipients({
+          eventType:
+            NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE,
+          userID: 'affected-voter-id',
+        });
+
+        expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: 'affected-voter-id',
+            },
+          ],
+          undefined,
+          expect.any(Object)
+        );
+      });
+
+      it('(e) poll events throw ValidationException when userID is missing', async () => {
+        await expect(
+          service.getRecipients({
+            eventType:
+              NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL,
+            // no userID
+          })
+        ).rejects.toThrow(ValidationException);
+      });
+
+      it('(f) poll events use default inApp:true channel setting when not set in user preferences', async () => {
+        const userWithNoPollPrefs = {
+          id: 'user-no-poll-prefs',
+          email: 'nopoll@example.com',
+          settings: {
+            notification: {
+              space: {
+                // No collaborationPoll* fields set — simulate legacy user settings
+                communicationUpdates: { email: false, inApp: false },
+                admin: {
+                  communityApplicationReceived: { email: false, inApp: false },
+                  communicationMessageReceived: { email: false, inApp: false },
+                  communityNewMember: { email: false, inApp: false },
+                  collaborationCalloutContributionCreated: {
+                    email: false,
+                    inApp: false,
+                  },
+                },
+                collaborationCalloutContributionCreated: {
+                  email: false,
+                  inApp: false,
+                },
+                collaborationCalloutPostContributionComment: {
+                  email: false,
+                  inApp: false,
+                },
+                collaborationCalloutComment: { email: false, inApp: false },
+                collaborationCalloutPublished: { email: false, inApp: false },
+                communityCalendarEvents: { email: false, inApp: false },
+                // collaborationPoll* fields absent → defaults to { email: false, inApp: true }
+              },
+            },
+          },
+          credentials: [],
+        } as unknown as IUser;
+
+        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
+          userWithNoPollPrefs,
+        ]);
+        // Return user only when IDs are provided (empty array = no match)
+        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
+          async (ids: string[]) => (ids.length > 0 ? [userWithNoPollPrefs] : [])
+        );
+
+        const result = await service.getRecipients({
+          eventType:
+            NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL,
+          userID: 'user-no-poll-prefs',
+        });
+
+        // Default inApp:true means the user is included as inApp recipient
+        expect(result.inAppRecipients).toHaveLength(1);
+        // Default email:false means the user is NOT included as email recipient
+        expect(result.emailRecipients).toHaveLength(0);
+      });
+    });
   });
 
   describe('getRecipients - channel settings for events', () => {
