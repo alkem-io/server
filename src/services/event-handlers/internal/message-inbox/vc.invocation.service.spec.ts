@@ -247,4 +247,31 @@ describe('VcInvocationService', () => {
       ).not.toHaveBeenCalled();
     });
   });
+
+  describe('processDirectConversation - error handling', () => {
+    it('should log errors when VC invocations fail but not throw', async () => {
+      const room = makeRoom();
+      const payload = makePayload();
+      const error = new Error('VC invocation failed');
+
+      communicationAdapter.getRoomMembers.mockResolvedValue([
+        'actor-sender',
+        'vc-agent-1',
+      ]);
+      entityManager.find.mockResolvedValue([{ id: 'vc-agent-1' } as Actor]);
+      actorContextService.buildForActor.mockResolvedValue({
+        actorID: 'actor-sender',
+      } as any);
+      virtualContributorMessageService.invokeVirtualContributor.mockRejectedValue(
+        error
+      );
+
+      // Should not throw despite the rejection
+      await service.processDirectConversation(payload, room);
+
+      expect(
+        virtualContributorMessageService.invokeVirtualContributor
+      ).toHaveBeenCalledTimes(1);
+    });
+  });
 });
