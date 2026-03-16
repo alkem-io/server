@@ -5,6 +5,7 @@ import { NotificationEventCategory } from '@common/enums/notification.event.cate
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { IUser } from '@domain/community/user/user.interface';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
@@ -51,8 +52,25 @@ export class NotificationSpaceAdapter {
     private notificationUserAdapter: NotificationUserAdapter,
     private communityResolverService: CommunityResolverService,
     private spaceLookupService: SpaceLookupService,
-    private urlGeneratorService: UrlGeneratorService
+    private urlGeneratorService: UrlGeneratorService,
+    private userLookupService: UserLookupService
   ) {}
+
+  private async getTriggeredByDisplayName(
+    triggeredById: string
+  ): Promise<string> {
+    try {
+      const user = await this.userLookupService.getUserByIdOrFail(
+        triggeredById,
+        {
+          relations: { profile: true },
+        }
+      );
+      return user?.profile?.displayName ?? 'Someone';
+    } catch {
+      return 'Someone';
+    }
+  }
 
   public async spaceCollaborationCalloutPublished(
     eventData: NotificationInputCalloutPublished
@@ -118,13 +136,16 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const calloutName =
+        eventData.callout.framing?.profile?.displayName ?? 'A callout';
+      const spaceName = space.about?.profile?.displayName ?? 'your space';
       const calloutUrl = await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id);
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
-          title: 'New callout published',
-          body: 'A new callout has been published in your space',
+          title: `${calloutName} published`,
+          body: `New callout in ${spaceName}`,
           url: calloutUrl,
         }
       );
@@ -202,12 +223,16 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== creatorID
     );
     if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const spaceName = space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
           title: 'New calendar event',
-          body: 'A new calendar event has been created in your space',
+          body: `${actorName} created a calendar event in ${spaceName}`,
           url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
@@ -291,12 +316,15 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== commenterID
     );
     if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
           title: 'New comment on calendar event',
-          body: 'Someone commented on your calendar event',
+          body: `${actorName} commented on your calendar event`,
           url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
@@ -389,12 +417,18 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const calloutName =
+        eventData.callout.framing?.profile?.displayName ?? 'a callout';
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const spaceName = space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
-          title: 'New contribution',
-          body: 'A new contribution has been added to a callout',
+          title: `New contribution in ${calloutName}`,
+          body: `${actorName} added a contribution in ${spaceName}`,
           url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
         }
       );
@@ -476,12 +510,19 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (adminPushRecipientsFiltered.length > 0) {
+      const adminCalloutName =
+        eventData.callout.framing?.profile?.displayName ?? 'a callout';
+      const adminActorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const adminSpaceName =
+        space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         adminPushRecipientsFiltered,
         adminEvent,
         {
-          title: 'New contribution (admin)',
-          body: 'A new contribution has been added to a callout in your space',
+          title: `New contribution in ${adminCalloutName}`,
+          body: `${adminActorName} added a contribution in ${adminSpaceName}`,
           url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
         }
       );
@@ -574,12 +615,15 @@ export class NotificationSpaceAdapter {
         !eventData.mentionedUserIDs?.includes(r.id)
     );
     if (pushRecipientCreators.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientCreators,
         event,
         {
-          title: 'New comment on your post',
-          body: 'Someone commented on your post contribution',
+          title: 'Comment on your post',
+          body: `${actorName} commented on your post`,
           url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
         }
       );
@@ -660,12 +704,18 @@ export class NotificationSpaceAdapter {
         !eventData.mentionedUserIDs?.includes(recipient.id)
     );
     if (pushRecipientsFiltered.length > 0) {
+      const calloutName =
+        eventData.callout.framing?.profile?.displayName ?? 'a callout';
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const spaceName = space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
-          title: 'New comment on callout',
-          body: 'Someone commented on a callout in your space',
+          title: `Comment in ${calloutName}`,
+          body: `${actorName} commented in ${spaceName}`,
           url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
         }
       );
@@ -735,12 +785,16 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== eventData.actorID
     );
     if (adminPushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.actorID
+      );
+      const spaceName = space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         adminPushRecipientsFiltered,
         adminEvent,
         {
-          title: 'New member joined',
-          body: 'A new member has joined your space',
+          title: `New member in ${spaceName}`,
+          body: `${actorName} joined your space`,
           url: await this.urlGeneratorService.createSpaceAdminCommunityURL(space.id),
         }
       );
@@ -803,12 +857,13 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const spaceName = space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
           title: 'Invitation declined',
-          body: 'A virtual contributor invitation was declined',
+          body: `A virtual contributor invitation was declined in ${spaceName}`,
           url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
@@ -868,12 +923,13 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (adminPushRecipientsFiltered.length > 0) {
+      const spaceName = space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         adminPushRecipientsFiltered,
         adminEvent,
         {
-          title: 'New application',
-          body: 'A new application has been submitted to your space',
+          title: `New application for ${spaceName}`,
+          body: 'A new application has been submitted',
           url: await this.urlGeneratorService.createSpaceAdminCommunityURL(space.id),
         }
       );
@@ -970,12 +1026,16 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const spaceName = space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         eventRecipientsAdmins,
         {
-          title: 'New message',
-          body: 'You received a new message in your space',
+          title: `Message in ${spaceName}`,
+          body: `${actorName} sent a message`,
           url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
@@ -1055,12 +1115,13 @@ export class NotificationSpaceAdapter {
       memberRecipients.pushRecipients
     );
     if (memberPushRecipientsWithoutAdmins.length > 0) {
+      const spaceName = space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         memberPushRecipientsWithoutAdmins,
         event,
         {
-          title: 'New update',
-          body: 'A new update has been posted in your space',
+          title: `Update in ${spaceName}`,
+          body: `New update posted in ${spaceName}`,
           url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );

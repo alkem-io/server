@@ -3,6 +3,7 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
@@ -39,8 +40,25 @@ export class NotificationUserAdapter {
     private notificationPushAdapter: NotificationPushAdapter,
     private communityResolverService: CommunityResolverService,
     private messageDetailsService: MessageDetailsService,
-    private urlGeneratorService: UrlGeneratorService
+    private urlGeneratorService: UrlGeneratorService,
+    private userLookupService: UserLookupService
   ) {}
+
+  private async getTriggeredByDisplayName(
+    triggeredById: string
+  ): Promise<string> {
+    try {
+      const user = await this.userLookupService.getUserByIdOrFail(
+        triggeredById,
+        {
+          relations: { profile: true },
+        }
+      );
+      return user?.profile?.displayName ?? 'Someone';
+    } catch {
+      return 'Someone';
+    }
+  }
 
   public async userSignUpWelcome(
     eventData: NotificationInputPlatformUserRegistered
@@ -150,11 +168,12 @@ export class NotificationUserAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const spaceName = space.about?.profile?.displayName ?? 'a space';
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
-          title: 'New invitation',
+          title: `Invitation to ${spaceName}`,
           body: 'You have been invited to join a space',
           url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
@@ -211,12 +230,13 @@ export class NotificationUserAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const spaceName = space.about?.profile?.displayName ?? 'a space';
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
-          title: 'You joined a space',
-          body: 'You are now a member of a space',
+          title: `Welcome to ${spaceName}`,
+          body: `You are now a member of ${spaceName}`,
           url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
@@ -283,12 +303,15 @@ export class NotificationUserAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
           title: 'You were mentioned',
-          body: 'Someone mentioned you in a conversation',
+          body: `${actorName} mentioned you`,
           url: '/',
         }
       );
@@ -345,12 +368,15 @@ export class NotificationUserAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
           title: 'New direct message',
-          body: 'You received a new direct message',
+          body: `${actorName} sent you a message`,
           url: '/',
         }
       );
@@ -421,12 +447,15 @@ export class NotificationUserAdapter {
         recipient => recipient.id !== eventData.triggeredBy
       );
       if (pushRecipientsFiltered.length > 0) {
+        const actorName = await this.getTriggeredByDisplayName(
+          eventData.triggeredBy
+        );
         await this.notificationPushAdapter.sendPushNotifications(
           pushRecipientsFiltered,
           event,
           {
-            title: 'New reply to your comment',
-            body: 'Someone replied to your comment',
+            title: 'Reply to your comment',
+            body: `${actorName} replied to your comment`,
             url: '/',
           }
         );
@@ -497,7 +526,7 @@ export class NotificationUserAdapter {
         event,
         {
           title: 'Application declined',
-          body: 'Your application to join a space was declined',
+          body: 'Your application was declined',
           url: await this.urlGeneratorService.getSpaceUrlPathByID(eventData.spaceID),
         }
       );

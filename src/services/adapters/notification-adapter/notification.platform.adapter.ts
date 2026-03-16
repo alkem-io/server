@@ -1,6 +1,7 @@
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
 import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.global.role.change';
@@ -36,8 +37,25 @@ export class NotificationPlatformAdapter {
     private notificationPushAdapter: NotificationPushAdapter,
     private notificationUserAdapter: NotificationUserAdapter,
     private communityResolverService: CommunityResolverService,
-    private urlGeneratorService: UrlGeneratorService
+    private urlGeneratorService: UrlGeneratorService,
+    private userLookupService: UserLookupService
   ) {}
+
+  private async getTriggeredByDisplayName(
+    triggeredById: string
+  ): Promise<string> {
+    try {
+      const user = await this.userLookupService.getUserByIdOrFail(
+        triggeredById,
+        {
+          relations: { profile: true },
+        }
+      );
+      return user?.profile?.displayName ?? 'Someone';
+    } catch {
+      return 'Someone';
+    }
+  }
 
   public async platformGlobalRoleChanged(
     eventData: NotificationInputPlatformGlobalRoleChange
@@ -89,8 +107,8 @@ export class NotificationPlatformAdapter {
         pushRecipientsFiltered,
         event,
         {
-          title: 'Global role changed',
-          body: 'A global role has been updated',
+          title: 'Role changed',
+          body: 'Your platform role has been updated',
           url: '/',
         }
       );
@@ -151,12 +169,17 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const discussionName =
+        eventData.discussion?.profile?.displayName ?? 'a discussion';
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
-          title: 'New forum discussion',
-          body: 'A new discussion has been created in the forum',
+          title: `New discussion: ${discussionName}`,
+          body: `${actorName} started a new forum discussion`,
           url: await this.urlGeneratorService.getForumDiscussionUrlPath(eventData.discussion.id),
         }
       );
@@ -239,12 +262,17 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const discussionName =
+        eventData.discussion?.profile?.displayName ?? 'a discussion';
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
-          title: 'New comment on discussion',
-          body: 'Someone commented on a forum discussion',
+          title: `Comment on ${discussionName}`,
+          body: `${actorName} commented on a discussion`,
           url: await this.urlGeneratorService.getForumDiscussionUrlPath(eventData.discussion.id),
         }
       );
@@ -315,12 +343,17 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const spaceName =
+        eventData.space.about?.profile?.displayName ?? 'New space';
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
-          title: 'New space created',
-          body: 'A new space has been created on the platform',
+          title: `New space: ${spaceName}`,
+          body: `${actorName} created a new space`,
           url: await this.urlGeneratorService.getSpaceUrlPathByID(eventData.space.id),
         }
       );

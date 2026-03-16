@@ -79,12 +79,13 @@ export class NotificationVirtualContributorAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const spaceName = space.about?.profile?.displayName ?? 'a space';
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
           title: 'New VC invitation',
-          body: 'A virtual contributor has been invited to a space',
+          body: `A virtual contributor has been invited to ${spaceName}`,
           url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
