@@ -5,7 +5,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import * as webpush from 'web-push';
+import webpush from 'web-push';
 import { PushNotificationMessage } from './push.notification.message';
 
 @Injectable()

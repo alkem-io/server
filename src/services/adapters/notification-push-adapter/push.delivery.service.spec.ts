@@ -1,19 +1,21 @@
 import { PushSubscriptionService } from '@domain/push-subscription/push.subscription.service';
 import { Nack } from '@golevelup/nestjs-rabbitmq';
-import { ConfigService } from '@nestjs/config';
-import { Test, TestingModule } from '@nestjs/testing';
-import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PushDeliveryService } from './push.delivery.service';
 import { PushNotificationMessage } from './push.notification.message';
+import webpush from 'web-push';
 
-// Mock web-push module
-vi.mock('web-push', () => ({
-  setVapidDetails: vi.fn(),
-  sendNotification: vi.fn(),
-}));
+const mockLogger = {
+  verbose: vi.fn(),
+  error: vi.fn(),
+  warn: vi.fn(),
+  log: vi.fn(),
+};
 
-import * as webpush from 'web-push';
+const mockPushSubscriptionService = {
+  markActive: vi.fn(),
+  markExpired: vi.fn(),
+};
 
 const mockConfigService = {
   get: vi.fn((key: string) => {
@@ -25,11 +27,6 @@ const mockConfigService = {
     };
     return config[key];
   }),
-};
-
-const mockPushSubscriptionService = {
-  markActive: vi.fn(),
-  markExpired: vi.fn(),
 };
 
 const createMessage = (
@@ -52,23 +49,22 @@ const createMessage = (
 
 describe('PushDeliveryService', () => {
   let service: PushDeliveryService;
+  let sendNotificationSpy: ReturnType<typeof vi.spyOn>;
 
-  beforeEach(async () => {
+  beforeEach(() => {
     vi.clearAllMocks();
 
-    const module: TestingModule = await Test.createTestingModule({
-      providers: [
-        PushDeliveryService,
-        {
-          provide: PushSubscriptionService,
-          useValue: mockPushSubscriptionService,
-        },
-        { provide: ConfigService, useValue: mockConfigService },
-        MockWinstonProvider,
-      ],
-    }).compile();
+    // Spy on webpush.sendNotification so we can control its behavior
+    sendNotificationSpy = vi
+      .spyOn(webpush, 'sendNotification')
+      .mockResolvedValue({} as any);
 
-    service = module.get<PushDeliveryService>(PushDeliveryService);
+    // Construct the service directly with mock dependencies
+    service = new PushDeliveryService(
+      mockPushSubscriptionService as unknown as PushSubscriptionService,
+      mockConfigService as any,
+      mockLogger as any
+    );
   });
 
   it('should be defined', () => {
@@ -77,13 +73,13 @@ describe('PushDeliveryService', () => {
 
   describe('handlePushMessage', () => {
     it('should deliver notification successfully and mark active', async () => {
-      (webpush.sendNotification as any).mockResolvedValue({});
+      sendNotificationSpy.mockResolvedValue({} as any);
       const message = createMessage();
 
       const result = await service.handlePushMessage(message);
 
       expect(result).toBeUndefined(); // void = ack
-      expect(webpush.sendNotification).toHaveBeenCalled();
+      expect(sendNotificationSpy).toHaveBeenCalled();
       expect(mockPushSubscriptionService.markActive).toHaveBeenCalledWith(
         'sub-1'
       );
@@ -92,7 +88,7 @@ describe('PushDeliveryService', () => {
     it('should mark expired on 410 Gone and ack', async () => {
       const error = new Error('Gone') as any;
       error.statusCode = 410;
-      (webpush.sendNotification as any).mockRejectedValue(error);
+      sendNotificationSpy.mockRejectedValue(error);
 
       const message = createMessage();
       const result = await service.handlePushMessage(message);
@@ -104,9 +100,7 @@ describe('PushDeliveryService', () => {
     });
 
     it('should nack on transient error for DLX requeue', async () => {
-      (webpush.sendNotification as any).mockRejectedValue(
-        new Error('Network error')
-      );
+      sendNotificationSpy.mockRejectedValue(new Error('Network error'));
 
       const message = createMessage({ retryCount: 2 });
       const result = await service.handlePushMessage(message);
@@ -120,7 +114,7 @@ describe('PushDeliveryService', () => {
       const result = await service.handlePushMessage(message);
 
       expect(result).toBeUndefined(); // ack
-      expect(webpush.sendNotification).not.toHaveBeenCalled();
+      expect(sendNotificationSpy).not.toHaveBeenCalled();
     });
   });
 });
