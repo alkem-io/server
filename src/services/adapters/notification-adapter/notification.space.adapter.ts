@@ -118,14 +118,14 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
-      const spaceUrl = await this.urlGeneratorService.getSpaceUrlPathByID(space.id);
+      const calloutUrl = await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id);
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
           title: 'New callout published',
           body: 'A new callout has been published in your space',
-          url: spaceUrl,
+          url: calloutUrl,
         }
       );
     }
@@ -395,7 +395,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New contribution',
           body: 'A new contribution has been added to a callout',
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
         }
       );
     }
@@ -482,7 +482,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New contribution (admin)',
           body: 'A new contribution has been added to a callout in your space',
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
         }
       );
     }
@@ -580,7 +580,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New comment on your post',
           body: 'Someone commented on your post contribution',
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
         }
       );
     }
@@ -666,7 +666,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New comment on callout',
           body: 'Someone commented on a callout in your space',
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
         }
       );
     }
@@ -741,7 +741,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New member joined',
           body: 'A new member has joined your space',
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(space.id),
         }
       );
     }
@@ -874,7 +874,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New application',
           body: 'A new application has been submitted to your space',
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(space.id),
         }
       );
     }

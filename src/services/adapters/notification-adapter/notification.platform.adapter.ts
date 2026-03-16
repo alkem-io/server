@@ -157,7 +157,7 @@ export class NotificationPlatformAdapter {
         {
           title: 'New forum discussion',
           body: 'A new discussion has been created in the forum',
-          url: '/forum',
+          url: await this.urlGeneratorService.getForumDiscussionUrlPath(eventData.discussion.id),
         }
       );
     }
@@ -245,7 +245,7 @@ export class NotificationPlatformAdapter {
         {
           title: 'New comment on discussion',
           body: 'Someone commented on a forum discussion',
-          url: '/forum',
+          url: await this.urlGeneratorService.getForumDiscussionUrlPath(eventData.discussion.id),
         }
       );
     }
