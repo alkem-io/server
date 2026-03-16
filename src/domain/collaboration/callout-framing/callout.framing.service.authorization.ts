@@ -70,8 +70,9 @@ export class CalloutFramingAuthorizationService {
 
     if (!calloutFraming.profile) {
       throw new RelationshipNotFoundException(
-        `Unable to load Profile on calloutFraming:  ${calloutFraming.id} `,
-        LogContext.COLLABORATION
+        'Unable to load Profile on calloutFraming',
+        LogContext.COLLABORATION,
+        { calloutFramingId: calloutFraming.id }
       );
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];

@@ -198,7 +198,7 @@ export class PollService {
       (resultsVisibility === PollResultsVisibility.TOTAL_ONLY && hasVoted);
 
     return options.map(opt => {
-      const enriched = opt as Omit<
+      const enriched = opt as unknown as Omit<
         PollOption,
         'voteCount' | 'votePercentage'
       > & {
@@ -224,8 +224,8 @@ export class PollService {
         // FULL: leave everything as is
       }
 
-      return enriched;
-    });
+      return enriched as unknown as PollOption;
+    }) as PollOption[];
   }
 
   canUserSeeDetailedResults(poll: Poll, userId: string): boolean {

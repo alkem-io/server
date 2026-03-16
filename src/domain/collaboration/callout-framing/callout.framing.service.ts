@@ -531,8 +531,9 @@ export class CalloutFramingService {
 
     if (!calloutFraming)
       throw new EntityNotFoundException(
-        `No CalloutFraming found with the given id: ${calloutFramingID}`,
-        LogContext.COLLABORATION
+        'No CalloutFraming found with the given id',
+        LogContext.COLLABORATION,
+        { calloutFramingID }
       );
     return calloutFraming;
   }
