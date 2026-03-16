@@ -85,6 +85,8 @@ describe('StorageBucketService', () => {
   let urlGeneratorService: UrlGeneratorService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     idCounter = 0;
 
     const module: TestingModule = await Test.createTestingModule({

@@ -21,7 +21,7 @@ const createLogger = () =>
 
 describe('Platform-admin identity deletion flows', () => {
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('clears authentication ID after adminUserAccountDelete executes', async () => {

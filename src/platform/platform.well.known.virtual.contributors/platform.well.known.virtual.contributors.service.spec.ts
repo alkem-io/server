@@ -15,6 +15,8 @@ describe('PlatformWellKnownVirtualContributorsService', () => {
   let platformRepository: MockType<Repository<Platform>>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         PlatformWellKnownVirtualContributorsService,

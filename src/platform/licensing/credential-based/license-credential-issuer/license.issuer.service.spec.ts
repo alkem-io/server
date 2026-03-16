@@ -11,6 +11,8 @@ describe('LicenseIssuerService', () => {
   let actorService: ActorService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [LicenseIssuerService, MockWinstonProvider],
     })

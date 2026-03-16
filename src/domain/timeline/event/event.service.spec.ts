@@ -31,6 +31,8 @@ describe('CalendarEventService', () => {
   let roomService: RoomService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static CalendarEvent.create to avoid DataSource requirement
     vi.spyOn(CalendarEvent, 'create').mockImplementation((input: any) => {
       const entity = new CalendarEvent();
@@ -89,11 +91,9 @@ describe('CalendarEventService', () => {
       } as any;
       const mockRoom = { id: 'room-1' } as any;
 
-      profileService.createProfile = vi.fn().mockResolvedValue(mockProfile);
-      profileService.addOrUpdateTagsetOnProfile = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      roomService.createRoom = vi.fn().mockResolvedValue(mockRoom);
+      profileService.createProfile.mockResolvedValue(mockProfile);
+      profileService.addOrUpdateTagsetOnProfile.mockResolvedValue(undefined);
+      roomService.createRoom.mockResolvedValue(mockRoom);
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
@@ -121,11 +121,9 @@ describe('CalendarEventService', () => {
       const mockStorageAggregator = { id: 'storage-1' } as any;
       const mockProfile = { id: 'profile-1' } as any;
 
-      profileService.createProfile = vi.fn().mockResolvedValue(mockProfile);
-      profileService.addOrUpdateTagsetOnProfile = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
+      profileService.createProfile.mockResolvedValue(mockProfile);
+      profileService.addOrUpdateTagsetOnProfile.mockResolvedValue(undefined);
+      roomService.createRoom.mockResolvedValue({ id: 'room-1' });
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
@@ -147,11 +145,9 @@ describe('CalendarEventService', () => {
       const mockStorageAggregator = { id: 'storage-1' } as any;
       const mockProfile = { id: 'profile-1' } as any;
 
-      profileService.createProfile = vi.fn().mockResolvedValue(mockProfile);
-      profileService.addOrUpdateTagsetOnProfile = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
+      profileService.createProfile.mockResolvedValue(mockProfile);
+      profileService.addOrUpdateTagsetOnProfile.mockResolvedValue(undefined);
+      roomService.createRoom.mockResolvedValue({ id: 'room-1' });
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
@@ -175,11 +171,9 @@ describe('CalendarEventService', () => {
       const mockStorageAggregator = { id: 'storage-1' } as any;
       const mockProfile = { id: 'profile-1' } as any;
 
-      profileService.createProfile = vi.fn().mockResolvedValue(mockProfile);
-      profileService.addOrUpdateTagsetOnProfile = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
+      profileService.createProfile.mockResolvedValue(mockProfile);
+      profileService.addOrUpdateTagsetOnProfile.mockResolvedValue(undefined);
+      roomService.createRoom.mockResolvedValue({ id: 'room-1' });
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
@@ -203,11 +197,9 @@ describe('CalendarEventService', () => {
       const mockStorageAggregator = { id: 'storage-1' } as any;
       const mockProfile = { id: 'profile-1' } as any;
 
-      profileService.createProfile = vi.fn().mockResolvedValue(mockProfile);
-      profileService.addOrUpdateTagsetOnProfile = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
+      profileService.createProfile.mockResolvedValue(mockProfile);
+      profileService.addOrUpdateTagsetOnProfile.mockResolvedValue(undefined);
+      roomService.createRoom.mockResolvedValue({ id: 'room-1' });
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
@@ -228,11 +220,9 @@ describe('CalendarEventService', () => {
       const mockStorageAggregator = { id: 'storage-1' } as any;
       const mockProfile = { id: 'profile-1' } as any;
 
-      profileService.createProfile = vi.fn().mockResolvedValue(mockProfile);
-      profileService.addOrUpdateTagsetOnProfile = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
+      profileService.createProfile.mockResolvedValue(mockProfile);
+      profileService.addOrUpdateTagsetOnProfile.mockResolvedValue(undefined);
+      roomService.createRoom.mockResolvedValue({ id: 'room-1' });
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
@@ -264,9 +254,9 @@ describe('CalendarEventService', () => {
         ...mockEvent,
         id: undefined as any,
       } as CalendarEvent);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
-      roomService.deleteRoom = vi.fn().mockResolvedValue(undefined);
+      authorizationPolicyService.delete.mockResolvedValue(undefined);
+      profileService.deleteProfile.mockResolvedValue(undefined);
+      roomService.deleteRoom.mockResolvedValue(undefined);
 
       // Act
       const result = await service.deleteCalendarEvent({ ID: eventId });
@@ -318,9 +308,9 @@ describe('CalendarEventService', () => {
 
       vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
       vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue(mockEvent);
-      authorizationPolicyService.delete = vi.fn();
-      profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
-      roomService.deleteRoom = vi.fn().mockResolvedValue(undefined);
+      authorizationPolicyService.delete.mockReset();
+      profileService.deleteProfile.mockResolvedValue(undefined);
+      roomService.deleteRoom.mockResolvedValue(undefined);
 
       // Act
       await service.deleteCalendarEvent({ ID: eventId });
@@ -341,9 +331,9 @@ describe('CalendarEventService', () => {
 
       vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
       vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue(mockEvent);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      profileService.deleteProfile = vi.fn();
-      roomService.deleteRoom = vi.fn().mockResolvedValue(undefined);
+      authorizationPolicyService.delete.mockResolvedValue(undefined);
+      profileService.deleteProfile.mockReset();
+      roomService.deleteRoom.mockResolvedValue(undefined);
 
       // Act
       await service.deleteCalendarEvent({ ID: eventId });
@@ -364,9 +354,9 @@ describe('CalendarEventService', () => {
 
       vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
       vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue(mockEvent);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
-      roomService.deleteRoom = vi.fn();
+      authorizationPolicyService.delete.mockResolvedValue(undefined);
+      profileService.deleteProfile.mockResolvedValue(undefined);
+      roomService.deleteRoom.mockReset();
 
       // Act
       await service.deleteCalendarEvent({ ID: eventId });
@@ -516,7 +506,7 @@ describe('CalendarEventService', () => {
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
-      profileService.updateProfile = vi.fn().mockResolvedValue(updatedProfile);
+      profileService.updateProfile.mockResolvedValue(updatedProfile);
 
       // Act
       const result = await service.updateCalendarEvent(updateInput);
@@ -572,10 +562,8 @@ describe('CalendarEventService', () => {
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
-      roomService.updateRoomDisplayName = vi.fn().mockResolvedValue(undefined);
-      profileService.updateProfile = vi
-        .fn()
-        .mockResolvedValue({ id: 'profile-1', displayName: 'New Name' });
+      roomService.updateRoomDisplayName.mockResolvedValue(undefined);
+      profileService.updateProfile.mockResolvedValue({ id: 'profile-1', displayName: 'New Name' });
 
       // Act
       await service.updateCalendarEvent(updateInput);
@@ -610,10 +598,8 @@ describe('CalendarEventService', () => {
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
-      roomService.updateRoomDisplayName = vi.fn();
-      profileService.updateProfile = vi
-        .fn()
-        .mockResolvedValue({ id: 'profile-1', displayName: 'Same Name' });
+      roomService.updateRoomDisplayName.mockReset();
+      profileService.updateProfile.mockResolvedValue({ id: 'profile-1', displayName: 'Same Name' });
 
       // Act
       await service.updateCalendarEvent(updateInput);
@@ -645,10 +631,8 @@ describe('CalendarEventService', () => {
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
-      roomService.updateRoomDisplayName = vi.fn();
-      profileService.updateProfile = vi
-        .fn()
-        .mockResolvedValue({ id: 'profile-1', displayName: 'New Name' });
+      roomService.updateRoomDisplayName.mockReset();
+      profileService.updateProfile.mockResolvedValue({ id: 'profile-1', displayName: 'New Name' });
 
       // Act
       await service.updateCalendarEvent(updateInput);

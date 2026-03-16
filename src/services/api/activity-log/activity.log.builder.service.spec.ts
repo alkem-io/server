@@ -6,13 +6,13 @@ import { vi } from 'vitest';
 import ActivityLogBuilderService from './activity.log.builder.service';
 import { IActivityLogEntry } from './dto/activity.log.entry.interface';
 
-// Mock getContributorType to avoid lazy require() that fails in vitest
+// Mock getActorType to avoid lazy require() that fails in vitest
 vi.mock('@domain/actor/actor/actor.service', async importOriginal => {
   const original =
     await importOriginal<typeof import('@domain/actor/actor/actor.service')>();
   return {
     ...original,
-    getContributorType: vi.fn().mockReturnValue(ActorType.USER),
+    getActorType: vi.fn().mockReturnValue(ActorType.USER),
   };
 });
 
@@ -89,23 +89,23 @@ describe('ActivityLogBuilderService', () => {
       ).rejects.toThrow(EntityNotFoundException);
     });
 
-    it('should return member joined entry with community and contributor', async () => {
+    it('should return member joined entry with community and actor', async () => {
       const community = { id: 'community-1' };
-      const contributor = { id: 'contributor-1', type: ActorType.USER };
+      const joiningActor = { id: 'actor-1', type: ActorType.USER };
       communityService.getCommunityOrFail.mockResolvedValue(community);
-      actorLookupService.getActorByIdOrFail.mockResolvedValue(contributor);
+      actorLookupService.getActorByIdOrFail.mockResolvedValue(joiningActor);
 
       const activity = {
         id: 'act-1',
         type: ActivityEventType.MEMBER_JOINED,
         parentID: 'community-1',
-        resourceID: 'contributor-1',
+        resourceID: 'actor-1',
       } as unknown as IActivity;
 
       const result = await builder[ActivityEventType.MEMBER_JOINED](activity);
 
       expect(result.community).toEqual(community);
-      expect(result.contributor).toEqual(contributor);
+      expect(result.actor).toEqual(joiningActor);
     });
   });
 
@@ -157,6 +157,219 @@ describe('ActivityLogBuilderService', () => {
 
       const result =
         await builder[ActivityEventType.CALLOUT_PUBLISHED](activity);
+
+      expect(result.callout).toEqual(callout);
+    });
+  });
+
+  describe('CALLOUT_LINK_CREATED', () => {
+    it('should throw EntityNotFoundException when parentID is not set', async () => {
+      const activity = {
+        id: 'act-1',
+        type: ActivityEventType.CALLOUT_LINK_CREATED,
+        parentID: undefined,
+        resourceID: 'link-1',
+      } as unknown as IActivity;
+
+      await expect(
+        builder[ActivityEventType.CALLOUT_LINK_CREATED](activity)
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('should return callout and link in the entry', async () => {
+      const callout = { id: 'callout-1' };
+      const link = { id: 'link-1' };
+      calloutService.getCalloutOrFail.mockResolvedValue(callout);
+      linkService.getLinkOrFail.mockResolvedValue(link);
+
+      const activity = {
+        id: 'act-1',
+        type: ActivityEventType.CALLOUT_LINK_CREATED,
+        parentID: 'callout-1',
+        resourceID: 'link-1',
+      } as unknown as IActivity;
+
+      const result =
+        await builder[ActivityEventType.CALLOUT_LINK_CREATED](activity);
+
+      expect(result.callout).toEqual(callout);
+      expect(result.link).toEqual(link);
+    });
+  });
+
+  describe('CALLOUT_WHITEBOARD_CREATED', () => {
+    it('should throw EntityNotFoundException when parentID is not set', async () => {
+      const activity = {
+        id: 'act-1',
+        type: ActivityEventType.CALLOUT_WHITEBOARD_CREATED,
+        parentID: undefined,
+        resourceID: 'wb-1',
+      } as unknown as IActivity;
+
+      await expect(
+        builder[ActivityEventType.CALLOUT_WHITEBOARD_CREATED](activity)
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('should return callout and whiteboard in the entry', async () => {
+      const callout = { id: 'callout-1' };
+      const whiteboard = { id: 'wb-1' };
+      calloutService.getCalloutOrFail.mockResolvedValue(callout);
+      whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
+
+      const activity = {
+        id: 'act-1',
+        type: ActivityEventType.CALLOUT_WHITEBOARD_CREATED,
+        parentID: 'callout-1',
+        resourceID: 'wb-1',
+      } as unknown as IActivity;
+
+      const result =
+        await builder[ActivityEventType.CALLOUT_WHITEBOARD_CREATED](activity);
+
+      expect(result.callout).toEqual(callout);
+      expect(result.whiteboard).toEqual(whiteboard);
+    });
+  });
+
+  describe('CALLOUT_MEMO_CREATED', () => {
+    it('should throw EntityNotFoundException when parentID is not set', async () => {
+      const activity = {
+        id: 'act-1',
+        type: ActivityEventType.CALLOUT_MEMO_CREATED,
+        parentID: undefined,
+        resourceID: 'memo-1',
+      } as unknown as IActivity;
+
+      await expect(
+        builder[ActivityEventType.CALLOUT_MEMO_CREATED](activity)
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('should return callout and memo in the entry', async () => {
+      const callout = { id: 'callout-1' };
+      const memo = { id: 'memo-1' };
+      calloutService.getCalloutOrFail.mockResolvedValue(callout);
+      memoService.getMemoOrFail.mockResolvedValue(memo);
+
+      const activity = {
+        id: 'act-1',
+        type: ActivityEventType.CALLOUT_MEMO_CREATED,
+        parentID: 'callout-1',
+        resourceID: 'memo-1',
+      } as unknown as IActivity;
+
+      const result =
+        await builder[ActivityEventType.CALLOUT_MEMO_CREATED](activity);
+
+      expect(result.callout).toEqual(callout);
+      expect(result.memo).toEqual(memo);
+    });
+  });
+
+  describe('CALLOUT_WHITEBOARD_CONTENT_MODIFIED', () => {
+    it('should throw EntityNotFoundException when parentID is not set', async () => {
+      const activity = {
+        id: 'act-1',
+        type: ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED,
+        parentID: undefined,
+        resourceID: 'wb-1',
+      } as unknown as IActivity;
+
+      await expect(
+        builder[ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED](activity)
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('should return callout and whiteboard in the entry', async () => {
+      const callout = { id: 'callout-1' };
+      const whiteboard = { id: 'wb-1' };
+      calloutService.getCalloutOrFail.mockResolvedValue(callout);
+      whiteboardService.getWhiteboardOrFail.mockResolvedValue(whiteboard);
+
+      const activity = {
+        id: 'act-1',
+        type: ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED,
+        parentID: 'callout-1',
+        resourceID: 'wb-1',
+      } as unknown as IActivity;
+
+      const result =
+        await builder[ActivityEventType.CALLOUT_WHITEBOARD_CONTENT_MODIFIED](
+          activity
+        );
+
+      expect(result.callout).toEqual(callout);
+      expect(result.whiteboard).toEqual(whiteboard);
+    });
+  });
+
+  describe('CALLOUT_POST_COMMENT', () => {
+    it('should throw EntityNotFoundException when parentID is not set', async () => {
+      const activity = {
+        id: 'act-1',
+        type: ActivityEventType.CALLOUT_POST_COMMENT,
+        parentID: undefined,
+        resourceID: 'post-1',
+      } as unknown as IActivity;
+
+      await expect(
+        builder[ActivityEventType.CALLOUT_POST_COMMENT](activity)
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('should return callout and post in the entry', async () => {
+      const callout = { id: 'callout-1' };
+      const post = { id: 'post-1' };
+      calloutService.getCalloutOrFail.mockResolvedValue(callout);
+      postService.getPostOrFail.mockResolvedValue(post);
+
+      const activity = {
+        id: 'act-1',
+        type: ActivityEventType.CALLOUT_POST_COMMENT,
+        parentID: 'callout-1',
+        resourceID: 'post-1',
+      } as unknown as IActivity;
+
+      const result =
+        await builder[ActivityEventType.CALLOUT_POST_COMMENT](activity);
+
+      expect(result.callout).toEqual(callout);
+      expect(result.post).toEqual(post);
+    });
+  });
+
+  describe('SUBSPACE_CREATED', () => {
+    it('should return subspace in the entry', async () => {
+      const subspace = { id: 'subspace-1' };
+      spaceService.getSpaceOrFail.mockResolvedValue(subspace);
+
+      const activity = {
+        id: 'act-1',
+        type: ActivityEventType.SUBSPACE_CREATED,
+        resourceID: 'subspace-1',
+      } as unknown as IActivity;
+
+      const result =
+        await builder[ActivityEventType.SUBSPACE_CREATED](activity);
+
+      expect(result.subspace).toEqual(subspace);
+    });
+  });
+
+  describe('DISCUSSION_COMMENT', () => {
+    it('should return callout in the entry', async () => {
+      const callout = { id: 'callout-1' };
+      calloutService.getCalloutOrFail.mockResolvedValue(callout);
+
+      const activity = {
+        id: 'act-1',
+        type: ActivityEventType.DISCUSSION_COMMENT,
+        resourceID: 'callout-1',
+      } as unknown as IActivity;
+
+      const result =
+        await builder[ActivityEventType.DISCUSSION_COMMENT](activity);
 
       expect(result.callout).toEqual(callout);
     });

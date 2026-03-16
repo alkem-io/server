@@ -63,10 +63,8 @@ export class SpaceAuthorizationService {
   ): Promise<IAuthorizationPolicy[]> {
     const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
       relations: {
-        actor: {
-          authorization: {
-            parentAuthorizationPolicy: true,
-          },
+        authorization: {
+          parentAuthorizationPolicy: true,
         },
         parentSpace: {
           community: {
@@ -174,6 +172,7 @@ export class SpaceAuthorizationService {
     switch (spaceVisibility) {
       case SpaceVisibility.ACTIVE:
       case SpaceVisibility.DEMO:
+      case SpaceVisibility.INACTIVE:
         space.authorization = await this.extendAuthorizationPolicyLocal(
           space.authorization,
           space.community.roleSet,

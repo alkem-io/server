@@ -1,6 +1,7 @@
 import { TagsetType } from '@common/enums/tagset.type';
 import {
   EntityNotFoundException,
+  RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
 import { TagsetNotFoundException } from '@common/exceptions/tagset.not.found.exception';
@@ -26,6 +27,8 @@ describe('TagsetService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Tagset.create to avoid DataSource requirement
     vi.spyOn(Tagset, 'create').mockImplementation((input: any) => {
       const entity = new Tagset();
@@ -404,6 +407,280 @@ describe('TagsetService', () => {
 
       expect(result).toHaveLength(1);
       expect(result[0].name).toBe('skills');
+    });
+
+    it('should not override tags when additional input has no tags', () => {
+      const base: CreateTagsetInput[] = [
+        { name: 'skills', tags: ['a'], type: TagsetType.FREEFORM },
+      ];
+      const additional: CreateTagsetInput[] = [
+        { name: 'skills', type: TagsetType.FREEFORM },
+      ];
+
+      const result = service.updatedTagsetInputUsingProvidedData(
+        base,
+        additional
+      );
+
+      expect(result[0].tags).toEqual(['a']);
+    });
+  });
+
+  describe('updateTagset', () => {
+    it('should update FREEFORM tagset without validation', async () => {
+      const tagset = {
+        id: 'ts-1',
+        name: 'skills',
+        tags: ['old'],
+        type: TagsetType.FREEFORM,
+        tagsetTemplate: undefined,
+      } as unknown as Tagset;
+      tagsetRepository.findOne!.mockResolvedValue(tagset);
+      tagsetRepository.save!.mockImplementation(async (t: any) => t);
+
+      const result = await service.updateTagset({
+        ID: 'ts-1',
+        tags: ['new1', 'new2'],
+      });
+
+      expect(result.tags).toEqual(['new1', 'new2']);
+    });
+
+    it('should throw EntityNotFoundException when tagset template not found for SELECT_ONE', async () => {
+      const tagset = {
+        id: 'ts-1',
+        name: 'category',
+        tags: ['old'],
+        type: TagsetType.SELECT_ONE,
+        tagsetTemplate: undefined,
+      } as unknown as Tagset;
+      tagsetRepository.findOne!.mockResolvedValue(tagset);
+
+      await expect(
+        service.updateTagset({ ID: 'ts-1', tags: ['value'] })
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('should throw ValidationException when SELECT_ONE tags length is not 1', async () => {
+      const tagset = {
+        id: 'ts-1',
+        name: 'category',
+        tags: ['old'],
+        type: TagsetType.SELECT_ONE,
+        tagsetTemplate: { allowedValues: ['a', 'b'] },
+      } as unknown as Tagset;
+      tagsetRepository.findOne!.mockResolvedValue(tagset);
+
+      await expect(
+        service.updateTagset({ ID: 'ts-1', tags: ['a', 'b'] })
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('should throw ValidationException when SELECT_ONE tag is not in allowed values', async () => {
+      const tagset = {
+        id: 'ts-1',
+        name: 'category',
+        tags: ['old'],
+        type: TagsetType.SELECT_ONE,
+        tagsetTemplate: { allowedValues: ['a', 'b'] },
+      } as unknown as Tagset;
+      tagsetRepository.findOne!.mockResolvedValue(tagset);
+
+      await expect(
+        service.updateTagset({ ID: 'ts-1', tags: ['invalid'] })
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('should update SELECT_ONE tagset when single allowed value is provided', async () => {
+      const tagset = {
+        id: 'ts-1',
+        name: 'category',
+        tags: ['old'],
+        type: TagsetType.SELECT_ONE,
+        tagsetTemplate: { allowedValues: ['a', 'b'] },
+      } as unknown as Tagset;
+      tagsetRepository.findOne!.mockResolvedValue(tagset);
+      tagsetRepository.save!.mockImplementation(async (t: any) => t);
+
+      const result = await service.updateTagset({ ID: 'ts-1', tags: ['a'] });
+
+      expect(result.tags).toEqual(['a']);
+    });
+
+    it('should update SELECT_MANY tagset when all tags are in allowed values', async () => {
+      const tagset = {
+        id: 'ts-1',
+        name: 'skills',
+        tags: ['old'],
+        type: TagsetType.SELECT_MANY,
+        tagsetTemplate: { allowedValues: ['a', 'b', 'c'] },
+      } as unknown as Tagset;
+      tagsetRepository.findOne!.mockResolvedValue(tagset);
+      tagsetRepository.save!.mockImplementation(async (t: any) => t);
+
+      const result = await service.updateTagset({
+        ID: 'ts-1',
+        tags: ['a', 'c'],
+      });
+
+      expect(result.tags).toEqual(['a', 'c']);
+    });
+  });
+
+  describe('updateTagsOnTagsetByName', () => {
+    it('should update tags on the tagset matching the given name', () => {
+      const tagsets = [
+        { name: 'skills', tags: ['old'] },
+        { name: 'keywords', tags: ['kw'] },
+      ] as ITagset[];
+
+      const result = service.updateTagsOnTagsetByName(tagsets, 'skills', [
+        'new1',
+        'new2',
+      ]);
+
+      expect(result.tags).toEqual(['new1', 'new2']);
+      expect(result.name).toBe('skills');
+    });
+
+    it('should throw TagsetNotFoundException when name not found', () => {
+      const tagsets = [{ name: 'skills', tags: ['old'] }] as ITagset[];
+
+      expect(() =>
+        service.updateTagsOnTagsetByName(tagsets, 'missing', ['x'])
+      ).toThrow(TagsetNotFoundException);
+    });
+  });
+
+  describe('defaultTagset', () => {
+    it('should return the tagset with DEFAULT reserved name template', () => {
+      const tagsets = [
+        { name: 'skills', tagsetTemplate: { name: 'skills' } },
+        { name: 'default', tagsetTemplate: { name: 'default' } },
+      ] as unknown as ITagset[];
+
+      const result = service.defaultTagset(tagsets);
+
+      expect(result).toBe(tagsets[1]);
+    });
+
+    it('should return undefined when no DEFAULT tagset exists', () => {
+      const tagsets = [
+        { name: 'skills', tagsetTemplate: { name: 'skills' } },
+      ] as unknown as ITagset[];
+
+      const result = service.defaultTagset(tagsets);
+
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('getAllowedValuesOrFail', () => {
+    it('should return empty array for FREEFORM tagset', async () => {
+      const tagset = { id: 'ts-1', type: TagsetType.FREEFORM } as ITagset;
+
+      const result = await service.getAllowedValuesOrFail(tagset);
+
+      expect(result).toEqual([]);
+    });
+
+    it('should return allowed values from tagset template for non-FREEFORM tagset', async () => {
+      const tagset = { id: 'ts-1', type: TagsetType.SELECT_ONE } as ITagset;
+      const tagsetWithTemplate = {
+        id: 'ts-1',
+        type: TagsetType.SELECT_ONE,
+        tagsetTemplate: { allowedValues: ['a', 'b', 'c'] },
+      } as unknown as Tagset;
+      tagsetRepository.findOne!.mockResolvedValue(tagsetWithTemplate);
+
+      const result = await service.getAllowedValuesOrFail(tagset);
+
+      expect(result).toEqual(['a', 'b', 'c']);
+    });
+  });
+
+  describe('getTagsetTemplateOrFail', () => {
+    it('should return tagset template when loaded', async () => {
+      const template = { id: 'tt-1', name: 'skills', allowedValues: ['a'] };
+      const tagset = {
+        id: 'ts-1',
+        tagsetTemplate: template,
+      } as unknown as Tagset;
+      tagsetRepository.findOne!.mockResolvedValue(tagset);
+
+      const result = await service.getTagsetTemplateOrFail('ts-1');
+
+      expect(result).toBe(template);
+    });
+
+    it('should throw RelationshipNotFoundException when template not loaded', async () => {
+      const tagset = {
+        id: 'ts-1',
+        tagsetTemplate: undefined,
+      } as unknown as Tagset;
+      tagsetRepository.findOne!.mockResolvedValue(tagset);
+
+      await expect(service.getTagsetTemplateOrFail('ts-1')).rejects.toThrow(
+        RelationshipNotFoundException
+      );
+    });
+  });
+
+  describe('updateTagsetsSelectedValue', () => {
+    it('should throw ValidationException when newDefaultValue is not in allowedValues', async () => {
+      await expect(
+        service.updateTagsetsSelectedValue([], ['a', 'b'], 'invalid')
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('should skip tagsets whose selected value is in allowedValues', async () => {
+      const tagsets = [{ id: 'ts-1', tags: ['a'] }] as unknown as ITagset[];
+
+      await service.updateTagsetsSelectedValue(tagsets, ['a', 'b'], 'b');
+
+      expect(tagsetRepository.save).not.toHaveBeenCalled();
+    });
+
+    it('should rename value when valueRenamed matches the selected value', async () => {
+      const tagsets = [
+        { id: 'ts-1', tags: ['oldName'] },
+      ] as unknown as ITagset[];
+
+      await service.updateTagsetsSelectedValue(
+        tagsets,
+        ['newName', 'default'],
+        'default',
+        { old: 'oldName', new: 'newName' }
+      );
+
+      expect(tagsets[0].tags).toEqual(['newName']);
+    });
+
+    it('should set to newDefaultValue when selected value is not allowed and not renamed', async () => {
+      const tagsets = [
+        { id: 'ts-1', tags: ['removed'] },
+      ] as unknown as ITagset[];
+      tagsetRepository.save!.mockResolvedValue({});
+
+      await service.updateTagsetsSelectedValue(tagsets, ['a', 'b'], 'a');
+
+      expect(tagsets[0].tags).toEqual(['a']);
+      expect(tagsetRepository.save).toHaveBeenCalledWith(tagsets[0]);
+    });
+  });
+
+  describe('updateTagsetInputs - additional edge case', () => {
+    it('should not override tags when matching input has no tags property', () => {
+      const additional: CreateTagsetInput[] = [
+        { name: 'skills', tags: ['original'], type: TagsetType.FREEFORM },
+      ];
+      const tagsetInputData: CreateTagsetInput[] = [
+        { name: 'skills', type: TagsetType.FREEFORM },
+      ];
+
+      const result = service.updateTagsetInputs(tagsetInputData, additional);
+
+      expect(result[0].tags).toEqual(['original']);
     });
   });
 });

@@ -20,6 +20,7 @@ import { PubSubEngine } from 'graphql-subscriptions';
 import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
 import { UpdateSpaceSettingsInput } from './dto/space.dto.update.settings';
+import { UpdateSubspacePinnedInput } from './dto/space.dto.update.subspace.pinned';
 import { SubspaceCreatedPayload } from './dto/space.subspace.created.payload';
 import { ISpace } from './space.interface';
 import { SpaceService } from './space.service';
@@ -71,10 +72,7 @@ export class SpaceResolverMutations {
         name: updatedSpace.about.profile.displayName,
         space: updatedSpace.id,
       },
-      {
-        id: actorContext.actorID,
-        email: actorContext.actorID,
-      }
+      actorContext
     );
 
     return updatedSpace;
@@ -208,16 +206,13 @@ export class SpaceResolverMutations {
         name: displayName,
         space: space.id, //TODO: should this be a root space ID?
       },
-      {
-        id: actorContext.actorID,
-        email: actorContext.actorID,
-      }
+      actorContext
     );
 
     const level0Space = await this.spaceService.getSpaceOrFail(
       subspace.levelZeroSpaceID,
       {
-        relations: { actor: { credentials: true } },
+        relations: { credentials: true },
       }
     );
 
@@ -260,5 +255,29 @@ export class SpaceResolverMutations {
     );
 
     return this.spaceService.updateSubspacesSortOrder(space, sortOrderData);
+  }
+
+  @Mutation(() => ISpace, {
+    description:
+      'Updates the pinned state of a Subspace within the specified Space. Returns the updated Subspace.',
+  })
+  async updateSubspacePinned(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('pinnedData') pinnedData: UpdateSubspacePinnedInput
+  ): Promise<ISpace> {
+    const space = await this.spaceService.getSpaceOrFail(pinnedData.spaceID);
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      space.authorization,
+      AuthorizationPrivilege.UPDATE,
+      'update subspace pinned on space'
+    );
+
+    return this.spaceService.updateSubspacePinned(
+      pinnedData.spaceID,
+      pinnedData.subspaceID,
+      pinnedData.pinned
+    );
   }
 }

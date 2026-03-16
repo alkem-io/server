@@ -13,7 +13,7 @@ concurrency:
 jobs:
   regenerate:
     name: Regenerate Baseline
-    runs-on: arc-runner-set
+    runs-on: [self-hosted, macOS, ARM64, apple-silicon, m4]
     permissions:
       actions: read
       contents: write
@@ -33,16 +33,16 @@ jobs:
             echo "BASELINE_FAILURE_PHASE=bootstrap"
           } >> "$GITHUB_ENV"
 
-      - name: Use Node.js 22
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+
+      - name: Setup Node.js
         uses: actions/setup-node@v6.2.0
         with:
           node-version: '22.22.0'
-
-      - name: Bootstrap pnpm toolchain
-        run: |
-          set -euo pipefail
-          corepack enable
-          corepack prepare pnpm@10.17.1 --activate
+          cache: 'pnpm'
 
       - name: Install dependencies
         run: pnpm install --frozen-lockfile

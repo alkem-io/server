@@ -472,8 +472,7 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.8.0
-    platform: linux/amd64
+    image: alkemio/whiteboard-collaboration-service:v0.10.1
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -493,8 +492,7 @@ services:
   file-service:
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.2.0
-    platform: linux/amd64
+    image: alkemio/file-service:v0.2.1
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -546,8 +544,7 @@ services:
   collaborative-document:
     container_name: alkemio_dev_collaborative-document
     hostname: collaborative-document
-    image: alkemio/collaborative-document-service:v0.0.1
-    platform: linux/amd64
+    image: alkemio/collaborative-document-service:v0.3.0
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -564,12 +561,12 @@ services:
     ports:
       - 4004
 
-  webhook-gateway:
+  kratos-hooks:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
-    container_name: alkemio_dev_webhook_gateway
-    hostname: webhook-gateway
-    image: alkemio/webhook-gateway:v0.1.0
+    container_name: alkemio_dev_kratos_hooks
+    hostname: kratos-hooks
+    image: alkemio/kratos-webhooks:v0.2.1
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -583,6 +580,12 @@ services:
       - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       - PLATFORM_URL=http://host.docker.internal:4000
       - MAINTENANCE_MODE=false
+      - CORRELATION_ID_HEADER=X-Request-ID
+      - LOGIN_BACKOFF_MAX_IDENTIFIER_ATTEMPTS=10
+      - LOGIN_BACKOFF_MAX_IP_ATTEMPTS=20
+      - LOGIN_BACKOFF_IDENTIFIER_LOCKOUT_SECONDS=120
+      - LOGIN_BACKOFF_IP_LOCKOUT_SECONDS=120
+      - KRATOS_INTERNAL_URL=http://kratos:4433
     restart: unless-stopped
     networks:
       - alkemio_dev_net

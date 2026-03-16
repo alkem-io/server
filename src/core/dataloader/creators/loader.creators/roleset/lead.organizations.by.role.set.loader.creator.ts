@@ -38,22 +38,20 @@ export class LeadOrganizationsByRoleSetLoaderCreator
     const whereConditions = keys.map(key => {
       const [type, resourceID] = key.split('|');
       return {
-        actor: {
-          credentials: { type, resourceID: resourceID || '' },
-        },
+        credentials: { type, resourceID: resourceID || '' },
       };
     });
 
     const organizations = await this.manager.find(Organization, {
       where: whereConditions,
-      relations: { actor: { credentials: true } },
+      relations: { credentials: true },
     });
 
     // Group organizations back by their matching composite key
     return keys.map(key => {
       const [type, resourceID] = key.split('|');
       return organizations.filter(org =>
-        org.actor?.credentials?.some(
+        org.credentials?.some(
           cred => cred.type === type && cred.resourceID === resourceID
         )
       );

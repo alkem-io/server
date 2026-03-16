@@ -4,6 +4,8 @@ import {
   EntityNotFoundException,
   EntityNotInitializedException,
 } from '@common/exceptions';
+import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
+import { ActorTypeCacheService } from '@domain/actor/actor-lookup/actor.lookup.service.cache';
 import {
   CreateCredentialInput,
   CredentialService,
@@ -25,12 +27,19 @@ import { IActor } from './actor.interface';
  * Determines the ActorType of a given actor.
  * Uses the type discriminator field on IActor.
  */
-export const getContributorType = (actor: IActor): ActorType => {
+export const getActorType = (actor: IActor): ActorType => {
   if (!actor.type) {
-    throw new Error(`Unable to determine contributor type for ${actor.id}`);
+    throw new EntityNotInitializedException(
+      'Unable to determine actor type',
+      LogContext.COMMUNITY,
+      { actorID: actor.id }
+    );
   }
   return actor.type;
 };
+
+/** @deprecated Use getActorType instead */
+export const getContributorType = getActorType;
 
 /** @deprecated Use ActorAuthorizationService instead */
 export {
@@ -57,7 +66,9 @@ export class ActorService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @Inject(CACHE_MANAGER)
-    private readonly cacheManager: Cache
+    private readonly cacheManager: Cache,
+    private actorContextCacheService: ActorContextCacheService,
+    private actorTypeCacheService: ActorTypeCacheService
   ) {
     this.cache_ttl = this.configService.get(
       'identity.authentication.cache_ttl',
@@ -109,6 +120,16 @@ export class ActorService {
    */
   async deleteActorById(actorID: string): Promise<void> {
     await this.actorRepository.delete(actorID);
+    // Best-effort cache invalidation — DB delete already committed,
+    // so a Redis failure should not break the caller's flow
+    try {
+      await this.invalidateAllActorCaches(actorID);
+    } catch (error: any) {
+      this.logger.warn?.(
+        `Failed to invalidate caches for deleted actor ${actorID}: ${error?.message}`,
+        LogContext.AUTH
+      );
+    }
   }
 
   // =========================================================================
@@ -281,11 +302,23 @@ export class ActorService {
   }
 
   /**
-   * Invalidate the actor cache.
+   * Invalidate the actor entity and context caches (used on credential changes).
    */
   private async invalidateActorCache(actorID: string): Promise<void> {
     const cacheKey = this.getActorCacheKey(actorID);
     await this.cacheManager.del(cacheKey);
+    // Also invalidate the ActorContext cache so subsequent requests
+    // pick up the updated credentials for myPrivileges evaluation
+    await this.actorContextCacheService.deleteByActorID(actorID);
+  }
+
+  /**
+   * Invalidate all actor-related caches (used on actor deletion).
+   */
+  private async invalidateAllActorCaches(actorID: string): Promise<void> {
+    await this.cacheManager.del(this.getActorCacheKey(actorID));
+    await this.actorContextCacheService.deleteByActorID(actorID);
+    await this.actorTypeCacheService.deleteActorType(actorID);
   }
 }
 

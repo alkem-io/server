@@ -32,6 +32,8 @@ describe('AdminWhiteboardService', () => {
   const actorContext = { actorID: 'uploader-1' } as any;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     mockEntityManager = {
       find: vi.fn(),
       save: vi.fn(),

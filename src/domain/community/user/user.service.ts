@@ -48,7 +48,7 @@ import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { InstrumentService } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, Repository } from 'typeorm';
 import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
 import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
@@ -106,7 +106,7 @@ export class UserService {
     let user: IUser = User.create({
       ...userData,
     });
-    // nameID is a getter/setter delegating to actor, not a @Column on User,
+    // nameID is inherited from Actor (CTI), not a @Column on User,
     // so TypeORM's create() won't copy it from the input — set it explicitly.
     user.nameID = userData.nameID!;
     user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
@@ -183,9 +183,7 @@ export class UserService {
       );
       user.accountID = account.id;
 
-      // TypeORM's cascade doesn't reliably set FK columns on the parent entity,
-      // so we pre-save children explicitly within the transaction.
-      await mgr.save((user as User).actor!);
+      // CTI handles multi-table saves automatically — no need to save actor separately.
       user.settings = await mgr.save(user.settings);
       return await mgr.save(user as User);
     });
@@ -427,7 +425,7 @@ export class UserService {
 
   private async isUserNameIdAvailableOrFail(nameID: string) {
     const userCount = await this.userRepository.count({
-      where: { actor: { nameID: nameID } },
+      where: { nameID: nameID },
     });
     if (userCount != 0)
       throw new ValidationException(
@@ -440,7 +438,7 @@ export class UserService {
     const userID = deleteData.ID;
     const user = await this.getUserByIdOrFail(userID, {
       relations: {
-        actor: { profile: true },
+        profile: true,
         storageAggregator: true,
         settings: true,
       },
@@ -458,7 +456,6 @@ export class UserService {
       );
     }
 
-    // TODO: give additional feedback?
     const accountHasResources =
       await this.accountLookupService.areResourcesInAccount(user.accountID);
     if (accountHasResources) {
@@ -471,28 +468,68 @@ export class UserService {
 
     await this.invalidateActorContextCache(user);
 
-    await this.profileService.deleteProfile(user.profile.id);
+    // All DB deletions in a single transaction so a partial failure
+    // does not leave the user in an inconsistent state.
+    await this.userRepository.manager.transaction(async () => {
+      await this.profileService.deleteProfile(user.profile.id);
 
-    // Note: Credentials are on Actor (which User extends), will be deleted via cascade
-    await this.authorizationPolicyService.delete(user.authorization);
+      // Note: Credentials are on Actor (which User extends), will be deleted via cascade
+      await this.authorizationPolicyService.delete(user.authorization!);
 
-    await this.storageAggregatorService.delete(user.storageAggregator.id);
+      await this.storageAggregatorService.delete(user.storageAggregator!.id);
 
-    await this.userSettingsService.deleteUserSettings(user.settings.id);
+      await this.userSettingsService.deleteUserSettings(user.settings!.id);
+
+      // Delete actor — cascades to delete the user row via FK (user.id → actor.id ON DELETE CASCADE).
+      // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
+      await this.actorService.deleteActorById(id);
+    });
 
     // Note: Conversations belong to the platform Messaging.
     // User's conversation memberships are cleaned up via cascade.
-    // TODO: Consider deleting conversations where this user is the only member
 
-    if (deleteData.deleteIdentity) {
-      await this.kratosService.deleteIdentityByEmail(user.email);
+    // Kratos identity deletion — outside the DB transaction since it's
+    // an external system call. Uses authenticationID (the Kratos identity
+    // UUID) which is more reliable than email lookup. If authenticationID
+    // is absent the user was never linked to Kratos — skip silently.
+    if (user.authenticationID) {
+      // Intentionally clear actor metadata even when deleteIdentity is false:
+      // the actor no longer exists in the DB, so any surviving Kratos identity
+      // must not carry a stale alkemio_actor_id that would break re-registration.
+      try {
+        await this.kratosService.clearIdentityActorMetadata(
+          user.authenticationID
+        );
+      } catch (error: any) {
+        this.logger.error?.(
+          {
+            message: 'Failed to clear actor metadata from Kratos identity',
+            userID: id,
+            authenticationID: user.authenticationID,
+            error: error?.message,
+          },
+          error?.stack,
+          LogContext.AUTH
+        );
+      }
+
+      if (deleteData.deleteIdentity) {
+        try {
+          await this.kratosService.deleteIdentityById(user.authenticationID);
+        } catch (error: any) {
+          this.logger.error?.(
+            {
+              message: 'Failed to delete Kratos identity during user deletion',
+              userID: id,
+              authenticationID: user.authenticationID,
+              error: error?.message,
+            },
+            error?.stack,
+            LogContext.AUTH
+          );
+        }
+      }
     }
-
-    // Delete actor — cascades to delete the user row via FK (user.id → actor.id ON DELETE CASCADE).
-    // Also cascades to delete credentials (credential.actorID → actor.id ON DELETE CASCADE).
-    await this.actorService.deleteActorById(id);
-
-    // Note: Should we unregister the user from communications?
 
     // Restore id so callers get the deleted entity's id
     user.id = id;
@@ -557,11 +594,10 @@ export class UserService {
     const credentialsFilter = args.filter?.credentials;
     let users: User[] = [];
     if (credentialsFilter) {
-      // User extends Actor which has the credentials relationship
+      // User extends Actor which has the credentials relationship directly
       users = await this.userRepository
         .createQueryBuilder('user')
-        .leftJoin('user.actor', 'actor')
-        .leftJoinAndSelect('actor.credentials', 'credential')
+        .leftJoinAndSelect('user.credentials', 'credential')
         .where('credential.type IN (:...credentialsFilter)')
         .setParameters({
           credentialsFilter: credentialsFilter,
@@ -586,8 +622,7 @@ export class UserService {
     const qb = this.userRepository.createQueryBuilder('user');
 
     if (withTags !== undefined) {
-      qb.leftJoin('user.actor', 'actor')
-        .leftJoin('actor.profile', 'profile')
+      qb.leftJoin('user.profile', 'profile')
         .leftJoin('tagset', 'tagset', 'profile.id = tagset.profileId')
         // cannot use object or operators here
         // because typeorm cannot construct the query properly
@@ -614,8 +649,7 @@ export class UserService {
     const qb = this.userRepository.createQueryBuilder('user').select();
 
     if (entryRoleCredentials.parentRoleSetRole) {
-      qb.leftJoin('user.actor', 'actor')
-        .leftJoin('actor.credentials', 'credential')
+      qb.leftJoin('user.credentials', 'credential')
         .addSelect(['credential.type', 'credential.resourceID'])
         .where('credential.type = :type')
         .andWhere('credential.resourceID = :resourceID')
@@ -656,8 +690,7 @@ export class UserService {
     const qb = this.userRepository
       .createQueryBuilder('user')
       .select()
-      .leftJoin('user.actor', 'actor')
-      .leftJoin('actor.credentials', 'credential')
+      .leftJoin('user.credentials', 'credential')
       .addSelect(['credential.type', 'credential.resourceID'])
       .where('credential.type = :type')
       .andWhere('credential.resourceID = :resourceID')
@@ -681,7 +714,7 @@ export class UserService {
 
   async updateUser(userInput: UpdateUserInput): Promise<IUser> {
     const user = await this.getUserByIdOrFail(userInput.ID, {
-      relations: { actor: { profile: true } },
+      relations: { profile: true },
     });
 
     if (userInput.nameID) {
@@ -753,7 +786,7 @@ export class UserService {
 
   async getProfile(user: IUser): Promise<IProfile> {
     const userWithProfile = await this.getUserByIdOrFail(user.id, {
-      relations: { actor: { profile: true } },
+      relations: { profile: true },
     });
     const profile = userWithProfile.profile;
     if (!profile)

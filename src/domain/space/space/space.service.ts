@@ -11,6 +11,7 @@ import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
@@ -142,7 +143,7 @@ export class SpaceService {
     parentPlatformRolesAccess?: IPlatformRolesAccess
   ): Promise<ISpace> {
     const space: ISpace = Space.create(spaceData);
-    // nameID is a getter/setter delegating to actor, not a @Column on Space,
+    // nameID is inherited from Actor (CTI), not a @Column on Space,
     // so TypeORM's create() won't copy it from the input — set it explicitly.
     if (spaceData.nameID) {
       space.nameID = spaceData.nameID;
@@ -150,12 +151,16 @@ export class SpaceService {
     // default to demo space
     space.visibility = SpaceVisibility.ACTIVE;
     space.sortOrder = 0;
+    space.pinned = false;
 
     space.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.SPACE
     );
 
     space.settings = templateContentSpace.settings;
+    if (!space.settings.sortMode) {
+      space.settings.sortMode = SpaceSortMode.ALPHABETICAL;
+    }
     space.platformRolesAccess =
       this.spacePlatformRolesAccessService.createPlatformRolesAccess(
         space,
@@ -219,9 +224,7 @@ export class SpaceService {
         storageAggregator
       );
 
-      // TypeORM's cascade through shared-PK @JoinColumn({ name: 'id' }) doesn't
-      // reliably set FK columns, so we pre-save children explicitly.
-      await mgr.save((space as Space).actor!);
+      // CTI handles multi-table saves automatically, just save children that need pre-saving
       space.license = await mgr.save(space.license);
       await mgr.save(space as Space);
     });
@@ -532,7 +535,11 @@ export class SpaceService {
   }
 
   public async getSpacesInList(spaceIDs: string[]): Promise<ISpace[]> {
-    const visibilities = [SpaceVisibility.ACTIVE, SpaceVisibility.DEMO];
+    const visibilities = [
+      SpaceVisibility.ACTIVE,
+      SpaceVisibility.DEMO,
+      SpaceVisibility.INACTIVE,
+    ];
 
     const spaces = await this.spaceRepository.find({
       where: {
@@ -583,8 +590,7 @@ export class SpaceService {
 
     const qb = this.spaceRepository.createQueryBuilder('space');
     if (visibilities) {
-      qb.leftJoin('space.actor', 'actor');
-      qb.leftJoinAndSelect('actor.authorization', 'authorization');
+      qb.leftJoinAndSelect('space.authorization', 'authorization');
       qb.where({
         level: SpaceLevel.L0,
         visibility: In(visibilities),
@@ -632,13 +638,14 @@ export class SpaceService {
       };
       spacesDataForSorting.push(spaceSortingData);
     }
+    const deprioritizedVisibilities = [
+      SpaceVisibility.DEMO,
+      SpaceVisibility.INACTIVE,
+    ];
     const sortedSpaces = spacesDataForSorting.sort((a, b) => {
-      if (
-        a.visibility !== b.visibility &&
-        (a.visibility === SpaceVisibility.DEMO ||
-          b.visibility === SpaceVisibility.DEMO)
-      )
-        return a.visibility === SpaceVisibility.DEMO ? 1 : -1;
+      const aDeprioritized = deprioritizedVisibilities.includes(a.visibility);
+      const bDeprioritized = deprioritizedVisibilities.includes(b.visibility);
+      if (aDeprioritized !== bDeprioritized) return aDeprioritized ? 1 : -1;
 
       if (a.accessModeIsPublic && !b.accessModeIsPublic) return -1;
       if (!a.accessModeIsPublic && b.accessModeIsPublic) return 1;
@@ -721,10 +728,9 @@ export class SpaceService {
 
     const spaceIds = spaceIdsWithActivity.map(row => row.id);
 
-    // Then fetch the full space entities with actor relation (authorization eagerly loaded on actor)
+    // Then fetch the full space entities (Space extends Actor, no separate actor relation needed)
     const spaces = await this.spaceRepository.find({
       where: { id: In(spaceIds) },
-      relations: { actor: true },
     });
 
     // Preserve the activity-based ordering from the first query
@@ -1094,10 +1100,45 @@ export class SpaceService {
     return subspacesInOrder;
   }
 
+  public async updateSubspacePinned(
+    spaceId: string,
+    subspaceId: string,
+    pinned: boolean
+  ): Promise<ISpace> {
+    const space = await this.getSpaceOrFail(spaceId, {
+      relations: { subspaces: true },
+    });
+
+    const subspaces = space.subspaces;
+    if (!subspaces) {
+      throw new EntityNotFoundException(
+        'Space not initialized, no subspaces',
+        LogContext.SPACES,
+        { spaceId }
+      );
+    }
+
+    const subspace = subspaces.find(s => s.id === subspaceId);
+    if (!subspace) {
+      throw new EntityNotFoundException(
+        'Subspace not found within parent Space',
+        LogContext.SPACES,
+        { subspaceId, parentSpaceId: spaceId }
+      );
+    }
+
+    if (subspace.pinned === pinned) {
+      return subspace;
+    }
+
+    subspace.pinned = pinned;
+    return await this.save(subspace);
+  }
+
   async getSubscriptions(spaceInput: ISpace): Promise<ISpaceSubscription[]> {
     const space = await this.getSpaceOrFail(spaceInput.id, {
       relations: {
-        actor: { credentials: true },
+        credentials: true,
       },
     });
     if (!space.credentials) {

@@ -177,14 +177,16 @@ export class CollaborativeDocumentIntegrationService {
       );
     const { displayName } = await this.memoService.getProfile(memoId);
 
-    users.forEach(({ id, email }) => {
+    users.forEach(({ id }) => {
       this.contributionReporter.memoContribution(
         {
           id: memoId,
           name: displayName,
           space: levelZeroSpaceID,
         },
-        { id, email }
+        {
+          actorID: id,
+        }
       );
     });
   }

@@ -28,7 +28,7 @@ export class OrganizationLookupService {
     });
   }
 
-  // Credentials are accessed via the actor relation
+  // Credentials are inherited from Actor (CTI) and queried directly on Organization.
   async organizationsWithCredentials(
     credentialCriteria: CredentialsSearchInput,
     limit?: number
@@ -37,15 +37,13 @@ export class OrganizationLookupService {
 
     return this.entityManager.find(Organization, {
       where: {
-        actor: {
-          credentials: {
-            type: credentialCriteria.type,
-            resourceID: credResourceID,
-          },
+        credentials: {
+          type: credentialCriteria.type,
+          resourceID: credResourceID,
         },
       },
       relations: {
-        actor: { credentials: true },
+        credentials: true,
       },
       take: limit,
     });
@@ -80,7 +78,7 @@ export class OrganizationLookupService {
   ): Promise<IOrganization | null> {
     return this.entityManager.findOne(Organization, {
       ...options,
-      where: { ...options?.where, actor: { nameID: organizationNameID } },
+      where: { ...options?.where, nameID: organizationNameID },
     });
   }
 

@@ -1,3 +1,4 @@
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
@@ -11,11 +12,13 @@ import { InputCreatorService } from './input.creator.service';
 
 describe('InputCreatorService', () => {
   let service: InputCreatorService;
-  let _calloutService: Record<string, Mock>;
+  let calloutService: Record<string, Mock>;
   let collaborationService: Record<string, Mock>;
-  let _spaceLookupService: Record<string, Mock>;
+  let spaceLookupService: Record<string, Mock>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [InputCreatorService, MockWinstonProvider],
     })
@@ -30,14 +33,14 @@ describe('InputCreatorService', () => {
       .compile();
 
     service = module.get(InputCreatorService);
-    _calloutService = module.get(CalloutService) as unknown as Record<
+    calloutService = module.get(CalloutService) as unknown as Record<
       string,
       Mock
     >;
     collaborationService = module.get(
       CollaborationService
     ) as unknown as Record<string, Mock>;
-    _spaceLookupService = module.get(SpaceLookupService) as unknown as Record<
+    spaceLookupService = module.get(SpaceLookupService) as unknown as Record<
       string,
       Mock
     >;
@@ -359,6 +362,258 @@ describe('InputCreatorService', () => {
       await expect(
         service.buildCreateCollaborationInputFromCollaboration('collab-1')
       ).rejects.toThrow(RelationshipNotFoundException);
+    });
+
+    it('should throw RelationshipNotFoundException when innovationFlow states are missing', async () => {
+      vi.mocked(collaborationService.getCollaborationOrFail).mockResolvedValue({
+        id: 'collab-1',
+        calloutsSet: { callouts: [] },
+        innovationFlow: { states: undefined },
+      });
+
+      await expect(
+        service.buildCreateCollaborationInputFromCollaboration('collab-1')
+      ).rejects.toThrow(RelationshipNotFoundException);
+    });
+
+    it('should build collaboration input with callouts and innovation flow', async () => {
+      vi.mocked(collaborationService.getCollaborationOrFail).mockResolvedValue({
+        id: 'collab-1',
+        calloutsSet: { id: 'cs-1', callouts: [] },
+        innovationFlow: {
+          id: 'if-1',
+          states: [
+            {
+              id: 's1',
+              displayName: 'Open',
+              description: '',
+              settings: {},
+              sortOrder: 0,
+            },
+          ],
+          settings: {},
+          profile: { displayName: 'Flow', description: '' },
+          currentStateID: 's1',
+        },
+      });
+
+      const result =
+        await service.buildCreateCollaborationInputFromCollaboration(
+          'collab-1'
+        );
+
+      expect(result.calloutsSetData).toBeDefined();
+      expect(result.innovationFlowData).toBeDefined();
+      expect(result.innovationFlowData!.currentStateDisplayName).toBe('Open');
+    });
+  });
+
+  describe('buildCreateCalloutInputFromCallout', () => {
+    it('should throw EntityNotInitializedException when callout is missing framing', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'callout-1',
+        framing: undefined,
+        contributionDefaults: {},
+        settings: {},
+        classification: {},
+      });
+
+      await expect(
+        service.buildCreateCalloutInputFromCallout('callout-1')
+      ).rejects.toThrow(EntityNotInitializedException);
+    });
+
+    it('should throw EntityNotInitializedException when callout framing is missing profile', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'callout-1',
+        framing: { profile: undefined },
+        contributionDefaults: {},
+        settings: {},
+        classification: {},
+      });
+
+      await expect(
+        service.buildCreateCalloutInputFromCallout('callout-1')
+      ).rejects.toThrow(EntityNotInitializedException);
+    });
+
+    it('should throw EntityNotInitializedException when callout classification is missing', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'callout-1',
+        framing: { profile: { tagsets: [] } },
+        contributionDefaults: {},
+        settings: {},
+        classification: undefined,
+      });
+
+      await expect(
+        service.buildCreateCalloutInputFromCallout('callout-1')
+      ).rejects.toThrow(EntityNotInitializedException);
+    });
+
+    it('should build callout input from valid callout', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'callout-1',
+        nameID: 'test-callout',
+        sortOrder: 1,
+        framing: {
+          id: 'framing-1',
+          type: CalloutFramingType.NONE,
+          profile: {
+            displayName: 'Test',
+            description: 'desc',
+            tagsets: [],
+          },
+          whiteboard: undefined,
+          link: undefined,
+          memo: undefined,
+          mediaGallery: undefined,
+        },
+        contributionDefaults: {
+          defaultDisplayName: 'Default',
+          postDescription: 'Post desc',
+          whiteboardContent: '',
+        },
+        settings: { mode: 'standard' },
+        classification: { tagsets: [] },
+      });
+
+      const result =
+        await service.buildCreateCalloutInputFromCallout('callout-1');
+
+      expect(result.nameID).toBe('test-callout');
+      expect(result.sortOrder).toBe(1);
+      expect(result.framing).toBeDefined();
+      expect(result.settings).toEqual({ mode: 'standard' });
+    });
+  });
+
+  describe('buildCreateCalloutInputsFromCallouts', () => {
+    it('should build input for each callout', async () => {
+      const callout = {
+        id: 'callout-1',
+        nameID: 'test',
+        sortOrder: 0,
+        framing: {
+          id: 'f-1',
+          type: CalloutFramingType.NONE,
+          profile: {
+            displayName: 'Test',
+            description: '',
+            tagsets: [],
+          },
+        },
+        contributionDefaults: {
+          defaultDisplayName: '',
+          postDescription: '',
+          whiteboardContent: '',
+        },
+        settings: {},
+        classification: { tagsets: [] },
+      };
+
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+      const result = await service.buildCreateCalloutInputsFromCallouts([
+        { id: 'callout-1' } as any,
+        { id: 'callout-2' } as any,
+      ]);
+
+      expect(result).toHaveLength(2);
+      expect(calloutService.getCalloutOrFail).toHaveBeenCalledTimes(2);
+    });
+  });
+
+  describe('buildCreateCommunityGuidelinesInputFromCommunityGuidelines', () => {
+    it('should build guidelines input from community guidelines', () => {
+      const guidelines = {
+        profile: {
+          displayName: 'Guidelines',
+          description: 'rules',
+        },
+      } as any;
+
+      const result =
+        service.buildCreateCommunityGuidelinesInputFromCommunityGuidelines(
+          guidelines
+        );
+
+      expect(result.profile).toBeDefined();
+      expect(result.profile.displayName).toBe('Guidelines');
+    });
+  });
+
+  describe('buildCreateTagsetInputFromTagset', () => {
+    it('should map a single tagset', () => {
+      const tagset = {
+        name: 'skills',
+        tags: ['ts'],
+        type: 'FREEFORM',
+        tagsetTemplate: { id: 'tpl-1' },
+      } as any;
+
+      const result = service.buildCreateTagsetInputFromTagset(tagset);
+
+      expect(result.name).toBe('skills');
+      expect(result.tags).toEqual(['ts']);
+    });
+  });
+
+  describe('buildCreateTemplateContentSpaceInputFromSpace', () => {
+    it('should throw RelationshipNotFoundException when space is missing collaboration', async () => {
+      vi.mocked(spaceLookupService.getSpaceOrFail).mockResolvedValue({
+        id: 'space-1',
+        collaboration: undefined,
+        about: { profile: {} },
+        subspaces: [],
+      });
+
+      await expect(
+        service.buildCreateTemplateContentSpaceInputFromSpace('space-1')
+      ).rejects.toThrow(RelationshipNotFoundException);
+    });
+
+    it('should throw RelationshipNotFoundException when space is missing about', async () => {
+      vi.mocked(spaceLookupService.getSpaceOrFail).mockResolvedValue({
+        id: 'space-1',
+        collaboration: { id: 'c-1' },
+        about: undefined,
+        subspaces: [],
+      });
+
+      await expect(
+        service.buildCreateTemplateContentSpaceInputFromSpace('space-1')
+      ).rejects.toThrow(RelationshipNotFoundException);
+    });
+  });
+
+  describe('buildCreateProfileInputFromProfile with location and references', () => {
+    it('should map location fields', () => {
+      const profile = {
+        displayName: 'P',
+        description: '',
+        tagline: '',
+        location: {
+          city: 'Amsterdam',
+          country: 'NL',
+          addressLine1: 'Street 1',
+          addressLine2: '',
+          postalCode: '1000',
+          stateOrProvince: 'NH',
+        },
+        references: [
+          { name: 'website', uri: 'https://example.com', description: 'site' },
+        ],
+        tagsets: [],
+        visuals: [],
+      } as any;
+
+      const result = service.buildCreateProfileInputFromProfile(profile);
+
+      expect(result.location).toBeDefined();
+      expect(result.location!.city).toBe('Amsterdam');
+      expect(result.referencesData).toHaveLength(1);
+      expect(result.referencesData![0].name).toBe('website');
     });
   });
 });

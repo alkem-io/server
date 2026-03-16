@@ -27,6 +27,8 @@ describe('TemplatesManagerService', () => {
   let templateDefaultService: Mocked<TemplateDefaultService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static TemplatesManager.create to avoid DataSource requirement
     vi.spyOn(TemplatesManager, 'create').mockImplementation((input: any) => {
       const entity = new TemplatesManager();

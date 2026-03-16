@@ -180,6 +180,7 @@ class SchemaBootstrapStubModule {}
     GraphQLModule.forRoot<ApolloDriverConfig>({
       driver: ApolloDriver,
       autoSchemaFile: true,
+      inheritResolversFromInterfaces: true,
       sortSchema: true,
       playground: false,
       introspection: true,

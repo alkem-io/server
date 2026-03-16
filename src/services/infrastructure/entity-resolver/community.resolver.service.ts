@@ -123,6 +123,34 @@ export class CommunityResolverService {
     return space.levelZeroSpaceID;
   }
 
+  public async getLevelZeroSpaceIdForMediaGallery(
+    mediaGalleryID: string
+  ): Promise<string> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          calloutsSet: {
+            callouts: {
+              framing: {
+                mediaGallery: {
+                  id: mediaGalleryID,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+    if (!space) {
+      throw new EntityNotFoundException(
+        'Unable to find Space for given media gallery',
+        LogContext.COMMUNITY,
+        { mediaGalleryID }
+      );
+    }
+    return space.levelZeroSpaceID;
+  }
+
   private async getAccountForRoleSetOrFail(
     roleSetID: string
   ): Promise<IAccount> {

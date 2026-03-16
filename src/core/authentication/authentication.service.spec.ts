@@ -81,6 +81,8 @@ describe('AuthenticationService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [AuthenticationService, MockCacheManager, MockWinstonProvider],
     })
@@ -121,7 +123,7 @@ describe('AuthenticationService', () => {
   });
 
   beforeEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   it('should be defined', () => {
@@ -391,9 +393,7 @@ describe('AuthenticationService', () => {
       expect(result).toBe(-1);
     });
     it('should parse HMS string correctly', () => {
-      // Mock ConfigUtils.parseHMSString to return 300 seconds (5 minutes)
-      const mockConfigUtils = ConfigUtils as Mocked<typeof ConfigUtils>;
-      mockConfigUtils.parseHMSString = vi.fn().mockReturnValue(300);
+      vi.spyOn(ConfigUtils, 'parseHMSString').mockReturnValue(300);
 
       const result = (service as any).parseEarliestPossibleExtend('5m');
 
@@ -401,8 +401,7 @@ describe('AuthenticationService', () => {
     });
 
     it('should return undefined for invalid HMS string', () => {
-      const mockConfigUtils = ConfigUtils as Mocked<typeof ConfigUtils>;
-      mockConfigUtils.parseHMSString = vi.fn().mockReturnValue(undefined);
+      vi.spyOn(ConfigUtils, 'parseHMSString').mockReturnValue(undefined);
 
       const result = (service as any).parseEarliestPossibleExtend('invalid');
 

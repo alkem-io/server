@@ -77,8 +77,7 @@ export class UrlGeneratorService {
       where: {
         id: id,
       },
-      relations: { actor: true },
-      select: { id: true, actor: { id: true, nameID: true } },
+      select: { id: true, nameID: true },
     });
     if (!vc) {
       throw new EntityNotFoundException(
@@ -282,7 +281,7 @@ export class UrlGeneratorService {
     return result;
   }
 
-  // Actor-based entity tables where both nameID and profileId live on the actor table
+  // CTI child entity tables — nameID and profileId live on the parent actor table
   private static readonly ACTOR_BASED_TABLES = new Set([
     'user',
     'organization',
@@ -1122,6 +1121,13 @@ export class UrlGeneratorService {
       this.FIELD_ID,
       calendarEventID
     );
+  }
+
+  public getCalendarEventIcsRestUrl(calendarEventID: string): string {
+    const { path_api_private_rest } = this.configService.get('hosting', {
+      infer: true,
+    });
+    return `${this.endpoint_cluster}${path_api_private_rest}/calendar/event/${calendarEventID}/ics`;
   }
 
   public async createSpaceAdminCommunityURL(id: string): Promise<string> {

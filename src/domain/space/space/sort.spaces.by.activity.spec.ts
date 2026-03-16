@@ -4,6 +4,7 @@ import { ActivityEventType } from '@common/enums/activity.event.type';
 import { ActorType } from '@common/enums/actor.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IActivity } from '@platform/activity/activity.interface';
 import { LatestActivitiesPerSpace } from '@services/api/me/space.membership.type';
@@ -44,6 +45,7 @@ const spaceSettings = {
     allowMembersToVideoCall: false,
     allowGuestContributions: false,
   },
+  sortMode: SpaceSortMode.ALPHABETICAL,
 };
 
 const createTestSpace = (id: string): ISpace => {
@@ -59,6 +61,7 @@ const createTestSpace = (id: string): ISpace => {
       roles: [],
     },
     sortOrder: 0,
+    pinned: false,
     createdDate: new Date(),
     updatedDate: new Date(),
     profile: {

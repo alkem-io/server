@@ -19,6 +19,8 @@ describe('UserLookupService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     entityManager = {
       findOne: vi.fn(),
       find: vi.fn(),
@@ -240,11 +242,9 @@ describe('UserLookupService', () => {
         expect.objectContaining({
           where: [
             {
-              actor: {
-                credentials: {
-                  type: 'space-member',
-                  resourceID: '',
-                },
+              credentials: {
+                type: 'space-member',
+                resourceID: '',
               },
             },
           ],

@@ -9,6 +9,8 @@ describe('PlatformSettingsService', () => {
   let service: PlatformSettingsService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [PlatformSettingsService, MockWinstonProvider],
     })

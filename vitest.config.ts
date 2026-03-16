@@ -56,11 +56,8 @@ export default defineConfig({
     coverage: {
       provider: 'v8',
       enabled: false, // Enable via CLI: vitest run --coverage
-      reporter: [
-        ['lcov', { subdir: 'lcov' }],
-        ['html-spa', { subdir: 'html-spa' }],
-      ],
-      reportsDirectory: './coverage',
+      reporter: ['lcov', ['html-spa', { subdir: 'html-spa' }]],
+      reportsDirectory: './coverage-ci',
 
       // Measure all TS files in src/ — denylist approach for broad visibility
       include: ['src/**/*.ts'],
@@ -97,9 +94,11 @@ export default defineConfig({
         'src/main.ts',
         'src/app.module.ts',
         'src/app.controller.ts',
-        'src/config/**',
-        'src/apm/**',
-        'src/tools/**',
+        // src/tools is now covered by unit tests (exclude only CLI scripts)
+        'src/tools/schema/diff-schema.ts',
+        'src/tools/schema/sort-sdl.ts',
+        'src/tools/schema/print-schema.ts',
+        'src/tools/schema/validate-artifacts.ts',
       ],
 
       // Coverage thresholds (matching current Jest config)

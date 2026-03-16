@@ -96,5 +96,5 @@ mutators:
       claims: |
         {
           "session": {{ .Extra | toJson }},
-          "alkemio_actor_id": "{{ .Extra.identity.metadata_public.alkemio_actor_id }}"
+          "alkemio_actor_id": "{{ if .Extra.identity }}{{ if .Extra.identity.metadata_public }}{{ .Extra.identity.metadata_public.alkemio_actor_id }}{{ end }}{{ end }}"
         }

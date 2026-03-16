@@ -196,7 +196,8 @@ export class NotificationRecipientsService {
         {
           relations: {
             settings: true,
-            actor: { profile: true, credentials: true },
+            profile: true,
+            credentials: true,
           },
         }
       );

@@ -18,6 +18,8 @@ describe('SpaceLookupService', () => {
   let accountLookupService: AccountLookupService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     entityManager = {
       findOne: vi.fn(),
     };
@@ -98,7 +100,7 @@ describe('SpaceLookupService', () => {
 
       await expect(
         service.getSpaceByNameIdOrFail('nonexistent')
-      ).rejects.toThrow('Unable to find L0 Space with nameID: nonexistent');
+      ).rejects.toThrow('L0 Space not found');
     });
   });
 
@@ -233,7 +235,7 @@ describe('SpaceLookupService', () => {
       vi.spyOn(spaceRepository, 'findOne')
         .mockResolvedValueOnce(mockSpace)
         .mockResolvedValueOnce(mockL0Space);
-      accountLookupService.getHost = vi.fn().mockResolvedValue(mockHost);
+      accountLookupService.getHost.mockResolvedValue(mockHost);
 
       const result = await service.getProvider(spaceAbout as any);
 
@@ -254,7 +256,7 @@ describe('SpaceLookupService', () => {
     it('should skip DB query for L0 space with account already loaded', async () => {
       const space = makeSpace('space-1', 'space-1', { id: 'acc-1' });
       const mockHost = { id: 'user-1' } as IActor;
-      accountLookupService.getHost = vi.fn().mockResolvedValue(mockHost);
+      accountLookupService.getHost.mockResolvedValue(mockHost);
 
       const result = await service.getProviderForSpace(space);
 
@@ -270,7 +272,7 @@ describe('SpaceLookupService', () => {
         dbSpace as unknown as Space
       );
       const mockHost = { id: 'user-1' } as IActor;
-      accountLookupService.getHost = vi.fn().mockResolvedValue(mockHost);
+      accountLookupService.getHost.mockResolvedValue(mockHost);
 
       const result = await service.getProviderForSpace(space);
 
@@ -288,7 +290,7 @@ describe('SpaceLookupService', () => {
         l0Space as unknown as Space
       );
       const mockHost = { id: 'org-1' } as IActor;
-      accountLookupService.getHost = vi.fn().mockResolvedValue(mockHost);
+      accountLookupService.getHost.mockResolvedValue(mockHost);
 
       const result = await service.getProviderForSpace(space);
 
@@ -302,7 +304,7 @@ describe('SpaceLookupService', () => {
     it('should return null and log warning when L0 space not found in DB', async () => {
       const space = makeSpace('space-1', 'space-1');
       vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(null);
-      accountLookupService.getHost = vi.fn();
+      accountLookupService.getHost.mockReset();
 
       const result = await service.getProviderForSpace(space);
 
@@ -316,7 +318,7 @@ describe('SpaceLookupService', () => {
       vi.spyOn(spaceRepository, 'findOne').mockResolvedValue(
         dbSpace as unknown as Space
       );
-      accountLookupService.getHost = vi.fn();
+      accountLookupService.getHost.mockReset();
 
       const result = await service.getProviderForSpace(space);
 
@@ -331,7 +333,7 @@ describe('SpaceLookupService', () => {
         l0Space as unknown as Space
       );
       const expectedHost = { id: 'user-42' } as IActor;
-      accountLookupService.getHost = vi.fn().mockResolvedValue(expectedHost);
+      accountLookupService.getHost.mockResolvedValue(expectedHost);
 
       const result = await service.getProviderForSpace(space);
 

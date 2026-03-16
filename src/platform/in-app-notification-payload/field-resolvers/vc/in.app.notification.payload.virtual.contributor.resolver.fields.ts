@@ -14,7 +14,7 @@ export class InAppNotificationPayloadVirtualContributorFieldsResolver {
   @ResolveField(() => IVirtualContributor, {
     nullable: false,
   })
-  async contributor(
+  async actor(
     @Parent() payload: InAppNotificationPayloadVirtualContributor,
     @Loader(ActorLoaderCreator)
     loader: ILoader<IVirtualContributor>

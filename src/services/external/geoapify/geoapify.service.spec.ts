@@ -11,6 +11,8 @@ describe('GeoapifyService', () => {
   let httpService: HttpService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         GeoapifyService,

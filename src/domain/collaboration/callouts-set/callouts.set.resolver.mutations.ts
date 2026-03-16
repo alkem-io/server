@@ -135,10 +135,7 @@ export class CalloutsSetResolverMutations {
           name: callout.nameID,
           space: levelZeroSpaceID,
         },
-        {
-          id: actorContext.actorID,
-          email: actorContext.actorID,
-        }
+        actorContext
       );
     }
 

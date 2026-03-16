@@ -39,6 +39,8 @@ describe('CalendarService', () => {
   let timelineResolverService: TimelineResolverService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalendarService,
@@ -105,10 +107,8 @@ describe('CalendarService', () => {
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
       vi.spyOn(calendarRepository, 'remove').mockResolvedValue(mockCalendar);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      calendarEventService.deleteCalendarEvent = vi
-        .fn()
-        .mockResolvedValue(undefined);
+      authorizationPolicyService.delete.mockResolvedValue(undefined);
+      calendarEventService.deleteCalendarEvent.mockResolvedValue(undefined);
 
       // Act
       await service.deleteCalendar(calendarId);
@@ -138,7 +138,7 @@ describe('CalendarService', () => {
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
       vi.spyOn(calendarRepository, 'remove').mockResolvedValue(mockCalendar);
-      authorizationPolicyService.delete = vi.fn();
+      authorizationPolicyService.delete.mockReset();
 
       // Act
       await service.deleteCalendar(calendarId);
@@ -158,8 +158,8 @@ describe('CalendarService', () => {
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
       vi.spyOn(calendarRepository, 'remove').mockResolvedValue(mockCalendar);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      calendarEventService.deleteCalendarEvent = vi.fn();
+      authorizationPolicyService.delete.mockResolvedValue(undefined);
+      calendarEventService.deleteCalendarEvent.mockReset();
 
       // Act
       await service.deleteCalendar(calendarId);
@@ -262,19 +262,11 @@ describe('CalendarService', () => {
       } as unknown as ICalendarEvent;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      namingService.getReservedNameIDsInCalendar = vi
-        .fn()
-        .mockResolvedValue([]);
-      namingService.createNameIdAvoidingReservedNameIDs = vi
-        .fn()
-        .mockReturnValue('test-event');
-      storageAggregatorResolverService.getStorageAggregatorForCalendar = vi
-        .fn()
-        .mockResolvedValue(mockStorageAggregator);
-      calendarEventService.createCalendarEvent = vi
-        .fn()
-        .mockResolvedValue(mockEvent);
-      calendarEventService.save = vi.fn().mockResolvedValue(savedEvent);
+      namingService.getReservedNameIDsInCalendar.mockResolvedValue([]);
+      namingService.createNameIdAvoidingReservedNameIDs.mockReturnValue('test-event');
+      storageAggregatorResolverService.getStorageAggregatorForCalendar.mockResolvedValue(mockStorageAggregator);
+      calendarEventService.createCalendarEvent.mockResolvedValue(mockEvent);
+      calendarEventService.save.mockResolvedValue(savedEvent);
 
       // Act
       const _result = await service.createCalendarEvent(input, 'user-1');
@@ -303,17 +295,11 @@ describe('CalendarService', () => {
       } as unknown as ICalendarEvent;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      namingService.getReservedNameIDsInCalendar = vi
-        .fn()
-        .mockResolvedValue(['other-name']);
-      namingService.createNameIdAvoidingReservedNameIDs = vi.fn();
-      storageAggregatorResolverService.getStorageAggregatorForCalendar = vi
-        .fn()
-        .mockResolvedValue(mockStorageAggregator);
-      calendarEventService.createCalendarEvent = vi
-        .fn()
-        .mockResolvedValue(mockEvent);
-      calendarEventService.save = vi.fn().mockResolvedValue(mockEvent);
+      namingService.getReservedNameIDsInCalendar.mockResolvedValue(['other-name']);
+      namingService.createNameIdAvoidingReservedNameIDs.mockReset();
+      storageAggregatorResolverService.getStorageAggregatorForCalendar.mockResolvedValue(mockStorageAggregator);
+      calendarEventService.createCalendarEvent.mockResolvedValue(mockEvent);
+      calendarEventService.save.mockResolvedValue(mockEvent);
 
       // Act
       await service.createCalendarEvent(input, 'user-1');
@@ -335,9 +321,7 @@ describe('CalendarService', () => {
       const mockCalendar = { id: 'calendar-1' } as Calendar;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      namingService.getReservedNameIDsInCalendar = vi
-        .fn()
-        .mockResolvedValue(['taken-name', 'other-name']);
+      namingService.getReservedNameIDsInCalendar.mockResolvedValue(['taken-name', 'other-name']);
 
       // Act & Assert
       await expect(
@@ -364,16 +348,10 @@ describe('CalendarService', () => {
       const mockEvent = { id: 'event-1' } as unknown as ICalendarEvent;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      namingService.getReservedNameIDsInCalendar = vi
-        .fn()
-        .mockResolvedValue([]);
-      storageAggregatorResolverService.getStorageAggregatorForCalendar = vi
-        .fn()
-        .mockResolvedValue(mockStorageAggregator);
-      calendarEventService.createCalendarEvent = vi
-        .fn()
-        .mockResolvedValue(mockEvent);
-      calendarEventService.save = vi.fn().mockResolvedValue(mockEvent);
+      namingService.getReservedNameIDsInCalendar.mockResolvedValue([]);
+      storageAggregatorResolverService.getStorageAggregatorForCalendar.mockResolvedValue(mockStorageAggregator);
+      calendarEventService.createCalendarEvent.mockResolvedValue(mockEvent);
+      calendarEventService.save.mockResolvedValue(mockEvent);
 
       // Act
       await service.createCalendarEvent(input, 'user-1');
@@ -413,9 +391,7 @@ describe('CalendarService', () => {
       } as unknown as Calendar;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      authorizationService.isAccessGranted = vi
-        .fn()
-        .mockImplementation(
+      authorizationService.isAccessGranted.mockImplementation(
           (_actorContext: ActorContext, authorization: AuthorizationPolicy) => {
             return authorization?.id === 'auth-1';
           }
@@ -452,7 +428,7 @@ describe('CalendarService', () => {
       } as unknown as Calendar;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      authorizationService.isAccessGranted = vi.fn().mockReturnValue(false);
+      authorizationService.isAccessGranted.mockReturnValue(false);
 
       const inputCalendar = { id: calendarId } as ICalendar;
 
@@ -504,7 +480,7 @@ describe('CalendarService', () => {
       } as unknown as Calendar;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      authorizationService.isAccessGranted = vi.fn().mockReturnValue(true);
+      authorizationService.isAccessGranted.mockReturnValue(true);
 
       // Mock the subspace events retrieval
       vi.spyOn(
@@ -578,9 +554,7 @@ describe('CalendarService', () => {
       } as unknown as ICalendarEvent;
 
       activityAdapter.calendarEventCreated = vi.fn();
-      timelineResolverService.getSpaceIdForCalendar = vi
-        .fn()
-        .mockResolvedValue('space-1');
+      timelineResolverService.getSpaceIdForCalendar.mockResolvedValue('space-1');
       contributionReporter.calendarEventCreated = vi.fn();
 
       // Act
@@ -603,8 +577,12 @@ describe('CalendarService', () => {
           space: 'space-1',
         },
         {
-          id: 'user-1',
-          email: 'user-1',
+          actorID: 'user-1',
+          authenticationID: undefined,
+          credentials: [],
+          expiry: undefined,
+          guestName: undefined,
+          isAnonymous: false,
         }
       );
     });
@@ -621,9 +599,7 @@ describe('CalendarService', () => {
       } as unknown as ICalendarEvent;
 
       activityAdapter.calendarEventCreated = vi.fn();
-      timelineResolverService.getSpaceIdForCalendar = vi
-        .fn()
-        .mockResolvedValue(null);
+      timelineResolverService.getSpaceIdForCalendar.mockResolvedValue(null);
       contributionReporter.calendarEventCreated = vi.fn();
 
       // Act
