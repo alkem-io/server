@@ -137,11 +137,7 @@ export class PollService {
     return result;
   }
 
-  computePollResults(
-    poll: Poll,
-    currentUserId: string,
-    hasVoted: boolean
-  ): PollOption[] {
+  computePollResults(poll: Poll): PollOption[] {
     const votes = poll.votes ?? [];
     const options = poll.options ?? [];
 
@@ -202,7 +198,7 @@ export class PollService {
       (resultsVisibility === PollResultsVisibility.TOTAL_ONLY && hasVoted);
 
     return options.map(opt => {
-      const enriched = opt as unknown as Omit<
+      const enriched = opt as Omit<
         PollOption,
         'voteCount' | 'votePercentage'
       > & {
@@ -228,8 +224,8 @@ export class PollService {
         // FULL: leave everything as is
       }
 
-      return enriched as unknown as PollOption;
-    }) as PollOption[];
+      return enriched;
+    });
   }
 
   canUserSeeDetailedResults(poll: Poll, userId: string): boolean {

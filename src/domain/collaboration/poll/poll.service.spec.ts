@@ -253,7 +253,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       [optA, optB, optC],
       votes
     );
-    const enriched = service.computePollResults(poll, 'u1', true);
+    const enriched = service.computePollResults(poll);
     expect(enriched.map(o => o.id)).toEqual(['a', 'b', 'c']);
   });
 
@@ -270,7 +270,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       [optA, optB, optC],
       votes
     );
-    const enriched = service.computePollResults(poll, 'u1', true);
+    const enriched = service.computePollResults(poll);
     expect(enriched.map(o => o.id)).toEqual(['a', 'b', 'c']);
   });
 
@@ -282,7 +282,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       [optA, optB],
       [makeVote('u2', ['a'])]
     );
-    const enriched = service.computePollResults(poll, 'u1', false);
+    const enriched = service.computePollResults(poll);
     const filtered = service.applyVisibilityRules(enriched, poll, false);
     for (const opt of filtered) {
       expect((opt as any).voteCount).toBeNull();
@@ -312,7 +312,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       [optA, optB, optC],
       votes
     );
-    const enriched = service.computePollResults(poll, 'non-voter', false);
+    const enriched = service.computePollResults(poll);
     expect(enriched.map(o => o.id)).toEqual(['a', 'b', 'c']);
   });
 
@@ -325,7 +325,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       [optA, optB],
       votes
     );
-    const enriched = service.computePollResults(poll, 'u1', true);
+    const enriched = service.computePollResults(poll);
     const filtered = service.applyVisibilityRules(enriched, poll, true);
     expect(filtered.map(o => o.id)).toEqual(['a', 'b']);
     expect((filtered[0] as any).voteCount).toBe(0);
@@ -340,7 +340,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       [optA, optB],
       [makeVote('u2', ['a'])]
     );
-    const enriched = service.computePollResults(poll, 'u1', false);
+    const enriched = service.computePollResults(poll);
     const filtered = service.applyVisibilityRules(enriched, poll, false);
     for (const opt of filtered) {
       expect((opt as any).voteCount).toBeNull();
@@ -357,7 +357,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       [optA, optB],
       [makeVote('u2', ['b'])]
     );
-    const enriched = service.computePollResults(poll, 'u1', false);
+    const enriched = service.computePollResults(poll);
     expect(enriched[0].id).toBe('a');
     expect((enriched[1] as any).voteCount).toBe(1);
   });
@@ -370,7 +370,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       [optA],
       [makeVote('u1', ['a'])]
     );
-    const enriched = service.computePollResults(poll, 'u1', true);
+    const enriched = service.computePollResults(poll);
     const filtered = service.applyVisibilityRules(enriched, poll, true);
     expect((filtered[0] as any).voteCount).toBeNull();
     expect((filtered[0] as any).voterIds).toBeNull();
@@ -385,7 +385,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       [optA],
       [makeVote('u1', ['a'])]
     );
-    const enriched = service.computePollResults(poll, 'u1', true);
+    const enriched = service.computePollResults(poll);
     const filtered = service.applyVisibilityRules(enriched, poll, true);
     expect((filtered[0] as any).votePercentage).toBeNull();
     expect((filtered[0] as any).voterIds).toBeNull();
@@ -400,7 +400,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       [optA],
       []
     );
-    const enriched = service.computePollResults(poll, 'u1', false);
+    const enriched = service.computePollResults(poll);
     expect((enriched[0] as any).votePercentage).toBeNull();
   });
 
@@ -427,7 +427,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       [optA, optB, optC],
       votes
     );
-    const enriched = service.computePollResults(poll, 'non-voter', false);
+    const enriched = service.computePollResults(poll);
     expect(enriched.map(o => o.id)).toEqual(['a', 'b', 'c']);
   });
 });

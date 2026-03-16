@@ -2,6 +2,7 @@ import { IPollOption } from '@domain/collaboration/poll-option/poll.option.inter
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity/base.alkemio.entity';
 import { User } from '@domain/community/user/user.entity';
 import { Column, Entity, JoinColumn, ManyToOne, Unique } from 'typeorm';
+import { IPoll } from '../poll/poll.interface';
 import { IPollVote } from './poll.vote.interface';
 
 @Entity()
@@ -26,7 +27,7 @@ export class PollVote extends BaseAlkemioEntity implements IPollVote {
     cascade: false,
     onDelete: 'CASCADE',
   })
-  poll?: unknown;
+  poll?: IPoll;
 
   // Derived — resolved by field resolver, not persisted
   selectedOptions?: IPollOption[];

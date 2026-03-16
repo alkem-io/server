@@ -84,11 +84,7 @@ export class PollFieldsResolver {
       : null;
     const hasVoted = vote !== null;
 
-    const enrichedOptions = this.pollService.computePollResults(
-      fullPoll,
-      userId,
-      hasVoted
-    );
+    const enrichedOptions = this.pollService.computePollResults(fullPoll);
 
     return this.pollService.applyVisibilityRules(
       enrichedOptions,
