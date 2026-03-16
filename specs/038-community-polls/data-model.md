@@ -362,7 +362,7 @@ CAST      → DELETED via option removal — any option the voter selected was r
 ### IPollSettings (GraphQL ObjectType)
 
 ```typescript
-// src/domain/collaboration/poll/poll.settings.ts
+// src/domain/collaboration/poll/poll.settings.interface.ts
 @ObjectType('PollSettings')
 export abstract class IPollSettings {
   @Field(() => Int, { nullable: false, description: 'Minimum number of options a voter must select (≥ 1).' })
