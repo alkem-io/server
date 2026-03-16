@@ -62,7 +62,6 @@ export abstract class IPoll extends IAuthorizable {
 
   // Internal — not exposed directly
   votes?: IPollVote[];
-  framing?: unknown;
 
   // Used internally for visibility gate computation
   resultsVisibility?: PollResultsVisibility;

@@ -23,7 +23,8 @@ export class PollOption extends BaseAlkemioEntity implements IPollOption {
   poll?: IPoll;
 
   // Derived — computed by field resolvers, not persisted
-  voteCount?: number;
-  votePercentage?: number;
+  voteCount?: number | null;
+  votePercentage?: number | null;
+  voterIds?: string[] | null;
   voters?: IUser[];
 }

@@ -28,14 +28,14 @@ export abstract class IPollOption {
     description:
       'Number of votes this option has received. Null when results are hidden or resultsDetail = PERCENTAGE.',
   })
-  voteCount?: number;
+  voteCount?: number | null;
 
   @Field(() => Float, {
     nullable: true,
     description:
       'Percentage of total votes this option has received (0–100). Null when results are hidden or resultsDetail = COUNT. Null when totalVotes = 0.',
   })
-  votePercentage?: number;
+  votePercentage?: number | null;
 
   @Field(() => [IUser], {
     nullable: true,

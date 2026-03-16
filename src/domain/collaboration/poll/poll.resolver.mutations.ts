@@ -302,12 +302,14 @@ export class PollMutationsResolver {
         id => !notifiedAlready.has(id)
       );
 
-      for (const priorVoterId of priorVotersToNotify) {
-        await this.notificationSpaceAdapter.spaceCollaborationPollVoteCastOnPollIVotedOn(
-          { ...baseDto, userID: priorVoterId },
-          spaceID
-        );
-      }
+      await Promise.allSettled(
+        priorVotersToNotify.map(priorVoterId =>
+          this.notificationSpaceAdapter.spaceCollaborationPollVoteCastOnPollIVotedOn(
+            { ...baseDto, userID: priorVoterId },
+            spaceID
+          )
+        )
+      );
     } catch (error) {
       this.logger.error?.(
         `Failed to dispatch vote notifications for poll: ${(error as Error)?.message}`,
@@ -339,12 +341,14 @@ export class PollMutationsResolver {
       const spaceID = space.id;
       const baseDto = { triggeredBy: actorId, calloutID, pollID: pollId };
 
-      for (const voterId of voterIds) {
-        await this.notificationSpaceAdapter.spaceCollaborationPollModifiedOnPollIVotedOn(
-          { ...baseDto, userID: voterId },
-          spaceID
-        );
-      }
+      await Promise.allSettled(
+        voterIds.map(voterId =>
+          this.notificationSpaceAdapter.spaceCollaborationPollModifiedOnPollIVotedOn(
+            { ...baseDto, userID: voterId },
+            spaceID
+          )
+        )
+      );
     } catch (error) {
       this.logger.error?.(
         `Failed to dispatch modified notifications for poll: ${(error as Error)?.message}`,
@@ -381,19 +385,20 @@ export class PollMutationsResolver {
       const spaceID = space.id;
       const baseDto = { triggeredBy: actorId, calloutID, pollID: pollId };
 
-      for (const voterId of deletedVoterIds) {
-        await this.notificationSpaceAdapter.spaceCollaborationPollVoteAffectedByOptionChange(
-          { ...baseDto, userID: voterId },
-          spaceID
-        );
-      }
-
-      for (const voterId of remainingVoterIds) {
-        await this.notificationSpaceAdapter.spaceCollaborationPollModifiedOnPollIVotedOn(
-          { ...baseDto, userID: voterId },
-          spaceID
-        );
-      }
+      await Promise.allSettled([
+        ...deletedVoterIds.map(voterId =>
+          this.notificationSpaceAdapter.spaceCollaborationPollVoteAffectedByOptionChange(
+            { ...baseDto, userID: voterId },
+            spaceID
+          )
+        ),
+        ...remainingVoterIds.map(voterId =>
+          this.notificationSpaceAdapter.spaceCollaborationPollModifiedOnPollIVotedOn(
+            { ...baseDto, userID: voterId },
+            spaceID
+          )
+        ),
+      ]);
     } catch (error) {
       this.logger.error?.(
         `Failed to dispatch option change notifications for poll: ${(error as Error)?.message}`,

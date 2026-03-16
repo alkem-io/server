@@ -157,7 +157,7 @@ export class PollService {
 
     const totalVotes = votes.length;
 
-    // Enrich options
+    // Enrich options with computed vote data
     const enriched = options.map(opt => {
       const votesForOption = votesByOption.get(opt.id) ?? [];
       const voteCount = votesForOption.length;
@@ -168,11 +168,7 @@ export class PollService {
       const enrichedOpt = Object.assign(
         Object.create(Object.getPrototypeOf(opt)),
         opt
-      ) as unknown as Omit<PollOption, 'voteCount' | 'votePercentage'> & {
-        voteCount: number | null;
-        votePercentage: number | null;
-        voterIds: string[];
-      };
+      ) as PollOption;
       enrichedOpt.voteCount = voteCount;
       enrichedOpt.votePercentage = votePercentage;
       enrichedOpt.voterIds = voterIds;
@@ -182,7 +178,7 @@ export class PollService {
     // FR-015: options are always returned in sortOrder ASC.
     enriched.sort((a, b) => a.sortOrder - b.sortOrder);
 
-    return enriched as unknown as PollOption[];
+    return enriched;
   }
 
   applyVisibilityRules(
@@ -198,34 +194,25 @@ export class PollService {
       (resultsVisibility === PollResultsVisibility.TOTAL_ONLY && hasVoted);
 
     return options.map(opt => {
-      const enriched = opt as unknown as Omit<
-        PollOption,
-        'voteCount' | 'votePercentage'
-      > & {
-        voteCount: number | null;
-        votePercentage: number | null;
-        voterIds: string[] | null;
-      };
-
       if (!canSeeResults) {
         // HIDDEN+not-voted or TOTAL_ONLY+not-voted: null all per-option detail
-        enriched.voteCount = null;
-        enriched.votePercentage = null;
-        enriched.voterIds = null;
+        opt.voteCount = null;
+        opt.votePercentage = null;
+        opt.voterIds = null;
       } else {
         // Visibility gate passed — apply detail filter
         if (resultsDetail === PollResultsDetail.PERCENTAGE) {
-          enriched.voteCount = null;
-          enriched.voterIds = null;
+          opt.voteCount = null;
+          opt.voterIds = null;
         } else if (resultsDetail === PollResultsDetail.COUNT) {
-          enriched.votePercentage = null;
-          enriched.voterIds = null;
+          opt.votePercentage = null;
+          opt.voterIds = null;
         }
         // FULL: leave everything as is
       }
 
-      return enriched as unknown as PollOption;
-    }) as PollOption[];
+      return opt;
+    });
   }
 
   canUserSeeDetailedResults(poll: Poll, userId: string): boolean {
@@ -377,22 +364,27 @@ export class PollService {
       }
     }
 
-    // Two-pass update to avoid UNIQUE (pollId, sortOrder) constraint violations
-    // Pass 1: assign temp negative sortOrders
-    for (let i = 0; i < options.length; i++) {
-      options[i].sortOrder = -(i + 1);
-      await this.pollOptionRepository.save(options[i]);
-    }
+    // Two-pass update inside a transaction to avoid UNIQUE (pollId, sortOrder)
+    // constraint violations and ensure atomicity.
+    await this.pollOptionRepository.manager.transaction(async txManager => {
+      const txRepo = txManager.getRepository(PollOption);
 
-    // Pass 2: assign final sortOrders per orderedOptionIds
-    const optionsById = new Map(options.map(o => [o.id, o]));
-    for (let i = 0; i < orderedOptionIds.length; i++) {
-      const opt = optionsById.get(orderedOptionIds[i]);
-      if (opt) {
-        opt.sortOrder = i + 1;
-        await this.pollOptionRepository.save(opt);
+      // Pass 1: assign temp negative sortOrders (batch save)
+      for (let i = 0; i < options.length; i++) {
+        options[i].sortOrder = -(i + 1);
       }
-    }
+      await txRepo.save(options);
+
+      // Pass 2: assign final sortOrders per orderedOptionIds (batch save)
+      const optionsById = new Map(options.map(o => [o.id, o]));
+      for (let i = 0; i < orderedOptionIds.length; i++) {
+        const opt = optionsById.get(orderedOptionIds[i]);
+        if (opt) {
+          opt.sortOrder = i + 1;
+        }
+      }
+      await txRepo.save(options);
+    });
 
     return this.getPollOrFail(pollId);
   }

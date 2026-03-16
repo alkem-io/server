@@ -85,7 +85,7 @@ export class CalloutService {
 
     const callout: ICallout = Callout.create(
       calloutData as DeepPartial<Callout>
-    ) as unknown as Callout;
+    );
     callout.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT
     );

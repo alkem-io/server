@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IPoll } from '@domain/collaboration/poll/poll.interface';
 import { PollAuthorizationService } from '@domain/collaboration/poll/poll.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -43,7 +44,7 @@ export class CalloutFramingAuthorizationService {
               storageBucket: true,
             },
             poll: true,
-          } as never,
+          } as never, // TypeORM circular-ref limitation: Poll ↔ CalloutFraming
           select: {
             id: true,
             authorization:
@@ -64,7 +65,7 @@ export class CalloutFramingAuthorizationService {
             poll: {
               id: true,
             },
-          } as never,
+          } as never, // TypeORM circular-ref limitation: Poll ↔ CalloutFraming
         }
       );
 
@@ -119,13 +120,10 @@ export class CalloutFramingAuthorizationService {
       updatedAuthorizations.push(...mediaGalleryAuthorizations);
     }
 
-    const framingWithPoll = calloutFraming as unknown as {
-      poll?: { id: string; authorization?: unknown };
-    };
-    if (framingWithPoll.poll) {
+    if (calloutFraming.poll) {
       const pollAuthorizations =
         await this.pollAuthorizationService.applyAuthorizationPolicy(
-          framingWithPoll.poll as never,
+          calloutFraming.poll,
           calloutFraming.authorization
         );
       updatedAuthorizations.push(...pollAuthorizations);

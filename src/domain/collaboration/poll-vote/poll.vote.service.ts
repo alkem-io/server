@@ -45,8 +45,12 @@ export class PollVoteService {
     // Validate minResponses
     if (selectedOptionIds.length < poll.settings.minResponses) {
       throw new ValidationException(
-        `Must select at least ${poll.settings.minResponses} option(s)`,
-        LogContext.COLLABORATION
+        'Selection count is below the minimum required',
+        LogContext.COLLABORATION,
+        {
+          minResponses: poll.settings.minResponses,
+          provided: selectedOptionIds.length,
+        }
       );
     }
 

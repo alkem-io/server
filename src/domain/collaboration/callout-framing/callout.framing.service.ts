@@ -68,7 +68,7 @@ export class CalloutFramingService {
   ): Promise<ICalloutFraming> {
     const calloutFraming: ICalloutFraming = CalloutFraming.create(
       calloutFramingData as DeepPartial<CalloutFraming>
-    ) as unknown as CalloutFraming;
+    );
 
     calloutFraming.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT_FRAMING
@@ -505,7 +505,7 @@ export class CalloutFramingService {
     }
 
     if (calloutFraming.poll) {
-      await this.pollService.deletePoll((calloutFraming.poll as IPoll).id);
+      await this.pollService.deletePoll(calloutFraming.poll.id);
     }
 
     if (calloutFraming.authorization) {

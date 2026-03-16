@@ -248,7 +248,7 @@ Verify:
 
 ```graphql
 mutation ReorderOptions($pollID: UUID!, $optionIDs: [UUID!]!) {
-  reorderPollOptions(reorderData: {
+  reorderPollOptions(optionData: {
     pollID: $pollID
     optionIDs: $optionIDs
   }) {

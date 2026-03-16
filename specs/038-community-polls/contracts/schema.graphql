@@ -403,7 +403,7 @@ extend type Mutation {
   Reordering does not affect vote counts or results ranking.
   Returns the updated Poll.
   """
-  reorderPollOptions(reorderData: ReorderPollOptionsInput!): Poll!
+  reorderPollOptions(optionData: ReorderPollOptionsInput!): Poll!
 
   """
   Cast or update a vote on a Poll.

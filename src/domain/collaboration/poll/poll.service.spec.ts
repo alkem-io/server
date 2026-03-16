@@ -442,12 +442,24 @@ describe('PollService — option management (T054)', () => {
     save: vi.fn(),
     createQueryBuilder: vi.fn(),
   };
+  const mockTxSave = vi
+    .fn()
+    .mockImplementation((entity: unknown) => Promise.resolve(entity));
   const mockPollOptionRepository = {
     findOne: vi.fn(),
     save: vi
       .fn()
       .mockImplementation((entity: unknown) => Promise.resolve(entity)),
     delete: vi.fn().mockResolvedValue(undefined),
+    manager: {
+      transaction: vi
+        .fn()
+        .mockImplementation(async (cb: (mgr: unknown) => Promise<void>) => {
+          await cb({
+            getRepository: () => ({ save: mockTxSave }),
+          });
+        }),
+    },
   };
 
   beforeEach(async () => {
@@ -559,7 +571,7 @@ describe('PollService — option management (T054)', () => {
     );
   });
 
-  it('(d) reorderOptions performs two-pass update (6 saves for 3 options)', async () => {
+  it('(d) reorderOptions performs two-pass batch update inside a transaction', async () => {
     const [optA, optB, optC] = [
       makeOpt('a', 1),
       makeOpt('b', 2),
@@ -577,8 +589,11 @@ describe('PollService — option management (T054)', () => {
 
     await service.reorderOptions('poll-1', ['c', 'a', 'b']);
 
-    // Pass 1 (3 saves with negative) + Pass 2 (3 saves with final) = 6 total
-    expect(mockPollOptionRepository.save).toHaveBeenCalledTimes(6);
+    // Wrapped in a transaction with 2 batch saves (one per pass)
+    expect(mockPollOptionRepository.manager.transaction).toHaveBeenCalledTimes(
+      1
+    );
+    expect(mockTxSave).toHaveBeenCalledTimes(2);
   });
 
   it('(e) updateOption deletes all votes containing the target option', async () => {

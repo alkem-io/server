@@ -6,8 +6,6 @@ import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { PollOption } from './poll.option.entity';
 import { IPollOption } from './poll.option.interface';
 
-type EnrichedPollOption = PollOption & { voterIds?: string[] | null };
-
 @Resolver(() => IPollOption)
 export class PollOptionFieldsResolver {
   @ResolveField('voters', () => [IUser], {
@@ -16,7 +14,7 @@ export class PollOptionFieldsResolver {
       'List of space members who voted for this option. Null when results are hidden or resultsDetail is not FULL.',
   })
   async voters(
-    @Parent() option: EnrichedPollOption,
+    @Parent() option: PollOption,
     @Loader(UserLoaderCreator) loader: ILoader<IUser>
   ): Promise<IUser[] | null> {
     const voterIds = option.voterIds;
