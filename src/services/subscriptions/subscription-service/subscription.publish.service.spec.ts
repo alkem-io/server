@@ -6,6 +6,8 @@ import {
   SUBSCRIPTION_CONVERSATION_EVENT,
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
+  SUBSCRIPTION_POLL_OPTIONS_CHANGED,
+  SUBSCRIPTION_POLL_VOTE_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_UPDATED,
 } from '@src/common/constants';
@@ -23,6 +25,8 @@ describe('SubscriptionPublishService', () => {
   let inAppNotifPubSub: { publish: Mock };
   let inAppCounterPubSub: { publish: Mock };
   let conversationPubSub: { publish: Mock };
+  let pollVoteUpdatedPubSub: { publish: Mock };
+  let pollOptionsChangedPubSub: { publish: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -33,6 +37,10 @@ describe('SubscriptionPublishService', () => {
     inAppNotifPubSub = { publish: vi.fn().mockResolvedValue(undefined) };
     inAppCounterPubSub = { publish: vi.fn().mockResolvedValue(undefined) };
     conversationPubSub = { publish: vi.fn().mockResolvedValue(undefined) };
+    pollVoteUpdatedPubSub = { publish: vi.fn().mockResolvedValue(undefined) };
+    pollOptionsChangedPubSub = {
+      publish: vi.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -60,6 +68,14 @@ describe('SubscriptionPublishService', () => {
         {
           provide: SUBSCRIPTION_CONVERSATION_EVENT,
           useValue: conversationPubSub,
+        },
+        {
+          provide: SUBSCRIPTION_POLL_VOTE_UPDATED,
+          useValue: pollVoteUpdatedPubSub,
+        },
+        {
+          provide: SUBSCRIPTION_POLL_OPTIONS_CHANGED,
+          useValue: pollOptionsChangedPubSub,
         },
         MockCacheManager,
         MockWinstonProvider,
@@ -225,6 +241,38 @@ describe('SubscriptionPublishService', () => {
 
       expect(conversationPubSub.publish).toHaveBeenCalledWith(
         SubscriptionType.CONVERSATION_EVENTS,
+        payload
+      );
+    });
+  });
+
+  describe('publishPollVoteUpdated', () => {
+    it('should publish poll vote updated event payload', async () => {
+      const payload = {
+        eventID: 'poll-vote-updated-1',
+        pollID: 'poll-1',
+      } as any;
+
+      await service.publishPollVoteUpdated(payload);
+
+      expect(pollVoteUpdatedPubSub.publish).toHaveBeenCalledWith(
+        SubscriptionType.POLL_VOTE_UPDATED,
+        payload
+      );
+    });
+  });
+
+  describe('publishPollOptionsChanged', () => {
+    it('should publish poll options changed event payload', async () => {
+      const payload = {
+        eventID: 'poll-options-changed-1',
+        pollID: 'poll-1',
+      } as any;
+
+      await service.publishPollOptionsChanged(payload);
+
+      expect(pollOptionsChangedPubSub.publish).toHaveBeenCalledWith(
+        SubscriptionType.POLL_OPTIONS_CHANGED,
         payload
       );
     });

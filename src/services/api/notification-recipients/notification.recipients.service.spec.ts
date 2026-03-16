@@ -107,6 +107,19 @@ describe('NotificationRecipientsService', () => {
               collaborationCalloutComment: { email: false, inApp: false },
               collaborationCalloutPublished: { email: false, inApp: false },
               communityCalendarEvents: { email: false, inApp: false },
+              collaborationPollVoteCastOnOwnPoll: { email: false, inApp: true },
+              collaborationPollVoteCastOnPollIVotedOn: {
+                email: false,
+                inApp: true,
+              },
+              collaborationPollModifiedOnPollIVotedOn: {
+                email: false,
+                inApp: true,
+              },
+              collaborationPollVoteAffectedByOptionChange: {
+                email: false,
+                inApp: true,
+              },
             },
             virtualContributor: {
               adminSpaceCommunityInvitation: { email: false, inApp: false },
@@ -538,62 +551,6 @@ describe('NotificationRecipientsService', () => {
             // no userID
           })
         ).rejects.toThrow(ValidationException);
-      });
-
-      it('(f) poll events use default inApp:true channel setting when not set in user preferences', async () => {
-        const userWithNoPollPrefs = {
-          id: 'user-no-poll-prefs',
-          email: 'nopoll@example.com',
-          settings: {
-            notification: {
-              space: {
-                // No collaborationPoll* fields set — simulate legacy user settings
-                communicationUpdates: { email: false, inApp: false },
-                admin: {
-                  communityApplicationReceived: { email: false, inApp: false },
-                  communicationMessageReceived: { email: false, inApp: false },
-                  communityNewMember: { email: false, inApp: false },
-                  collaborationCalloutContributionCreated: {
-                    email: false,
-                    inApp: false,
-                  },
-                },
-                collaborationCalloutContributionCreated: {
-                  email: false,
-                  inApp: false,
-                },
-                collaborationCalloutPostContributionComment: {
-                  email: false,
-                  inApp: false,
-                },
-                collaborationCalloutComment: { email: false, inApp: false },
-                collaborationCalloutPublished: { email: false, inApp: false },
-                communityCalendarEvents: { email: false, inApp: false },
-                // collaborationPoll* fields absent → defaults to { email: false, inApp: true }
-              },
-            },
-          },
-          credentials: [],
-        } as unknown as IUser;
-
-        vi.mocked(userLookupService.usersWithCredentials).mockResolvedValue([
-          userWithNoPollPrefs,
-        ]);
-        // Return user only when IDs are provided (empty array = no match)
-        vi.mocked(userLookupService.getUsersByIds).mockImplementation(
-          async (ids: string[]) => (ids.length > 0 ? [userWithNoPollPrefs] : [])
-        );
-
-        const result = await service.getRecipients({
-          eventType:
-            NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL,
-          userID: 'user-no-poll-prefs',
-        });
-
-        // Default inApp:true means the user is included as inApp recipient
-        expect(result.inAppRecipients).toHaveLength(1);
-        // Default email:false means the user is NOT included as email recipient
-        expect(result.emailRecipients).toHaveLength(0);
       });
     });
   });

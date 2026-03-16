@@ -87,6 +87,11 @@ describe('UserSettingsService', () => {
           collaborationCalloutComment: defaultNotificationSetting(),
           collaborationCalloutPublished: defaultNotificationSetting(),
           communityCalendarEvents: defaultNotificationSetting(),
+          collaborationPollVoteCastOnOwnPoll: defaultNotificationSetting(),
+          collaborationPollModifiedOnPollIVotedOn: defaultNotificationSetting(),
+          collaborationPollVoteAffectedByOptionChange:
+            defaultNotificationSetting(),
+          collaborationPollVoteCastOnPollIVotedOn: defaultNotificationSetting(),
         },
         virtualContributor: {
           adminSpaceCommunityInvitation: defaultNotificationSetting(),
