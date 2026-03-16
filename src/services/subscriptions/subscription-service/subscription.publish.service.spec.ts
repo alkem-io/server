@@ -1,5 +1,10 @@
+import { PollEventType } from '@common/enums/poll.event.type';
+import { PollResultsDetail } from '@common/enums/poll.results.detail';
+import { PollResultsVisibility } from '@common/enums/poll.results.visibility';
+import { PollStatus } from '@common/enums/poll.status';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { MutationType } from '@common/enums/subscriptions';
+import { PollSubscriptionPayload } from '@domain/collaboration/poll/dto/poll.subscription.payload';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   SUBSCRIPTION_ACTIVITY_CREATED,
@@ -248,10 +253,23 @@ describe('SubscriptionPublishService', () => {
 
   describe('publishPollVoteUpdated', () => {
     it('should publish poll vote updated event payload', async () => {
-      const payload = {
+      const payload: PollSubscriptionPayload = {
         eventID: 'poll-vote-updated-1',
-        pollID: 'poll-1',
-      } as any;
+        poll: {
+          id: 'poll-1',
+          title: 'Favorite color?',
+          status: PollStatus.OPEN,
+          settings: {
+            maxResponses: 1,
+            minResponses: 1,
+            resultsDetail: PollResultsDetail.FULL,
+            resultsVisibility: PollResultsVisibility.VISIBLE,
+          },
+          createdDate: new Date(),
+          updatedDate: new Date(),
+        },
+        pollEventType: PollEventType.POLL_VOTE_UPDATED,
+      };
 
       await service.publishPollVoteUpdated(payload);
 

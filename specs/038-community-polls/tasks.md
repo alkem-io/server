@@ -12,7 +12,7 @@
 ## Format: `[ID] [P?] [Story] Description`
 
 - **[P]**: Parallelizable — different files, no incomplete task dependencies
-- **[Story]**: User story this task belongs to (US1…US6 from spec.md)
+- **[Story]**: User story this task belongs to (US1…US7 from spec.md)
 - File paths follow `src/domain/collaboration/` conventions per plan.md
 
 ---

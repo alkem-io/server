@@ -1,4 +1,5 @@
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { UUID } from '@domain/common/scalars';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
 import { InAppNotificationPayloadSpaceBase } from './notification.in.app.payload.space.base';
@@ -10,7 +11,7 @@ export abstract class InAppNotificationPayloadSpaceCollaborationPoll extends InA
   declare type: NotificationEventPayload.SPACE_COLLABORATION_POLL;
   calloutID!: string;
 
-  @Field(() => String, {
+  @Field(() => UUID, {
     nullable: false,
     description: 'The ID of the Poll this notification relates to.',
   })

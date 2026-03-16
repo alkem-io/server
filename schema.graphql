@@ -2622,7 +2622,7 @@ type InAppNotificationPayloadSpaceCollaborationPoll implements InAppNotification
   """The Callout that contains the poll."""
   callout: Callout!
   """The ID of the Poll this notification relates to."""
-  pollID: String!
+  pollID: UUID!
   """Where the callout is located."""
   space: Space!
   """The payload type."""
