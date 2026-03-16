@@ -137,8 +137,8 @@ describe('RoomResolverFields', () => {
 
       expect(result).toBe(3);
       expect(roomDataLoader.loadUnreadCount).toHaveBeenCalledWith(
-        'room-1',
-        'user-1'
+        mockRoom,
+        actorContext
       );
     });
   });
@@ -149,16 +149,20 @@ describe('RoomResolverFields', () => {
       const mockMessage = { id: 'msg-1' } as IMessage;
       roomDataLoader.loadLastMessage.mockResolvedValue(mockMessage);
 
-      const result = await resolver.lastMessage(mockRoom);
+      const result = await resolver.lastMessage(mockRoom, actorContext);
 
       expect(result).toBe(mockMessage);
+      expect(roomDataLoader.loadLastMessage).toHaveBeenCalledWith(
+        mockRoom,
+        actorContext
+      );
     });
 
     it('should return null when no last message', async () => {
       const mockRoom = { id: 'room-1' } as any;
       roomDataLoader.loadLastMessage.mockResolvedValue(null);
 
-      const result = await resolver.lastMessage(mockRoom);
+      const result = await resolver.lastMessage(mockRoom, actorContext);
 
       expect(result).toBeNull();
     });
