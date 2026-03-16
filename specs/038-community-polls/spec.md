@@ -46,7 +46,7 @@ A community member wants to express their preference or availability by voting o
 
 A poll creator or community member wants to see how the community has voted, including which members voted for each option, while keeping options in the configured order.
 
-**Why this priority**: Transparency and ranked results are what make a poll actionable. Without visible results, the poll data cannot be used to inform decisions.
+**Why this priority**: Transparency and results are what make a poll actionable. Without visible results, the poll data cannot be used to inform decisions.
 
 **Independent Test**: After votes are cast, any space member can view the full results including vote counts and the list of voters per option, with options returned in `sortOrder`.
 

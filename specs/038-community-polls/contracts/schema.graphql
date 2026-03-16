@@ -27,7 +27,7 @@ enum PollStatus {
 enum PollResultsVisibility {
   """Results hidden until the viewer has cast their own vote."""
   HIDDEN
-  """Only the total vote count is shown before voting; full detail after voting."""
+  """Only the total vote count is shown before voting; details (depending on PollResultsDetail) available after voting."""
   TOTAL_ONLY
   """Full results always visible regardless of whether the viewer has voted (default)."""
   VISIBLE

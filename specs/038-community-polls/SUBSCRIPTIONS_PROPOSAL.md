@@ -1,7 +1,7 @@
 # Subscription Feature Proposal for Community Polls (Feature 038)
 
-**Status**: READY FOR REVIEW  
-**Date**: 2026-03-11  
+**Status**: READY FOR REVIEW
+**Date**: 2026-03-11
 **Proposed by**: AI Assistant
 
 ## Executive Summary
@@ -52,25 +52,30 @@ From analyzing the callout subscriptions and virtual contributor updates:
 ```
 
 **Key Pattern Files**:
-- `src/common/enums/subscription.type.ts` — SubscriptionType enum (add 3 new types)
+- `src/common/enums/subscription.type.ts` — SubscriptionType enum (add 2 new types)
 - `src/services/subscriptions/subscription-service/` — Read service (add methods)
 - `src/domain/collaboration/callout/callout.resolver.subscriptions.ts` — Example resolver
-- `src/common/constants/providers.ts` — PubSub engine providers (add 3 new)
+- `src/common/constants/providers.ts` — PubSub engine providers (add 2 new)
 
 ---
 
 ## Proposed Subscription Events
 
 ### 1. **Poll Vote Updated** (`pollVoteUpdated`)
-**Fires when**: A user casts or updates their vote on a poll  
-**Subscribers**: All users viewing that poll  
-**Payload**: Updated poll with new vote counts and voter lists (respecting visibility settings)  
-**Authorization**: READ on poll (same as viewing it)  
+**Fires when**: A user casts or updates their vote on a poll
+**Subscribers**: All users viewing that poll
+**Payload**: `PollVoteUpdatedSubscriptionResult` containing `pollEventType` + updated `poll` (respecting visibility settings)
+**Authorization**: READ on poll (same as viewing it)
 
 **GraphQL Signature**:
 ```graphql
 type Subscription {
-  pollVoteUpdated(pollID: UUID!): Poll!
+  pollVoteUpdated(pollID: UUID!): PollVoteUpdatedSubscriptionResult!
+}
+
+type PollVoteUpdatedSubscriptionResult {
+  pollEventType: PollEventType!
+  poll: Poll!
 }
 ```
 
@@ -85,14 +90,19 @@ type Subscription {
 - Option removed
 - Options reordered
 
-**Subscribers**: All users viewing that poll  
-**Payload**: Updated poll with new option structure  
-**Authorization**: READ on poll  
+**Subscribers**: All users viewing that poll
+**Payload**: `PollOptionsChangedSubscriptionResult` containing `pollEventType` + updated `poll`
+**Authorization**: READ on poll
 
 **GraphQL Signature**:
 ```graphql
 type Subscription {
-  pollOptionsChanged(pollID: UUID!): Poll!
+  pollOptionsChanged(pollID: UUID!): PollOptionsChangedSubscriptionResult!
+}
+
+type PollOptionsChangedSubscriptionResult {
+  pollEventType: PollEventType!
+  poll: Poll!
 }
 ```
 

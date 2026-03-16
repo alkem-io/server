@@ -587,6 +587,12 @@ enum PlatformFeatureFlagName {
   WHITEBOARDS
 }
 
+"""The type of event that occurred on a poll."""
+enum PollEventType {
+  POLL_OPTIONS_CHANGED
+  POLL_VOTE_UPDATED
+}
+
 """Controls the level of detail shown in poll results."""
 enum PollResultsDetail {
   """Vote count per option; no voter identities."""
@@ -602,7 +608,7 @@ enum PollResultsVisibility {
   """Results hidden until the viewer has cast their own vote."""
   HIDDEN
   """
-  Only the total vote count is shown before voting; full detail after voting.
+  Only the total vote count is shown before voting; details (depending on PollResultsDetail) available after voting.
   """
   TOTAL_ONLY
   """
@@ -2615,6 +2621,8 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
 type InAppNotificationPayloadSpaceCollaborationPoll implements InAppNotificationPayload {
   """The Callout that contains the poll."""
   callout: Callout!
+  """The ID of the Poll this notification relates to."""
+  pollID: String!
   """Where the callout is located."""
   space: Space!
   """The payload type."""
@@ -4386,7 +4394,7 @@ type Poll {
   """
   myVote: PollVote
   """
-  The selectable options for this poll, ordered by vote count (most votes first), with ties broken by sortOrder ascending.
+  The selectable options for this poll, always ordered by sortOrder ascending.
   """
   options: [PollOption!]!
   """Configuration settings for this poll (immutable after creation)."""
@@ -4426,6 +4434,15 @@ type PollOption {
   List of space members who voted for this option. Null when results are hidden or resultsDetail is not FULL.
   """
   voters: [User!]
+}
+
+type PollOptionsChangedSubscriptionResult {
+  """
+  The updated Poll. Fields are filtered per subscriber's visibility context.
+  """
+  poll: Poll!
+  """The type of poll event."""
+  pollEventType: PollEventType!
 }
 
 type PollSettings {
@@ -4469,6 +4486,15 @@ type PollVote {
   selectedOptions: [PollOption!]!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type PollVoteUpdatedSubscriptionResult {
+  """
+  The updated Poll. Fields are filtered per subscriber's visibility context.
+  """
+  poll: Poll!
+  """The type of poll event."""
+  pollEventType: PollEventType!
 }
 
 type Post {
@@ -5629,6 +5655,20 @@ type Subscription {
   Counter of unread in-app notifications for the currently authenticated user.
   """
   notificationsUnreadCount: Int!
+  """
+  Subscribe to option changes on a specific Poll. Fires when options are added, removed, updated, or reordered. Always delivered regardless of resultsVisibility.
+  """
+  pollOptionsChanged(
+    """The ID of the Poll to subscribe to."""
+    pollID: UUID!
+  ): PollOptionsChangedSubscriptionResult!
+  """
+  Subscribe to vote updates on a specific Poll. Fires when votes are cast or updated. When resultsVisibility = HIDDEN and the subscriber has not voted, events are suppressed.
+  """
+  pollVoteUpdated(
+    """The ID of the Poll to subscribe to."""
+    pollID: UUID!
+  ): PollVoteUpdatedSubscriptionResult!
   """Receive Room event"""
   roomEvents(
     """The Room to receive the events from."""
@@ -8435,6 +8475,18 @@ input UpdateUserSettingsNotificationSpaceInput {
   collaborationCalloutPostContributionComment: NotificationSettingInput
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: NotificationSettingInput
+  """Receive a notification when a poll you voted on is modified"""
+  collaborationPollModifiedOnPollIVotedOn: NotificationSettingInput
+  """
+  Receive a notification when a poll option you voted for is changed or removed
+  """
+  collaborationPollVoteAffectedByOptionChange: NotificationSettingInput
+  """Receive a notification when a vote is cast on a poll you created"""
+  collaborationPollVoteCastOnOwnPoll: NotificationSettingInput
+  """
+  Receive a notification when another user votes on a poll you already voted on
+  """
+  collaborationPollVoteCastOnPollIVotedOn: NotificationSettingInput
   """Receive a notification for community updates"""
   communicationUpdates: NotificationSettingInput
   """Receive a notification when a calendar event is created"""
