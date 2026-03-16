@@ -90,7 +90,8 @@ done
 
 # ---------- Step 6: Register admin user ----------
 info "Step 6/6: Registering admin user"
-bash .scripts/register-user.sh "admin@alkem.io" "$AUTH_ADMIN_PASSWORD" "admin" "alkemio"
+printf '%s' "$AUTH_ADMIN_PASSWORD" > /tmp/.register-password
+bash .scripts/register-user.sh "admin@alkem.io" "admin" "alkemio"
 
 cat <<'EOF'
 
