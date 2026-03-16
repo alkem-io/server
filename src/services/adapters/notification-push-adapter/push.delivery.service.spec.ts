@@ -1,5 +1,5 @@
 import { PushSubscriptionService } from '@domain/push-subscription/push.subscription.service';
-import { Nack } from '@golevelup/nestjs-rabbitmq';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import { PushDeliveryService } from './push.delivery.service';
 import { PushNotificationMessage } from './push.notification.message';
@@ -99,13 +99,27 @@ describe('PushDeliveryService', () => {
       );
     });
 
-    it('should nack on transient error for DLX requeue', async () => {
+    it('should ack and drop on transient error to prevent redelivery loop', async () => {
       sendNotificationSpy.mockRejectedValue(new Error('Network error'));
 
       const message = createMessage({ retryCount: 2 });
       const result = await service.handlePushMessage(message);
 
-      expect(result).toBeInstanceOf(Nack);
+      expect(result).toBeUndefined(); // ack - drop to prevent tight loop
+    });
+
+    it('should mark expired on 4xx client errors', async () => {
+      const error = new Error('Not Found') as any;
+      error.statusCode = 404;
+      sendNotificationSpy.mockRejectedValue(error);
+
+      const message = createMessage();
+      const result = await service.handlePushMessage(message);
+
+      expect(result).toBeUndefined();
+      expect(mockPushSubscriptionService.markExpired).toHaveBeenCalledWith(
+        'sub-1'
+      );
     });
 
     it('should abandon and ack when retry count exceeds max', async () => {

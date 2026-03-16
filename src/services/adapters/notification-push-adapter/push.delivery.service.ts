@@ -98,17 +98,27 @@ export class PushDeliveryService {
         return; // ack - no retry
       }
 
-      // Transient error - nack for DLX requeue
+      // Transient error - log and ack to prevent tight redelivery loop.
+      // Without a DLX configured on the queue, Nack causes immediate
+      // redelivery which saturates the CPU. Instead we ack and drop;
+      // the notification adapter will re-enqueue on the next event.
       this.logger.verbose?.(
         {
-          message: 'Push notification delivery failed, requeueing',
+          message: 'Push notification delivery failed, dropping message',
           subscriptionId: message.subscriptionId,
           retryCount: message.retryCount,
           error: error?.message,
         },
         LogContext.PUSH_NOTIFICATION
       );
-      return new Nack(false); // nack without requeue (goes to DLX)
+
+      // Mark subscription as expired on persistent failures (e.g. 404, 401)
+      const statusCode = error?.statusCode;
+      if (statusCode && statusCode >= 400 && statusCode < 500) {
+        await this.pushSubscriptionService.markExpired(message.subscriptionId);
+      }
+
+      return; // ack - drop the message
     }
   }
 }
