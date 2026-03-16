@@ -569,7 +569,9 @@ describe('LookupResolverFields', () => {
       const apService = resolver['authorizationPolicyService'] as any;
       apService.getAuthorizationPolicyOrFail.mockResolvedValue(authPolicy);
       const platformService = resolver['platformAuthorizationService'] as any;
-      platformService.getPlatformAuthorizationPolicy.mockResolvedValue(platformAuth);
+      platformService.getPlatformAuthorizationPolicy.mockResolvedValue(
+        platformAuth
+      );
       authorizationService.grantAccessOrFail.mockReturnValue(undefined);
 
       const result = await resolver.authorizationPolicy(actorContext, 'ap-1');
@@ -589,12 +591,16 @@ describe('LookupResolverFields', () => {
       const authorization = { id: 'auth-1' };
       const user = { id: 'user-1', credentials: [{ id: 'cred-1' }] };
       const platformService = resolver['platformAuthorizationService'] as any;
-      platformService.getPlatformAuthorizationPolicy.mockResolvedValue(platformAuth);
+      platformService.getPlatformAuthorizationPolicy.mockResolvedValue(
+        platformAuth
+      );
       authorizationService.grantAccessOrFail.mockReturnValue(undefined);
       const apService = resolver['authorizationPolicyService'] as any;
       apService.getAuthorizationPolicyOrFail.mockResolvedValue(authorization);
       userLookupService.getUserByIdOrFail.mockResolvedValue(user);
-      (authorizationService as any).getGrantedPrivileges.mockReturnValue([AuthorizationPrivilege.READ]);
+      (authorizationService as any).getGrantedPrivileges.mockReturnValue([
+        AuthorizationPrivilege.READ,
+      ]);
 
       const result = await resolver.authorizationPrivilegesForUser(
         actorContext,

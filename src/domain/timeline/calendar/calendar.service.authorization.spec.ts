@@ -6,16 +6,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi } from 'vitest';
+import { type Mocked, vi } from 'vitest';
 import { ICalendar } from './calendar.interface';
 import { CalendarService } from './calendar.service';
 import { CalendarAuthorizationService } from './calendar.service.authorization';
 
 describe('CalendarAuthorizationService', () => {
   let service: CalendarAuthorizationService;
-  let calendarService: CalendarService;
-  let authorizationPolicyService: AuthorizationPolicyService;
-  let calendarEventAuthorizationService: CalendarEventAuthorizationService;
+  let calendarService: Mocked<CalendarService>;
+  let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
+  let calendarEventAuthorizationService: Mocked<CalendarEventAuthorizationService>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -33,14 +33,13 @@ describe('CalendarAuthorizationService', () => {
     service = module.get<CalendarAuthorizationService>(
       CalendarAuthorizationService
     );
-    calendarService = module.get<CalendarService>(CalendarService);
-    authorizationPolicyService = module.get<AuthorizationPolicyService>(
+    calendarService = module.get(CalendarService) as Mocked<CalendarService>;
+    authorizationPolicyService = module.get(
       AuthorizationPolicyService
-    );
-    calendarEventAuthorizationService =
-      module.get<CalendarEventAuthorizationService>(
-        CalendarEventAuthorizationService
-      );
+    ) as Mocked<AuthorizationPolicyService>;
+    calendarEventAuthorizationService = module.get(
+      CalendarEventAuthorizationService
+    ) as Mocked<CalendarEventAuthorizationService>;
   });
 
   describe('applyAuthorizationPolicy', () => {
@@ -60,8 +59,12 @@ describe('CalendarAuthorizationService', () => {
 
       calendarService.getCalendarOrFail.mockResolvedValue(mockCalendar);
       authorizationPolicyService.reset.mockReturnValue(resetAuth);
-      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(inheritedAuth);
-      calendarEventAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([eventAuth]);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+        inheritedAuth
+      );
+      calendarEventAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        [eventAuth]
+      );
 
       const inputCalendar = { id: 'calendar-1' } as ICalendar;
 
@@ -117,7 +120,9 @@ describe('CalendarAuthorizationService', () => {
 
       calendarService.getCalendarOrFail.mockResolvedValue(mockCalendar);
       authorizationPolicyService.reset.mockReturnValue(calendarAuth);
-      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(inheritedAuth);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+        inheritedAuth
+      );
 
       const inputCalendar = { id: 'calendar-1' } as ICalendar;
 
@@ -149,8 +154,11 @@ describe('CalendarAuthorizationService', () => {
 
       calendarService.getCalendarOrFail.mockResolvedValue(mockCalendar);
       authorizationPolicyService.reset.mockReturnValue(calendarAuth);
-      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(inheritedAuth);
-      calendarEventAuthorizationService.applyAuthorizationPolicy.mockResolvedValueOnce([eventAuth1])
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+        inheritedAuth
+      );
+      calendarEventAuthorizationService.applyAuthorizationPolicy
+        .mockResolvedValueOnce([eventAuth1])
         .mockResolvedValueOnce([eventAuth2]);
 
       const inputCalendar = { id: 'calendar-1' } as ICalendar;
@@ -182,7 +190,9 @@ describe('CalendarAuthorizationService', () => {
 
       calendarService.getCalendarOrFail.mockResolvedValue(mockCalendar);
       authorizationPolicyService.reset.mockReturnValue(calendarAuth);
-      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(calendarAuth);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+        calendarAuth
+      );
 
       const inputCalendar = { id: 'calendar-1' } as ICalendar;
 

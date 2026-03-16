@@ -5,15 +5,15 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi } from 'vitest';
+import { type Mocked, vi } from 'vitest';
 import { ICalendarEvent } from './event.interface';
 import { CalendarEventResolverMutations } from './event.resolver.mutations';
 import { CalendarEventService } from './event.service';
 
 describe('CalendarEventResolverMutations', () => {
   let resolver: CalendarEventResolverMutations;
-  let authorizationService: AuthorizationService;
-  let calendarEventService: CalendarEventService;
+  let authorizationService: Mocked<AuthorizationService>;
+  let calendarEventService: Mocked<CalendarEventService>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -29,10 +29,12 @@ describe('CalendarEventResolverMutations', () => {
       .compile();
 
     resolver = module.get(CalendarEventResolverMutations);
-    authorizationService =
-      module.get<AuthorizationService>(AuthorizationService);
-    calendarEventService =
-      module.get<CalendarEventService>(CalendarEventService);
+    authorizationService = module.get(
+      AuthorizationService
+    ) as Mocked<AuthorizationService>;
+    calendarEventService = module.get(
+      CalendarEventService
+    ) as Mocked<CalendarEventService>;
   });
 
   it('should be defined', () => {
@@ -62,7 +64,9 @@ describe('CalendarEventResolverMutations', () => {
       // Act
       const result = await resolver.deleteCalendarEvent(
         actorContext,
-        deleteData as any
+        deleteData as unknown as Parameters<
+          CalendarEventResolverMutations['deleteCalendarEvent']
+        >[1]
       );
 
       // Assert
@@ -101,7 +105,12 @@ describe('CalendarEventResolverMutations', () => {
       authorizationService.grantAccessOrFail.mockReset();
       calendarEventService.updateCalendarEvent.mockResolvedValue(updatedEvent);
 
-      const eventData = { ID: 'event-1', wholeDay: true } as any;
+      const eventData = {
+        ID: 'event-1',
+        wholeDay: true,
+      } as unknown as Parameters<
+        CalendarEventResolverMutations['updateCalendarEvent']
+      >[1];
 
       // Act
       const result = await resolver.updateCalendarEvent(
