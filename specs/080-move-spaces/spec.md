@@ -102,16 +102,35 @@ A subspace (level 1) is promoted to become a top-level space (level 0). It must 
 
 ---
 
+### User Story 6 — Move Sub-subspace Between Subspaces (Priority: P3)
+
+As a space facilitator, I want to move a sub-subspace from one subspace to another so that I can reorganize work items under the most appropriate parent without changing their nesting level.
+
+A sub-subspace (level 2) is transferred from its current parent subspace (level 1) to a different parent subspace. The target subspace may be in the same or a different space. Content moves with it. Community memberships are not transferred.
+
+**Why this priority**: This is a simple horizontal move at the lowest level. Together with US1 (L1→L1), it completes horizontal reorganization at every level.
+
+**Independent Test**: Create a space with two subspaces, each containing a sub-subspace. Move one sub-subspace to the other subspace and verify hierarchy and content.
+
+**Acceptance Scenarios**:
+
+1. **Given** a sub-subspace under Subspace A in Space X, **When** an authorized user moves it to Subspace B in the same space, **Then** it appears under Subspace B and is removed from Subspace A.
+2. **Given** a sub-subspace under Subspace A in Space X, **When** an authorized user moves it to Subspace C in Space Y, **Then** it appears under Subspace C in Space Y and is no longer in Space X.
+3. **Given** a sub-subspace with community members, **When** it is moved, **Then** community memberships are cleared.
+
+---
+
 ### Edge Cases
 
 - **Circular moves**: What happens when a user tries to move a space under one of its own descendants? The operation must be rejected to prevent circular hierarchies.
 - **Self-move**: What happens when a user tries to move a space to its current parent? The operation should be a no-op or return a clear message that the space is already in the requested location.
 - **Depth overflow on move**: What happens when moving a subspace (with sub-subspaces) to become a sub-subspace? The operation must be rejected because children would exceed the maximum depth (level 2).
 - **Empty source parent**: What happens when the moved space is the only child? The parent should end up with zero children — this is valid and must not be blocked.
-- **Content in active use**: What happens when content within the space is being actively edited during a move? The system should either complete the move atomically or reject concurrent modifications gracefully.
+- **Content in active use**: What happens when content within the space is being actively edited during a move? The move operation wins — it proceeds within its database transaction, and concurrent edits to content within the moving space receive a conflict error.
 - **Authorization chain reset**: What happens to authorization policies after a move? The moved space and its subtree must inherit the authorization chain of the new parent.
 - **Move to same space**: What happens when moving a sub-subspace to be a subspace of the same top-level space it already belongs to (promotion within the same space tree)? This should work — it is a valid promotion.
 - **Storage and file references**: What happens to uploaded files and media in the moved space? All storage references must remain valid after the move.
+- **Visibility state preservation**: What happens to ARCHIVED, DEMO, or INACTIVE spaces when moved? The space's visibility state is preserved — the system does not reset visibility to ACTIVE.
 
 ## User Interaction Requirements
 
@@ -133,7 +152,7 @@ These requirements apply to the frontend (client-web) and describe how users int
 ### Navigation After Move
 
 - **UIR-008**: After a successful move, users MUST be navigated to the space in its new location.
-- **UIR-009**: If a user navigates to the space's old URL after a move, the system SHOULD redirect to the new location or display a message indicating the space has been moved.
+- **UIR-009**: If a user navigates to the space's old URL after a move, the system SHOULD display a clear message indicating the space has been moved. Full URL redirection (automatic redirect to the new location) requires backend support for maintaining move history and is deferred to a follow-up enhancement.
 
 ## Requirements *(mandatory)*
 
@@ -142,19 +161,24 @@ These requirements apply to the frontend (client-web) and describe how users int
 - **FR-001**: System MUST allow moving a subspace (level 1) from one space to another space, preserving the subspace and its entire subtree (sub-subspaces and their content).
 - **FR-002**: System MUST allow transferring a top-level space (level 0) from one account to another account, preserving the space's full hierarchy and content.
 - **FR-003**: System MUST allow promoting a sub-subspace (level 2) to become a subspace (level 1) within its grandparent space.
-- **FR-004**: System MUST allow moving a subspace (level 1) to become a sub-subspace (level 2) under another subspace, provided the moved subspace has no children.
-- **FR-005**: System MUST allow promoting a subspace (level 1) to become a top-level space (level 0) under a specified target account, adjusting all descendant levels accordingly.
+- **FR-004**: System MUST allow moving a subspace (level 1) to become a sub-subspace (level 2) under another subspace, provided the move would not cause any descendant to exceed the maximum nesting depth (level 2).
+- **FR-005**: System MUST allow promoting a subspace (level 1) to become a top-level space (level 0) under a specified target account, adjusting all descendant levels accordingly. The system MUST create a templates manager for the promoted space, initialized with default templates.
 - **FR-006**: System MUST clear all community memberships (member, admin, facilitator roles) in the moved space and its entire subtree upon any move or promotion operation.
 - **FR-007**: System MUST update the authorization chain of the moved space and its subtree to inherit from the new parent's authorization policies.
 - **FR-008**: System MUST reject any move that would create a circular hierarchy (moving a space under one of its own descendants).
 - **FR-009**: System MUST reject any move that would cause a space to exceed the maximum nesting depth (level 2).
-- **FR-010**: System MUST preserve all content within the moved space — including collaboration data (callouts, posts, whiteboards, discussions), profiles, settings, templates, innovation flows, and storage references.
-- **FR-011**: System MUST require authorization from both the source container's admin and the target container's admin for cross-container moves.
+- **FR-010**: System MUST preserve all content within the moved space — including collaboration data (callouts, posts, whiteboards, discussions), profiles, settings, templates, innovation flows, and storage references. The system MUST update storage aggregator references for all nested entities to reflect the new parent context, and MUST invalidate all cached URLs for the moved space, its subtree, and all contained entities (profiles, collaborations, callouts, contributions).
+- **FR-011**: System MUST require the user performing a cross-container move to hold admin privileges on both the source and target containers. Platform admins implicitly satisfy this requirement for all spaces.
 - **FR-012**: System MUST require platform admin privileges for moving a space between accounts (FR-002).
-- **FR-013**: System MUST perform the move as an atomic operation — if any step fails, the entire operation must be rolled back with no partial state changes.
+- **FR-013**: The data layer operations of a move MUST be atomic (single database transaction) — if any persistence step fails, the entire operation must be rolled back with no partial state changes. Non-transactional side effects (cache invalidation, external service calls) use best-effort execution after the transaction commits; if a side effect fails, it is logged and may be retried, but does not roll back the committed move.
 - **FR-014**: System MUST update sort order and display position of the moved space within its new parent context.
 - **FR-015**: When promoting a subspace to a space (L1→L0), the system MUST assign the user performing the promotion as the initial admin of the promoted space's community.
 - **FR-016**: When moving or promoting a space to an account that would exceed its license entitlements (either via account-to-account transfer or L1→L0 promotion), the system MUST warn the user about the license discrepancy but MUST NOT block the operation.
+- **FR-017**: System MUST allow moving a sub-subspace (level 2) from one parent subspace to another parent subspace, remaining at level 2. The target subspace may be in the same or a different space.
+- **FR-018**: When a move crosses level-zero space boundaries, the system MUST update the level-zero space reference for the moved space and its entire subtree to reflect the new root space. This reference is used for nameID scoping, URL resolution, and template lookups.
+- **FR-019**: System MUST validate that the nameID of the moved space (and all descendants) does not collide with existing nameIDs in the target's level-zero space scope. If a collision is detected, the system MUST reject the move with a clear error identifying the conflicting nameID.
+- **FR-020**: System MUST recalculate platform role access (anonymous, guest, registered user visibility) for the moved space and its entire subtree based on the new parent's access configuration.
+- **FR-021**: When a move crosses level-zero space boundaries, the system MUST synchronize callout classification tagsets in the moved subtree with the target tree's innovation flow template configuration.
 
 ### Key Entities
 
@@ -167,7 +191,7 @@ These requirements apply to the frontend (client-web) and describe how users int
 
 ### Measurable Outcomes
 
-- **SC-001**: Authorized users can move a subspace between spaces and verify all content is intact within 30 seconds for typical spaces (up to 50 callouts).
+- **SC-001**: Authorized users can move a subspace between spaces and verify all content is intact in the new location with no data loss.
 - **SC-002**: After any move operation, 100% of content (callouts, posts, whiteboards, discussions) is accessible in the new location with no data loss.
 - **SC-003**: After any move operation, 0% of community memberships from the source location persist in the moved space — all roles are cleared.
 - **SC-004**: Circular move attempts and depth-overflow attempts are rejected 100% of the time with clear error messages.
@@ -187,6 +211,14 @@ These requirements apply to the frontend (client-web) and describe how users int
 - Q: Should space moves have a dedicated audit trail? → A: No — rely on existing application logs. A dedicated audit trail may be added later if operational need arises.
 - Q: Should L1→L0 promotion also check the target account's license entitlements? → A: Yes. The same soft enforcement (warn but allow) applies when promoting a subspace to a space, since the promoted space is assigned to the target account.
 - Q: What is the service scope of this feature? → A: Cross-service — backend (server repo) and frontend (client-web repo). Added UIR-001 through UIR-009 for user interaction requirements, SC-008 through SC-010 for frontend success criteria, and cross-service coordination assumption.
+- Q: What happens to a space's visibility state (ACTIVE, ARCHIVED, DEMO, INACTIVE) when it is moved? → A: Visibility is preserved. The system does not reset visibility on move.
+- Q: Should old URLs redirect to the new location after a move? → A: Deferred. The initial implementation shows a "space has been moved" message. Automatic URL redirection requires a move-history mechanism and is a follow-up enhancement.
+- Q: Can a sub-subspace be moved horizontally between subspaces? → A: Yes. Added FR-017 for L2→L2 horizontal moves and User Story 6.
+- Q: What happens to a space's privacy mode (PUBLIC/PRIVATE) when it is moved to a parent with a different privacy setting? → A: Privacy mode is preserved. The space keeps its PUBLIC/PRIVATE setting; the recalculated platform role access (FR-020) combines the new parent's access with the preserved privacy mode.
+- Q: Does FR-011 require a single user to be admin on both source and target, or a two-phase approval from separate admins? → A: Single user must hold admin on both source and target containers. Platform admins always satisfy this requirement since they have full access across all spaces.
+- Q: Should L2→L1 promotion be allowed cross-space (into a different space), or only within the grandparent? → A: Only within the grandparent space. Cross-space L2→L1 is out of scope; users should first move L2→L2 cross-space (FR-017), then promote within the target tree (FR-003).
+- Q: When community memberships are cleared on move, what happens to communication rooms (Matrix/Synapse)? Preserve rooms with history (clear participants only) or delete rooms entirely? → A: [NEEDS CLARIFICATION]
+- Q: How should concurrent content edits during a move be handled? → A: Move wins. The move operation proceeds within its DB transaction; concurrent edits to content within the moving space receive a conflict error.
 
 ## Assumptions
 
@@ -197,4 +229,6 @@ These requirements apply to the frontend (client-web) and describe how users int
 - **Existing sorting/pinning unaffected**: The move feature is independent of display ordering within a parent. The moved space receives a default sort position in its new parent.
 - **No cascading notifications**: The initial implementation does not send notifications to former community members about the move. This may be added as a follow-up enhancement.
 - **Storage references remain valid**: Files and media uploaded within the moved space continue to be accessible via their existing references. The storage aggregator is updated to reflect the new parent context.
+- **Visibility and privacy preserved on move**: The space's visibility state (ACTIVE, ARCHIVED, DEMO, INACTIVE) and privacy mode (PUBLIC, PRIVATE) are both preserved when moved. The system does not automatically change these settings on relocation; the recalculated platform role access reflects the combination of the new parent's access and the space's existing privacy mode.
+- **NameID collisions block the move**: If the moved space or any descendant has a nameID that conflicts with an existing entity in the target scope, the move is rejected. The user must rename the conflicting entity before retrying.
 - **Cross-service coordination**: This feature requires coordinated changes across two repositories: the server (backend — GraphQL API, domain logic, data operations) and client-web (frontend — UI for initiating moves, destination picker, confirmation dialogs, post-move navigation). Both must be developed and released together.
