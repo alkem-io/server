@@ -6,6 +6,7 @@ import { PollStatus } from '@common/enums/poll.status';
 import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { PollOption } from '@domain/collaboration/poll-option/poll.option.entity';
+import { PollVote } from '@domain/collaboration/poll-vote/poll.vote.entity';
 import { PollVoteService } from '@domain/collaboration/poll-vote/poll.vote.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -324,21 +325,35 @@ export class PollService {
     );
     const deletedVoterIds = affectedVotes.map(v => v.createdBy);
 
-    // Delete affected votes
-    await this.pollVoteService.deleteVotesByIds(affectedVotes.map(v => v.id));
+    // Ensure vote deletion + option deletion + re-sequencing are atomic.
+    // Use two-pass updates to avoid UNIQUE (pollId, sortOrder) collisions.
+    await this.pollOptionRepository.manager.transaction(async txManager => {
+      const txVoteRepo = txManager.getRepository(PollVote);
+      const txOptionRepo = txManager.getRepository(PollOption);
 
-    // Delete the option
-    await this.pollOptionRepository.delete(optionId);
+      const affectedVoteIds = affectedVotes.map(v => v.id);
+      if (affectedVoteIds.length > 0) {
+        await txVoteRepo.delete(affectedVoteIds);
+      }
 
-    // Re-sequence remaining options (1, 2, 3…)
-    const remaining = options
-      .filter(o => o.id !== optionId)
-      .sort((a, b) => a.sortOrder - b.sortOrder);
+      await txOptionRepo.delete(optionId);
 
-    for (let i = 0; i < remaining.length; i++) {
-      remaining[i].sortOrder = i + 1;
-      await this.pollOptionRepository.save(remaining[i]);
-    }
+      const remaining = options
+        .filter(o => o.id !== optionId)
+        .sort((a, b) => a.sortOrder - b.sortOrder);
+
+      // Pass 1: assign temporary negative sort orders.
+      for (let i = 0; i < remaining.length; i++) {
+        remaining[i].sortOrder = -(i + 1);
+      }
+      await txOptionRepo.save(remaining);
+
+      // Pass 2: assign final contiguous sort orders (1..N).
+      for (let i = 0; i < remaining.length; i++) {
+        remaining[i].sortOrder = i + 1;
+      }
+      await txOptionRepo.save(remaining);
+    });
 
     const updatedPoll = await this.getPollOrFail(pollId);
     return { poll: updatedPoll, deletedVoterIds };

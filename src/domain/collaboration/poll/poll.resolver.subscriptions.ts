@@ -16,6 +16,7 @@ import { PollOptionsChangedSubscriptionResult } from './dto/poll.options.changed
 import { PollSubscriptionArgs } from './dto/poll.subscription.args';
 import { PollSubscriptionPayload } from './dto/poll.subscription.payload';
 import { PollVoteUpdatedSubscriptionResult } from './dto/poll.vote.updated.subscription.result';
+import { Poll } from './poll.entity';
 import { PollService } from './poll.service';
 
 @InstrumentResolver()
@@ -37,16 +38,33 @@ export class PollResolverSubscriptions {
   >(() => PollVoteUpdatedSubscriptionResult, {
     description:
       'Subscribe to vote updates on a specific Poll. Fires when votes are cast or updated. When resultsVisibility = HIDDEN and the subscriber has not voted, events are suppressed.',
-    resolve(
+    async resolve(
       this: PollResolverSubscriptions,
-      payload
-    ): PollVoteUpdatedSubscriptionResult {
+      payload,
+      _args,
+      context
+    ): Promise<PollVoteUpdatedSubscriptionResult> {
+      const actorID = context.req.user?.actorID ?? '';
+      const vote = actorID
+        ? await this.pollVoteService.getVoteForUser(payload.poll.id, actorID)
+        : null;
+      const hasVoted = vote !== null;
+
+      const poll = payload.poll as Poll;
+      const enrichedOptions = this.pollService.computePollResults(poll);
+      const visibleOptions = this.pollService.applyVisibilityRules(
+        enrichedOptions,
+        poll,
+        hasVoted
+      );
+
       // Rehydrate dates: PubSub JSON serialization converts Date → ISO string,
       // but the DateTime scalar's serialize() requires instanceof Date.
       return {
         pollEventType: payload.pollEventType,
         poll: {
           ...payload.poll,
+          options: visibleOptions,
           createdDate: new Date(payload.poll.createdDate),
           updatedDate: new Date(payload.poll.updatedDate),
           ...(payload.poll.deadline

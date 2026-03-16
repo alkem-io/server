@@ -459,6 +459,7 @@ describe('PollService — option management (T054)', () => {
   const mockTxSave = vi
     .fn()
     .mockImplementation((entity: unknown) => Promise.resolve(entity));
+  const mockTxDelete = vi.fn().mockResolvedValue(undefined);
   const mockPollOptionRepository = {
     findOne: vi.fn(),
     save: vi
@@ -470,7 +471,7 @@ describe('PollService — option management (T054)', () => {
         .fn()
         .mockImplementation(async (cb: (mgr: unknown) => Promise<void>) => {
           await cb({
-            getRepository: () => ({ save: mockTxSave }),
+            getRepository: () => ({ save: mockTxSave, delete: mockTxDelete }),
           });
         }),
     },
@@ -554,17 +555,16 @@ describe('PollService — option management (T054)', () => {
       .mockResolvedValueOnce(poll)
       .mockResolvedValueOnce(updatedPoll);
 
-    const pollVoteService = service['pollVoteService'] as unknown as {
-      deleteVotesByIds: ReturnType<typeof vi.fn>;
-    };
-    pollVoteService.deleteVotesByIds = vi.fn().mockResolvedValue(undefined);
-
     const { deletedVoterIds } = await service.removeOption('poll-1', 'a');
     expect(deletedVoterIds).toEqual(
       expect.arrayContaining(['user-1', 'user-2'])
     );
     expect(deletedVoterIds).not.toContain('user-3');
-    expect(mockPollOptionRepository.delete).toHaveBeenCalledWith('a');
+    expect(mockPollOptionRepository.manager.transaction).toHaveBeenCalledTimes(
+      1
+    );
+    expect(mockTxDelete).toHaveBeenCalledWith(['v1', 'v2']);
+    expect(mockTxDelete).toHaveBeenCalledWith('a');
   });
 
   it('(c) reorderOptions rejects mismatched ID list (extra ID)', async () => {

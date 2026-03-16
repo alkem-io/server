@@ -624,9 +624,9 @@ export class NotificationExternalAdapter {
     poll: { id: string; title: string } | undefined
   ): Promise<
     | NotificationEventPayloadSpacePollVoteCastOnOwnPoll
+    | NotificationEventPayloadSpacePollVoteCastOnPollIVotedOn
     | NotificationEventPayloadSpacePollModifiedOnPollIVotedOn
     | NotificationEventPayloadSpacePollVoteAffectedByOptionChange
-    | NotificationEventPayloadSpacePollVoteCastOnOwnPoll
   > {
     const spacePayload = await this.buildSpacePayload(
       eventType,
