@@ -4,6 +4,7 @@
 **Created**: 2026-03-16
 **Status**: Draft
 **Input**: GitHub Issue [#5898](https://github.com/alkem-io/server/issues/5898) — Move Spaces
+**Scope**: Cross-service — backend (server) and frontend (client-web)
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -97,6 +98,7 @@ A subspace (level 1) is promoted to become a top-level space (level 0). It must 
 2. **Given** a subspace with content across its subtree, **When** it is promoted to a space, **Then** all content in the entire subtree is preserved.
 3. **Given** a subspace with community members, **When** it is promoted, **Then** all community memberships across the subtree are cleared.
 4. **Given** a user without admin privileges on the target account, **When** they attempt to promote a subspace to a space, **Then** the operation is rejected.
+5. **Given** the target account has reached its license limit for hosted spaces, **When** an authorized user promotes a subspace to a space under that account, **Then** the system warns about the license discrepancy but completes the promotion.
 
 ---
 
@@ -110,6 +112,28 @@ A subspace (level 1) is promoted to become a top-level space (level 0). It must 
 - **Authorization chain reset**: What happens to authorization policies after a move? The moved space and its subtree must inherit the authorization chain of the new parent.
 - **Move to same space**: What happens when moving a sub-subspace to be a subspace of the same top-level space it already belongs to (promotion within the same space tree)? This should work — it is a valid promotion.
 - **Storage and file references**: What happens to uploaded files and media in the moved space? All storage references must remain valid after the move.
+
+## User Interaction Requirements
+
+These requirements apply to the frontend (client-web) and describe how users interact with move operations.
+
+### Initiating a Move
+
+- **UIR-001**: Users MUST be able to initiate a move/promote operation from the space's settings or context menu. The option MUST only be visible to users with sufficient privileges.
+- **UIR-002**: Users MUST be presented with a destination picker that allows them to browse and select the target location (parent space or account). The picker MUST only show valid destinations (e.g., no circular targets, no depth-overflow targets).
+- **UIR-003**: For L1→L0 promotion, users MUST be presented with an account selector to choose the hosting account for the new space.
+
+### Confirmation and Feedback
+
+- **UIR-004**: Before executing any move, users MUST see a confirmation dialog that clearly states: the space being moved, the target destination, and that community memberships will be cleared.
+- **UIR-005**: When a move would cause a license entitlement discrepancy on the target account, the confirmation dialog MUST display a warning about the license impact while still allowing the user to proceed.
+- **UIR-006**: Users MUST receive clear feedback on the outcome — success (with the new location), failure (with the reason), or rejection (authorization, circular reference, depth overflow).
+- **UIR-007**: During the move operation, the interface MUST indicate that the operation is in progress and prevent duplicate submissions.
+
+### Navigation After Move
+
+- **UIR-008**: After a successful move, users MUST be navigated to the space in its new location.
+- **UIR-009**: If a user navigates to the space's old URL after a move, the system SHOULD redirect to the new location or display a message indicating the space has been moved.
 
 ## Requirements *(mandatory)*
 
@@ -129,6 +153,8 @@ A subspace (level 1) is promoted to become a top-level space (level 0). It must 
 - **FR-012**: System MUST require platform admin privileges for moving a space between accounts (FR-002).
 - **FR-013**: System MUST perform the move as an atomic operation — if any step fails, the entire operation must be rolled back with no partial state changes.
 - **FR-014**: System MUST update sort order and display position of the moved space within its new parent context.
+- **FR-015**: When promoting a subspace to a space (L1→L0), the system MUST assign the user performing the promotion as the initial admin of the promoted space's community.
+- **FR-016**: When moving or promoting a space to an account that would exceed its license entitlements (either via account-to-account transfer or L1→L0 promotion), the system MUST warn the user about the license discrepancy but MUST NOT block the operation.
 
 ### Key Entities
 
@@ -148,13 +174,27 @@ A subspace (level 1) is promoted to become a top-level space (level 0). It must 
 - **SC-005**: Platform administrators can transfer a space between accounts in a single operation, eliminating the need to manually recreate spaces.
 - **SC-006**: The move operation completes atomically — either fully succeeds or fully rolls back, with no partial state observable by users.
 - **SC-007**: Authorization chains in the moved subtree correctly reflect the new parent within the same operation, with no manual re-authorization needed.
+- **SC-008**: Users can discover and initiate a move operation from the space interface without external documentation or support guidance.
+- **SC-009**: The destination picker only presents valid targets — users cannot accidentally select a circular or depth-violating destination.
+- **SC-010**: After a successful move, users land on the space in its new location within 2 seconds of the operation completing.
+
+## Clarifications
+
+### Session 2026-03-16
+
+- Q: After community memberships are cleared on move, who gets initial admin access to manage the moved space? → A: The mover becomes admin only when promoting a subspace to a space (L1→L0). For all other move types, the target parent container's admin manages the moved space via authorization inheritance.
+- Q: Should moves be blocked if the target account's license limits would be exceeded? → A: Warn the user but allow the move to proceed (soft enforcement). License discrepancies are resolved after the fact by platform admins.
+- Q: Should space moves have a dedicated audit trail? → A: No — rely on existing application logs. A dedicated audit trail may be added later if operational need arises.
+- Q: Should L1→L0 promotion also check the target account's license entitlements? → A: Yes. The same soft enforcement (warn but allow) applies when promoting a subspace to a space, since the promoted space is assigned to the target account.
+- Q: What is the service scope of this feature? → A: Cross-service — backend (server repo) and frontend (client-web repo). Added UIR-001 through UIR-009 for user interaction requirements, SC-008 through SC-010 for frontend success criteria, and cross-service coordination assumption.
 
 ## Assumptions
 
 - **Subtree moves intact**: When a space is moved, its entire subtree (children, grandchildren) moves with it. Individual child extraction is a separate operation.
-- **Community cleared, not restructured**: "Users are not transferred" means all community role assignments are removed. The community entity itself is preserved but emptied. The user performing the move does not automatically become an admin of the moved space — admins are assigned through normal community management flows after the move.
+- **Community cleared, not restructured**: "Users are not transferred" means all community role assignments are removed. The community entity itself is preserved but emptied. For subspace-level moves (L1→L1, L2→L1, L1→L2), the target parent's admin manages the moved space via authorization inheritance. For L1→L0 promotion, the user performing the move automatically becomes the initial admin of the promoted space.
 - **Target account required for promotion to space**: When promoting a subspace (L1) to a space (L0), the caller must specify the target account. The system does not auto-create accounts.
 - **Authorization defaults**: Cross-container moves (between different spaces) require admin privileges on both the source and target containers. Within-space promotions/demotions require admin privileges on the parent space. Account-to-account transfers require platform admin privileges.
 - **Existing sorting/pinning unaffected**: The move feature is independent of display ordering within a parent. The moved space receives a default sort position in its new parent.
 - **No cascading notifications**: The initial implementation does not send notifications to former community members about the move. This may be added as a follow-up enhancement.
 - **Storage references remain valid**: Files and media uploaded within the moved space continue to be accessible via their existing references. The storage aggregator is updated to reflect the new parent context.
+- **Cross-service coordination**: This feature requires coordinated changes across two repositories: the server (backend — GraphQL API, domain logic, data operations) and client-web (frontend — UI for initiating moves, destination picker, confirmation dialogs, post-move navigation). Both must be developed and released together.
