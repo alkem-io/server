@@ -20,7 +20,6 @@ import { ReactionAddedEvent } from './reaction.added.event';
 import { ReactionRemovedEvent } from './reaction.removed.event';
 import { RoomCreatedEvent } from './room.created.event';
 import { RoomDmRequestedEvent } from './room.dm.requested.event';
-import { RoomMemberLeftEvent } from './room.member.left.event';
 import { RoomMemberUpdatedEvent } from './room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from './room.receipt.updated.event';
 import { VcInvocationService } from './vc.invocation.service';
@@ -532,29 +531,14 @@ describe('MessageInboxService', () => {
     });
   });
 
-  describe('handleRoomMemberLeft', () => {
-    it('should complete without error (logging only)', async () => {
-      await service.handleRoomMemberLeft(
-        new RoomMemberLeftEvent({
-          roomId: 'room-1',
-          actorID: 'actor-1',
-          reason: 'left voluntarily',
-          timestamp: 9000,
-        })
-      );
-
-      expect(roomLookupService.getRoomOrFail).not.toHaveBeenCalled();
-    });
-  });
-
   describe('handleRoomMemberUpdated', () => {
-    it('should complete without error (logging only)', async () => {
+    it('should return early for non-join/leave membership types', async () => {
       await service.handleRoomMemberUpdated(
         new RoomMemberUpdatedEvent({
           roomId: 'room-1',
           memberActorID: 'actor-1',
           senderActorID: 'actor-2',
-          membership: 'join',
+          membership: 'invite',
           timestamp: 10000,
         })
       );
