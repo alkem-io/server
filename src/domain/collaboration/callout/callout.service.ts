@@ -251,6 +251,7 @@ export class CalloutService {
           link: true,
           memo: true,
           mediaGallery: true,
+          poll: true,
         },
         classification: {
           tagsets: true,

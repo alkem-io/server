@@ -42,6 +42,12 @@ function makePoll(overrides: Partial<Poll> = {}): Poll {
 describe('PollVoteService', () => {
   let service: PollVoteService;
 
+  const mockPollRepository = {
+    findOneOrFail: vi
+      .fn()
+      .mockImplementation(() => Promise.resolve(makePoll())),
+  };
+
   const mockPollVoteRepository = {
     findOne: vi.fn().mockResolvedValue(null),
     save: vi.fn().mockImplementation((entity: unknown) => {
@@ -50,6 +56,9 @@ describe('PollVoteService', () => {
       return Promise.resolve(vote);
     }),
     find: vi.fn().mockResolvedValue([]),
+    manager: {
+      getRepository: vi.fn().mockReturnValue(mockPollRepository),
+    },
   };
 
   beforeEach(async () => {

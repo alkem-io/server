@@ -56,8 +56,9 @@ export class PollVoteService {
       selectedOptionIds.length > poll.settings.maxResponses
     ) {
       throw new ValidationException(
-        `Cannot select more than ${poll.settings.maxResponses} option(s)`,
-        LogContext.COLLABORATION
+        'Cannot select more than maxResponses option(s)',
+        LogContext.COLLABORATION,
+        { maxResponses: poll.settings.maxResponses }
       );
     }
 
@@ -79,7 +80,16 @@ export class PollVoteService {
 
     await this.pollVoteRepository.save(vote);
 
-    return poll;
+    // Re-fetch poll with fresh relations so callers (including subscription
+    // publishers) receive up-to-date vote data.
+    const freshPoll = await this.pollVoteRepository.manager
+      .getRepository(Poll)
+      .findOneOrFail({
+        where: { id: poll.id },
+        relations: { options: true, votes: true },
+      });
+
+    return freshPoll;
   }
 
   async getVoteForUser(

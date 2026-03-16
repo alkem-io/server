@@ -476,6 +476,7 @@ export class CalloutFramingService {
           link: true,
           memo: true,
           mediaGallery: true,
+          poll: true,
         },
       }
     );
@@ -501,6 +502,10 @@ export class CalloutFramingService {
       await this.mediaGalleryService.deleteMediaGallery(
         calloutFraming.mediaGallery.id
       );
+    }
+
+    if (calloutFraming.poll) {
+      await this.pollService.deletePoll((calloutFraming.poll as IPoll).id);
     }
 
     if (calloutFraming.authorization) {
