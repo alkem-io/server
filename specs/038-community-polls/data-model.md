@@ -10,7 +10,7 @@ CalloutFraming (existing)
 
 Poll (NEW)
   ├── id: UUID (PK)
-  ├── title: string (MID_TEXT_LENGTH = 512)
+  ├── title: string (MID_TEXT_LENGTH = 512; optional at input, defaults to "")
   ├── status: PollStatus (enum column)
   ├── settings: JSONB {
   │     minResponses: int (≥ 1),
@@ -248,7 +248,8 @@ This prevents orphaned votes and keeps poll aggregates consistent without requir
 
 ### Poll Creation
 - Minimum 2 options required — enforced in `PollService.createPoll()`.
-- `title` must not be empty; max `MID_TEXT_LENGTH` (512 chars).
+- `title` is optional at input; when provided, max `MID_TEXT_LENGTH` (512 chars).
+- If `title` is omitted, the persisted value is `""` (empty string).
 - `settings.minResponses` must be ≥ 1. Defaults to 1.
 - `settings.maxResponses` must be ≥ 0. Defaults to 1.
 - When `settings.maxResponses > 0`, `settings.maxResponses` must be ≥ `settings.minResponses`.
@@ -404,7 +405,7 @@ export class PollSettingsInput {
 ```typescript
 @ObjectType('Poll')
 export abstract class IPoll extends IAuthorizable {
-  @Field(() => String, { nullable: false, description: 'Poll title.' })
+  @Field(() => String, { nullable: false, description: 'Poll title (optional at creation; defaults to empty string).' })
   title!: string;
 
   @Field(() => PollStatus, { nullable: false })

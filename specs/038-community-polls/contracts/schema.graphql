@@ -262,9 +262,9 @@ Required when framing.type = POLL.
 input CreatePollInput {
   """
   Poll title.
-  Must not be empty. Maximum length 512 characters.
+  Optional. Maximum length 512 characters.
   """
-  title: String!
+  title: String
 
   """
   Poll configuration settings (all immutable after creation).
@@ -365,8 +365,8 @@ input CastPollVoteInput {
 NOTE: Poll CREATION is NOT a separate mutation.
 A poll is created as part of the standard createCallout mutation by setting:
   - framing.type = POLL
-  - framing.poll = { title: "...", settings: { minResponses: 1, maxResponses: 1 }, options: ["Option A", "Option B"] }
-The `settings` field is optional (defaults apply). `title` and `options` (min 2) are required.
+  - framing.poll = { settings: { minResponses: 1, maxResponses: 1 }, options: ["Option A", "Option B"] }
+The `settings` field is optional (defaults apply). `title` is optional. `options` (min 2) is required.
 This follows the same pattern as WHITEBOARD, LINK, and MEMO framing types.
 """
 

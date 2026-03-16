@@ -48,12 +48,12 @@ A poll creator or community member wants to see how the community has voted, inc
 
 **Why this priority**: Transparency and results are what make a poll actionable. Without visible results, the poll data cannot be used to inform decisions.
 
-**Independent Test**: After votes are cast, any space member can view the full results including vote counts and the list of voters per option, with options returned in `sortOrder`.
+**Independent Test**: After votes are cast, any space member can view results with options returned in `sortOrder`; when the visibility gate is passed and `resultsDetail = FULL`, they can view the list of voters per option.
 
 **Acceptance Scenarios**:
 
 1. **Given** at least one vote has been cast on a poll, **When** any space member views the poll results, **Then** they see all options in `sortOrder` (ascending), with the vote count displayed for each option.
-2. **Given** a poll has received votes, **When** a space member views an option's voter list, **Then** they can see the names (or identities) of all members who voted for that option.
+2. **Given** a poll has received votes, **When** a space member views an option's voter list and the visibility gate is passed, **Then** they can see the names (or identities) of all members who voted for that option.
 3. **Given** two or more options have the same number of votes, **When** results are displayed, **Then** options still remain in `sortOrder` (ascending), without any vote-based reordering.
 4. **Given** a poll has zero votes, **When** any member views it, **Then** all options are shown with zero counts and no voter list is shown.
 5. **Given** a space member has not yet voted, **When** they view the results, **Then** they can still see the current results before casting their own vote.
@@ -171,7 +171,7 @@ A community member viewing a poll in their browser wants the poll display to upd
 
 **Poll Lifecycle**
 
-- **FR-001**: Any user with permission to create a Callout (Post) in a space MUST be able to add a poll to that Callout. A poll consists of a required title (max 512 chars), a minimum of two selectable options (each option text max 512 chars), and response count settings stored in a `settings` object containing `minResponses` and `maxResponses`, and is attached to the Callout's Framing.
+- **FR-001**: Any user with permission to create a Callout (Post) in a space MUST be able to add a poll to that Callout. A poll consists of an optional title (max 512 chars), a minimum of two selectable options (each option text max 512 chars), and response count settings stored in a `settings` object containing `minResponses` and `maxResponses`, and is attached to the Callout's Framing.
 - **FR-002**: Poll creators MUST be able to configure how many options a voter may select by setting `settings.minResponses` (minimum selections required, must be ≥ 1) and `settings.maxResponses` (maximum selections allowed, must be ≥ 0 where 0 means unlimited). Typical configurations: single-choice (`minResponses = 1, maxResponses = 1`), open multi-choice (`minResponses = 1, maxResponses = 0`).
 - **FR-003**: A newly created poll MUST be immediately visible and open for voting to all space members.
 - **FR-004**: Any user with Callout edit permissions MUST be able to add new options to a published poll at any time.
@@ -193,7 +193,7 @@ A community member viewing a poll in their browser wants the poll display to upd
 - **FR-014**: Poll results visibility MUST be governed by the poll's `settings.resultsVisibility` setting: `HIDDEN` (results hidden until the viewer has voted), `TOTAL_ONLY` (only total vote count before voting), or `VISIBLE` (always visible, default).
 - **FR-015**: Poll options MUST always be returned in `sortOrder ASC` (configured option order), regardless of result visibility or whether the viewer has voted. Vote counts, percentages, and voters are visibility/detail-gated independently from ordering.
 - **FR-016**: The level of detail shown in results MUST be governed by the poll's `settings.resultsDetail` setting: `PERCENTAGE` (only percentage per option), `COUNT` (vote count per option, no voter identities), or `FULL` (counts + voter list, default).
-- **FR-017**: When `resultsDetail = FULL`, any space member MUST be able to view the list of members who voted for a specific option.
+- **FR-017**: When `resultsDetail = FULL` and the visibility gate is passed per `settings.resultsVisibility`, any space member MUST be able to view the list of members who voted for a specific option.
 - **FR-018**: A member's current vote selections MUST be visually distinguishable from unselected options when they view a poll they have already voted on.
 - **FR-019**: When a member’s account is deleted from the platform, all Poll votes authored by that member MUST be deleted so their votes no longer appear in poll results.
 
@@ -221,8 +221,8 @@ A community member viewing a poll in their browser wants the poll display to upd
 
 **Real-Time Subscriptions**
 
-- **FR-028**: The system MUST expose a `pollVoteUpdated(pollID: UUID!)` GraphQL subscription that fires whenever a vote is cast or updated on the specified poll. The subscription MUST return the updated `Poll` object. Authorization: the subscriber MUST have `READ` privilege on the poll.
-- **FR-029**: The system MUST expose a `pollOptionsChanged(pollID: UUID!)` GraphQL subscription that fires whenever poll options are added, edited, removed, or reordered. The subscription MUST return the updated `Poll` object. Authorization: the subscriber MUST have `READ` privilege on the poll.
+- **FR-028**: The system MUST expose a `pollVoteUpdated(pollID: UUID!)` GraphQL subscription that fires whenever a vote is cast or updated on the specified poll. The subscription return type MUST be `PollVoteUpdatedSubscriptionResult`, a wrapper object containing `pollEventType` and `poll` (the updated `Poll`). Authorization: the subscriber MUST have `READ` privilege on the poll.
+- **FR-029**: The system MUST expose a `pollOptionsChanged(pollID: UUID!)` GraphQL subscription that fires whenever poll options are added, edited, removed, or reordered. The subscription return type MUST be `PollOptionsChangedSubscriptionResult`, a wrapper object containing `pollEventType` and `poll` (the updated `Poll`). Authorization: the subscriber MUST have `READ` privilege on the poll.
 - **FR-030**: Subscription payloads MUST respect the poll's `resultsVisibility` and `resultsDetail` settings per subscriber. The existing field resolvers (which apply visibility/detail filtering based on the current user's context) MUST be reused — no separate filtering logic. Specifically:
   - When `resultsVisibility = HIDDEN` and the subscriber has NOT voted: vote events (`pollVoteUpdated`) MUST be suppressed entirely (the subscriber receives nothing); option change events (`pollOptionsChanged`) MUST deliver updated options only with no vote status data.
   - When `resultsVisibility = TOTAL_ONLY` and the subscriber has NOT voted: vote events deliver only `totalVotes`; option change events deliver updated options and `totalVotes`.
@@ -233,7 +233,7 @@ A community member viewing a poll in their browser wants the poll display to upd
 ### Key Entities
 
 - **Callout (Post)**: An existing collaboration artifact in a space. A poll is optional additional content attached to a Callout's Framing — a Callout may or may not have a poll.
-- **Poll**: Additional content on a Callout's Framing. Holds a required `title` (max 512 chars), a `settings` object (JSONB) containing `minResponses` and `maxResponses` integers that define how many options a voter must/may select plus `resultsVisibility` and `resultsDetail` enums, status (open/closed), an ordered list of Poll Options, and a future-compatibility deadline field. A Callout Framing has at most one Poll.
+- **Poll**: Additional content on a Callout's Framing. Holds an optional `title` (max 512 chars; defaults to an empty string when omitted), a `settings` object (JSONB) containing `minResponses` and `maxResponses` integers that define how many options a voter must/may select plus `resultsVisibility` and `resultsDetail` enums, status (open/closed), an ordered list of Poll Options, and a future-compatibility deadline field. A Callout Framing has at most one Poll.
 - **Poll Option**: An individual selectable choice within a Poll. Has display text (max 512 chars) and an ordering value. Associated with zero or more Votes.
 - **Vote**: A record of one space member's current selection(s) on a specific Poll. Belongs to exactly one member. References between `minResponses` and `maxResponses` Poll Options. Updated in place when the voter changes their selections — no historical vote records are retained. Records the timestamp of the last update. A member has at most one Vote per Poll. A change event is emitted on each update to support future subscription integration without requiring stored history.
 
@@ -247,7 +247,7 @@ A community member viewing a poll in their browser wants the poll display to upd
 - **SC-004**: Poll results always display options in `sortOrder` order (ascending). Results reflect the current state at the time the poll is loaded, the page is refreshed, or a real-time subscription event is received. Subscribers viewing a poll receive live updates when votes are cast or options change, respecting the poll's `resultsVisibility` and `resultsDetail` settings.
 - **SC-005**: Poll creators receive a notification within 60 seconds of a vote being cast on their poll.
 - **SC-006**: A voter can successfully update their vote and see their previous selection removed and new selection recorded, all within a single interaction.
-- **SC-007**: When `resultsDetail = FULL`, all space members can view the full voter list per option without additional permissions or steps.
+- **SC-007**: When `resultsDetail = FULL` and the visibility gate is passed, all space members can view the full voter list per option without additional permissions or steps.
 - **SC-008**: Polls support a minimum of 20 options without degradation in display or voting performance.
 
 ## Assumptions
@@ -279,7 +279,7 @@ A community member viewing a poll in their browser wants the poll display to upd
 
 ### Session 2026-03-11
 
-- Q: Should subscriptions return the full Poll object or a lightweight payload? → A: Full Poll object. The existing field resolvers already apply visibility/detail filtering per user context (via `@CurrentActor()`), so each subscriber automatically receives appropriately filtered data without reimplementing the visibility matrix.
+- Q: Should subscriptions return the full Poll object or a lightweight payload? → A: Wrapper payloads containing the full updated `Poll` object plus event metadata (`pollEventType`). Specifically: `PollVoteUpdatedSubscriptionResult` and `PollOptionsChangedSubscriptionResult`, each with `pollEventType` and `poll`. The existing field resolvers already apply visibility/detail filtering per user context (via `@CurrentActor()`), so each subscriber automatically receives appropriately filtered poll data without reimplementing the visibility matrix.
 - Q: Should we have one combined subscription or separate ones? → A: Two separate subscriptions (`pollVoteUpdated` and `pollOptionsChanged`) — different event frequencies (votes: high, options: low) and different client interests.
 - Q: Should new subscribers receive catch-up with current state? → A: No, future events only — consistent with all other subscriptions in the platform (PubSub delivers only after subscription starts).
 - Q: What logging level for subscription events? → A: Debug level (not verbose).

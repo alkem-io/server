@@ -117,6 +117,14 @@ describe('PollService', () => {
       expect(poll.settings.resultsDetail).toBe(PollResultsDetail.FULL);
     });
 
+    it('(e2) allows missing title and defaults to empty string', async () => {
+      const { poll } = await service.createPoll({
+        options: ['A', 'B'],
+      });
+
+      expect(poll.title).toBe('');
+    });
+
     it('(f) assigns sequential sortOrder starting at 1', async () => {
       const { poll } = await service.createPoll({
         title: 'Test',

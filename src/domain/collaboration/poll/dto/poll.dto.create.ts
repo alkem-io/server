@@ -53,12 +53,12 @@ export class PollSettingsInput {
 @ObjectType('CreatePollData')
 export class CreatePollInput {
   @Field(() => String, {
-    nullable: false,
-    description:
-      'Poll title. Must not be empty. Maximum length 512 characters.',
+    nullable: true,
+    description: 'Poll title. Optional. Maximum length 512 characters.',
   })
+  @IsOptional()
   @MaxLength(MID_TEXT_LENGTH)
-  title!: string;
+  title?: string;
 
   @Field(() => PollSettingsInput, {
     nullable: true,

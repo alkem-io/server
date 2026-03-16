@@ -98,7 +98,7 @@ export class PollService {
 
     // Build the Poll entity
     const poll = new Poll();
-    poll.title = input.title;
+    poll.title = input.title ?? '';
     poll.status = PollStatus.OPEN;
     poll.settings = {
       minResponses,

@@ -2269,8 +2269,8 @@ type CreatePollData {
   Poll configuration settings (all immutable after creation). Optional; uses defaults for any unspecified settings.
   """
   settings: PollSettingsData
-  """Poll title. Must not be empty. Maximum length 512 characters."""
-  title: String!
+  """Poll title. Optional. Maximum length 512 characters."""
+  title: String
 }
 
 type CreatePostData {
@@ -6939,8 +6939,8 @@ input CreatePollInput {
   Poll configuration settings (all immutable after creation). Optional; uses defaults for any unspecified settings.
   """
   settings: PollSettingsInput
-  """Poll title. Must not be empty. Maximum length 512 characters."""
-  title: String!
+  """Poll title. Optional. Maximum length 512 characters."""
+  title: String
 }
 
 input CreatePostInput {
