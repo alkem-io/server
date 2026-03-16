@@ -161,6 +161,20 @@ describe('PollService', () => {
       expect(poll.deadline).toBeUndefined();
     });
   });
+
+  describe('save (poll title update)', () => {
+    it('persists an updated poll title', async () => {
+      const poll = new Poll();
+      poll.id = 'poll-1';
+      poll.title = 'Updated Title';
+
+      await service.save(poll);
+
+      expect(mockPollRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'poll-1', title: 'Updated Title' })
+      );
+    });
+  });
 });
 
 describe('CalloutFramingService - poll validation', () => {

@@ -2269,7 +2269,9 @@ type CreatePollData {
   Poll configuration settings (all immutable after creation). Optional; uses defaults for any unspecified settings.
   """
   settings: PollSettingsData
-  """Poll title. Optional. Maximum length 512 characters."""
+  """
+  Poll title. Optional. Maximum length 512 characters. Becomes an empty string if not provided.
+  """
   title: String
 }
 
@@ -6939,7 +6941,9 @@ input CreatePollInput {
   Poll configuration settings (all immutable after creation). Optional; uses defaults for any unspecified settings.
   """
   settings: PollSettingsInput
-  """Poll title. Optional. Maximum length 512 characters."""
+  """
+  Poll title. Optional. Maximum length 512 characters. Becomes an empty string if not provided.
+  """
   title: String
 }
 
@@ -7828,6 +7832,10 @@ input UpdateCalloutFramingInput {
   link: UpdateLinkInput
   """The new markdown content for the Memo."""
   memoContent: Markdown
+  """
+  Updates for the Poll attached to this Framing. Only applies when type = POLL.
+  """
+  poll: UpdatePollInput
   """The Profile of the Template."""
   profile: UpdateProfileInput
   """The type of additional content attached to the framing of the callout."""
@@ -8164,6 +8172,13 @@ input UpdatePlatformSettingsIntegrationInput {
   Update the list of email addresses blocked from receiving notifications.
   """
   notificationEmailBlacklist: [String!]
+}
+
+input UpdatePollInput {
+  """
+  Updated title for the Poll (max 512 chars). This is the only mutable property once a poll is created; options are managed via separate mutations.
+  """
+  title: String
 }
 
 input UpdatePollOptionInput {

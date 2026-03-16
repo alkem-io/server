@@ -128,6 +128,10 @@ export class PollService {
     return { poll: savedPoll, warnings };
   }
 
+  async save(poll: Poll): Promise<Poll> {
+    return this.pollRepository.save(poll);
+  }
+
   async deletePoll(pollId: string): Promise<Poll> {
     const poll = await this.getPollOrFail(pollId);
 

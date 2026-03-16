@@ -455,6 +455,23 @@ export class CalloutFramingService {
         }
         break;
       }
+      case CalloutFramingType.POLL: {
+        // Poll options are managed via separate mutations (addPollOption,
+        // updatePollOption, removePollOption, reorderPollOptions), and
+        // PollSettings are readonly after poll creation.
+        // Only the poll title can be updated through this path.
+        if (
+          calloutFraming.poll &&
+          calloutFramingData.poll?.title !== undefined
+        ) {
+          const poll = await this.pollService.getPollOrFail(
+            calloutFraming.poll.id
+          );
+          poll.title = calloutFramingData.poll.title;
+          await this.pollService.save(poll);
+        }
+        break;
+      }
       case CalloutFramingType.NONE:
       default: {
         // if the type is NONE we have already deleted any existing framing content

@@ -1,5 +1,6 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { UpdateLinkInput } from '@domain/collaboration/link/dto';
+import { UpdatePollInput } from '@domain/collaboration/poll/dto/poll.dto.update';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { WhiteboardContent } from '@domain/common/scalars/scalar.whiteboard.content';
@@ -55,4 +56,14 @@ export class UpdateCalloutFramingInput {
   })
   @IsOptional()
   memoContent?: string;
+
+  @Field(() => UpdatePollInput, {
+    nullable: true,
+    description:
+      'Updates for the Poll attached to this Framing. Only applies when type = POLL.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => UpdatePollInput)
+  poll?: UpdatePollInput;
 }

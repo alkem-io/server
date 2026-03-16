@@ -62,6 +62,8 @@ export abstract class IPoll extends IAuthorizable {
 
   // Internal — not exposed directly
   votes?: IPollVote[];
+  // String-based relation on entity; typed as unknown to avoid circular import
+  framing?: unknown;
 
   // Used internally for visibility gate computation
   resultsVisibility?: PollResultsVisibility;
