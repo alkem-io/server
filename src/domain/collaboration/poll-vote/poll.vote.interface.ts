@@ -2,6 +2,7 @@ import { IPollOption } from '@domain/collaboration/poll-option/poll.option.inter
 import { IBaseAlkemio } from '@domain/common/entity/base-entity';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, ObjectType } from '@nestjs/graphql';
+import { IPoll } from '../poll/poll.interface';
 
 @ObjectType('PollVote')
 export abstract class IPollVote extends IBaseAlkemio {
@@ -18,5 +19,5 @@ export abstract class IPollVote extends IBaseAlkemio {
   selectedOptions?: IPollOption[];
 
   // Internal — not exposed directly
-  poll?: unknown;
+  poll?: IPoll;
 }

@@ -23,6 +23,7 @@ export class PollVote extends BaseAlkemioEntity implements IPollVote {
   selectedOptionIds!: string[];
 
   @ManyToOne('Poll', 'votes', {
+    nullable: false,
     eager: false,
     cascade: false,
     onDelete: 'CASCADE',
