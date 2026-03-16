@@ -12,6 +12,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { IPollOption } from '../poll-option/poll.option.interface';
 import { CreatePollInput } from './dto/poll.dto.create';
 import { Poll } from './poll.entity';
 
@@ -189,7 +190,7 @@ export class PollService {
     options: PollOption[],
     poll: Poll,
     hasVoted: boolean
-  ): PollOption[] {
+  ): IPollOption[] {
     const { resultsVisibility, resultsDetail } = poll.settings;
 
     const canSeeResults =
@@ -198,24 +199,26 @@ export class PollService {
       (resultsVisibility === PollResultsVisibility.TOTAL_ONLY && hasVoted);
 
     return options.map(opt => {
+      const cloned = { ...opt };
+
       if (!canSeeResults) {
         // HIDDEN+not-voted or TOTAL_ONLY+not-voted: null all per-option detail
-        opt.voteCount = null;
-        opt.votePercentage = null;
-        opt.voterIds = null;
+        cloned.voteCount = null;
+        cloned.votePercentage = null;
+        cloned.voterIds = null;
       } else {
         // Visibility gate passed — apply detail filter
         if (resultsDetail === PollResultsDetail.PERCENTAGE) {
-          opt.voteCount = null;
-          opt.voterIds = null;
+          cloned.voteCount = null;
+          cloned.voterIds = null;
         } else if (resultsDetail === PollResultsDetail.COUNT) {
-          opt.votePercentage = null;
-          opt.voterIds = null;
+          cloned.votePercentage = null;
+          cloned.voterIds = null;
         }
         // FULL: leave everything as is
       }
 
-      return opt;
+      return cloned;
     });
   }
 

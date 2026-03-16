@@ -1,4 +1,5 @@
 import { LogContext } from '@common/enums/logging.context';
+import { PollStatus } from '@common/enums/poll.status';
 import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Poll } from '@domain/collaboration/poll/poll.entity';
@@ -19,6 +20,15 @@ export class PollVoteService {
     voterId: string,
     selectedOptionIds: string[]
   ): Promise<Poll> {
+    // Validate poll is open
+    if (poll.status !== PollStatus.OPEN) {
+      throw new ValidationException(
+        'Cannot cast vote on a closed poll',
+        LogContext.COLLABORATION,
+        { pollId: poll.id, status: poll.status }
+      );
+    }
+
     const options = poll.options ?? [];
 
     // Validate all selected option IDs exist in this poll

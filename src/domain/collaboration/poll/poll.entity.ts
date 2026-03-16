@@ -5,6 +5,7 @@ import { PollVote } from '@domain/collaboration/poll-vote/poll.vote.entity';
 import { IPollVote } from '@domain/collaboration/poll-vote/poll.vote.interface';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Column, Entity, OneToMany, OneToOne } from 'typeorm';
+import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { IPoll } from './poll.interface';
 import { IPollSettings } from './poll.settings.interface';
 
@@ -43,7 +44,7 @@ export class Poll extends AuthorizableEntity implements IPoll {
   votes?: PollVote[];
 
   @OneToOne('CalloutFraming', 'poll')
-  framing?: unknown;
+  framing?: ICalloutFraming;
 
   // Derived — not persisted; computed by field resolvers
   totalVotes?: number;

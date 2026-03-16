@@ -44,7 +44,7 @@ export class CalloutFramingAuthorizationService {
               storageBucket: true,
             },
             poll: true,
-          } as never, // TypeORM circular-ref limitation: Poll ↔ CalloutFraming
+          },
           select: {
             id: true,
             authorization:

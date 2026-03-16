@@ -4,6 +4,7 @@ import { IPollOption } from '@domain/collaboration/poll-option/poll.option.inter
 import { IPollVote } from '@domain/collaboration/poll-vote/poll.vote.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
 import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { IPollSettings } from './poll.settings.interface';
 
 @ObjectType('Poll')
@@ -62,8 +63,8 @@ export abstract class IPoll extends IAuthorizable {
 
   // Internal — not exposed directly
   votes?: IPollVote[];
-  // String-based relation on entity; typed as unknown to avoid circular import
-  framing?: unknown;
+
+  framing?: ICalloutFraming;
 
   // Used internally for visibility gate computation
   resultsVisibility?: PollResultsVisibility;
