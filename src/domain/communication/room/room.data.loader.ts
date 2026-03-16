@@ -1,11 +1,7 @@
-import { AuthorizationPrivilege } from '@common/enums';
-import { ActorContext } from '@core/actor-context/actor.context';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Injectable, Scope } from '@nestjs/common';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import DataLoader from 'dataloader';
 import { IMessage } from '../message/message.interface';
-import { IRoom } from './room.interface';
 
 /** Composite key for unread count: actorID + roomID */
 interface UnreadCountKey {
@@ -17,56 +13,33 @@ interface UnreadCountKey {
  * Request-scoped DataLoader for batching room communication data requests.
  * Prevents N+1 queries when resolving lastMessage and unreadCount for multiple rooms.
  *
- * Authorization is enforced synchronously in the load methods (not via async guards)
- * so that all .load() calls within a GraphQL request land in the same event loop tick,
- * allowing DataLoader to batch them into a single RPC call.
+ * Authorization is handled by the synchronous GraphqlGuard on the resolver.
+ * The guard must remain synchronous to preserve DataLoader batching —
+ * all .load() calls must land in the same event loop tick.
  */
 @Injectable({ scope: Scope.REQUEST })
 export class RoomDataLoader {
   private lastMessageLoader: DataLoader<string, IMessage | null>;
   private unreadCountLoader: DataLoader<UnreadCountKey, number, string>;
 
-  constructor(
-    private readonly communicationAdapter: CommunicationAdapter,
-    private readonly authorizationService: AuthorizationService
-  ) {
+  constructor(private readonly communicationAdapter: CommunicationAdapter) {
     this.lastMessageLoader = this.createLastMessageLoader();
     this.unreadCountLoader = this.createUnreadCountLoader();
   }
 
   /**
    * Get the last message for a room using batched loading.
-   * Checks READ authorization synchronously to preserve DataLoader batching.
    */
-  loadLastMessage(
-    room: IRoom,
-    actorContext: ActorContext
-  ): Promise<IMessage | null> {
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      room.authorization,
-      AuthorizationPrivilege.READ,
-      'room lastMessage'
-    );
-    return this.lastMessageLoader.load(room.id);
+  loadLastMessage(roomId: string): Promise<IMessage | null> {
+    return this.lastMessageLoader.load(roomId);
   }
 
   /**
    * Get the unread count for a room using batched loading.
-   * Checks READ authorization synchronously to preserve DataLoader batching.
    * Uses composite key (actorID + roomID) so different actors get separate cache entries.
    */
-  loadUnreadCount(room: IRoom, actorContext: ActorContext): Promise<number> {
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      room.authorization,
-      AuthorizationPrivilege.READ,
-      'room unreadCount'
-    );
-    return this.unreadCountLoader.load({
-      actorID: actorContext.actorID,
-      roomID: room.id,
-    });
+  loadUnreadCount(roomId: string, actorID: string): Promise<number> {
+    return this.unreadCountLoader.load({ actorID, roomID: roomId });
   }
 
   private createLastMessageLoader(): DataLoader<string, IMessage | null> {

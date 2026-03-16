@@ -91,6 +91,8 @@ export class RoomResolverFields {
     );
   }
 
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('unreadCount', () => Int, {
     nullable: false,
     description:
@@ -100,18 +102,17 @@ export class RoomResolverFields {
     @Parent() room: IRoom,
     @CurrentActor() actorContext: ActorContext
   ): Promise<number> {
-    return this.roomDataLoader.loadUnreadCount(room, actorContext);
+    return this.roomDataLoader.loadUnreadCount(room.id, actorContext.actorID);
   }
 
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
   @ResolveField('lastMessage', () => IMessage, {
     nullable: true,
     description:
       'The last message sent to the Room. Useful for conversation previews.',
   })
-  async lastMessage(
-    @Parent() room: IRoom,
-    @CurrentActor() actorContext: ActorContext
-  ): Promise<IMessage | null> {
-    return this.roomDataLoader.loadLastMessage(room, actorContext);
+  async lastMessage(@Parent() room: IRoom): Promise<IMessage | null> {
+    return this.roomDataLoader.loadLastMessage(room.id);
   }
 }

@@ -1,28 +1,11 @@
-import { ActorContext } from '@core/actor-context/actor.context';
-import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { type Mocked, vi } from 'vitest';
 import { IMessage } from '../message/message.interface';
 import { RoomDataLoader } from './room.data.loader';
-import { IRoom } from './room.interface';
 
 describe('RoomDataLoader', () => {
   let loader: RoomDataLoader;
   let communicationAdapter: Mocked<CommunicationAdapter>;
-  let authorizationService: Mocked<AuthorizationService>;
-
-  const mockActorContext = (id = 'actor-1') =>
-    ({
-      actorID: id,
-      credentials: [],
-      isAnonymous: false,
-    }) as unknown as ActorContext;
-
-  const mockRoom = (id: string): IRoom =>
-    ({
-      id,
-      authorization: { id: `auth-${id}` },
-    }) as unknown as IRoom;
 
   beforeEach(() => {
     communicationAdapter = {
@@ -30,11 +13,7 @@ describe('RoomDataLoader', () => {
       batchGetUnreadCounts: vi.fn(),
     } as any;
 
-    authorizationService = {
-      grantAccessOrFail: vi.fn(),
-    } as any;
-
-    loader = new RoomDataLoader(communicationAdapter, authorizationService);
+    loader = new RoomDataLoader(communicationAdapter);
   });
 
   it('should be defined', () => {
@@ -48,22 +27,15 @@ describe('RoomDataLoader', () => {
         'room-1': mockMessage,
       });
 
-      const result = await loader.loadLastMessage(
-        mockRoom('room-1'),
-        mockActorContext()
-      );
+      const result = await loader.loadLastMessage('room-1');
 
       expect(result).toBe(mockMessage);
-      expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
     });
 
     it('should return null when no last message exists', async () => {
       communicationAdapter.batchGetLastMessages.mockResolvedValue({});
 
-      const result = await loader.loadLastMessage(
-        mockRoom('room-1'),
-        mockActorContext()
-      );
+      const result = await loader.loadLastMessage('room-1');
 
       expect(result).toBeNull();
     });
@@ -76,10 +48,9 @@ describe('RoomDataLoader', () => {
         'room-2': mockMsg2,
       });
 
-      const ctx = mockActorContext();
       const [result1, result2] = await Promise.all([
-        loader.loadLastMessage(mockRoom('room-1'), ctx),
-        loader.loadLastMessage(mockRoom('room-2'), ctx),
+        loader.loadLastMessage('room-1'),
+        loader.loadLastMessage('room-2'),
       ]);
 
       expect(result1).toBe(mockMsg1);
@@ -96,10 +67,7 @@ describe('RoomDataLoader', () => {
         'room-1': 5,
       });
 
-      const result = await loader.loadUnreadCount(
-        mockRoom('room-1'),
-        mockActorContext()
-      );
+      const result = await loader.loadUnreadCount('room-1', 'actor-1');
 
       expect(result).toBe(5);
     });
@@ -107,10 +75,7 @@ describe('RoomDataLoader', () => {
     it('should return 0 when no unread count exists', async () => {
       communicationAdapter.batchGetUnreadCounts.mockResolvedValue({});
 
-      const result = await loader.loadUnreadCount(
-        mockRoom('room-1'),
-        mockActorContext()
-      );
+      const result = await loader.loadUnreadCount('room-1', 'actor-1');
 
       expect(result).toBe(0);
     });
@@ -121,10 +86,9 @@ describe('RoomDataLoader', () => {
         'room-2': 7,
       });
 
-      const ctx = mockActorContext();
       const [result1, result2] = await Promise.all([
-        loader.loadUnreadCount(mockRoom('room-1'), ctx),
-        loader.loadUnreadCount(mockRoom('room-2'), ctx),
+        loader.loadUnreadCount('room-1', 'actor-1'),
+        loader.loadUnreadCount('room-2', 'actor-1'),
       ]);
 
       expect(result1).toBe(3);
@@ -144,13 +108,12 @@ describe('RoomDataLoader', () => {
         .mockResolvedValueOnce({ 'room-1': 5 });
 
       const [result1, result2] = await Promise.all([
-        loader.loadUnreadCount(mockRoom('room-1'), mockActorContext('actor-1')),
-        loader.loadUnreadCount(mockRoom('room-1'), mockActorContext('actor-2')),
+        loader.loadUnreadCount('room-1', 'actor-1'),
+        loader.loadUnreadCount('room-1', 'actor-2'),
       ]);
 
       expect(result1).toBe(3);
       expect(result2).toBe(5);
-      // Both batched in same DataLoader, but grouped by actor in batch fn
       expect(communicationAdapter.batchGetUnreadCounts).toHaveBeenCalledTimes(
         2
       );
@@ -161,26 +124,14 @@ describe('RoomDataLoader', () => {
         'room-1': 5,
       });
 
-      const ctx = mockActorContext();
-      const result1 = await loader.loadUnreadCount(mockRoom('room-1'), ctx);
-      const result2 = await loader.loadUnreadCount(mockRoom('room-1'), ctx);
+      const result1 = await loader.loadUnreadCount('room-1', 'actor-1');
+      const result2 = await loader.loadUnreadCount('room-1', 'actor-1');
 
       expect(result1).toBe(5);
       expect(result2).toBe(5);
-      // Only 1 RPC call — second was served from cache
       expect(communicationAdapter.batchGetUnreadCounts).toHaveBeenCalledTimes(
         1
       );
-    });
-
-    it('should throw when authorization fails', () => {
-      authorizationService.grantAccessOrFail.mockImplementation(() => {
-        throw new Error('Forbidden');
-      });
-
-      expect(() =>
-        loader.loadUnreadCount(mockRoom('room-1'), mockActorContext())
-      ).toThrow('Forbidden');
     });
   });
 });
