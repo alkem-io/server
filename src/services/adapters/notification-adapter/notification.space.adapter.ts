@@ -7,6 +7,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { IUser } from '@domain/community/user/user.interface';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.comment';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
@@ -49,7 +50,8 @@ export class NotificationSpaceAdapter {
     private notificationAdapter: NotificationAdapter,
     private notificationUserAdapter: NotificationUserAdapter,
     private communityResolverService: CommunityResolverService,
-    private spaceLookupService: SpaceLookupService
+    private spaceLookupService: SpaceLookupService,
+    private urlGeneratorService: UrlGeneratorService
   ) {}
 
   public async spaceCollaborationCalloutPublished(
@@ -116,13 +118,14 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const spaceUrl = await this.urlGeneratorService.getSpaceUrlPathByID(space.id);
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
           title: 'New callout published',
           body: 'A new callout has been published in your space',
-          url: `/spaces/${space.id}`,
+          url: spaceUrl,
         }
       );
     }
@@ -205,7 +208,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New calendar event',
           body: 'A new calendar event has been created in your space',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }
@@ -294,7 +297,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New comment on calendar event',
           body: 'Someone commented on your calendar event',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }
@@ -392,7 +395,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New contribution',
           body: 'A new contribution has been added to a callout',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }
@@ -479,7 +482,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New contribution (admin)',
           body: 'A new contribution has been added to a callout in your space',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }
@@ -577,7 +580,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New comment on your post',
           body: 'Someone commented on your post contribution',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }
@@ -663,7 +666,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New comment on callout',
           body: 'Someone commented on a callout in your space',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }
@@ -738,7 +741,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New member joined',
           body: 'A new member has joined your space',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }
@@ -806,7 +809,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'Invitation declined',
           body: 'A virtual contributor invitation was declined',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }
@@ -871,7 +874,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New application',
           body: 'A new application has been submitted to your space',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }
@@ -973,7 +976,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New message',
           body: 'You received a new message in your space',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }
@@ -1058,7 +1061,7 @@ export class NotificationSpaceAdapter {
         {
           title: 'New update',
           body: 'A new update has been posted in your space',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }

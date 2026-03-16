@@ -321,7 +321,7 @@ export class NotificationPlatformAdapter {
         {
           title: 'New space created',
           body: 'A new space has been created on the platform',
-          url: `/spaces/${eventData.space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(eventData.space.id),
         }
       );
     }

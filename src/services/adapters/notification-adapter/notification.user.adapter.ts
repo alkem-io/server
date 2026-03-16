@@ -13,6 +13,7 @@ import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-noti
 import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.room';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
@@ -37,7 +38,8 @@ export class NotificationUserAdapter {
     private notificationInAppAdapter: NotificationInAppAdapter,
     private notificationPushAdapter: NotificationPushAdapter,
     private communityResolverService: CommunityResolverService,
-    private messageDetailsService: MessageDetailsService
+    private messageDetailsService: MessageDetailsService,
+    private urlGeneratorService: UrlGeneratorService
   ) {}
 
   public async userSignUpWelcome(
@@ -154,7 +156,7 @@ export class NotificationUserAdapter {
         {
           title: 'New invitation',
           body: 'You have been invited to join a space',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }
@@ -215,7 +217,7 @@ export class NotificationUserAdapter {
         {
           title: 'You joined a space',
           body: 'You are now a member of a space',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }
@@ -496,7 +498,7 @@ export class NotificationUserAdapter {
         {
           title: 'Application declined',
           body: 'Your application to join a space was declined',
-          url: `/spaces/${eventData.spaceID}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(eventData.spaceID),
         }
       );
     }

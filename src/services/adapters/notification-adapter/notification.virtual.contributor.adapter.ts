@@ -5,6 +5,7 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-notification-payload/dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
@@ -22,7 +23,8 @@ export class NotificationVirtualContributorAdapter {
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationInAppAdapter: NotificationInAppAdapter,
     private notificationPushAdapter: NotificationPushAdapter,
-    private communityResolverService: CommunityResolverService
+    private communityResolverService: CommunityResolverService,
+    private urlGeneratorService: UrlGeneratorService
   ) {}
 
   public async spaceCommunityInvitationVirtualContributorCreated(
@@ -83,7 +85,7 @@ export class NotificationVirtualContributorAdapter {
         {
           title: 'New VC invitation',
           body: 'A virtual contributor has been invited to a space',
-          url: `/spaces/${space.id}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
         }
       );
     }
