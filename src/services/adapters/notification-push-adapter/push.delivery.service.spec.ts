@@ -19,8 +19,8 @@ const mockConfigService = {
   get: vi.fn((key: string) => {
     const config: Record<string, unknown> = {
       'notifications.push.retry.max_attempts': 5,
-      'notifications.push.vapid.public_key': 'test-public-key',
-      'notifications.push.vapid.private_key': 'test-private-key',
+      'notifications.push.vapid.public_key': '',
+      'notifications.push.vapid.private_key': '',
       'notifications.push.vapid.subject': 'mailto:test@example.com',
     };
     return config[key];

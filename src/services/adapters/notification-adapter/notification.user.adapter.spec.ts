@@ -25,6 +25,7 @@ describe('NotificationUserAdapter', () => {
     vi.mocked(notificationAdapter.getNotificationRecipients).mockResolvedValue({
       emailRecipients,
       inAppRecipients,
+      pushRecipients: [],
     } as any);
   };
 
