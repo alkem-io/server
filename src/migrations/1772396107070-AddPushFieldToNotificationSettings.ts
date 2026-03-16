@@ -42,16 +42,17 @@ export class AddPushFieldToNotificationSettings1772396107070
     for (const path of paths) {
       // For each leaf node, set "push" to the current "inApp" value.
       // jsonb_set adds the key if it doesn't exist.
-      // We use a subquery approach: extract inApp from the leaf, then set push to that value.
+      // Build the full path to the "push" key by replacing the closing brace with ",push}".
+      const pushPath = path.replace(/}'$/, ",push}'");
       await queryRunner.query(`
         UPDATE user_settings
         SET notification = jsonb_set(
           notification,
-          ${path} || '{push}',
-          COALESCE(notification #> ${path} -> 'inApp', 'false'::jsonb)
+          ${pushPath}::text[],
+          COALESCE(notification #> ${path}::text[] -> 'inApp', 'false'::jsonb)
         )
-        WHERE notification #> ${path} IS NOT NULL
-          AND notification #> ${path} -> 'push' IS NULL
+        WHERE notification #> ${path}::text[] IS NOT NULL
+          AND notification #> ${path}::text[] -> 'push' IS NULL
       `);
     }
   }
@@ -86,11 +87,12 @@ export class AddPushFieldToNotificationSettings1772396107070
     ];
 
     for (const path of paths) {
+      const pushPath = path.replace(/}'$/, ",push}'");
       await queryRunner.query(`
         UPDATE user_settings
-        SET notification = notification #- ${path} || '{push}'
-        WHERE notification #> ${path} IS NOT NULL
-          AND notification #> ${path} -> 'push' IS NOT NULL
+        SET notification = notification #- ${pushPath}::text[]
+        WHERE notification #> ${path}::text[] IS NOT NULL
+          AND notification #> ${path}::text[] -> 'push' IS NOT NULL
       `);
     }
   }
