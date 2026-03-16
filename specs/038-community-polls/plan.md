@@ -15,7 +15,7 @@ Add a Poll composition object to CalloutFraming that lets space members vote on 
 **Testing**: Vitest 4.x — unit tests for PollService invariants; no full integration tests required (risk-based: authorization is covered by framework tests)
 **Target Platform**: Linux server — same deployment target as existing service
 **Project Type**: Single NestJS monolith (`src/`)
-**Performance Goals**: Results queries must be < 200 ms p95 for polls with up to 20 options and 500 voters (SC-008 scaled)
+**Performance Goals**: Results queries must be < 200 ms p95 for polls with up to 20 options and 500 voters (SC-008 scaled). A request-scoped `PollDataLoader` batches repeated `getPollOrFail` and `getVoteForUser` calls across concurrent field resolvers into single SQL queries per request, preventing N+1 query amplification.
 **Constraints**: Options returned in `sortOrder ASC`; real-time subscriptions deliver poll updates via PubSub (same infrastructure as existing callout/VC subscriptions)
 **Account Deletion Handling**: Poll votes are removed when a user is deleted via Foreign Key Cascade.
 **Scale/Scope**: Polls are per-Callout; typical poll has 2–20 options and 5–200 voters per space; no sharding needed
@@ -63,9 +63,10 @@ src/domain/collaboration/
 │   ├── poll.interface.ts
 │   ├── poll.service.ts            # createPoll, addOption, updateOption, removeOption, reorderOptions
 │   ├── poll.service.authorization.ts
+│   ├── poll.data.loader.ts        # Request-scoped DataLoader — batches getPoll and getUserVote queries across field resolvers (SC-008)
 │   ├── poll.module.ts
 │   ├── poll.resolver.mutations.ts # addPollOption, updatePollOption, removePollOption, reorderPollOptions, castPollVote
-│   ├── poll.resolver.fields.ts    # options (enriched), myVote field resolvers
+│   ├── poll.resolver.fields.ts    # options (enriched), myVote field resolvers — uses PollDataLoader to avoid N+1 queries
 │   └── dto/
 │       ├── poll.dto.create.ts
 │       └── poll.dto.option.ts     # AddPollOptionInput, UpdatePollOptionInput, ReorderPollOptionsInput

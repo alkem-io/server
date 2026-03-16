@@ -1,10 +1,12 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
+import { LogContext } from '@common/enums/logging.context';
+import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { PollOption } from '@domain/collaboration/poll-option/poll.option.entity';
 import { IPollOption } from '@domain/collaboration/poll-option/poll.option.interface';
 import { IPollVote } from '@domain/collaboration/poll-vote/poll.vote.interface';
-import { PollVoteService } from '@domain/collaboration/poll-vote/poll.vote.service';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { PollDataLoader } from './poll.data.loader';
 import { Poll } from './poll.entity';
 import { IPoll } from './poll.interface';
 import { PollService } from './poll.service';
@@ -13,8 +15,20 @@ import { PollService } from './poll.service';
 export class PollFieldsResolver {
   constructor(
     private readonly pollService: PollService,
-    private readonly pollVoteService: PollVoteService
+    private readonly pollDataLoader: PollDataLoader
   ) {}
+
+  private async getFullPollOrFail(pollId: string): Promise<Poll> {
+    const poll = await this.pollDataLoader.loadPoll(pollId);
+    if (!poll) {
+      throw new EntityNotFoundException(
+        'Poll not found',
+        LogContext.COLLABORATION,
+        { pollId }
+      );
+    }
+    return poll;
+  }
 
   @ResolveField('myVote', () => IPollVote, {
     nullable: true,
@@ -27,18 +41,15 @@ export class PollFieldsResolver {
   ): Promise<IPollVote | null> {
     if (!actorContext?.actorID) return null;
 
-    const vote = await this.pollVoteService.getVoteForUser(
+    const vote = await this.pollDataLoader.loadUserVote(
       poll.id,
       actorContext.actorID
     );
-
     if (!vote) return null;
 
     // Resolve selectedOptions from the poll's options list
-    const pollWithOptions = await this.pollService.getPollOrFail(poll.id);
-    const optionsMap = new Map(
-      (pollWithOptions.options ?? []).map(o => [o.id, o])
-    );
+    const fullPoll = await this.getFullPollOrFail(poll.id);
+    const optionsMap = new Map((fullPoll.options ?? []).map(o => [o.id, o]));
 
     const selectedOptions: IPollOption[] = vote.selectedOptionIds
       .map(id => optionsMap.get(id))
@@ -63,7 +74,7 @@ export class PollFieldsResolver {
     @CurrentActor() actorContext: ActorContext
   ): Promise<boolean> {
     const userId = actorContext?.actorID ?? '';
-    const fullPoll = await this.pollService.getPollOrFail(poll.id);
+    const fullPoll = await this.getFullPollOrFail(poll.id);
     return this.pollService.canUserSeeDetailedResults(fullPoll, userId);
   }
 
@@ -77,10 +88,9 @@ export class PollFieldsResolver {
     @CurrentActor() actorContext: ActorContext
   ): Promise<IPollOption[]> {
     const userId = actorContext?.actorID ?? '';
-    // Load full poll with votes and options to compute results
-    const fullPoll = await this.pollService.getPollOrFail(poll.id);
+    const fullPoll = await this.getFullPollOrFail(poll.id);
     const vote = userId
-      ? await this.pollVoteService.getVoteForUser(poll.id, userId)
+      ? await this.pollDataLoader.loadUserVote(poll.id, userId)
       : null;
     const hasVoted = vote !== null;
 
@@ -103,9 +113,9 @@ export class PollFieldsResolver {
     @CurrentActor() actorContext: ActorContext
   ): Promise<number | null> {
     const userId = actorContext?.actorID ?? '';
-    const fullPoll = await this.pollService.getPollOrFail(poll.id);
+    const fullPoll = await this.getFullPollOrFail(poll.id);
     const vote = userId
-      ? await this.pollVoteService.getVoteForUser(poll.id, userId)
+      ? await this.pollDataLoader.loadUserVote(poll.id, userId)
       : null;
     const hasVoted = vote !== null;
 

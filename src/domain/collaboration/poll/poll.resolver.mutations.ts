@@ -1,14 +1,18 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { LogContext } from '@common/enums/logging.context';
 import { PollEventType } from '@common/enums/poll.event.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CastPollVoteInput } from '@domain/collaboration/poll-vote/dto/poll.vote.dto.cast';
 import { PollVoteService } from '@domain/collaboration/poll-vote/poll.vote.service';
+import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
+import { randomUUID } from 'crypto';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
   AddPollOptionInput,
   RemovePollOptionInput,
@@ -27,7 +31,9 @@ export class PollMutationsResolver {
     private readonly notificationSpaceAdapter: NotificationSpaceAdapter,
     private readonly pollService: PollService,
     private readonly pollVoteService: PollVoteService,
-    private readonly subscriptionPublishService: SubscriptionPublishService
+    private readonly subscriptionPublishService: SubscriptionPublishService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   @Mutation(() => IPoll, {
@@ -247,7 +253,7 @@ export class PollMutationsResolver {
     poll: IPoll
   ): Promise<void> {
     const payload: PollSubscriptionPayload = {
-      eventID: `${pollEventType}-${Math.round(Math.random() * 1000)}`,
+      eventID: `${pollEventType}-${randomUUID()}`,
       pollEventType,
       poll,
     };
@@ -264,41 +270,49 @@ export class PollMutationsResolver {
     voterId: string,
     priorVoterIds: string[]
   ): Promise<void> {
-    const { calloutID, createdBy: creatorId } =
-      await this.pollService.getCalloutContextForPoll(pollId);
-    const community =
-      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
-        calloutID
+    try {
+      const { calloutID, createdBy: creatorId } =
+        await this.pollService.getCalloutContextForPoll(pollId);
+      const community =
+        await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
+          calloutID
+        );
+      const space =
+        await this.communityResolverService.getSpaceForCommunityOrFail(
+          community.id
+        );
+      const spaceID = space.id;
+
+      const baseDto = { triggeredBy: voterId, calloutID, pollID: pollId };
+
+      // Notify poll creator if they are not the voter
+      if (creatorId !== voterId) {
+        await this.notificationSpaceAdapter.spaceCollaborationPollVoteCastOnOwnPoll(
+          { ...baseDto, userID: creatorId },
+          spaceID
+        );
+      }
+
+      // Notify prior voters (excluding current voter and creator if already notified)
+      const notifiedAlready = new Set([
+        voterId,
+        creatorId !== voterId ? creatorId : '',
+      ]);
+      const priorVotersToNotify = priorVoterIds.filter(
+        id => !notifiedAlready.has(id)
       );
-    const space =
-      await this.communityResolverService.getSpaceForCommunityOrFail(
-        community.id
-      );
-    const spaceID = space.id;
 
-    const baseDto = { triggeredBy: voterId, calloutID, pollID: pollId };
-
-    // Notify poll creator if they are not the voter
-    if (creatorId !== voterId) {
-      await this.notificationSpaceAdapter.spaceCollaborationPollVoteCastOnOwnPoll(
-        { ...baseDto, userID: creatorId },
-        spaceID
-      );
-    }
-
-    // Notify prior voters (excluding current voter and creator if already notified)
-    const notifiedAlready = new Set([
-      voterId,
-      creatorId !== voterId ? creatorId : '',
-    ]);
-    const priorVotersToNotify = priorVoterIds.filter(
-      id => !notifiedAlready.has(id)
-    );
-
-    for (const priorVoterId of priorVotersToNotify) {
-      await this.notificationSpaceAdapter.spaceCollaborationPollVoteCastOnPollIVotedOn(
-        { ...baseDto, userID: priorVoterId },
-        spaceID
+      for (const priorVoterId of priorVotersToNotify) {
+        await this.notificationSpaceAdapter.spaceCollaborationPollVoteCastOnPollIVotedOn(
+          { ...baseDto, userID: priorVoterId },
+          spaceID
+        );
+      }
+    } catch (error) {
+      this.logger.error?.(
+        `Failed to dispatch vote notifications for poll: ${(error as Error)?.message}`,
+        (error as Error)?.stack ?? '',
+        LogContext.COLLABORATION
       );
     }
   }
@@ -311,23 +325,31 @@ export class PollMutationsResolver {
   ): Promise<void> {
     if (voterIds.length === 0) return;
 
-    const { calloutID } =
-      await this.pollService.getCalloutContextForPoll(pollId);
-    const community =
-      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
-        calloutID
-      );
-    const space =
-      await this.communityResolverService.getSpaceForCommunityOrFail(
-        community.id
-      );
-    const spaceID = space.id;
-    const baseDto = { triggeredBy: actorId, calloutID, pollID: pollId };
+    try {
+      const { calloutID } =
+        await this.pollService.getCalloutContextForPoll(pollId);
+      const community =
+        await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
+          calloutID
+        );
+      const space =
+        await this.communityResolverService.getSpaceForCommunityOrFail(
+          community.id
+        );
+      const spaceID = space.id;
+      const baseDto = { triggeredBy: actorId, calloutID, pollID: pollId };
 
-    for (const voterId of voterIds) {
-      await this.notificationSpaceAdapter.spaceCollaborationPollModifiedOnPollIVotedOn(
-        { ...baseDto, userID: voterId },
-        spaceID
+      for (const voterId of voterIds) {
+        await this.notificationSpaceAdapter.spaceCollaborationPollModifiedOnPollIVotedOn(
+          { ...baseDto, userID: voterId },
+          spaceID
+        );
+      }
+    } catch (error) {
+      this.logger.error?.(
+        `Failed to dispatch modified notifications for poll: ${(error as Error)?.message}`,
+        (error as Error)?.stack ?? '',
+        LogContext.COLLABORATION
       );
     }
   }
@@ -345,30 +367,38 @@ export class PollMutationsResolver {
     const hasWork = deletedVoterIds.length > 0 || remainingVoterIds.length > 0;
     if (!hasWork) return;
 
-    const { calloutID } =
-      await this.pollService.getCalloutContextForPoll(pollId);
-    const community =
-      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
-        calloutID
-      );
-    const space =
-      await this.communityResolverService.getSpaceForCommunityOrFail(
-        community.id
-      );
-    const spaceID = space.id;
-    const baseDto = { triggeredBy: actorId, calloutID, pollID: pollId };
+    try {
+      const { calloutID } =
+        await this.pollService.getCalloutContextForPoll(pollId);
+      const community =
+        await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
+          calloutID
+        );
+      const space =
+        await this.communityResolverService.getSpaceForCommunityOrFail(
+          community.id
+        );
+      const spaceID = space.id;
+      const baseDto = { triggeredBy: actorId, calloutID, pollID: pollId };
 
-    for (const voterId of deletedVoterIds) {
-      await this.notificationSpaceAdapter.spaceCollaborationPollVoteAffectedByOptionChange(
-        { ...baseDto, userID: voterId },
-        spaceID
-      );
-    }
+      for (const voterId of deletedVoterIds) {
+        await this.notificationSpaceAdapter.spaceCollaborationPollVoteAffectedByOptionChange(
+          { ...baseDto, userID: voterId },
+          spaceID
+        );
+      }
 
-    for (const voterId of remainingVoterIds) {
-      await this.notificationSpaceAdapter.spaceCollaborationPollModifiedOnPollIVotedOn(
-        { ...baseDto, userID: voterId },
-        spaceID
+      for (const voterId of remainingVoterIds) {
+        await this.notificationSpaceAdapter.spaceCollaborationPollModifiedOnPollIVotedOn(
+          { ...baseDto, userID: voterId },
+          spaceID
+        );
+      }
+    } catch (error) {
+      this.logger.error?.(
+        `Failed to dispatch option change notifications for poll: ${(error as Error)?.message}`,
+        (error as Error)?.stack ?? '',
+        LogContext.COLLABORATION
       );
     }
   }
