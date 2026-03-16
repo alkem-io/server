@@ -65,11 +65,13 @@ export class PollResolverSubscriptions {
       if (!isMatch) return false;
 
       // Suppress vote events when resultsVisibility = HIDDEN and subscriber has not voted (FR-030)
+      // Settings are immutable (FR-025), so we can safely use the payload's copy.
       const actorID = context.req.user.actorID;
-      const poll = await this.pollService.getPollOrFail(payload.poll.id);
-      if (poll.settings.resultsVisibility === PollResultsVisibility.HIDDEN) {
+      if (
+        payload.poll.settings.resultsVisibility === PollResultsVisibility.HIDDEN
+      ) {
         const vote = await this.pollVoteService.getVoteForUser(
-          poll.id,
+          payload.poll.id,
           actorID
         );
         if (!vote) {
