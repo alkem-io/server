@@ -85,9 +85,7 @@ describe('GraphqlGuard', () => {
       const result = guard.canActivate(context);
 
       expect(result).toBe(true);
-      expect(
-        mockAuthorizationService.grantAccessOrFail
-      ).not.toHaveBeenCalled();
+      expect(mockAuthorizationService.grantAccessOrFail).not.toHaveBeenCalled();
     });
 
     it('checks privilege against parent authorization when privilege is set', () => {
@@ -104,9 +102,7 @@ describe('GraphqlGuard', () => {
       const result = guard.canActivate(context);
 
       expect(result).toBe(true);
-      expect(
-        mockAuthorizationService.grantAccessOrFail
-      ).toHaveBeenCalledWith(
+      expect(mockAuthorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorCtx,
         authorization,
         AuthorizationPrivilege.READ,
@@ -126,9 +122,7 @@ describe('GraphqlGuard', () => {
       guard.canActivate(context);
 
       expect(mockActorContextService.createAnonymous).toHaveBeenCalledOnce();
-      expect(
-        mockAuthorizationService.grantAccessOrFail
-      ).toHaveBeenCalledWith(
+      expect(mockAuthorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         expect.objectContaining({ isAnonymous: true }),
         authorization,
         AuthorizationPrivilege.READ,

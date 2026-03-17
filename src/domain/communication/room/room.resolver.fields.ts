@@ -91,6 +91,7 @@ export class RoomResolverFields {
     );
   }
 
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('unreadCount', () => Int, {
     nullable: false,

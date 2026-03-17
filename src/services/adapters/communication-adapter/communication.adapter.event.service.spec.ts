@@ -294,7 +294,7 @@ describe('CommunicationAdapterEventService', () => {
   });
 
   describe('onRoomMemberLeft', () => {
-    it('should emit room.member.left event', async () => {
+    it('should not emit any event (log-only handler)', async () => {
       const payload = {
         alkemio_room_id: 'room-123',
         actor_id: 'actor-456',
@@ -304,24 +304,7 @@ describe('CommunicationAdapterEventService', () => {
 
       await service.onRoomMemberLeft(payload as any);
 
-      expect(eventEmitter.emit).toHaveBeenCalledWith(
-        'room.member.left',
-        expect.any(Object)
-      );
-    });
-
-    it('should return Nack on error', async () => {
-      vi.mocked(eventEmitter.emit).mockImplementation(() => {
-        throw new Error('Emit failed');
-      });
-
-      const result = await service.onRoomMemberLeft({
-        alkemio_room_id: 'room-123',
-        actor_id: 'actor-456',
-        timestamp: Date.now(),
-      } as any);
-
-      expect(result).toBeInstanceOf(Nack);
+      expect(eventEmitter.emit).not.toHaveBeenCalled();
     });
   });
 

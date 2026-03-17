@@ -48,25 +48,37 @@ describe('InnovationHubAuthorizationService', () => {
         authorization: { id: 'hub-auth' },
       } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(hubWithProfile);
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
+        hubWithProfile
+      );
 
       const clonedAuth = { id: 'cloned-auth' };
       const clonedWithAnon = { id: 'cloned-with-anon' };
       const inheritedAuth = { id: 'inherited-auth' };
       const extendedAuth = { id: 'extended-auth' };
 
-      (authorizationPolicyService as any).cloneAuthorizationPolicy.mockReturnValue(clonedAuth);
+      (
+        authorizationPolicyService as any
+      ).cloneAuthorizationPolicy.mockReturnValue(clonedAuth);
       (
         authorizationPolicyService as any
       ).appendCredentialRuleAnonymousRegisteredAccess = vi
         .fn()
         .mockReturnValue(clonedWithAnon);
-      (authorizationPolicyService as any).inheritParentAuthorization.mockReturnValue(inheritedAuth);
-      (authorizationPolicyService as any).createCredentialRuleUsingTypesOnly.mockReturnValue({ cascade: false });
-      (authorizationPolicyService as any).appendCredentialAuthorizationRules.mockReturnValue(extendedAuth);
+      (
+        authorizationPolicyService as any
+      ).inheritParentAuthorization.mockReturnValue(inheritedAuth);
+      (
+        authorizationPolicyService as any
+      ).createCredentialRuleUsingTypesOnly.mockReturnValue({ cascade: false });
+      (
+        authorizationPolicyService as any
+      ).appendCredentialAuthorizationRules.mockReturnValue(extendedAuth);
 
       const profileAuths = [{ id: 'profile-auth-1' }, { id: 'profile-auth-2' }];
-      (profileAuthorizationService as any).applyAuthorizationPolicy.mockResolvedValue(profileAuths);
+      (
+        profileAuthorizationService as any
+      ).applyAuthorizationPolicy.mockResolvedValue(profileAuths);
 
       // Act
       const result = await service.applyAuthorizationPolicy(
@@ -92,19 +104,31 @@ describe('InnovationHubAuthorizationService', () => {
         authorization: { id: 'hub-auth' },
       } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(hubWithProfile);
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
+        hubWithProfile
+      );
 
       const clonedAuth = { id: 'cloned' };
-      (authorizationPolicyService as any).cloneAuthorizationPolicy.mockReturnValue(clonedAuth);
+      (
+        authorizationPolicyService as any
+      ).cloneAuthorizationPolicy.mockReturnValue(clonedAuth);
       (
         authorizationPolicyService as any
       ).appendCredentialRuleAnonymousRegisteredAccess = vi
         .fn()
         .mockReturnValue(clonedAuth);
-      (authorizationPolicyService as any).inheritParentAuthorization.mockReturnValue({ id: 'inherited' });
-      (authorizationPolicyService as any).createCredentialRuleUsingTypesOnly.mockReturnValue({ cascade: false });
-      (authorizationPolicyService as any).appendCredentialAuthorizationRules.mockReset();
-      (profileAuthorizationService as any).applyAuthorizationPolicy.mockResolvedValue([]);
+      (
+        authorizationPolicyService as any
+      ).inheritParentAuthorization.mockReturnValue({ id: 'inherited' });
+      (
+        authorizationPolicyService as any
+      ).createCredentialRuleUsingTypesOnly.mockReturnValue({ cascade: false });
+      (
+        authorizationPolicyService as any
+      ).appendCredentialAuthorizationRules.mockReset();
+      (
+        profileAuthorizationService as any
+      ).applyAuthorizationPolicy.mockResolvedValue([]);
 
       // Act
       await service.applyAuthorizationPolicy(hubInput, mockParentAuthorization);
@@ -128,7 +152,9 @@ describe('InnovationHubAuthorizationService', () => {
         authorization: { id: 'hub-auth' },
       } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(hubWithoutProfile);
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
+        hubWithoutProfile
+      );
 
       // Act & Assert
       await expect(
@@ -146,17 +172,29 @@ describe('InnovationHubAuthorizationService', () => {
         authorization: { id: 'hub-auth' },
       } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(hubWithProfile);
-      (authorizationPolicyService as any).cloneAuthorizationPolicy.mockReturnValue({});
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
+        hubWithProfile
+      );
+      (
+        authorizationPolicyService as any
+      ).cloneAuthorizationPolicy.mockReturnValue({});
       (
         authorizationPolicyService as any
       ).appendCredentialRuleAnonymousRegisteredAccess = vi
         .fn()
         .mockReturnValue({});
-      (authorizationPolicyService as any).inheritParentAuthorization.mockReturnValue(inheritedAuth);
-      (authorizationPolicyService as any).createCredentialRuleUsingTypesOnly.mockReturnValue({ cascade: false });
-      (authorizationPolicyService as any).appendCredentialAuthorizationRules.mockReset();
-      (profileAuthorizationService as any).applyAuthorizationPolicy.mockResolvedValue([]);
+      (
+        authorizationPolicyService as any
+      ).inheritParentAuthorization.mockReturnValue(inheritedAuth);
+      (
+        authorizationPolicyService as any
+      ).createCredentialRuleUsingTypesOnly.mockReturnValue({ cascade: false });
+      (
+        authorizationPolicyService as any
+      ).appendCredentialAuthorizationRules.mockReset();
+      (
+        profileAuthorizationService as any
+      ).applyAuthorizationPolicy.mockResolvedValue([]);
 
       // Act
       await service.applyAuthorizationPolicy(hubInput, mockParentAuthorization);
@@ -176,17 +214,29 @@ describe('InnovationHubAuthorizationService', () => {
         authorization: { id: 'hub-auth' },
       } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(hubWithProfile);
-      (authorizationPolicyService as any).cloneAuthorizationPolicy.mockReturnValue({});
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
+        hubWithProfile
+      );
+      (
+        authorizationPolicyService as any
+      ).cloneAuthorizationPolicy.mockReturnValue({});
       (
         authorizationPolicyService as any
       ).appendCredentialRuleAnonymousRegisteredAccess = vi
         .fn()
         .mockReturnValue({});
-      (authorizationPolicyService as any).inheritParentAuthorization.mockReturnValue({});
-      (authorizationPolicyService as any).createCredentialRuleUsingTypesOnly.mockReturnValue({ cascade: false });
-      (authorizationPolicyService as any).appendCredentialAuthorizationRules.mockReset();
-      (profileAuthorizationService as any).applyAuthorizationPolicy.mockResolvedValue([]);
+      (
+        authorizationPolicyService as any
+      ).inheritParentAuthorization.mockReturnValue({});
+      (
+        authorizationPolicyService as any
+      ).createCredentialRuleUsingTypesOnly.mockReturnValue({ cascade: false });
+      (
+        authorizationPolicyService as any
+      ).appendCredentialAuthorizationRules.mockReset();
+      (
+        profileAuthorizationService as any
+      ).applyAuthorizationPolicy.mockResolvedValue([]);
 
       // Act
       const result = await service.applyAuthorizationPolicy(
@@ -210,19 +260,31 @@ describe('InnovationHubAuthorizationService', () => {
         authorization: { id: 'hub-auth' },
       } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(hubWithProfile);
-      (authorizationPolicyService as any).cloneAuthorizationPolicy.mockReturnValue({});
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
+        hubWithProfile
+      );
+      (
+        authorizationPolicyService as any
+      ).cloneAuthorizationPolicy.mockReturnValue({});
       (
         authorizationPolicyService as any
       ).appendCredentialRuleAnonymousRegisteredAccess = vi
         .fn()
         .mockReturnValue({});
-      (authorizationPolicyService as any).inheritParentAuthorization.mockReturnValue({});
+      (
+        authorizationPolicyService as any
+      ).inheritParentAuthorization.mockReturnValue({});
 
       const credentialRule = { cascade: false };
-      (authorizationPolicyService as any).createCredentialRuleUsingTypesOnly.mockReturnValue(credentialRule);
-      (authorizationPolicyService as any).appendCredentialAuthorizationRules.mockReset();
-      (profileAuthorizationService as any).applyAuthorizationPolicy.mockResolvedValue([]);
+      (
+        authorizationPolicyService as any
+      ).createCredentialRuleUsingTypesOnly.mockReturnValue(credentialRule);
+      (
+        authorizationPolicyService as any
+      ).appendCredentialAuthorizationRules.mockReset();
+      (
+        profileAuthorizationService as any
+      ).applyAuthorizationPolicy.mockResolvedValue([]);
 
       // Act
       await service.applyAuthorizationPolicy(hubInput, mockParentAuthorization);

@@ -31,6 +31,12 @@ export class IRoomWithReadState {
   // The communication IDs of the room members (internal, not exposed in GraphQL)
   members?: string[];
 
+  @Field(() => String, {
+    nullable: true,
+    description: 'The avatar URL of the room (mxc:// or https://).',
+  })
+  avatarUrl?: string;
+
   @Field(() => MessageID, {
     nullable: true,
     description: 'The ID of the last message read by the current user.',
