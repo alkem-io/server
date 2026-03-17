@@ -3,6 +3,7 @@
 
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { ProfileType } from '@common/enums/profile.type';
 import { RoleName } from '@common/enums/role.name';
@@ -153,6 +154,9 @@ export const spaceData: { space: ISpace } = {
         allowGuestContributions: false,
       },
       sortMode: SpaceSortMode.ALPHABETICAL,
+      layout: {
+        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+      },
     },
   },
 };

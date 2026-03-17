@@ -257,6 +257,11 @@ enum CalloutContributionType {
   WHITEBOARD
 }
 
+enum CalloutDescriptionDisplayMode {
+  COLLAPSED
+  EXPANDED
+}
+
 enum CalloutFramingType {
   LINK
   MEDIA_GALLERY
@@ -4920,6 +4925,8 @@ type RelayPaginatedSpace implements ActorFull {
   credentials: [Credential!]
   """The ID of the Actor"""
   id: UUID!
+  """The layout settings for this Space. Accessible without READ privilege."""
+  layout: SpaceSettingsLayout!
   """
   The level of this Space, representing the number of Spaces above this one.
   """
@@ -5448,6 +5455,8 @@ type Space implements ActorFull {
   credentials: [Credential!]
   """The ID of the Actor"""
   id: UUID!
+  """The layout settings for this Space. Accessible without READ privilege."""
+  layout: SpaceSettingsLayout!
   """
   The level of this Space, representing the number of Spaces above this one.
   """
@@ -5559,6 +5568,8 @@ type SpacePendingMembershipInfo {
 type SpaceSettings {
   """The collaboration settings for this Space."""
   collaboration: SpaceSettingsCollaboration!
+  """The layout settings for this Space."""
+  layout: SpaceSettingsLayout!
   """The membership settings for this Space."""
   membership: SpaceSettingsMembership!
   """The privacy settings for this Space"""
@@ -5584,6 +5595,11 @@ type SpaceSettingsCollaboration {
   Flag to control if ability to contribute is inherited from parent Space.
   """
   inheritMembershipRights: Boolean!
+}
+
+type SpaceSettingsLayout {
+  """The default display mode for callout descriptions in this Space."""
+  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode!
 }
 
 type SpaceSettingsMembership {
@@ -7116,12 +7132,19 @@ input CreateSpaceSettingsCollaborationInput {
 input CreateSpaceSettingsInput {
   """"""
   collaboration: CreateSpaceSettingsCollaborationInput
+  """The layout settings for this Space."""
+  layout: CreateSpaceSettingsLayoutInput
   """"""
   membership: CreateSpaceSettingsMembershipInput
   """"""
   privacy: CreateSpaceSettingsPrivacyInput
   """The sort mode for subspaces: Alphabetical or Custom."""
   sortMode: SpaceSortMode
+}
+
+input CreateSpaceSettingsLayoutInput {
+  """The default display mode for callout descriptions."""
+  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode!
 }
 
 input CreateSpaceSettingsMembershipInput {
@@ -8387,6 +8410,8 @@ input UpdateSpaceSettingsCollaborationInput {
 input UpdateSpaceSettingsEntityInput {
   """"""
   collaboration: UpdateSpaceSettingsCollaborationInput
+  """The layout settings for this Space."""
+  layout: UpdateSpaceSettingsLayoutInput
   """"""
   membership: UpdateSpaceSettingsMembershipInput
   """"""
@@ -8400,6 +8425,11 @@ input UpdateSpaceSettingsInput {
   settings: UpdateSpaceSettingsEntityInput!
   """The identifier for the Space whose settings are to be updated."""
   spaceID: String!
+}
+
+input UpdateSpaceSettingsLayoutInput {
+  """The default display mode for callout descriptions."""
+  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode!
 }
 
 input UpdateSpaceSettingsMembershipInput {
