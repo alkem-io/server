@@ -23,6 +23,8 @@ describe('AdminLicensingService', () => {
   let accountLookupService: { getAccountOrFail: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminLicensingService,

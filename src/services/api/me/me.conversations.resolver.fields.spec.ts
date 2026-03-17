@@ -1,0 +1,38 @@
+import { Test, TestingModule } from '@nestjs/testing';
+import { MockCacheManager } from '@test/mocks/cache-manager.mock';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { MeConversationsResolverFields } from './me.conversations.resolver.fields';
+
+describe('MeConversationsResolverFields', () => {
+  let resolver: MeConversationsResolverFields;
+
+  beforeEach(async () => {
+    vi.restoreAllMocks();
+
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        MeConversationsResolverFields,
+        MockCacheManager,
+        MockWinstonProvider,
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+
+    resolver = module.get<MeConversationsResolverFields>(
+      MeConversationsResolverFields
+    );
+  });
+
+  it('should be defined', () => {
+    expect(resolver).toBeDefined();
+  });
+
+  it('should throw when actorID is missing for conversations', async () => {
+    const actorContext = { actorID: '' } as any;
+    await expect(
+      resolver.conversations(actorContext, {} as any)
+    ).rejects.toThrow();
+  });
+});

@@ -28,6 +28,8 @@ describe('MemoService', () => {
   let profileDocumentsService: ProfileDocumentsService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Memo.create to avoid DataSource requirement
     vi.spyOn(Memo, 'create').mockImplementation((input: any) => {
       const entity = new Memo();

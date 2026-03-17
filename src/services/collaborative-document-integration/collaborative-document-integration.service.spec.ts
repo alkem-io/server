@@ -43,6 +43,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CollaborativeDocumentIntegrationService,

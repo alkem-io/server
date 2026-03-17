@@ -1,16 +1,29 @@
+import { AccountType } from '@common/enums/account.type';
 import { LicensingCredentialBasedCredentialType } from '@common/enums/licensing.credential.based.credential.type';
+import {
+  EntityNotInitializedException,
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { InnovationHubService } from '@domain/innovation-hub/innovation.hub.service';
+import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
+import { InnovationPackAuthorizationService } from '@library/innovation-pack/innovation.pack.service.authorization';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
-import { vi } from 'vitest';
+import { type Mocked, vi } from 'vitest';
+import { AccountHostService } from '../account.host/account.host.service';
+import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { SpaceService } from '../space/space.service';
 import { Account } from './account.entity';
 import { IAccount } from './account.interface';
@@ -19,14 +32,16 @@ import { AccountService } from './account.service';
 describe('AccountService', () => {
   let service: AccountService;
   let accountRepository: Repository<Account>;
-  let storageAggregatorService: StorageAggregatorService;
-  let spaceService: SpaceService;
-  let virtualContributorService: VirtualContributorService;
-  let innovationPackService: InnovationPackService;
-  let innovationHubService: InnovationHubService;
-  let licenseService: LicenseService;
+  let storageAggregatorService: Mocked<StorageAggregatorService>;
+  let spaceService: Mocked<SpaceService>;
+  let virtualContributorService: Mocked<VirtualContributorService>;
+  let innovationPackService: Mocked<InnovationPackService>;
+  let innovationHubService: Mocked<InnovationHubService>;
+  let licenseService: Mocked<LicenseService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AccountService,
@@ -45,12 +60,20 @@ describe('AccountService', () => {
     (accountRepository as any).manager = {
       transaction: vi.fn(async (cb: any) => cb()),
     };
-    storageAggregatorService = module.get(StorageAggregatorService);
-    spaceService = module.get(SpaceService);
-    virtualContributorService = module.get(VirtualContributorService);
-    innovationPackService = module.get(InnovationPackService);
-    innovationHubService = module.get(InnovationHubService);
-    licenseService = module.get(LicenseService);
+    storageAggregatorService = module.get(
+      StorageAggregatorService
+    ) as Mocked<StorageAggregatorService>;
+    spaceService = module.get(SpaceService) as Mocked<SpaceService>;
+    virtualContributorService = module.get(
+      VirtualContributorService
+    ) as Mocked<VirtualContributorService>;
+    innovationPackService = module.get(
+      InnovationPackService
+    ) as Mocked<InnovationPackService>;
+    innovationHubService = module.get(
+      InnovationHubService
+    ) as Mocked<InnovationHubService>;
+    licenseService = module.get(LicenseService) as Mocked<LicenseService>;
   });
 
   describe('getAccountOrFail', () => {
@@ -183,16 +206,14 @@ describe('AccountService', () => {
       } as unknown as Account;
 
       vi.spyOn(accountRepository, 'findOne').mockResolvedValue(mockAccount);
-      storageAggregatorService.delete = vi.fn().mockResolvedValue(undefined);
-      licenseService.removeLicenseOrFail = vi.fn().mockResolvedValue(undefined);
-      virtualContributorService.deleteVirtualContributor = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      innovationPackService.deleteInnovationPack = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      innovationHubService.delete = vi.fn().mockResolvedValue(undefined);
-      spaceService.deleteSpaceOrFail = vi.fn().mockResolvedValue(undefined);
+      storageAggregatorService.delete.mockResolvedValue(undefined!);
+      licenseService.removeLicenseOrFail.mockResolvedValue(undefined!);
+      virtualContributorService.deleteVirtualContributor.mockResolvedValue(
+        undefined!
+      );
+      innovationPackService.deleteInnovationPack.mockResolvedValue(undefined!);
+      innovationHubService.delete.mockResolvedValue(undefined!);
+      spaceService.deleteSpaceOrFail.mockResolvedValue(undefined!);
       vi.spyOn(accountRepository, 'remove').mockResolvedValue({
         id: undefined,
       } as unknown as Account);
@@ -484,6 +505,291 @@ describe('AccountService', () => {
       // Assert -- should only include L0, L1, L2 (3 roleSets, not 4)
       expect(result).toHaveLength(3);
       expect(result[2].id).toBe('rs-2');
+    });
+  });
+
+  describe('createSpaceOnAccount', () => {
+    let namingService: NamingService;
+    let _accountLookupService: AccountLookupService;
+    let accountHostService: AccountHostService;
+
+    beforeEach(() => {
+      namingService = (service as any).namingService;
+      _accountLookupService = (service as any).accountLookupService;
+      accountHostService = (service as any).accountHostService;
+    });
+
+    it('should throw RelationshipNotFoundException when storageAggregator is missing', async () => {
+      vi.spyOn(accountRepository, 'findOne').mockResolvedValue({
+        id: 'account-1',
+        spaces: [],
+        storageAggregator: undefined,
+      } as any);
+
+      await expect(
+        service.createSpaceOnAccount(
+          {
+            accountID: 'account-1',
+            about: { profileData: { displayName: 'Test' } },
+          } as any,
+          { actorID: 'actor-1', isAnonymous: false } as any
+        )
+      ).rejects.toThrow(RelationshipNotFoundException);
+    });
+
+    it('should throw ValidationException when provided nameID is reserved', async () => {
+      vi.spyOn(accountRepository, 'findOne').mockResolvedValue({
+        id: 'account-1',
+        spaces: [],
+        storageAggregator: { id: 'sa-1' },
+      } as any);
+      vi.mocked(
+        namingService.getReservedNameIDsLevelZeroSpaces
+      ).mockResolvedValue(['reserved-name']);
+
+      await expect(
+        service.createSpaceOnAccount(
+          {
+            accountID: 'account-1',
+            nameID: 'reserved-name',
+            about: { profileData: { displayName: 'Test' } },
+          } as any,
+          { actorID: 'actor-1', isAnonymous: false } as any
+        )
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('should auto-generate nameID when not provided', async () => {
+      const account = {
+        id: 'account-1',
+        spaces: [],
+        storageAggregator: { id: 'sa-1' },
+        accountType: AccountType.USER,
+      } as any;
+      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(account);
+      vi.mocked(
+        namingService.getReservedNameIDsLevelZeroSpaces
+      ).mockResolvedValue([]);
+      vi.mocked(
+        namingService.createNameIdAvoidingReservedNameIDs
+      ).mockReturnValue('auto-generated-name');
+
+      const space = {
+        id: 'space-1',
+        community: { roleSet: { id: 'rs-1' } },
+        subspaces: [],
+      } as any;
+      vi.mocked(spaceService.createRootSpaceAndSubspaces).mockResolvedValue(
+        space
+      );
+      vi.mocked(spaceService.save).mockResolvedValue(space);
+      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(space);
+      vi.mocked(spaceService.assignUserToRoles).mockResolvedValue(
+        undefined as any
+      );
+      vi.mocked(accountHostService.assignLicensePlansToSpace).mockResolvedValue(
+        undefined as any
+      );
+
+      await service.createSpaceOnAccount(
+        {
+          accountID: 'account-1',
+          about: { profileData: { displayName: 'Test Space' } },
+        } as any,
+        { actorID: 'actor-1', isAnonymous: false } as any
+      );
+
+      expect(
+        namingService.createNameIdAvoidingReservedNameIDs
+      ).toHaveBeenCalledWith('Test Space', []);
+    });
+
+    it('should throw when community/roleSet not loaded after creation', async () => {
+      const account = {
+        id: 'account-1',
+        spaces: [],
+        storageAggregator: { id: 'sa-1' },
+        accountType: AccountType.USER,
+      } as any;
+      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(account);
+      vi.mocked(
+        namingService.getReservedNameIDsLevelZeroSpaces
+      ).mockResolvedValue([]);
+      vi.mocked(
+        namingService.createNameIdAvoidingReservedNameIDs
+      ).mockReturnValue('name');
+
+      const space = { id: 'space-1' } as any;
+      vi.mocked(spaceService.createRootSpaceAndSubspaces).mockResolvedValue(
+        space
+      );
+      vi.mocked(spaceService.save).mockResolvedValue(space);
+      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue({
+        id: 'space-1',
+        community: undefined,
+        subspaces: [],
+      } as any);
+
+      await expect(
+        service.createSpaceOnAccount(
+          {
+            accountID: 'account-1',
+            about: { profileData: { displayName: 'Test' } },
+          } as any,
+          { actorID: 'actor-1', isAnonymous: false } as any
+        )
+      ).rejects.toThrow(EntityNotInitializedException);
+    });
+  });
+
+  describe('createVirtualContributorOnAccount', () => {
+    it('should throw RelationshipNotFoundException when required entities missing', async () => {
+      vi.spyOn(accountRepository, 'findOne').mockResolvedValue({
+        id: 'account-1',
+        virtualContributors: undefined,
+        storageAggregator: undefined,
+      } as any);
+
+      await expect(
+        service.createVirtualContributorOnAccount({
+          accountID: 'account-1',
+        } as any)
+      ).rejects.toThrow(RelationshipNotFoundException);
+    });
+
+    it('should create and return virtual contributor', async () => {
+      const account = {
+        id: 'account-1',
+        virtualContributors: [],
+        storageAggregator: { id: 'sa-1' },
+      } as any;
+      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(account);
+
+      const platformTemplatesService = (service as any)
+        .platformTemplatesService as PlatformTemplatesService;
+      vi.mocked(
+        platformTemplatesService.getCreateCalloutInputsFromTemplate
+      ).mockResolvedValue([]);
+
+      const vc = { id: 'vc-1' } as any;
+      vi.mocked(
+        virtualContributorService.createVirtualContributor
+      ).mockResolvedValue(vc);
+      vi.mocked(virtualContributorService.save).mockResolvedValue(vc);
+
+      const result = await service.createVirtualContributorOnAccount(
+        { accountID: 'account-1' } as any,
+        { actorID: 'actor-1' } as any
+      );
+
+      expect(result).toBe(vc);
+      expect(vc.account).toBe(account);
+    });
+  });
+
+  describe('createInnovationHubOnAccount', () => {
+    it('should throw RelationshipNotFoundException when storageAggregator missing', async () => {
+      vi.spyOn(accountRepository, 'findOne').mockResolvedValue({
+        id: 'account-1',
+        storageAggregator: undefined,
+      } as any);
+
+      await expect(
+        service.createInnovationHubOnAccount({
+          accountID: 'account-1',
+        } as any)
+      ).rejects.toThrow(RelationshipNotFoundException);
+    });
+
+    it('should create and return innovation hub', async () => {
+      const account = {
+        id: 'account-1',
+        storageAggregator: { id: 'sa-1' },
+        authorization: { id: 'auth-1' },
+      } as any;
+      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(account);
+
+      const hub = { id: 'hub-1' } as any;
+      vi.mocked(innovationHubService.createInnovationHub).mockResolvedValue(
+        hub
+      );
+      vi.mocked(innovationHubService.save).mockResolvedValue(hub);
+
+      const innovationHubAuthorizationService = (service as any)
+        .innovationHubAuthorizationService as InnovationHubAuthorizationService;
+      vi.mocked(
+        innovationHubAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+
+      const authPolicyService = (service as any)
+        .authorizationPolicyService as AuthorizationPolicyService;
+      vi.mocked(authPolicyService.saveAll).mockResolvedValue(undefined as any);
+
+      const result = await service.createInnovationHubOnAccount({
+        accountID: 'account-1',
+      } as any);
+
+      expect(result).toBe(hub);
+      expect(hub.account).toBe(account);
+    });
+  });
+
+  describe('createInnovationPackOnAccount', () => {
+    it('should throw RelationshipNotFoundException when storageAggregator missing', async () => {
+      vi.spyOn(accountRepository, 'findOne').mockResolvedValue({
+        id: 'account-1',
+        storageAggregator: undefined,
+      } as any);
+
+      await expect(
+        service.createInnovationPackOnAccount({
+          accountID: 'account-1',
+        } as any)
+      ).rejects.toThrow(RelationshipNotFoundException);
+    });
+
+    it('should create and return innovation pack', async () => {
+      const account = {
+        id: 'account-1',
+        storageAggregator: { id: 'sa-1' },
+        authorization: { id: 'auth-1' },
+      } as any;
+      vi.spyOn(accountRepository, 'findOne').mockResolvedValue(account);
+
+      const ip = { id: 'ip-1' } as any;
+      const innovationPackService = (service as any)
+        .innovationPackService as InnovationPackService;
+      vi.mocked(innovationPackService.createInnovationPack).mockResolvedValue(
+        ip
+      );
+      vi.mocked(innovationPackService.save).mockResolvedValue(ip);
+
+      const innovationPackAuthorizationService = (service as any)
+        .innovationPackAuthorizationService as InnovationPackAuthorizationService;
+      vi.mocked(
+        innovationPackAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+
+      const authPolicyService = (service as any)
+        .authorizationPolicyService as AuthorizationPolicyService;
+      vi.mocked(authPolicyService.saveAll).mockResolvedValue(undefined as any);
+
+      const result = await service.createInnovationPackOnAccount({
+        accountID: 'account-1',
+      } as any);
+
+      expect(result).toBe(ip);
+      expect(ip.account).toBe(account);
+    });
+  });
+
+  describe('save', () => {
+    it('should save and return the account', async () => {
+      const account = { id: 'account-1' } as any;
+      vi.spyOn(accountRepository, 'save').mockResolvedValue(account);
+
+      const result = await service.save(account);
+      expect(result).toBe(account);
     });
   });
 });

@@ -19,6 +19,8 @@ describe('LocationService', () => {
   let geoapifyService: GeoapifyService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Location.create to avoid DataSource requirement
     vi.spyOn(Location, 'create').mockImplementation((input: any) => {
       const entity = new Location();

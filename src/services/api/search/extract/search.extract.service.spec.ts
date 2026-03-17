@@ -21,6 +21,8 @@ describe('SearchExtractService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     mockClient = {
       msearch: vi.fn(),
     };

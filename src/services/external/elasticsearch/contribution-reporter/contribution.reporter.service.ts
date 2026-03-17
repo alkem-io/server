@@ -323,9 +323,8 @@ export class ContributionReporterService {
                 'Unable to fetch user details for actor in ContributionReporterService',
               actorContext,
               actorId: actor.id,
-              error: e,
             },
-            undefined,
+            e instanceof Error ? e.stack : String(e),
             LogContext.CONTRIBUTION_REPORTER
           );
           return {

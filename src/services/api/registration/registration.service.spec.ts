@@ -62,6 +62,8 @@ describe('RegistrationService', () => {
   let notificationPlatformAdapter: { platformUserProfileCreated: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [RegistrationService, MockCacheManager, MockWinstonProvider],
     })

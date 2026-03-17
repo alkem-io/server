@@ -15,6 +15,8 @@ describe('FormService', () => {
   let formRepository: MockType<Repository<Form>>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         FormService,

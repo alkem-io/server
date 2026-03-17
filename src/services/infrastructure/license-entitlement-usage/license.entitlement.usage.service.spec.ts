@@ -20,6 +20,8 @@ describe('LicenseEntitlementUsageService', () => {
   let entityManager: Mocked<EntityManager>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [LicenseEntitlementUsageService, MockWinstonProvider],
     })
@@ -35,7 +37,7 @@ describe('LicenseEntitlementUsageService', () => {
   });
 
   afterEach(() => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
   });
 
   describe('getEntitlementUsageForAccount', () => {

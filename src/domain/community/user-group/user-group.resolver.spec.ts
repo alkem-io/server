@@ -7,6 +7,8 @@ describe('UserGroupResolverMutations', () => {
   let resolver: UserGroupResolverMutations;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [UserGroupResolverMutations, MockWinstonProvider],
     })

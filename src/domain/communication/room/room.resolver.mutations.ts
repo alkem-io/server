@@ -101,23 +101,23 @@ export class RoomResolverMutations {
     // Get room members from Matrix (lightweight call - no message history)
     const members = await this.communicationAdapter.getRoomMembers(room.id);
 
-    // Find the other user (not the sender) - members contains agent IDs
-    const otherMemberAgentIds = members.filter(
+    // Find the other user (not the sender) - members contains actor IDs
+    const otherMemberActorIds = members.filter(
       (memberId: string) => memberId !== actorContext.actorID
     );
 
-    if (otherMemberAgentIds.length === 0) {
+    if (otherMemberActorIds.length === 0) {
       // Only sender in room, skip validation
       return;
     }
 
     // For direct conversations, check the first other member's messaging preferences
     // (In practice there should only be 2 members in a direct conversation)
-    const receivingUserAgentId = otherMemberAgentIds[0];
+    const receivingUserActorId = otherMemberActorIds[0];
 
-    // Look up user by their agent ID
+    // Look up user by their actor ID
     const receivingUser =
-      await this.userLookupService.getUserById(receivingUserAgentId);
+      await this.userLookupService.getUserById(receivingUserActorId);
 
     if (!receivingUser) {
       // Actor ID doesn't map to a user (might be a VC or deleted user)

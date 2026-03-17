@@ -50,15 +50,6 @@ import { ClientProxy } from '@nestjs/microservices';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { AlkemioConfig } from '@src/types';
-import {
-  CalendarEventCalendarData,
-  CalendarUrls,
-  calculateCalendarEventEndDate,
-  formatLocation,
-  generateCalendarUrls,
-  toIsoString,
-  validateCalendarDateRange,
-} from '../../../domain/timeline/event/calendar.event.calendar-links';
 import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutContributionCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
@@ -72,29 +63,6 @@ interface CalloutContributionPayload {
   type: CalloutContributionType;
   url: string;
 }
-
-interface CalendarEventPayload {
-  id: string;
-  title: string;
-  type: string;
-  createdBy: UserPayload;
-  url: string;
-  startDate: string;
-  endDate: string;
-  wholeDay: boolean;
-  description?: string;
-  location?: string;
-  googleCalendarUrl: string;
-  outlookCalendarUrl: string;
-  icsDownloadUrl: string;
-}
-
-type NotificationEventPayloadSpaceCalendarEventExtended = Omit<
-  NotificationEventPayloadSpaceCalendarEvent,
-  'calendarEvent'
-> & {
-  calendarEvent: CalendarEventPayload;
-};
 
 @Injectable()
 export class NotificationExternalAdapter {
@@ -551,7 +519,7 @@ export class NotificationExternalAdapter {
     recipients: IUser[],
     space: ISpace,
     calendarEvent: ICalendarEvent
-  ): Promise<NotificationEventPayloadSpaceCalendarEventExtended> {
+  ): Promise<NotificationEventPayloadSpaceCalendarEvent> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
@@ -568,37 +536,6 @@ export class NotificationExternalAdapter {
     const calendarEventUrl =
       await this.urlGeneratorService.getCalendarEventUrlPath(calendarEvent.id);
 
-    const startDateIso = toIsoString(calendarEvent.startDate, 'startDate');
-    const endDateIso = toIsoString(
-      calculateCalendarEventEndDate(calendarEvent).toISOString(),
-      'endDate'
-    );
-
-    validateCalendarDateRange(startDateIso, endDateIso, calendarEvent.id);
-
-    const description = calendarEvent.profile?.description ?? undefined;
-    const location = formatLocation(calendarEvent.profile?.location);
-
-    const calendarEventCalendarData: CalendarEventCalendarData = {
-      id: calendarEvent.id,
-      title: calendarEvent.profile.displayName,
-      url: calendarEventUrl,
-      startDate: startDateIso,
-      endDate: endDateIso,
-      wholeDay: calendarEvent.wholeDay,
-      description,
-      location,
-    };
-
-    const icsRestUrl = this.urlGeneratorService.getCalendarEventIcsRestUrl(
-      calendarEvent.id
-    );
-
-    const calendarUrls: CalendarUrls = generateCalendarUrls(
-      calendarEventCalendarData,
-      icsRestUrl
-    );
-
     // Add calendar event details - will be properly typed once notifications-lib is updated
     return {
       ...spacePayload,
@@ -608,12 +545,14 @@ export class NotificationExternalAdapter {
         type: calendarEvent.type,
         createdBy: createdByUser,
         url: calendarEventUrl,
-        startDate: startDateIso,
-        endDate: endDateIso,
+        startDate: calendarEvent.startDate.toISOString(),
+        endDate: '',
         wholeDay: calendarEvent.wholeDay,
-        description,
-        location,
-        ...calendarUrls,
+        description: calendarEvent.profile?.description ?? undefined,
+        googleCalendarUrl: '',
+        outlookCalendarUrl: '',
+        appleCalendarUrl: '',
+        icsDownloadUrl: '',
       },
     };
   }

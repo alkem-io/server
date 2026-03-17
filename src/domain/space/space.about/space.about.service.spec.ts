@@ -9,7 +9,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
-import { vi } from 'vitest';
+import { type Mocked, vi } from 'vitest';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { SpaceAbout } from './space.about.entity';
 import { ISpaceAbout } from './space.about.interface';
@@ -18,12 +18,14 @@ import { SpaceAboutService } from './space.about.service';
 describe('SpaceAboutService', () => {
   let service: SpaceAboutService;
   let spaceAboutRepository: Repository<SpaceAbout>;
-  let profileService: ProfileService;
-  let communityGuidelinesService: CommunityGuidelinesService;
-  let authorizationPolicyService: AuthorizationPolicyService;
-  let spaceLookupService: SpaceLookupService;
+  let profileService: Mocked<ProfileService>;
+  let communityGuidelinesService: Mocked<CommunityGuidelinesService>;
+  let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
+  let spaceLookupService: Mocked<SpaceLookupService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         SpaceAboutService,
@@ -38,10 +40,16 @@ describe('SpaceAboutService', () => {
     spaceAboutRepository = module.get<Repository<SpaceAbout>>(
       getRepositoryToken(SpaceAbout)
     );
-    profileService = module.get(ProfileService);
-    communityGuidelinesService = module.get(CommunityGuidelinesService);
-    authorizationPolicyService = module.get(AuthorizationPolicyService);
-    spaceLookupService = module.get(SpaceLookupService);
+    profileService = module.get(ProfileService) as Mocked<ProfileService>;
+    communityGuidelinesService = module.get(
+      CommunityGuidelinesService
+    ) as Mocked<CommunityGuidelinesService>;
+    authorizationPolicyService = module.get(
+      AuthorizationPolicyService
+    ) as Mocked<AuthorizationPolicyService>;
+    spaceLookupService = module.get(
+      SpaceLookupService
+    ) as Mocked<SpaceLookupService>;
   });
 
   describe('getSpaceAboutOrFail', () => {
@@ -138,10 +146,16 @@ describe('SpaceAboutService', () => {
       vi.spyOn(spaceAboutRepository, 'save').mockImplementation(
         async entity => entity as SpaceAbout
       );
-      profileService.updateProfile = vi.fn().mockResolvedValue(updatedProfile);
+      profileService.updateProfile.mockResolvedValue(
+        updatedProfile as unknown as Awaited<
+          ReturnType<ProfileService['updateProfile']>
+        >
+      );
 
       const updateData = {
-        profile: { displayName: 'Updated' } as any,
+        profile: { displayName: 'Updated' } as unknown as Parameters<
+          ProfileService['updateProfile']
+        >[1],
       };
 
       // Act
@@ -224,11 +238,11 @@ describe('SpaceAboutService', () => {
         authorization: { id: 'auth-1' },
       } as SpaceAbout;
       vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(about);
-      profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
-      communityGuidelinesService.deleteCommunityGuidelines = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
+      profileService.deleteProfile.mockResolvedValue(undefined!);
+      communityGuidelinesService.deleteCommunityGuidelines.mockResolvedValue(
+        undefined!
+      );
+      authorizationPolicyService.delete.mockResolvedValue(undefined!);
       vi.spyOn(spaceAboutRepository, 'remove').mockResolvedValue(about);
 
       // Act
@@ -254,11 +268,11 @@ describe('SpaceAboutService', () => {
         authorization: undefined,
       } as SpaceAbout;
       vi.spyOn(spaceAboutRepository, 'findOne').mockResolvedValue(about);
-      profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
-      communityGuidelinesService.deleteCommunityGuidelines = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
+      profileService.deleteProfile.mockResolvedValue(undefined!);
+      communityGuidelinesService.deleteCommunityGuidelines.mockResolvedValue(
+        undefined!
+      );
+      authorizationPolicyService.delete.mockResolvedValue(undefined!);
       vi.spyOn(spaceAboutRepository, 'remove').mockResolvedValue(about);
 
       // Act
@@ -307,9 +321,11 @@ describe('SpaceAboutService', () => {
       const mockRoleSet = { id: 'roleset-1' };
       const mockCommunity = { id: 'community-1', roleSet: mockRoleSet };
       const mockSpace = { id: 'space-1', community: mockCommunity };
-      spaceLookupService.getSpaceForSpaceAboutOrFail = vi
-        .fn()
-        .mockResolvedValue(mockSpace);
+      spaceLookupService.getSpaceForSpaceAboutOrFail.mockResolvedValue(
+        mockSpace as unknown as Awaited<
+          ReturnType<SpaceLookupService['getSpaceForSpaceAboutOrFail']>
+        >
+      );
 
       // Act
       const result = await service.getCommunityWithRoleSet('about-1');
@@ -321,9 +337,11 @@ describe('SpaceAboutService', () => {
     it('should throw RelationshipNotFoundException when community is missing', async () => {
       // Arrange
       const mockSpace = { id: 'space-1', community: undefined };
-      spaceLookupService.getSpaceForSpaceAboutOrFail = vi
-        .fn()
-        .mockResolvedValue(mockSpace);
+      spaceLookupService.getSpaceForSpaceAboutOrFail.mockResolvedValue(
+        mockSpace as unknown as Awaited<
+          ReturnType<SpaceLookupService['getSpaceForSpaceAboutOrFail']>
+        >
+      );
 
       // Act & Assert
       await expect(service.getCommunityWithRoleSet('about-1')).rejects.toThrow(
@@ -337,9 +355,11 @@ describe('SpaceAboutService', () => {
         id: 'space-1',
         community: { id: 'community-1', roleSet: undefined },
       };
-      spaceLookupService.getSpaceForSpaceAboutOrFail = vi
-        .fn()
-        .mockResolvedValue(mockSpace);
+      spaceLookupService.getSpaceForSpaceAboutOrFail.mockResolvedValue(
+        mockSpace as unknown as Awaited<
+          ReturnType<SpaceLookupService['getSpaceForSpaceAboutOrFail']>
+        >
+      );
 
       // Act & Assert
       await expect(service.getCommunityWithRoleSet('about-1')).rejects.toThrow(
@@ -376,7 +396,9 @@ describe('SpaceAboutService', () => {
           tagsets: [],
           visuals: [],
         },
-      } as any;
+      } as unknown as Parameters<
+        SpaceAboutService['getMergedTemplateSpaceAbout']
+      >[1];
 
       // Act
       const result = service.getMergedTemplateSpaceAbout(
@@ -418,7 +440,9 @@ describe('SpaceAboutService', () => {
           tagsets: [],
           visuals: [],
         },
-      } as any;
+      } as unknown as Parameters<
+        SpaceAboutService['getMergedTemplateSpaceAbout']
+      >[1];
 
       // Act
       const result = service.getMergedTemplateSpaceAbout(
@@ -463,7 +487,9 @@ describe('SpaceAboutService', () => {
           tagsets: [{ name: 'skills', tags: ['react', 'typescript'] }],
           visuals: [],
         },
-      } as any;
+      } as unknown as Parameters<
+        SpaceAboutService['getMergedTemplateSpaceAbout']
+      >[1];
 
       // Act
       const result = service.getMergedTemplateSpaceAbout(
@@ -514,7 +540,9 @@ describe('SpaceAboutService', () => {
           tagsets: undefined,
           visuals: undefined,
         },
-      } as any;
+      } as unknown as Parameters<
+        SpaceAboutService['getMergedTemplateSpaceAbout']
+      >[1];
 
       // Act
       const result = service.getMergedTemplateSpaceAbout(
@@ -557,7 +585,9 @@ describe('SpaceAboutService', () => {
           tagsets: [],
           visuals: [{ name: VisualType.AVATAR, uri: 'input-avatar.png' }],
         },
-      } as any;
+      } as unknown as Parameters<
+        SpaceAboutService['getMergedTemplateSpaceAbout']
+      >[1];
 
       // Act
       const result = service.getMergedTemplateSpaceAbout(
@@ -608,7 +638,9 @@ describe('SpaceAboutService', () => {
           tagsets: [],
           visuals: [],
         },
-      } as any;
+      } as unknown as Parameters<
+        SpaceAboutService['getMergedTemplateSpaceAbout']
+      >[1];
 
       // Act
       const result = service.getMergedTemplateSpaceAbout(
@@ -620,10 +652,10 @@ describe('SpaceAboutService', () => {
       const avatar = result.profileData.visuals?.find(
         v => v.name === VisualType.AVATAR
       );
-      expect((avatar as any)?.minWidth).toBe(
+      expect((avatar as unknown as Record<string, unknown>)?.minWidth).toBe(
         DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR].minWidth
       );
-      expect((avatar as any)?.maxWidth).toBe(
+      expect((avatar as unknown as Record<string, unknown>)?.maxWidth).toBe(
         DEFAULT_VISUAL_CONSTRAINTS[VisualType.AVATAR].maxWidth
       );
     });
@@ -656,7 +688,9 @@ describe('SpaceAboutService', () => {
           tagsets: [],
           visuals: [],
         },
-      } as any;
+      } as unknown as Parameters<
+        SpaceAboutService['getMergedTemplateSpaceAbout']
+      >[1];
 
       // Act
       const result = service.getMergedTemplateSpaceAbout(
@@ -699,7 +733,9 @@ describe('SpaceAboutService', () => {
           tagsets: [],
           visuals: [],
         },
-      } as any;
+      } as unknown as Parameters<
+        SpaceAboutService['getMergedTemplateSpaceAbout']
+      >[1];
 
       // Act
       const result = service.getMergedTemplateSpaceAbout(

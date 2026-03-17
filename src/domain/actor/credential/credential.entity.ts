@@ -1,7 +1,7 @@
 import { ENUM_LENGTH, UUID_LENGTH } from '@common/constants';
 import { Actor } from '@domain/actor/actor/actor.entity';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
-import { Column, Entity, JoinColumn, ManyToOne } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne } from 'typeorm';
 import { ICredential } from './credential.interface';
 
 @Entity()
@@ -24,6 +24,7 @@ export class Credential extends BaseAlkemioEntity implements ICredential {
   @JoinColumn({ name: 'actorId' })
   actor?: Actor;
 
+  @Index()
   @Column('uuid', { nullable: true, name: 'actorId' })
   actorID?: string;
 

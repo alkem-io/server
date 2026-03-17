@@ -7,6 +7,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomService } from '@domain/communication/room/room.service';
 import { Space } from '@domain/space/space/space.entity';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -16,7 +17,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
-import { vi } from 'vitest';
+import { type Mocked, vi } from 'vitest';
 import { CreateCalendarEventInput } from './dto/event.dto.create';
 import { UpdateCalendarEventInput } from './dto/event.dto.update';
 import { CalendarEvent } from './event.entity';
@@ -26,16 +27,18 @@ import { CalendarEventService } from './event.service';
 describe('CalendarEventService', () => {
   let service: CalendarEventService;
   let calendarEventRepository: Repository<CalendarEvent>;
-  let authorizationPolicyService: AuthorizationPolicyService;
-  let profileService: ProfileService;
-  let roomService: RoomService;
+  let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
+  let profileService: Mocked<ProfileService>;
+  let roomService: Mocked<RoomService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static CalendarEvent.create to avoid DataSource requirement
-    vi.spyOn(CalendarEvent, 'create').mockImplementation((input: any) => {
+    vi.spyOn(CalendarEvent, 'create').mockImplementation((input: unknown) => {
       const entity = new CalendarEvent();
       Object.assign(entity, input);
-      return entity as any;
+      return entity as CalendarEvent;
     });
 
     const module: TestingModule = await Test.createTestingModule({
@@ -54,11 +57,11 @@ describe('CalendarEventService', () => {
     calendarEventRepository = module.get<Repository<CalendarEvent>>(
       getRepositoryToken(CalendarEvent)
     );
-    authorizationPolicyService = module.get<AuthorizationPolicyService>(
+    authorizationPolicyService = module.get(
       AuthorizationPolicyService
-    );
-    profileService = module.get<ProfileService>(ProfileService);
-    roomService = module.get<RoomService>(RoomService);
+    ) as Mocked<AuthorizationPolicyService>;
+    profileService = module.get(ProfileService) as Mocked<ProfileService>;
+    roomService = module.get(RoomService) as Mocked<RoomService>;
   });
 
   describe('createCalendarEvent', () => {
@@ -67,7 +70,9 @@ describe('CalendarEventService', () => {
     ): CreateCalendarEventInput => ({
       type: CalendarEventType.EVENT,
       nameID: 'test-event',
-      profileData: { displayName: 'Test Event' } as any,
+      profileData: {
+        displayName: 'Test Event',
+      } as unknown as CreateCalendarEventInput['profileData'],
       tags: ['tag1', 'tag2'],
       startDate: new Date('2025-06-15'),
       wholeDay: false,
@@ -81,19 +86,21 @@ describe('CalendarEventService', () => {
     it('should create a calendar event with profile, authorization, and comments room when given valid input', async () => {
       // Arrange
       const input = buildCreateInput();
-      const mockStorageAggregator = { id: 'storage-1' } as any;
+      const mockStorageAggregator = {
+        id: 'storage-1',
+      } as unknown as Parameters<
+        CalendarEventService['createCalendarEvent']
+      >[1];
       const userId = 'user-1';
       const mockProfile = {
         id: 'profile-1',
         displayName: 'Test Event',
-      } as any;
-      const mockRoom = { id: 'room-1' } as any;
+      } as unknown as Awaited<ReturnType<ProfileService['createProfile']>>;
+      const mockRoom = { id: 'room-1' } as unknown as IRoom;
 
-      profileService.createProfile = vi.fn().mockResolvedValue(mockProfile);
-      profileService.addOrUpdateTagsetOnProfile = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      roomService.createRoom = vi.fn().mockResolvedValue(mockRoom);
+      profileService.createProfile.mockResolvedValue(mockProfile);
+      profileService.addOrUpdateTagsetOnProfile.mockResolvedValue(undefined!);
+      roomService.createRoom.mockResolvedValue(mockRoom);
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
@@ -118,14 +125,20 @@ describe('CalendarEventService', () => {
     it('should create profile with CALENDAR_EVENT type and storage aggregator when called', async () => {
       // Arrange
       const input = buildCreateInput();
-      const mockStorageAggregator = { id: 'storage-1' } as any;
-      const mockProfile = { id: 'profile-1' } as any;
+      const mockStorageAggregator = {
+        id: 'storage-1',
+      } as unknown as Parameters<
+        CalendarEventService['createCalendarEvent']
+      >[1];
+      const mockProfile = { id: 'profile-1' } as unknown as Awaited<
+        ReturnType<ProfileService['createProfile']>
+      >;
 
-      profileService.createProfile = vi.fn().mockResolvedValue(mockProfile);
-      profileService.addOrUpdateTagsetOnProfile = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
+      profileService.createProfile.mockResolvedValue(mockProfile);
+      profileService.addOrUpdateTagsetOnProfile.mockResolvedValue(undefined!);
+      roomService.createRoom.mockResolvedValue({
+        id: 'room-1',
+      } as unknown as IRoom);
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
@@ -144,14 +157,20 @@ describe('CalendarEventService', () => {
     it('should add default tagset with provided tags when tags are specified', async () => {
       // Arrange
       const input = buildCreateInput({ tags: ['alpha', 'beta'] });
-      const mockStorageAggregator = { id: 'storage-1' } as any;
-      const mockProfile = { id: 'profile-1' } as any;
+      const mockStorageAggregator = {
+        id: 'storage-1',
+      } as unknown as Parameters<
+        CalendarEventService['createCalendarEvent']
+      >[1];
+      const mockProfile = { id: 'profile-1' } as unknown as Awaited<
+        ReturnType<ProfileService['createProfile']>
+      >;
 
-      profileService.createProfile = vi.fn().mockResolvedValue(mockProfile);
-      profileService.addOrUpdateTagsetOnProfile = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
+      profileService.createProfile.mockResolvedValue(mockProfile);
+      profileService.addOrUpdateTagsetOnProfile.mockResolvedValue(undefined!);
+      roomService.createRoom.mockResolvedValue({
+        id: 'room-1',
+      } as unknown as IRoom);
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
@@ -172,14 +191,20 @@ describe('CalendarEventService', () => {
     it('should add default tagset with empty array when tags are not provided', async () => {
       // Arrange
       const input = buildCreateInput({ tags: undefined });
-      const mockStorageAggregator = { id: 'storage-1' } as any;
-      const mockProfile = { id: 'profile-1' } as any;
+      const mockStorageAggregator = {
+        id: 'storage-1',
+      } as unknown as Parameters<
+        CalendarEventService['createCalendarEvent']
+      >[1];
+      const mockProfile = { id: 'profile-1' } as unknown as Awaited<
+        ReturnType<ProfileService['createProfile']>
+      >;
 
-      profileService.createProfile = vi.fn().mockResolvedValue(mockProfile);
-      profileService.addOrUpdateTagsetOnProfile = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
+      profileService.createProfile.mockResolvedValue(mockProfile);
+      profileService.addOrUpdateTagsetOnProfile.mockResolvedValue(undefined!);
+      roomService.createRoom.mockResolvedValue({
+        id: 'room-1',
+      } as unknown as IRoom);
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
@@ -200,14 +225,20 @@ describe('CalendarEventService', () => {
     it('should create a comments room with CALENDAR_EVENT type and nameID-based display name', async () => {
       // Arrange
       const input = buildCreateInput({ nameID: 'my-event' });
-      const mockStorageAggregator = { id: 'storage-1' } as any;
-      const mockProfile = { id: 'profile-1' } as any;
+      const mockStorageAggregator = {
+        id: 'storage-1',
+      } as unknown as Parameters<
+        CalendarEventService['createCalendarEvent']
+      >[1];
+      const mockProfile = { id: 'profile-1' } as unknown as Awaited<
+        ReturnType<ProfileService['createProfile']>
+      >;
 
-      profileService.createProfile = vi.fn().mockResolvedValue(mockProfile);
-      profileService.addOrUpdateTagsetOnProfile = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
+      profileService.createProfile.mockResolvedValue(mockProfile);
+      profileService.addOrUpdateTagsetOnProfile.mockResolvedValue(undefined!);
+      roomService.createRoom.mockResolvedValue({
+        id: 'room-1',
+      } as unknown as IRoom);
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
@@ -225,14 +256,20 @@ describe('CalendarEventService', () => {
     it('should persist the calendar event through the repository when creation succeeds', async () => {
       // Arrange
       const input = buildCreateInput();
-      const mockStorageAggregator = { id: 'storage-1' } as any;
-      const mockProfile = { id: 'profile-1' } as any;
+      const mockStorageAggregator = {
+        id: 'storage-1',
+      } as unknown as Parameters<
+        CalendarEventService['createCalendarEvent']
+      >[1];
+      const mockProfile = { id: 'profile-1' } as unknown as Awaited<
+        ReturnType<ProfileService['createProfile']>
+      >;
 
-      profileService.createProfile = vi.fn().mockResolvedValue(mockProfile);
-      profileService.addOrUpdateTagsetOnProfile = vi
-        .fn()
-        .mockResolvedValue(undefined);
-      roomService.createRoom = vi.fn().mockResolvedValue({ id: 'room-1' });
+      profileService.createProfile.mockResolvedValue(mockProfile);
+      profileService.addOrUpdateTagsetOnProfile.mockResolvedValue(undefined!);
+      roomService.createRoom.mockResolvedValue({
+        id: 'room-1',
+      } as unknown as IRoom);
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
@@ -250,8 +287,10 @@ describe('CalendarEventService', () => {
       // Arrange
       const eventId = 'event-1';
       const mockAuthorization = { id: 'auth-1' } as AuthorizationPolicy;
-      const mockProfile = { id: 'profile-1' } as any;
-      const mockComments = { id: 'room-1' } as any;
+      const mockProfile = { id: 'profile-1' } as unknown as Awaited<
+        ReturnType<ProfileService['deleteProfile']>
+      >;
+      const mockComments = { id: 'room-1' } as unknown as IRoom;
       const mockEvent = {
         id: eventId,
         authorization: mockAuthorization,
@@ -262,11 +301,11 @@ describe('CalendarEventService', () => {
       vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
       vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue({
         ...mockEvent,
-        id: undefined as any,
+        id: undefined as unknown as string,
       } as CalendarEvent);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
-      roomService.deleteRoom = vi.fn().mockResolvedValue(undefined);
+      authorizationPolicyService.delete.mockResolvedValue(undefined!);
+      profileService.deleteProfile.mockResolvedValue(undefined!);
+      roomService.deleteRoom.mockResolvedValue(undefined!);
 
       // Act
       const result = await service.deleteCalendarEvent({ ID: eventId });
@@ -296,7 +335,7 @@ describe('CalendarEventService', () => {
       vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
       vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue({
         ...mockEvent,
-        id: undefined as any,
+        id: undefined as unknown as string,
       } as CalendarEvent);
 
       // Act
@@ -318,9 +357,9 @@ describe('CalendarEventService', () => {
 
       vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
       vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue(mockEvent);
-      authorizationPolicyService.delete = vi.fn();
-      profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
-      roomService.deleteRoom = vi.fn().mockResolvedValue(undefined);
+      authorizationPolicyService.delete.mockReset();
+      profileService.deleteProfile.mockResolvedValue(undefined!);
+      roomService.deleteRoom.mockResolvedValue(undefined!);
 
       // Act
       await service.deleteCalendarEvent({ ID: eventId });
@@ -341,9 +380,9 @@ describe('CalendarEventService', () => {
 
       vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
       vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue(mockEvent);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      profileService.deleteProfile = vi.fn();
-      roomService.deleteRoom = vi.fn().mockResolvedValue(undefined);
+      authorizationPolicyService.delete.mockResolvedValue(undefined!);
+      profileService.deleteProfile.mockReset();
+      roomService.deleteRoom.mockResolvedValue(undefined!);
 
       // Act
       await service.deleteCalendarEvent({ ID: eventId });
@@ -364,9 +403,9 @@ describe('CalendarEventService', () => {
 
       vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
       vi.spyOn(calendarEventRepository, 'remove').mockResolvedValue(mockEvent);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      profileService.deleteProfile = vi.fn().mockResolvedValue(undefined);
-      roomService.deleteRoom = vi.fn();
+      authorizationPolicyService.delete.mockResolvedValue(undefined!);
+      profileService.deleteProfile.mockResolvedValue(undefined!);
+      roomService.deleteRoom.mockReset();
 
       // Act
       await service.deleteCalendarEvent({ ID: eventId });
@@ -494,9 +533,11 @@ describe('CalendarEventService', () => {
       const updatedProfile = {
         id: 'profile-1',
         displayName: 'Updated Event',
-      } as any;
+      } as unknown as Awaited<ReturnType<ProfileService['updateProfile']>>;
       const updateInput = buildUpdateInput({
-        profileData: { displayName: 'Updated Event' } as any,
+        profileData: {
+          displayName: 'Updated Event',
+        } as unknown as UpdateCalendarEventInput['profileData'],
       });
       const mockEvent = {
         id: 'event-1',
@@ -516,7 +557,7 @@ describe('CalendarEventService', () => {
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
-      profileService.updateProfile = vi.fn().mockResolvedValue(updatedProfile);
+      profileService.updateProfile.mockResolvedValue(updatedProfile);
 
       // Act
       const result = await service.updateCalendarEvent(updateInput);
@@ -532,7 +573,9 @@ describe('CalendarEventService', () => {
     it('should throw EntityNotFoundException when profileData is provided but profile is not initialized', async () => {
       // Arrange
       const updateInput = buildUpdateInput({
-        profileData: { displayName: 'Updated Event' } as any,
+        profileData: {
+          displayName: 'Updated Event',
+        } as unknown as UpdateCalendarEventInput['profileData'],
       });
       const mockEvent = {
         id: 'event-1',
@@ -552,7 +595,9 @@ describe('CalendarEventService', () => {
     it('should sync room display name when displayName changes and comments room exists', async () => {
       // Arrange
       const updateInput = buildUpdateInput({
-        profileData: { displayName: 'New Name' } as any,
+        profileData: {
+          displayName: 'New Name',
+        } as unknown as UpdateCalendarEventInput['profileData'],
       });
       const mockEvent = {
         id: 'event-1',
@@ -572,10 +617,11 @@ describe('CalendarEventService', () => {
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
-      roomService.updateRoomDisplayName = vi.fn().mockResolvedValue(undefined);
-      profileService.updateProfile = vi
-        .fn()
-        .mockResolvedValue({ id: 'profile-1', displayName: 'New Name' });
+      roomService.updateRoomDisplayName.mockResolvedValue(undefined!);
+      profileService.updateProfile.mockResolvedValue({
+        id: 'profile-1',
+        displayName: 'New Name',
+      } as unknown as Awaited<ReturnType<ProfileService['updateProfile']>>);
 
       // Act
       await service.updateCalendarEvent(updateInput);
@@ -590,7 +636,9 @@ describe('CalendarEventService', () => {
     it('should not sync room display name when displayName has not changed', async () => {
       // Arrange
       const updateInput = buildUpdateInput({
-        profileData: { displayName: 'Same Name' } as any,
+        profileData: {
+          displayName: 'Same Name',
+        } as unknown as UpdateCalendarEventInput['profileData'],
       });
       const mockEvent = {
         id: 'event-1',
@@ -610,10 +658,11 @@ describe('CalendarEventService', () => {
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
-      roomService.updateRoomDisplayName = vi.fn();
-      profileService.updateProfile = vi
-        .fn()
-        .mockResolvedValue({ id: 'profile-1', displayName: 'Same Name' });
+      roomService.updateRoomDisplayName.mockReset();
+      profileService.updateProfile.mockResolvedValue({
+        id: 'profile-1',
+        displayName: 'Same Name',
+      } as unknown as Awaited<ReturnType<ProfileService['updateProfile']>>);
 
       // Act
       await service.updateCalendarEvent(updateInput);
@@ -625,7 +674,9 @@ describe('CalendarEventService', () => {
     it('should not sync room display name when comments room does not exist', async () => {
       // Arrange
       const updateInput = buildUpdateInput({
-        profileData: { displayName: 'New Name' } as any,
+        profileData: {
+          displayName: 'New Name',
+        } as unknown as UpdateCalendarEventInput['profileData'],
       });
       const mockEvent = {
         id: 'event-1',
@@ -645,10 +696,11 @@ describe('CalendarEventService', () => {
       vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
         Promise.resolve(entity as CalendarEvent)
       );
-      roomService.updateRoomDisplayName = vi.fn();
-      profileService.updateProfile = vi
-        .fn()
-        .mockResolvedValue({ id: 'profile-1', displayName: 'New Name' });
+      roomService.updateRoomDisplayName.mockReset();
+      profileService.updateProfile.mockResolvedValue({
+        id: 'profile-1',
+        displayName: 'New Name',
+      } as unknown as Awaited<ReturnType<ProfileService['updateProfile']>>);
 
       // Act
       await service.updateCalendarEvent(updateInput);
@@ -732,7 +784,12 @@ describe('CalendarEventService', () => {
   describe('getProfileOrFail', () => {
     it('should return the profile when calendar event has a loaded profile', async () => {
       // Arrange
-      const mockProfile = { id: 'profile-1', displayName: 'Test' } as any;
+      const mockProfile = {
+        id: 'profile-1',
+        displayName: 'Test',
+      } as unknown as Awaited<
+        ReturnType<CalendarEventService['getProfileOrFail']>
+      >;
       const mockEvent = {
         id: 'event-1',
         profile: mockProfile,
@@ -770,7 +827,7 @@ describe('CalendarEventService', () => {
   describe('getComments', () => {
     it('should return comments when calendar event has comments loaded', async () => {
       // Arrange
-      const mockComments = { id: 'room-1' } as any;
+      const mockComments = { id: 'room-1' } as unknown as IRoom;
       const mockEvent = {
         id: 'event-1',
         comments: mockComments,

@@ -68,7 +68,7 @@ describe('IdentityResolveController (REST)', () => {
   const authenticationId = '09d7f4d8-1c4b-4f05-9d50-3ddf2a120001';
 
   beforeEach(async () => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
 
     const moduleRef = await Test.createTestingModule({
       controllers: [IdentityResolveController],

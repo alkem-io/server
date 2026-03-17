@@ -6,16 +6,18 @@ import { MockWinstonProvider } from '@test/mocks';
 import { MockActorLookupService } from '@test/mocks/actor.lookup.service.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { testData } from '@test/utils/test-data';
-import { vi } from 'vitest';
+import { type Mocked, vi } from 'vitest';
 import { RoomMentionsService } from '../room-mentions/room.mentions.service';
 
 describe('RoomServiceMentions', () => {
   let roomMentionsService: RoomMentionsService;
-  let virtualActorLookupService: VirtualActorLookupService;
-  let userLookupService: UserLookupService;
-  let organizationLookupService: OrganizationLookupService;
+  let virtualActorLookupService: Mocked<VirtualActorLookupService>;
+  let userLookupService: Mocked<UserLookupService>;
+  let organizationLookupService: Mocked<OrganizationLookupService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MockWinstonProvider,
@@ -28,9 +30,15 @@ describe('RoomServiceMentions', () => {
       .compile();
 
     roomMentionsService = module.get(RoomMentionsService);
-    virtualActorLookupService = module.get(VirtualActorLookupService);
-    userLookupService = module.get(UserLookupService);
-    organizationLookupService = module.get(OrganizationLookupService);
+    virtualActorLookupService = module.get(
+      VirtualActorLookupService
+    ) as Mocked<VirtualActorLookupService>;
+    userLookupService = module.get(
+      UserLookupService
+    ) as Mocked<UserLookupService>;
+    organizationLookupService = module.get(
+      OrganizationLookupService
+    ) as Mocked<OrganizationLookupService>;
   });
 
   it.each([
@@ -190,15 +198,15 @@ describe('RoomServiceMentions', () => {
     const organization = testData.organization;
     const virtualContributor = testData.virtualContributor;
     // Direct assignment to avoid proxy issues with vi.spyOn
-    userLookupService.getUserByNameIdOrFail = vi.fn().mockResolvedValue(user);
+    userLookupService.getUserByNameIdOrFail.mockResolvedValue(user);
 
-    organizationLookupService.getOrganizationByNameIdOrFail = vi
-      .fn()
-      .mockResolvedValue(organization);
+    organizationLookupService.getOrganizationByNameIdOrFail.mockResolvedValue(
+      organization
+    );
 
-    virtualActorLookupService.getVirtualContributorByNameIdOrFail = vi
-      .fn()
-      .mockResolvedValue(virtualContributor);
+    virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(
+      virtualContributor
+    );
 
     const result = await roomMentionsService.getMentionsFromText(text);
     expect(result.length).toBe(expected.length);
