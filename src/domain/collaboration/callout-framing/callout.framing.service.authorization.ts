@@ -65,7 +65,7 @@ export class CalloutFramingAuthorizationService {
             poll: {
               id: true,
             },
-          } as never, // TypeORM circular-ref limitation: Poll ↔ CalloutFraming
+          },
         }
       );
 

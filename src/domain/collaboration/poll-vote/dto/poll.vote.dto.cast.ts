@@ -17,6 +17,6 @@ export class CastPollVoteInput {
       'The complete set of selected PollOption IDs. When updating an existing vote, the entire selection set must be provided. Count must be ≥ poll.minResponses and ≤ poll.maxResponses (0 = unlimited). All IDs must belong to the specified poll.',
   })
   @ArrayMinSize(1)
-  @IsUUID('4', { each: true })
+  @IsUUID('all', { each: true })
   selectedOptionIDs!: string[];
 }
