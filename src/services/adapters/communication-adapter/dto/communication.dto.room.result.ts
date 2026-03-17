@@ -30,6 +30,9 @@ export class CommunicationRoomResult {
   // The communication IDs of the room members
   members!: string[];
 
+  // Avatar URL from Matrix (mxc:// or https://)
+  avatarUrl?: string;
+
   constructor() {
     this.displayName = '';
     this.messagesCount = 0;

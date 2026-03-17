@@ -103,10 +103,13 @@ Winston logger signatures:
 
 ### TypeORM Entity Guidelines
 
-- No defaults in entity definitions or class fields
+- Declare `nullable: false` explicitly on all NOT NULL columns (TypeORM default varies by context)
+- Declare `default` in `@Column()` when the DB column has a DEFAULT (e.g., `default: 0`, `default: {}`)
 - Non-eager relations must be optional
 - Always use length constants: `UUID_LENGTH`, `ENUM_LENGTH`, `URI_LENGTH`
 - Generate migrations after schema changes
+- The `actor.type` discriminator uses a PostgreSQL enum (`actor_type_enum`), declared via `@TableInheritance({ column: { type: 'enum', enum: ActorType } })`
+
 
 ### GraphQL API Conventions
 
@@ -184,6 +187,7 @@ Key rules:
 - TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, TypeORM 0.3, Apollo Server 4, GraphQL 16 (034-unit-tests)
 - N/A (no data model changes — test-only feature) (034-unit-tests)
 - PostgreSQL 17.5
+- PostgreSQL 17.5 (conversation, conversation_membership, room tables) (040-group-conversations)
 - PostgreSQL 17.5 (space table + JSONB settings column) (041-subspace-sorting-pinning)
 
 ## Recent Changes

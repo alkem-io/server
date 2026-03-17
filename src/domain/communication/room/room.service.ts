@@ -38,6 +38,9 @@ export class RoomService {
     room.authorization = new AuthorizationPolicy(AuthorizationPolicyType.ROOM);
     room.messagesCount = 0;
     room.vcInteractionsByThread = {};
+    if (roomData.avatarUrl) {
+      room.avatarUrl = roomData.avatarUrl;
+    }
 
     // Save first to get the ID assigned by the database
     const savedRoom = await this.save(room);
@@ -81,21 +84,44 @@ export class RoomService {
   }
 
   /**
-   * Update the room's display name in both the local database and Matrix.
-   * Call this when the parent entity's displayName changes.
+   * Update the room's display name.
+   * Writes to DB immediately and sends RPC to Matrix.
+   * The inbound room.updated event will be a no-op (value already matches).
    */
   async updateRoomDisplayName(
     room: IRoom,
     newDisplayName: string
-  ): Promise<IRoom> {
+  ): Promise<void> {
     if (room.displayName === newDisplayName) {
-      return room;
+      return;
     }
 
-    room.displayName = newDisplayName;
+    await this.roomLookupService.updatePartial(room.id, {
+      displayName: newDisplayName,
+    });
     await this.communicationAdapter.updateRoom(room.id, newDisplayName);
+  }
 
-    return this.save(room);
+  /**
+   * Update the room avatar.
+   * Writes to DB immediately (handles clearing via empty string → null)
+   * and sends RPC to Matrix. Matrix may not fire a room.updated event
+   * when the avatar is cleared, so the local write is essential.
+   */
+  async updateRoomAvatar(room: IRoom, avatarUrl: string): Promise<void> {
+    // Empty string means "remove avatar" — store as null in DB.
+    // Must pass null (not undefined) so TypeORM actually sets the column to NULL.
+    const dbValue = avatarUrl || null;
+    await this.roomLookupService.updatePartial(room.id, {
+      avatarUrl: dbValue,
+    });
+    await this.communicationAdapter.updateRoom(
+      room.id,
+      undefined, // name
+      undefined, // topic
+      undefined, // isPublic
+      avatarUrl
+    );
   }
 
   async save(room: IRoom): Promise<IRoom> {
@@ -162,6 +188,7 @@ export class RoomService {
     roomData: CreateRoomInput
   ): Promise<void> {
     const isDirect = roomData.type === RoomType.CONVERSATION_DIRECT;
+    const isGroup = roomData.type === RoomType.CONVERSATION_GROUP;
 
     // Compute initial members based on room type
     let initialMembers: string[] | undefined;
@@ -172,13 +199,16 @@ export class RoomService {
         );
       }
       initialMembers = [roomData.senderActorID, roomData.receiverActorID];
+    } else if (isGroup && roomData.memberActorIDs) {
+      initialMembers = roomData.memberActorIDs;
     } else if (roomData.senderActorID) {
       initialMembers = [roomData.senderActorID];
     }
 
-    const logContext = isDirect
-      ? LogContext.COMMUNICATION_CONVERSATION
-      : LogContext.COMMUNICATION;
+    const logContext =
+      isDirect || isGroup
+        ? LogContext.COMMUNICATION_CONVERSATION
+        : LogContext.COMMUNICATION;
 
     try {
       this.logger.verbose?.(
@@ -190,7 +220,9 @@ export class RoomService {
         room.id,
         roomData.type,
         roomData.displayName,
-        initialMembers
+        initialMembers,
+        undefined, // parentContextId
+        roomData.avatarUrl
       );
     } catch (error: unknown) {
       const err = error as Error;

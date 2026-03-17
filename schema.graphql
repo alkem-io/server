@@ -279,11 +279,6 @@ enum CalloutVisibility {
   PUBLISHED
 }
 
-enum CommunicationConversationType {
-  USER_USER
-  USER_VC
-}
-
 enum CommunityMembershipPolicy {
   APPLICATIONS
   INVITATIONS
@@ -303,9 +298,21 @@ enum ContentUpdatePolicy {
   OWNER
 }
 
+"""
+The type of conversation to create. Maps to room type: DIRECT → DM room, GROUP → group room.
+"""
+enum ConversationCreationType {
+  DIRECT
+  GROUP
+}
+
 """The type of conversation event."""
 enum ConversationEventType {
   CONVERSATION_CREATED
+  CONVERSATION_DELETED
+  CONVERSATION_UPDATED
+  MEMBER_ADDED
+  MEMBER_REMOVED
   MESSAGE_RECEIVED
   MESSAGE_REMOVED
   READ_RECEIPT_UPDATED
@@ -646,6 +653,18 @@ enum RoleSetType {
   ORGANIZATION
   PLATFORM
   SPACE
+}
+
+"""The type of room."""
+enum RoomType {
+  CALENDAR_EVENT
+  CALLOUT
+  CONVERSATION
+  CONVERSATION_DIRECT
+  CONVERSATION_GROUP
+  DISCUSSION_FORUM
+  POST
+  UPDATES
 }
 
 """
@@ -2008,27 +2027,17 @@ type Conversation {
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  """All members of this Conversation, returned as actors with their types."""
+  members: [Actor!]!
   messaging: Messaging!
   """The room for this Conversation."""
-  room: Room
-  """
-  The type of this Conversation (USER_USER or USER_VC), inferred from member agent types.
-  """
-  type: CommunicationConversationType!
+  room: Room!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """
-  The other user participating in this Conversation (excludes the current user).
-  """
-  user: User
-  """
-  The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
-  """
-  virtualContributor: VirtualContributor
 }
 
 """
-Event fired when a new conversation is created. Each member receives a personalized event with the other participant resolved via conversation.user or conversation.virtualContributor.
+Event fired when a new conversation is created. All members receive the event with the full conversation and its members list.
 """
 type ConversationCreatedEvent {
   """The conversation that was created."""
@@ -2039,20 +2048,56 @@ type ConversationCreatedEvent {
   message: Message
 }
 
+"""Event fired when a conversation is deleted. All members are notified."""
+type ConversationDeletedEvent {
+  """
+  The ID of the deleted conversation. UUID only — conversation no longer exists.
+  """
+  conversationID: UUID!
+}
+
 """Payload for conversation subscription events."""
 type ConversationEventSubscriptionResult {
   """Present when eventType is CONVERSATION_CREATED."""
   conversationCreated: ConversationCreatedEvent
+  """Present when eventType is CONVERSATION_DELETED."""
+  conversationDeleted: ConversationDeletedEvent
+  """Present when eventType is CONVERSATION_UPDATED."""
+  conversationUpdated: ConversationUpdatedEvent
   """
   The type of event. Use this to determine which payload field is populated.
   """
   eventType: ConversationEventType!
+  """Present when eventType is MEMBER_ADDED."""
+  memberAdded: ConversationMemberAddedEvent
+  """Present when eventType is MEMBER_REMOVED."""
+  memberRemoved: ConversationMemberRemovedEvent
   """Present when eventType is MESSAGE_RECEIVED."""
   messageReceived: ConversationMessageReceivedEvent
   """Present when eventType is MESSAGE_REMOVED."""
   messageRemoved: ConversationMessageRemovedEvent
   """Present when eventType is READ_RECEIPT_UPDATED."""
   readReceiptUpdated: ConversationReadReceiptUpdatedEvent
+}
+
+"""Event fired when a member is added to a group conversation."""
+type ConversationMemberAddedEvent {
+  """The actor that was added as a member."""
+  addedMember: Actor!
+  """The conversation the member was added to."""
+  conversation: Conversation!
+}
+
+"""
+Event fired when a member is removed from or leaves a group conversation.
+"""
+type ConversationMemberRemovedEvent {
+  """The conversation the member was removed from."""
+  conversation: Conversation!
+  """
+  The ID of the removed member. UUID only — removed member may not be resolvable after removal.
+  """
+  removedMemberID: UUID!
 }
 
 """Event fired when a new message is received in a conversation."""
@@ -2077,6 +2122,12 @@ type ConversationReadReceiptUpdatedEvent {
   lastReadEventId: MessageID!
   """The room ID where the read receipt was updated."""
   roomId: UUID!
+}
+
+"""Event fired when a conversation is updated (displayName, avatarUrl)."""
+type ConversationUpdatedEvent {
+  """The conversation that was updated."""
+  conversation: Conversation!
 }
 
 type CreateCalloutContributionData {
@@ -3206,14 +3257,10 @@ type LookupQueryResults {
 }
 
 type MeConversationsResult {
-  """Conversations between users."""
-  users: [Conversation!]!
   """
-  Get a conversation with a well-known virtual contributor for the current user.
+  All conversations (direct and group) for the current authenticated user. Client handles categorization by room type and member actor types.
   """
-  virtualContributor(wellKnown: VirtualContributorWellKnown!): Conversation
-  """Conversations between users and virtual contributors."""
-  virtualContributors: [Conversation!]!
+  conversations: [Conversation!]!
 }
 
 type MediaGallery {
@@ -3470,6 +3517,10 @@ type Mutation {
   aiServerUpdateAiPersona(aiPersonaData: UpdateAiPersonaInput!): AiPersona!
   """Apply to join the specified RoleSet in the entry Role."""
   applyForEntryRoleOnRoleSet(applicationData: ApplyForEntryRoleOnRoleSetInput!): Application!
+  """
+  Assign a member to a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_ADDED subscription event.
+  """
+  assignConversationMember(memberData: AssignConversationMemberInput!): Boolean!
   """Assign the specified LicensePlan to an Account."""
   assignLicensePlanToAccount(planData: AssignLicensePlanToAccount!): Account!
   """Assign the specified LicensePlan to a Space."""
@@ -3520,7 +3571,9 @@ type Mutation {
   createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!): Callout!
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
-  """Create a new Conversation on the Messaging."""
+  """
+  Create a new Conversation. Use type DIRECT for 1-on-1, GROUP for multi-party.
+  """
   createConversation(conversationData: CreateConversationInput!): Conversation!
   """Creates a new Discussion as part of this Forum."""
   createDiscussion(createData: ForumCreateDiscussionInput!): Discussion!
@@ -3573,7 +3626,7 @@ type Mutation {
   """Deletes a contribution."""
   deleteContribution(deleteData: DeleteContributionInput!): CalloutContribution!
   """
-  Deletes a Conversation. The Matrix room is only deleted if no reciprocal conversation exists.
+  Deletes a Conversation. All members are notified via CONVERSATION_DELETED event.
   """
   deleteConversation(deleteData: DeleteConversationInput!): Conversation!
   """Deletes the specified Discussion."""
@@ -3638,6 +3691,10 @@ type Mutation {
   Join the specified RoleSet using the entry Role, without going through an approval process.
   """
   joinRoleSet(joinData: JoinAsEntryRoleOnRoleSetInput!): RoleSet!
+  """
+  Leave a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_REMOVED subscription event. If the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.
+  """
+  leaveConversation(leaveData: LeaveConversationInput!): Boolean!
   """Reset the License with Entitlements on the specified Account."""
   licenseResetOnAccount(resetData: AccountLicenseResetInput!): Account!
   """Marks a message as read for the current user."""
@@ -3660,6 +3717,10 @@ type Mutation {
   refreshVirtualContributorBodyOfKnowledge(refreshData: RefreshVirtualContributorBodyOfKnowledgeInput!): Boolean!
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
+  """
+  Remove a member from a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_REMOVED subscription event.
+  """
+  removeConversationMember(memberData: RemoveConversationMemberInput!): Boolean!
   """Remove the default callout template from an InnovationFlowState."""
   removeDefaultCalloutTemplateOnInnovationFlowState(removeData: RemoveDefaultCalloutTemplateOnInnovationFlowStateInput!): InnovationFlowState!
   """Removes an Iframe Allowed URL from the Platform Settings"""
@@ -3754,6 +3815,10 @@ type Mutation {
   updateCommunityGuidelines(communityGuidelinesData: UpdateCommunityGuidelinesEntityInput!): CommunityGuidelines!
   """Update the sortOrder field of the Contributions of s Callout."""
   updateContributionsSortOrder(sortOrderData: UpdateContributionCalloutsSortOrderInput!): [CalloutContribution!]!
+  """
+  Update a group conversation (display name, avatar). Returns true when the RPC is sent. Actual changes arrive via CONVERSATION_UPDATED subscription events. When both fields are provided, clients may receive separate update events for each.
+  """
+  updateConversation(updateData: UpdateConversationInput!): Boolean!
   """Updates the specified Discussion."""
   updateDiscussion(updateData: UpdateDiscussionInput!): Discussion!
   """Updates the specified Document."""
@@ -4921,6 +4986,8 @@ type RolesResultSpace {
 type Room {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """The avatar URL of the Room (mxc:// or https://). Fetched from Matrix."""
+  avatarUrl: String
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The display name of the Room."""
@@ -4933,6 +5000,10 @@ type Room {
   messages: [Message!]!
   """The number of messages in the Room."""
   messagesCount: Int!
+  """
+  The type of room (e.g., post, callout, conversation_direct, conversation_group).
+  """
+  type: RoomType!
   """
   Simple unread message count for the current user. Use unreadCounts for per-thread breakdown.
   """
@@ -5437,7 +5508,7 @@ type Subscription {
     calloutID: UUID!
   ): CalloutPostCreated!
   """
-  Receive conversation events for the authenticated user. Includes new conversations, messages, and read receipts.
+  Receive conversation events for the authenticated user. Includes conversation lifecycle (created, updated, deleted), messages (received, removed), membership changes (member added, removed), and read receipts.
   """
   conversationEvents: ConversationEventSubscriptionResult!
   """Receive updates on Discussions"""
@@ -6279,6 +6350,13 @@ input ApplyForEntryRoleOnRoleSetInput {
   roleSetID: UUID!
 }
 
+input AssignConversationMemberInput {
+  """The ID of the conversation to add a member to."""
+  conversationID: UUID!
+  """The ID of the member (user or VC) to add."""
+  memberID: UUID!
+}
+
 input AssignLicensePlanToAccount {
   """The ID of the Account to assign the LicensePlan to."""
   accountID: UUID!
@@ -6550,9 +6628,22 @@ input CreateContributionOnCalloutInput {
 }
 
 input CreateConversationInput {
-  userID: UUID!
-  virtualContributorID: UUID
-  wellKnownVirtualContributor: VirtualContributorWellKnown
+  """
+  Optional avatar URL for GROUP conversations. Ignored for DIRECT conversations. Accepts mxc:// or https:// URLs.
+  """
+  avatarUrl: String
+  """
+  Optional display name for GROUP conversations. Ignored for DIRECT conversations (Synapse uses the other member name automatically).
+  """
+  displayName: String
+  """
+  IDs of members to add. For DIRECT: exactly 1 ID. For GROUP: 1+ IDs. Creator is auto-included.
+  """
+  memberIDs: [UUID!]!
+  """
+  The type of conversation to create: DIRECT for 1-on-1, GROUP for multi-party.
+  """
+  type: ConversationCreationType!
 }
 
 input CreateInnovationFlowInput {
@@ -7138,6 +7229,11 @@ input JoinAsEntryRoleOnRoleSetInput {
   roleSetID: UUID!
 }
 
+input LeaveConversationInput {
+  """The ID of the conversation to leave."""
+  conversationID: UUID!
+}
+
 input LibraryTemplatesFilterInput {
   """
   Return Templates within the Library matching the specified Template Types.
@@ -7255,6 +7351,13 @@ input RefreshVirtualContributorBodyOfKnowledgeInput {
 input RemoveCommunityGuidelinesContentInput {
   """ID of the CommunityGuidelines that will be emptied"""
   communityGuidelinesID: UUID!
+}
+
+input RemoveConversationMemberInput {
+  """The ID of the conversation to remove a member from."""
+  conversationID: UUID!
+  """The ID of the member (user or VC) to remove."""
+  memberID: UUID!
 }
 
 input RemoveDefaultCalloutTemplateOnInnovationFlowStateInput {
@@ -7646,6 +7749,19 @@ input UpdateContributionCalloutsSortOrderInput {
   calloutID: UUID!
   """The IDs of the contributions to update the sort order on"""
   contributionIDs: [UUID!]!
+}
+
+input UpdateConversationInput {
+  """
+  Avatar URL for the conversation. Accepts mxc:// or https:// URLs. Pass empty string to remove.
+  """
+  avatarUrl: String
+  """The ID of the conversation to update."""
+  conversationID: UUID!
+  """
+  New display name for the conversation. Only GROUP conversations support custom names.
+  """
+  displayName: String
 }
 
 input UpdateDiscussionInput {

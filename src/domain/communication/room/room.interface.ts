@@ -6,6 +6,10 @@ import { IVcInteraction } from '../vc-interaction/vc.interaction.interface';
 
 @ObjectType('Room')
 export abstract class IRoom extends IAuthorizable {
+  @Field(() => RoomType, {
+    description:
+      'The type of room (e.g., post, callout, conversation_direct, conversation_group).',
+  })
   type!: RoomType;
 
   @Field(() => Int, {
@@ -17,6 +21,13 @@ export abstract class IRoom extends IAuthorizable {
     description: 'The display name of the Room.',
   })
   displayName!: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'The avatar URL of the Room (mxc:// or https://). Fetched from Matrix.',
+  })
+  avatarUrl?: string;
 
   // Internal storage (JSON column)
   vcInteractionsByThread!: VcInteractionsByThread;

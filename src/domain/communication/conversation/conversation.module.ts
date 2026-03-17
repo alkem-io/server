@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { ActorModule as ActorCoreModule } from '@domain/actor/actor/actor.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
@@ -6,6 +7,7 @@ import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors';
+import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { ConversationMembershipModule } from '../conversation-membership/conversation.membership.module';
 import { Conversation } from './conversation.entity';
@@ -17,8 +19,10 @@ import { ConversationAuthorizationService } from './conversation.service.authori
 
 @Module({
   imports: [
+    ActorCoreModule,
     AuthorizationPolicyModule,
     AuthorizationModule,
+    CommunicationAdapterModule,
     RoomModule,
     UserLookupModule,
     VirtualActorLookupModule,

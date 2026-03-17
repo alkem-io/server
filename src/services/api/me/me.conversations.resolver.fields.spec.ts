@@ -29,22 +29,10 @@ describe('MeConversationsResolverFields', () => {
     expect(resolver).toBeDefined();
   });
 
-  it('should throw when actorID is missing for users', async () => {
-    const actorContext = { actorID: '' } as any;
-    await expect(resolver.users(actorContext, {} as any)).rejects.toThrow();
-  });
-
-  it('should throw when actorID is missing for virtualContributors', async () => {
+  it('should throw when actorID is missing for conversations', async () => {
     const actorContext = { actorID: '' } as any;
     await expect(
-      resolver.virtualContributors(actorContext, {} as any)
-    ).rejects.toThrow();
-  });
-
-  it('should throw when actorID is missing for virtualContributor', async () => {
-    const actorContext = { actorID: '' } as any;
-    await expect(
-      resolver.virtualContributor(actorContext, {} as any, 'PLATFORM' as any)
+      resolver.conversations(actorContext, {} as any)
     ).rejects.toThrow();
   });
 });

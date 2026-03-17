@@ -32,6 +32,7 @@ export class Organization extends Actor implements IOrganization, IGroupable {
 
   @Column({
     unique: true,
+    nullable: false,
   })
   @Generated('increment')
   rowId!: number;
@@ -46,17 +47,17 @@ export class Organization extends Actor implements IOrganization, IGroupable {
   )
   groups?: UserGroup[];
 
-  @Column()
-  legalEntityName?: string = '';
+  @Column({ nullable: false, default: '' })
+  legalEntityName!: string;
 
-  @Column()
-  domain?: string = '';
+  @Column({ nullable: false, default: '' })
+  domain!: string;
 
-  @Column()
-  website?: string = '';
+  @Column({ nullable: false, default: '' })
+  website!: string;
 
-  @Column()
-  contactEmail?: string = '';
+  @Column({ nullable: false, default: '' })
+  contactEmail!: string;
 
   @OneToOne(() => OrganizationVerification, {
     eager: false,

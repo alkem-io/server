@@ -6,16 +6,16 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi } from 'vitest';
+import { type Mocked, vi } from 'vitest';
 import { ITimeline } from './timeline.interface';
 import { TimelineService } from './timeline.service';
 import { TimelineAuthorizationService } from './timeline.service.authorization';
 
 describe('TimelineAuthorizationService', () => {
   let service: TimelineAuthorizationService;
-  let timelineService: TimelineService;
-  let authorizationPolicyService: AuthorizationPolicyService;
-  let calendarAuthorizationService: CalendarAuthorizationService;
+  let timelineService: Mocked<TimelineService>;
+  let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
+  let calendarAuthorizationService: Mocked<CalendarAuthorizationService>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -33,13 +33,13 @@ describe('TimelineAuthorizationService', () => {
     service = module.get<TimelineAuthorizationService>(
       TimelineAuthorizationService
     );
-    timelineService = module.get<TimelineService>(TimelineService);
-    authorizationPolicyService = module.get<AuthorizationPolicyService>(
+    timelineService = module.get(TimelineService) as Mocked<TimelineService>;
+    authorizationPolicyService = module.get(
       AuthorizationPolicyService
-    );
-    calendarAuthorizationService = module.get<CalendarAuthorizationService>(
+    ) as Mocked<AuthorizationPolicyService>;
+    calendarAuthorizationService = module.get(
       CalendarAuthorizationService
-    );
+    ) as Mocked<CalendarAuthorizationService>;
   });
 
   describe('applyAuthorizationPolicy', () => {
@@ -56,8 +56,12 @@ describe('TimelineAuthorizationService', () => {
       } as unknown as ITimeline;
 
       timelineService.getTimelineOrFail.mockResolvedValue(mockTimeline);
-      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(timelineAuth);
-      calendarAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([calendarAuth]);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+        timelineAuth
+      );
+      calendarAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        calendarAuth,
+      ]);
 
       const inputTimeline = { id: 'timeline-1' } as ITimeline;
 
@@ -109,8 +113,12 @@ describe('TimelineAuthorizationService', () => {
       } as unknown as ITimeline;
 
       timelineService.getTimelineOrFail.mockResolvedValue(mockTimeline);
-      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(timelineAuth);
-      calendarAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+        timelineAuth
+      );
+      calendarAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
 
       const inputTimeline = { id: 'timeline-1' } as ITimeline;
 
@@ -133,8 +141,12 @@ describe('TimelineAuthorizationService', () => {
       } as unknown as ITimeline;
 
       timelineService.getTimelineOrFail.mockResolvedValue(mockTimeline);
-      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(timelineAuth);
-      calendarAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+        timelineAuth
+      );
+      calendarAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
 
       const inputTimeline = { id: 'timeline-1' } as ITimeline;
 
