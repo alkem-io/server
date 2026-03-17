@@ -29,7 +29,15 @@ export class PollVoteService {
       );
     }
 
-    const options = poll.options ?? [];
+    if (!poll.options) {
+      throw new ValidationException(
+        'Poll options relation must be loaded before casting a vote',
+        LogContext.COLLABORATION,
+        { pollId: poll.id }
+      );
+    }
+
+    const options = poll.options;
 
     // Validate all selected option IDs exist in this poll
     const validOptionIds = new Set(options.map(o => o.id));
@@ -79,6 +87,9 @@ export class PollVoteService {
     // Atomic upsert: INSERT ... ON CONFLICT (createdBy, pollId) DO UPDATE
     // Prevents race condition where concurrent requests from the same user
     // could both pass a findOne check and attempt duplicate inserts.
+    // Note: validation above and this upsert are not wrapped in a single
+    // transaction, so the poll could be closed or options removed between
+    // validation and insert (TOCTOU). Acceptable risk for a poll feature.
     await this.pollVoteRepository
       .createQueryBuilder()
       .insert()

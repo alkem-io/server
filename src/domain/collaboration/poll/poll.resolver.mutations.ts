@@ -101,13 +101,11 @@ export class PollMutationsResolver {
     );
 
     // Notify all prior voters that the poll was modified
-    this.dispatchModifiedNotifications(
+    void this.dispatchModifiedNotifications(
       poll.id,
       actorContext.actorID,
       voterIds
-    ).catch(() => {
-      /* errors logged inside */
-    });
+    );
 
     // Publish subscription event
     void this.publishPollEvent(PollEventType.POLL_OPTIONS_CHANGED, updatedPoll);
@@ -148,14 +146,12 @@ export class PollMutationsResolver {
     );
 
     // Notify voters whose vote was deleted
-    this.dispatchOptionChangeNotifications(
+    void this.dispatchOptionChangeNotifications(
       poll.id,
       actorContext.actorID,
       deletedVoterIds,
       remainingVoterIds
-    ).catch(() => {
-      /* errors logged inside */
-    });
+    );
 
     // Publish subscription event
     void this.publishPollEvent(PollEventType.POLL_OPTIONS_CHANGED, updatedPoll);
@@ -195,14 +191,12 @@ export class PollMutationsResolver {
     );
 
     // Notify voters whose vote was deleted
-    this.dispatchOptionChangeNotifications(
+    void this.dispatchOptionChangeNotifications(
       poll.id,
       actorContext.actorID,
       deletedVoterIds,
       remainingVoterIds
-    ).catch(() => {
-      /* errors logged inside */
-    });
+    );
 
     // Publish subscription event
     void this.publishPollEvent(PollEventType.POLL_OPTIONS_CHANGED, updatedPoll);
@@ -294,10 +288,7 @@ export class PollMutationsResolver {
       }
 
       // Notify prior voters (excluding current voter and creator if already notified)
-      const notifiedAlready = new Set([
-        voterId,
-        creatorId !== voterId ? creatorId : '',
-      ]);
+      const notifiedAlready = new Set([voterId, creatorId]);
       const priorVotersToNotify = priorVoterIds.filter(
         id => !notifiedAlready.has(id)
       );
@@ -312,7 +303,10 @@ export class PollMutationsResolver {
       );
     } catch (error) {
       this.logger.error?.(
-        `Failed to dispatch vote notifications for poll: ${(error as Error)?.message}`,
+        {
+          message: 'Failed to dispatch vote notifications for poll',
+          error: (error as Error)?.message,
+        },
         (error as Error)?.stack ?? '',
         LogContext.COLLABORATION
       );
@@ -325,9 +319,8 @@ export class PollMutationsResolver {
     actorId: string,
     voterIds: string[]
   ): Promise<void> {
-    if (voterIds.length === 0) return;
-
     try {
+      if (voterIds.length === 0) return;
       const { calloutID } =
         await this.pollService.getCalloutContextForPoll(pollId);
       const community =
@@ -351,7 +344,10 @@ export class PollMutationsResolver {
       );
     } catch (error) {
       this.logger.error?.(
-        `Failed to dispatch modified notifications for poll: ${(error as Error)?.message}`,
+        {
+          message: 'Failed to dispatch modified notifications for poll',
+          error: (error as Error)?.message,
+        },
         (error as Error)?.stack ?? '',
         LogContext.COLLABORATION
       );
@@ -368,10 +364,11 @@ export class PollMutationsResolver {
     deletedVoterIds: string[],
     remainingVoterIds: string[]
   ): Promise<void> {
-    const hasWork = deletedVoterIds.length > 0 || remainingVoterIds.length > 0;
-    if (!hasWork) return;
-
     try {
+      const hasWork =
+        deletedVoterIds.length > 0 || remainingVoterIds.length > 0;
+      if (!hasWork) return;
+
       const { calloutID } =
         await this.pollService.getCalloutContextForPoll(pollId);
       const community =
@@ -401,7 +398,10 @@ export class PollMutationsResolver {
       ]);
     } catch (error) {
       this.logger.error?.(
-        `Failed to dispatch option change notifications for poll: ${(error as Error)?.message}`,
+        {
+          message: 'Failed to dispatch option change notifications for poll',
+          error: (error as Error)?.message,
+        },
         (error as Error)?.stack ?? '',
         LogContext.COLLABORATION
       );

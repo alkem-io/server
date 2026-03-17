@@ -29,6 +29,7 @@ import { NotificationInputCollaborationCalloutContributionCreated } from './dto/
 import { NotificationInputCollaborationCalloutPostContributionComment } from './dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCalloutPublished } from './dto/space/notification.dto.input.space.collaboration.callout.published';
 import {
+  NotificationInputCollaborationPoll,
   NotificationInputCollaborationPollModifiedOnPollIVotedOn,
   NotificationInputCollaborationPollVoteAffectedByOptionChange,
   NotificationInputCollaborationPollVoteCastOnOwnPoll,
@@ -886,232 +887,55 @@ export class NotificationSpaceAdapter {
     );
   }
 
-  public async spaceCollaborationPollVoteCastOnOwnPoll(
+  public spaceCollaborationPollVoteCastOnOwnPoll(
     dto: NotificationInputCollaborationPollVoteCastOnOwnPoll,
     spaceID: string
   ): Promise<void> {
-    const event =
-      NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL;
-
-    const callout = await this.calloutLookupService.getCalloutOrFail(
-      dto.calloutID,
-      {
-        relations: {
-          framing: {
-            profile: true,
-            poll: true,
-          },
-        },
-      }
-    );
-
-    const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
-      relations: {
-        about: {
-          profile: true,
-        },
-      },
-    });
-
-    const recipients = await this.getNotificationRecipientsSpace(
-      event,
+    return this.sendPollNotification(
+      NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL,
       dto,
-      spaceID,
-      dto.userID
+      spaceID
     );
-
-    // Send email notifications
-    const emailRecipientsWithoutTrigger = recipients.emailRecipients.filter(
-      r => r.id !== dto.triggeredBy
-    );
-    if (emailRecipientsWithoutTrigger.length > 0) {
-      const payload =
-        await this.notificationExternalAdapter.buildSpaceCollaborationPollPayload(
-          event,
-          dto.triggeredBy,
-          emailRecipientsWithoutTrigger,
-          space,
-          callout,
-          callout.framing.poll
-        );
-      this.notificationExternalAdapter.sendExternalNotifications(
-        event,
-        payload
-      );
-    }
-
-    // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(r => r.id);
-    if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCollaborationPoll = {
-        type: NotificationEventPayload.SPACE_COLLABORATION_POLL,
-        spaceID,
-        calloutID: dto.calloutID,
-        pollID: dto.pollID,
-      };
-      await this.notificationInAppAdapter.sendInAppNotifications(
-        event,
-        NotificationEventCategory.SPACE_MEMBER,
-        dto.triggeredBy,
-        inAppReceiverIDs,
-        inAppPayload
-      );
-    }
   }
 
-  public async spaceCollaborationPollVoteCastOnPollIVotedOn(
+  public spaceCollaborationPollVoteCastOnPollIVotedOn(
     dto: NotificationInputCollaborationPollVoteCastOnPollIVotedOn,
     spaceID: string
   ): Promise<void> {
-    const event =
-      NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON;
-
-    const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
-      relations: {
-        about: {
-          profile: true,
-        },
-      },
-    });
-
-    const callout = await this.calloutLookupService.getCalloutOrFail(
-      dto.calloutID,
-      {
-        relations: {
-          framing: {
-            profile: true,
-            poll: true,
-          },
-        },
-      }
-    );
-
-    const recipients = await this.getNotificationRecipientsSpace(
-      event,
+    return this.sendPollNotification(
+      NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON,
       dto,
-      spaceID,
-      dto.userID
+      spaceID
     );
-
-    // Send email notifications
-    const emailRecipientsWithoutTrigger = recipients.emailRecipients.filter(
-      r => r.id !== dto.triggeredBy
-    );
-    if (emailRecipientsWithoutTrigger.length > 0) {
-      const payload =
-        await this.notificationExternalAdapter.buildSpaceCollaborationPollPayload(
-          event,
-          dto.triggeredBy,
-          emailRecipientsWithoutTrigger,
-          space,
-          callout,
-          callout.framing.poll
-        );
-      this.notificationExternalAdapter.sendExternalNotifications(
-        event,
-        payload
-      );
-    }
-
-    // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(r => r.id);
-    if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCollaborationPoll = {
-        type: NotificationEventPayload.SPACE_COLLABORATION_POLL,
-        spaceID,
-        calloutID: dto.calloutID,
-        pollID: dto.pollID,
-      };
-      await this.notificationInAppAdapter.sendInAppNotifications(
-        event,
-        NotificationEventCategory.SPACE_MEMBER,
-        dto.triggeredBy,
-        inAppReceiverIDs,
-        inAppPayload
-      );
-    }
   }
 
-  public async spaceCollaborationPollModifiedOnPollIVotedOn(
+  public spaceCollaborationPollModifiedOnPollIVotedOn(
     dto: NotificationInputCollaborationPollModifiedOnPollIVotedOn,
     spaceID: string
   ): Promise<void> {
-    const event =
-      NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON;
-
-    const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
-      relations: {
-        about: {
-          profile: true,
-        },
-      },
-    });
-
-    const callout = await this.calloutLookupService.getCalloutOrFail(
-      dto.calloutID,
-      {
-        relations: {
-          framing: {
-            profile: true,
-            poll: true,
-          },
-        },
-      }
-    );
-
-    const recipients = await this.getNotificationRecipientsSpace(
-      event,
+    return this.sendPollNotification(
+      NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON,
       dto,
-      spaceID,
-      dto.userID
+      spaceID
     );
-
-    // Send email notifications
-    const emailRecipientsWithoutTrigger = recipients.emailRecipients.filter(
-      r => r.id !== dto.triggeredBy
-    );
-    if (emailRecipientsWithoutTrigger.length > 0) {
-      const payload =
-        await this.notificationExternalAdapter.buildSpaceCollaborationPollPayload(
-          event,
-          dto.triggeredBy,
-          emailRecipientsWithoutTrigger,
-          space,
-          callout,
-          callout.framing.poll
-        );
-      this.notificationExternalAdapter.sendExternalNotifications(
-        event,
-        payload
-      );
-    }
-
-    // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(r => r.id);
-    if (inAppReceiverIDs.length > 0) {
-      const inAppPayload: InAppNotificationPayloadSpaceCollaborationPoll = {
-        type: NotificationEventPayload.SPACE_COLLABORATION_POLL,
-        spaceID,
-        calloutID: dto.calloutID,
-        pollID: dto.pollID,
-      };
-      await this.notificationInAppAdapter.sendInAppNotifications(
-        event,
-        NotificationEventCategory.SPACE_MEMBER,
-        dto.triggeredBy,
-        inAppReceiverIDs,
-        inAppPayload
-      );
-    }
   }
 
-  public async spaceCollaborationPollVoteAffectedByOptionChange(
+  public spaceCollaborationPollVoteAffectedByOptionChange(
     dto: NotificationInputCollaborationPollVoteAffectedByOptionChange,
     spaceID: string
   ): Promise<void> {
-    const event =
-      NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE;
+    return this.sendPollNotification(
+      NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE,
+      dto,
+      spaceID
+    );
+  }
 
+  private async sendPollNotification(
+    event: NotificationEvent,
+    dto: NotificationInputCollaborationPoll,
+    spaceID: string
+  ): Promise<void> {
     const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
       relations: {
         about: {

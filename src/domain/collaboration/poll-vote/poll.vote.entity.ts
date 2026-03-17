@@ -19,6 +19,10 @@ export class PollVote extends BaseAlkemioEntity implements IPollVote {
   @JoinColumn({ name: 'createdBy' })
   createdByUser?: User;
 
+  // Stored as JSONB (no FK to poll_option) by design. Orphaned IDs are prevented by:
+  // - removeOption/updateOption delete affected votes in a transaction
+  // - ON DELETE CASCADE on the poll FK cleans up votes when a poll is deleted
+  // - Field resolvers filter out any missing option IDs before returning to clients
   @Column('jsonb', { nullable: false })
   selectedOptionIds!: string[];
 
