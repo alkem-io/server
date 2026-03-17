@@ -175,7 +175,7 @@
 
 ### User Story Dependencies
 
-```
+```text
 Phase 1 (Setup) → Phase 2 (Foundational) → US1 (Members) → US6 (Listing) ──┐
                                            US2 (Create)  ───────────────────┼→ US3 (Membership) → Polish
                                            US5 (Subs)    ───────────────────┤   US4 (Lifecycle) ↗

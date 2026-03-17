@@ -2026,13 +2026,13 @@ type Conversation {
   members: [Actor!]!
   messaging: Messaging!
   """The room for this Conversation."""
-  room: Room
+  room: Room!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
 
 """
-Event fired when a new conversation is created. Each member receives a personalized event with the other participant resolved via conversation.user or conversation.virtualContributor.
+Event fired when a new conversation is created. All members receive the event with the full conversation and its members list.
 """
 type ConversationCreatedEvent {
   """The conversation that was created."""
@@ -3687,7 +3687,7 @@ type Mutation {
   """
   joinRoleSet(joinData: JoinAsEntryRoleOnRoleSetInput!): RoleSet!
   """
-  Leave a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_REMOVED subscription event.
+  Leave a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_REMOVED subscription event. If the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.
   """
   leaveConversation(leaveData: LeaveConversationInput!): Boolean!
   """Reset the License with Entitlements on the specified Account."""
@@ -3811,7 +3811,7 @@ type Mutation {
   """Update the sortOrder field of the Contributions of s Callout."""
   updateContributionsSortOrder(sortOrderData: UpdateContributionCalloutsSortOrderInput!): [CalloutContribution!]!
   """
-  Update a group conversation (display name, avatar). Returns true when the RPC is sent. Actual changes arrive via CONVERSATION_UPDATED subscription event.
+  Update a group conversation (display name, avatar). Returns true when the RPC is sent. Actual changes arrive via CONVERSATION_UPDATED subscription events. When both fields are provided, clients may receive separate update events for each.
   """
   updateConversation(updateData: UpdateConversationInput!): Boolean!
   """Updates the specified Discussion."""
@@ -5492,7 +5492,7 @@ type Subscription {
     calloutID: UUID!
   ): CalloutPostCreated!
   """
-  Receive conversation events for the authenticated user. Includes new conversations, messages, and read receipts.
+  Receive conversation events for the authenticated user. Includes conversation lifecycle (created, updated, deleted), messages (received, removed), membership changes (member added, removed), and read receipts.
   """
   conversationEvents: ConversationEventSubscriptionResult!
   """Receive updates on Discussions"""

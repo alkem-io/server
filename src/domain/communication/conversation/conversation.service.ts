@@ -360,11 +360,8 @@ export class ConversationService {
 
   /**
    * Get the room for a conversation.
-   * Returns undefined if the conversation has no room (legacy conversations).
-   * Run adminCommunicationMigrateOrphanedConversations mutation to create rooms
-   * for legacy conversations before they can be used.
    */
-  public async getRoom(conversationID: string): Promise<IRoom | undefined> {
+  public async getRoom(conversationID: string): Promise<IRoom> {
     const conversation = await this.getConversationOrFail(conversationID, {
       relations: { room: true },
     });

@@ -16,12 +16,10 @@ export class ConversationResolverFields {
   constructor(private readonly conversationService: ConversationService) {}
 
   @ResolveField('room', () => IRoom, {
-    nullable: true,
+    nullable: false,
     description: 'The room for this Conversation.',
   })
-  async room(
-    @Parent() conversation: IConversation
-  ): Promise<IRoom | undefined> {
+  async room(@Parent() conversation: IConversation): Promise<IRoom> {
     // Use eager-loaded room if available
     if (conversation.room !== undefined) {
       return conversation.room;

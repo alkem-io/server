@@ -8,7 +8,7 @@ import { IMessaging } from '../messaging/messaging.interface';
 export abstract class IConversation extends IAuthorizable {
   memberships?: IConversationMembership[];
 
-  room?: IRoom;
+  room!: IRoom;
 
   @Field(() => IMessaging)
   messaging!: IMessaging;

@@ -47,7 +47,7 @@ export class ConversationEventResolverSubscription {
     () => ConversationEventSubscriptionResult,
     {
       description:
-        'Receive conversation events for the authenticated user. Includes new conversations, messages, and read receipts.',
+        'Receive conversation events for the authenticated user. Includes conversation lifecycle (created, updated, deleted), messages (received, removed), membership changes (member added, removed), and read receipts.',
       async filter(
         this: ConversationEventResolverSubscription,
         payload,

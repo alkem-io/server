@@ -196,7 +196,8 @@ export class ConversationResolverMutations {
   @Mutation(() => Boolean, {
     description:
       'Leave a group conversation. Returns true when the RPC is sent. ' +
-      'Actual membership change arrives via MEMBER_REMOVED subscription event.',
+      'Actual membership change arrives via MEMBER_REMOVED subscription event. ' +
+      'If the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.',
   })
   async leaveConversation(
     @CurrentActor() actorContext: ActorContext,
@@ -213,7 +214,8 @@ export class ConversationResolverMutations {
   @Mutation(() => Boolean, {
     description:
       'Update a group conversation (display name, avatar). Returns true when the RPC is sent. ' +
-      'Actual changes arrive via CONVERSATION_UPDATED subscription event.',
+      'Actual changes arrive via CONVERSATION_UPDATED subscription events. ' +
+      'When both fields are provided, clients may receive separate update events for each.',
   })
   async updateConversation(
     @CurrentActor() actorContext: ActorContext,

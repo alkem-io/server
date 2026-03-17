@@ -26,7 +26,7 @@ registerEnumType(ConversationEventType, {
 
 @ObjectType('ConversationCreatedEvent', {
   description:
-    'Event fired when a new conversation is created. Each member receives a personalized event with the other participant resolved via conversation.user or conversation.virtualContributor.',
+    'Event fired when a new conversation is created. All members receive the event with the full conversation and its members list.',
 })
 export class ConversationCreatedEvent {
   @Field(() => IConversation, {
