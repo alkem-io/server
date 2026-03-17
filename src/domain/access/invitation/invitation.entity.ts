@@ -4,7 +4,14 @@ import { RoleSet } from '@domain/access/role-set/role.set.entity';
 import { Actor } from '@domain/actor/actor/actor.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Lifecycle } from '@domain/common/lifecycle/lifecycle.entity';
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+} from 'typeorm';
 import { IInvitation } from './invitation.interface';
 
 @Entity()
@@ -24,8 +31,9 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
   @JoinColumn({ name: 'invitedActorId' })
   invitedActor?: Actor;
 
-  @Column('uuid', { nullable: false })
-  createdBy!: string;
+  @Index()
+  @Column('uuid', { nullable: true })
+  createdBy?: string;
 
   @ManyToOne(() => Actor, {
     eager: false,

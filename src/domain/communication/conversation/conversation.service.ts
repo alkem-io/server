@@ -1,7 +1,6 @@
 import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { CommunicationConversationType } from '@common/enums/communication.conversation.type';
 import { RoomType } from '@common/enums/room.type';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import {
@@ -23,6 +22,7 @@ import { VirtualActorLookupService } from '@domain/community/virtual-contributor
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { FindOneOptions, In, Repository } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
@@ -48,6 +48,7 @@ export class ConversationService {
     private userLookupService: UserLookupService,
     private virtualActorLookupService: VirtualActorLookupService,
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
+    private communicationAdapter: CommunicationAdapter,
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>,
     @InjectRepository(ConversationMembership)
@@ -58,31 +59,32 @@ export class ConversationService {
   // TODO: do we support uploading content in a conversation? If so will need to pass in a storage aggregator
 
   /**
-   * Create a conversation between two agents.
-   * This is the core creation method that works purely with agent IDs.
-   * Callers are responsible for resolving user/VC IDs to agent IDs.
+   * Create a conversation with N members.
+   * Works for both DIRECT (2 members) and GROUP (N members) conversations.
+   * Deduplicates member IDs. Validates at least 2 members.
    *
-   * @param currentUserActorID - Actor ID of the current user
-   * @param otherActorID - Actor ID of the other party (user or VC)
-   * @param createRoom - Whether to create a room (true for USER_USER, false for USER_VC)
-   * @returns The created or existing conversation
+   * For DIRECT conversations, the caller is responsible for dedup checks
+   * (see findConversationBetweenActors).
+   *
+   * @param creatorActorId - Actor ID of the creator (auto-included as member)
+   * @param memberActorIds - Actor IDs of the other members
+   * @param roomType - CONVERSATION_DIRECT or CONVERSATION_GROUP
+   * @returns The created conversation
    */
   public async createConversation(
-    currentUserActorID: string,
-    otherActorID: string,
-    createRoom: boolean
+    creatorActorId: string,
+    memberActorIds: string[],
+    roomType: RoomType,
+    displayName?: string,
+    avatarUrl?: string
   ): Promise<IConversation> {
-    // Check if conversation already exists between these agents
-    const existingConversation = await this.findConversationBetweenAgents(
-      currentUserActorID,
-      otherActorID
-    );
-    if (existingConversation) {
-      this.logger.verbose?.(
-        `Returning existing conversation ${existingConversation.id} between agents ${currentUserActorID} and ${otherActorID}`,
+    const allMemberIds = [...new Set([creatorActorId, ...memberActorIds])];
+
+    if (allMemberIds.length < 2) {
+      throw new ValidationException(
+        'Conversations require at least 2 members',
         LogContext.COMMUNICATION_CONVERSATION
       );
-      return existingConversation;
     }
 
     // Create conversation entity
@@ -91,36 +93,30 @@ export class ConversationService {
       AuthorizationPolicyType.COMMUNICATION_CONVERSATION
     );
 
-    // Create room for the conversation
-    if (createRoom) {
-      conversation.room = await this.createConversationRoom(
-        currentUserActorID,
-        otherActorID,
-        RoomType.CONVERSATION_DIRECT
-      );
-    }
+    // Create room
+    conversation.room = await this.createConversationRoom(
+      allMemberIds,
+      roomType,
+      displayName,
+      avatarUrl
+    );
 
     // Save conversation to get ID
     const savedConversation = await this.conversationRepository.save(
       conversation as Conversation
     );
 
-    // Create membership records for both agents
-    const membership1 = this.conversationMembershipRepository.create({
-      conversationId: savedConversation.id,
-      actorID: currentUserActorID,
-    });
-    const membership2 = this.conversationMembershipRepository.create({
-      conversationId: savedConversation.id,
-      actorID: otherActorID,
-    });
-    await this.conversationMembershipRepository.save([
-      membership1,
-      membership2,
-    ]);
+    // Create membership records for all members
+    const memberships = allMemberIds.map(actorID =>
+      this.conversationMembershipRepository.create({
+        conversationId: savedConversation.id,
+        actorID,
+      })
+    );
+    await this.conversationMembershipRepository.save(memberships);
 
     this.logger.verbose?.(
-      `Created conversation ${savedConversation.id} with memberships for agents: ${currentUserActorID}, ${otherActorID}`,
+      `Created ${roomType} conversation ${savedConversation.id} with ${allMemberIds.length} members`,
       LogContext.COMMUNICATION_CONVERSATION
     );
 
@@ -128,21 +124,29 @@ export class ConversationService {
   }
 
   /**
-   * Create a room for a conversation between two agents.
-   * @param senderActorID - Actor ID of the sender/initiator
-   * @param receiverActorID - Actor ID of the receiver
-   * @param roomType - Type of room to create
+   * Create a room for a conversation.
+   * Handles both direct (sender/receiver) and group (N members) room creation.
    */
   private async createConversationRoom(
-    senderActorID: string,
-    receiverActorID: string,
-    roomType: RoomType
+    memberActorIDs: string[],
+    roomType: RoomType,
+    displayName?: string,
+    avatarUrl?: string
   ): Promise<IRoom> {
+    if (roomType === RoomType.CONVERSATION_DIRECT) {
+      return await this.roomService.createRoom({
+        displayName: `conversation-${memberActorIDs[0]}-${memberActorIDs[1]}`,
+        type: roomType,
+        senderActorID: memberActorIDs[0],
+        receiverActorID: memberActorIDs[1],
+      });
+    }
     return await this.roomService.createRoom({
-      displayName: `conversation-${senderActorID}-${receiverActorID}`,
+      displayName:
+        displayName || `group-conversation-${memberActorIDs.length}-members`,
       type: roomType,
-      senderActorID: senderActorID,
-      receiverActorID: receiverActorID,
+      memberActorIDs,
+      avatarUrl,
     });
   }
 
@@ -166,6 +170,146 @@ export class ConversationService {
 
   async save(conversation: IConversation): Promise<IConversation> {
     return await this.conversationRepository.save(conversation);
+  }
+
+  /**
+   * Add a member to a group conversation.
+   * Sends RPC to Matrix only — DB persistence happens via room.member.updated event.
+   */
+  public async addMember(
+    conversationId: string,
+    memberActorId: string
+  ): Promise<IConversation> {
+    const conversation = await this.getConversationOrFail(conversationId, {
+      relations: { room: true },
+    });
+
+    if (
+      !conversation.room ||
+      conversation.room.type !== RoomType.CONVERSATION_GROUP
+    ) {
+      throw new ValidationException(
+        'Cannot add members to a non-group conversation',
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+
+    // Idempotent — skip if already a member
+    const alreadyMember = await this.isConversationMember(
+      conversationId,
+      memberActorId
+    );
+    if (alreadyMember) {
+      return conversation;
+    }
+
+    // Send to Matrix only — DB will be updated when room.member.updated event arrives
+    await this.communicationAdapter.batchAddMember(memberActorId, [
+      conversation.room.id,
+    ]);
+
+    this.logger.verbose?.(
+      `Sent add-member RPC for ${memberActorId} to group conversation ${conversationId}`,
+      LogContext.COMMUNICATION_CONVERSATION
+    );
+
+    return conversation;
+  }
+
+  /**
+   * Remove a member from a group conversation.
+   * Sends RPC to Matrix only — DB persistence and auto-delete happen via room.member.updated event.
+   */
+  public async removeMember(
+    conversationId: string,
+    memberActorId: string
+  ): Promise<IConversation> {
+    const conversation = await this.getConversationOrFail(conversationId, {
+      relations: { room: true },
+    });
+
+    if (
+      !conversation.room ||
+      conversation.room.type !== RoomType.CONVERSATION_GROUP
+    ) {
+      throw new ValidationException(
+        'Cannot remove members from a non-group conversation',
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+
+    const isMember = await this.isConversationMember(
+      conversationId,
+      memberActorId
+    );
+    if (!isMember) {
+      throw new ValidationException(
+        'Actor is not a member of this conversation',
+        LogContext.COMMUNICATION_CONVERSATION
+      );
+    }
+
+    // Send to Matrix only — DB will be updated when room.member.updated event arrives
+    await this.communicationAdapter.batchRemoveMember(memberActorId, [
+      conversation.room.id,
+    ]);
+
+    this.logger.verbose?.(
+      `Sent remove-member RPC for ${memberActorId} from group conversation ${conversationId}`,
+      LogContext.COMMUNICATION_CONVERSATION
+    );
+
+    return conversation;
+  }
+
+  /**
+   * Persist a membership addition. Called from the event handler when
+   * a room.member.updated event with membership=join is received.
+   */
+  public async persistMemberAdded(
+    conversationId: string,
+    memberActorId: string
+  ): Promise<void> {
+    const alreadyMember = await this.isConversationMember(
+      conversationId,
+      memberActorId
+    );
+    if (alreadyMember) return;
+
+    const membership = this.conversationMembershipRepository.create({
+      conversationId,
+      actorID: memberActorId,
+    });
+    await this.conversationMembershipRepository.save(membership);
+
+    this.logger.verbose?.(
+      `Persisted member ${memberActorId} added to conversation ${conversationId}`,
+      LogContext.COMMUNICATION_CONVERSATION
+    );
+  }
+
+  /**
+   * Persist a membership removal. Called from the event handler when
+   * a room.member.updated event with membership=leave is received.
+   * @returns The remaining member count.
+   */
+  public async persistMemberRemoved(
+    conversationId: string,
+    memberActorId: string
+  ): Promise<number> {
+    await this.conversationMembershipRepository.delete({
+      conversationId,
+      actorID: memberActorId,
+    });
+
+    this.logger.verbose?.(
+      `Persisted member ${memberActorId} removed from conversation ${conversationId}`,
+      LogContext.COMMUNICATION_CONVERSATION
+    );
+
+    return this.conversationMembershipRepository.count({
+      where: { conversationId },
+    });
   }
 
   public async deleteConversation(
@@ -216,11 +360,8 @@ export class ConversationService {
 
   /**
    * Get the room for a conversation.
-   * Returns undefined if the conversation has no room (legacy conversations).
-   * Run adminCommunicationMigrateOrphanedConversations mutation to create rooms
-   * for legacy conversations before they can be used.
    */
-  public async getRoom(conversationID: string): Promise<IRoom | undefined> {
+  public async getRoom(conversationID: string): Promise<IRoom> {
     const conversation = await this.getConversationOrFail(conversationID, {
       relations: { room: true },
     });
@@ -268,8 +409,7 @@ export class ConversationService {
 
     // Create the room
     const createdRoom = await this.createConversationRoom(
-      member1.actorID,
-      member2.actorID,
+      [member1.actorID, member2.actorID],
       RoomType.CONVERSATION_DIRECT
     );
 
@@ -322,8 +462,7 @@ export class ConversationService {
 
     // Create a new room
     conversation.room = await this.createConversationRoom(
-      senderActorID,
-      receiverActorID,
+      [senderActorID, receiverActorID],
       RoomType.CONVERSATION_DIRECT
     );
     return await this.save(conversation);
@@ -372,10 +511,10 @@ export class ConversationService {
   }
 
   /**
-   * Check if an agent is a member of a conversation.
+   * Check if an actor is a member of a conversation.
    * @param conversationId - UUID of the conversation
-   * @param actorID - UUID of the agent
-   * @returns true if the agent is a member, false otherwise
+   * @param actorID - UUID of the actor
+   * @returns true if the actor is a member, false otherwise
    */
   async isConversationMember(
     conversationId: string,
@@ -388,17 +527,17 @@ export class ConversationService {
   }
 
   /**
-   * Find an existing conversation between two agents.
-   * Uses the pivot table to find conversations where both agents are members.
+   * Find an existing conversation between two actors.
+   * Uses the pivot table to find conversations where both actors are members.
    * Performance: Self-join on pivot table with indexed foreign keys provides efficient lookups.
    * Query execution: < 10ms typical for indexed actor_id columns.
-   * @param agentId1 - UUID of first agent
-   * @param agentId2 - UUID of second agent
+   * @param actorId1 - UUID of first actor
+   * @param actorId2 - UUID of second actor
    * @returns The conversation if found, null otherwise
    */
-  async findConversationBetweenAgents(
-    agentId1: string,
-    agentId2: string
+  async findConversationBetweenActors(
+    actorId1: string,
+    actorId2: string
   ): Promise<IConversation | null> {
     const result = await this.conversationMembershipRepository
       .createQueryBuilder('m1')
@@ -409,8 +548,12 @@ export class ConversationService {
       )
       .innerJoinAndSelect('m1.conversation', 'conversation')
       .leftJoinAndSelect('conversation.authorization', 'authorization')
-      .where('m1.actorID = :agentId1', { agentId1 })
-      .andWhere('m2.actorID = :agentId2', { agentId2 })
+      .innerJoin('conversation.room', 'room')
+      .where('m1.actorID = :actorId1', { actorId1 })
+      .andWhere('m2.actorID = :actorId2', { actorId2 })
+      .andWhere('room.type = :roomType', {
+        roomType: RoomType.CONVERSATION_DIRECT,
+      })
       .getOne();
 
     return result?.conversation || null;
@@ -418,11 +561,35 @@ export class ConversationService {
 
   /**
    * Find a conversation between a user and a well-known virtual contributor.
-   * Uses the efficient findConversationBetweenAgents query.
+   * Uses the efficient findConversationBetweenActors query.
    * @param userID - UUID of the user
    * @param wellKnown - The well-known VC enum value
    * @returns The conversation if found, null otherwise
    */
+  /**
+   * Resolve a well-known VC to its agent ID.
+   */
+  async resolveWellKnownVCActorId(
+    wellKnown: VirtualContributorWellKnown
+  ): Promise<string> {
+    const vcId =
+      await this.platformWellKnownVirtualContributorsService.getVirtualContributorID(
+        wellKnown
+      );
+    if (!vcId) {
+      throw new ValidationException(
+        'Well-known virtual contributor not found',
+        LogContext.COMMUNICATION_CONVERSATION,
+        { wellKnown }
+      );
+    }
+    const vc =
+      await this.virtualActorLookupService.getVirtualContributorByIdOrFail(
+        vcId
+      );
+    return vc.id;
+  }
+
   async findConversationWithWellKnownVC(
     userID: string,
     wellKnown: VirtualContributorWellKnown
@@ -438,53 +605,17 @@ export class ConversationService {
 
     // Get user's actor ID (user.id IS the actor ID in the new model)
     const user = await this.userLookupService.getUserByIdOrFail(userID);
-    const userAgentId = user.id;
+    const userActorId = user.id;
 
     // Get VC's actor ID (vc.id IS the actor ID in the new model)
     const vc =
       await this.virtualActorLookupService.getVirtualContributorByIdOrFail(
         vcId
       );
-    const vcAgentId = vc.id;
+    const vcActorId = vc.id;
 
     // Use efficient self-join query
-    return this.findConversationBetweenAgents(userAgentId, vcAgentId);
-  }
-
-  /**
-   * Infer conversation type from the agent types of its members.
-   * Performance optimization: Uses short-circuit evaluation to check agent.type directly
-   * without loading full user/virtualContributor entities. Actor type is eagerly loaded
-   * by the memberships query, avoiding N+1 queries.
-   * Enforces exactly at most 2 members per conversation (per spec clarification).
-   * @returns USER_USER if both are users, USER_VC if one is a VC
-   * @throws ValidationException if conversation doesn't have exactly 2 members
-   * @param memberships
-   */
-  async inferConversationType(
-    memberships: IConversationMembershipWithActorType[]
-  ): Promise<CommunicationConversationType> {
-    if (memberships.length > 2) {
-      throw new ValidationException(
-        'Conversation must have exactly 2 members',
-        LogContext.COMMUNICATION,
-        {
-          details: {
-            conversationId: memberships[0]?.conversationId,
-            memberCount: memberships.length,
-          },
-        }
-      );
-    }
-
-    // Check if any agent is a virtual contributor using actorType field
-    const hasVC = memberships.some(
-      m => m.actorType === ActorType.VIRTUAL_CONTRIBUTOR
-    );
-
-    return hasVC
-      ? CommunicationConversationType.USER_VC
-      : CommunicationConversationType.USER_USER;
+    return this.findConversationBetweenActors(userActorId, vcActorId);
   }
 
   /**
@@ -517,20 +648,20 @@ export class ConversationService {
    * T075: Get the user from a conversation via membership resolution.
    * Replaces direct access to conversation.userID (column dropped).
    * @param conversationId - UUID of the conversation
-   * @param excludeAgentId - Optional agent ID to exclude (for finding "the other user")
+   * @param excludeActorId - Optional actor ID to exclude (for finding "the other user")
    * @returns The user if found, null if conversation has no user member (or only excluded user)
    */
   async getUserFromConversation(
     conversationId: string,
-    excludeAgentId?: string
+    excludeActorId?: string
   ): Promise<IUser | null> {
     const members = await this.getConversationMembers(conversationId);
 
-    // Find a user member, excluding the specified agent if provided
+    // Find a user member, excluding the specified actor if provided
     const userMember = members.find(
       m =>
         m.actorType === ActorType.USER &&
-        (!excludeAgentId || m.actorID !== excludeAgentId)
+        (!excludeActorId || m.actorID !== excludeActorId)
     );
 
     if (!userMember) {
@@ -589,13 +720,13 @@ export class ConversationService {
   }
 
   /**
-   * Get all member agent IDs for a conversation.
+   * Get all member actor IDs for a conversation.
    * Lightweight version of getConversationMembers that returns only IDs.
    * Used for subscription event filtering.
    * @param conversationId - UUID of the conversation
-   * @returns Array of agent IDs
+   * @returns Array of actor IDs
    */
-  async getConversationMemberAgentIds(
+  async getConversationMemberActorIds(
     conversationId: string
   ): Promise<string[]> {
     const memberships = await this.conversationMembershipRepository.find({

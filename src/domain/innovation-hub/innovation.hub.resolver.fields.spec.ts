@@ -37,7 +37,9 @@ describe('InnovationHubResolverFields', () => {
       const innovationHub = { id: 'hub-1' } as IInnovationHub;
       const filter = ['space-2', 'space-1', 'space-3'];
 
-      (innovationHubService as any).getSpaceListFilterOrFail.mockResolvedValue(filter);
+      (innovationHubService as any).getSpaceListFilterOrFail.mockResolvedValue(
+        filter
+      );
 
       const spaces = [
         { id: 'space-1', nameID: 'first' },
@@ -60,7 +62,9 @@ describe('InnovationHubResolverFields', () => {
       // Arrange
       const innovationHub = { id: 'hub-1' } as IInnovationHub;
 
-      (innovationHubService as any).getSpaceListFilterOrFail.mockResolvedValue(undefined);
+      (innovationHubService as any).getSpaceListFilterOrFail.mockResolvedValue(
+        undefined
+      );
 
       // Act
       const result = await resolver.spaceListFilter(innovationHub);
@@ -74,7 +78,9 @@ describe('InnovationHubResolverFields', () => {
       const innovationHub = { id: 'hub-1' } as IInnovationHub;
       const filter = ['space-1', 'space-missing', 'space-2'];
 
-      (innovationHubService as any).getSpaceListFilterOrFail.mockResolvedValue(filter);
+      (innovationHubService as any).getSpaceListFilterOrFail.mockResolvedValue(
+        filter
+      );
 
       const spaces = [
         { id: 'space-1', nameID: 'first' },

@@ -32,7 +32,7 @@ describe('SessionExtendMiddleware', () => {
     let middleware: SessionExtendMiddleware;
 
     beforeEach(async () => {
-    vi.restoreAllMocks();
+      vi.restoreAllMocks();
 
       const module: TestingModule = await Test.createTestingModule({
         providers: [

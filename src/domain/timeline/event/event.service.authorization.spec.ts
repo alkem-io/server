@@ -10,17 +10,17 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
-import { vi } from 'vitest';
+import { type Mocked, vi } from 'vitest';
 import { ICalendarEvent } from './event.interface';
 import { CalendarEventService } from './event.service';
 import { CalendarEventAuthorizationService } from './event.service.authorization';
 
 describe('CalendarEventAuthorizationService', () => {
   let service: CalendarEventAuthorizationService;
-  let calendarEventService: CalendarEventService;
-  let authorizationPolicyService: AuthorizationPolicyService;
-  let roomAuthorizationService: RoomAuthorizationService;
-  let profileAuthorizationService: ProfileAuthorizationService;
+  let calendarEventService: Mocked<CalendarEventService>;
+  let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
+  let roomAuthorizationService: Mocked<RoomAuthorizationService>;
+  let profileAuthorizationService: Mocked<ProfileAuthorizationService>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -38,17 +38,18 @@ describe('CalendarEventAuthorizationService', () => {
     service = module.get<CalendarEventAuthorizationService>(
       CalendarEventAuthorizationService
     );
-    calendarEventService =
-      module.get<CalendarEventService>(CalendarEventService);
-    authorizationPolicyService = module.get<AuthorizationPolicyService>(
+    calendarEventService = module.get(
+      CalendarEventService
+    ) as Mocked<CalendarEventService>;
+    authorizationPolicyService = module.get(
       AuthorizationPolicyService
-    );
-    roomAuthorizationService = module.get<RoomAuthorizationService>(
+    ) as Mocked<AuthorizationPolicyService>;
+    roomAuthorizationService = module.get(
       RoomAuthorizationService
-    );
-    profileAuthorizationService = module.get<ProfileAuthorizationService>(
+    ) as Mocked<RoomAuthorizationService>;
+    profileAuthorizationService = module.get(
       ProfileAuthorizationService
-    );
+    ) as Mocked<ProfileAuthorizationService>;
   });
 
   describe('applyAuthorizationPolicy', () => {
@@ -71,14 +72,32 @@ describe('CalendarEventAuthorizationService', () => {
       } as unknown as ICalendarEvent;
 
       calendarEventService.getCalendarEventOrFail.mockResolvedValue(mockEvent);
-      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(eventAuth);
-      authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue(clonedAuth);
-      authorizationPolicyService.createCredentialRule.mockReturnValue({ type: 'credential-rule' });
-      authorizationPolicyService.appendCredentialAuthorizationRules.mockReturnValue(extendedAuth);
-      roomAuthorizationService.applyAuthorizationPolicy.mockReturnValue(commentsAuth);
-      roomAuthorizationService.allowContributorsToCreateMessages.mockReturnValue(commentsAuth);
-      roomAuthorizationService.allowContributorsToReplyReactToMessages.mockReturnValue(commentsAuth);
-      profileAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([profileAuth]);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+        eventAuth
+      );
+      authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue(
+        clonedAuth
+      );
+      authorizationPolicyService.createCredentialRule.mockReturnValue({
+        type: 'credential-rule',
+      } as unknown as ReturnType<
+        AuthorizationPolicyService['createCredentialRule']
+      >);
+      authorizationPolicyService.appendCredentialAuthorizationRules.mockReturnValue(
+        extendedAuth
+      );
+      roomAuthorizationService.applyAuthorizationPolicy.mockReturnValue(
+        commentsAuth
+      );
+      roomAuthorizationService.allowContributorsToCreateMessages.mockReturnValue(
+        commentsAuth
+      );
+      roomAuthorizationService.allowContributorsToReplyReactToMessages.mockReturnValue(
+        commentsAuth
+      );
+      profileAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        profileAuth,
+      ]);
 
       const inputEvent = { id: 'event-1' } as ICalendarEvent;
 
@@ -153,11 +172,23 @@ describe('CalendarEventAuthorizationService', () => {
       } as unknown as ICalendarEvent;
 
       calendarEventService.getCalendarEventOrFail.mockResolvedValue(mockEvent);
-      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(eventAuth);
-      authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue({ id: 'cloned' });
-      authorizationPolicyService.createCredentialRule.mockReturnValue({ type: 'rule' });
-      authorizationPolicyService.appendCredentialAuthorizationRules.mockReturnValue(extendedAuth);
-      profileAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([profileAuth]);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+        eventAuth
+      );
+      authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue({
+        id: 'cloned',
+      } as IAuthorizationPolicy);
+      authorizationPolicyService.createCredentialRule.mockReturnValue({
+        type: 'rule',
+      } as unknown as ReturnType<
+        AuthorizationPolicyService['createCredentialRule']
+      >);
+      authorizationPolicyService.appendCredentialAuthorizationRules.mockReturnValue(
+        extendedAuth
+      );
+      profileAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([
+        profileAuth,
+      ]);
 
       const inputEvent = { id: 'event-1' } as ICalendarEvent;
 
@@ -190,8 +221,12 @@ describe('CalendarEventAuthorizationService', () => {
       } as unknown as ICalendarEvent;
 
       calendarEventService.getCalendarEventOrFail.mockResolvedValue(mockEvent);
-      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(undefined);
-      authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue({ id: 'cloned' });
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+        undefined!
+      );
+      authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue({
+        id: 'cloned',
+      } as IAuthorizationPolicy);
 
       const inputEvent = { id: 'event-1' } as ICalendarEvent;
 
@@ -214,11 +249,23 @@ describe('CalendarEventAuthorizationService', () => {
       } as unknown as ICalendarEvent;
 
       calendarEventService.getCalendarEventOrFail.mockResolvedValue(mockEvent);
-      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(eventAuth);
-      authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue({ id: 'cloned' });
-      authorizationPolicyService.createCredentialRule.mockReturnValue({ type: 'rule' });
-      authorizationPolicyService.appendCredentialAuthorizationRules.mockReturnValue(eventAuth);
-      profileAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+      authorizationPolicyService.inheritParentAuthorization.mockReturnValue(
+        eventAuth
+      );
+      authorizationPolicyService.cloneAuthorizationPolicy.mockReturnValue({
+        id: 'cloned',
+      } as IAuthorizationPolicy);
+      authorizationPolicyService.createCredentialRule.mockReturnValue({
+        type: 'rule',
+      } as unknown as ReturnType<
+        AuthorizationPolicyService['createCredentialRule']
+      >);
+      authorizationPolicyService.appendCredentialAuthorizationRules.mockReturnValue(
+        eventAuth
+      );
+      profileAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
 
       const inputEvent = { id: 'event-1' } as ICalendarEvent;
 

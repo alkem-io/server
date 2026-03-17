@@ -1,13 +1,9 @@
 import { AuthorizationPrivilege } from '@common/enums';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import {
-  CanActivate,
-  ExecutionContext,
-  Injectable,
-} from '@nestjs/common';
+import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { GqlExecutionContext } from '@nestjs/graphql';
-import { ActorContextService } from '@core/actor-context/actor.context.service';
 
 /**
  * Synchronous authorization guard for GraphQL resolvers.

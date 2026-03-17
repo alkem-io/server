@@ -83,7 +83,9 @@ describe('RoomMentionsService', () => {
 
     it('should extract organization mention from text', async () => {
       const mockOrg = { id: 'org-uuid-1' } as any;
-      organizationLookupService.getOrganizationByNameIdOrFail.mockResolvedValue(mockOrg);
+      organizationLookupService.getOrganizationByNameIdOrFail.mockResolvedValue(
+        mockOrg
+      );
 
       const result = await service.getMentionsFromText(
         'See [@acme-corp](https://example.com/organization/acme-corp) for details'
@@ -99,7 +101,9 @@ describe('RoomMentionsService', () => {
 
     it('should extract virtual contributor mention from text', async () => {
       const mockVC = { id: 'vc-uuid-1' } as any;
-      virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(mockVC);
+      virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(
+        mockVC
+      );
 
       const result = await service.getMentionsFromText(
         'Ask [@my-vc](https://example.com/vc/my-vc) about this'
@@ -118,7 +122,9 @@ describe('RoomMentionsService', () => {
       const mockOrg = { id: 'org-uuid-1' } as any;
 
       userLookupService.getUserByNameIdOrFail.mockResolvedValue(mockUser);
-      organizationLookupService.getOrganizationByNameIdOrFail.mockResolvedValue(mockOrg);
+      organizationLookupService.getOrganizationByNameIdOrFail.mockResolvedValue(
+        mockOrg
+      );
 
       const text =
         'Hey, [@john](https://example.com/user/john-doe) and [@acme](https://example.com/organization/acme-corp)';

@@ -241,7 +241,9 @@ describe('ConversionResolverMutations', () => {
           calloutsSet: { id: 'cs-2', callouts: [] },
         },
       });
-      spaceService.getAccountForLevelZeroSpaceOrFail.mockResolvedValue({ id: 'acc-2' });
+      spaceService.getAccountForLevelZeroSpaceOrFail.mockResolvedValue({
+        id: 'acc-2',
+      });
 
       await expect(
         resolver.convertVirtualContributorToUseKnowledgeBase(actorContext, {
