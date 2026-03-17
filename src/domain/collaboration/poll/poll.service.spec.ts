@@ -299,9 +299,9 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
     const enriched = service.computePollResults(poll);
     const filtered = service.applyVisibilityRules(enriched, poll, false);
     for (const opt of filtered) {
-      expect((opt as any).voteCount).toBeNull();
-      expect((opt as any).votePercentage).toBeNull();
-      expect((opt as any).voterIds).toBeNull();
+      expect(opt.voteCount).toBeNull();
+      expect(opt.votePercentage).toBeNull();
+      expect(opt.voterIds).toBeNull();
     }
   });
 
@@ -342,8 +342,8 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
     const enriched = service.computePollResults(poll);
     const filtered = service.applyVisibilityRules(enriched, poll, true);
     expect(filtered.map(o => o.id)).toEqual(['a', 'b']);
-    expect((filtered[0] as any).voteCount).toBe(0);
-    expect((filtered[1] as any).voteCount).toBe(2);
+    expect(filtered[0].voteCount).toBe(0);
+    expect(filtered[1].voteCount).toBe(2);
   });
 
   it('(d) TOTAL_ONLY + not voted: all per-option fields are null', () => {
@@ -357,9 +357,9 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
     const enriched = service.computePollResults(poll);
     const filtered = service.applyVisibilityRules(enriched, poll, false);
     for (const opt of filtered) {
-      expect((opt as any).voteCount).toBeNull();
-      expect((opt as any).votePercentage).toBeNull();
-      expect((opt as any).voterIds).toBeNull();
+      expect(opt.voteCount).toBeNull();
+      expect(opt.votePercentage).toBeNull();
+      expect(opt.voterIds).toBeNull();
     }
   });
 
@@ -373,7 +373,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
     );
     const enriched = service.computePollResults(poll);
     expect(enriched[0].id).toBe('a');
-    expect((enriched[1] as any).voteCount).toBe(1);
+    expect(enriched[1].voteCount).toBe(1);
   });
 
   it('(f) resultsDetail = PERCENTAGE: voteCount and voterIds are null, votePercentage is set', () => {
@@ -386,9 +386,9 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
     );
     const enriched = service.computePollResults(poll);
     const filtered = service.applyVisibilityRules(enriched, poll, true);
-    expect((filtered[0] as any).voteCount).toBeNull();
-    expect((filtered[0] as any).voterIds).toBeNull();
-    expect((filtered[0] as any).votePercentage).toBe(100);
+    expect(filtered[0].voteCount).toBeNull();
+    expect(filtered[0].voterIds).toBeNull();
+    expect(filtered[0].votePercentage).toBe(100);
   });
 
   it('(g) resultsDetail = COUNT: votePercentage and voterIds are null, voteCount is set', () => {
@@ -401,9 +401,9 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
     );
     const enriched = service.computePollResults(poll);
     const filtered = service.applyVisibilityRules(enriched, poll, true);
-    expect((filtered[0] as any).votePercentage).toBeNull();
-    expect((filtered[0] as any).voterIds).toBeNull();
-    expect((filtered[0] as any).voteCount).toBe(1);
+    expect(filtered[0].votePercentage).toBeNull();
+    expect(filtered[0].voterIds).toBeNull();
+    expect(filtered[0].voteCount).toBe(1);
   });
 
   it('(h) votePercentage = null when totalVotes = 0', () => {
@@ -415,7 +415,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       []
     );
     const enriched = service.computePollResults(poll);
-    expect((enriched[0] as any).votePercentage).toBeNull();
+    expect(enriched[0].votePercentage).toBeNull();
   });
 
   it('(i) FR-015: HIDDEN + not voted C=5 A=3 B=1 → order [A,B,C] not [C,A,B]', () => {
@@ -610,7 +610,7 @@ describe('PollService — option management (T054)', () => {
     expect(mockTxSave).toHaveBeenCalledTimes(2);
   });
 
-  it('(e) updateOption deletes all votes containing the target option', async () => {
+  it('(e) updateOption deletes affected votes and updates text inside a transaction', async () => {
     const [optA, optB] = [makeOpt('a', 1), makeOpt('b', 2)];
     const voteA = makeVoteWith('v1', 'user-1', ['a']);
     const voteB = makeVoteWith('v2', 'user-2', ['b']);
@@ -620,18 +620,21 @@ describe('PollService — option management (T054)', () => {
       .mockResolvedValueOnce(poll)
       .mockResolvedValueOnce(updatedPoll);
 
-    const pollVoteService = service['pollVoteService'] as unknown as {
-      deleteVotesByIds: ReturnType<typeof vi.fn>;
-    };
-    pollVoteService.deleteVotesByIds = vi.fn().mockResolvedValue(undefined);
-
     const { deletedVoterIds } = await service.updateOption(
       'poll-1',
       'a',
       'New text'
     );
     expect(deletedVoterIds).toEqual(['user-1']);
-    expect(pollVoteService.deleteVotesByIds).toHaveBeenCalledWith(['v1']);
+    // Wrapped in a transaction
+    expect(mockPollOptionRepository.manager.transaction).toHaveBeenCalledTimes(
+      1
+    );
+    // Vote deletion + option save inside the transaction
+    expect(mockTxDelete).toHaveBeenCalledWith(['v1']);
+    expect(mockTxSave).toHaveBeenCalledWith(
+      expect.objectContaining({ text: 'New text' })
+    );
   });
 
   it('(f) addOption assigns sortOrder = max + 1', async () => {

@@ -29,10 +29,14 @@ export class PollService {
     private readonly logger: LoggerService
   ) {}
 
-  async getPollOrFail(pollId: string): Promise<Poll> {
+  async getPollOrFail(pollId: string, loadVotes = true): Promise<Poll> {
+    const relations: { options: true; votes?: true } = { options: true };
+    if (loadVotes) {
+      relations.votes = true;
+    }
     const poll = await this.pollRepository.findOne({
       where: { id: pollId },
-      relations: { options: true, votes: true },
+      relations,
     });
     if (!poll) {
       throw new EntityNotFoundException(
@@ -246,7 +250,7 @@ export class PollService {
   }
 
   async addOption(pollId: string, text: string): Promise<Poll> {
-    const poll = await this.getPollOrFail(pollId);
+    const poll = await this.getPollOrFail(pollId, false);
     const options = poll.options ?? [];
     const maxSortOrder = options.reduce(
       (max, o) => Math.max(max, o.sortOrder),
@@ -285,12 +289,19 @@ export class PollService {
     );
     const deletedVoterIds = affectedVotes.map(v => v.createdBy);
 
-    // Delete affected votes
-    await this.pollVoteService.deleteVotesByIds(affectedVotes.map(v => v.id));
+    // Ensure vote deletion + option text update are atomic
+    await this.pollOptionRepository.manager.transaction(async txManager => {
+      const txVoteRepo = txManager.getRepository(PollVote);
+      const txOptionRepo = txManager.getRepository(PollOption);
 
-    // Update option text
-    option.text = newText;
-    await this.pollOptionRepository.save(option);
+      const affectedVoteIds = affectedVotes.map(v => v.id);
+      if (affectedVoteIds.length > 0) {
+        await txVoteRepo.delete(affectedVoteIds);
+      }
+
+      option.text = newText;
+      await txOptionRepo.save(option);
+    });
 
     const updatedPoll = await this.getPollOrFail(pollId);
     return { poll: updatedPoll, deletedVoterIds };
@@ -363,7 +374,7 @@ export class PollService {
     pollId: string,
     orderedOptionIds: string[]
   ): Promise<Poll> {
-    const poll = await this.getPollOrFail(pollId);
+    const poll = await this.getPollOrFail(pollId, false);
     const options = poll.options ?? [];
 
     // Validate: orderedOptionIds must be exactly the same set as current options

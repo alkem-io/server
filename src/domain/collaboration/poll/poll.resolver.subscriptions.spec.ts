@@ -71,6 +71,7 @@ describe('PollResolverSubscriptions', () => {
     const { resolver, pollService, pollVoteService } = createResolver();
     const resolve = getPollVoteUpdatedResolve();
 
+    const freshPoll = { ...basePayload.poll, id: 'poll-1' } as any;
     const enrichedOptions = [
       { id: 'o1', voteCount: 10, votePercentage: 100, voterIds: ['u1'] },
     ] as any;
@@ -78,6 +79,7 @@ describe('PollResolverSubscriptions', () => {
       { id: 'o1', voteCount: null, votePercentage: null, voterIds: null },
     ] as any;
 
+    pollService.getPollOrFail.mockResolvedValue(freshPoll);
     pollVoteService.getVoteForUser.mockResolvedValue(null);
     pollService.computePollResults.mockReturnValue(enrichedOptions);
     pollService.applyVisibilityRules.mockReturnValue(visibleOptions);
@@ -89,16 +91,15 @@ describe('PollResolverSubscriptions', () => {
       { req: { user: { actorID: 'user-1' } } }
     )) as any;
 
+    expect(pollService.getPollOrFail).toHaveBeenCalledWith('poll-1');
     expect(pollVoteService.getVoteForUser).toHaveBeenCalledWith(
       'poll-1',
       'user-1'
     );
-    expect(pollService.computePollResults).toHaveBeenCalledWith(
-      basePayload.poll
-    );
+    expect(pollService.computePollResults).toHaveBeenCalledWith(freshPoll);
     expect(pollService.applyVisibilityRules).toHaveBeenCalledWith(
       enrichedOptions,
-      basePayload.poll,
+      freshPoll,
       false
     );
     expect(result.poll.options).toEqual(visibleOptions);
@@ -108,11 +109,13 @@ describe('PollResolverSubscriptions', () => {
     const { resolver, pollService, pollVoteService } = createResolver();
     const resolve = getPollVoteUpdatedResolve();
 
+    const freshPoll = { ...basePayload.poll, id: 'poll-1' } as any;
     const enrichedOptions = [
       { id: 'o1', voteCount: 3, votePercentage: 75, voterIds: ['user-1'] },
     ] as any;
     const visibleOptions = enrichedOptions;
 
+    pollService.getPollOrFail.mockResolvedValue(freshPoll);
     pollVoteService.getVoteForUser.mockResolvedValue({ id: 'vote-1' });
     pollService.computePollResults.mockReturnValue(enrichedOptions);
     pollService.applyVisibilityRules.mockReturnValue(visibleOptions);
@@ -126,7 +129,7 @@ describe('PollResolverSubscriptions', () => {
 
     expect(pollService.applyVisibilityRules).toHaveBeenCalledWith(
       enrichedOptions,
-      basePayload.poll,
+      freshPoll,
       true
     );
     expect(result.poll.options).toEqual(visibleOptions);

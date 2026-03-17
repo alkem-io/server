@@ -15,7 +15,7 @@ registerEnumType(PollResultsVisibility, {
     },
     TOTAL_ONLY: {
       description:
-        'Only the total vote count is shown before voting; details (depending on PollResultsDetail) available after voting.',
+        'Only the total vote count is shown before voting; details (depending on PollResultsDetail) become available after voting.',
     },
     VISIBLE: {
       description:

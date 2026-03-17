@@ -76,23 +76,20 @@ export class PollVoteService {
       );
     }
 
-    // Upsert: find existing vote or create new one
-    let vote = await this.pollVoteRepository.findOne({
-      where: { createdBy: voterId, poll: { id: poll.id } },
-      relations: { poll: true },
-    });
-
-    if (vote) {
-      // Full replacement of existing vote
-      vote.selectedOptionIds = selectedOptionIds;
-    } else {
-      vote = new PollVote();
-      vote.createdBy = voterId;
-      vote.selectedOptionIds = selectedOptionIds;
-      vote.poll = poll;
-    }
-
-    await this.pollVoteRepository.save(vote);
+    // Atomic upsert: INSERT ... ON CONFLICT (createdBy, pollId) DO UPDATE
+    // Prevents race condition where concurrent requests from the same user
+    // could both pass a findOne check and attempt duplicate inserts.
+    await this.pollVoteRepository
+      .createQueryBuilder()
+      .insert()
+      .into(PollVote)
+      .values({
+        createdBy: voterId,
+        selectedOptionIds,
+        poll: { id: poll.id },
+      })
+      .orUpdate(['selectedOptionIds'], ['createdBy', 'pollId'])
+      .execute();
 
     // Re-fetch poll with fresh relations so callers (including subscription
     // publishers) receive up-to-date vote data.

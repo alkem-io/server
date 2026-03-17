@@ -48,6 +48,15 @@ describe('PollVoteService', () => {
       .mockImplementation(() => Promise.resolve(makePoll())),
   };
 
+  const mockExecute = vi.fn().mockResolvedValue({ raw: [], generatedMaps: [] });
+  const mockOrUpdate = vi.fn().mockReturnValue({ execute: mockExecute });
+  const mockValues = vi.fn().mockReturnValue({ orUpdate: mockOrUpdate });
+  const mockInto = vi.fn().mockReturnValue({ values: mockValues });
+  const mockInsert = vi.fn().mockReturnValue({ into: mockInto });
+  const mockCreateQueryBuilder = vi
+    .fn()
+    .mockReturnValue({ insert: mockInsert });
+
   const mockPollVoteRepository = {
     findOne: vi.fn().mockResolvedValue(null),
     save: vi.fn().mockImplementation((entity: unknown) => {
@@ -56,6 +65,7 @@ describe('PollVoteService', () => {
       return Promise.resolve(vote);
     }),
     find: vi.fn().mockResolvedValue([]),
+    createQueryBuilder: mockCreateQueryBuilder,
     manager: {
       getRepository: vi.fn().mockReturnValue(mockPollRepository),
     },
@@ -139,50 +149,43 @@ describe('PollVoteService', () => {
       );
     });
 
-    it('(f) inserts new PollVote on first call', async () => {
-      mockPollVoteRepository.findOne.mockResolvedValueOnce(null);
+    it('(f) performs atomic upsert via INSERT ... ON CONFLICT', async () => {
       const poll = makePoll();
       await service.castVoteOnPoll(poll, 'voter-1', ['option-a']);
-      expect(mockPollVoteRepository.save).toHaveBeenCalledWith(
+      expect(mockValues).toHaveBeenCalledWith(
         expect.objectContaining({
           createdBy: 'voter-1',
           selectedOptionIds: ['option-a'],
         })
       );
+      expect(mockOrUpdate).toHaveBeenCalledWith(
+        ['selectedOptionIds'],
+        ['createdBy', 'pollId']
+      );
+      expect(mockExecute).toHaveBeenCalled();
     });
 
-    it('(g) fully replaces selectedOptionIds on second call (US4 branch)', async () => {
-      const existingVote = new PollVote();
-      existingVote.id = 'existing-vote';
-      existingVote.createdBy = 'voter-1';
-      existingVote.selectedOptionIds = ['option-a'];
-
-      mockPollVoteRepository.findOne.mockResolvedValueOnce(existingVote);
-
+    it('(g) upsert uses correct option IDs on replacement', async () => {
       const poll = makePoll();
       await service.castVoteOnPoll(poll, 'voter-1', ['option-b']);
-
-      expect(mockPollVoteRepository.save).toHaveBeenCalledWith(
-        expect.objectContaining({ selectedOptionIds: ['option-b'] })
+      expect(mockValues).toHaveBeenCalledWith(
+        expect.objectContaining({
+          createdBy: 'voter-1',
+          selectedOptionIds: ['option-b'],
+        })
       );
     });
 
-    it('(h) result of full replacement shows old option loses vote, new option gains vote', async () => {
-      const existingVote = new PollVote();
-      existingVote.id = 'existing-vote';
-      existingVote.createdBy = 'voter-1';
-      existingVote.selectedOptionIds = ['option-a'];
-
-      mockPollVoteRepository.findOne.mockResolvedValueOnce(existingVote);
-
+    it('(h) re-fetches poll with fresh relations after upsert', async () => {
       const poll = makePoll();
-      await service.castVoteOnPoll(poll, 'voter-1', ['option-b']);
-
-      // After replacement, the saved vote has option-b, not option-a
-      const savedVote = mockPollVoteRepository.save.mock
-        .calls[0][0] as PollVote;
-      expect(savedVote.selectedOptionIds).toContain('option-b');
-      expect(savedVote.selectedOptionIds).not.toContain('option-a');
+      const result = await service.castVoteOnPoll(poll, 'voter-1', [
+        'option-b',
+      ]);
+      expect(mockPollRepository.findOneOrFail).toHaveBeenCalledWith({
+        where: { id: 'poll-1' },
+        relations: { options: true, votes: true },
+      });
+      expect(result).toBeDefined();
     });
   });
 });

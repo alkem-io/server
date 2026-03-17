@@ -43,4 +43,6 @@ export abstract class IPollOption {
       'List of space members who voted for this option. Null when results are hidden or resultsDetail is not FULL.',
   })
   voters?: IUser[];
+
+  voterIds?: string[] | null; // Not exposed in GraphQL schema; used internally for visibility rules
 }

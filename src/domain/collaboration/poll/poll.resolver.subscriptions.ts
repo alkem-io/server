@@ -16,7 +16,6 @@ import { PollOptionsChangedSubscriptionResult } from './dto/poll.options.changed
 import { PollSubscriptionArgs } from './dto/poll.subscription.args';
 import { PollSubscriptionPayload } from './dto/poll.subscription.payload';
 import { PollVoteUpdatedSubscriptionResult } from './dto/poll.vote.updated.subscription.result';
-import { Poll } from './poll.entity';
 import { PollService } from './poll.service';
 
 @InstrumentResolver()
@@ -45,12 +44,16 @@ export class PollResolverSubscriptions {
       context
     ): Promise<PollVoteUpdatedSubscriptionResult> {
       const actorID = context.req.user?.actorID ?? '';
+
+      // Re-fetch poll from DB to get a real entity (PubSub deserializes to
+      // a plain object, making `as Poll` casts unreliable).
+      const poll = await this.pollService.getPollOrFail(payload.poll.id);
+
       const vote = actorID
-        ? await this.pollVoteService.getVoteForUser(payload.poll.id, actorID)
+        ? await this.pollVoteService.getVoteForUser(poll.id, actorID)
         : null;
       const hasVoted = vote !== null;
 
-      const poll = payload.poll as Poll;
       const enrichedOptions = this.pollService.computePollResults(poll);
       const visibleOptions = this.pollService.applyVisibilityRules(
         enrichedOptions,
@@ -58,18 +61,11 @@ export class PollResolverSubscriptions {
         hasVoted
       );
 
-      // Rehydrate dates: PubSub JSON serialization converts Date → ISO string,
-      // but the DateTime scalar's serialize() requires instanceof Date.
       return {
         pollEventType: payload.pollEventType,
         poll: {
-          ...payload.poll,
+          ...poll,
           options: visibleOptions,
-          createdDate: new Date(payload.poll.createdDate),
-          updatedDate: new Date(payload.poll.updatedDate),
-          ...(payload.poll.deadline
-            ? { deadline: new Date(payload.poll.deadline) }
-            : {}),
         },
       };
     },
@@ -84,7 +80,7 @@ export class PollResolverSubscriptions {
 
       // Suppress vote events when resultsVisibility = HIDDEN and subscriber has not voted (FR-030)
       // Settings are immutable (FR-025), so we can safely use the payload's copy.
-      const actorID = context.req.user.actorID;
+      const actorID = context.req.user?.actorID ?? '';
       if (
         payload.poll.settings.resultsVisibility === PollResultsVisibility.HIDDEN
       ) {
@@ -137,21 +133,35 @@ export class PollResolverSubscriptions {
   >(() => PollOptionsChangedSubscriptionResult, {
     description:
       'Subscribe to option changes on a specific Poll. Fires when options are added, removed, updated, or reordered. Always delivered regardless of resultsVisibility.',
-    resolve(
+    async resolve(
       this: PollResolverSubscriptions,
-      payload
-    ): PollOptionsChangedSubscriptionResult {
-      // Rehydrate dates: PubSub JSON serialization converts Date → ISO string,
-      // but the DateTime scalar's serialize() requires instanceof Date.
+      payload,
+      _args,
+      context
+    ): Promise<PollOptionsChangedSubscriptionResult> {
+      const actorID = context.req.user?.actorID ?? '';
+
+      // Re-fetch poll from DB to get a real entity with current vote data
+      const poll = await this.pollService.getPollOrFail(payload.poll.id);
+
+      const vote = actorID
+        ? await this.pollVoteService.getVoteForUser(poll.id, actorID)
+        : null;
+      const hasVoted = vote !== null;
+
+      // Apply visibility rules to prevent leaking vote data
+      const enrichedOptions = this.pollService.computePollResults(poll);
+      const visibleOptions = this.pollService.applyVisibilityRules(
+        enrichedOptions,
+        poll,
+        hasVoted
+      );
+
       return {
         pollEventType: payload.pollEventType,
         poll: {
-          ...payload.poll,
-          createdDate: new Date(payload.poll.createdDate),
-          updatedDate: new Date(payload.poll.updatedDate),
-          ...(payload.poll.deadline
-            ? { deadline: new Date(payload.poll.deadline) }
-            : {}),
+          ...poll,
+          options: visibleOptions,
         },
       };
     },
@@ -164,7 +174,7 @@ export class PollResolverSubscriptions {
       const isMatch = variables.pollID === payload.poll.id;
       if (!isMatch) return false;
 
-      const actorID = context.req.user.actorID;
+      const actorID = context.req.user?.actorID ?? '';
       this.logger.debug?.(
         `[PollOptionsChanged] Delivering event '${payload.eventID}' to user ${actorID} for poll ${payload.poll.id}`,
         LogContext.SUBSCRIPTIONS
