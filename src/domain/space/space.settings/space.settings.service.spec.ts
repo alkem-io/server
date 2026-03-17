@@ -1,3 +1,4 @@
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import { SpaceSortMode } from '@common/enums/space.sort.mode';
@@ -43,6 +44,9 @@ describe('SpaceSettingsService', () => {
         allowGuestContributions: false,
       },
       sortMode: SpaceSortMode.ALPHABETICAL,
+      layout: {
+        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+      },
     };
 
     const cloneSettings = (): ISpaceSettings =>
@@ -247,6 +251,79 @@ describe('SpaceSettingsService', () => {
 
       // Assert
       expect(result.sortMode).toBe(SpaceSortMode.CUSTOM);
+    });
+
+    it('should update calloutDescriptionDisplayMode to EXPANDED when layout update is provided', () => {
+      // Arrange
+      const settings = cloneSettings(); // starts as COLLAPSED
+      const updateData: UpdateSpaceSettingsEntityInput = {
+        layout: {
+          calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+        },
+      };
+
+      // Act
+      const result = service.updateSettings(settings, updateData);
+
+      // Assert
+      expect(result.layout.calloutDescriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.EXPANDED
+      );
+    });
+
+    it('should update calloutDescriptionDisplayMode to COLLAPSED when layout update is provided', () => {
+      // Arrange
+      const settings = cloneSettings();
+      settings.layout.calloutDescriptionDisplayMode =
+        CalloutDescriptionDisplayMode.EXPANDED;
+      const updateData: UpdateSpaceSettingsEntityInput = {
+        layout: {
+          calloutDescriptionDisplayMode:
+            CalloutDescriptionDisplayMode.COLLAPSED,
+        },
+      };
+
+      // Act
+      const result = service.updateSettings(settings, updateData);
+
+      // Assert
+      expect(result.layout.calloutDescriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.COLLAPSED
+      );
+    });
+
+    it('should preserve existing calloutDescriptionDisplayMode when layout update is not provided', () => {
+      // Arrange
+      const settings = cloneSettings(); // COLLAPSED
+      const updateData: UpdateSpaceSettingsEntityInput = {
+        privacy: { mode: SpacePrivacyMode.PRIVATE },
+      };
+
+      // Act
+      const result = service.updateSettings(settings, updateData);
+
+      // Assert
+      expect(result.layout.calloutDescriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.COLLAPSED
+      );
+    });
+
+    it('should merge layout update with the existing layout object (spread behavior)', () => {
+      // Arrange – ensure the merge retains any future extra fields (spread pattern)
+      const settings = cloneSettings();
+      const updateData: UpdateSpaceSettingsEntityInput = {
+        layout: {
+          calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+        },
+      };
+
+      // Act
+      const result = service.updateSettings(settings, updateData);
+
+      // Assert – merged, not replaced wholesale
+      expect(result.layout).toMatchObject({
+        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+      });
     });
   });
 });
