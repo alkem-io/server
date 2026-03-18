@@ -52,7 +52,12 @@ export class PollDataLoader {
         const pollMap = new Map(polls.map(p => [p.id, p]));
         return pollIds.map(id => pollMap.get(id) ?? null);
       },
-      { cache: true, name: 'PollLoader' }
+      // cache: false — DataLoader is Scope.REQUEST but for WebSocket subscriptions
+      // the same instance is reused across all events on the same connection.
+      // Disabling the cache ensures each subscription event (and each HTTP request
+      // field-resolver pass) receives fresh data. Concurrent load() calls within
+      // the same tick are still coalesced into a single batch query.
+      { cache: false, name: 'PollLoader' }
     );
   }
 
@@ -72,7 +77,8 @@ export class PollDataLoader {
         const voteMap = new Map(votes.map(v => [v.poll!.id, v]));
         return pollIds.map(id => voteMap.get(id) ?? null);
       },
-      { cache: true, name: `PollUserVoteLoader:${userId}` }
+      // cache: false — same reason as createPollLoader above.
+      { cache: false, name: `PollUserVoteLoader:${userId}` }
     );
   }
 }

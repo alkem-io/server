@@ -963,24 +963,40 @@ export class NotificationSpaceAdapter {
       dto.userID
     );
 
-    // Send email notifications
+    // Send email notifications; skip gracefully if entity was deleted
     const emailRecipientsWithoutTrigger = recipients.emailRecipients.filter(
       r => r.id !== dto.triggeredBy
     );
-    if (emailRecipientsWithoutTrigger.length > 0) {
-      const payload =
-        await this.notificationExternalAdapter.buildSpaceCollaborationPollPayload(
+    if (emailRecipientsWithoutTrigger.length > 0 && callout.framing.poll) {
+      try {
+        const payload =
+          await this.notificationExternalAdapter.buildSpaceCollaborationPollPayload(
+            event,
+            dto.triggeredBy,
+            emailRecipientsWithoutTrigger,
+            space,
+            callout,
+            callout.framing.poll
+          );
+        this.notificationExternalAdapter.sendExternalNotifications(
           event,
-          dto.triggeredBy,
-          emailRecipientsWithoutTrigger,
-          space,
-          callout,
-          callout.framing.poll
+          payload
         );
-      this.notificationExternalAdapter.sendExternalNotifications(
-        event,
-        payload
-      );
+      } catch (error) {
+        if (error instanceof EntityNotFoundException) {
+          this.logger.warn(
+            {
+              message:
+                'Skipping poll notification; poll entity was deleted before notification could be sent',
+              calloutId: dto.calloutID,
+              pollId: dto.pollID,
+            },
+            LogContext.NOTIFICATIONS
+          );
+        } else {
+          throw error;
+        }
+      }
     }
 
     // Send in-app notifications

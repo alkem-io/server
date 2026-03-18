@@ -177,6 +177,24 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
     }
+
+    if (
+      calloutData.framing.type === CalloutFramingType.POLL &&
+      !calloutData.framing.poll
+    ) {
+      throw new ValidationException(
+        'Please provide a poll',
+        LogContext.COLLABORATION
+      );
+    } else if (
+      calloutData.framing.type !== CalloutFramingType.POLL &&
+      calloutData.framing.poll
+    ) {
+      throw new ValidationException(
+        'Poll framing can only be used with poll framing type',
+        LogContext.COLLABORATION
+      );
+    }
   }
 
   private async getStorageAggregator(

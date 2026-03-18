@@ -186,7 +186,7 @@ A community member viewing a poll in their browser wants the poll display to upd
 **Voting**
 
 - **FR-008**: Any space member MUST be able to cast a vote on an open poll.
-- **FR-009**: The system MUST enforce that the number of selected options in a vote submission is at least `settings.minResponses` and at most `settings.maxResponses` (or unlimited when `settings.maxResponses = 0`).
+- **FR-009**: The system MUST enforce that the number of selected options in a vote submission is at least `settings.minResponses` and at most `settings.maxResponses` (or unlimited when `settings.maxResponses = 0`). Regardless of `maxResponses`, the absolute maximum number of selectable options per vote is 10 (enforced at the DTO validation layer).
 - **FR-010**: The system MUST enforce at most one concurrent Vote record per member per Poll. A subsequent `castPollVote` call replaces the existing vote entirely (no historical records retained) per FR-012.
 - **FR-011**: A voter MUST NOT be able to select the same option more than once in a single vote submission.
 - **FR-012**: Voters MUST be able to update their vote at any time while the poll is open by submitting a complete new set of selected options. The system MUST replace the previous vote entirely (no partial modifications allowed), and MUST validate the new selection set against the poll's `settings.minResponses` and `settings.maxResponses` constraints.
