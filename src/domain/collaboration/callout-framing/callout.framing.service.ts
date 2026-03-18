@@ -468,7 +468,7 @@ export class CalloutFramingService {
             calloutFraming.poll.id
           );
           poll.title = calloutFramingData.poll.title;
-          await this.pollService.save(poll);
+          calloutFraming.poll = await this.pollService.save(poll);
         }
         break;
       }

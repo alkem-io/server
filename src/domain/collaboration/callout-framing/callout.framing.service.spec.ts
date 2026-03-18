@@ -18,6 +18,7 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
 import { LinkService } from '../link/link.service';
+import { PollService } from '../poll/poll.service';
 import { CalloutFraming } from './callout.framing.entity';
 import { CalloutFramingService } from './callout.framing.service';
 
@@ -29,6 +30,7 @@ describe('CalloutFramingService', () => {
   let linkService: LinkService;
   let memoService: MemoService;
   let mediaGalleryService: MediaGalleryService;
+  let pollService: PollService;
   let namingService: NamingService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let tagsetService: TagsetService;
@@ -61,6 +63,7 @@ describe('CalloutFramingService', () => {
     linkService = module.get(LinkService);
     memoService = module.get(MemoService);
     mediaGalleryService = module.get(MediaGalleryService);
+    pollService = module.get(PollService);
     namingService = module.get(NamingService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     tagsetService = module.get(TagsetService);
@@ -428,6 +431,38 @@ describe('CalloutFramingService', () => {
       );
 
       expect(linkService.updateLink).toHaveBeenCalledWith(updateData.link);
+    });
+
+    it('should update poll title and keep framing poll in sync', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.POLL,
+        profile: { id: 'profile-1' },
+        poll: { id: 'poll-1', title: 'Old title' },
+      } as any;
+
+      const updateData = {
+        poll: { title: 'New title' },
+      } as any;
+
+      vi.mocked(pollService.getPollOrFail).mockResolvedValue({
+        id: 'poll-1',
+        title: 'Old title',
+      } as any);
+      vi.mocked(pollService.save).mockImplementation(async poll => poll as any);
+
+      const result = await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false
+      );
+
+      expect(pollService.getPollOrFail).toHaveBeenCalledWith('poll-1');
+      expect(pollService.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'poll-1', title: 'New title' })
+      );
+      expect(result.poll?.title).toBe('New title');
     });
 
     it('should return framing unchanged when MEMO type has no content update', async () => {
