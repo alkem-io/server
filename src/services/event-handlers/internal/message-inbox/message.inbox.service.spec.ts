@@ -1,6 +1,6 @@
 import { RoomType } from '@common/enums/room.type';
 import { MutationType } from '@common/enums/subscriptions';
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { ConversationService } from '@domain/communication/conversation/conversation.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
@@ -16,6 +16,11 @@ import { MessageInboxService } from './message.inbox.service';
 import { MessageNotificationService } from './message.notification.service';
 import { MessageReceivedEvent } from './message.received.event';
 import { MessageRedactedEvent } from './message.redacted.event';
+import { ReactionAddedEvent } from './reaction.added.event';
+import { ReactionRemovedEvent } from './reaction.removed.event';
+import { RoomCreatedEvent } from './room.created.event';
+import { RoomDmRequestedEvent } from './room.dm.requested.event';
+import { RoomMemberUpdatedEvent } from './room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from './room.receipt.updated.event';
 import { VcInvocationService } from './vc.invocation.service';
 
@@ -23,7 +28,7 @@ describe('MessageInboxService', () => {
   let service: MessageInboxService;
   let roomLookupService: Mocked<RoomLookupService>;
   let subscriptionPublishService: Mocked<SubscriptionPublishService>;
-  let agentInfoService: Mocked<AgentInfoService>;
+  let actorContextService: Mocked<ActorContextService>;
   let roomServiceEvents: Mocked<RoomServiceEvents>;
   let inAppNotificationService: Mocked<InAppNotificationService>;
   let messageNotificationService: Mocked<MessageNotificationService>;
@@ -31,6 +36,8 @@ describe('MessageInboxService', () => {
   let conversationService: Mocked<ConversationService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [MessageInboxService, MockWinstonProvider],
     })
@@ -40,7 +47,7 @@ describe('MessageInboxService', () => {
     service = module.get(MessageInboxService);
     roomLookupService = module.get(RoomLookupService);
     subscriptionPublishService = module.get(SubscriptionPublishService);
-    agentInfoService = module.get(AgentInfoService);
+    actorContextService = module.get(ActorContextService);
     roomServiceEvents = module.get(RoomServiceEvents);
     inAppNotificationService = module.get(InAppNotificationService);
     messageNotificationService = module.get(MessageNotificationService);
@@ -74,7 +81,7 @@ describe('MessageInboxService', () => {
       roomLookupService.incrementMessagesCount.mockResolvedValue(
         undefined as any
       );
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({} as any);
+      actorContextService.buildForActor.mockResolvedValue({} as any);
       messageNotificationService.processMessageNotifications.mockResolvedValue(
         undefined
       );
@@ -100,8 +107,8 @@ describe('MessageInboxService', () => {
       roomLookupService.incrementMessagesCount.mockResolvedValue(
         undefined as any
       );
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({
-        agentID: 'actor-1',
+      actorContextService.buildForActor.mockResolvedValue({
+        actorID: 'actor-1',
       } as any);
       messageNotificationService.processMessageNotifications.mockResolvedValue(
         undefined
@@ -117,7 +124,7 @@ describe('MessageInboxService', () => {
       ).toHaveBeenCalledWith(
         room,
         expect.objectContaining({ id: 'msg-1' }),
-        expect.objectContaining({ agentID: 'actor-1' }),
+        expect.objectContaining({ actorID: 'actor-1' }),
         undefined
       );
     });
@@ -131,7 +138,7 @@ describe('MessageInboxService', () => {
       conversationService.findConversationByRoomId.mockResolvedValue({
         id: 'conv-1',
       } as any);
-      conversationService.getConversationMemberAgentIds.mockResolvedValue([
+      conversationService.getConversationMemberActorIds.mockResolvedValue([
         'agent-a',
         'agent-b',
       ]);
@@ -150,7 +157,7 @@ describe('MessageInboxService', () => {
         subscriptionPublishService.publishConversationEvent
       ).toHaveBeenCalledWith(
         expect.objectContaining({
-          memberAgentIds: ['agent-a', 'agent-b'],
+          memberActorIds: ['agent-a', 'agent-b'],
           messageReceived: expect.objectContaining({ roomId: 'room-1' }),
         })
       );
@@ -165,7 +172,7 @@ describe('MessageInboxService', () => {
       conversationService.findConversationByRoomId.mockResolvedValue({
         id: 'conv-1',
       } as any);
-      conversationService.getConversationMemberAgentIds.mockResolvedValue([]);
+      conversationService.getConversationMemberActorIds.mockResolvedValue([]);
       vcInvocationService.processDirectConversation.mockResolvedValue(
         undefined
       );
@@ -196,7 +203,7 @@ describe('MessageInboxService', () => {
       roomLookupService.incrementMessagesCount.mockResolvedValue(
         undefined as any
       );
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({} as any);
+      actorContextService.buildForActor.mockResolvedValue({} as any);
       messageNotificationService.processMessageNotifications.mockResolvedValue(
         undefined
       );
@@ -220,7 +227,7 @@ describe('MessageInboxService', () => {
       roomLookupService.incrementMessagesCount.mockResolvedValue(
         undefined as any
       );
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({} as any);
+      actorContextService.buildForActor.mockResolvedValue({} as any);
       messageNotificationService.processMessageNotifications.mockResolvedValue(
         undefined
       );
@@ -255,7 +262,7 @@ describe('MessageInboxService', () => {
       await service.handleMessageEdited(
         new MessageEditedEvent({
           roomId: 'room-1',
-          senderActorId: 'actor-1',
+          senderActorID: 'actor-1',
           originalMessageId: 'orig-msg-1',
           newMessageId: 'new-msg-1',
           newContent: 'Updated content',
@@ -285,7 +292,7 @@ describe('MessageInboxService', () => {
       await service.handleMessageEdited(
         new MessageEditedEvent({
           roomId: 'room-1',
-          senderActorId: 'actor-1',
+          senderActorID: 'actor-1',
           originalMessageId: 'missing-msg',
           newMessageId: 'new-msg-1',
           newContent: 'Updated content',
@@ -309,7 +316,7 @@ describe('MessageInboxService', () => {
       inAppNotificationService.deleteAllByMessageId.mockResolvedValue(
         undefined as any
       );
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({} as any);
+      actorContextService.buildForActor.mockResolvedValue({} as any);
       roomServiceEvents.processActivityMessageRemoved.mockResolvedValue(
         undefined as any
       );
@@ -317,7 +324,7 @@ describe('MessageInboxService', () => {
       await service.handleMessageRedacted(
         new MessageRedactedEvent({
           roomId: 'room-1',
-          redactorActorId: 'actor-1',
+          redactorActorID: 'actor-1',
           redactedMessageId: 'del-msg-1',
           redactionMessageId: 'redact-1',
           timestamp: 3000,
@@ -346,21 +353,21 @@ describe('MessageInboxService', () => {
       inAppNotificationService.deleteAllByMessageId.mockResolvedValue(
         undefined as any
       );
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({} as any);
+      actorContextService.buildForActor.mockResolvedValue({} as any);
       roomServiceEvents.processActivityMessageRemoved.mockResolvedValue(
         undefined as any
       );
       conversationService.findConversationByRoomId.mockResolvedValue({
         id: 'conv-1',
       } as any);
-      conversationService.getConversationMemberAgentIds.mockResolvedValue([
+      conversationService.getConversationMemberActorIds.mockResolvedValue([
         'agent-a',
       ]);
 
       await service.handleMessageRedacted(
         new MessageRedactedEvent({
           roomId: 'room-1',
-          redactorActorId: 'actor-1',
+          redactorActorID: 'actor-1',
           redactedMessageId: 'del-msg-1',
           redactionMessageId: 'redact-1',
           timestamp: 3000,
@@ -371,7 +378,7 @@ describe('MessageInboxService', () => {
         subscriptionPublishService.publishConversationEvent
       ).toHaveBeenCalledWith(
         expect.objectContaining({
-          memberAgentIds: ['agent-a'],
+          memberActorIds: ['agent-a'],
           messageRemoved: expect.objectContaining({
             roomId: 'room-1',
             messageId: 'del-msg-1',
@@ -389,7 +396,7 @@ describe('MessageInboxService', () => {
       await service.handleRoomReceiptUpdated(
         new RoomReceiptUpdatedEvent({
           roomId: 'room-1',
-          actorId: 'actor-1',
+          actorID: 'actor-1',
           eventId: 'evt-1',
           timestamp: 4000,
         })
@@ -399,13 +406,13 @@ describe('MessageInboxService', () => {
         subscriptionPublishService.publishRoomReceiptEvent
       ).toHaveBeenCalledWith(
         room,
-        expect.objectContaining({ actorId: 'actor-1' })
+        expect.objectContaining({ actorID: 'actor-1' })
       );
       expect(
         subscriptionPublishService.publishConversationEvent
       ).toHaveBeenCalledWith(
         expect.objectContaining({
-          memberAgentIds: ['actor-1'],
+          memberActorIds: ['actor-1'],
           readReceiptUpdated: expect.objectContaining({
             roomId: 'room-1',
             lastReadMessageId: 'evt-1',
@@ -421,7 +428,7 @@ describe('MessageInboxService', () => {
       await service.handleRoomReceiptUpdated(
         new RoomReceiptUpdatedEvent({
           roomId: 'room-1',
-          actorId: 'actor-1',
+          actorID: 'actor-1',
           eventId: 'evt-1',
           timestamp: 4000,
         })
@@ -430,6 +437,175 @@ describe('MessageInboxService', () => {
       expect(
         subscriptionPublishService.publishRoomReceiptEvent
       ).toHaveBeenCalled();
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleReactionAdded', () => {
+    it('should publish CREATE event for the reaction', async () => {
+      const room = makeRoom();
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+
+      await service.handleReactionAdded(
+        new ReactionAddedEvent({
+          roomId: 'room-1',
+          messageId: 'msg-1',
+          reactionId: 'react-1',
+          emoji: '👍',
+          actorID: 'actor-1',
+          timestamp: 5000,
+        })
+      );
+
+      expect(subscriptionPublishService.publishRoomEvent).toHaveBeenCalledWith(
+        room,
+        MutationType.CREATE,
+        expect.objectContaining({
+          id: 'react-1',
+          emoji: '👍',
+          sender: 'actor-1',
+          timestamp: 5000,
+        }),
+        'msg-1'
+      );
+    });
+  });
+
+  describe('handleReactionRemoved', () => {
+    it('should publish DELETE event for the reaction', async () => {
+      const room = makeRoom();
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+
+      await service.handleReactionRemoved(
+        new ReactionRemovedEvent({
+          roomId: 'room-1',
+          messageId: 'msg-1',
+          reactionId: 'react-1',
+          timestamp: 6000,
+        })
+      );
+
+      expect(subscriptionPublishService.publishRoomEvent).toHaveBeenCalledWith(
+        room,
+        MutationType.DELETE,
+        expect.objectContaining({
+          id: 'react-1',
+          emoji: '',
+          sender: '',
+          timestamp: 6000,
+        }),
+        'msg-1'
+      );
+    });
+  });
+
+  describe('handleRoomCreated', () => {
+    it('should complete without error (logging only)', async () => {
+      await service.handleRoomCreated(
+        new RoomCreatedEvent({
+          roomId: 'room-1',
+          creatorActorID: 'actor-1',
+          roomType: 'callout',
+          timestamp: 7000,
+        })
+      );
+
+      // No service calls expected - logging only
+      expect(roomLookupService.getRoomOrFail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleRoomDmRequested', () => {
+    it('should complete without error (logging only)', async () => {
+      await service.handleRoomDmRequested(
+        new RoomDmRequestedEvent({
+          initiatorActorID: 'actor-1',
+          targetActorID: 'actor-2',
+          timestamp: 8000,
+        })
+      );
+
+      expect(roomLookupService.getRoomOrFail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleRoomMemberUpdated', () => {
+    it('should return early for non-join/leave membership types', async () => {
+      await service.handleRoomMemberUpdated(
+        new RoomMemberUpdatedEvent({
+          roomId: 'room-1',
+          memberActorID: 'actor-1',
+          senderActorID: 'actor-2',
+          membership: 'invite',
+          timestamp: 10000,
+        })
+      );
+
+      expect(roomLookupService.getRoomOrFail).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleMessageRedacted - conversation not found', () => {
+    it('should skip conversation event when conversation is not found for conversation room', async () => {
+      const room = makeRoom({ type: RoomType.CONVERSATION });
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+      roomLookupService.decrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
+      inAppNotificationService.deleteAllByMessageId.mockResolvedValue(
+        undefined as any
+      );
+      actorContextService.buildForActor.mockResolvedValue({} as any);
+      roomServiceEvents.processActivityMessageRemoved.mockResolvedValue(
+        undefined as any
+      );
+      conversationService.findConversationByRoomId.mockResolvedValue(null);
+
+      await service.handleMessageRedacted(
+        new MessageRedactedEvent({
+          roomId: 'room-1',
+          redactorActorID: 'actor-1',
+          redactedMessageId: 'del-msg-1',
+          redactionMessageId: 'redact-1',
+          timestamp: 3000,
+        })
+      );
+
+      // Room event should still be published
+      expect(subscriptionPublishService.publishRoomEvent).toHaveBeenCalled();
+      // Conversation event should NOT be published because conversation was not found
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('handleMessageReceived - conversation not found', () => {
+    it('should skip conversation event when conversation is not found for conversation room', async () => {
+      const room = makeRoom({ type: RoomType.CONVERSATION });
+      roomLookupService.getRoomOrFail.mockResolvedValue(room);
+      roomLookupService.incrementMessagesCount.mockResolvedValue(
+        undefined as any
+      );
+      conversationService.findConversationByRoomId.mockResolvedValue(null);
+      vcInvocationService.processDirectConversation.mockResolvedValue(
+        undefined
+      );
+
+      await service.handleMessageReceived(
+        new MessageReceivedEvent({
+          roomId: 'room-1',
+          actorID: 'actor-1',
+          message: {
+            id: 'msg-1',
+            message: 'Hello',
+            timestamp: 1000,
+          },
+        } as any)
+      );
+
       expect(
         subscriptionPublishService.publishConversationEvent
       ).not.toHaveBeenCalled();

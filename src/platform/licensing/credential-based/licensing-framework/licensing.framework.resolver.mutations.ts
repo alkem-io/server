@@ -1,10 +1,10 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { CreateLicensePlanOnLicensingFrameworkInput } from './dto/licensing.framework.dto.create.license.plan';
 import { LicensingFrameworkService } from './licensing.framework.service';
 
@@ -20,7 +20,7 @@ export class LicensingFrameworkResolverMutations {
     description: 'Create a new LicensePlan on the Licensing.',
   })
   async createLicensePlan(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('planData') planData: CreateLicensePlanOnLicensingFrameworkInput
   ): Promise<ILicensePlan> {
     const licensing = await this.licensingFrameworkService.getLicensingOrFail(
@@ -28,7 +28,7 @@ export class LicensingFrameworkResolverMutations {
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       licensing.authorization,
       AuthorizationPrivilege.CREATE,
       `create licensePlan on licensing framework: ${licensing.id}`

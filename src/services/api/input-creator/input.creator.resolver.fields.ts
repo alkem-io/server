@@ -1,7 +1,7 @@
 import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
@@ -15,7 +15,7 @@ import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service'
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { CreateCommunityGuidelinesInput } from '@domain/community/community-guidelines/dto/community.guidelines.dto.create';
 import { Args, ResolveField, Resolver } from '@nestjs/graphql';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { InputCreatorQueryResults } from './dto/input.creator.query.results';
 import { InputCreatorService } from './input.creator.service';
 
@@ -36,7 +36,7 @@ export class InputCreatorResolverFields {
     description: 'Create an input based on the provided Community Guidelines',
   })
   async communityGuidelines(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateCommunityGuidelinesInput> {
     const guidelines =
@@ -51,7 +51,7 @@ export class InputCreatorResolverFields {
         },
       });
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       guidelines.authorization,
       AuthorizationPrivilege.READ,
       `inputCreator Community guidelines: ${guidelines.id}`
@@ -67,7 +67,7 @@ export class InputCreatorResolverFields {
     description: 'Create an input based on the provided InnovationFlow',
   })
   async innovationFlow(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateInnovationFlowInput> {
     const innovationFlow =
@@ -82,7 +82,7 @@ export class InputCreatorResolverFields {
         },
       });
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       innovationFlow.authorization,
       AuthorizationPrivilege.READ,
       `inputCreator InnovationFlow: ${innovationFlow.id}`
@@ -98,12 +98,12 @@ export class InputCreatorResolverFields {
     description: 'Create an input based on the provided Callout',
   })
   async callout(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateCalloutInput> {
     const callout = await this.calloutService.getCalloutOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       callout.authorization,
       AuthorizationPrivilege.READ,
       `inputCreator callout: ${callout.id}`
@@ -119,12 +119,12 @@ export class InputCreatorResolverFields {
     description: 'Create an input based on the provided Whiteboard',
   })
   async whiteboard(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateWhiteboardInput> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       whiteboard.authorization,
       AuthorizationPrivilege.READ,
       `inputCreator whiteboard: ${whiteboard.id}`
@@ -148,13 +148,13 @@ export class InputCreatorResolverFields {
     description: 'Create an input based on the provided Collaboration',
   })
   async collaboration(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
   ): Promise<CreateCollaborationInput> {
     const collaboration =
       await this.collaborationService.getCollaborationOrFail(id);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       collaboration.authorization,
       AuthorizationPrivilege.READ,
       `inputCreator Collaboration: ${collaboration.id}`

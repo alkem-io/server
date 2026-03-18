@@ -1,9 +1,11 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
 import {
-  AgentLoaderCreator,
+  ActorLoaderCreator,
   SpaceAboutLoaderCreator,
   SpaceCollaborationLoaderCreator,
   SpaceCommunityLoaderCreator,
@@ -12,7 +14,7 @@ import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
-import { IAgent } from '@domain/agent/agent';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
@@ -26,13 +28,14 @@ import { ITemplatesManager } from '@domain/template/templates-manager';
 import { UseGuards } from '@nestjs/common';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
-  AuthorizationAgentPrivilege,
-  CurrentUser,
+  AuthorizationActorHasPrivilege,
+  CurrentActor,
 } from '@src/common/decorators';
 import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
+import { ISpaceSettingsLayout } from '../space.settings/space.settings.layout.interface';
 import { ISpaceSubscription } from './space.license.subscription.interface';
 
 @Resolver(() => ISpace)
@@ -130,22 +133,22 @@ export class SpaceResolverFields {
     return loader.load(space.id);
   }
 
-  @ResolveField('agent', () => IAgent, {
+  @ResolveField('actor', () => IActor, {
     nullable: false,
-    description: 'The Agent representing this Space.',
+    description: 'The Actor representing this Space.',
   })
   async agent(
     @Parent() space: Space,
-    @Loader(AgentLoaderCreator, {
+    @Loader(ActorLoaderCreator, {
       parentClassRef: Space,
       checkParentPrivilege: AuthorizationPrivilege.READ,
     })
-    loader: ILoader<IAgent>
-  ): Promise<IAgent> {
+    loader: ILoader<IActor>
+  ): Promise<IActor> {
     return loader.load(space.id);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('storageAggregator', () => IStorageAggregator, {
     nullable: false,
@@ -153,6 +156,35 @@ export class SpaceResolverFields {
   })
   async storageAggregator(@Parent() space: Space): Promise<IStorageAggregator> {
     return await this.spaceService.getStorageAggregatorOrFail(space.id);
+  }
+
+  @ResolveField('sortMode', () => SpaceSortMode, {
+    nullable: false,
+    description:
+      'The sort mode for subspaces of this Space: Alphabetical or Custom. Accessible without READ privilege.',
+  })
+  async sortMode(@Parent() space: Space): Promise<SpaceSortMode> {
+    if (space.settings?.sortMode) {
+      return space.settings.sortMode;
+    }
+    const loaded = await this.spaceService.getSpaceOrFail(space.id);
+    return loaded.settings?.sortMode ?? SpaceSortMode.ALPHABETICAL;
+  }
+
+  @ResolveField('layout', () => ISpaceSettingsLayout, {
+    nullable: false,
+    description:
+      'The layout settings for this Space. Accessible without READ privilege.',
+  })
+  async layout(@Parent() space: Space): Promise<ISpaceSettingsLayout> {
+    const layout =
+      space.settings?.layout ??
+      (await this.spaceService.getSpaceOrFail(space.id)).settings?.layout;
+    return {
+      calloutDescriptionDisplayMode:
+        layout?.calloutDescriptionDisplayMode ??
+        CalloutDescriptionDisplayMode.EXPANDED,
+    };
   }
 
   @ResolveField('subspaces', () => [ISpace], {
@@ -166,7 +198,7 @@ export class SpaceResolverFields {
     return await this.spaceService.getSubspaces(space, args);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('account', () => IAccount, {
     nullable: false,
@@ -176,7 +208,7 @@ export class SpaceResolverFields {
     return await this.spaceService.getAccountForLevelZeroSpaceOrFail(space);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('subspaceByNameID', () => ISpace, {
     nullable: false,
@@ -184,7 +216,7 @@ export class SpaceResolverFields {
   })
   async subspace(
     @Args('NAMEID', { type: () => NameID }) id: string,
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() space: ISpace
   ): Promise<ISpace> {
     const subspace =
@@ -196,7 +228,7 @@ export class SpaceResolverFields {
       throw new EntityNotFoundException(
         `Unable to find subspace with ID: '${id}'`,
         LogContext.SPACES,
-        { subspaceId: id, spaceId: space.id, userId: agentInfo.userID }
+        { subspaceId: id, spaceId: space.id, userId: actorContext.actorID }
       );
     }
     return subspace;
@@ -211,17 +243,29 @@ export class SpaceResolverFields {
     return new Date(createdDate);
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('settings', () => ISpaceSettings, {
     nullable: false,
     description: 'The settings for this Space.',
   })
-  settings(@Parent() space: ISpace): ISpaceSettings {
-    return space.settings;
+  async settings(@Parent() space: ISpace): Promise<ISpaceSettings> {
+    const settings =
+      space.settings ??
+      (await this.spaceService.getSpaceOrFail(space.id)).settings;
+
+    return {
+      ...settings,
+      sortMode: settings.sortMode ?? SpaceSortMode.ALPHABETICAL,
+      layout: {
+        calloutDescriptionDisplayMode:
+          settings.layout?.calloutDescriptionDisplayMode ??
+          CalloutDescriptionDisplayMode.EXPANDED,
+      },
+    };
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('templatesManager', () => ITemplatesManager, {
     nullable: true,

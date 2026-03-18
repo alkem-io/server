@@ -1,12 +1,12 @@
-import { InjectionToken } from '@nestjs/common';
 import { createMock } from '@golevelup/ts-vitest';
-import { vi } from 'vitest';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { InjectionToken } from '@nestjs/common';
+import { Publisher } from '@services/infrastructure/event-bus/publisher';
+import { RabbitMQConnectionFactory } from '@services/infrastructure/event-bus/rabbitmq.connection.factory';
+import { Subscriber } from '@services/infrastructure/event-bus/subscriber';
 import { MockWinstonProvider } from '@test/mocks';
 import { repositoryMockFactory } from '@test/utils/repository.mock.factory';
-import { Publisher } from '@services/infrastructure/event-bus/publisher';
-import { Subscriber } from '@services/infrastructure/event-bus/subscriber';
-import { RabbitMQConnectionFactory } from '@services/infrastructure/event-bus/rabbitmq.connection.factory';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { vi } from 'vitest';
 
 const mockerDictionary = new Map<InjectionToken, unknown>([
   [WINSTON_MODULE_NEST_PROVIDER, MockWinstonProvider],

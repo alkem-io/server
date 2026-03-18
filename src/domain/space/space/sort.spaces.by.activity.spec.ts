@@ -1,8 +1,11 @@
 import { ProfileType } from '@common/enums';
 import { AccountType } from '@common/enums/account.type';
 import { ActivityEventType } from '@common/enums/activity.event.type';
+import { ActorType } from '@common/enums/actor.type';
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IActivity } from '@platform/activity/activity.interface';
 import { LatestActivitiesPerSpace } from '@services/api/me/space.membership.type';
@@ -43,10 +46,15 @@ const spaceSettings = {
     allowMembersToVideoCall: false,
     allowGuestContributions: false,
   },
+  sortMode: SpaceSortMode.ALPHABETICAL,
+  layout: {
+    calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+  },
 };
 
 const createTestSpace = (id: string): ISpace => {
   return {
+    type: ActorType.SPACE,
     id,
     rowId: 1,
     nameID: 'space1',
@@ -57,8 +65,16 @@ const createTestSpace = (id: string): ISpace => {
       roles: [],
     },
     sortOrder: 0,
+    pinned: false,
     createdDate: new Date(),
     updatedDate: new Date(),
+    profile: {
+      id: `profile-space-${id}`,
+      displayName: `Space ${id}`,
+      type: ProfileType.SPACE,
+      createdDate: new Date(),
+      updatedDate: new Date(),
+    },
     about: {
       id: '1',
       profile: {
@@ -75,13 +91,22 @@ const createTestSpace = (id: string): ISpace => {
     },
     account: {
       id: `account${id}`,
+      nameID: `account-nameid-${id}`,
+      accountType: AccountType.ORGANIZATION,
       virtualContributors: [],
       innovationHubs: [],
       innovationPacks: [],
       externalSubscriptionID: '',
       spaces: [],
-      type: AccountType.ORGANIZATION,
+      type: ActorType.ORGANIZATION,
       baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
+      profile: {
+        id: `profile-account-${id}`,
+        displayName: `Account ${id}`,
+        type: ProfileType.ACCOUNT,
+        createdDate: new Date(),
+        updatedDate: new Date(),
+      },
       createdDate: new Date(),
       updatedDate: new Date(),
     },

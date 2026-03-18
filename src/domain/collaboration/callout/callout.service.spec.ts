@@ -30,6 +30,7 @@ import { CalloutService } from './callout.service';
 
 describe('CalloutService', () => {
   let service: CalloutService;
+  let module: TestingModule;
   let repository: Repository<Callout>;
   let framingService: CalloutFramingService;
   let contributionDefaultsService: CalloutContributionDefaultsService;
@@ -42,6 +43,8 @@ describe('CalloutService', () => {
   let _storageAggregatorResolverService: StorageAggregatorResolverService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Callout.create to avoid DataSource requirement
     vi.spyOn(Callout, 'create').mockImplementation((input: any) => {
       const entity = new Callout();
@@ -49,7 +52,7 @@ describe('CalloutService', () => {
       return entity as any;
     });
 
-    const module: TestingModule = await Test.createTestingModule({
+    module = await Test.createTestingModule({
       providers: [
         CalloutService,
         repositoryProviderMockFactory(Callout),
@@ -296,7 +299,7 @@ describe('CalloutService', () => {
       const callout = { id: 'callout-1' } as any;
       const publisher = { id: 'real-user-id' };
 
-      vi.mocked(userLookupService.getUserByUUID).mockResolvedValue(
+      vi.mocked(userLookupService.getUserById).mockResolvedValue(
         publisher as any
       );
       vi.mocked(repository.save).mockResolvedValue(callout);
@@ -309,7 +312,7 @@ describe('CalloutService', () => {
     it('should set publishedBy to empty string when publisher not found', async () => {
       const callout = { id: 'callout-1' } as any;
 
-      vi.mocked(userLookupService.getUserByUUID).mockResolvedValue(
+      vi.mocked(userLookupService.getUserById).mockResolvedValue(
         undefined as any
       );
       vi.mocked(repository.save).mockResolvedValue(callout);
@@ -549,6 +552,263 @@ describe('CalloutService', () => {
       await expect(service.getCalloutFraming('callout-1')).rejects.toThrow(
         EntityNotFoundException
       );
+    });
+  });
+
+  describe('updateCallout', () => {
+    it('should update callout framing, settings, classification, and save', async () => {
+      const callout = {
+        id: 'callout-1',
+        framing: { id: 'framing-1' },
+        contributionDefaults: { id: 'defaults-1' },
+        settings: {
+          contribution: { allowedTypes: [] },
+          framing: { commentsEnabled: false },
+        },
+        classification: { id: 'class-1', tagsets: [] },
+        calloutsSet: { id: 'cs-1' },
+        isTemplate: false,
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      vi.mocked(repository.save).mockResolvedValue(callout);
+
+      const storageAggregatorResolverService = module.get(
+        StorageAggregatorResolverService
+      );
+      vi.mocked(
+        storageAggregatorResolverService.getStorageAggregatorForCallout
+      ).mockResolvedValue({ id: 'agg-1' } as any);
+
+      vi.mocked(framingService.updateCalloutFraming).mockResolvedValue({
+        id: 'framing-1-updated',
+      } as any);
+      vi.mocked(classificationService.updateClassification).mockReturnValue({
+        id: 'class-updated',
+      } as any);
+
+      const contributionDefaultsService = module.get(
+        CalloutContributionDefaultsService
+      );
+      vi.mocked(
+        contributionDefaultsService.updateCalloutContributionDefaults
+      ).mockReturnValue({ id: 'defaults-updated' } as any);
+
+      const result = await service.updateCallout(
+        callout,
+        {
+          framing: { profile: { displayName: 'Updated' } },
+          settings: { contribution: { enabled: true } },
+          classification: { tagsets: [] },
+          contributionDefaults: {},
+          sortOrder: 5,
+        } as any,
+        'user-1'
+      );
+
+      expect(framingService.updateCalloutFraming).toHaveBeenCalled();
+      expect(classificationService.updateClassification).toHaveBeenCalled();
+      expect(result.sortOrder).toBe(5);
+    });
+
+    it('should throw EntityNotInitializedException when contributionDefaults is missing', async () => {
+      const callout = {
+        id: 'callout-1',
+        contributionDefaults: undefined,
+        settings: { contribution: undefined },
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+
+      const storageAggregatorResolverService = module.get(
+        StorageAggregatorResolverService
+      );
+      vi.mocked(
+        storageAggregatorResolverService.getStorageAggregatorForCallout
+      ).mockResolvedValue({ id: 'agg-1' } as any);
+
+      await expect(service.updateCallout(callout, {} as any)).rejects.toThrow(
+        EntityNotInitializedException
+      );
+    });
+
+    it('should create comments room when enabled and not existing', async () => {
+      const callout = {
+        id: 'callout-1',
+        nameID: 'test',
+        framing: { id: 'framing-1' },
+        contributionDefaults: { id: 'defaults-1' },
+        settings: {
+          contribution: { allowedTypes: [] },
+          framing: { commentsEnabled: true },
+        },
+        classification: { id: 'class-1', tagsets: [] },
+        calloutsSet: { id: 'cs-1' },
+        isTemplate: false,
+        comments: undefined,
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      vi.mocked(repository.save).mockResolvedValue(callout);
+
+      const storageAggregatorResolverService = module.get(
+        StorageAggregatorResolverService
+      );
+      vi.mocked(
+        storageAggregatorResolverService.getStorageAggregatorForCallout
+      ).mockResolvedValue({ id: 'agg-1' } as any);
+      vi.mocked(roomService.createRoom).mockResolvedValue({
+        id: 'new-room',
+      } as any);
+
+      await service.updateCallout(callout, {} as any);
+
+      expect(roomService.createRoom).toHaveBeenCalled();
+    });
+  });
+
+  describe('getComments', () => {
+    it('should return comments when they exist', async () => {
+      const comments = { id: 'room-1' };
+      const callout = { id: 'callout-1', comments } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+
+      const result = await service.getComments('callout-1');
+
+      expect(result).toBe(comments);
+    });
+
+    it('should return undefined when no comments', async () => {
+      const callout = { id: 'callout-1', comments: undefined } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+
+      const result = await service.getComments('callout-1');
+
+      expect(result).toBeUndefined();
+    });
+  });
+
+  describe('getContributions', () => {
+    it('should return all contributions when no IDs specified', async () => {
+      const contributions = [{ id: 'c-1' }, { id: 'c-2' }];
+      const callout = { id: 'callout-1', contributions } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+
+      const result = await service.getContributions(callout);
+
+      expect(result).toHaveLength(2);
+    });
+
+    it('should return only matching contributions when IDs specified', async () => {
+      const contributions = [{ id: 'c-1' }, { id: 'c-2' }, { id: 'c-3' }];
+      const callout = { id: 'callout-1', contributions } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+
+      const result = await service.getContributions(callout, ['c-1', 'c-3']);
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('c-1');
+      expect(result[1].id).toBe('c-3');
+    });
+
+    it('should throw EntityNotFoundException when contributions not initialized', async () => {
+      const callout = { id: 'callout-1', contributions: undefined } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+
+      await expect(service.getContributions(callout)).rejects.toThrow(
+        EntityNotFoundException
+      );
+    });
+
+    it('should skip non-matching contribution IDs silently', async () => {
+      const contributions = [{ id: 'c-1' }];
+      const callout = { id: 'callout-1', contributions } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+
+      const result = await service.getContributions(callout, [
+        'c-1',
+        'nonexistent',
+      ]);
+
+      expect(result).toHaveLength(1);
+    });
+  });
+
+  describe('createContributionOnCallout', () => {
+    it('should create a contribution and set default sort order', async () => {
+      const callout = {
+        id: 'callout-1',
+        settings: { contribution: { allowedTypes: [] } },
+        contributions: [{ sortOrder: 5 }, { sortOrder: 3 }],
+        posts: [],
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+
+      const _namingServiceRef = module.get(NamingService);
+      vi.mocked(
+        _namingServiceRef.getReservedNameIDsInCalloutContributions
+      ).mockResolvedValue([]);
+
+      const storageAggregatorResolverService = module.get(
+        StorageAggregatorResolverService
+      );
+      vi.mocked(
+        storageAggregatorResolverService.getStorageAggregatorForCallout
+      ).mockResolvedValue({ id: 'agg-1' } as any);
+
+      const contribution = { id: 'contrib-1', callout: undefined } as any;
+      vi.mocked(
+        contributionService.createCalloutContribution
+      ).mockResolvedValue(contribution);
+      vi.mocked(contributionService.save).mockResolvedValue(contribution);
+
+      const result = await service.createContributionOnCallout(
+        { calloutID: 'callout-1' } as any,
+        'user-1'
+      );
+
+      expect(result).toBe(contribution);
+      expect(contribution.callout).toBe(callout);
+    });
+
+    it('should throw EntityNotInitializedException when contributions setting is missing', async () => {
+      const callout = {
+        id: 'callout-1',
+        settings: { contribution: undefined },
+        contributions: [],
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+
+      await expect(
+        service.createContributionOnCallout(
+          { calloutID: 'callout-1' } as any,
+          'user-1'
+        )
+      ).rejects.toThrow(EntityNotInitializedException);
+    });
+
+    it('should throw EntityNotInitializedException when contributions are not loaded', async () => {
+      const callout = {
+        id: 'callout-1',
+        settings: { contribution: { allowedTypes: [] } },
+        contributions: undefined,
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+
+      const _namingServiceRef = module.get(NamingService);
+      vi.mocked(
+        _namingServiceRef.getReservedNameIDsInCalloutContributions
+      ).mockResolvedValue([]);
+
+      await expect(
+        service.createContributionOnCallout(
+          { calloutID: 'callout-1' } as any,
+          'user-1'
+        )
+      ).rejects.toThrow(EntityNotInitializedException);
     });
   });
 

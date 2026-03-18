@@ -218,7 +218,7 @@ export class CalloutService {
     publishedTimestamp?: number
   ): Promise<ICallout> {
     if (publisherID) {
-      const publisher = await this.userLookupService.getUserByUUID(publisherID);
+      const publisher = await this.userLookupService.getUserById(publisherID);
       callout.publishedBy = publisher?.id || '';
     }
 

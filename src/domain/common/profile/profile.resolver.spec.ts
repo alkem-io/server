@@ -8,6 +8,8 @@ describe('Profile3Resolver', () => {
   let resolver: ProfileResolverMutations;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         ProfileResolverMutations,

@@ -1,17 +1,12 @@
-import { AgentType } from '@common/enums/agent.type';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { AgentService } from '@domain/agent/agent/agent.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -31,16 +26,15 @@ describe('MessagingService', () => {
   let conversationService: Mocked<ConversationService>;
   let _conversationAuthorizationService: Mocked<ConversationAuthorizationService>;
   let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
-  let platformWellKnownVCService: Mocked<PlatformWellKnownVirtualContributorsService>;
-  let _virtualContributorLookupService: Mocked<VirtualContributorLookupService>;
-  let userLookupService: Mocked<UserLookupService>;
-  let agentService: Mocked<AgentService>;
   let _subscriptionPublishService: Mocked<SubscriptionPublishService>;
   let messagingRepo: Mocked<Repository<Messaging>>;
+  let conversationMembershipRepo: Mocked<Repository<ConversationMembership>>;
   let entityManager: Mocked<EntityManager>;
   let configService: { get: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     configService = {
       get: vi.fn(),
     };
@@ -77,16 +71,11 @@ describe('MessagingService', () => {
       ConversationAuthorizationService
     );
     authorizationPolicyService = module.get(AuthorizationPolicyService);
-    platformWellKnownVCService = module.get(
-      PlatformWellKnownVirtualContributorsService
-    );
-    _virtualContributorLookupService = module.get(
-      VirtualContributorLookupService
-    );
-    userLookupService = module.get(UserLookupService);
-    agentService = module.get(AgentService);
     _subscriptionPublishService = module.get(SubscriptionPublishService);
     messagingRepo = module.get(getRepositoryToken(Messaging));
+    conversationMembershipRepo = module.get(
+      getRepositoryToken(ConversationMembership)
+    );
     entityManager = module.get(EntityManager);
   });
 
@@ -229,81 +218,38 @@ describe('MessagingService', () => {
   });
 
   describe('createConversation', () => {
-    it('should throw ValidationException when neither invitedAgentId nor wellKnown is provided', async () => {
-      // Mock getPlatformMessaging
-      const mockPlatformRepo = {
-        createQueryBuilder: vi.fn().mockReturnValue({
-          leftJoinAndSelect: vi.fn().mockReturnThis(),
-          getOne: vi.fn().mockResolvedValue({
-            messaging: { id: 'platform-messaging' },
-          }),
-        }),
-      };
-      entityManager.getRepository.mockReturnValue(mockPlatformRepo as any);
-
+    it('should throw ValidationException for DIRECT with wrong member count', async () => {
       await expect(
         service.createConversation({
-          callerAgentId: 'agent-1',
+          type: 'direct' as any,
+          callerActorId: 'agent-1',
+          memberActorIds: ['agent-2', 'agent-3'],
         })
       ).rejects.toThrow(ValidationException);
     });
 
-    it('should throw ValidationException when wellKnown VC cannot be resolved', async () => {
-      const mockPlatformRepo = {
-        createQueryBuilder: vi.fn().mockReturnValue({
-          leftJoinAndSelect: vi.fn().mockReturnThis(),
-          getOne: vi.fn().mockResolvedValue({
-            messaging: { id: 'platform-messaging' },
-          }),
-        }),
-      };
-      entityManager.getRepository.mockReturnValue(mockPlatformRepo as any);
-
-      platformWellKnownVCService.getVirtualContributorID.mockResolvedValue(
-        undefined as any
-      );
-
-      await expect(
-        service.createConversation({
-          callerAgentId: 'agent-1',
-          wellKnownVirtualContributor: 'CHAT_GUIDANCE' as any,
-        })
-      ).rejects.toThrow(ValidationException);
-    });
-
-    it('should resolve invitedAgentId and detect VC type from agent', async () => {
-      const mockPlatformRepo = {
-        createQueryBuilder: vi.fn().mockReturnValue({
-          leftJoinAndSelect: vi.fn().mockReturnThis(),
-          getOne: vi.fn().mockResolvedValue({
-            messaging: { id: 'platform-messaging', authorization: {} },
-          }),
-        }),
-      };
-      entityManager.getRepository.mockReturnValue(mockPlatformRepo as any);
-
-      agentService.getAgentOrFail.mockResolvedValue({
-        id: 'agent-invited',
-        type: AgentType.VIRTUAL_CONTRIBUTOR,
-      } as any);
-
+    it('should return existing conversation for DIRECT dedup', async () => {
       const existingConversation = {
         id: 'conv-1',
-        messaging: { id: 'messaging-1' },
       } as unknown as IConversation;
-      conversationService.createConversation.mockResolvedValue(
+      conversationService.findConversationBetweenActors.mockResolvedValue(
         existingConversation
       );
       conversationService.getConversationOrFail.mockResolvedValue(
         existingConversation
       );
 
-      await service.createConversation({
-        callerAgentId: 'agent-caller',
-        invitedAgentId: 'agent-invited',
+      const result = await service.createConversation({
+        type: 'direct' as any,
+        callerActorId: 'agent-caller',
+        memberActorIds: ['agent-invited'],
       });
 
-      expect(agentService.getAgentOrFail).toHaveBeenCalledWith('agent-invited');
+      expect(
+        conversationService.findConversationBetweenActors
+      ).toHaveBeenCalledWith('agent-caller', 'agent-invited');
+      expect(result).toBe(existingConversation);
+      expect(conversationService.createConversation).not.toHaveBeenCalled();
     });
   });
 
@@ -374,15 +320,35 @@ describe('MessagingService', () => {
     });
   });
 
-  describe('getConversationsForUser', () => {
-    it('should throw EntityNotInitializedException when user has no agent', async () => {
-      userLookupService.getUserOrFail.mockResolvedValue({
-        id: 'user-1',
-        agent: undefined,
-      } as any);
+  describe('getConversationsForActor', () => {
+    it('should return flat list of conversations for an actor', async () => {
+      const mockConversation = { id: 'conv-1' } as IConversation;
+      const mockQueryBuilder = {
+        innerJoinAndSelect: vi.fn().mockReturnThis(),
+        leftJoinAndSelect: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        andWhere: vi.fn().mockReturnThis(),
+        getMany: vi
+          .fn()
+          .mockResolvedValue([{ conversation: mockConversation }]),
+      };
+      conversationMembershipRepo.createQueryBuilder = vi
+        .fn()
+        .mockReturnValue(mockQueryBuilder) as any;
 
-      await expect(service.getConversationsForUser('user-1')).rejects.toThrow(
-        EntityNotInitializedException
+      const result = await service.getConversationsForActor(
+        'messaging-1',
+        'actor-1'
+      );
+
+      expect(result).toEqual([mockConversation]);
+      expect(mockQueryBuilder.where).toHaveBeenCalledWith(
+        'membership.actorID = :actorID',
+        { actorID: 'actor-1' }
+      );
+      expect(mockQueryBuilder.andWhere).toHaveBeenCalledWith(
+        'conversation.messagingId = :messagingId',
+        { messagingId: 'messaging-1' }
       );
     });
   });

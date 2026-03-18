@@ -1,5 +1,4 @@
-import { AuthenticationAgentInfoModule } from '@core/authentication.agent.info/agent.info.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -16,9 +15,8 @@ import { AUTH_STRATEGY_OATHKEEPER_JWT } from './strategy.names';
       session: false,
       defaultStrategy: AUTH_STRATEGY_OATHKEEPER_JWT,
     }),
-    AuthenticationAgentInfoModule,
+    ActorContextModule,
     KratosModule,
-    AgentModule,
     CacheModule.register(),
     JwtModule.registerAsync({
       imports: [ConfigModule],

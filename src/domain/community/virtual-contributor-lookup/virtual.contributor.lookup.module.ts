@@ -1,11 +1,12 @@
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { VirtualContributor } from '../virtual-contributor/virtual.contributor.entity';
-import { VirtualContributorLookupService } from './virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from './virtual.contributor.lookup.service';
 
 @Module({
-  imports: [TypeOrmModule.forFeature([VirtualContributor])], // Important this is empty!
-  providers: [VirtualContributorLookupService],
-  exports: [VirtualContributorLookupService],
+  imports: [ActorLookupModule, TypeOrmModule.forFeature([VirtualContributor])],
+  providers: [VirtualActorLookupService],
+  exports: [VirtualActorLookupService],
 })
-export class VirtualContributorLookupModule {}
+export class VirtualActorLookupModule {}

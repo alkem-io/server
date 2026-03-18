@@ -1,14 +1,17 @@
 import { AccountType } from '@common/enums/account.type';
+import { ActorType } from '@common/enums/actor.type';
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { ProfileType } from '@common/enums/profile.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { ApplicationService } from '@domain/access/application/application.service';
+import { InvitationService } from '@domain/access/invitation/invitation.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { Organization } from '@domain/community/organization';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Account } from '@domain/space/account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '@domain/space/account/constants';
 import { Space } from '@domain/space/space/space.entity';
@@ -21,17 +24,14 @@ import {
   MockEntityManagerProvider,
   MockSpaceService,
 } from '@test/mocks';
+import { MockActorLookupService } from '@test/mocks/actor.lookup.service.mock';
 import { MockApplicationService } from '@test/mocks/application.service.mock';
 import { MockCommunityResolverService } from '@test/mocks/community.resolver.service.mock';
 import { MockCommunityService } from '@test/mocks/community.service.mock';
-import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
 import { MockInvitationService } from '@test/mocks/invitation.service.mock';
-import { MockOrganizationLookupService } from '@test/mocks/organization.lookup.service.mock';
 import { MockOrganizationService } from '@test/mocks/organization.service.mock';
 import { MockSpaceFilterService } from '@test/mocks/space.filter.service.mock';
-import { MockUserLookupService } from '@test/mocks/user.lookup.service.mock';
 import { MockUserService } from '@test/mocks/user.service.mock';
-import { MockVirtualContributorLookupService } from '@test/mocks/virtual.contributor.lookup.service.mock';
 import { MockVirtualContributorService } from '@test/mocks/virtual.contributor.service.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { testData } from '@test/utils';
@@ -40,18 +40,23 @@ import { RolesResultCommunity } from './dto/roles.dto.result.community';
 import { RolesResultSpace } from './dto/roles.dto.result.space';
 import { RolesService } from './roles.service';
 import * as getOrganizationRolesForUserEntityData from './util/get.organization.roles.for.user.entity.data';
+import * as getSpaceRolesForContributorEntityData from './util/get.space.roles.for.contributor.entity.data';
 import * as getSpaceRolesForContributorQueryResult from './util/get.space.roles.for.contributor.query.result';
 
 describe('RolesService', () => {
   let rolesService: RolesService;
   let spaceFilterService: SpaceFilterService;
   let applicationService: ApplicationService;
-  let userLookupService: UserLookupService;
-  let organizationLookupService: OrganizationLookupService;
+  let actorLookupService: ActorLookupService;
   let communityResolverService: CommunityResolverService;
+  let moduleRef: any;
+
+  afterAll(() => {
+    vi.restoreAllMocks();
+  });
 
   beforeAll(async () => {
-    const moduleRef = await Test.createTestingModule({
+    moduleRef = await Test.createTestingModule({
       providers: [
         MockUserService,
         MockApplicationService,
@@ -60,23 +65,19 @@ describe('RolesService', () => {
         MockSpaceFilterService,
         MockOrganizationService,
         MockCommunityResolverService,
-        MockVirtualContributorLookupService,
-        MockOrganizationLookupService,
         MockAuthorizationService,
         MockWinstonProvider,
         MockEntityManagerProvider,
         MockSpaceService,
-        MockUserLookupService,
         MockVirtualContributorService,
-        MockContributorLookupService,
+        MockActorLookupService,
         RolesService,
       ],
     }).compile();
 
     rolesService = moduleRef.get(RolesService);
-    userLookupService = moduleRef.get(UserLookupService);
+    actorLookupService = moduleRef.get(ActorLookupService);
     applicationService = moduleRef.get(ApplicationService);
-    organizationLookupService = moduleRef.get(OrganizationLookupService);
     communityResolverService = moduleRef.get(CommunityResolverService);
     spaceFilterService = moduleRef.get(SpaceFilterService);
   });
@@ -105,11 +106,19 @@ describe('RolesService', () => {
       }
       spaceRolesMock.subspaces = subspaceRolesMocks;
       const spacesRolesMock: RolesResultSpace[] = [spaceRolesMock];
-      vi.spyOn(userLookupService, 'getUserWithAgent').mockResolvedValue(user);
+      vi.spyOn(
+        actorLookupService,
+        'getActorCredentialsOrFail'
+      ).mockResolvedValue(user.credentials ?? []);
 
       vi.spyOn(spaceFilterService, 'getAllowedVisibilities').mockReturnValue([
         SpaceVisibility.ACTIVE,
       ]);
+
+      vi.spyOn(
+        getSpaceRolesForContributorEntityData,
+        'getSpaceRolesForContributorEntityData'
+      ).mockResolvedValue({ spaces: [], subspaces: [] });
 
       vi.spyOn(
         getSpaceRolesForContributorQueryResult,
@@ -141,14 +150,14 @@ describe('RolesService', () => {
 
     it('Should get user roles', async () => {
       const roles = await rolesService.getRolesForUser({
-        userID: testData.user.id,
+        actorID: testData.user.id,
       });
 
       const organizationRoles =
         await rolesService.getOrganizationRolesForUser(roles);
-      const spaceRoles = await rolesService.getSpaceRolesForContributor(
+      const spaceRoles = await rolesService.getSpaceRolesForActor(
         roles,
-        testData.agentInfo
+        testData.actorContext
       );
 
       expect(organizationRoles).toEqual(
@@ -187,20 +196,17 @@ describe('RolesService', () => {
   describe('Organization Roles', () => {
     it('Should get organization roles', async () => {
       vi.spyOn(
-        organizationLookupService,
-        'getOrganizationAndAgent'
-      ).mockResolvedValue({
-        organization: testData.organization,
-        agent: testData.agent,
-      } as any);
+        actorLookupService,
+        'getActorCredentialsOrFail'
+      ).mockResolvedValue((testData.organization as any).credentials ?? []);
 
       const roles = await rolesService.getRolesForOrganization({
-        organizationID: testData.organization.id,
+        actorID: testData.organization.id,
       });
 
-      const spaces = await rolesService.getSpaceRolesForContributor(
+      const spaces = await rolesService.getSpaceRolesForActor(
         roles,
-        testData.agentInfo
+        testData.actorContext
       );
 
       expect(spaces).toEqual(
@@ -210,6 +216,153 @@ describe('RolesService', () => {
           }),
         ])
       );
+    });
+  });
+
+  describe('Virtual Contributor Roles', () => {
+    it('Should get virtual contributor roles', async () => {
+      vi.spyOn(
+        actorLookupService,
+        'getActorCredentialsOrFail'
+      ).mockResolvedValue([]);
+
+      const roles = await rolesService.getRolesForVirtualContributor({
+        actorID: 'vc-1',
+      });
+
+      expect(roles.id).toBe('vc-1');
+      expect(roles.credentials).toEqual([]);
+    });
+  });
+
+  describe('convertApplicationsToRoleResults', () => {
+    it('should return empty array for empty applications', async () => {
+      const result = await rolesService.convertApplicationsToRoleResults([]);
+      expect(result).toEqual([]);
+    });
+
+    it('should convert applications with roleSet to results', async () => {
+      vi.spyOn(applicationService, 'getLifecycleState').mockResolvedValue(
+        'new'
+      );
+      vi.spyOn(
+        communityResolverService,
+        'getDisplayNameForRoleSetOrFail'
+      ).mockResolvedValue('My Community');
+      vi.spyOn(
+        communityResolverService,
+        'getSpaceForRoleSetOrFail'
+      ).mockResolvedValue({ id: 'space-1', level: 0 } as any);
+
+      const applications = [
+        {
+          id: 'app-1',
+          roleSet: { id: 'rs-1' },
+          createdDate: new Date(),
+          updatedDate: new Date(),
+        },
+      ] as any[];
+
+      const result =
+        await rolesService.convertApplicationsToRoleResults(applications);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('app-1');
+      expect(result[0].displayName).toBe('My Community');
+      expect(result[0].state).toBe('new');
+    });
+
+    it('should skip applications without roleSet', async () => {
+      vi.spyOn(applicationService, 'getLifecycleState').mockResolvedValue(
+        'new'
+      );
+
+      const applications = [
+        {
+          id: 'app-1',
+          roleSet: undefined,
+          createdDate: new Date(),
+          updatedDate: new Date(),
+        },
+      ] as any[];
+
+      const result =
+        await rolesService.convertApplicationsToRoleResults(applications);
+
+      expect(result).toHaveLength(0);
+    });
+  });
+
+  describe('getCommunityInvitationsForUser', () => {
+    it('should return invitations for all contributors managed by user', async () => {
+      vi.spyOn(actorLookupService, 'getActorsManagedByUser').mockResolvedValue([
+        { id: 'contrib-1' },
+        { id: 'contrib-2' },
+      ] as any[]);
+
+      const invitationService = moduleRef.get(InvitationService);
+      vi.spyOn(invitationService, 'findInvitationsForActor')
+        .mockResolvedValueOnce([{ id: 'inv-1' }] as any[])
+        .mockResolvedValueOnce([{ id: 'inv-2' }] as any[]);
+
+      const result =
+        await rolesService.getCommunityInvitationsForUser('user-1');
+
+      expect(result).toHaveLength(2);
+    });
+
+    it('should return empty array when no managed contributors', async () => {
+      vi.spyOn(actorLookupService, 'getActorsManagedByUser').mockResolvedValue(
+        []
+      );
+
+      const result =
+        await rolesService.getCommunityInvitationsForUser('user-1');
+
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('convertInvitationsToRoleResults', () => {
+    it('should return empty array for empty invitations', async () => {
+      const result = await rolesService.convertInvitationsToRoleResults([]);
+      expect(result).toEqual([]);
+    });
+
+    it('should convert invitations with roleSet to results', async () => {
+      const invitationService = moduleRef.get(InvitationService);
+      vi.spyOn(invitationService, 'getLifecycleState').mockResolvedValue(
+        'pending'
+      );
+      vi.spyOn(
+        communityResolverService,
+        'getDisplayNameForRoleSetOrFail'
+      ).mockResolvedValue('Space Community');
+      vi.spyOn(
+        communityResolverService,
+        'getSpaceForRoleSetOrFail'
+      ).mockResolvedValue({ id: 'space-1', level: 0 } as any);
+
+      const invitations = [
+        {
+          id: 'inv-1',
+          roleSet: { id: 'rs-1' },
+          invitedActorID: 'actor-1',
+          createdBy: 'admin-1',
+          welcomeMessage: 'Welcome!',
+          createdDate: new Date(),
+          updatedDate: new Date(),
+        },
+      ] as any[];
+
+      const result =
+        await rolesService.convertInvitationsToRoleResults(invitations);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('inv-1');
+      expect(result[0].actorID).toBe('actor-1');
+      expect(result[0].createdBy).toBe('admin-1');
+      expect(result[0].welcomeMessage).toBe('Welcome!');
     });
   });
 });
@@ -232,6 +385,10 @@ const spaceSettings = {
     allowMembersToVideoCall: false,
     allowGuestContributions: false,
   },
+  sortMode: SpaceSortMode.ALPHABETICAL,
+  layout: {
+    calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+  },
 };
 
 const getSpaceRoleResultMock = ({
@@ -252,6 +409,7 @@ const getSpaceRoleResultMock = ({
     visibility: SpaceVisibility.ACTIVE,
     roles,
     space: {
+      type: ActorType.SPACE,
       id,
       platformRolesAccess: {
         roles: [],
@@ -261,6 +419,13 @@ const getSpaceRoleResultMock = ({
       nameID: `space-${id}`,
       levelZeroSpaceID: '',
       sortOrder: 0,
+      pinned: false,
+      profile: {
+        id: `profile-space-${id}`,
+        displayName: `Space ${id}`,
+        type: ProfileType.SPACE,
+        ...getEntityMock<Profile>(),
+      },
       about: {
         id,
         profile: {
@@ -277,14 +442,22 @@ const getSpaceRoleResultMock = ({
       visibility: SpaceVisibility.ACTIVE,
       account: {
         id: `account-${id}`,
+        nameID: `account-nameid-${id}`,
+        accountType: AccountType.ORGANIZATION,
         virtualContributors: [],
         innovationHubs: [],
         innovationPacks: [],
         externalSubscriptionID: '',
         spaces: [],
-        type: AccountType.ORGANIZATION,
+        type: ActorType.ORGANIZATION,
         ...getEntityMock<Account>(),
         baselineLicensePlan: DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN,
+        profile: {
+          id: `profile-account-${id}`,
+          displayName: `Account ${id}`,
+          type: ProfileType.ACCOUNT,
+          ...getEntityMock<Profile>(),
+        },
       },
       ...getEntityMock<Space>(),
     },

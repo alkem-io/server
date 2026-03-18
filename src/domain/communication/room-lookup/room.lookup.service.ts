@@ -118,6 +118,17 @@ export class RoomLookupService {
   }
 
   /**
+   * Atomically update specific fields on a room.
+   * Avoids read-modify-write races when multiple events arrive concurrently.
+   */
+  async updatePartial(
+    roomId: string,
+    fields: Partial<Record<'displayName' | 'avatarUrl', string | null>>
+  ): Promise<void> {
+    await this.roomRepository.update(roomId, fields as any);
+  }
+
+  /**
    * Atomically increment the messages count for a room.
    * Uses database-level increment to avoid race conditions.
    */
@@ -140,12 +151,12 @@ export class RoomLookupService {
 
   async sendMessage(
     room: IRoom,
-    actorId: string,
+    actorID: string,
     messageData: RoomSendMessageInput
   ): Promise<IMessage> {
     // The new adapter uses alkemio room ID and handles membership internally
     return this.communicationAdapter.sendMessage({
-      actorId: actorId,
+      actorID: actorID,
       message: messageData.message,
       roomID: room.id,
     });
@@ -153,12 +164,12 @@ export class RoomLookupService {
 
   async sendMessageReply(
     room: IRoom,
-    actorId: string,
+    actorID: string,
     messageData: RoomSendMessageReplyInput
   ): Promise<IMessage> {
     // The new adapter uses alkemio room ID and handles membership internally
     return this.communicationAdapter.sendMessageReply({
-      actorId: actorId,
+      actorID: actorID,
       message: messageData.message,
       roomID: room.id,
       threadID: messageData.threadID,

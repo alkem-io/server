@@ -20,6 +20,8 @@ describe('DiscussionService', () => {
   let roomService: RoomService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     vi.spyOn(Discussion, 'create').mockImplementation((input: any) => {
       const e = new Discussion();
       Object.assign(e, input);

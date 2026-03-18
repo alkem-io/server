@@ -5,9 +5,9 @@ import { ISearchCategoryResult } from './search.category.result';
 export abstract class ISearchResults {
   @Field(() => ISearchCategoryResult, {
     nullable: false,
-    description: 'The search results for contributors (Users, Organizations).',
+    description: 'The search results for actors (Users, Organizations).',
   })
-  contributorResults!: ISearchCategoryResult;
+  actorResults!: ISearchCategoryResult;
 
   @Field(() => ISearchCategoryResult, {
     nullable: false,

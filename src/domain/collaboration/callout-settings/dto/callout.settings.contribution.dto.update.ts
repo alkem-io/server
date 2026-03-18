@@ -1,4 +1,4 @@
-import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
+import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { Field, InputType } from '@nestjs/graphql';
 
@@ -11,11 +11,11 @@ export class UpdateCalloutSettingsContributionInput {
   })
   enabled?: boolean;
 
-  @Field(() => CalloutAllowedContributors, {
+  @Field(() => CalloutAllowedActors, {
     nullable: true,
     description: 'Indicate who can add more contributions to the callout.',
   })
-  canAddContributions?: CalloutAllowedContributors;
+  canAddContributions?: CalloutAllowedActors;
 
   // Not a field, this cannot be changed from the API
   allowedTypes?: CalloutContributionType[];

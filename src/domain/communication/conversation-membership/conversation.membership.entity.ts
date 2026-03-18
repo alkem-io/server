@@ -1,8 +1,9 @@
-import { Agent } from '@domain/agent/agent/agent.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import {
   CreateDateColumn,
   Entity,
   Index,
+  JoinColumn,
   ManyToOne,
   PrimaryColumn,
 } from 'typeorm';
@@ -14,9 +15,12 @@ export class ConversationMembership implements IConversationMembership {
   @PrimaryColumn('uuid')
   conversationId!: string;
 
+  // actorID - the actor participating in this conversation
   @Index()
-  @PrimaryColumn('uuid')
-  agentId!: string;
+  @ManyToOne(() => Actor, { eager: false, cascade: false, onDelete: 'CASCADE' })
+  @JoinColumn({ name: 'actorId' })
+  @PrimaryColumn('uuid', { name: 'actorId' })
+  actorID!: string;
 
   @Index()
   @ManyToOne(
@@ -30,13 +34,6 @@ export class ConversationMembership implements IConversationMembership {
   )
   conversation!: Conversation;
 
-  @ManyToOne(() => Agent, {
-    eager: false,
-    cascade: false,
-    onDelete: 'CASCADE',
-  })
-  agent!: Agent;
-
-  @CreateDateColumn()
+  @CreateDateColumn({ type: 'timestamptz' })
   createdAt!: Date;
 }

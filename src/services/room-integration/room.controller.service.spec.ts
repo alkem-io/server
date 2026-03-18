@@ -1,3 +1,4 @@
+import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -11,6 +12,8 @@ describe('RoomControllerService', () => {
   let roomLookupService: Mocked<RoomLookupService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [RoomControllerService, MockWinstonProvider],
     })
@@ -71,7 +74,7 @@ describe('RoomControllerService', () => {
             roomDetails: {
               roomID: 'room-1',
               threadID: undefined,
-              actorId: 'actor-1',
+              actorID: 'actor-1',
             },
           },
         },
@@ -98,7 +101,7 @@ describe('RoomControllerService', () => {
             roomDetails: {
               roomID: 'room-1',
               threadID: 'thread-1',
-              actorId: 'actor-1',
+              actorID: 'actor-1',
             },
           },
         },
@@ -142,7 +145,7 @@ describe('RoomControllerService', () => {
             roomDetails: {
               roomID: 'room-1',
               threadID: 'thread-1',
-              actorId: 'actor-1',
+              actorID: 'actor-1',
             },
           },
         },
@@ -163,13 +166,68 @@ describe('RoomControllerService', () => {
     });
   });
 
+  describe('getMessages', () => {
+    it('should retrieve messages for the given room', async () => {
+      const room = { id: 'room-1' };
+      const messages = [{ id: 'msg-1' }, { id: 'msg-2' }];
+      roomLookupService.getRoomOrFail.mockResolvedValue(room as any);
+      roomLookupService.getMessages.mockResolvedValue(messages as any);
+
+      const result = await service.getMessages('room-1');
+
+      expect(roomLookupService.getRoomOrFail).toHaveBeenCalledWith('room-1');
+      expect(roomLookupService.getMessages).toHaveBeenCalledWith(room);
+      expect(result).toBe(messages);
+    });
+
+    it('should propagate error when room is not found', async () => {
+      roomLookupService.getRoomOrFail.mockRejectedValue(
+        new EntityNotFoundException('Room not found', LogContext.COMMUNICATION)
+      );
+
+      await expect(service.getMessages('bad-room')).rejects.toThrow(
+        EntityNotFoundException
+      );
+    });
+  });
+
+  describe('getMessagesInThread', () => {
+    it('should retrieve messages for the given room and thread', async () => {
+      const room = { id: 'room-1' };
+      const threadMessages = [{ id: 'msg-3' }];
+      roomLookupService.getRoomOrFail.mockResolvedValue(room as any);
+      roomLookupService.getMessagesInThread.mockResolvedValue(
+        threadMessages as any
+      );
+
+      const result = await service.getMessagesInThread('room-1', 'thread-1');
+
+      expect(roomLookupService.getRoomOrFail).toHaveBeenCalledWith('room-1');
+      expect(roomLookupService.getMessagesInThread).toHaveBeenCalledWith(
+        room,
+        'thread-1'
+      );
+      expect(result).toBe(threadMessages);
+    });
+
+    it('should propagate error when room is not found', async () => {
+      roomLookupService.getRoomOrFail.mockRejectedValue(
+        new EntityNotFoundException('Room not found', LogContext.COMMUNICATION)
+      );
+
+      await expect(
+        service.getMessagesInThread('bad-room', 'thread-1')
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+  });
+
   describe('convertResultToMessage (via postMessage)', () => {
     it('should append sources with label when sources exist', async () => {
       const room = { id: 'room-1' };
       const event = {
         original: {
           resultHandler: {
-            roomDetails: { roomID: 'room-1', actorId: 'actor-1' },
+            roomDetails: { roomID: 'room-1', actorID: 'actor-1' },
           },
         },
         response: {
@@ -199,7 +257,7 @@ describe('RoomControllerService', () => {
       const event = {
         original: {
           resultHandler: {
-            roomDetails: { roomID: 'room-1', actorId: 'actor-1' },
+            roomDetails: { roomID: 'room-1', actorID: 'actor-1' },
           },
         },
         response: {

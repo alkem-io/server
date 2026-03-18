@@ -1,9 +1,9 @@
 import { SpaceLevel } from '@common/enums/space.level';
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
-import { IAgent } from '@domain/agent/agent/agent.interface';
+import { IActor, IActorFull } from '@domain/actor/actor/actor.interface';
 import { ICollaboration } from '@domain/collaboration/collaboration';
-import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { ILicense } from '@domain/common/license/license.interface';
 import { NameID } from '@domain/common/scalars/scalar.nameid';
 import { ICommunity } from '@domain/community/community';
@@ -14,8 +14,10 @@ import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { ISpaceSettings } from '../space.settings/space.settings.interface';
 
-@ObjectType('Space')
-export class ISpace extends IAuthorizable {
+@ObjectType('Space', {
+  implements: () => [IActorFull],
+})
+export class ISpace extends IActor implements IActorFull {
   rowId!: number;
 
   @Field(() => NameID, {
@@ -23,7 +25,7 @@ export class ISpace extends IAuthorizable {
     description:
       'A name identifier of the entity, unique within a given scope.',
   })
-  nameID!: string;
+  declare nameID: string;
 
   about!: ISpaceAbout;
 
@@ -44,7 +46,7 @@ export class ISpace extends IAuthorizable {
   })
   visibility!: SpaceVisibility;
 
-  agent?: IAgent;
+  // Space extends Actor - credentials are on Actor.credentials
 
   collaboration?: ICollaboration;
 
@@ -66,6 +68,14 @@ export class ISpace extends IAuthorizable {
     description: 'The sorting order for this Space within its parent.',
   })
   sortOrder!: number;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Whether this Space is pinned in its parent Space.',
+  })
+  pinned!: boolean;
+
+  sortMode?: SpaceSortMode;
 
   templatesManager?: ITemplatesManager;
   license?: ILicense;

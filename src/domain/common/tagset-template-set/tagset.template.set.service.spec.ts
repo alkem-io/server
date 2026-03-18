@@ -19,6 +19,8 @@ describe('TagsetTemplateSetService', () => {
   let tagsetTemplateService: TagsetTemplateService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static TagsetTemplateSet.create to avoid DataSource requirement
     vi.spyOn(TagsetTemplateSet, 'create').mockImplementation((input: any) => {
       const entity = new TagsetTemplateSet();

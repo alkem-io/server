@@ -7,6 +7,10 @@ import { Column, Entity, OneToOne } from 'typeorm';
 import { VcInteractionsByThread } from '../vc-interaction/vc.interaction.entity';
 import { IRoom } from './room.interface';
 
+// Shape of the vcData JSONB column in the room table.
+// vcInteractionsByThread is stored as a sub-field to allow future extension.
+type VcData = { interactionsByThread?: VcInteractionsByThread };
+
 @Entity()
 export class Room extends AuthorizableEntity implements IRoom {
   @Column('int', { nullable: false })
@@ -18,8 +22,26 @@ export class Room extends AuthorizableEntity implements IRoom {
   @Column()
   displayName!: string;
 
-  @Column('jsonb', { default: {} })
-  vcInteractionsByThread!: VcInteractionsByThread;
+  @Column({ nullable: true })
+  avatarUrl?: string;
+
+  // The actual DB column – holds vcInteractionsByThread nested under interactionsByThread key
+  @Column('jsonb', { nullable: true, default: {} })
+  vcData!: VcData;
+
+  // Transparent getter/setter so all existing code continues to work unchanged.
+  // Getter always initialises the nested map so callers can safely mutate the returned reference.
+  get vcInteractionsByThread(): VcInteractionsByThread {
+    if (!this.vcData) this.vcData = {};
+    if (!this.vcData.interactionsByThread)
+      this.vcData.interactionsByThread = {};
+    return this.vcData.interactionsByThread;
+  }
+
+  set vcInteractionsByThread(value: VcInteractionsByThread) {
+    if (!this.vcData) this.vcData = {};
+    this.vcData.interactionsByThread = value;
+  }
 
   @OneToOne(
     () => Callout,
@@ -38,6 +60,6 @@ export class Room extends AuthorizableEntity implements IRoom {
     this.type = type;
     this.displayName = displayName;
     this.messagesCount = 0;
-    this.vcInteractionsByThread = {};
+    this.vcData = {};
   }
 }

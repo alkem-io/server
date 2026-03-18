@@ -8,4 +8,10 @@ export interface KratosPayload {
   nbf: number;
   sub: string;
   session: Session | null;
+  /**
+   * Alkemio actor ID from Kratos metadata_public.
+   * Set by identity resolver webhook on registration/login.
+   * Used to skip user lookup - actorID is known directly from token.
+   */
+  alkemio_actor_id: string;
 }

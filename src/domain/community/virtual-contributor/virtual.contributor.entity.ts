@@ -1,32 +1,37 @@
 import { ENUM_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { ActorType } from '@common/enums/actor.type';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
+import { IVirtualContributorPlatformSettings } from '@domain/community/virtual-contributor-platform-settings';
 import { Account } from '@domain/space/account/account.entity';
 import {
+  ChildEntity,
   Column,
-  Entity,
   Generated,
   JoinColumn,
   ManyToOne,
   OneToOne,
 } from 'typeorm';
-import { ContributorBase } from '../contributor/contributor.base.entity';
-import { IVirtualContributorPlatformSettings } from '../virtual-contributor-platform-settings/virtual.contributor.platform.settings.interface';
 import { IVirtualContributorSettings } from '../virtual-contributor-settings/virtual.contributor.settings.interface';
 import { PromptGraphDefinition } from './dto/prompt-graph-definition/prompt.graph.definition.dto';
 import { PromptGraphTransformer } from './transformers/prompt.graph.transformer';
 import { IVirtualContributor } from './virtual.contributor.interface';
 
-@Entity()
-export class VirtualContributor
-  extends ContributorBase
-  implements IVirtualContributor
-{
+@ChildEntity({
+  discriminatorValue: ActorType.VIRTUAL_CONTRIBUTOR,
+  tableName: 'virtual_contributor',
+})
+export class VirtualContributor extends Actor implements IVirtualContributor {
+  // Inherited from Actor (on actor table):
+  //   id, type, nameID, profile, authorization, credentials, createdDate, updatedDate, version
+
   @Column({
     unique: true,
+    nullable: false,
   })
   @Generated('increment')
   rowId!: number;
@@ -58,7 +63,7 @@ export class VirtualContributor
   @Column('jsonb', { nullable: true, transformer: PromptGraphTransformer })
   promptGraphDefinition?: PromptGraphDefinition;
 
-  @Column()
+  @Column({ nullable: false })
   listedInStore!: boolean;
 
   @Column('varchar', {

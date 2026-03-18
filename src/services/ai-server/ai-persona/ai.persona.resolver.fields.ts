@@ -1,7 +1,7 @@
-import { CurrentUser, Profiling } from '@common/decorators';
+import { CurrentActor, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
@@ -30,7 +30,7 @@ export class AiPersonaResolverFields {
   })
   async promptGraph(
     @Parent() parent: AiPersona,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ) {
     // Reload to ensure the authorization is loaded
     const aiPersona = await this.aiPersonaServiceService.getAiPersonaOrFail(
@@ -38,7 +38,7 @@ export class AiPersonaResolverFields {
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       aiPersona.authorization,
       AuthorizationPrivilege.READ,
       `ai persona authorization access: ${aiPersona.id}`
@@ -78,7 +78,7 @@ export class AiPersonaResolverFields {
   @Profiling.api
   async authorization(
     @Parent() parent: AiPersona,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ) {
     // Reload to ensure the authorization is loaded
     const aiPersona = await this.aiPersonaServiceService.getAiPersonaOrFail(
@@ -86,7 +86,7 @@ export class AiPersonaResolverFields {
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       aiPersona.authorization,
       AuthorizationPrivilege.READ,
       `ai persona authorization access: ${aiPersona.id}`
@@ -102,14 +102,14 @@ export class AiPersonaResolverFields {
   @Profiling.api
   async externalConfig(
     @Parent() parent: AiPersona,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ) {
     // Reload to ensure the authorization is loaded
     const aiPersonaService =
       await this.aiPersonaServiceService.getAiPersonaOrFail(parent.id);
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       aiPersonaService.authorization,
       AuthorizationPrivilege.READ,
       `ai persona authorization access: ${aiPersonaService.id}`

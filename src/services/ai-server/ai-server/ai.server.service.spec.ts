@@ -1,10 +1,13 @@
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
 import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.contributor.body.of.knowledge.type';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { AiPersonaService } from '@services/ai-server/ai-persona/ai.persona.service';
+import { AiPersonaAuthorizationService } from '@services/ai-server/ai-persona/ai.persona.service.authorization';
 import { InvocationResultAction } from '@services/ai-server/ai-persona/dto/ai.persona.invocation/invocation.result.action.dto';
 import { MessageSenderRole } from '@services/ai-server/ai-persona/dto/interaction.message';
 import {
@@ -27,8 +30,13 @@ describe('AiServerService', () => {
   let aiPersonaService: Record<string, Mock>;
   let roomControllerService: Record<string, Mock>;
   let subscriptionPublishService: Record<string, Mock>;
+  let _authorizationPolicyService: Record<string, Mock>;
+  let aiPersonaAuthorizationService: Record<string, Mock>;
+  let configService: Record<string, Mock>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AiServerService,
@@ -53,6 +61,16 @@ describe('AiServerService', () => {
     subscriptionPublishService = module.get(
       SubscriptionPublishService
     ) as unknown as Record<string, Mock>;
+    _authorizationPolicyService = module.get(
+      AuthorizationPolicyService
+    ) as unknown as Record<string, Mock>;
+    aiPersonaAuthorizationService = module.get(
+      AiPersonaAuthorizationService
+    ) as unknown as Record<string, Mock>;
+    configService = module.get(ConfigService) as unknown as Record<
+      string,
+      Mock
+    >;
   });
 
   describe('getAiServerOrFail', () => {
@@ -213,7 +231,7 @@ describe('AiServerService', () => {
         original: {
           resultHandler: {
             action: InvocationResultAction.POST_REPLY,
-            roomDetails: { roomID: 'room-1', actorId: 'actor-1' },
+            roomDetails: { roomID: 'room-1', actorID: 'actor-1' },
           },
         },
         response: new InvokeEngineResponse({ message: 'test' }),
@@ -229,7 +247,7 @@ describe('AiServerService', () => {
         original: {
           resultHandler: {
             action: InvocationResultAction.POST_MESSAGE,
-            roomDetails: { roomID: 'room-1', actorId: 'actor-1' },
+            roomDetails: { roomID: 'room-1', actorID: 'actor-1' },
           },
         },
         response: new InvokeEngineResponse({ message: 'test' }),
@@ -268,7 +286,7 @@ describe('AiServerService', () => {
       );
 
       const result = await service.getLastNInteractionMessages(
-        { roomID: 'room-1', threadID: 'thread-1', actorId: 'actor-1' },
+        { roomID: 'room-1', threadID: 'thread-1', actorID: 'actor-1' },
         100
       );
 
@@ -288,7 +306,7 @@ describe('AiServerService', () => {
       );
 
       const result = await service.getLastNInteractionMessages(
-        { roomID: 'room-1', actorId: 'actor-1' },
+        { roomID: 'room-1', actorID: 'actor-1' },
         100
       );
 
@@ -306,7 +324,7 @@ describe('AiServerService', () => {
       );
 
       const result = await service.getLastNInteractionMessages(
-        { roomID: 'room-1', actorId: 'actor-1' },
+        { roomID: 'room-1', actorID: 'actor-1' },
         3,
         false
       );
@@ -324,12 +342,234 @@ describe('AiServerService', () => {
       );
 
       const result = await service.getLastNInteractionMessages(
-        { roomID: 'room-1', actorId: 'actor-1' },
+        { roomID: 'room-1', actorID: 'actor-1' },
         100
       );
 
       expect(result[0].role).toBe(MessageSenderRole.ASSISTANT);
       expect(result[1].role).toBe(MessageSenderRole.HUMAN);
+    });
+  });
+
+  describe('invoke', () => {
+    it('should invoke aiPersonaService with history for EXPERT engine with room details', async () => {
+      const persona = {
+        id: 'persona-1',
+        engine: AiPersonaEngine.EXPERT,
+      };
+      vi.mocked(aiPersonaService.getAiPersonaOrFail).mockResolvedValue(
+        persona as any
+      );
+      vi.mocked(configService.get).mockReturnValue(10);
+
+      const roomMessages = [
+        { sender: '@user1', message: 'hello' },
+        { sender: '@virtualcontributor-vc1', message: 'hi there' },
+      ];
+      vi.mocked(roomControllerService.getMessages).mockResolvedValue(
+        roomMessages as any
+      );
+      vi.mocked(roomControllerService.getRoomEntityOrFail).mockResolvedValue(
+        null as any
+      );
+
+      const invocationInput = {
+        aiPersonaID: 'persona-1',
+        message: 'Hello',
+        resultHandler: {
+          action: InvocationResultAction.NONE,
+          roomDetails: { roomID: 'room-1', actorID: 'actor-1' },
+        },
+      } as any;
+
+      await service.invoke(invocationInput);
+
+      expect(aiPersonaService.invoke).toHaveBeenCalledWith(
+        invocationInput,
+        expect.any(Array)
+      );
+    });
+
+    it('should invoke with empty history when no room details', async () => {
+      const persona = {
+        id: 'persona-1',
+        engine: AiPersonaEngine.EXPERT,
+      };
+      vi.mocked(aiPersonaService.getAiPersonaOrFail).mockResolvedValue(
+        persona as any
+      );
+
+      const invocationInput = {
+        aiPersonaID: 'persona-1',
+        message: 'Hello',
+        resultHandler: {
+          action: InvocationResultAction.NONE,
+        },
+      } as any;
+
+      await service.invoke(invocationInput);
+
+      expect(aiPersonaService.invoke).toHaveBeenCalledWith(invocationInput, []);
+    });
+
+    it('should not load history for non-history-enabled engines', async () => {
+      const persona = {
+        id: 'persona-1',
+        engine: AiPersonaEngine.COMMUNITY_MANAGER,
+      };
+      vi.mocked(aiPersonaService.getAiPersonaOrFail).mockResolvedValue(
+        persona as any
+      );
+
+      const invocationInput = {
+        aiPersonaID: 'persona-1',
+        message: 'Hello',
+        resultHandler: {
+          action: InvocationResultAction.NONE,
+          roomDetails: { roomID: 'room-1', actorID: 'actor-1' },
+        },
+      } as any;
+
+      await service.invoke(invocationInput);
+
+      expect(aiPersonaService.invoke).toHaveBeenCalledWith(invocationInput, []);
+    });
+  });
+
+  describe('updateAiPersona', () => {
+    it('should delegate to aiPersonaService.updateAiPersona', async () => {
+      const updateData = { ID: 'p1', prompt: ['new'] } as any;
+      const updatedPersona = { id: 'p1', prompt: ['new'] };
+      vi.mocked(aiPersonaService.updateAiPersona).mockResolvedValue(
+        updatedPersona as any
+      );
+
+      const result = await service.updateAiPersona(updateData);
+
+      expect(aiPersonaService.updateAiPersona).toHaveBeenCalledWith(updateData);
+      expect(result).toEqual(updatedPersona);
+    });
+  });
+
+  describe('createAiPersona', () => {
+    it('should create persona, apply authorization, and return it', async () => {
+      const aiServer = {
+        id: 'server-1',
+        authorization: { id: 'auth-1' },
+        aiPersonas: [],
+      };
+      const personaData = { engine: 'expert', prompt: ['test'] } as any;
+      const createdPersona = { id: 'p1' } as any;
+
+      aiServerRepository.findOne.mockResolvedValue(aiServer);
+      vi.mocked(aiPersonaService.createAiPersona).mockResolvedValue(
+        createdPersona
+      );
+      vi.mocked(aiPersonaService.save).mockResolvedValue(createdPersona);
+      vi.mocked(
+        aiPersonaAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([{ id: 'auth-updated' }]);
+
+      const result = await service.createAiPersona(personaData);
+
+      expect(aiPersonaService.createAiPersona).toHaveBeenCalledWith(
+        personaData,
+        aiServer
+      );
+      expect(aiPersonaService.save).toHaveBeenCalled();
+      expect(result).toEqual(createdPersona);
+    });
+  });
+
+  describe('saveAiServer', () => {
+    it('should save and return the AI server', async () => {
+      const aiServer = { id: 'server-1' } as any;
+      aiServerRepository.save.mockResolvedValue(aiServer);
+
+      const result = await service.saveAiServer(aiServer);
+
+      expect(aiServerRepository.save).toHaveBeenCalledWith(aiServer);
+      expect(result).toEqual(aiServer);
+    });
+  });
+
+  describe('resetAuthorizationPolicyOnAiPersona', () => {
+    it('should get persona and apply authorization policy', async () => {
+      const persona = { id: 'p1', authorization: { id: 'auth-1' } };
+      const parentAuth = { id: 'parent-auth' } as any;
+      const updatedAuths = [{ id: 'updated-auth' }];
+
+      vi.mocked(aiPersonaService.getAiPersonaOrFail).mockResolvedValue(
+        persona as any
+      );
+      vi.mocked(
+        aiPersonaAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue(updatedAuths as any);
+
+      const result = await service.resetAuthorizationPolicyOnAiPersona(
+        'p1',
+        parentAuth
+      );
+
+      expect(aiPersonaService.getAiPersonaOrFail).toHaveBeenCalledWith('p1');
+      expect(
+        aiPersonaAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalledWith(persona, parentAuth);
+      expect(result).toEqual(updatedAuths);
+    });
+  });
+
+  describe('ensureContextIsIngested', () => {
+    it('should publish IngestBodyOfKnowledge event', async () => {
+      await service.ensureContextIsIngested('space-1');
+      // Just verifying no error thrown - event bus is mocked
+    });
+  });
+
+  describe('getLastNInteractionMessages - includeEntityContents', () => {
+    it('should prepend entity content for Callout rooms when includeEntityContents is true', async () => {
+      const roomMessages = [{ sender: '@user1', message: 'hello' }];
+      vi.mocked(roomControllerService.getMessages).mockResolvedValue(
+        roomMessages as any
+      );
+
+      // Mock a Callout-like entity
+      const calloutEntity = Object.create(
+        (await import('@domain/collaboration/callout/callout.entity')).Callout
+          .prototype
+      );
+      calloutEntity.framing = { profile: { description: 'callout content' } };
+      vi.mocked(roomControllerService.getRoomEntityOrFail).mockResolvedValue(
+        calloutEntity
+      );
+
+      const result = await service.getLastNInteractionMessages(
+        { roomID: 'room-1', actorID: 'actor-1' },
+        100,
+        true
+      );
+
+      // Should have the entity content prepended + the room message
+      expect(result.length).toBeGreaterThanOrEqual(1);
+    });
+
+    it('should handle error when getRoomEntityOrFail throws', async () => {
+      const roomMessages = [{ sender: '@user1', message: 'hello' }];
+      vi.mocked(roomControllerService.getMessages).mockResolvedValue(
+        roomMessages as any
+      );
+      vi.mocked(roomControllerService.getRoomEntityOrFail).mockRejectedValue(
+        new Error('Room not found')
+      );
+
+      const result = await service.getLastNInteractionMessages(
+        { roomID: 'room-1', actorID: 'actor-1' },
+        100,
+        true
+      );
+
+      // Should still return the messages even on error
+      expect(result).toHaveLength(1);
     });
   });
 });

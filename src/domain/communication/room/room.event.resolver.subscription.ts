@@ -1,7 +1,7 @@
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { LogContext } from '@common/enums/logging.context';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   RoomEventSubscriptionArgs,
@@ -37,8 +37,8 @@ export class RoomEventResolverSubscription {
         _args,
         context
       ) {
-        const agentInfo = context.req?.user;
-        const logMsgPrefix = `[User (${agentInfo.email}) Room Msg] - `;
+        const actorContext = context.req?.user;
+        const logMsgPrefix = `[User (${actorContext.actorID}) Room Msg] - `;
         this.logger.verbose?.(
           `${logMsgPrefix} Sending out event: ${payload.roomID} `,
           LogContext.SUBSCRIPTIONS
@@ -51,11 +51,11 @@ export class RoomEventResolverSubscription {
         variables,
         context
       ) {
-        const agentInfo = context.req?.user;
+        const actorContext = context.req?.user;
         const isMatch = variables.roomID === payload.roomID;
 
         this.logger.verbose?.(
-          `[User (${agentInfo.email}) Room Events] - Filtering event id '${payload.eventID}' - match=${isMatch}`,
+          `[User (${actorContext.actorID}) Room Events] - Filtering event id '${payload.eventID}' - match=${isMatch}`,
           LogContext.SUBSCRIPTIONS
         );
 
@@ -64,10 +64,10 @@ export class RoomEventResolverSubscription {
     }
   )
   async roomEvents(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args({ nullable: false }) { roomID }: RoomEventSubscriptionArgs
   ) {
-    const logMsgPrefix = `[User (${agentInfo.email}) Room Events] - `;
+    const logMsgPrefix = `[User (${actorContext.actorID}) Room Events] - `;
     this.logger.verbose?.(
       `${logMsgPrefix} Subscribing to the following room: ${roomID}`,
       LogContext.SUBSCRIPTIONS
@@ -75,7 +75,7 @@ export class RoomEventResolverSubscription {
 
     const room = await this.roomService.getRoomOrFail(roomID);
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       room.authorization,
       AuthorizationPrivilege.READ,
       `subscription to room events on: ${room.id}`

@@ -1,26 +1,28 @@
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks';
-import { MockContributorLookupService } from '@test/mocks/contributor.lookup.service.mock';
+import { MockActorLookupService } from '@test/mocks/actor.lookup.service.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { testData } from '@test/utils/test-data';
-import { vi } from 'vitest';
+import { type Mocked, vi } from 'vitest';
 import { RoomMentionsService } from '../room-mentions/room.mentions.service';
 
 describe('RoomServiceMentions', () => {
   let roomMentionsService: RoomMentionsService;
-  let virtualContributorLookupService: VirtualContributorLookupService;
-  let userLookupService: UserLookupService;
-  let organizationLookupService: OrganizationLookupService;
+  let virtualActorLookupService: Mocked<VirtualActorLookupService>;
+  let userLookupService: Mocked<UserLookupService>;
+  let organizationLookupService: Mocked<OrganizationLookupService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         MockWinstonProvider,
         RoomMentionsService,
-        MockContributorLookupService,
+        MockActorLookupService,
       ],
       exports: [RoomMentionsService],
     })
@@ -28,11 +30,15 @@ describe('RoomServiceMentions', () => {
       .compile();
 
     roomMentionsService = module.get(RoomMentionsService);
-    virtualContributorLookupService = module.get(
-      VirtualContributorLookupService
-    );
-    userLookupService = module.get(UserLookupService);
-    organizationLookupService = module.get(OrganizationLookupService);
+    virtualActorLookupService = module.get(
+      VirtualActorLookupService
+    ) as Mocked<VirtualActorLookupService>;
+    userLookupService = module.get(
+      UserLookupService
+    ) as Mocked<UserLookupService>;
+    organizationLookupService = module.get(
+      OrganizationLookupService
+    ) as Mocked<OrganizationLookupService>;
   });
 
   it.each([
@@ -42,8 +48,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar-alex](https://localhost/user/alex123) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -52,8 +58,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar-alex](http://localhost:3000/user/alex) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -61,8 +67,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar-alex](https://localhost:3000/user/alex) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -70,8 +76,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](http://localhost:3000/user/alex-alex) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -79,8 +85,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](https://localhost:3000/user/alex-alex) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -89,8 +95,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar-alex](http://localhost:3000/organization/alex) - this look like you',
       [
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -98,8 +104,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar-alex](https://localhost:3000/organization/alex) - this look like you',
       [
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -107,8 +113,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](http://localhost:3000/organization/alex-alex) - this look like you',
       [
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -116,8 +122,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](https://localhost:3000/organization/alex-alex) - this look like you',
       [
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -126,8 +132,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](http://localhost:3000/user/alex) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -135,8 +141,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](https://localhost:3000/user/alex) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
       ],
     ],
@@ -144,8 +150,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](http://localhost:3000/organization/alex) - this look like you',
       [
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -153,8 +159,8 @@ describe('RoomServiceMentions', () => {
       'Hey, [@aleksandar](https://localhost:3000/organization/alex) - this look like you',
       [
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -164,12 +170,12 @@ describe('RoomServiceMentions', () => {
         'Hey, [@aleksandar](http://localhost:3000/organization/alex-org) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -178,12 +184,12 @@ describe('RoomServiceMentions', () => {
         'Hey, [@aleksandar](https://localhost:3000/organization/alex-org) - this look like you',
       [
         {
-          contributorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
-          contributorType: 'user',
+          actorID: 'b69f82a1-bc7d-486c-85f9-e7ac6e689f4e',
+          actorType: 'user',
         },
         {
-          contributorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
-          contributorType: 'organization',
+          actorID: '03bb5b07-f134-4074-97b9-1dd7950c7fa4',
+          actorType: 'organization',
         },
       ],
     ],
@@ -192,15 +198,15 @@ describe('RoomServiceMentions', () => {
     const organization = testData.organization;
     const virtualContributor = testData.virtualContributor;
     // Direct assignment to avoid proxy issues with vi.spyOn
-    userLookupService.getUserByNameIdOrFail = vi.fn().mockResolvedValue(user);
+    userLookupService.getUserByNameIdOrFail.mockResolvedValue(user);
 
-    organizationLookupService.getOrganizationByNameIdOrFail = vi
-      .fn()
-      .mockResolvedValue(organization);
+    organizationLookupService.getOrganizationByNameIdOrFail.mockResolvedValue(
+      organization
+    );
 
-    virtualContributorLookupService.getVirtualContributorByNameIdOrFail = vi
-      .fn()
-      .mockResolvedValue(virtualContributor);
+    virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(
+      virtualContributor
+    );
 
     const result = await roomMentionsService.getMentionsFromText(text);
     expect(result.length).toBe(expected.length);

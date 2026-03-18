@@ -1,7 +1,7 @@
-import { AuthorizationAgentPrivilege } from '@common/decorators/authorization.agent.privilege';
-import { CurrentUser } from '@common/decorators/current-user.decorator';
+import { AuthorizationActorHasPrivilege } from '@common/decorators/authorizationActorHasPrivilege';
+import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization/graphql.guard';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { UseGuards } from '@nestjs/common';
@@ -16,7 +16,7 @@ import { CalloutsSetArgsTags } from './dto/callouts.set.args.tags';
 export class CalloutsSetResolverFields {
   constructor(private calloutsSetService: CalloutsSetService) {}
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('callouts', () => [ICallout], {
     nullable: false,
@@ -24,17 +24,17 @@ export class CalloutsSetResolverFields {
   })
   async callouts(
     @Parent() calloutsSet: ICalloutsSet,
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args({ nullable: true }) args: CalloutsSetArgsCallouts
   ) {
     return await this.calloutsSetService.getCalloutsFromCollaboration(
       calloutsSet,
       args,
-      agentInfo
+      actorContext
     );
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('tagsetTemplates', () => [ITagsetTemplate], {
     nullable: true,
@@ -48,7 +48,7 @@ export class CalloutsSetResolverFields {
     return tagsetTemplateSet.tagsetTemplates;
   }
 
-  @AuthorizationAgentPrivilege(AuthorizationPrivilege.READ)
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
   @ResolveField('tags', () => [String], {
     nullable: false,
@@ -57,12 +57,12 @@ export class CalloutsSetResolverFields {
   })
   async tags(
     @Parent() calloutsSet: ICalloutsSet,
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args({ nullable: true }) args: CalloutsSetArgsTags
   ): Promise<string[]> {
     const tags = await this.calloutsSetService.getAllTags(
       calloutsSet.id,
-      agentInfo,
+      actorContext,
       args?.classificationTagsets
     );
     return tags;

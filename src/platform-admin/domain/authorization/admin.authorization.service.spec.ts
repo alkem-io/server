@@ -1,9 +1,13 @@
 import {
   AuthorizationCredential,
+  AuthorizationPrivilege,
   AuthorizationRoleGlobal,
 } from '@common/enums';
 import { ForbiddenException, ValidationException } from '@common/exceptions';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -18,11 +22,15 @@ describe('AdminAuthorizationService', () => {
   let service: AdminAuthorizationService;
   let userLookupService: {
     usersWithCredential: Mock;
-    getUserAndAgent: Mock;
+    getUserByIdOrFail: Mock;
     getUserAndCredentials: Mock;
   };
-  let organizationLookupService: { getOrganizationAndAgent: Mock };
-  let agentService: { grantCredentialOrFail: Mock; revokeCredential: Mock };
+  let organizationLookupService: { getOrganizationByIdOrFail: Mock };
+  let actorService: {
+    grantCredentialOrFail: Mock;
+    revokeCredential: Mock;
+    findActorsWithMatchingCredentials: Mock;
+  };
   let authorizationPolicyService: {
     getAuthorizationPolicyOrFail: Mock;
     reset: Mock;
@@ -30,8 +38,12 @@ describe('AdminAuthorizationService', () => {
     appendCredentialAuthorizationRules: Mock;
     save: Mock;
   };
+  let actorLookupService: { getActorCredentialsOrFail: Mock };
+  let authorizationService: { getGrantedPrivileges: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminAuthorizationService,
@@ -49,10 +61,16 @@ describe('AdminAuthorizationService', () => {
     organizationLookupService = module.get(
       OrganizationLookupService
     ) as unknown as typeof organizationLookupService;
-    agentService = module.get(AgentService) as unknown as typeof agentService;
+    actorService = module.get(ActorService) as unknown as typeof actorService;
     authorizationPolicyService = module.get(
       AuthorizationPolicyService
     ) as unknown as typeof authorizationPolicyService;
+    actorLookupService = module.get(
+      ActorLookupService
+    ) as unknown as typeof actorLookupService;
+    authorizationService = module.get(
+      AuthorizationService
+    ) as unknown as typeof authorizationService;
   });
 
   describe('isGlobalAuthorizationCredential', () => {
@@ -124,15 +142,10 @@ describe('AdminAuthorizationService', () => {
 
     it('should grant credential and return user on success', async () => {
       const user = { id: 'user-1' };
-      const agent = { id: 'agent-1' };
-      const updatedAgent = { id: 'agent-1', credentials: [] };
 
-      vi.mocked(userLookupService.getUserAndAgent).mockResolvedValue({
-        user,
-        agent,
-      });
-      vi.mocked(agentService.grantCredentialOrFail).mockResolvedValue(
-        updatedAgent
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(user);
+      vi.mocked(actorService.grantCredentialOrFail).mockResolvedValue(
+        undefined
       );
 
       const result = await service.grantCredentialToUser({
@@ -141,30 +154,30 @@ describe('AdminAuthorizationService', () => {
         resourceID: 'space-1',
       });
 
-      expect(agentService.grantCredentialOrFail).toHaveBeenCalledWith({
-        agentID: 'agent-1',
-        type: AuthorizationCredential.SPACE_MEMBER,
-        resourceID: 'space-1',
-      });
+      // User IS the Actor - user.id is the actorID
+      expect(actorService.grantCredentialOrFail).toHaveBeenCalledWith(
+        'user-1',
+        {
+          type: AuthorizationCredential.SPACE_MEMBER,
+          resourceID: 'space-1',
+        }
+      );
       expect(result).toBe(user);
-      expect(result.agent).toBe(updatedAgent);
     });
 
     it('should allow global credential without resourceID', async () => {
       const user = { id: 'user-1' } as any;
-      const agent = { id: 'agent-1' };
-      vi.mocked(userLookupService.getUserAndAgent).mockResolvedValue({
-        user,
-        agent,
-      });
-      vi.mocked(agentService.grantCredentialOrFail).mockResolvedValue(agent);
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(user);
+      vi.mocked(actorService.grantCredentialOrFail).mockResolvedValue(
+        undefined
+      );
 
       await service.grantCredentialToUser({
         userID: 'user-1',
         type: AuthorizationCredential.GLOBAL_ADMIN,
       });
 
-      expect(agentService.grantCredentialOrFail).toHaveBeenCalled();
+      expect(actorService.grantCredentialOrFail).toHaveBeenCalled();
     });
   });
 
@@ -181,14 +194,9 @@ describe('AdminAuthorizationService', () => {
 
     it('should revoke credential and return user on success', async () => {
       const user = { id: 'user-1' } as any;
-      const agent = { id: 'agent-1' };
-      const updatedAgent = { id: 'agent-1', credentials: [] };
 
-      vi.mocked(userLookupService.getUserAndAgent).mockResolvedValue({
-        user,
-        agent,
-      });
-      vi.mocked(agentService.revokeCredential).mockResolvedValue(updatedAgent);
+      vi.mocked(userLookupService.getUserByIdOrFail).mockResolvedValue(user);
+      vi.mocked(actorService.revokeCredential).mockResolvedValue(undefined);
 
       const result = await service.revokeCredentialFromUser({
         userID: 'user-1',
@@ -196,8 +204,8 @@ describe('AdminAuthorizationService', () => {
         resourceID: 'space-1',
       });
 
-      expect(agentService.revokeCredential).toHaveBeenCalledWith({
-        agentID: 'agent-1',
+      // User IS the Actor - user.id is the actorID
+      expect(actorService.revokeCredential).toHaveBeenCalledWith('user-1', {
         type: AuthorizationCredential.SPACE_MEMBER,
         resourceID: 'space-1',
       });
@@ -218,14 +226,12 @@ describe('AdminAuthorizationService', () => {
 
     it('should grant credential and return organization on success', async () => {
       const organization = { id: 'org-1' } as any;
-      const agent = { id: 'agent-1' };
-      const updatedAgent = { id: 'agent-1', credentials: [] };
 
       vi.mocked(
-        organizationLookupService.getOrganizationAndAgent
-      ).mockResolvedValue({ organization, agent });
-      vi.mocked(agentService.grantCredentialOrFail).mockResolvedValue(
-        updatedAgent
+        organizationLookupService.getOrganizationByIdOrFail
+      ).mockResolvedValue(organization);
+      vi.mocked(actorService.grantCredentialOrFail).mockResolvedValue(
+        undefined
       );
 
       const result = await service.grantCredentialToOrganization({
@@ -235,7 +241,6 @@ describe('AdminAuthorizationService', () => {
       });
 
       expect(result).toBe(organization);
-      expect(result.agent).toBe(updatedAgent);
     });
   });
 
@@ -252,13 +257,11 @@ describe('AdminAuthorizationService', () => {
 
     it('should revoke credential and return organization on success', async () => {
       const organization = { id: 'org-1' } as any;
-      const agent = { id: 'agent-1' };
-      const updatedAgent = { id: 'agent-1', credentials: [] };
 
       vi.mocked(
-        organizationLookupService.getOrganizationAndAgent
-      ).mockResolvedValue({ organization, agent });
-      vi.mocked(agentService.revokeCredential).mockResolvedValue(updatedAgent);
+        organizationLookupService.getOrganizationByIdOrFail
+      ).mockResolvedValue(organization);
+      vi.mocked(actorService.revokeCredential).mockResolvedValue(undefined);
 
       const result = await service.revokeCredentialFromOrganization({
         organizationID: 'org-1',
@@ -267,7 +270,145 @@ describe('AdminAuthorizationService', () => {
       });
 
       expect(result).toBe(organization);
-      expect(result.agent).toBe(updatedAgent);
+    });
+  });
+
+  describe('actorsWithCredential', () => {
+    it('should find actors with matching credentials', async () => {
+      const actors = [{ id: 'actor-1' }];
+      vi.mocked(
+        actorService.findActorsWithMatchingCredentials
+      ).mockResolvedValue(actors as any);
+
+      const result = await service.actorsWithCredential(
+        'some-type' as any,
+        'resource-1'
+      );
+
+      expect(
+        actorService.findActorsWithMatchingCredentials
+      ).toHaveBeenCalledWith({
+        type: 'some-type',
+        resourceID: 'resource-1',
+      });
+      expect(result).toEqual(actors);
+    });
+
+    it('should work without resourceID', async () => {
+      vi.mocked(
+        actorService.findActorsWithMatchingCredentials
+      ).mockResolvedValue([]);
+
+      const result = await service.actorsWithCredential('some-type' as any);
+
+      expect(
+        actorService.findActorsWithMatchingCredentials
+      ).toHaveBeenCalledWith({
+        type: 'some-type',
+        resourceID: undefined,
+      });
+      expect(result).toEqual([]);
+    });
+  });
+
+  describe('userAuthorizationPrivileges', () => {
+    it('should return granted privileges for a user', async () => {
+      const credentials = [{ type: 'global-admin' }];
+      const authPolicy = { id: 'auth-1' };
+      const privileges = [AuthorizationPrivilege.READ];
+      const actorContext = { actorID: 'actor-1' } as any as ActorContext;
+
+      vi.mocked(actorLookupService.getActorCredentialsOrFail).mockResolvedValue(
+        credentials as any
+      );
+      vi.mocked(
+        authorizationPolicyService.getAuthorizationPolicyOrFail
+      ).mockResolvedValue(authPolicy as any);
+      vi.mocked(authorizationService.getGrantedPrivileges).mockReturnValue(
+        privileges
+      );
+
+      const result = await service.userAuthorizationPrivileges(actorContext, {
+        userID: 'user-1',
+        authorizationID: 'auth-1',
+      } as any);
+
+      expect(actorLookupService.getActorCredentialsOrFail).toHaveBeenCalledWith(
+        'user-1'
+      );
+      expect(
+        authorizationPolicyService.getAuthorizationPolicyOrFail
+      ).toHaveBeenCalledWith('auth-1');
+      expect(authorizationService.getGrantedPrivileges).toHaveBeenCalledWith(
+        credentials,
+        authPolicy
+      );
+      expect(result).toEqual(privileges);
+    });
+  });
+
+  describe('resetAuthorizationPolicy', () => {
+    it('should reset and extend authorization policy with global admin rules', async () => {
+      const authorization = { id: 'auth-1', credentialRules: [] as any[] };
+      const savedAuth = { id: 'auth-1-saved' };
+
+      vi.mocked(
+        authorizationPolicyService.getAuthorizationPolicyOrFail
+      ).mockResolvedValue(authorization as any);
+      vi.mocked(
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly
+      ).mockReturnValue({ cascade: true } as any);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(authorization as any);
+      vi.mocked(authorizationPolicyService.save).mockResolvedValue(
+        savedAuth as any
+      );
+
+      const result = await service.resetAuthorizationPolicy('auth-1');
+
+      expect(authorizationPolicyService.reset).toHaveBeenCalledWith(
+        authorization
+      );
+      expect(
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly
+      ).toHaveBeenCalled();
+      expect(authorizationPolicyService.save).toHaveBeenCalled();
+      expect(result).toEqual(savedAuth);
+    });
+  });
+
+  describe('extendAuthorizationPolicyWithAuthorizationReset', () => {
+    it('should add AUTHORIZATION_RESET rule for global admins and support', () => {
+      const authorization = { id: 'auth-1', credentialRules: [] } as any;
+      const rule = { cascade: true } as any;
+      const extendedAuth = { id: 'auth-1-extended' } as any;
+
+      vi.mocked(
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly
+      ).mockReturnValue(rule);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockReturnValue(extendedAuth);
+
+      const result =
+        service.extendAuthorizationPolicyWithAuthorizationReset(authorization);
+
+      expect(
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly
+      ).toHaveBeenCalledWith(
+        [AuthorizationPrivilege.AUTHORIZATION_RESET],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        expect.any(String)
+      );
+      expect(rule.cascade).toBe(false);
+      expect(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).toHaveBeenCalledWith(authorization, [rule]);
+      expect(result).toEqual(extendedAuth);
     });
   });
 });

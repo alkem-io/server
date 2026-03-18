@@ -1,10 +1,10 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor/actor.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LicenseModule } from '@domain/common/license/license.module';
-import { ContributorModule } from '@domain/community/contributor/contributor.module';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
-import { VirtualContributorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
+import { ProfileModule } from '@domain/common/profile/profile.module';
+import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { VirtualActorLookupModule } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { Account } from '@domain/space/account/account.entity';
 import { AccountResolverFields } from '@domain/space/account/account.resolver.fields';
@@ -35,10 +35,9 @@ import { AccountLicenseService } from './account.service.license';
   imports: [
     AccountHostModule,
     AccountLookupModule,
-    AgentModule,
+    ActorModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
-    ContributorModule,
     StorageAggregatorModule,
     TemporaryStorageModule,
     PlatformAuthorizationPolicyModule,
@@ -48,11 +47,12 @@ import { AccountLicenseService } from './account.service.license';
     LicensingCredentialBasedModule,
     LicensingWingbackSubscriptionModule,
     LicenseModule,
+    ProfileModule,
     SpaceModule,
     InnovationHubModule,
     InnovationPackModule,
-    VirtualContributorModule,
-    VirtualContributorLookupModule,
+    VirtualActorModule,
+    VirtualActorLookupModule,
     NamingModule,
     TypeOrmModule.forFeature([Account]),
     NotificationAdapterModule,

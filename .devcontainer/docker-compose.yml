@@ -258,8 +258,7 @@ services:
     restart: unless-stopped
 
   whiteboard-collaboration:
-    image: alkemio/whiteboard-collaboration-service:v0.8.0
-    platform: linux/amd64
+    image: alkemio/whiteboard-collaboration-service:v0.10.1
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -275,8 +274,7 @@ services:
       - "4002:4002"
 
   file-service:
-    image: alkemio/file-service:v0.2.0
-    platform: linux/amd64
+    image: alkemio/file-service:v0.2.1
     depends_on:
       rabbitmq:
         condition: service_healthy

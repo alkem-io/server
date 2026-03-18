@@ -40,6 +40,8 @@ describe('TemplateService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Template.create to avoid DataSource requirement
     vi.spyOn(Template, 'create').mockImplementation((input: any) => {
       const entity = new Template();

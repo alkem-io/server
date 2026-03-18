@@ -7,7 +7,7 @@ on:
 
 jobs:
   pr_metrics:
-    runs-on: ubuntu-latest
+    runs-on: [self-hosted, macOS, ARM64, apple-silicon, m4]
     steps:
     # 1. Checkout the repository code
     - name: Checkout Code
@@ -15,25 +15,7 @@ jobs:
       with:
         # Fetch depth 0 is important to get the base branch reference for diffing
         fetch-depth: 0
-    # 2. Setup Python environment
-    - name: Set up Python
-      uses: actions/setup-python@v5
-      with:
-        python-version: '3.x'
-    # 3. Cache Python packages
-    - name: Cache Python dependencies
-      uses: actions/cache@v4
-      with:
-        path: ~/.cache/pip
-        key: ${{ runner.os }}-pip-${{ hashFiles('**/requirements.txt') }}
-        restore-keys: |
-          ${{ runner.os }}-pip-
-    # 4. Install dependencies
-    - name: Install dependencies
-      run: |
-        python -m pip install --upgrade pip
-        # pip install -r requirements.txt # Uncomment if you use external packages
-    # 5. Collect PR Metrics
+    # 2. Collect PR Metrics
     - name: Collect PR Metrics
       id: metrics
       run: |
@@ -76,10 +58,10 @@ jobs:
 
         # 5. Execute the Python script with real data
         # We pass the accumulated file paths string as a single, quoted argument
-        JSON_OUTPUT=$(PR_DESCRIPTION="${PR_DESCRIPTION}" python .github/workflows/review_metrics/review_metrics.py "${PR_TITLE}" "${LOC}" "${FILES}" "${CHANGED_PATHS}")
+        JSON_OUTPUT=$(PR_DESCRIPTION="${PR_DESCRIPTION}" python3 .github/workflows/review_metrics/review_metrics.py "${PR_TITLE}" "${LOC}" "${FILES}" "${CHANGED_PATHS}")
 
         # Extract review_type for conditional step execution
-        REVIEW_TYPE=$(echo "${JSON_OUTPUT}" | python -c "import sys, json; print(json.load(sys.stdin).get('review_type', ''))")
+        REVIEW_TYPE=$(echo "${JSON_OUTPUT}" | python3 -c "import sys, json; print(json.load(sys.stdin).get('review_type', ''))")
 
         # Make the outputs available to subsequent steps
         echo "metrics_json=${JSON_OUTPUT}" >> $GITHUB_OUTPUT

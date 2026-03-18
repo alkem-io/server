@@ -1,4 +1,4 @@
-import { CalloutAllowedContributors } from '@common/enums/callout.allowed.contributors';
+import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
@@ -261,7 +261,7 @@ export const bootstrapTemplateSpaceContentCalloutsVcKnowledgeBase: CreateTemplat
               contribution: {
                 enabled: false,
                 allowedTypes: [CalloutContributionType.LINK],
-                canAddContributions: CalloutAllowedContributors.NONE,
+                canAddContributions: CalloutAllowedActors.NONE,
                 commentsEnabled: false,
               },
             },

@@ -17,6 +17,8 @@ describe('FileIntegrationService', () => {
   let storageService: { exists: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     storageService = { exists: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
@@ -68,8 +70,8 @@ describe('FileIntegrationService', () => {
         authorization: 'Bearer token',
       });
 
-      vi.mocked(authenticationService.getAgentInfo).mockResolvedValue({
-        agentID: 'agent-1',
+      vi.mocked(authenticationService.getActorContext).mockResolvedValue({
+        actorID: 'agent-1',
       } as any);
       vi.mocked(documentService.getDocumentOrFail).mockRejectedValue(
         new Error('Not found')
@@ -88,8 +90,8 @@ describe('FileIntegrationService', () => {
         authorization: 'Bearer token',
       });
 
-      vi.mocked(authenticationService.getAgentInfo).mockResolvedValue({
-        agentID: 'agent-1',
+      vi.mocked(authenticationService.getActorContext).mockResolvedValue({
+        actorID: 'agent-1',
       } as any);
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
         id: 'doc-1',
@@ -111,8 +113,8 @@ describe('FileIntegrationService', () => {
         authorization: 'Bearer token',
       });
 
-      vi.mocked(authenticationService.getAgentInfo).mockResolvedValue({
-        agentID: 'agent-1',
+      vi.mocked(authenticationService.getActorContext).mockResolvedValue({
+        actorID: 'agent-1',
       } as any);
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
         id: 'doc-1',
@@ -135,8 +137,8 @@ describe('FileIntegrationService', () => {
         authorization: 'Bearer token',
       });
 
-      vi.mocked(authenticationService.getAgentInfo).mockResolvedValue({
-        agentID: 'agent-1',
+      vi.mocked(authenticationService.getActorContext).mockResolvedValue({
+        actorID: 'agent-1',
       } as any);
       vi.mocked(documentService.getDocumentOrFail).mockResolvedValue({
         id: 'doc-1',

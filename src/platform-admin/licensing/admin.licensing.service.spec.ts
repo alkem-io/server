@@ -1,6 +1,5 @@
 import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
 import { ValidationException } from '@common/exceptions';
-import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -24,6 +23,8 @@ describe('AdminLicensingService', () => {
   let accountLookupService: { getAccountOrFail: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AdminLicensingService,
@@ -67,40 +68,17 @@ describe('AdminLicensingService', () => {
       ).rejects.toThrow(ValidationException);
     });
 
-    it('should throw EntityNotInitializedException when space has no agent', async () => {
-      vi.mocked(
-        licensingFrameworkService.getLicensePlanOrFail
-      ).mockResolvedValue({
-        type: LicensingCredentialBasedPlanType.SPACE_PLAN,
-      });
-      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue({
-        id: 'space-1',
-        agent: undefined,
-      });
-
-      await expect(
-        service.assignLicensePlanToSpace(
-          { spaceID: 'space-1', licensePlanID: 'lp-1' },
-          'licensing-1'
-        )
-      ).rejects.toThrow(EntityNotInitializedException);
-    });
-
     it('should assign license plan and return space on success with SPACE_PLAN type', async () => {
       const licensePlan = {
         type: LicensingCredentialBasedPlanType.SPACE_PLAN,
       };
-      const agent = { id: 'agent-1' };
-      const updatedAgent = { id: 'agent-1', credentials: ['cred'] };
+      const space = { id: 'space-1' };
       vi.mocked(
         licensingFrameworkService.getLicensePlanOrFail
       ).mockResolvedValue(licensePlan);
-      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue({
-        id: 'space-1',
-        agent,
-      });
+      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(space);
       vi.mocked(licenseIssuerService.assignLicensePlan).mockResolvedValue(
-        updatedAgent
+        space
       );
 
       const result = await service.assignLicensePlanToSpace(
@@ -108,27 +86,26 @@ describe('AdminLicensingService', () => {
         'licensing-1'
       );
 
-      expect(result.agent).toBe(updatedAgent);
+      // Space IS the Actor - space.id passed as actorID
       expect(licenseIssuerService.assignLicensePlan).toHaveBeenCalledWith(
-        agent,
+        'space-1',
         licensePlan,
         'space-1'
       );
+      expect(result.id).toBe('space-1');
     });
 
     it('should accept SPACE_FEATURE_FLAG type as valid for spaces', async () => {
+      const space = { id: 'space-1' };
       vi.mocked(
         licensingFrameworkService.getLicensePlanOrFail
       ).mockResolvedValue({
         type: LicensingCredentialBasedPlanType.SPACE_FEATURE_FLAG,
       });
-      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue({
-        id: 'space-1',
-        agent: { id: 'agent-1' },
-      });
-      vi.mocked(licenseIssuerService.assignLicensePlan).mockResolvedValue({
-        id: 'agent-1',
-      });
+      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(space);
+      vi.mocked(licenseIssuerService.assignLicensePlan).mockResolvedValue(
+        space
+      );
 
       await expect(
         service.assignLicensePlanToSpace(
@@ -155,40 +132,17 @@ describe('AdminLicensingService', () => {
       ).rejects.toThrow(ValidationException);
     });
 
-    it('should throw EntityNotInitializedException when space has no agent', async () => {
-      vi.mocked(
-        licensingFrameworkService.getLicensePlanOrFail
-      ).mockResolvedValue({
-        type: LicensingCredentialBasedPlanType.SPACE_PLAN,
-      });
-      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue({
-        id: 'space-1',
-        agent: undefined,
-      });
-
-      await expect(
-        service.revokeLicensePlanFromSpace(
-          { spaceID: 'space-1', licensePlanID: 'lp-1' },
-          'licensing-1'
-        )
-      ).rejects.toThrow(EntityNotInitializedException);
-    });
-
     it('should revoke license plan and return space on success', async () => {
       const licensePlan = {
         type: LicensingCredentialBasedPlanType.SPACE_PLAN,
       };
-      const agent = { id: 'agent-1' };
-      const updatedAgent = { id: 'agent-1', credentials: [] };
+      const space = { id: 'space-1' };
       vi.mocked(
         licensingFrameworkService.getLicensePlanOrFail
       ).mockResolvedValue(licensePlan);
-      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue({
-        id: 'space-1',
-        agent,
-      });
+      vi.mocked(spaceService.getSpaceOrFail).mockResolvedValue(space);
       vi.mocked(licenseIssuerService.revokeLicensePlan).mockResolvedValue(
-        updatedAgent
+        space
       );
 
       const result = await service.revokeLicensePlanFromSpace(
@@ -196,12 +150,13 @@ describe('AdminLicensingService', () => {
         'licensing-1'
       );
 
-      expect(result.agent).toBe(updatedAgent);
+      // Space IS the Actor - space.id passed as actorID
       expect(licenseIssuerService.revokeLicensePlan).toHaveBeenCalledWith(
-        agent,
+        'space-1',
         licensePlan,
         'space-1'
       );
+      expect(result.id).toBe('space-1');
     });
   });
 
@@ -221,40 +176,19 @@ describe('AdminLicensingService', () => {
       ).rejects.toThrow(ValidationException);
     });
 
-    it('should throw EntityNotInitializedException when account has no agent', async () => {
-      vi.mocked(
-        licensingFrameworkService.getLicensePlanOrFail
-      ).mockResolvedValue({
-        type: LicensingCredentialBasedPlanType.ACCOUNT_PLAN,
-      });
-      vi.mocked(accountLookupService.getAccountOrFail).mockResolvedValue({
-        id: 'acc-1',
-        agent: undefined,
-      });
-
-      await expect(
-        service.assignLicensePlanToAccount(
-          { accountID: 'acc-1', licensePlanID: 'lp-1' },
-          'licensing-1'
-        )
-      ).rejects.toThrow(EntityNotInitializedException);
-    });
-
     it('should assign license plan and return account on success', async () => {
       const licensePlan = {
         type: LicensingCredentialBasedPlanType.ACCOUNT_PLAN,
       };
-      const agent = { id: 'agent-1' };
-      const updatedAgent = { id: 'agent-1', credentials: ['cred'] };
+      const account = { id: 'acc-1', credentials: [{ id: 'cred-1' }] };
       vi.mocked(
         licensingFrameworkService.getLicensePlanOrFail
       ).mockResolvedValue(licensePlan);
-      vi.mocked(accountLookupService.getAccountOrFail).mockResolvedValue({
-        id: 'acc-1',
-        agent,
-      });
+      vi.mocked(accountLookupService.getAccountOrFail).mockResolvedValue(
+        account
+      );
       vi.mocked(licenseIssuerService.assignLicensePlan).mockResolvedValue(
-        updatedAgent
+        account
       );
 
       const result = await service.assignLicensePlanToAccount(
@@ -262,7 +196,13 @@ describe('AdminLicensingService', () => {
         'licensing-1'
       );
 
-      expect(result.agent).toBe(updatedAgent);
+      // Account IS the Actor - account.id passed as actorID
+      expect(licenseIssuerService.assignLicensePlan).toHaveBeenCalledWith(
+        'acc-1',
+        licensePlan,
+        'acc-1'
+      );
+      expect(result.id).toBe('acc-1');
     });
 
     it('should accept ACCOUNT_FEATURE_FLAG type as valid for accounts', async () => {
@@ -273,10 +213,10 @@ describe('AdminLicensingService', () => {
       });
       vi.mocked(accountLookupService.getAccountOrFail).mockResolvedValue({
         id: 'acc-1',
-        agent: { id: 'agent-1' },
+        credentials: [{ id: 'cred-1' }],
       });
       vi.mocked(licenseIssuerService.assignLicensePlan).mockResolvedValue({
-        id: 'agent-1',
+        id: 'acc-1',
       });
 
       await expect(
@@ -304,40 +244,19 @@ describe('AdminLicensingService', () => {
       ).rejects.toThrow(ValidationException);
     });
 
-    it('should throw EntityNotInitializedException when account has no agent', async () => {
-      vi.mocked(
-        licensingFrameworkService.getLicensePlanOrFail
-      ).mockResolvedValue({
-        type: LicensingCredentialBasedPlanType.ACCOUNT_PLAN,
-      });
-      vi.mocked(accountLookupService.getAccountOrFail).mockResolvedValue({
-        id: 'acc-1',
-        agent: undefined,
-      });
-
-      await expect(
-        service.revokeLicensePlanFromAccount(
-          { accountID: 'acc-1', licensePlanID: 'lp-1' },
-          'licensing-1'
-        )
-      ).rejects.toThrow(EntityNotInitializedException);
-    });
-
     it('should revoke license plan and return account on success', async () => {
       const licensePlan = {
         type: LicensingCredentialBasedPlanType.ACCOUNT_PLAN,
       };
-      const agent = { id: 'agent-1' };
-      const updatedAgent = { id: 'agent-1', credentials: [] };
+      const account = { id: 'acc-1', credentials: [{ id: 'cred-1' }] };
       vi.mocked(
         licensingFrameworkService.getLicensePlanOrFail
       ).mockResolvedValue(licensePlan);
-      vi.mocked(accountLookupService.getAccountOrFail).mockResolvedValue({
-        id: 'acc-1',
-        agent,
-      });
+      vi.mocked(accountLookupService.getAccountOrFail).mockResolvedValue(
+        account
+      );
       vi.mocked(licenseIssuerService.revokeLicensePlan).mockResolvedValue(
-        updatedAgent
+        account
       );
 
       const result = await service.revokeLicensePlanFromAccount(
@@ -345,12 +264,13 @@ describe('AdminLicensingService', () => {
         'licensing-1'
       );
 
-      expect(result.agent).toBe(updatedAgent);
+      // Account IS the Actor - account.id passed as actorID
       expect(licenseIssuerService.revokeLicensePlan).toHaveBeenCalledWith(
-        agent,
+        'acc-1',
         licensePlan,
         'acc-1'
       );
+      expect(result.id).toBe('acc-1');
     });
   });
 });

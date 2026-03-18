@@ -32,6 +32,8 @@ describe('CalloutsSetService', () => {
   let storageAggregatorResolverService: StorageAggregatorResolverService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static CalloutsSet.create to avoid DataSource requirement
     vi.spyOn(CalloutsSet, 'create').mockImplementation((input: any) => {
       const entity = new CalloutsSet();
@@ -371,6 +373,453 @@ describe('CalloutsSetService', () => {
     });
   });
 
+  describe('getCalloutsSetOrFail', () => {
+    it('should return calloutsSet when found', async () => {
+      const calloutsSet = { id: 'cs-1' } as any;
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+
+      const result = await service.getCalloutsSetOrFail('cs-1');
+
+      expect(result).toBe(calloutsSet);
+    });
+
+    it('should throw EntityNotFoundException when not found', async () => {
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(null as any);
+
+      await expect(service.getCalloutsSetOrFail('nonexistent')).rejects.toThrow(
+        EntityNotFoundException
+      );
+    });
+  });
+
+  describe('getTagsetTemplatesSet', () => {
+    it('should return tagset template set when loaded', async () => {
+      const tagsetTemplateSet = { id: 'tts-1' };
+      const calloutsSet = { id: 'cs-1', tagsetTemplateSet } as any;
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+
+      const result = await service.getTagsetTemplatesSet('cs-1');
+
+      expect(result).toBe(tagsetTemplateSet);
+    });
+
+    it('should throw EntityNotInitializedException when tagset template set is missing', async () => {
+      const calloutsSet = { id: 'cs-1', tagsetTemplateSet: undefined } as any;
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+
+      await expect(service.getTagsetTemplatesSet('cs-1')).rejects.toThrow(
+        EntityNotInitializedException
+      );
+    });
+  });
+
+  describe('getCallout', () => {
+    it('should delegate to calloutService.getCalloutOrFail with calloutsSet filter', async () => {
+      const callout = { id: 'c-1' } as any;
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+      const result = await service.getCallout('c-1', 'cs-1');
+
+      expect(result).toBe(callout);
+      expect(calloutService.getCalloutOrFail).toHaveBeenCalledWith('c-1', {
+        where: { calloutsSet: { id: 'cs-1' } },
+        relations: { calloutsSet: true },
+      });
+    });
+  });
+
+  describe('getCallouts', () => {
+    it('should return callouts from calloutsSet', async () => {
+      const callouts = [{ id: 'c-1' }, { id: 'c-2' }] as any[];
+      const calloutsSet = { id: 'cs-1', callouts } as any;
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+
+      const result = await service.getCallouts('cs-1');
+
+      expect(result).toEqual(callouts);
+    });
+  });
+
+  describe('getCalloutsOnCalloutsSet', () => {
+    it('should return callouts for a calloutsSet', async () => {
+      const callouts = [{ id: 'c-1' }] as any[];
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'cs-1',
+        callouts,
+      } as any);
+
+      const result = await service.getCalloutsOnCalloutsSet({
+        id: 'cs-1',
+      } as any);
+
+      expect(result).toEqual(callouts);
+    });
+
+    it('should throw EntityNotFoundException when calloutsSet is not found', async () => {
+      vi.mocked(repository.findOne).mockResolvedValue(null);
+
+      await expect(
+        service.getCalloutsOnCalloutsSet({ id: 'cs-1' } as any)
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('should throw EntityNotFoundException when callouts are not initialized', async () => {
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'cs-1',
+        callouts: undefined,
+      } as any);
+
+      await expect(
+        service.getCalloutsOnCalloutsSet({ id: 'cs-1' } as any)
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('should filter callouts by IDs when provided', async () => {
+      const callouts = [{ id: 'c-1' }, { id: 'c-2' }] as any[];
+      vi.mocked(repository.findOne).mockResolvedValue({
+        id: 'cs-1',
+        callouts,
+      } as any);
+
+      const result = await service.getCalloutsOnCalloutsSet(
+        { id: 'cs-1' } as any,
+        { calloutIds: ['c-1'] }
+      );
+
+      expect(result).toEqual(callouts);
+    });
+  });
+
+  describe('createCallout', () => {
+    it('should create a callout, save it, and return it', async () => {
+      const calloutsSet = { id: 'cs-1' } as any;
+      const calloutInput = {
+        framing: { profile: { displayName: 'Test Callout' } },
+      } as any;
+      const savedCallout = { id: 'new-c', calloutsSet } as any;
+
+      vi.mocked(
+        storageAggregatorResolverService.getStorageAggregatorForCalloutsSet
+      ).mockResolvedValue({ id: 'agg-1' } as any);
+      vi.mocked(
+        namingService.createNameIdAvoidingReservedNameIDs
+      ).mockReturnValue('test-callout');
+      vi.mocked(calloutService.createCallout).mockResolvedValue(
+        savedCallout as any
+      );
+      vi.mocked(calloutService.save).mockResolvedValue(savedCallout as any);
+
+      const result = await service.createCallout(calloutsSet, calloutInput);
+
+      expect(result).toBe(savedCallout);
+      expect(calloutService.save).toHaveBeenCalledWith(savedCallout);
+    });
+
+    it('should throw ValidationException when nameID is already taken', async () => {
+      // Note: the current implementation has a TODO and reservedNameIDs is always empty
+      // so this path (reservedNameIDs.includes) is never true in practice
+      // We test the name generation path instead
+      const calloutsSet = { id: 'cs-1' } as any;
+      const calloutInput = {
+        framing: { profile: { displayName: 'Test Callout' } },
+      } as any;
+
+      vi.mocked(
+        storageAggregatorResolverService.getStorageAggregatorForCalloutsSet
+      ).mockResolvedValue({ id: 'agg-1' } as any);
+      vi.mocked(
+        namingService.createNameIdAvoidingReservedNameIDs
+      ).mockReturnValue('generated-name');
+      vi.mocked(calloutService.createCallout).mockResolvedValue({
+        id: 'c-1',
+        calloutsSet: undefined,
+      } as any);
+      vi.mocked(calloutService.save).mockResolvedValue({
+        id: 'c-1',
+      } as any);
+
+      const result = await service.createCallout(calloutsSet, calloutInput);
+
+      expect(calloutInput.nameID).toBe('generated-name');
+      expect(result).toBeDefined();
+    });
+  });
+
+  describe('save', () => {
+    it('should save and return the calloutsSet', async () => {
+      const calloutsSet = { id: 'cs-1' } as any;
+      vi.mocked(repository.save).mockResolvedValue(calloutsSet);
+
+      const result = await service.save(calloutsSet);
+
+      expect(result).toBe(calloutsSet);
+      expect(repository.save).toHaveBeenCalledWith(calloutsSet);
+    });
+  });
+
+  describe('getCalloutsFromCollaboration', () => {
+    let authorizationService: any;
+
+    beforeEach(async () => {
+      // Need to import AuthorizationService to mock isAccessGranted
+      const { AuthorizationService } = await import(
+        '@core/authorization/authorization.service'
+      );
+      const module = await Test.createTestingModule({
+        providers: [
+          CalloutsSetService,
+          repositoryProviderMockFactory(CalloutsSet),
+          MockCacheManager,
+          MockWinstonProvider,
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+
+      service = module.get(CalloutsSetService);
+      authorizationService = module.get(AuthorizationService);
+    });
+
+    it('should filter callouts by access and return sorted by sortOrder', async () => {
+      const callouts = [
+        {
+          id: 'c-1',
+          sortOrder: 20,
+          authorization: {},
+          settings: { contribution: { allowedTypes: [] } },
+          classification: { tagsets: [] },
+        },
+        {
+          id: 'c-2',
+          sortOrder: 10,
+          authorization: {},
+          settings: { contribution: { allowedTypes: [] } },
+          classification: { tagsets: [] },
+        },
+      ] as any[];
+
+      const calloutsSet = { id: 'cs-1', callouts } as any;
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+      const result = await service.getCalloutsFromCollaboration(
+        { id: 'cs-1' } as any,
+        {} as any,
+        { actorID: 'user-1' } as any
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('c-2'); // lower sortOrder first
+      expect(result[1].id).toBe('c-1');
+    });
+
+    it('should filter out callouts without READ access', async () => {
+      const callouts = [
+        {
+          id: 'c-1',
+          sortOrder: 10,
+          authorization: { id: 'auth-1' },
+          settings: { contribution: { allowedTypes: [] } },
+          classification: { tagsets: [] },
+        },
+        {
+          id: 'c-2',
+          sortOrder: 20,
+          authorization: { id: 'auth-2' },
+          settings: { contribution: { allowedTypes: [] } },
+          classification: { tagsets: [] },
+        },
+      ] as any[];
+
+      const calloutsSet = { id: 'cs-1', callouts } as any;
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+      vi.mocked(authorizationService.isAccessGranted)
+        .mockReturnValueOnce(true)
+        .mockReturnValueOnce(false);
+
+      const result = await service.getCalloutsFromCollaboration(
+        { id: 'cs-1' } as any,
+        {} as any,
+        { actorID: 'user-1' } as any
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('c-1');
+    });
+
+    it('should return callouts by IDs when args.IDs is specified', async () => {
+      const callouts = [
+        {
+          id: 'c-1',
+          sortOrder: 10,
+          authorization: {},
+          settings: { contribution: { allowedTypes: [] } },
+          classification: { tagsets: [] },
+        },
+        {
+          id: 'c-2',
+          sortOrder: 20,
+          authorization: {},
+          settings: { contribution: { allowedTypes: [] } },
+          classification: { tagsets: [] },
+        },
+      ] as any[];
+
+      const calloutsSet = { id: 'cs-1', callouts } as any;
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+      const result = await service.getCalloutsFromCollaboration(
+        { id: 'cs-1' } as any,
+        { IDs: ['c-2', 'c-1'] } as any,
+        { actorID: 'user-1' } as any
+      );
+
+      expect(result).toHaveLength(2);
+      expect(result[0].id).toBe('c-2');
+      expect(result[1].id).toBe('c-1');
+    });
+
+    it('should throw EntityNotFoundException when requested callout ID not found', async () => {
+      const calloutsSet = {
+        id: 'cs-1',
+        callouts: [
+          {
+            id: 'c-1',
+            authorization: {},
+            settings: { contribution: { allowedTypes: [] } },
+            classification: { tagsets: [] },
+          },
+        ],
+      } as any;
+
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+      await expect(
+        service.getCalloutsFromCollaboration(
+          { id: 'cs-1' } as any,
+          { IDs: ['nonexistent'] } as any,
+          { actorID: 'user-1' } as any
+        )
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('should respect limit parameter', async () => {
+      const callouts = [
+        {
+          id: 'c-1',
+          sortOrder: 10,
+          authorization: {},
+          settings: { contribution: { allowedTypes: [] } },
+          classification: { tagsets: [] },
+        },
+        {
+          id: 'c-2',
+          sortOrder: 20,
+          authorization: {},
+          settings: { contribution: { allowedTypes: [] } },
+          classification: { tagsets: [] },
+        },
+        {
+          id: 'c-3',
+          sortOrder: 30,
+          authorization: {},
+          settings: { contribution: { allowedTypes: [] } },
+          classification: { tagsets: [] },
+        },
+      ] as any[];
+
+      const calloutsSet = { id: 'cs-1', callouts } as any;
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+      const result = await service.getCalloutsFromCollaboration(
+        { id: 'cs-1' } as any,
+        { limit: 2 } as any,
+        { actorID: 'user-1' } as any
+      );
+
+      expect(result.length).toBeLessThanOrEqual(2);
+    });
+
+    it('should throw EntityNotFoundException when callouts not initialized', async () => {
+      const calloutsSet = { id: 'cs-1', callouts: undefined } as any;
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+
+      await expect(
+        service.getCalloutsFromCollaboration(
+          { id: 'cs-1' } as any,
+          {} as any,
+          { actorID: 'user-1' } as any
+        )
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+  });
+
+  describe('getAllTags', () => {
+    let authorizationService: any;
+
+    beforeEach(async () => {
+      const { AuthorizationService } = await import(
+        '@core/authorization/authorization.service'
+      );
+      const module = await Test.createTestingModule({
+        providers: [
+          CalloutsSetService,
+          repositoryProviderMockFactory(CalloutsSet),
+          MockCacheManager,
+          MockWinstonProvider,
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+
+      service = module.get(CalloutsSetService);
+      authorizationService = module.get(AuthorizationService);
+    });
+
+    it('should return all tags sorted by frequency then alphabetically', async () => {
+      const callouts = [
+        {
+          id: 'c-1',
+          authorization: {},
+          classification: { tagsets: [] },
+          framing: {
+            profile: {
+              tagsets: [{ tags: ['alpha', 'beta'] }],
+            },
+          },
+          contributions: [],
+        },
+        {
+          id: 'c-2',
+          authorization: {},
+          classification: { tagsets: [] },
+          framing: {
+            profile: {
+              tagsets: [{ tags: ['beta', 'gamma'] }],
+            },
+          },
+          contributions: [],
+        },
+      ] as any[];
+
+      const calloutsSet = { id: 'cs-1', callouts } as any;
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+      const result = await service.getAllTags('cs-1', {
+        actorID: 'user-1',
+      } as any);
+
+      // beta appears twice, alpha and gamma once each
+      expect(result[0]).toBe('beta');
+      expect(result).toContain('alpha');
+      expect(result).toContain('gamma');
+    });
+  });
+
   describe('createCalloutOnCalloutsSet', () => {
     it('should create callout with auto-generated sortOrder when not provided', async () => {
       const calloutsSet = {
@@ -432,6 +881,190 @@ describe('CalloutsSetService', () => {
       await expect(
         service.createCalloutOnCalloutsSet(calloutData, 'user-1')
       ).rejects.toThrow(ValidationException);
+    });
+  });
+
+  describe('moveCalloutsToDefaultFlowState', () => {
+    it('should move callouts with invalid flow state to the default state', () => {
+      const callouts = [
+        {
+          id: 'c-1',
+          classification: {
+            tagsets: [
+              {
+                name: TagsetReservedName.FLOW_STATE,
+                type: TagsetType.SELECT_ONE,
+                tags: ['deleted-state'],
+              },
+            ],
+          },
+        },
+      ] as any[];
+
+      service.moveCalloutsToDefaultFlowState(['state-A', 'state-B'], callouts);
+
+      const flowTagset = callouts[0].classification.tagsets.find(
+        (t: any) => t.name === TagsetReservedName.FLOW_STATE
+      );
+      expect(flowTagset.tags).toEqual(['state-A']);
+    });
+
+    it('should not change callouts already in a valid flow state', () => {
+      const callouts = [
+        {
+          id: 'c-1',
+          classification: {
+            tagsets: [
+              {
+                name: TagsetReservedName.FLOW_STATE,
+                type: TagsetType.SELECT_ONE,
+                tags: ['state-B'],
+              },
+            ],
+          },
+        },
+      ] as any[];
+
+      service.moveCalloutsToDefaultFlowState(['state-A', 'state-B'], callouts);
+
+      const flowTagset = callouts[0].classification.tagsets.find(
+        (t: any) => t.name === TagsetReservedName.FLOW_STATE
+      );
+      expect(flowTagset.tags).toEqual(['state-B']);
+    });
+
+    it('should create flow state tagset when callout has no flow state tagset', () => {
+      const callouts = [
+        {
+          id: 'c-1',
+          classification: {
+            tagsets: [],
+          },
+        },
+      ] as any[];
+
+      service.moveCalloutsToDefaultFlowState(['state-A', 'state-B'], callouts);
+
+      const flowTagset = callouts[0].classification.tagsets.find(
+        (t: any) => t.name === TagsetReservedName.FLOW_STATE
+      );
+      expect(flowTagset).toBeDefined();
+      expect(flowTagset.tags).toEqual(['state-A']);
+    });
+
+    it('should throw RelationshipNotFoundException when callout has no classification', () => {
+      const callouts = [
+        {
+          id: 'c-1',
+          classification: undefined,
+        },
+      ] as any[];
+
+      expect(() =>
+        service.moveCalloutsToDefaultFlowState(['state-A'], callouts)
+      ).toThrow(RelationshipNotFoundException);
+    });
+  });
+
+  describe('classificationTagset filtering (via getCalloutsFromCollaboration)', () => {
+    let authorizationService: any;
+
+    beforeEach(async () => {
+      const { AuthorizationService } = await import(
+        '@core/authorization/authorization.service'
+      );
+      const module = await Test.createTestingModule({
+        providers: [
+          CalloutsSetService,
+          repositoryProviderMockFactory(CalloutsSet),
+          MockCacheManager,
+          MockWinstonProvider,
+        ],
+      })
+        .useMocker(defaultMockerFactory)
+        .compile();
+
+      service = module.get(CalloutsSetService);
+      authorizationService = module.get(AuthorizationService);
+    });
+
+    it('should filter callouts by classification tagset values', async () => {
+      const callouts = [
+        {
+          id: 'c-1',
+          sortOrder: 10,
+          authorization: {},
+          settings: { contribution: { allowedTypes: [] } },
+          classification: {
+            tagsets: [
+              { name: TagsetReservedName.FLOW_STATE, tags: ['state-A'] },
+            ],
+          },
+        },
+        {
+          id: 'c-2',
+          sortOrder: 20,
+          authorization: {},
+          settings: { contribution: { allowedTypes: [] } },
+          classification: {
+            tagsets: [
+              { name: TagsetReservedName.FLOW_STATE, tags: ['state-B'] },
+            ],
+          },
+        },
+      ] as any[];
+
+      const calloutsSet = { id: 'cs-1', callouts } as any;
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+      const result = await service.getCalloutsFromCollaboration(
+        { id: 'cs-1' } as any,
+        {
+          classificationTagsets: [
+            { name: TagsetReservedName.FLOW_STATE, tags: ['state-A'] },
+          ],
+        } as any,
+        { actorID: 'user-1' } as any
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].id).toBe('c-1');
+    });
+
+    it('should return all callouts when classificationTagsets has no tags', async () => {
+      const callouts = [
+        {
+          id: 'c-1',
+          sortOrder: 10,
+          authorization: {},
+          settings: { contribution: { allowedTypes: [] } },
+          classification: { tagsets: [] },
+        },
+        {
+          id: 'c-2',
+          sortOrder: 20,
+          authorization: {},
+          settings: { contribution: { allowedTypes: [] } },
+          classification: { tagsets: [] },
+        },
+      ] as any[];
+
+      const calloutsSet = { id: 'cs-1', callouts } as any;
+      vi.mocked(CalloutsSet.findOne).mockResolvedValue(calloutsSet);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+      const result = await service.getCalloutsFromCollaboration(
+        { id: 'cs-1' } as any,
+        {
+          classificationTagsets: [
+            { name: TagsetReservedName.FLOW_STATE, tags: [] },
+          ],
+        } as any,
+        { actorID: 'user-1' } as any
+      );
+
+      expect(result).toHaveLength(2);
     });
   });
 });

@@ -25,10 +25,12 @@ describe('CalloutTransferService', () => {
   let profileService: ProfileService;
   let tagsetService: TagsetService;
   let storageAggregatorResolverService: StorageAggregatorResolverService;
-  let classificationService: ClassificationService;
-  let urlGeneratorCacheService: UrlGeneratorCacheService;
+  let _classificationService: ClassificationService;
+  let _urlGeneratorCacheService: UrlGeneratorCacheService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalloutTransferService,
@@ -48,8 +50,8 @@ describe('CalloutTransferService', () => {
     storageAggregatorResolverService = module.get(
       StorageAggregatorResolverService
     );
-    classificationService = module.get(ClassificationService);
-    urlGeneratorCacheService = module.get(UrlGeneratorCacheService);
+    _classificationService = module.get(ClassificationService);
+    _urlGeneratorCacheService = module.get(UrlGeneratorCacheService);
   });
 
   describe('transferCallout', () => {
@@ -134,10 +136,7 @@ describe('CalloutTransferService', () => {
         profileService.convertTagsetTemplatesToCreateTagsetInput
       ).mockReturnValue([]);
 
-      const result = await service.transferCallout(
-        callout,
-        targetCalloutsSet
-      );
+      const result = await service.transferCallout(callout, targetCalloutsSet);
 
       expect(
         calloutsSetService.validateNameIDNotInUseOrFail
@@ -231,7 +230,7 @@ describe('CalloutTransferService', () => {
         contributions: undefined, // not initialized
       } as any);
 
-      expect(
+      await expect(
         service.transferCallout(callout, targetCalloutsSet)
       ).rejects.toThrow(EntityNotInitializedException);
     });

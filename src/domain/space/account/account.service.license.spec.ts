@@ -1,7 +1,7 @@
 import { LogContext } from '@common/enums';
 import { LicenseEntitlementDataType } from '@common/enums/license.entitlement.data.type';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
-import { AgentService } from '@domain/agent/agent/agent.service';
+import { ActorService } from '@domain/actor/actor/actor.service';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -37,7 +37,7 @@ describe('AccountLicenseService', () => {
         AccountLicenseService,
         { provide: LicenseService, useValue: mockLicenseService },
         { provide: AccountService, useValue: {} },
-        { provide: AgentService, useValue: {} },
+        { provide: ActorService, useValue: {} },
         { provide: SpaceLicenseService, useValue: {} },
         { provide: LicensingCredentialBasedService, useValue: {} },
         { provide: LicensingWingbackSubscriptionService, useValue: {} },
@@ -798,6 +798,245 @@ describe('AccountLicenseService', () => {
       );
       expect(innovationPackEntitlement?.limit).toBe(2); // From credential-based
       expect(innovationPackEntitlement?.enabled).toBe(true);
+    });
+  });
+
+  describe('applyLicensePolicy', () => {
+    let mockAccountService: any;
+    let mockLicenseService: any;
+    let mockCredentialBasedService: any;
+    let mockWingbackService: any;
+    let mockSpaceLicenseService: any;
+
+    beforeEach(() => {
+      mockAccountService = {
+        getAccountOrFail: vi.fn(),
+      };
+      mockLicenseService = {
+        reset: vi.fn().mockImplementation(license => license),
+      };
+      mockCredentialBasedService = {
+        getEntitlementIfGranted: vi.fn().mockResolvedValue(undefined),
+      };
+      mockWingbackService = {
+        isEnabled: vi.fn().mockReturnValue(false),
+        getEntitlements: vi.fn(),
+      };
+      mockSpaceLicenseService = {
+        applyLicensePolicy: vi.fn().mockResolvedValue([]),
+      };
+
+      service['accountService'] = mockAccountService;
+      service['licenseService'] = mockLicenseService;
+      service['licensingCredentialBasedService'] = mockCredentialBasedService;
+      service['licensingWingbackSubscriptionService'] = mockWingbackService;
+      service['spaceLicenseService'] = mockSpaceLicenseService;
+    });
+
+    it('should throw when required relations are missing', async () => {
+      mockAccountService.getAccountOrFail.mockResolvedValue({
+        id: 'account-1',
+        spaces: undefined,
+        credentials: [],
+        license: { id: 'lic-1', entitlements: [] },
+        baselineLicensePlan: {},
+      });
+
+      await expect(service.applyLicensePolicy('account-1')).rejects.toThrow(
+        'Unable to load Account with entities at start of license reset'
+      );
+    });
+
+    it('should throw when credentials are missing', async () => {
+      mockAccountService.getAccountOrFail.mockResolvedValue({
+        id: 'account-1',
+        spaces: [],
+        credentials: undefined,
+        license: { id: 'lic-1', entitlements: [] },
+        baselineLicensePlan: {},
+      });
+
+      await expect(service.applyLicensePolicy('account-1')).rejects.toThrow(
+        'Unable to load Account with entities at start of license reset'
+      );
+    });
+
+    it('should throw when baselineLicensePlan is missing', async () => {
+      mockAccountService.getAccountOrFail.mockResolvedValue({
+        id: 'account-1',
+        spaces: [],
+        credentials: [],
+        license: { id: 'lic-1', entitlements: [] },
+        baselineLicensePlan: undefined,
+      });
+
+      await expect(service.applyLicensePolicy('account-1')).rejects.toThrow(
+        'Unable to load Account with entities at start of license reset'
+      );
+    });
+
+    it('should apply license policy to account and its spaces', async () => {
+      const mockLicense = {
+        id: 'lic-1',
+        entitlements: [
+          {
+            id: 'e1',
+            type: LicenseEntitlementType.ACCOUNT_SPACE_FREE,
+            limit: 0,
+            enabled: false,
+          },
+        ],
+      };
+      mockAccountService.getAccountOrFail.mockResolvedValue({
+        id: 'account-1',
+        spaces: [{ id: 'space-1' }],
+        credentials: [],
+        license: mockLicense,
+        baselineLicensePlan: {
+          spaceFree: 1,
+          spacePlus: 0,
+          spacePremium: 0,
+          virtualContributor: 0,
+          innovationPacks: 0,
+          startingPages: 0,
+        },
+      });
+
+      const result = await service.applyLicensePolicy('account-1');
+
+      expect(result).toBeDefined();
+      expect(result.length).toBeGreaterThanOrEqual(1);
+      expect(mockSpaceLicenseService.applyLicensePolicy).toHaveBeenCalledWith(
+        'space-1'
+      );
+    });
+
+    it('should return licenses from both account and spaces', async () => {
+      const mockLicense = {
+        id: 'lic-1',
+        entitlements: [],
+      };
+      const spaceLicense = { id: 'space-lic-1' };
+      mockAccountService.getAccountOrFail.mockResolvedValue({
+        id: 'account-1',
+        spaces: [{ id: 'space-1' }],
+        credentials: [],
+        license: mockLicense,
+        baselineLicensePlan: {
+          spaceFree: 0,
+          spacePlus: 0,
+          spacePremium: 0,
+          virtualContributor: 0,
+          innovationPacks: 0,
+          startingPages: 0,
+        },
+      });
+      mockSpaceLicenseService.applyLicensePolicy.mockResolvedValue([
+        spaceLicense,
+      ]);
+
+      const result = await service.applyLicensePolicy('account-1');
+
+      expect(result).toContain(mockLicense);
+      expect(result).toContain(spaceLicense);
+    });
+  });
+
+  describe('createWingbackAccount', () => {
+    let mockAccountService: any;
+    let mockActorService: any;
+    let mockWingbackService: any;
+
+    beforeEach(() => {
+      mockAccountService = {
+        getAccountAndDetails: vi.fn(),
+        updateExternalSubscriptionId: vi.fn().mockResolvedValue(undefined),
+        getAccountOrFail: vi.fn(),
+      };
+      mockActorService = {
+        grantCredentialOrFail: vi.fn().mockResolvedValue(undefined),
+      };
+      mockWingbackService = {
+        createCustomer: vi.fn().mockResolvedValue({ id: 'wingback-123' }),
+        isEnabled: vi.fn().mockReturnValue(false),
+        getEntitlements: vi.fn(),
+      };
+
+      service['accountService'] = mockAccountService;
+      service['actorService'] = mockActorService;
+      service['licensingWingbackSubscriptionService'] = mockWingbackService;
+    });
+
+    it('should throw when account not found', async () => {
+      mockAccountService.getAccountAndDetails.mockResolvedValue(undefined);
+
+      await expect(service.createWingbackAccount('missing')).rejects.toThrow(
+        'Account not found'
+      );
+    });
+
+    it('should throw when account already has external subscription', async () => {
+      mockAccountService.getAccountAndDetails.mockResolvedValue({
+        externalSubscriptionID: 'existing-sub',
+      });
+
+      await expect(service.createWingbackAccount('account-1')).rejects.toThrow(
+        'Account already has an external subscription'
+      );
+    });
+
+    it('should create Wingback customer for user account', async () => {
+      mockAccountService.getAccountAndDetails.mockResolvedValue({
+        accountID: 'account-1',
+        externalSubscriptionID: undefined,
+        user: { id: 'user-1', email: 'user@test.com', name: 'Test User' },
+        organization: undefined,
+      });
+      // Mock applyLicensePolicy to avoid complex chain
+      mockAccountService.getAccountOrFail.mockResolvedValue({
+        id: 'account-1',
+        spaces: [],
+        credentials: [],
+        license: { id: 'lic-1', entitlements: [] },
+        baselineLicensePlan: {
+          spaceFree: 0,
+          spacePlus: 0,
+          spacePremium: 0,
+          virtualContributor: 0,
+          innovationPacks: 0,
+          startingPages: 0,
+        },
+      });
+      service['licenseService'] = {
+        reset: vi.fn().mockImplementation(l => l),
+      } as any;
+
+      const result = await service.createWingbackAccount('account-1');
+
+      expect(result).toBe('wingback-123');
+      expect(mockWingbackService.createCustomer).toHaveBeenCalledWith({
+        name: 'Test User',
+        emails: { main: 'user@test.com' },
+      });
+      expect(
+        mockAccountService.updateExternalSubscriptionId
+      ).toHaveBeenCalledWith('account-1', 'wingback-123');
+    });
+
+    it('should handle credential grant failure gracefully', async () => {
+      mockAccountService.getAccountAndDetails.mockResolvedValue({
+        accountID: 'account-1',
+        externalSubscriptionID: undefined,
+        user: { id: 'user-1', email: 'user@test.com', name: 'Test User' },
+        organization: undefined,
+      });
+      mockActorService.grantCredentialOrFail.mockRejectedValue(
+        new Error('Already exists')
+      );
+
+      const result = await service.createWingbackAccount('account-1');
+
+      expect(result).toBe('wingback-123');
     });
   });
 });

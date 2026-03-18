@@ -22,13 +22,13 @@ import {
 import { AuthInterceptor } from '@core/interceptors';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { ActivityFeedModule } from '@domain/activity-feed';
-import { AgentModule } from '@domain/agent/agent/agent.module';
+import { ActorModule } from '@domain/actor/actor.module';
 import { ContributionMoveModule } from '@domain/collaboration/callout-contribution/callout.contribution.move.module';
 import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
-import { VirtualContributorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
+import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { TaskGraphqlModule } from '@domain/task/task.module';
@@ -59,6 +59,7 @@ import { RegistrationModule } from '@services/api/registration/registration.modu
 import { RolesModule } from '@services/api/roles/roles.module';
 import { SearchModule } from '@services/api/search/search.module';
 import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.module';
+import { CalendarEventIcsModule } from '@services/api-rest/calendar-event-ics/calendar-event-ics.module';
 import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-document-integration';
@@ -193,6 +194,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
           cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
           uploads: false,
           autoSchemaFile: true,
+          inheritResolversFromInterfaces: true,
           introspection: true,
           playground: {
             settings: {
@@ -264,7 +266,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
             'graphql-ws': {
               onNext: (ctx, message, args, result) => {
                 const context = args.contextValue as IGraphQLContext;
-                const expiry = context.req.user.expiry;
+                const expiry = context.req?.user?.expiry;
                 // if the session has expired, close the socket
                 if (expiry && expiry < Date.now()) {
                   (ctx as WebsocketContext).extra.socket.close(
@@ -301,7 +303,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     AdminGeoLocationModule,
     LicensingWingbackSubscriptionModule,
     WingbackManagerModule,
-    AgentModule,
+    ActorModule,
     MessageModule,
     MessageReactionModule,
     NotificationRecipientsModule,
@@ -316,9 +318,10 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     GeoLocationModule,
     ContributionReporterModule,
     InnovationHubModule,
+    CalendarEventIcsModule,
     IdentityResolveModule,
     MeModule,
-    VirtualContributorModule,
+    VirtualActorModule,
     InputCreatorModule,
     LookupModule,
     LookupByNameModule,

@@ -7,7 +7,7 @@ import {
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
   SUBSCRIPTION_ROOM_EVENT,
-  SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+  SUBSCRIPTION_VIRTUAL_UPDATED,
 } from '@src/common/constants';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -25,6 +25,8 @@ describe('SubscriptionPublishService', () => {
   let conversationPubSub: { publish: Mock };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     activityPubSub = { publish: vi.fn().mockResolvedValue(undefined) };
     roomPubSub = { publish: vi.fn().mockResolvedValue(undefined) };
     vcPubSub = { publish: vi.fn().mockResolvedValue(undefined) };
@@ -44,7 +46,7 @@ describe('SubscriptionPublishService', () => {
           useValue: roomPubSub,
         },
         {
-          provide: SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED,
+          provide: SUBSCRIPTION_VIRTUAL_UPDATED,
           useValue: vcPubSub,
         },
         {
@@ -145,7 +147,7 @@ describe('SubscriptionPublishService', () => {
     it('should publish a receipt event with MutationType.UPDATE', async () => {
       const room = { id: 'room-1' } as any;
       const receiptData = {
-        actorId: 'user-1',
+        actorID: 'user-1',
         eventId: 'evt-1',
         timestamp: 1234567890,
       };
@@ -172,7 +174,7 @@ describe('SubscriptionPublishService', () => {
       service.publishVirtualContributorUpdated(vc);
 
       expect(vcPubSub.publish).toHaveBeenCalledWith(
-        SubscriptionType.VIRTUAL_CONTRIBUTOR_UPDATED,
+        SubscriptionType.VIRTUAL_UPDATED,
         expect.objectContaining({
           virtualContributor: vc,
         })

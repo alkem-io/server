@@ -1,6 +1,6 @@
-import { vi } from 'vitest';
 import { UserGroupService } from '@domain/community/user-group/user-group.service';
 import { ValueProvider } from '@nestjs/common';
+import { vi } from 'vitest';
 import { PublicPart } from '../utils/public-part';
 
 export const MockUserGroupService: ValueProvider<PublicPart<UserGroupService>> =

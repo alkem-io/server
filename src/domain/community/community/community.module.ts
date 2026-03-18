@@ -8,7 +8,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
-import { VirtualContributorModule } from '../virtual-contributor/virtual.contributor.module';
+import { VirtualActorModule } from '../virtual-contributor/virtual.contributor.module';
 import { Community } from './community.entity';
 import { CommunityResolverFields } from './community.resolver.fields';
 import { CommunityResolverMutations } from './community.resolver.mutations';
@@ -25,7 +25,7 @@ import { CommunityAuthorizationService } from './community.service.authorization
     CommunicationModule,
     StorageAggregatorResolverModule,
     PlatformRolesAccessModule,
-    VirtualContributorModule,
+    VirtualActorModule,
     TypeOrmModule.forFeature([Community]),
   ],
   providers: [

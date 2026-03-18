@@ -1,6 +1,6 @@
 import { ExcalidrawContent } from '@common/interfaces';
 import { base64ToBuffer } from '@common/utils';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Whiteboard } from '@domain/common/whiteboard/types';
 import { DocumentService } from '@domain/storage/document/document.service';
@@ -22,7 +22,9 @@ export class AdminWhiteboardService {
     private documentAuthorizationService: DocumentAuthorizationService
   ) {}
 
-  public async uploadFilesFromContentToStorageBucket(agentInfo: AgentInfo) {
+  public async uploadFilesFromContentToStorageBucket(
+    actorContext: ActorContext
+  ) {
     // select the ids of the entities, needed for the save
     const options: FindManyOptions = {
       relations: {
@@ -47,7 +49,7 @@ export class AdminWhiteboardService {
 
     const whiteboardResults = await this._uploadFilesFromContentToStorageBucket(
       whiteboards,
-      agentInfo.userID
+      actorContext.actorID
     );
 
     return {

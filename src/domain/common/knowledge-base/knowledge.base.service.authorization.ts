@@ -3,7 +3,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
-import { ICredentialDefinition } from '@domain/agent/credential/credential.definition.interface';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { CalloutsSetAuthorizationService } from '@domain/collaboration/callouts-set/callouts.set.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';

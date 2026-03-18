@@ -1,5 +1,7 @@
+import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ISpaceSettingsCollaboration } from './space.settings.collaboration.interface';
+import { ISpaceSettingsLayout } from './space.settings.layout.interface';
 import { ISpaceSettingsMembership } from './space.settings.membership.interface';
 import { ISpaceSettingsPrivacy } from './space.settings.privacy.interface';
 
@@ -22,4 +24,17 @@ export abstract class ISpaceSettings {
     description: 'The collaboration settings for this Space.',
   })
   collaboration!: ISpaceSettingsCollaboration;
+
+  @Field(() => SpaceSortMode, {
+    nullable: false,
+    description:
+      'The sort mode for subspaces of this Space: Alphabetical or Custom.',
+  })
+  sortMode!: SpaceSortMode;
+
+  @Field(() => ISpaceSettingsLayout, {
+    nullable: false,
+    description: 'The layout settings for this Space.',
+  })
+  layout!: ISpaceSettingsLayout;
 }

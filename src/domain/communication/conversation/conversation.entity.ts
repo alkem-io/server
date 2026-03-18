@@ -34,8 +34,8 @@ export class Conversation extends AuthorizableEntity implements IConversation {
   @OneToOne(() => Room, {
     eager: true,
     cascade: true,
-    onDelete: 'SET NULL',
+    onDelete: 'CASCADE',
   })
   @JoinColumn()
-  room?: Room;
+  room!: Room;
 }

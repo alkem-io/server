@@ -2,7 +2,7 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ValidationException } from '@common/exceptions/validation.exception';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -20,7 +20,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
-import { vi } from 'vitest';
+import { type Mocked, vi } from 'vitest';
 import { Calendar } from './calendar.entity';
 import { ICalendar } from './calendar.interface';
 import { CalendarService } from './calendar.service';
@@ -29,16 +29,18 @@ import { CreateCalendarEventOnCalendarInput } from './dto/calendar.dto.create.ev
 describe('CalendarService', () => {
   let service: CalendarService;
   let calendarRepository: Repository<Calendar>;
-  let calendarEventService: CalendarEventService;
-  let authorizationPolicyService: AuthorizationPolicyService;
-  let authorizationService: AuthorizationService;
-  let namingService: NamingService;
-  let activityAdapter: ActivityAdapter;
-  let contributionReporter: ContributionReporterService;
-  let storageAggregatorResolverService: StorageAggregatorResolverService;
-  let timelineResolverService: TimelineResolverService;
+  let calendarEventService: Mocked<CalendarEventService>;
+  let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
+  let authorizationService: Mocked<AuthorizationService>;
+  let namingService: Mocked<NamingService>;
+  let activityAdapter: Mocked<ActivityAdapter>;
+  let contributionReporter: Mocked<ContributionReporterService>;
+  let storageAggregatorResolverService: Mocked<StorageAggregatorResolverService>;
+  let timelineResolverService: Mocked<TimelineResolverService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalendarService,
@@ -54,25 +56,26 @@ describe('CalendarService', () => {
     calendarRepository = module.get<Repository<Calendar>>(
       getRepositoryToken(Calendar)
     );
-    calendarEventService =
-      module.get<CalendarEventService>(CalendarEventService);
-    authorizationPolicyService = module.get<AuthorizationPolicyService>(
+    calendarEventService = module.get(
+      CalendarEventService
+    ) as Mocked<CalendarEventService>;
+    authorizationPolicyService = module.get(
       AuthorizationPolicyService
-    );
-    authorizationService =
-      module.get<AuthorizationService>(AuthorizationService);
-    namingService = module.get<NamingService>(NamingService);
-    activityAdapter = module.get<ActivityAdapter>(ActivityAdapter);
-    contributionReporter = module.get<ContributionReporterService>(
+    ) as Mocked<AuthorizationPolicyService>;
+    authorizationService = module.get(
+      AuthorizationService
+    ) as Mocked<AuthorizationService>;
+    namingService = module.get(NamingService) as Mocked<NamingService>;
+    activityAdapter = module.get(ActivityAdapter) as Mocked<ActivityAdapter>;
+    contributionReporter = module.get(
       ContributionReporterService
-    );
-    storageAggregatorResolverService =
-      module.get<StorageAggregatorResolverService>(
-        StorageAggregatorResolverService
-      );
-    timelineResolverService = module.get<TimelineResolverService>(
+    ) as Mocked<ContributionReporterService>;
+    storageAggregatorResolverService = module.get(
+      StorageAggregatorResolverService
+    ) as Mocked<StorageAggregatorResolverService>;
+    timelineResolverService = module.get(
       TimelineResolverService
-    );
+    ) as Mocked<TimelineResolverService>;
   });
 
   describe('createCalendar', () => {
@@ -105,10 +108,8 @@ describe('CalendarService', () => {
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
       vi.spyOn(calendarRepository, 'remove').mockResolvedValue(mockCalendar);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      calendarEventService.deleteCalendarEvent = vi
-        .fn()
-        .mockResolvedValue(undefined);
+      authorizationPolicyService.delete.mockResolvedValue(undefined!);
+      calendarEventService.deleteCalendarEvent.mockResolvedValue(undefined!);
 
       // Act
       await service.deleteCalendar(calendarId);
@@ -138,7 +139,7 @@ describe('CalendarService', () => {
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
       vi.spyOn(calendarRepository, 'remove').mockResolvedValue(mockCalendar);
-      authorizationPolicyService.delete = vi.fn();
+      authorizationPolicyService.delete.mockReset();
 
       // Act
       await service.deleteCalendar(calendarId);
@@ -158,8 +159,8 @@ describe('CalendarService', () => {
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
       vi.spyOn(calendarRepository, 'remove').mockResolvedValue(mockCalendar);
-      authorizationPolicyService.delete = vi.fn().mockResolvedValue(undefined);
-      calendarEventService.deleteCalendarEvent = vi.fn();
+      authorizationPolicyService.delete.mockResolvedValue(undefined!);
+      calendarEventService.deleteCalendarEvent.mockReset();
 
       // Act
       await service.deleteCalendar(calendarId);
@@ -251,7 +252,11 @@ describe('CalendarService', () => {
       // Arrange
       const input = buildCreateInput({ nameID: '' });
       const mockCalendar = { id: 'calendar-1' } as Calendar;
-      const mockStorageAggregator = { id: 'storage-1' } as any;
+      const mockStorageAggregator = { id: 'storage-1' } as unknown as Awaited<
+        ReturnType<
+          StorageAggregatorResolverService['getStorageAggregatorForCalendar']
+        >
+      >;
       const mockEvent = {
         id: 'event-1',
         nameID: 'test-event',
@@ -262,19 +267,19 @@ describe('CalendarService', () => {
       } as unknown as ICalendarEvent;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      namingService.getReservedNameIDsInCalendar = vi
-        .fn()
-        .mockResolvedValue([]);
-      namingService.createNameIdAvoidingReservedNameIDs = vi
-        .fn()
-        .mockReturnValue('test-event');
-      storageAggregatorResolverService.getStorageAggregatorForCalendar = vi
-        .fn()
-        .mockResolvedValue(mockStorageAggregator);
-      calendarEventService.createCalendarEvent = vi
-        .fn()
-        .mockResolvedValue(mockEvent);
-      calendarEventService.save = vi.fn().mockResolvedValue(savedEvent);
+      namingService.getReservedNameIDsInCalendar.mockResolvedValue([]);
+      namingService.createNameIdAvoidingReservedNameIDs.mockReturnValue(
+        'test-event'
+      );
+      storageAggregatorResolverService.getStorageAggregatorForCalendar.mockResolvedValue(
+        mockStorageAggregator
+      );
+      calendarEventService.createCalendarEvent.mockResolvedValue(mockEvent);
+      calendarEventService.save.mockResolvedValue(
+        savedEvent as unknown as Awaited<
+          ReturnType<CalendarEventService['save']>
+        >
+      );
 
       // Act
       const _result = await service.createCalendarEvent(input, 'user-1');
@@ -296,24 +301,30 @@ describe('CalendarService', () => {
       // Arrange
       const input = buildCreateInput({ nameID: 'custom-name-id' });
       const mockCalendar = { id: 'calendar-1' } as Calendar;
-      const mockStorageAggregator = { id: 'storage-1' } as any;
+      const mockStorageAggregator = { id: 'storage-1' } as unknown as Awaited<
+        ReturnType<
+          StorageAggregatorResolverService['getStorageAggregatorForCalendar']
+        >
+      >;
       const mockEvent = {
         id: 'event-1',
         nameID: 'custom-name-id',
       } as unknown as ICalendarEvent;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      namingService.getReservedNameIDsInCalendar = vi
-        .fn()
-        .mockResolvedValue(['other-name']);
-      namingService.createNameIdAvoidingReservedNameIDs = vi.fn();
-      storageAggregatorResolverService.getStorageAggregatorForCalendar = vi
-        .fn()
-        .mockResolvedValue(mockStorageAggregator);
-      calendarEventService.createCalendarEvent = vi
-        .fn()
-        .mockResolvedValue(mockEvent);
-      calendarEventService.save = vi.fn().mockResolvedValue(mockEvent);
+      namingService.getReservedNameIDsInCalendar.mockResolvedValue([
+        'other-name',
+      ]);
+      namingService.createNameIdAvoidingReservedNameIDs.mockReset();
+      storageAggregatorResolverService.getStorageAggregatorForCalendar.mockResolvedValue(
+        mockStorageAggregator
+      );
+      calendarEventService.createCalendarEvent.mockResolvedValue(mockEvent);
+      calendarEventService.save.mockResolvedValue(
+        mockEvent as unknown as Awaited<
+          ReturnType<CalendarEventService['save']>
+        >
+      );
 
       // Act
       await service.createCalendarEvent(input, 'user-1');
@@ -335,9 +346,10 @@ describe('CalendarService', () => {
       const mockCalendar = { id: 'calendar-1' } as Calendar;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      namingService.getReservedNameIDsInCalendar = vi
-        .fn()
-        .mockResolvedValue(['taken-name', 'other-name']);
+      namingService.getReservedNameIDsInCalendar.mockResolvedValue([
+        'taken-name',
+        'other-name',
+      ]);
 
       // Act & Assert
       await expect(
@@ -360,20 +372,24 @@ describe('CalendarService', () => {
       // Arrange
       const input = buildCreateInput({ nameID: 'test-event' });
       const mockCalendar = { id: 'calendar-1' } as Calendar;
-      const mockStorageAggregator = { id: 'storage-1' } as any;
+      const mockStorageAggregator = { id: 'storage-1' } as unknown as Awaited<
+        ReturnType<
+          StorageAggregatorResolverService['getStorageAggregatorForCalendar']
+        >
+      >;
       const mockEvent = { id: 'event-1' } as unknown as ICalendarEvent;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      namingService.getReservedNameIDsInCalendar = vi
-        .fn()
-        .mockResolvedValue([]);
-      storageAggregatorResolverService.getStorageAggregatorForCalendar = vi
-        .fn()
-        .mockResolvedValue(mockStorageAggregator);
-      calendarEventService.createCalendarEvent = vi
-        .fn()
-        .mockResolvedValue(mockEvent);
-      calendarEventService.save = vi.fn().mockResolvedValue(mockEvent);
+      namingService.getReservedNameIDsInCalendar.mockResolvedValue([]);
+      storageAggregatorResolverService.getStorageAggregatorForCalendar.mockResolvedValue(
+        mockStorageAggregator
+      );
+      calendarEventService.createCalendarEvent.mockResolvedValue(mockEvent);
+      calendarEventService.save.mockResolvedValue(
+        mockEvent as unknown as Awaited<
+          ReturnType<CalendarEventService['save']>
+        >
+      );
 
       // Act
       await service.createCalendarEvent(input, 'user-1');
@@ -386,18 +402,19 @@ describe('CalendarService', () => {
   });
 
   describe('getCalendarEvents', () => {
-    const buildAgentInfo = (overrides?: Partial<AgentInfo>): AgentInfo => {
-      const agentInfo = new AgentInfo();
-      agentInfo.userID = 'user-1';
-      agentInfo.email = 'user@example.com';
-      Object.assign(agentInfo, overrides);
-      return agentInfo;
+    const buildActorContext = (
+      overrides?: Partial<ActorContext>
+    ): ActorContext => {
+      const actorContext = new ActorContext();
+      actorContext.actorID = 'user-1';
+      Object.assign(actorContext, overrides);
+      return actorContext;
     };
 
     it('should return only events the agent has READ access to when no rootSpaceId is provided', async () => {
       // Arrange
       const calendarId = 'calendar-1';
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
       const eventWithAccess = {
         id: 'event-1',
         authorization: { id: 'auth-1' },
@@ -412,24 +429,25 @@ describe('CalendarService', () => {
       } as unknown as Calendar;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      authorizationService.isAccessGranted = vi
-        .fn()
-        .mockImplementation(
-          (_agentInfo: AgentInfo, authorization: AuthorizationPolicy) => {
-            return authorization?.id === 'auth-1';
-          }
-        );
+      authorizationService.isAccessGranted.mockImplementation(
+        (_actorContext, authorization) => {
+          return (authorization as AuthorizationPolicy)?.id === 'auth-1';
+        }
+      );
 
       const inputCalendar = { id: calendarId } as ICalendar;
 
       // Act
-      const result = await service.getCalendarEvents(inputCalendar, agentInfo);
+      const result = await service.getCalendarEvents(
+        inputCalendar,
+        actorContext
+      );
 
       // Assert
       expect(result).toHaveLength(1);
       expect(result[0]).toBe(eventWithAccess);
       expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
-        agentInfo,
+        actorContext,
         eventWithAccess.authorization,
         AuthorizationPrivilege.READ
       );
@@ -438,7 +456,7 @@ describe('CalendarService', () => {
     it('should return empty array when agent has no READ access to any events', async () => {
       // Arrange
       const calendarId = 'calendar-1';
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
       const mockCalendar = {
         id: calendarId,
         events: [
@@ -448,12 +466,15 @@ describe('CalendarService', () => {
       } as unknown as Calendar;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      authorizationService.isAccessGranted = vi.fn().mockReturnValue(false);
+      authorizationService.isAccessGranted.mockReturnValue(false);
 
       const inputCalendar = { id: calendarId } as ICalendar;
 
       // Act
-      const result = await service.getCalendarEvents(inputCalendar, agentInfo);
+      const result = await service.getCalendarEvents(
+        inputCalendar,
+        actorContext
+      );
 
       // Assert
       expect(result).toEqual([]);
@@ -462,7 +483,7 @@ describe('CalendarService', () => {
     it('should throw EntityNotFoundException when calendar events are not initialized', async () => {
       // Arrange
       const calendarId = 'calendar-1';
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
       const mockCalendar = {
         id: calendarId,
         events: undefined,
@@ -474,7 +495,7 @@ describe('CalendarService', () => {
 
       // Act & Assert
       await expect(
-        service.getCalendarEvents(inputCalendar, agentInfo)
+        service.getCalendarEvents(inputCalendar, actorContext)
       ).rejects.toThrow(EntityNotFoundException);
     });
 
@@ -482,7 +503,7 @@ describe('CalendarService', () => {
       // Arrange
       const calendarId = 'calendar-1';
       const rootSpaceId = 'space-root';
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
       const calendarEvent = {
         id: 'event-1',
         authorization: { id: 'auth-1' },
@@ -497,12 +518,12 @@ describe('CalendarService', () => {
       } as unknown as Calendar;
 
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
-      authorizationService.isAccessGranted = vi.fn().mockReturnValue(true);
+      authorizationService.isAccessGranted.mockReturnValue(true);
 
       // Mock the subspace events retrieval
       vi.spyOn(
         service,
-        'getCalendarEventsFromSubspaces' as any
+        'getCalendarEventsFromSubspaces' as unknown as keyof CalendarService
       ).mockResolvedValue([subspaceEvent]);
 
       const inputCalendar = { id: calendarId } as ICalendar;
@@ -510,7 +531,7 @@ describe('CalendarService', () => {
       // Act
       const result = await service.getCalendarEvents(
         inputCalendar,
-        agentInfo,
+        actorContext,
         rootSpaceId
       );
 
@@ -523,7 +544,7 @@ describe('CalendarService', () => {
     it('should not fetch subspace events when rootSpaceId is not provided', async () => {
       // Arrange
       const calendarId = 'calendar-1';
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
       const mockCalendar = {
         id: calendarId,
         events: [],
@@ -532,13 +553,13 @@ describe('CalendarService', () => {
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(mockCalendar);
       const getSubspaceEventsSpy = vi.spyOn(
         service,
-        'getCalendarEventsFromSubspaces' as any
+        'getCalendarEventsFromSubspaces' as unknown as keyof CalendarService
       );
 
       const inputCalendar = { id: calendarId } as ICalendar;
 
       // Act
-      await service.getCalendarEvents(inputCalendar, agentInfo);
+      await service.getCalendarEvents(inputCalendar, actorContext);
 
       // Assert
       expect(getSubspaceEventsSpy).not.toHaveBeenCalled();
@@ -546,14 +567,14 @@ describe('CalendarService', () => {
 
     it('should throw EntityNotFoundException when calendar does not exist', async () => {
       // Arrange
-      const agentInfo = buildAgentInfo();
+      const actorContext = buildActorContext();
       vi.spyOn(calendarRepository, 'findOne').mockResolvedValue(null);
 
       const inputCalendar = { id: 'non-existent-id' } as ICalendar;
 
       // Act & Assert
       await expect(
-        service.getCalendarEvents(inputCalendar, agentInfo)
+        service.getCalendarEvents(inputCalendar, actorContext)
       ).rejects.toThrow(EntityNotFoundException);
     });
   });
@@ -561,9 +582,8 @@ describe('CalendarService', () => {
   describe('processActivityCalendarEventCreated', () => {
     it('should emit activity event and report contribution when spaceID exists', async () => {
       // Arrange
-      const agentInfo = new AgentInfo();
-      agentInfo.userID = 'user-1';
-      agentInfo.email = 'user@example.com';
+      const actorContext = new ActorContext();
+      actorContext.actorID = 'user-1';
 
       const mockCalendar = { id: 'calendar-1' } as ICalendar;
       const mockEvent = {
@@ -572,16 +592,16 @@ describe('CalendarService', () => {
       } as unknown as ICalendarEvent;
 
       activityAdapter.calendarEventCreated = vi.fn();
-      timelineResolverService.getSpaceIdForCalendar = vi
-        .fn()
-        .mockResolvedValue('space-1');
+      timelineResolverService.getSpaceIdForCalendar.mockResolvedValue(
+        'space-1'
+      );
       contributionReporter.calendarEventCreated = vi.fn();
 
       // Act
       await service.processActivityCalendarEventCreated(
         mockCalendar,
         mockEvent,
-        agentInfo
+        actorContext
       );
 
       // Assert
@@ -597,17 +617,20 @@ describe('CalendarService', () => {
           space: 'space-1',
         },
         {
-          id: 'user-1',
-          email: 'user@example.com',
+          actorID: 'user-1',
+          authenticationID: undefined,
+          credentials: [],
+          expiry: undefined,
+          guestName: undefined,
+          isAnonymous: false,
         }
       );
     });
 
     it('should emit activity event but skip contribution report when spaceID is null', async () => {
       // Arrange
-      const agentInfo = new AgentInfo();
-      agentInfo.userID = 'user-1';
-      agentInfo.email = 'user@example.com';
+      const actorContext = new ActorContext();
+      actorContext.actorID = 'user-1';
 
       const mockCalendar = { id: 'calendar-1' } as ICalendar;
       const mockEvent = {
@@ -616,16 +639,16 @@ describe('CalendarService', () => {
       } as unknown as ICalendarEvent;
 
       activityAdapter.calendarEventCreated = vi.fn();
-      timelineResolverService.getSpaceIdForCalendar = vi
-        .fn()
-        .mockResolvedValue(null);
+      timelineResolverService.getSpaceIdForCalendar.mockResolvedValue(
+        null as unknown as string
+      );
       contributionReporter.calendarEventCreated = vi.fn();
 
       // Act
       await service.processActivityCalendarEventCreated(
         mockCalendar,
         mockEvent,
-        agentInfo
+        actorContext
       );
 
       // Assert

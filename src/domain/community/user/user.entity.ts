@@ -1,26 +1,31 @@
 import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
+import { ActorType } from '@common/enums/actor.type';
 import { Application } from '@domain/access/application/application.entity';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { IUser } from '@domain/community/user/user.interface';
 import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import {
+  ChildEntity,
   Column,
-  Entity,
   Generated,
   Index,
   JoinColumn,
   OneToMany,
   OneToOne,
 } from 'typeorm';
-import { ContributorBase } from '../contributor/contributor.base.entity';
 import { UserSettings } from '../user-settings/user.settings.entity';
 
-@Entity()
-export class User extends ContributorBase implements IUser {
+@ChildEntity({ discriminatorValue: ActorType.USER, tableName: 'user' })
+export class User extends Actor implements IUser {
+  // Inherited from Actor (on actor table):
+  //   id, type, nameID, profile, authorization, credentials, createdDate, updatedDate, version
+
   @Column('uuid', { nullable: false })
   accountID!: string;
 
   @Column({
     unique: true,
+    nullable: false,
   })
   @Generated('increment')
   rowId!: number;

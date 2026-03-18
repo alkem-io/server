@@ -1,5 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
@@ -9,7 +9,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
-import { CurrentUser } from '@src/common/decorators';
+import { CurrentActor } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
@@ -43,12 +43,12 @@ export class WhiteboardResolverMutations {
       'Grants or revokes GLOBAL_GUEST permissions for a whiteboard using a single toggle.',
   })
   async updateWhiteboardGuestAccess(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('input') input: UpdateWhiteboardGuestAccessInput
   ): Promise<UpdateWhiteboardGuestAccessResult> {
     const whiteboard =
       await this.whiteboardGuestAccessService.updateGuestAccess(
-        agentInfo,
+        actorContext,
         input.whiteboardId,
         input.guestAccessEnabled
       );
@@ -85,7 +85,7 @@ export class WhiteboardResolverMutations {
     description: 'Updates the specified Whiteboard.',
   })
   async updateWhiteboard(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('whiteboardData') whiteboardData: UpdateWhiteboardEntityInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
@@ -93,7 +93,7 @@ export class WhiteboardResolverMutations {
     );
     const originalContentPolicy = whiteboard.contentUpdatePolicy;
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       whiteboard.authorization,
       AuthorizationPrivilege.UPDATE,
       `update Whiteboard: ${whiteboard.id}`
@@ -161,14 +161,14 @@ export class WhiteboardResolverMutations {
     description: 'Deletes the specified Whiteboard.',
   })
   async deleteWhiteboard(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Args('whiteboardData') whiteboardData: DeleteWhiteboardInput
   ): Promise<IWhiteboard> {
     const whiteboard = await this.whiteboardService.getWhiteboardOrFail(
       whiteboardData.ID
     );
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       whiteboard.authorization,
       AuthorizationPrivilege.DELETE,
       `delete Whiteboard: ${whiteboard.id}`

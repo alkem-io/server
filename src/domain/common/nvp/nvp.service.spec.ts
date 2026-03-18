@@ -15,6 +15,8 @@ describe('NVPService', () => {
   let nvpRepository: MockType<Repository<NVP>>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         NVPService,

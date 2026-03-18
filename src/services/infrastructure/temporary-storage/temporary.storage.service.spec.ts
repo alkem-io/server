@@ -15,6 +15,8 @@ describe('TemporaryStorageService', () => {
   };
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TemporaryStorageService,

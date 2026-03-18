@@ -1,5 +1,5 @@
-import { AgentInfoService } from '@core/authentication.agent.info/agent.info.service';
-import { Agent } from '@domain/agent/agent/agent.entity';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { MentionedEntityType } from '@domain/communication/messaging/mention.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { VirtualContributorMessageService } from '@domain/communication/virtual.contributor.message/virtual.contributor.message.service';
@@ -20,7 +20,7 @@ import {
 describe('VcInvocationService', () => {
   let service: VcInvocationService;
   let communicationAdapter: Mocked<CommunicationAdapter>;
-  let agentInfoService: Mocked<AgentInfoService>;
+  let actorContextService: Mocked<ActorContextService>;
   let virtualContributorMessageService: Mocked<VirtualContributorMessageService>;
   let messageNotificationService: Mocked<MessageNotificationService>;
   let entityManager: Mocked<EntityManager>;
@@ -46,6 +46,8 @@ describe('VcInvocationService', () => {
   });
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [VcInvocationService, MockWinstonProvider],
     })
@@ -54,7 +56,7 @@ describe('VcInvocationService', () => {
 
     service = module.get(VcInvocationService);
     communicationAdapter = module.get(CommunicationAdapter);
-    agentInfoService = module.get(AgentInfoService);
+    actorContextService = module.get(ActorContextService);
     virtualContributorMessageService = module.get(
       VirtualContributorMessageService
     );
@@ -73,11 +75,11 @@ describe('VcInvocationService', () => {
         'vc-agent-2',
       ]);
       entityManager.find.mockResolvedValue([
-        { id: 'vc-agent-1' } as Agent,
-        { id: 'vc-agent-2' } as Agent,
+        { id: 'vc-agent-1' } as Actor,
+        { id: 'vc-agent-2' } as Actor,
       ]);
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({
-        agentID: 'actor-sender',
+      actorContextService.buildForActor.mockResolvedValue({
+        actorID: 'actor-sender',
       } as any);
       virtualContributorMessageService.invokeVirtualContributor.mockResolvedValue(
         undefined as any
@@ -94,7 +96,7 @@ describe('VcInvocationService', () => {
         'vc-agent-1',
         'Hello VC',
         'msg-1', // threadID = message.id for direct conversations
-        expect.objectContaining({ agentID: 'actor-sender' }),
+        expect.objectContaining({ actorID: 'actor-sender' }),
         '',
         room
       );
@@ -140,8 +142,8 @@ describe('VcInvocationService', () => {
         virtualContributorActorID: 'vc-actor-1',
       };
 
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({
-        agentID: 'human-actor',
+      actorContextService.buildForActor.mockResolvedValue({
+        actorID: 'human-actor',
       } as any);
       virtualContributorMessageService.invokeVirtualContributor.mockResolvedValue(
         undefined as any
@@ -155,7 +157,7 @@ describe('VcInvocationService', () => {
         'vc-actor-1',
         'Hello VC',
         'thread-1',
-        expect.objectContaining({ agentID: 'human-actor' }),
+        expect.objectContaining({ actorID: 'human-actor' }),
         '',
         room
       );
@@ -173,7 +175,7 @@ describe('VcInvocationService', () => {
       expect(
         virtualContributorMessageService.invokeVirtualContributor
       ).not.toHaveBeenCalled();
-      expect(agentInfoService.buildAgentInfoForAgent).not.toHaveBeenCalled();
+      expect(actorContextService.buildForActor).not.toHaveBeenCalled();
     });
   });
 
@@ -184,19 +186,19 @@ describe('VcInvocationService', () => {
 
       const vcMentions = [
         {
-          contributorID: 'vc-1',
-          contributorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
+          actorID: 'vc-1',
+          actorType: MentionedEntityType.VIRTUAL_CONTRIBUTOR,
         },
       ];
       messageNotificationService.getMentionsFromText.mockResolvedValue([
         ...vcMentions,
         {
-          contributorID: 'user-1',
-          contributorType: MentionedEntityType.USER,
+          actorID: 'user-1',
+          actorType: MentionedEntityType.USER,
         },
       ]);
-      agentInfoService.buildAgentInfoForAgent.mockResolvedValue({
-        agentID: 'actor-sender',
+      actorContextService.buildForActor.mockResolvedValue({
+        actorID: 'actor-sender',
       } as any);
       messageNotificationService.processVirtualContributorMentions.mockResolvedValue(
         undefined
@@ -210,7 +212,7 @@ describe('VcInvocationService', () => {
         vcMentions, // only VC mentions
         'Hello VC',
         'thread-1',
-        expect.objectContaining({ agentID: 'actor-sender' }),
+        expect.objectContaining({ actorID: 'actor-sender' }),
         room
       );
     });
@@ -221,14 +223,14 @@ describe('VcInvocationService', () => {
 
       messageNotificationService.getMentionsFromText.mockResolvedValue([
         {
-          contributorID: 'user-1',
-          contributorType: MentionedEntityType.USER,
+          actorID: 'user-1',
+          actorType: MentionedEntityType.USER,
         },
       ]);
 
       await service.processNewThread(payload, room, 'thread-1');
 
-      expect(agentInfoService.buildAgentInfoForAgent).not.toHaveBeenCalled();
+      expect(actorContextService.buildForActor).not.toHaveBeenCalled();
       expect(
         messageNotificationService.processVirtualContributorMentions
       ).not.toHaveBeenCalled();
@@ -245,6 +247,33 @@ describe('VcInvocationService', () => {
       expect(
         messageNotificationService.processVirtualContributorMentions
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('processDirectConversation - error handling', () => {
+    it('should log errors when VC invocations fail but not throw', async () => {
+      const room = makeRoom();
+      const payload = makePayload();
+      const error = new Error('VC invocation failed');
+
+      communicationAdapter.getRoomMembers.mockResolvedValue([
+        'actor-sender',
+        'vc-agent-1',
+      ]);
+      entityManager.find.mockResolvedValue([{ id: 'vc-agent-1' } as Actor]);
+      actorContextService.buildForActor.mockResolvedValue({
+        actorID: 'actor-sender',
+      } as any);
+      virtualContributorMessageService.invokeVirtualContributor.mockRejectedValue(
+        error
+      );
+
+      // Should not throw despite the rejection
+      await service.processDirectConversation(payload, room);
+
+      expect(
+        virtualContributorMessageService.invokeVirtualContributor
+      ).toHaveBeenCalledTimes(1);
     });
   });
 });

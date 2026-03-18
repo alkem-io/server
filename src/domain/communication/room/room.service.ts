@@ -2,11 +2,11 @@ import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
-import { ContributorLookupService } from '@services/infrastructure/contributor-lookup/contributor.lookup.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IMessage } from '../message/message.interface';
@@ -29,7 +29,7 @@ export class RoomService {
     private readonly roomRepository: Repository<Room>,
     private readonly communicationAdapter: CommunicationAdapter,
     private readonly roomLookupService: RoomLookupService,
-    private readonly contributorLookupService: ContributorLookupService,
+    private readonly actorLookupService: ActorLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -38,6 +38,9 @@ export class RoomService {
     room.authorization = new AuthorizationPolicy(AuthorizationPolicyType.ROOM);
     room.messagesCount = 0;
     room.vcInteractionsByThread = {};
+    if (roomData.avatarUrl) {
+      room.avatarUrl = roomData.avatarUrl;
+    }
 
     // Save first to get the ID assigned by the database
     const savedRoom = await this.save(room);
@@ -81,21 +84,44 @@ export class RoomService {
   }
 
   /**
-   * Update the room's display name in both the local database and Matrix.
-   * Call this when the parent entity's displayName changes.
+   * Update the room's display name.
+   * Writes to DB immediately and sends RPC to Matrix.
+   * The inbound room.updated event will be a no-op (value already matches).
    */
   async updateRoomDisplayName(
     room: IRoom,
     newDisplayName: string
-  ): Promise<IRoom> {
+  ): Promise<void> {
     if (room.displayName === newDisplayName) {
-      return room;
+      return;
     }
 
-    room.displayName = newDisplayName;
+    await this.roomLookupService.updatePartial(room.id, {
+      displayName: newDisplayName,
+    });
     await this.communicationAdapter.updateRoom(room.id, newDisplayName);
+  }
 
-    return this.save(room);
+  /**
+   * Update the room avatar.
+   * Writes to DB immediately (handles clearing via empty string → null)
+   * and sends RPC to Matrix. Matrix may not fire a room.updated event
+   * when the avatar is cleared, so the local write is essential.
+   */
+  async updateRoomAvatar(room: IRoom, avatarUrl: string): Promise<void> {
+    // Empty string means "remove avatar" — store as null in DB.
+    // Must pass null (not undefined) so TypeORM actually sets the column to NULL.
+    const dbValue = avatarUrl || null;
+    await this.roomLookupService.updatePartial(room.id, {
+      avatarUrl: dbValue,
+    });
+    await this.communicationAdapter.updateRoom(
+      room.id,
+      undefined, // name
+      undefined, // topic
+      undefined, // isPublic
+      avatarUrl
+    );
   }
 
   async save(room: IRoom): Promise<IRoom> {
@@ -112,7 +138,7 @@ export class RoomService {
    * Matrix requires moderator/admin privileges to delete other users' messages.
    * Currently, Alkemio users with DELETE privilege on a Room are not reflected as
    * moderators in the Matrix room, so we work around this by:
-   *   1. Looking up the original message sender's actorId
+   *   1. Looking up the original message sender's actorID
    *   2. Deleting the message AS the sender (impersonation)
    *
    * This is a security/audit concern because the deletion appears to come from
@@ -120,9 +146,9 @@ export class RoomService {
    *
    * TODO: Implement proper Matrix admin rights reflection so that Alkemio admins
    * are granted moderator power levels in Matrix rooms. Once implemented:
-   *   - Use the `agentId` parameter (the actual deleting user) instead of sender
+   *   - Use the `actorID` parameter (the actual deleting user) instead of sender
    *   - Remove the `getMessageSenderActor` call
-   *   - The `agentId` param is kept in the signature to avoid interface changes later
+   *   - The `actorID` param is kept in the signature to avoid interface changes later
    *
    * See: docs/matrix-admin-reflection.md for requirements and findings.
    */
@@ -131,17 +157,17 @@ export class RoomService {
     messageData: RoomRemoveMessageInput,
     _agentId: string // TODO: Use this once Matrix admin reflection is implemented
   ): Promise<string> {
-    // WORKAROUND: Get the original message sender's actorId - Matrix only allows
+    // WORKAROUND: Get the original message sender's actorID - Matrix only allows
     // the sender or room moderators to delete messages. Since we don't yet
     // reflect Alkemio admin rights to Matrix power levels, we impersonate the sender.
-    const senderActorId = await this.communicationAdapter.getMessageSenderActor(
+    const senderActorID = await this.communicationAdapter.getMessageSenderActor(
       {
         alkemioRoomId: room.id,
         messageId: messageData.messageID,
       }
     );
 
-    if (!senderActorId) {
+    if (!senderActorID) {
       throw new ValidationException(
         'Cannot delete message: unable to identify message sender',
         LogContext.COMMUNICATION
@@ -149,7 +175,7 @@ export class RoomService {
     }
 
     await this.communicationAdapter.deleteMessage({
-      actorId: senderActorId, // TODO: Replace with _agentId once Matrix reflection is implemented
+      actorID: senderActorID, // TODO: Replace with _agentId once Matrix reflection is implemented
       messageId: messageData.messageID,
       roomID: room.id,
     });
@@ -162,23 +188,27 @@ export class RoomService {
     roomData: CreateRoomInput
   ): Promise<void> {
     const isDirect = roomData.type === RoomType.CONVERSATION_DIRECT;
+    const isGroup = roomData.type === RoomType.CONVERSATION_GROUP;
 
     // Compute initial members based on room type
     let initialMembers: string[] | undefined;
     if (isDirect) {
-      if (!roomData.senderActorId || !roomData.receiverActorId) {
+      if (!roomData.senderActorID || !roomData.receiverActorID) {
         throw new Error(
-          `Missing senderActorId or receiverActorId for direct messaging room creation: ${roomData.displayName}`
+          `Missing senderActorID or receiverActorID for direct messaging room creation: ${roomData.displayName}`
         );
       }
-      initialMembers = [roomData.senderActorId, roomData.receiverActorId];
-    } else if (roomData.senderActorId) {
-      initialMembers = [roomData.senderActorId];
+      initialMembers = [roomData.senderActorID, roomData.receiverActorID];
+    } else if (isGroup && roomData.memberActorIDs) {
+      initialMembers = roomData.memberActorIDs;
+    } else if (roomData.senderActorID) {
+      initialMembers = [roomData.senderActorID];
     }
 
-    const logContext = isDirect
-      ? LogContext.COMMUNICATION_CONVERSATION
-      : LogContext.COMMUNICATION;
+    const logContext =
+      isDirect || isGroup
+        ? LogContext.COMMUNICATION_CONVERSATION
+        : LogContext.COMMUNICATION;
 
     try {
       this.logger.verbose?.(
@@ -190,7 +220,9 @@ export class RoomService {
         room.id,
         roomData.type,
         roomData.displayName,
-        initialMembers
+        initialMembers,
+        undefined, // parentContextId
+        roomData.avatarUrl
       );
     } catch (error: unknown) {
       const err = error as Error;
@@ -204,12 +236,12 @@ export class RoomService {
 
   async addReactionToMessage(
     room: IRoom,
-    actorId: string,
+    actorID: string,
     reactionData: RoomAddReactionToMessageInput
   ): Promise<IMessageReaction> {
     return await this.communicationAdapter.addReaction({
       alkemioRoomId: room.id,
-      actorId,
+      actorID,
       messageId: reactionData.messageID,
       emoji: reactionData.emoji,
     });
@@ -234,14 +266,14 @@ export class RoomService {
     reactionData: RoomRemoveReactionToMessageInput,
     _agentId: string // TODO: Use this once Matrix admin reflection is implemented
   ): Promise<boolean> {
-    // WORKAROUND: Get the original reaction sender's actorId and impersonate them
-    const senderActorId =
+    // WORKAROUND: Get the original reaction sender's actorID and impersonate them
+    const senderActorID =
       await this.communicationAdapter.getReactionSenderActor({
         alkemioRoomId: room.id,
         reactionId: reactionData.reactionID,
       });
 
-    if (!senderActorId) {
+    if (!senderActorID) {
       throw new ValidationException(
         'Cannot remove reaction: unable to identify reaction sender',
         LogContext.COMMUNICATION
@@ -250,7 +282,7 @@ export class RoomService {
 
     await this.communicationAdapter.removeReaction({
       alkemioRoomId: room.id,
-      actorId: senderActorId, // TODO: Replace with _agentId once Matrix reflection is implemented
+      actorID: senderActorID, // TODO: Replace with _agentId once Matrix reflection is implemented
       reactionId: reactionData.reactionID,
     });
 
@@ -282,10 +314,10 @@ export class RoomService {
   private async getUserIdForSender(
     room: IRoom,
     entityId: string,
-    getSenderActorId: () => Promise<string>
+    getSenderActorID: () => Promise<string>
   ): Promise<string> {
-    const senderActorId = await getSenderActorId();
-    if (senderActorId === '') {
+    const senderActorID = await getSenderActorID();
+    if (senderActorID === '') {
       this.logger.error(
         `Unable to identify sender for ${room.id} - ${entityId}`,
         undefined,
@@ -293,10 +325,8 @@ export class RoomService {
       );
       return '';
     }
-    const userId =
-      await this.contributorLookupService.getUserIdByAgentId(senderActorId);
-
-    return userId ?? '';
+    // In the Actor model, actorID IS the userId for user actors
+    return senderActorID ?? '';
   }
 
   /**
@@ -305,11 +335,11 @@ export class RoomService {
    */
   async markMessageAsRead(
     room: IRoom,
-    agentId: string,
+    actorID: string,
     messageData: RoomMarkMessageReadInput
   ): Promise<boolean> {
     await this.communicationAdapter.markMessageRead(
-      agentId,
+      actorID,
       room.id,
       messageData.messageID,
       messageData.threadID
@@ -331,18 +361,18 @@ export class RoomService {
    * Returns room-level unread count and optionally per-thread unread counts.
    *
    * @param room - The room to get unread counts for
-   * @param agentId - The agent ID of the requesting user
+   * @param actorID - The agent ID of the requesting user
    * @param threadIds - Optional thread IDs to get per-thread unread counts.
    *   - undefined: only room-level count returned, threadUnreadCounts is null
    *   - empty array or array with IDs: threadUnreadCounts is an array (possibly empty)
    */
   async getUnreadCounts(
     room: IRoom,
-    agentId: string,
+    actorID: string,
     threadIds?: string[]
   ): Promise<RoomUnreadCounts> {
     const result = await this.communicationAdapter.getUnreadCounts(
-      agentId,
+      actorID,
       room.id,
       threadIds
     );

@@ -24,6 +24,8 @@ describe('InnovationFlowResolverFields', () => {
   let innovationFlowService: Mocked<InnovationFlowService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [InnovationFlowResolverFields, MockWinstonProvider],
     })

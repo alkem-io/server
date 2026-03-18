@@ -7,7 +7,6 @@
 
 Welcome to the Alkemio Server! This server is the heart of the Alkemio Platform, and manages the representation of the Space and all the entities stored wthin it.
 
-[![Build Status](https://api.travis-ci.com/alkem-io/server.svg?branch=develop)](https://travis-ci.com/github/alkem-io/server)
 [![Coverage Status](https://coveralls.io/repos/github/alkem-io/server/badge.svg?branch=develop)](https://coveralls.io/github/alkem-io/server?branch=develop)
 ![Docker Image CI](https://github.com/alkem-io/server/actions/workflows/build-release-docker-hub.yml/badge.svg)
 

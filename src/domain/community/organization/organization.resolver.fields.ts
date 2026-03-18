@@ -1,16 +1,16 @@
-import { CurrentUser } from '@common/decorators';
+import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
-import { AgentInfo } from '@core/authentication.agent.info/agent.info';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
-  AgentLoaderCreator,
+  ActorLoaderCreator,
   ProfileLoaderCreator,
 } from '@core/dataloader/creators';
 import { OrganizationStorageAggregatorLoaderCreator } from '@core/dataloader/creators/loader.creators/community/organization.storage.aggregator.loader.creator';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
-import { IAgent } from '@domain/agent/agent';
+import { IActor } from '@domain/actor/actor/actor.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { INVP } from '@domain/common/nvp/nvp.interface';
 import { IProfile } from '@domain/common/profile';
@@ -40,7 +40,7 @@ export class OrganizationResolverFields {
   })
   async groups(
     @Parent() parent: Organization,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IUserGroup[]> {
     // Reload to ensure the authorization is loaded
     const organization = await this.organizationService.getOrganizationOrFail(
@@ -48,7 +48,7 @@ export class OrganizationResolverFields {
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.READ,
       `read user groups on org: ${organization.id}`
@@ -70,7 +70,7 @@ export class OrganizationResolverFields {
     description: 'Group defined on this organization.',
   })
   async group(
-    @CurrentUser() agentInfo: AgentInfo,
+    @CurrentActor() actorContext: ActorContext,
     @Parent() parent: Organization,
     @Args('ID', { type: () => UUID }) groupID: string
   ): Promise<IUserGroup> {
@@ -80,7 +80,7 @@ export class OrganizationResolverFields {
     );
 
     this.authorizationService.grantAccessOrFail(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.READ,
       `read single usergroup on org: ${organization.id}`
@@ -117,10 +117,10 @@ export class OrganizationResolverFields {
   })
   async account(
     @Parent() organization: IOrganization,
-    @CurrentUser() agentInfo: AgentInfo
+    @CurrentActor() actorContext: ActorContext
   ): Promise<IAccount | undefined> {
     const accountVisible = this.authorizationService.isAccessGranted(
-      agentInfo,
+      actorContext,
       organization.authorization,
       AuthorizationPrivilege.UPDATE
     );
@@ -165,15 +165,15 @@ export class OrganizationResolverFields {
     return await this.organizationService.getVerification(organization);
   }
 
-  @ResolveField('agent', () => IAgent, {
+  @ResolveField('actor', () => IActor, {
     nullable: false,
-    description: 'The Agent representing this User.',
+    description: 'The Actor representing this User.',
   })
   async agent(
     @Parent() organization: Organization,
-    @Loader(AgentLoaderCreator, { parentClassRef: Organization })
-    loader: ILoader<IAgent>
-  ): Promise<IAgent> {
+    @Loader(ActorLoaderCreator, { parentClassRef: Organization })
+    loader: ILoader<IActor>
+  ): Promise<IActor> {
     return loader.load(organization.id);
   }
 

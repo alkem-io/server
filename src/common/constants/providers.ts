@@ -1,6 +1,6 @@
 export const SUBSCRIPTION_DISCUSSION_UPDATED =
   'alkemio-subscriptions-discussion-updated';
-export const SUBSCRIPTION_VIRTUAL_CONTRIBUTOR_UPDATED =
+export const SUBSCRIPTION_VIRTUAL_UPDATED =
   'alkemio-subscriptions-vritual-contributor-updated';
 export const SUBSCRIPTION_CALLOUT_POST_CREATED =
   'alkemio-subscriptions-callout-post-created';
