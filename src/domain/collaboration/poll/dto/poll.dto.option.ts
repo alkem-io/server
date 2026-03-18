@@ -1,7 +1,13 @@
 import { MID_TEXT_LENGTH } from '@common/constants';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
-import { ArrayMinSize, IsUUID, MaxLength } from 'class-validator';
+import {
+  ArrayMinSize,
+  IsNotEmpty,
+  IsString,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 
 @InputType('AddPollOptionInput')
 export class AddPollOptionInput {
@@ -10,6 +16,8 @@ export class AddPollOptionInput {
   pollID!: string;
 
   @Field(() => String, { nullable: false })
+  @IsString()
+  @IsNotEmpty()
   @MaxLength(MID_TEXT_LENGTH)
   text!: string;
 }
@@ -25,6 +33,8 @@ export class UpdatePollOptionInput {
   optionID!: string;
 
   @Field(() => String, { nullable: false })
+  @IsString()
+  @IsNotEmpty()
   @MaxLength(MID_TEXT_LENGTH)
   text!: string;
 }
