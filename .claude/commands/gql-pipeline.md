@@ -31,5 +31,6 @@ Spawn 3 teammates:
 After reviewer completes all reviews, create a new "Run full GQL validation cycle" task to restart the loop.
 
 Read `.claude/skills/gql-pipeline.md` for pipeline conventions before starting.
+Performance benchmarking can also be run standalone via `/gql-performance-benchmark` (see `.claude/skills/gql-performance-benchmark.md`).
 
 I will use delegate mode. Do not implement anything yourself — only coordinate.

@@ -182,6 +182,9 @@ The paths are configured in `.claude/pipeline/.env`.
       phase-1/<Query>.json
       phase-2/<Query>.json
       skipped/<Query>.json
+  benchmarks/
+    baseline.json               # Performance baseline timings
+    report.json                 # Latest comparison report
   fixes/                        # Auto-generated fix PRs
   reviews/                      # Review artifacts
   signals/                      # Pipeline signals

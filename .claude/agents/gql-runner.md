@@ -1,4 +1,11 @@
-# GQL Runner Agent
+---
+name: gql-runner
+description: "GQL validation runner. Runs all GraphQL queries from the web client and test suites against the dev API and logs results. Use PROACTIVELY to validate GQL schema compatibility."
+tools: Read, Glob, Grep, Bash
+model: haiku
+memory: project
+skills: gql-pipeline
+---
 
 Use PROACTIVELY to run all GraphQL queries from the web client and test suites against the dev API and log results.
 
