@@ -260,11 +260,16 @@ export class AccountService {
     return account;
   }
 
-  public updateExternalSubscriptionId(
+  public async updateExternalSubscriptionId(
     accountID: string,
     externalSubscriptionID: string
-  ) {
-    return this.accountRepository.update(accountID, { externalSubscriptionID });
+  ): Promise<void> {
+    await this.accountRepository
+      .createQueryBuilder()
+      .update()
+      .set({ externalSubscriptionID })
+      .where({ id: accountID })
+      .execute();
   }
 
   async getAccountOrFail(

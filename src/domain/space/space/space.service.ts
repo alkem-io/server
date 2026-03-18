@@ -925,12 +925,12 @@ export class SpaceService {
     levelZeroSpaceID: string,
     visibility: SpaceVisibility
   ) {
-    await this.spaceRepository.update(
-      {
-        levelZeroSpaceID: levelZeroSpaceID,
-      },
-      { visibility }
-    );
+    await this.spaceRepository
+      .createQueryBuilder()
+      .update()
+      .set({ visibility })
+      .where({ levelZeroSpaceID })
+      .execute();
   }
 
   /**
