@@ -152,6 +152,7 @@ describe('RoomResolverFields', () => {
       const result = await resolver.lastMessage(mockRoom);
 
       expect(result).toBe(mockMessage);
+      expect(roomDataLoader.loadLastMessage).toHaveBeenCalledWith('room-1');
     });
 
     it('should return null when no last message', async () => {

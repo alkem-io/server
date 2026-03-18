@@ -486,7 +486,9 @@ describe('UrlResolverService', () => {
           },
         },
       };
-      _virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(mockVC);
+      _virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(
+        mockVC
+      );
 
       const result = await service.resolveUrl(
         'https://example.com/vc/my-vc',
@@ -513,7 +515,9 @@ describe('UrlResolverService', () => {
         id: 'vc-123',
         knowledgeBase: undefined,
       };
-      _virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(mockVC);
+      _virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(
+        mockVC
+      );
       urlGeneratorService.generateUrlForPlatform.mockReturnValue(
         'https://example.com'
       );
@@ -545,7 +549,9 @@ describe('UrlResolverService', () => {
           },
         },
       };
-      _virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(mockVC);
+      _virtualActorLookupService.getVirtualContributorByNameIdOrFail.mockResolvedValue(
+        mockVC
+      );
       entityManager.findOneOrFail.mockResolvedValue({
         id: 'callout-1',
         nameID: 'my-callout',

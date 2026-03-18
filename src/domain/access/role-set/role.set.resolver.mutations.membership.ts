@@ -616,7 +616,7 @@ export class RoleSetResolverMutationsMembership {
           const notificationInput: NotificationInputVirtualContributorSpaceCommunityInvitationDeclined =
             {
               triggeredBy: actorContext.actorID, // Who declined the invitation
-              invitationCreatedBy: invitation.createdBy, // Who sent the invitation (recipient)
+              invitationCreatedBy: invitation.createdBy ?? '', // Who sent the invitation (may be null if creator was deleted)
               virtualContributorID: invitedActorID,
               spaceID: space.id,
             };

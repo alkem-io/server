@@ -8,7 +8,6 @@ describe('RoomDataLoader', () => {
   let communicationAdapter: Mocked<CommunicationAdapter>;
 
   beforeEach(() => {
-    // RoomDataLoader is REQUEST-scoped, so we instantiate directly
     communicationAdapter = {
       batchGetLastMessages: vi.fn(),
       batchGetUnreadCounts: vi.fn(),
@@ -97,20 +96,41 @@ describe('RoomDataLoader', () => {
       expect(communicationAdapter.batchGetUnreadCounts).toHaveBeenCalledTimes(
         1
       );
+      expect(communicationAdapter.batchGetUnreadCounts).toHaveBeenCalledWith(
+        'actor-1',
+        ['room-1', 'room-2']
+      );
     });
 
-    it('should create separate loaders for different actors', async () => {
+    it('should use separate RPC calls for different actors', async () => {
       communicationAdapter.batchGetUnreadCounts
         .mockResolvedValueOnce({ 'room-1': 3 })
         .mockResolvedValueOnce({ 'room-1': 5 });
 
-      const result1 = await loader.loadUnreadCount('room-1', 'actor-1');
-      const result2 = await loader.loadUnreadCount('room-1', 'actor-2');
+      const [result1, result2] = await Promise.all([
+        loader.loadUnreadCount('room-1', 'actor-1'),
+        loader.loadUnreadCount('room-1', 'actor-2'),
+      ]);
 
       expect(result1).toBe(3);
       expect(result2).toBe(5);
       expect(communicationAdapter.batchGetUnreadCounts).toHaveBeenCalledTimes(
         2
+      );
+    });
+
+    it('should cache same actor+room combination', async () => {
+      communicationAdapter.batchGetUnreadCounts.mockResolvedValue({
+        'room-1': 5,
+      });
+
+      const result1 = await loader.loadUnreadCount('room-1', 'actor-1');
+      const result2 = await loader.loadUnreadCount('room-1', 'actor-1');
+
+      expect(result1).toBe(5);
+      expect(result2).toBe(5);
+      expect(communicationAdapter.batchGetUnreadCounts).toHaveBeenCalledTimes(
+        1
       );
     });
   });

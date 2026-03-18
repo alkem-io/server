@@ -59,7 +59,7 @@
     }
   },
   "dependencies": {
-    "@alkemio/matrix-adapter-lib": "0.8.4-mapping8",
+    "@alkemio/matrix-adapter-lib": "0.8.5",
     "@alkemio/notifications-lib": "0.13.0",
     "@apollo/server": "^4.10.4",
     "@elastic/elasticsearch": "^8.12.2",
@@ -136,7 +136,7 @@
     "sharp": "^0.34.5",
     "ts-node": "^10.9.2",
     "tsconfig-paths": "4.2.0",
-    "typeorm": "https://pkg.pr.new/antst/typeorm@4975be5",
+    "typeorm": "https://pkg.pr.new/antst/typeorm@2c8f380",
     "web-push": "^3.6.7",
     "winston": "^3.13.1",
     "xstate": "5.18.0",

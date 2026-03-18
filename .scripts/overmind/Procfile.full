@@ -21,3 +21,6 @@ test: sleep 35 && pnpm test:watch 2>&1
 
 # NestJS app (wait for infra to be ready)
 app: sleep 40 && pnpm start:dev 2>&1
+
+# GQL schema validation (delayed start, runs every 5 min)
+gql: sleep 60 && while true; do bash ../../.scripts/gql-validate/validate-queries.sh 2>&1 | tee -a /tmp/overmind-gql-log.txt; sleep 300; done

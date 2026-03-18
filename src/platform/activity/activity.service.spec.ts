@@ -405,11 +405,9 @@ describe('ActivityService', () => {
         where: vi.fn().mockReturnThis(),
         getMany: vi.fn().mockResolvedValue([{ id: 'c1' }, { id: 'c2' }]),
       };
-      entityManager.getRepository = vi
-        .fn()
-        .mockReturnValue({
-          createQueryBuilder: vi.fn().mockReturnValue(collabQb),
-        });
+      entityManager.getRepository = vi.fn().mockReturnValue({
+        createQueryBuilder: vi.fn().mockReturnValue(collabQb),
+      });
 
       const result = await service.getMySpacesActivity('user-1', 10);
 
@@ -435,11 +433,9 @@ describe('ActivityService', () => {
         where: vi.fn().mockReturnThis(),
         getMany: vi.fn().mockResolvedValue([]),
       };
-      entityManager.getRepository = vi
-        .fn()
-        .mockReturnValue({
-          createQueryBuilder: vi.fn().mockReturnValue(collabQb),
-        });
+      entityManager.getRepository = vi.fn().mockReturnValue({
+        createQueryBuilder: vi.fn().mockReturnValue(collabQb),
+      });
 
       const result = await service.getMySpacesActivity('user-1', 10);
 
@@ -480,11 +476,9 @@ describe('ActivityService', () => {
           .fn()
           .mockResolvedValue([{ id: 'c1' }, { id: 'c2' }, { id: 'c3' }]),
       };
-      entityManager.getRepository = vi
-        .fn()
-        .mockReturnValue({
-          createQueryBuilder: vi.fn().mockReturnValue(collabQb),
-        });
+      entityManager.getRepository = vi.fn().mockReturnValue({
+        createQueryBuilder: vi.fn().mockReturnValue(collabQb),
+      });
 
       const result = await service.getMySpacesActivity('user-1', 1);
 

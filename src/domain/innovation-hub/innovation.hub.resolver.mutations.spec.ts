@@ -43,8 +43,12 @@ describe('InnovationHubResolverMutations', () => {
       } as any;
       const updatedHub = { id: 'hub-1', nameID: 'new-name' } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(existingHub);
-      (authorizationService as any).grantAccessOrFail.mockResolvedValue(undefined);
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
+        existingHub
+      );
+      (authorizationService as any).grantAccessOrFail.mockResolvedValue(
+        undefined
+      );
       (innovationHubService as any).updateOrFail.mockResolvedValue(updatedHub);
 
       // Act
@@ -80,8 +84,12 @@ describe('InnovationHubResolverMutations', () => {
         authorization: { id: 'auth-1' },
       } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(existingHub);
-      (authorizationService as any).grantAccessOrFail.mockRejectedValue(new Error('Forbidden'));
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
+        existingHub
+      );
+      (authorizationService as any).grantAccessOrFail.mockRejectedValue(
+        new Error('Forbidden')
+      );
 
       // Act & Assert
       await expect(
@@ -101,8 +109,12 @@ describe('InnovationHubResolverMutations', () => {
       } as any;
       const deletedHub = { id: 'hub-1' } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(existingHub);
-      (authorizationService as any).grantAccessOrFail.mockResolvedValue(undefined);
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
+        existingHub
+      );
+      (authorizationService as any).grantAccessOrFail.mockResolvedValue(
+        undefined
+      );
       (innovationHubService as any).delete.mockResolvedValue(deletedHub);
 
       // Act
@@ -138,8 +150,12 @@ describe('InnovationHubResolverMutations', () => {
         authorization: { id: 'auth-1' },
       } as any;
 
-      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(existingHub);
-      (authorizationService as any).grantAccessOrFail.mockRejectedValue(new Error('Forbidden'));
+      (innovationHubService as any).getInnovationHubOrFail.mockResolvedValue(
+        existingHub
+      );
+      (authorizationService as any).grantAccessOrFail.mockRejectedValue(
+        new Error('Forbidden')
+      );
 
       // Act & Assert
       await expect(

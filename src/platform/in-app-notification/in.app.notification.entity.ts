@@ -11,7 +11,14 @@ import { Organization } from '@domain/community/organization/organization.entity
 import { User } from '@domain/community/user/user.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { CalendarEvent } from '@domain/timeline/event';
-import { Column, Entity, Generated, JoinColumn, ManyToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Generated,
+  Index,
+  JoinColumn,
+  ManyToOne,
+} from 'typeorm';
 import { NotificationEventInAppState } from '../../common/enums/notification.event.in.app.state';
 import { BaseAlkemioEntity } from '../../domain/common/entity/base-entity/base.alkemio.entity';
 import { IInAppNotificationPayload } from '../in-app-notification-payload/in.app.notification.payload.interface';
@@ -199,6 +206,7 @@ export class InAppNotification
   })
   messageID?: string;
 
+  @Index()
   @Column('uuid', {
     nullable: true,
     comment:

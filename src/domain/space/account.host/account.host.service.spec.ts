@@ -7,17 +7,17 @@ import { LicensingFrameworkService } from '@platform/licensing/credential-based/
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
-import { vi } from 'vitest';
+import { type Mocked, vi } from 'vitest';
 import { Account } from '../account/account.entity';
 import { DEFAULT_BASELINE_ACCOUNT_LICENSE_PLAN } from '../account/constants';
 import { AccountHostService } from './account.host.service';
 
 describe('AccountHostService', () => {
   let service: AccountHostService;
-  let licenseService: LicenseService;
-  let storageAggregatorService: StorageAggregatorService;
-  let licensingFrameworkService: LicensingFrameworkService;
-  let licenseIssuerService: LicenseIssuerService;
+  let licenseService: Mocked<LicenseService>;
+  let storageAggregatorService: Mocked<StorageAggregatorService>;
+  let licensingFrameworkService: Mocked<LicensingFrameworkService>;
+  let licenseIssuerService: Mocked<LicenseIssuerService>;
   let _accountRepository: any;
 
   beforeEach(async () => {
@@ -34,10 +34,16 @@ describe('AccountHostService', () => {
       .compile();
 
     service = module.get(AccountHostService);
-    licenseService = module.get(LicenseService);
-    storageAggregatorService = module.get(StorageAggregatorService);
-    licensingFrameworkService = module.get(LicensingFrameworkService);
-    licenseIssuerService = module.get(LicenseIssuerService);
+    licenseService = module.get(LicenseService) as Mocked<LicenseService>;
+    storageAggregatorService = module.get(
+      StorageAggregatorService
+    ) as Mocked<StorageAggregatorService>;
+    licensingFrameworkService = module.get(
+      LicensingFrameworkService
+    ) as Mocked<LicensingFrameworkService>;
+    licenseIssuerService = module.get(
+      LicenseIssuerService
+    ) as Mocked<LicenseIssuerService>;
     _accountRepository = module.get(`${Account.name}Repository`);
   });
 
@@ -48,9 +54,15 @@ describe('AccountHostService', () => {
       const _mockAgent = { id: 'agent-1' };
       const mockLicense = { id: 'license-1' };
 
-      storageAggregatorService.createStorageAggregator.mockResolvedValue(mockStorageAggregator);
+      storageAggregatorService.createStorageAggregator.mockResolvedValue(
+        mockStorageAggregator as unknown as Awaited<
+          ReturnType<StorageAggregatorService['createStorageAggregator']>
+        >
+      );
       // Account IS the Actor now - no separate agent creation
-      licenseService.createLicense.mockReturnValue(mockLicense);
+      licenseService.createLicense.mockReturnValue(
+        mockLicense as unknown as ReturnType<LicenseService['createLicense']>
+      );
 
       const saveSpy = vi.fn().mockImplementation(account => ({
         ...account,
@@ -65,7 +77,7 @@ describe('AccountHostService', () => {
             .fn()
             .mockImplementation(cb => cb({ save: mgrSaveSpy })),
         },
-      } as any;
+      } as unknown as (typeof service)['accountRepository'];
 
       // Act
       const result = await service.createAccount(AccountType.USER);
@@ -82,7 +94,11 @@ describe('AccountHostService', () => {
 
     it('should create license with all entitlement types initialized to 0 and disabled', async () => {
       // Arrange
-      storageAggregatorService.createStorageAggregator.mockResolvedValue({});
+      storageAggregatorService.createStorageAggregator.mockResolvedValue(
+        {} as unknown as Awaited<
+          ReturnType<StorageAggregatorService['createStorageAggregator']>
+        >
+      );
       const createLicenseSpy = vi.fn().mockReturnValue({});
       licenseService.createLicense = createLicenseSpy;
       const mgrSave = vi.fn().mockImplementation(a => a);
@@ -92,7 +108,7 @@ describe('AccountHostService', () => {
           save: mgrSave,
           transaction: vi.fn().mockImplementation(cb => cb({ save: mgrSave })),
         },
-      } as any;
+      } as unknown as (typeof service)['accountRepository'];
 
       // Act
       await service.createAccount(AccountType.ORGANIZATION);
@@ -124,9 +140,17 @@ describe('AccountHostService', () => {
         },
       ];
 
-      licensingFrameworkService.getDefaultLicensingOrFail.mockResolvedValue(mockLicensingFramework);
-      licensingFrameworkService.getLicensePlansOrFail.mockResolvedValue(mockPlans);
-      licenseIssuerService.assignLicensePlan.mockResolvedValue({});
+      licensingFrameworkService.getDefaultLicensingOrFail.mockResolvedValue(
+        mockLicensingFramework as unknown as Awaited<
+          ReturnType<LicensingFrameworkService['getDefaultLicensingOrFail']>
+        >
+      );
+      licensingFrameworkService.getLicensePlansOrFail.mockResolvedValue(
+        mockPlans as unknown as Awaited<
+          ReturnType<LicensingFrameworkService['getLicensePlansOrFail']>
+        >
+      );
+      licenseIssuerService.assignLicensePlan.mockResolvedValue(undefined!);
 
       // Act - new signature: (spaceId, type, licensePlanID?)
       await service.assignLicensePlansToSpace('space-1', AccountType.USER);
@@ -156,9 +180,17 @@ describe('AccountHostService', () => {
         },
       ];
 
-      licensingFrameworkService.getDefaultLicensingOrFail.mockResolvedValue(mockLicensingFramework);
-      licensingFrameworkService.getLicensePlansOrFail.mockResolvedValue(mockPlans);
-      licenseIssuerService.assignLicensePlan.mockResolvedValue({});
+      licensingFrameworkService.getDefaultLicensingOrFail.mockResolvedValue(
+        mockLicensingFramework as unknown as Awaited<
+          ReturnType<LicensingFrameworkService['getDefaultLicensingOrFail']>
+        >
+      );
+      licensingFrameworkService.getLicensePlansOrFail.mockResolvedValue(
+        mockPlans as unknown as Awaited<
+          ReturnType<LicensingFrameworkService['getLicensePlansOrFail']>
+        >
+      );
+      licenseIssuerService.assignLicensePlan.mockResolvedValue(undefined!);
 
       // Act
       await service.assignLicensePlansToSpace(
@@ -185,10 +217,22 @@ describe('AccountHostService', () => {
       };
       const additionalPlan = { id: 'plan-additional' };
 
-      licensingFrameworkService.getDefaultLicensingOrFail.mockResolvedValue(mockLicensingFramework);
-      licensingFrameworkService.getLicensePlansOrFail.mockResolvedValue([autoAssignPlan]);
-      licensingFrameworkService.getLicensePlanOrFail.mockResolvedValue(additionalPlan);
-      licenseIssuerService.assignLicensePlan.mockResolvedValue({});
+      licensingFrameworkService.getDefaultLicensingOrFail.mockResolvedValue(
+        mockLicensingFramework as unknown as Awaited<
+          ReturnType<LicensingFrameworkService['getDefaultLicensingOrFail']>
+        >
+      );
+      licensingFrameworkService.getLicensePlansOrFail.mockResolvedValue([
+        autoAssignPlan,
+      ] as unknown as Awaited<
+        ReturnType<LicensingFrameworkService['getLicensePlansOrFail']>
+      >);
+      licensingFrameworkService.getLicensePlanOrFail.mockResolvedValue(
+        additionalPlan as unknown as Awaited<
+          ReturnType<LicensingFrameworkService['getLicensePlanOrFail']>
+        >
+      );
+      licenseIssuerService.assignLicensePlan.mockResolvedValue(undefined!);
 
       // Act
       await service.assignLicensePlansToSpace(
@@ -210,9 +254,17 @@ describe('AccountHostService', () => {
         assignToNewOrganizationAccounts: false,
       };
 
-      licensingFrameworkService.getDefaultLicensingOrFail.mockResolvedValue(mockLicensingFramework);
-      licensingFrameworkService.getLicensePlansOrFail.mockResolvedValue([autoAssignPlan]);
-      licenseIssuerService.assignLicensePlan.mockResolvedValue({});
+      licensingFrameworkService.getDefaultLicensingOrFail.mockResolvedValue(
+        mockLicensingFramework as unknown as Awaited<
+          ReturnType<LicensingFrameworkService['getDefaultLicensingOrFail']>
+        >
+      );
+      licensingFrameworkService.getLicensePlansOrFail.mockResolvedValue([
+        autoAssignPlan,
+      ] as unknown as Awaited<
+        ReturnType<LicensingFrameworkService['getLicensePlansOrFail']>
+      >);
+      licenseIssuerService.assignLicensePlan.mockResolvedValue(undefined!);
 
       // Act
       await service.assignLicensePlansToSpace(
@@ -237,9 +289,17 @@ describe('AccountHostService', () => {
         assignToNewOrganizationAccounts: true,
       };
 
-      licensingFrameworkService.getDefaultLicensingOrFail.mockResolvedValue(mockLicensingFramework);
-      licensingFrameworkService.getLicensePlansOrFail.mockResolvedValue([orgOnlyPlan]);
-      licenseIssuerService.assignLicensePlan.mockResolvedValue({});
+      licensingFrameworkService.getDefaultLicensingOrFail.mockResolvedValue(
+        mockLicensingFramework as unknown as Awaited<
+          ReturnType<LicensingFrameworkService['getDefaultLicensingOrFail']>
+        >
+      );
+      licensingFrameworkService.getLicensePlansOrFail.mockResolvedValue([
+        orgOnlyPlan,
+      ] as unknown as Awaited<
+        ReturnType<LicensingFrameworkService['getLicensePlansOrFail']>
+      >);
+      licenseIssuerService.assignLicensePlan.mockResolvedValue(undefined!);
 
       // Act
       await service.assignLicensePlansToSpace(

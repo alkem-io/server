@@ -103,10 +103,13 @@ Winston logger signatures:
 
 ### TypeORM Entity Guidelines
 
-- No defaults in entity definitions or class fields
+- Declare `nullable: false` explicitly on all NOT NULL columns (TypeORM default varies by context)
+- Declare `default` in `@Column()` when the DB column has a DEFAULT (e.g., `default: 0`, `default: {}`)
 - Non-eager relations must be optional
 - Always use length constants: `UUID_LENGTH`, `ENUM_LENGTH`, `URI_LENGTH`
 - Generate migrations after schema changes
+- The `actor.type` discriminator uses a PostgreSQL enum (`actor_type_enum`), declared via `@TableInheritance({ column: { type: 'enum', enum: ActorType } })`
+
 
 ### GraphQL API Conventions
 
