@@ -63,6 +63,16 @@ export class CommunityPolls1772569123375 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    await queryRunner.query(`
+      UPDATE "user_settings"
+      SET "notification" =
+        "notification"
+          #- '{space,collaborationPollVoteCastOnOwnPoll}'
+          #- '{space,collaborationPollVoteCastOnPollIVotedOn}'
+          #- '{space,collaborationPollModifiedOnPollIVotedOn}'
+          #- '{space,collaborationPollVoteAffectedByOptionChange}';
+    `);
+
     await queryRunner.query(`DROP INDEX "public"."IDX_99f9db6d3dae2a0aebebbf8e10"`);
     await queryRunner.query(`DROP INDEX "public"."IDX_a1200fcfcdab6145351545f26e"`);
     await queryRunner.query(`ALTER TABLE "callout_framing" DROP CONSTRAINT "FK_1befc5c804ba6c5eb3eb713282e"`);
@@ -75,14 +85,5 @@ export class CommunityPolls1772569123375 implements MigrationInterface {
     await queryRunner.query(`DROP TABLE "poll"`);
     await queryRunner.query(`DROP TABLE "poll_vote"`);
     await queryRunner.query(`DROP TABLE "poll_option"`);
-    await queryRunner.query(`
-      UPDATE "user_settings"
-      SET "notification" =
-        "notification"
-          #- '{space,collaborationPollVoteCastOnOwnPoll}'
-          #- '{space,collaborationPollVoteCastOnPollIVotedOn}'
-          #- '{space,collaborationPollModifiedOnPollIVotedOn}'
-          #- '{space,collaborationPollVoteAffectedByOptionChange}';
-    `);
   }
 }

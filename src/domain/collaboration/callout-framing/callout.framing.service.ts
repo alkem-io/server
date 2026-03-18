@@ -9,7 +9,6 @@ import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { LinkService } from '@domain/collaboration/link/link.service';
-import { CreatePollInput } from '@domain/collaboration/poll/dto/poll.dto.create';
 import { IPoll } from '@domain/collaboration/poll/poll.interface';
 import { PollService } from '@domain/collaboration/poll/poll.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
@@ -588,8 +587,9 @@ export class CalloutFramingService {
     );
     if (!calloutFraming.profile)
       throw new EntityNotFoundException(
-        `Callout profile not initialized: ${calloutFramingInput.id}`,
-        LogContext.COLLABORATION
+        'Callout profile not initialized',
+        LogContext.COLLABORATION,
+        { calloutFramingID: calloutFramingInput.id }
       );
 
     return calloutFraming.profile;
