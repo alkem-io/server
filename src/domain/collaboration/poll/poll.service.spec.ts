@@ -29,7 +29,7 @@ describe('PollService', () => {
       }
       return Promise.resolve(poll);
     }),
-    remove: vi.fn().mockImplementation((entity: unknown) => {
+    remove: vi.fn().mockImplementation((entity: any) => {
       return Promise.resolve({ ...entity, id: undefined });
     }),
     createQueryBuilder: vi.fn().mockReturnValue({
@@ -117,6 +117,7 @@ describe('PollService', () => {
         PollResultsVisibility.VISIBLE
       );
       expect(poll.settings.resultsDetail).toBe(PollResultsDetail.FULL);
+      expect(poll.settings.allowContributorsAddOptions).toBe(false);
     });
 
     it('(e2) allows missing title and defaults to empty string', async () => {
@@ -249,6 +250,7 @@ describe('PollService', () => {
         maxResponses: 1,
         resultsVisibility: visibility,
         resultsDetail: PollResultsDetail.FULL,
+        allowContributorsAddOptions: false,
       };
       poll.votes = Array.from({ length: voteCount }, (_, i) => {
         const v = new PollVote();
@@ -294,6 +296,7 @@ describe('PollService', () => {
         maxResponses: 1,
         resultsVisibility: visibility,
         resultsDetail: PollResultsDetail.FULL,
+        allowContributorsAddOptions: false,
       };
       poll.votes = voterIds.map(uid => {
         const v = new PollVote();
@@ -387,6 +390,7 @@ describe('PollService — computePollResults / applyVisibilityRules (T047)', () 
       maxResponses: 1,
       resultsVisibility,
       resultsDetail,
+      allowContributorsAddOptions: false,
     };
     poll.options = options;
     poll.votes = votes;
@@ -647,6 +651,7 @@ describe('PollService — option management (T054)', () => {
       maxResponses: 1,
       resultsVisibility: PollResultsVisibility.VISIBLE,
       resultsDetail: PollResultsDetail.FULL,
+      allowContributorsAddOptions: false,
     };
     poll.options = opts;
     poll.votes = votes;

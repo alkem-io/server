@@ -116,6 +116,8 @@ export class PollService {
       resultsVisibility:
         input.settings?.resultsVisibility ?? PollResultsVisibility.VISIBLE,
       resultsDetail: input.settings?.resultsDetail ?? PollResultsDetail.FULL,
+      allowContributorsAddOptions:
+        input.settings?.allowContributorsAddOptions ?? false,
     };
     poll.authorization = new AuthorizationPolicy(AuthorizationPolicyType.POLL);
 

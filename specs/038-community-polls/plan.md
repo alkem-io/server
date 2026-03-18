@@ -189,3 +189,9 @@ src/migrations/
 - **Behavior**: Mutation fails with ValidationException if user has not voted. Vote removal is silent — no notifications sent to poll creator or other voters (per FR-020a/b clarification) — but `pollVoteUpdated` subscription fires so real-time viewers see updated counts.
 - **Affected files**: `spec.md` (FR-012a, FR-012b, US4 scenarios 5-6, SC-006a, edge cases, clarifications), `contracts/schema.graphql` (new mutation), `poll.service.ts`, `poll.resolver.mutations.ts`.
 - **Resolves**: Vote withdrawal capability gap.
+
+**2026-03-18**: Added `allowContributorsAddOptions` poll setting.
+- **Change**: New boolean `allowContributorsAddOptions` (default `false`) in `IPollSettings` / `PollSettingsInput`. When `true`, users with `CONTRIBUTE` privilege (voters) can add new options to the poll via `addPollOption`. Editing, removing, and reordering remain `UPDATE`-only.
+- **Rationale**: Enables collaborative poll building where the community can suggest their own answers, controlled per-poll by the creator.
+- **Authorization impact**: `addPollOption` now checks `UPDATE` OR (`CONTRIBUTE` + `allowContributorsAddOptions = true`). Constitution Check row 8 updated: secure-by-design is maintained — the setting is immutable after creation, preventing privilege escalation.
+- **Affected files**: `spec.md` (FR-004a, FR-025, US5 scenarios 6-7, Key Entities, clarifications), `data-model.md` (ERD, validation rules, interfaces, authorization table), `tasks.md` (T008, T027, T053), `contracts/schema.graphql` (PollSettings, PollSettingsInput), `quickstart.md` (examples), `poll.settings.interface.ts`, `poll.dto.create.ts`, `poll.service.ts`, `poll.resolver.mutations.ts`, `poll.service.spec.ts`, `poll.resolver.subscriptions.spec.ts`.

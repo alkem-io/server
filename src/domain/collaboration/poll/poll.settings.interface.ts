@@ -31,4 +31,11 @@ export abstract class IPollSettings {
       'Controls how much detail is shown in results. Immutable after poll creation.',
   })
   resultsDetail!: PollResultsDetail;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Whether users with CONTRIBUTE privilege can add new options to the poll. Immutable after poll creation. Default: false.',
+  })
+  allowContributorsAddOptions!: boolean;
 }

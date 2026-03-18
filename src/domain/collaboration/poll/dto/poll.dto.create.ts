@@ -6,6 +6,7 @@ import { Type } from 'class-transformer';
 import {
   ArrayMaxSize,
   ArrayMinSize,
+  IsBoolean,
   IsInt,
   IsOptional,
   MaxLength,
@@ -48,6 +49,15 @@ export class PollSettingsInput {
   })
   @IsOptional()
   resultsDetail?: PollResultsDetail;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Whether voters can add new options to the poll. Defaults to false.',
+  })
+  @IsOptional()
+  @IsBoolean()
+  allowContributorsAddOptions?: boolean;
 }
 
 @InputType('CreatePollInput')

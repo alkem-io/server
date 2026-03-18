@@ -21,6 +21,7 @@ Any user with permission to create a Post (Callout) in a space can add a poll to
 2. **Given** a user is adding a poll to a Callout, **When** they set `maxResponses = 0` (unlimited), **Then** members will be able to select more than one option when voting.
 3. **Given** a user is adding a poll to a Callout, **When** they submit with fewer than two options, **Then** the system prevents submission and informs them that at least two options are required.
 4. **Given** a Callout with a poll has been created, **When** any space member views the collaboration space, **Then** they can see the poll question, all options, and the response count settings.
+5. **Given** a user is creating a poll with `settings.allowContributorsAddOptions = true`, **When** the poll is created, **Then** the setting is persisted and any voter (CONTRIBUTE privilege) can subsequently add new options to the poll.
 
 ---
 
@@ -95,6 +96,8 @@ Any user with Callout edit permissions (the Callout creator, a space admin, or a
 3. **Given** a user with Callout edit permissions removes an option that has received votes, **When** they confirm the removal, **Then** the option is deleted, all votes containing that option are deleted entirely, and every affected voter receives a notification informing them their vote has been removed and inviting them to re-vote.
 4. **Given** a user with Callout edit permissions reorders poll options (e.g., moves option 3 to position 1), **When** they save, **Then** members see the new order; this does not affect vote counts.
 5. **Given** a member without Callout edit permissions views a poll, **When** they inspect the poll, **Then** no edit controls are available to them.
+6. **Given** a poll with `settings.allowContributorsAddOptions = true`, **When** a space member with voting rights (CONTRIBUTE privilege) adds a new option via `addPollOption`, **Then** the new option appears at the end of the option list and is immediately available for voting, identical to an admin-added option.
+7. **Given** a poll with `settings.allowContributorsAddOptions = false` (default), **When** a space member without Callout edit permissions attempts to add an option, **Then** the system rejects the action with an authorization error.
 
 ---
 
@@ -179,6 +182,7 @@ A community member viewing a poll in their browser wants the poll display to upd
 - **FR-002**: Poll creators MUST be able to configure how many options a voter may select by setting `settings.minResponses` (minimum selections required, must be ≥ 1) and `settings.maxResponses` (maximum selections allowed, must be ≥ 0 where 0 means unlimited). Typical configurations: single-choice (`minResponses = 1, maxResponses = 1`), open multi-choice (`minResponses = 1, maxResponses = 0`).
 - **FR-003**: A newly created poll MUST be immediately visible and open for voting to all space members.
 - **FR-004**: Any user with Callout edit permissions MUST be able to add new options to a published poll at any time.
+- **FR-004a**: When `settings.allowContributorsAddOptions` is `true`, any space member who can vote (CONTRIBUTE privilege) MAY add new options to the poll via `addPollOption`. The option is appended with the next available sort order, identical to admin-added options. Editing, removing, and reordering options remain restricted to UPDATE privilege (FR-005, FR-006, FR-007 unchanged).
 - **FR-005**: Any user with Callout edit permissions MUST be able to edit the text of any existing poll option. When the text of an option is changed, all votes containing that option MUST be deleted entirely, and each affected voter MUST receive a notification informing them their vote has been removed due to the option text change and inviting them to re-vote.
 - **FR-006**: Any user with Callout edit permissions MUST be able to remove a poll option; the system MUST prevent removal if the poll would have fewer than 2 remaining options (polls must always contain at least 2 options). When an option with existing votes is removed, all votes containing that option MUST be deleted entirely, and each affected voter MUST receive a notification informing them their vote has been removed and inviting them to re-vote.
 - **FR-007**: Any user with Callout edit permissions MUST be able to reorder poll options; reordering does not affect vote counts and changes only option display order.
@@ -220,7 +224,7 @@ A community member viewing a poll in their browser wants the poll display to upd
 - **FR-022 (revised)**: Callout creators MUST NOT receive a notification when they vote on their own poll (scoped to FR-021a).
 - **FR-023**: The poll data model MUST support a "status" field (e.g., open, closed) per poll, to allow future poll closing without migration.
 - **FR-024**: Poll creators MUST be able to configure a `settings.resultsDetail` setting at poll creation time, choosing from `PERCENTAGE` (only percentage per option), `COUNT` (vote count per option, no voter identities), or `FULL` (counts + voter list). The default MUST be `FULL`.
-- **FR-025**: The entire `settings` object (containing `minResponses`, `maxResponses`, `resultsVisibility`, and `resultsDetail`) MUST be immutable after poll creation — any attempt to change any field within it after the poll exists MUST be rejected.
+- **FR-025**: The entire `settings` object (containing `minResponses`, `maxResponses`, `resultsVisibility`, `resultsDetail`, and `allowContributorsAddOptions`) MUST be immutable after poll creation — any attempt to change any field within it after the poll exists MUST be rejected.
 - **FR-026**: The server MUST expose a derived `canSeeDetailedResults` boolean on the Poll type so clients can determine with a single field check whether the visibility gate is passed for the current user.
 
 - **FR-027**: The poll data model MUST support a "deadline" field per poll (even if auto-close by deadline is not implemented in this iteration), to avoid future breaking changes.
@@ -239,7 +243,7 @@ A community member viewing a poll in their browser wants the poll display to upd
 ### Key Entities
 
 - **Callout (Post)**: An existing collaboration artifact in a space. A poll is optional additional content attached to a Callout's Framing — a Callout may or may not have a poll.
-- **Poll**: Additional content on a Callout's Framing. Holds an optional `title` (max 512 chars; defaults to an empty string when omitted), a `settings` object (JSONB) containing `minResponses` and `maxResponses` integers that define how many options a voter must/may select plus `resultsVisibility` and `resultsDetail` enums, status (open/closed), an ordered list of Poll Options, and a future-compatibility deadline field. A Callout Framing has at most one Poll.
+- **Poll**: Additional content on a Callout's Framing. Holds an optional `title` (max 512 chars; defaults to an empty string when omitted), a `settings` object (JSONB) containing `minResponses` and `maxResponses` integers that define how many options a voter must/may select, `resultsVisibility` and `resultsDetail` enums, and `allowContributorsAddOptions` boolean (default `false`) that controls whether voters can add new options; status (open/closed), an ordered list of Poll Options, and a future-compatibility deadline field. A Callout Framing has at most one Poll.
 - **Poll Option**: An individual selectable choice within a Poll. Has display text (max 512 chars) and an ordering value. Associated with zero or more Votes.
 - **Vote**: A record of one space member's current selection(s) on a specific Poll. Belongs to exactly one member. References between `minResponses` and `maxResponses` Poll Options. Updated in place when the voter changes their selections — no historical vote records are retained. Records the timestamp of the last update. A member has at most one Vote per Poll. A change event is emitted on each update to support future subscription integration without requiring stored history.
 
@@ -304,6 +308,12 @@ A community member viewing a poll in their browser wants the poll display to upd
 
 - Q: When a poll option's text is changed or removed and voters had selected that option in a multi-select poll, should we remove only the affected option from their vote or delete the entire vote? → A: Delete the entire vote. The voter's original selection set was a deliberate combination — silently modifying it (removing one option) could misrepresent their intent. Deleting the vote entirely and notifying them to re-vote is the correct behavior, ensuring voters always explicitly confirm their selections.
 - Q: When `resultsVisibility = TOTAL_ONLY` and the user has not voted, `totalVotes` is visible but all per-option details (counts, percentages, voters) are null. Is this asymmetry intentional? → A: Yes. `TOTAL_ONLY` is designed to let unvoted users know that other community members are actively participating (social proof / engagement signal) without revealing which options are popular, thereby avoiding vote biasing. Once the user votes, per-option details become visible per the `resultsDetail` setting.
+
+---
+
+### Session 2026-03-18 (Voter-Added Options)
+
+- Q: Should voters be able to add their own options to a poll? → A: Yes, controlled by a new `settings.allowContributorsAddOptions` boolean (default `false`). When enabled, any user with CONTRIBUTE privilege (i.e. voters) can add options via the existing `addPollOption` mutation. The authorization check becomes: UPDATE privilege OR (CONTRIBUTE privilege AND `allowContributorsAddOptions = true`). Editing, removing, and reordering options remain admin-only (UPDATE privilege). Voter-added options are identical to admin-added ones — no tracking of who added which option, no separate cap beyond the existing `POLL_OPTIONS_MAX_COUNT`.
 
 ---
 

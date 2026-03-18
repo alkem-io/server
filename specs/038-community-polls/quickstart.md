@@ -31,10 +31,13 @@ mutation CreateCalloutWithPoll($calloutsSetID: UUID!) {
       type: POLL
       poll: {
         title: "Which day works for the team sync?"
-        # minResponses and maxResponses are optional; both default to 1
-        # resultsVisibility and resultsDetail are optional; defaults shown:
-        # resultsVisibility: VISIBLE
-        # resultsDetail: FULL
+        # settings: {
+          # minResponses and maxResponses are optional; both default to 1
+          # resultsVisibility and resultsDetail are optional; defaults shown:
+          # resultsVisibility: VISIBLE
+          # resultsDetail: FULL
+          # allowContributorsAddOptions: false (when true, voters can add options)
+        # }
         options: ["Monday", "Wednesday", "Friday"]
       }
     }
@@ -354,6 +357,7 @@ query CheckSettings($calloutID: UUID!) {
             maxResponses           # e.g. 1 or 0
             resultsVisibility      # VISIBLE (default)
             resultsDetail          # FULL (default)
+            allowContributorsAddOptions  # false (default)
           }
           status                 # OPEN
           totalVotes             # 0 (or current count)

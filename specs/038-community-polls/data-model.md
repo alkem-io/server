@@ -16,7 +16,8 @@ Poll (NEW)
   │     minResponses: int (≥ 1),
   │     maxResponses: int (≥ 0, 0 = unlimited),
   │     resultsVisibility: PollResultsVisibility (enum),
-  │     resultsDetail: PollResultsDetail (enum)
+  │     resultsDetail: PollResultsDetail (enum),
+  │     allowContributorsAddOptions: boolean (default false)
   │   }
   ├── deadline?: DateTime                    [future-compat]
   ├── options: PollOption[] [OneToMany]
@@ -69,7 +70,7 @@ export enum PollResultsDetail {
 }
 ```
 
-> All `minResponses`, `maxResponses`, `resultsVisibility` and `resultsDetail` and in general anything under `Poll`.`settings` are **immutable after creation** — they cannot be changed once the poll exists.
+> All `minResponses`, `maxResponses`, `resultsVisibility`, `resultsDetail`, and `allowContributorsAddOptions` and in general anything under `Poll`.`settings` are **immutable after creation** — they cannot be changed once the poll exists.
 
 ## PollOption Row Shape
 
@@ -108,7 +109,7 @@ export class Poll extends AuthorizableEntity implements IPoll {
   status!: PollStatus;  // future-compat: always OPEN in this iteration
 
   @Column('jsonb', { nullable: false })
-  settings!: IPollSettings;  // { minResponses, maxResponses, resultsVisibility, resultsDetail }; immutable after creation
+  settings!: IPollSettings;  // { minResponses, maxResponses, resultsVisibility, resultsDetail, allowContributorsAddOptions }; immutable after creation
 
   @Column('timestamp', { nullable: true })
   deadline?: Date;  // future-compat: always null in this iteration
@@ -200,7 +201,7 @@ poll?: Poll;
 | version | int | NOT NULL | optimistic lock |
 | title | varchar(512) | NOT NULL | poll title |
 | status | varchar(128) | NOT NULL | 'open' \| 'closed' (always 'open' in v1) |
-| settings | jsonb | NOT NULL | `{ minResponses, maxResponses, resultsVisibility, resultsDetail }` — immutable after creation |
+| settings | jsonb | NOT NULL | `{ minResponses, maxResponses, resultsVisibility, resultsDetail, allowContributorsAddOptions }` — immutable after creation |
 | deadline | timestamp | NULL | always NULL in v1 |
 | authorizationId | uuid | NULL | FK → authorization_policy(id) ON DELETE SET NULL |
 
@@ -255,10 +256,18 @@ This prevents orphaned votes and keeps poll aggregates consistent without requir
 - When `settings.maxResponses > 0`, `settings.maxResponses` must be ≥ `settings.minResponses`.
 - `settings.resultsVisibility` must be a valid `PollResultsVisibility` value; defaults to `VISIBLE`.
 - `settings.resultsDetail` must be a valid `PollResultsDetail` value; defaults to `FULL`.
+- `settings.allowContributorsAddOptions` must be a boolean; defaults to `false`. When `true`, users with CONTRIBUTE privilege can add new options via `addPollOption`.
 - The entire `settings` object is **immutable after creation** — any attempt to change any field within it is rejected.
 - Option texts must not be empty; max `MID_TEXT_LENGTH` (512 chars).
 - Duplicate option texts: warn but allow (per spec edge cases).
 - Each new option is persisted as a `poll_option` row with UUID v4 `id` and sequential `sortOrder`.
+
+### Adding a Poll Option
+- Caller must have `UPDATE` privilege on the parent Callout, **OR** `CONTRIBUTE` privilege on the Poll when `settings.allowContributorsAddOptions` is `true` (FR-004a).
+- The new option text must not be empty; max `MID_TEXT_LENGTH` (512 chars).
+- The poll must not exceed `POLL_OPTIONS_MAX_COUNT` options after the addition.
+- The new option is appended with the next sequential `sortOrder` value.
+- Voter-added options are identical to admin-added options — no provenance tracking.
 
 ### Casting or Updating a Vote
 - Caller must have `CONTRIBUTE` privilege on the Poll (authorization guard).
@@ -377,6 +386,9 @@ export abstract class IPollSettings {
 
   @Field(() => PollResultsDetail, { nullable: false, description: 'Controls how much detail is shown in results.' })
   resultsDetail!: PollResultsDetail;
+
+  @Field(() => Boolean, { nullable: false, description: 'Whether users with CONTRIBUTE privilege can add new options to the poll. Default: false.' })
+  allowContributorsAddOptions!: boolean;
 }
 ```
 
@@ -397,6 +409,9 @@ export class PollSettingsInput {
 
   @Field(() => PollResultsDetail, { nullable: true, description: 'How much detail is shown. Defaults to FULL.' })
   resultsDetail?: PollResultsDetail;
+
+  @Field(() => Boolean, { nullable: true, description: 'Whether users with CONTRIBUTE privilege can add new options. Defaults to false.' })
+  allowContributorsAddOptions?: boolean;
 }
 ```
 
@@ -493,7 +508,9 @@ export abstract class IPollVote extends IBaseAlkemio {
 | View voter lists | `READ` on Poll | Same |
 | Cast / update vote | `CONTRIBUTE` on Poll | Space member credential |
 | Create poll (via createCallout) | `CREATE` on CalloutsSet | Callout create/edit permission |
-| Add / edit / remove / reorder options | `UPDATE` on Callout | Callout edit permission |
+| Add option (admin) | `UPDATE` on Callout | Callout edit permission |
+| Add option (voter, FR-004a) | `CONTRIBUTE` on Poll | Space member credential; only when `settings.allowContributorsAddOptions = true` |
+| Edit / remove / reorder options | `UPDATE` on Callout | Callout edit permission |
 | Subscribe to poll events | `READ` on Poll | Same as viewing poll |
 
 ---

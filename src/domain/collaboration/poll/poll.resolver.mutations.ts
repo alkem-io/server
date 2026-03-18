@@ -108,7 +108,7 @@ export class PollMutationsResolver {
 
   @Mutation(() => IPoll, {
     description:
-      'Add a new option to a Poll. Requires UPDATE privilege on the Poll. The new option is appended with the next available sort order.',
+      'Add a new option to a Poll. Requires UPDATE privilege, or CONTRIBUTE privilege when the poll setting allowContributorsAddOptions is enabled. The new option is appended with the next available sort order.',
   })
   async addPollOption(
     @CurrentActor() actorContext: ActorContext,
@@ -116,12 +116,24 @@ export class PollMutationsResolver {
   ): Promise<IPoll> {
     const poll = await this.pollService.getPollOrFail(optionData.pollID);
 
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      poll.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `add option to poll: ${poll.id}`
-    );
+    if (poll.settings.allowContributorsAddOptions) {
+      // If allowContributorsAddOptions is enabled, users with CONTRIBUTE privilege can add options.
+      // This is a relaxed permission check that does not require UPDATE privilege, but it still ensures the user has at least CONTRIBUTE access to the poll.
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        poll.authorization,
+        AuthorizationPrivilege.CONTRIBUTE,
+        `add option to poll: ${poll.id}`
+      );
+    } else {
+      // Normal voters cannot add options, so we enforce the UPDATE privilege
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        poll.authorization,
+        AuthorizationPrivilege.UPDATE,
+        `add option to poll: ${poll.id}`
+      );
+    }
 
     // Capture current voters before mutation
     const voterIds = (poll.votes ?? []).map(v => v.createdBy);

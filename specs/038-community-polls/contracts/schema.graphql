@@ -89,6 +89,14 @@ type PollSettings {
   Immutable after poll creation.
   """
   resultsDetail: PollResultsDetail!
+
+  """
+  Whether users with CONTRIBUTE privilege can add new options to the poll.
+  When true, any user who can vote can also add options via addPollOption.
+  Editing, removing, and reordering options remain restricted to UPDATE privilege.
+  Immutable after poll creation.
+  """
+  allowContributorsAddOptions: Boolean!
 }
 
 """
@@ -252,6 +260,12 @@ input PollSettingsInput {
   Optional; defaults to FULL.
   """
   resultsDetail: PollResultsDetail
+
+  """
+  Whether users with CONTRIBUTE privilege can add new options to the poll.
+  Optional; defaults to false.
+  """
+  allowContributorsAddOptions: Boolean
 }
 
 """

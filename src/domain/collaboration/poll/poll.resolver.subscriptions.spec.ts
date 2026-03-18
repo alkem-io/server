@@ -61,6 +61,7 @@ describe('PollResolverSubscriptions', () => {
       settings: {
         resultsVisibility: PollResultsVisibility.TOTAL_ONLY,
         resultsDetail: PollResultsDetail.FULL,
+        allowContributorsAddOptions: false,
       } as any,
       options: [],
       votes: [],
