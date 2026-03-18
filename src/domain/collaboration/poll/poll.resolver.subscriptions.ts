@@ -139,7 +139,7 @@ export class PollResolverSubscriptions {
       actorContext,
       poll.authorization,
       AuthorizationPrivilege.READ,
-      `subscription to poll vote updates: ${poll.id}`
+      'subscription to poll vote updates'
     );
 
     return this.subscriptionService.subscribeToPollVoteUpdated();
@@ -226,7 +226,7 @@ export class PollResolverSubscriptions {
       actorContext,
       poll.authorization,
       AuthorizationPrivilege.READ,
-      `subscription to poll options changes: ${poll.id}`
+      'subscription to poll options changes'
     );
 
     return this.subscriptionService.subscribeToPollOptionsChanged();

@@ -21,6 +21,7 @@ function makePoll(overrides: Partial<Poll> = {}): Poll {
     maxResponses: 1,
     resultsVisibility: PollResultsVisibility.VISIBLE,
     resultsDetail: PollResultsDetail.FULL,
+    allowContributorsAddOptions: false,
   };
 
   const optA = new PollOption();
