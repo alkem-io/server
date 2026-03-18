@@ -138,6 +138,14 @@ export class PollVoteService {
         relations: { options: true, votes: true },
       });
 
+    if (poll.status !== PollStatus.OPEN) {
+      throw new ValidationException(
+        'Cannot remove vote from a closed poll',
+        LogContext.COLLABORATION,
+        { pollId: poll.id, status: poll.status }
+      );
+    }
+
     const existingVote = await this.pollVoteRepository.findOne({
       where: { createdBy: voterId, poll: { id: pollId } },
     });

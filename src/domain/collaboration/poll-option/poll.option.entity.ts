@@ -1,7 +1,7 @@
 import { MID_TEXT_LENGTH } from '@common/constants';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity/base.alkemio.entity';
 import { IUser } from '@domain/community/user/user.interface';
-import { Column, Entity, ManyToOne, Unique } from 'typeorm';
+import { Column, Entity, Index, ManyToOne, Unique } from 'typeorm';
 import { IPoll } from '../poll/poll.interface';
 import { IPollOption } from './poll.option.interface';
 
@@ -14,6 +14,7 @@ export class PollOption extends BaseAlkemioEntity implements IPollOption {
   @Column('int', { nullable: false })
   sortOrder!: number;
 
+  @Index()
   @ManyToOne('Poll', 'options', {
     nullable: false,
     eager: false,

@@ -984,7 +984,9 @@ export class NotificationSpaceAdapter {
     }
 
     // Send in-app notifications
-    const inAppReceiverIDs = recipients.inAppRecipients.map(r => r.id);
+    const inAppReceiverIDs = recipients.inAppRecipients
+      .filter(r => r.id !== dto.triggeredBy)
+      .map(r => r.id);
     if (inAppReceiverIDs.length > 0) {
       const inAppPayload: InAppNotificationPayloadSpaceCollaborationPoll = {
         type: NotificationEventPayload.SPACE_COLLABORATION_POLL,

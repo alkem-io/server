@@ -1,7 +1,7 @@
 import { IPollOption } from '@domain/collaboration/poll-option/poll.option.interface';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity/base.alkemio.entity';
 import { User } from '@domain/community/user/user.entity';
-import { Column, Entity, JoinColumn, ManyToOne, Unique } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne, Unique } from 'typeorm';
 import { IPoll } from '../poll/poll.interface';
 import { IPollVote } from './poll.vote.interface';
 
@@ -26,6 +26,7 @@ export class PollVote extends BaseAlkemioEntity implements IPollVote {
   @Column('jsonb', { nullable: false })
   selectedOptionIds!: string[];
 
+  @Index()
   @ManyToOne('Poll', 'votes', {
     nullable: false,
     eager: false,
