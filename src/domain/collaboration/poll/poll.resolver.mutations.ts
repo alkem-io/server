@@ -5,6 +5,7 @@ import { PollEventType } from '@common/enums/poll.event.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CastPollVoteInput } from '@domain/collaboration/poll-vote/dto/poll.vote.dto.cast';
+import { RemovePollVoteInput } from '@domain/collaboration/poll-vote/dto/poll.vote.dto.remove';
 import { PollVoteService } from '@domain/collaboration/poll-vote/poll.vote.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -70,6 +71,34 @@ export class PollMutationsResolver {
     );
 
     // Publish subscription event
+    void this.publishPollEvent(PollEventType.POLL_VOTE_UPDATED, updatedPoll);
+
+    return updatedPoll;
+  }
+
+  @Mutation(() => IPoll, {
+    description:
+      'Remove the current user vote from a Poll. Requires CONTRIBUTE privilege on the Poll. If the user has not voted, returns a validation error.',
+  })
+  async removePollVote(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('voteData') voteData: RemovePollVoteInput
+  ): Promise<IPoll> {
+    const poll = await this.pollService.getPollOrFail(voteData.pollID);
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      poll.authorization,
+      AuthorizationPrivilege.CONTRIBUTE,
+      `remove vote from poll: ${poll.id}`
+    );
+
+    const updatedPoll = await this.pollVoteService.removeVote(
+      voteData.pollID,
+      actorContext.actorID
+    );
+
+    // Vote removal is silent for notifications, but subscription updates are published.
     void this.publishPollEvent(PollEventType.POLL_VOTE_UPDATED, updatedPoll);
 
     return updatedPoll;

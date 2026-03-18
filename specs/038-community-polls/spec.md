@@ -74,6 +74,8 @@ A community member who has already voted wants to update their selections — fo
 2. **Given** a member views a poll where they have voted, **When** they change their selections and submit, **Then** their previous vote is replaced by the new selection(s) and the results update accordingly.
 3. **Given** a member in a poll with `maxResponses = 1` switches from option A to option B, **When** they submit the change, **Then** option A loses one vote, option B gains one vote, and the ranked results update.
 4. **Given** a member in a poll with `maxResponses = 0` wants to change their selections, **When** they submit a new complete set of selections (e.g., previously voted A+B+C, now submitting B+C+D), **Then** their previous vote (A+B+C) is replaced entirely by the new vote (B+C+D), and the results update accordingly (A loses one vote, D gains one vote).
+5. **Given** a member has voted on a poll, **When** they click the remove vote button or invoke `removePollVote(pollID)`, **Then** their vote is entirely deleted, the poll options' vote counts decrement accordingly, their `myVote` status is cleared, and they are returned to the unvoted state with the ability to vote again.
+6. **Given** a member has not voted on a poll, **When** they attempt to invoke `removePollVote(pollID)`, **Then** the system returns a validation error indicating they have no vote to remove and prevents the operation.
 
 ---
 
@@ -162,6 +164,7 @@ A community member viewing a poll in their browser wants the poll display to upd
 - What happens if a member's account is deleted from the platform after voting? Their votes are removed from the poll results.
 - What happens if a poll is created with duplicate option text? The system should warn the creator that two options have identical text (via a validation warning message returned in the GraphQL response) but allow creation at the creator's discretion.
 - What happens in multi-select mode if a voter selects no options and submits? The system should require at least one selection before allowing submission.
+- What happens if a member invokes `removePollVote` twice in rapid succession? The system should prevent the second removal with an appropriate error indicating no vote exists to remove.
 
 ---
 
@@ -186,6 +189,8 @@ A community member viewing a poll in their browser wants the poll display to upd
 - **FR-010**: The system MUST enforce at most one concurrent Vote record per member per Poll. A subsequent `castPollVote` call replaces the existing vote entirely (no historical records retained) per FR-012.
 - **FR-011**: A voter MUST NOT be able to select the same option more than once in a single vote submission.
 - **FR-012**: Voters MUST be able to update their vote at any time while the poll is open by submitting a complete new set of selected options. The system MUST replace the previous vote entirely (no partial modifications allowed), and MUST validate the new selection set against the poll's `settings.minResponses` and `settings.maxResponses` constraints.
+- **FR-012a**: Voters MUST be able to remove their vote entirely from a poll at any time. When a vote is removed, all selections associated with that vote MUST be deleted, poll results MUST be updated to decrement vote counts for each selected option, and the voter's `myVote` status MUST reflect no active vote. The `removePollVote(pollID: UUID!)` mutation MUST return the updated Poll object reflecting the vote removal, poll results visibility rules apply on the returned object.
+- **FR-012b**: The `removePollVote` mutation MUST fail with a validation error if the invoking user has not voted on the specified poll. The error message MUST be user-friendly and indicate the user has no vote to remove.
 - **FR-013**: Non-members of a space MUST NOT be able to cast votes on polls within that space.
 
 **Results & Transparency**
@@ -200,8 +205,8 @@ A community member viewing a poll in their browser wants the poll display to upd
 **Notifications**
 
 - **FR-020**: The system MUST deliver notifications for four distinct poll-related events, each controlled by dedicated preference fields under `spaceNotificationChannels`:
-- **FR-020a**: When a member casts or updates a vote on a poll, the Callout creator MUST receive a notification (except if the voter is the creator himself) indicating a vote was cast or updated on their poll. Controlled by preference field `collaborationPollVoteCastOnOwnPoll`.
-- **FR-020b**: When any member (excluding the member voting) casts or updates a vote on a poll where another member has previously voted, the recipient MUST receive a notification indicating new voting activity on a poll they participate in. When the Callout creator has also voted on the poll, they MUST NOT receive this notification for the same vote event where FR-020a was already dispatched to them — FR-020a takes precedence and FR-020b is suppressed for the creator on that event to prevent duplicate notifications. Controlled by preference field `collaborationPollVoteCastOnPollIVotedOn`.
+- **FR-020a**: When a member casts or updates a vote on a poll, the Callout creator MUST receive a notification (except if the voter is the creator himself) indicating a vote was cast or updated on their poll. When a member removes their vote via `removePollVote`, the Callout creator does NOT receive a notification for the removal (only for cast/update events). Controlled by preference field `collaborationPollVoteCastOnOwnPoll`.
+- **FR-020b**: When any member (excluding the member voting) casts or updates a vote on a poll where another member has previously voted, the recipient MUST receive a notification indicating new voting activity on a poll they participate in. When a member removes their vote, other voters on that poll do NOT receive a notification for the removal. When the Callout creator has also voted on the poll, they MUST NOT receive this notification for the same vote event where FR-020a was already dispatched to them — FR-020a takes precedence and FR-020b is suppressed for the creator on that event to prevent duplicate notifications. Controlled by preference field `collaborationPollVoteCastOnPollIVotedOn`.
 - **FR-020c**: When a poll option that the recipient voted for is removed or has its text edited (both actions cause the vote to be deleted), the recipient MUST receive a notification informing them their vote has been removed and inviting them to re-vote. Controlled by preference field `collaborationPollVoteAffectedByOptionChange`.
 - **FR-020d**: When a poll where the recipient has voted is modified in ways that do not affect the recipient's vote (options added, option text changed for options the recipient did not vote for, poll reordered, options removed where the recipient did not vote for the removed option, etc.), the recipient MUST receive a notification informing them the poll has been updated. Controlled by preference field `collaborationPollModifiedOnPollIVotedOn`. Note: When an option is removed, voters whose votes are affected (they voted for the removed option) receive `collaborationPollVoteAffectedByOptionChange` instead; voters whose votes are unaffected receive this notification.
 
@@ -247,6 +252,7 @@ A community member viewing a poll in their browser wants the poll display to upd
 - **SC-004**: Poll results always display options in `sortOrder` order (ascending). Results reflect the current state at the time the poll is loaded, the page is refreshed, or a real-time subscription event is received. Subscribers viewing a poll receive live updates when votes are cast or options change, respecting the poll's `resultsVisibility` and `resultsDetail` settings.
 - **SC-005**: Poll creators receive a notification within 60 seconds of a vote being cast on their poll.
 - **SC-006**: A voter can successfully update their vote and see their previous selection removed and new selection recorded, all within a single interaction.
+- **SC-006a**: A voter can successfully remove their vote and see their selections removed from the results and their vote status cleared, within a single interaction.
 - **SC-007**: When `resultsDetail = FULL` and the visibility gate is passed, all space members can view the full voter list per option without additional permissions or steps.
 - **SC-008**: Polls support a minimum of 20 options without degradation in display or voting performance.
 
@@ -284,6 +290,12 @@ A community member viewing a poll in their browser wants the poll display to upd
 - Q: Should new subscribers receive catch-up with current state? → A: No, future events only — consistent with all other subscriptions in the platform (PubSub delivers only after subscription starts).
 - Q: What logging level for subscription events? → A: Debug level (not verbose).
 - Q: Should payloads include an event type field? → A: Yes, include `pollEventType` with values `POLL_VOTE_UPDATED` and `POLL_OPTIONS_CHANGED` — consistent with other subscriptions that include event context.
+
+---
+
+### Session 2026-03-18
+
+- Q: Should users be able to completely remove their vote, or only update it? → A: Users should be able to remove their vote entirely via the `removePollVote(pollID)` mutation. This is distinct from updating the vote (which replaces it with a new selection set). Vote removal returns the user to the unvoted state and should fail with a validation error if the user has not voted. Vote removal does NOT trigger notifications to poll creators or other voters (unlike vote cast/update events).
 
 ---
 

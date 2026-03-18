@@ -414,6 +414,17 @@ extend type Mutation {
   Returns the updated Poll including the caller's updated vote and new option counts.
   """
   castPollVote(voteData: CastPollVoteInput!): Poll!
+
+  """
+  Remove the current user's vote from a Poll.
+  Requires CONTRIBUTE privilege on the Poll (space member).
+  If the user has not voted on the poll, the mutation returns a validation error.
+  Vote removal clears the user's myVote status and decrements vote counts for all formerly selected options.
+  No notifications are sent (vote removal is silent — unlike vote cast/update which trigger FR-020a/b notifications).
+  The user returns to the unvoted state and can cast a new vote immediately.
+  Returns the updated Poll with vote counts and myVote reflecting the removal.
+  """
+  removePollVote(pollID: UUID!): Poll!
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

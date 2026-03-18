@@ -119,6 +119,24 @@
 
 ---
 
+## Phase 4b: User Story 4 — Vote Removal (Priority: P4) 🔄 FR-012a/b Implementation
+
+**Goal (US4 Branch)**: Voters can remove their vote entirely via `removePollVote(pollID)`, returning the poll to an unvoted state. Vote removal is silent (no notifications per FR-020a/b clarification) but `pollVoteUpdated` subscription fires so real-time viewers see updated counts.
+
+**Independent Test**: A member who has voted calls `removePollVote(pollID)`; the returned `Poll.myVote` is `null`, all `options[].voteCount` are decremented by 1 for options that member had selected. A member who has not voted calls `removePollVote(pollID)` and receives a validation error "You have not voted on this poll".
+
+### Implementation
+
+- [X] T039a [P] [US4] Create `RemovePollVoteInput` input DTO in `src/domain/collaboration/poll-vote/dto/poll.vote.dto.remove.ts`: single required field `pollID: UUID!` (with `@IsUUID()` validator)
+- [X] T039b [US4] Implement `PollVoteService.removeVote(pollId: string, voterId: string): Promise<Poll>` in `src/domain/collaboration/poll-vote/poll.vote.service.ts`: (1) load `Poll` with options; (2) find `PollVote` record for `(voterId, pollId)` — if not found, throw `ValidationException('You have not voted on this poll', LogContext.COLLABORATION)`; (3) delete the `PollVote` record; (4) return updated `Poll` (for field resolvers to compute results with decremented counts). **No notifications dispatched** (per FR-020a/b: vote removal is silent). (notification hook placeholder, Phase 9 only: `// TODO US7: publish PollVoteUpdatedSubscriptionPayload after vote removal`)
+- [X] T039c [US4] Create `removePollVote` mutation in `src/domain/collaboration/poll/poll.resolver.mutations.ts`: `@Mutation(() => IPoll) removePollVote(@Args('voteData') voteData: RemovePollVoteInput, @CurrentUser() user: AgentInfo): Promise<IPoll>`; enforce `CONTRIBUTE` privilege on `Poll` via `PollAuthorizationService.checkAuthorization()`; call `PollVoteService.removeVote(voteData.pollID, user.userID)`; return updated `Poll`
+- [X] T039d [US4] Wire subscription publish in `removePollVote` mutation (Phase 9 forward-reference): after vote removal, add a TODO placeholder: `// TODO US7: call subscriptionPublishService.publishPollVoteUpdated(payload)` — implementation deferred to Phase 9 (T086)
+- [X] T039e [US4] Add unit tests in `src/domain/collaboration/poll-vote/poll.vote.service.spec.ts` for `removeVote()`: (a) removes existing vote and returns updated poll with decremented counts; (b) throws `ValidationException` when voter has not voted; (c) after removal, subsequent call to `getVoteForUser()` returns `null`; (d) double-removal error: after first `removeVote()` succeeds, second `removeVote()` in rapid succession throws validation error (ensures idempotency guard); (e) verify `myVote` field resolver returns `null` after removal (integration between T039a–d and T038)
+
+**Checkpoint**: Vote removal works end-to-end. Mutations enforce authorization. Validation errors fire on missing votes. Results update correctly with decremented counts. Real-time subscribers will see updates once Phase 9 subscriptions are wired.
+
+---
+
 ## Phase 5: User Story 3 — Viewing Results with Vote Transparency (Priority: P3)
 
 **Goal**: Any space member can view poll results at any time (results update on page load). Options are always returned in `sortOrder` (ascending). Visibility is governed by `settings.resultsVisibility` and `settings.resultsDetail`.
@@ -164,7 +182,6 @@
 
 **Checkpoint**: All four option-management mutations work. Vote cleanup on option removal/edit is correct. Notifications are stubbed but not yet dispatched.
 
----
 
 ## Phase 7: User Story 6 — Callout Creator & Voter Notifications (Priority: P6)
 
@@ -297,11 +314,12 @@
 ```
 Phase 1 (Setup)
   └─► Phase 2 (Foundational) ─┬─► Phase 3 (US1 - Create Poll)
-                               ├─► Phase 4 (US2+US4 - Vote)       ← depends on US1 data to test
-                               ├─► Phase 5 (US3 - Results)         ← depends on US2 votes to test
-                               ├─► Phase 6 (US5 - Options)         ← depends on US1 data to test
-                               ├─► Phase 7 (US6 - Notifications)   ← depends on US2+US5 hooks
-                               └─► Phase 9 (US7 - Subscriptions)   ← depends on US2+US5 mutations
+                               ├─► Phase 4 (US2+US4a - Vote)      ← depends on US1 data to test
+                               ├─► Phase 4b (US4b - Vote Removal) ← depends on Phase 4 castVote
+                               ├─► Phase 5 (US3 - Results)        ← depends on US2 votes to test
+                               ├─► Phase 6 (US5 - Options)        ← depends on US1 data to test
+                               ├─► Phase 7 (US6 - Notifications)  ← depends on US2+US4b+US5 hooks
+                               └─► Phase 9 (US7 - Subscriptions)  ← depends on US2+US4b+US5 mutations
 Phase 8 (Polish) ← depends on all phases complete (including Phase 9)
 ```
 
@@ -310,10 +328,11 @@ Phase 8 (Polish) ← depends on all phases complete (including Phase 9)
 - **US1 (P1)**: Depends only on Phase 2 — no other story dependency
 - **US2 (P2)**: Requires US1 data (a poll must exist to vote on); can be implemented independently once Phase 2 is complete
 - **US3 (P3)**: Requires US2 to have cast votes for meaningful test data; implementation is independent of US2 code
-- **US4 (P4)**: Implemented as the update branch in US2's `castVote()` — no additional story phase needed
+- **US4a (P4 cast)**: Implemented in Phase 4 as the core `castVote()` mutation for both new votes and vote updates
+- **US4b (P4 removal)**: Implemented in Phase 4b as `removePollVote()` mutation; depends on Phase 4 `castVote()` service method existing; optional vote removal capability
 - **US5 (P5)**: Requires US1 data; notification stubs reference US6 but mutations work without notifications
-- **US6 (P6)**: Wires into US2 (`castVote`) and US5 (option mutations); must be done after US2 and US5 service methods exist
-- **US7 (P7)**: Wires into US2 (`castVote`) and US5 (option mutations) for publishing events; requires Poll entities and mutations to be functional. Independent of US6 (notifications)
+- **US6 (P6)**: Wires into US2 (`castVote`), US4b (`removePollVote`), and US5 (option mutations); must be done after US2, US4b, and US5 service methods exist
+- **US7 (P7)**: Wires into US2 (`castVote`), US4b (`removePollVote`), and US5 (option mutations) for publishing events; requires Poll entities and all vote/option mutations to be functional. Independent of US6 (notifications)
 
 ### Within Each Phase: Execution Order
 
@@ -350,8 +369,26 @@ Sequential:       T033                        (field resolver — after T032)
 Sequential:       T034                        (unit tests — after T029)
 ```
 
-### Phase 7 — US6
+### Phase 4 — US2+US4a
 
+```
+Parallel batch 1: T035, T036                  (DTOs + service method — fully parallel)
+Sequential:       T037                        (mutation resolver — after T036)
+Sequential:       T038                        (myVote field resolver — after T036)
+Sequential:       T039                        (unit tests — after T036)
+```
+
+### Phase 4b — US4b
+
+```
+Sequential:       T039a                       (DTO — standalone)
+Sequential:       T039b                       (PollVoteService.removeVote — after DTO)
+Sequential:       T039c                       (removePollVote mutation — after T039b)
+Sequential:       T039d                       (subscription publish hook — after T039c)
+Sequential:       T039e                       (unit tests — after T039b, T039c)
+```
+
+### Phase 7 — US6
 ```
 Parallel batch 1: T055, T056, T057, T058      (enums, prefs, DTOs, payload — fully parallel)
 Sequential:       T059                        (adapter methods — after T055–T058)
@@ -391,15 +428,16 @@ Sequential:       T089                        (schema contract — after T087)
 1. Phases 1–2 → Foundation ready (entities, modules, migration)
 2. Phase 3 → Poll creation works → can be demoed
 3. Phase 4 → Voting works → can be demoed with results
-4. Phase 5 → Results visible to all members → core value delivered
-5. Phase 6 → Option editing works → editorial controls complete
-6. Phase 7 → Notifications → engagement loop closed
-7. Phase 9 → Subscriptions → real-time updates delivered to browsers
-8. Phase 8 → Polish → production-ready
+4. Phase 4b → Vote removal works → full vote lifecycle complete
+5. Phase 5 → Results visible to all members → core value delivered
+6. Phase 6 → Option editing works → editorial controls complete
+7. Phase 7 → Notifications → engagement loop closed (including vote removal)
+8. Phase 9 → Subscriptions → real-time updates delivered to browsers
+9. Phase 8 → Polish → production-ready
 
 ### Single-Developer Sequence
 
-Complete phases in order: 1 → 2 → 3 → 4 → 5 → 6 → 7 → 9 → 8. Stop at each **Checkpoint** to validate the story independently before proceeding.
+Complete phases in order: 1 → 2 → 3 → 4 → 4b → 5 → 6 → 7 → 9 → 8. Stop at each **Checkpoint** to validate the story independently before proceeding.
 
 ---
 

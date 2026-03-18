@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add a Poll composition object to CalloutFraming that lets space members vote on community questions (single-select or multi-select), view transparent results, and change their vote at any time. Polls are created as part of the existing `createCallout` mutation by extending `CreateCalloutFramingInput` with an optional `poll` field (same pattern as `whiteboard`/`link`/`memo`) — no separate creation mutation is exposed. Poll option management and voting are four new mutations. Poll notifications are delivered through the existing dual-channel notification infrastructure for both Callout creators and existing voters, with four dedicated preference fields (`collaborationPollVoteCastOnOwnPoll`, `collaborationPollVoteCastOnPollIVotedOn`, `collaborationPollModifiedOnPollIVotedOn`, `collaborationPollVoteAffectedByOptionChange`). Visibility/detail settings (`resultsVisibility`, `resultsDetail`) and future `status`/`deadline` compatibility are modeled explicitly. Poll votes authored by a deleted user account are removed automatically via a DB-level `ON DELETE CASCADE` constraint on `poll_vote.createdBy` (FK → `user.id`) — no application-level cleanup listener is required. Two real-time GraphQL subscriptions (`pollVoteUpdated`, `pollOptionsChanged`) push live updates to viewers, respecting visibility/detail settings per subscriber by reusing existing field resolver filtering logic.
+Add a Poll composition object to CalloutFraming that lets space members vote on community questions (single-select or multi-select), view transparent results, and change their vote at any time. Polls are created as part of the existing `createCallout` mutation by extending `CreateCalloutFramingInput` with an optional `poll` field (same pattern as `whiteboard`/`link`/`memo`) — no separate creation mutation is exposed. Poll option management and voting are five new mutations (including `removePollVote` for vote withdrawal). Poll notifications are delivered through the existing dual-channel notification infrastructure for both Callout creators and existing voters, with four dedicated preference fields (`collaborationPollVoteCastOnOwnPoll`, `collaborationPollVoteCastOnPollIVotedOn`, `collaborationPollModifiedOnPollIVotedOn`, `collaborationPollVoteAffectedByOptionChange`). Visibility/detail settings (`resultsVisibility`, `resultsDetail`) and future `status`/`deadline` compatibility are modeled explicitly. Poll votes authored by a deleted user account are removed automatically via a DB-level `ON DELETE CASCADE` constraint on `poll_vote.createdBy` (FK → `user.id`) — no application-level cleanup listener is required. Two real-time GraphQL subscriptions (`pollVoteUpdated`, `pollOptionsChanged`) push live updates to viewers, respecting visibility/detail settings per subscriber by reusing existing field resolver filtering logic.
 
 ## Technical Context
 
@@ -32,7 +32,7 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 | **4. Explicit Data & Event Flow** | DEVIATION (accepted) | Vote path: validate → authorize → domain op → **direct notification adapter call** → persist. Principle 4 requires side effects to subscribe to domain events, never embedded inline. Deviation accepted: existing callout-contribution notifications follow the same synchronous direct-call pattern (see research.md §7 — async RabbitMQ dispatch was explicitly rejected to stay consistent with the codebase). No domain event bus is introduced; the notification adapter is called synchronously from the service method, matching the established pattern. |
 | **5. Observability & Operational Readiness** | PASS | Structured log contexts defined per module; no orphaned metrics |
 | **6. Code Quality with Pragmatic Testing** | PASS | Unit tests for PollService invariants (vote mode enforcement, min-option validation); defaults validation |
-| **7. API Consistency & Evolution Discipline** | PASS | Poll created via extended `CreateCalloutFramingInput`; mutation names: `castPollVote`, `addPollOption`, `updatePollOption`, `removePollOption`, `reorderPollOptions`; inputs end with `Input` |
+| **7. API Consistency & Evolution Discipline** | PASS | Poll created via extended `CreateCalloutFramingInput`; mutation names: `castPollVote`, `removePollVote`, `addPollOption`, `updatePollOption`, `removePollOption`, `reorderPollOptions`; inputs end with `Input` |
 | **8. Secure-by-Design Integration** | PASS | Voting requires `CONTRIBUTE` privilege on Poll; editing requires `UPDATE` on Callout; non-members blocked |
 | **9. Container & Deployment Determinism** | PASS | Migration generated and committed; no runtime process.env reads |
 | **10. Simplicity & Incremental Hardening** | PASS | Simplest normalized model; no CQRS/event-sourcing; relational options with JSONB vote selections |
@@ -65,7 +65,7 @@ src/domain/collaboration/
 │   ├── poll.service.authorization.ts
 │   ├── poll.data.loader.ts        # Request-scoped DataLoader — batches getPoll and getUserVote queries across field resolvers (SC-008)
 │   ├── poll.module.ts
-│   ├── poll.resolver.mutations.ts # addPollOption, updatePollOption, removePollOption, reorderPollOptions, castPollVote
+│   ├── poll.resolver.mutations.ts # addPollOption, updatePollOption, removePollOption, reorderPollOptions, castPollVote, removePollVote
 │   ├── poll.resolver.fields.ts    # options (enriched), myVote field resolvers — uses PollDataLoader to avoid N+1 queries
 │   └── dto/
 │       ├── poll.dto.create.ts
@@ -81,7 +81,8 @@ src/domain/collaboration/
 │   ├── poll.vote.service.ts
 │   ├── poll.vote.module.ts
 │   └── dto/
-│       └── poll.vote.dto.cast.ts
+│       ├── poll.vote.dto.cast.ts
+│       └── poll.vote.dto.remove.ts
 ├── callout-framing/               # MODIFIED — add poll OneToOne relation
 │   ├── callout.framing.entity.ts  # + poll?: Poll
 │   ├── callout.framing.interface.ts # + poll?: IPoll
@@ -181,3 +182,10 @@ src/migrations/
 - **Affected files**: `spec.md` (US7, FR-028..FR-031, SC-004, clarifications, future scope), `plan.md` (summary, constraints, project structure, revision history), `data-model.md` (subscription infrastructure), `tasks.md` (Phase 9), `contracts/schema.graphql` (subscription types).
 - **New source files**: `poll.resolver.subscriptions.ts`, `poll.subscription.args.ts`, `poll.vote.updated.subscription.result.ts`, `poll.options.changed.subscription.result.ts`, `poll.vote.updated.subscription.payload.ts`, `poll.options.changed.subscription.payload.ts`, `poll.event.type.ts`.
 - **Modified source files**: `subscription.type.ts`, `providers.ts` (constants), `subscription.read.service.ts`, `subscription.publish.service.ts`, `poll.resolver.mutations.ts`, `poll.module.ts`.
+
+**2026-03-18**: Added `removePollVote` mutation for vote withdrawal.
+- **Change**: New mutation `removePollVote(pollID: UUID!)` allows voters to completely remove their vote from a poll. Returns updated Poll with `myVote` cleared and vote counts decremented.
+- **Rationale**: Completes the vote lifecycle (cast → update → remove). Users may want to withdraw participation entirely rather than just changing their selection.
+- **Behavior**: Mutation fails with ValidationException if user has not voted. Vote removal is silent — no notifications sent to poll creator or other voters (per FR-020a/b clarification) — but `pollVoteUpdated` subscription fires so real-time viewers see updated counts.
+- **Affected files**: `spec.md` (FR-012a, FR-012b, US4 scenarios 5-6, SC-006a, edge cases, clarifications), `contracts/schema.graphql` (new mutation), `poll.service.ts`, `poll.resolver.mutations.ts`.
+- **Resolves**: Vote withdrawal capability gap.

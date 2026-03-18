@@ -59,6 +59,7 @@ describe('PollVoteService', () => {
 
   const mockPollVoteRepository = {
     findOne: vi.fn().mockResolvedValue(null),
+    delete: vi.fn().mockResolvedValue({ affected: 1 }),
     save: vi.fn().mockImplementation((entity: unknown) => {
       const vote = entity as PollVote;
       if (!vote.id) vote.id = 'mock-vote-id';
@@ -186,6 +187,80 @@ describe('PollVoteService', () => {
         relations: { options: true, votes: true },
       });
       expect(result).toBeDefined();
+    });
+  });
+
+  describe('removeVote', () => {
+    it('(a) removes existing vote and returns updated poll with decremented counts', async () => {
+      const vote = new PollVote();
+      vote.id = 'vote-1';
+      vote.createdBy = 'voter-1';
+
+      const pollBefore = makePoll();
+      const pollAfter = makePoll({ votes: [] });
+
+      mockPollRepository.findOneOrFail
+        .mockResolvedValueOnce(pollBefore)
+        .mockResolvedValueOnce(pollAfter);
+      mockPollVoteRepository.findOne.mockResolvedValueOnce(vote);
+
+      const result = await service.removeVote('poll-1', 'voter-1');
+
+      expect(mockPollVoteRepository.delete).toHaveBeenCalledWith('vote-1');
+      expect(result.id).toBe('poll-1');
+      expect(result.votes).toEqual([]);
+    });
+
+    it('(b) throws ValidationException when voter has not voted', async () => {
+      const poll = makePoll();
+
+      mockPollRepository.findOneOrFail.mockResolvedValueOnce(poll);
+      mockPollVoteRepository.findOne.mockResolvedValueOnce(null);
+
+      await expect(service.removeVote('poll-1', 'voter-1')).rejects.toThrow(
+        ValidationException
+      );
+      expect(mockPollVoteRepository.delete).not.toHaveBeenCalled();
+    });
+
+    it('(c) after removal, getVoteForUser() returns null', async () => {
+      const vote = new PollVote();
+      vote.id = 'vote-1';
+      vote.createdBy = 'voter-1';
+
+      const poll = makePoll({ votes: [] });
+      mockPollRepository.findOneOrFail
+        .mockResolvedValueOnce(poll)
+        .mockResolvedValueOnce(poll);
+      mockPollVoteRepository.findOne
+        .mockResolvedValueOnce(vote)
+        .mockResolvedValueOnce(null);
+
+      await service.removeVote('poll-1', 'voter-1');
+      const existingVote = await service.getVoteForUser('poll-1', 'voter-1');
+
+      expect(existingVote).toBeNull();
+    });
+
+    it('(d) double-removal throws validation error on second call', async () => {
+      const vote = new PollVote();
+      vote.id = 'vote-1';
+      vote.createdBy = 'voter-1';
+
+      const poll = makePoll({ votes: [] });
+      mockPollRepository.findOneOrFail
+        .mockResolvedValueOnce(poll)
+        .mockResolvedValueOnce(poll)
+        .mockResolvedValueOnce(poll);
+      mockPollVoteRepository.findOne
+        .mockResolvedValueOnce(vote)
+        .mockResolvedValueOnce(null);
+
+      await service.removeVote('poll-1', 'voter-1');
+
+      await expect(service.removeVote('poll-1', 'voter-1')).rejects.toThrow(
+        ValidationException
+      );
     });
   });
 });

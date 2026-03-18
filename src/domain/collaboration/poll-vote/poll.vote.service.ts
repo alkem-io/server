@@ -1,7 +1,6 @@
 import { LogContext } from '@common/enums/logging.context';
 import { PollStatus } from '@common/enums/poll.status';
 import { ValidationException } from '@common/exceptions';
-import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { Poll } from '@domain/collaboration/poll/poll.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -129,6 +128,38 @@ export class PollVoteService {
       where: { poll: { id: pollId } },
       relations: { poll: true },
     });
+  }
+
+  async removeVote(pollId: string, voterId: string): Promise<Poll> {
+    const poll = await this.pollVoteRepository.manager
+      .getRepository(Poll)
+      .findOneOrFail({
+        where: { id: pollId },
+        relations: { options: true, votes: true },
+      });
+
+    const existingVote = await this.pollVoteRepository.findOne({
+      where: { createdBy: voterId, poll: { id: pollId } },
+    });
+
+    if (!existingVote) {
+      throw new ValidationException(
+        'You have not voted on this poll',
+        LogContext.COLLABORATION,
+        { pollId, voterId }
+      );
+    }
+
+    await this.pollVoteRepository.delete(existingVote.id);
+
+    const freshPoll = await this.pollVoteRepository.manager
+      .getRepository(Poll)
+      .findOneOrFail({
+        where: { id: poll.id },
+        relations: { options: true, votes: true },
+      });
+
+    return freshPoll;
   }
 
   async deleteVotesByIds(voteIds: string[]): Promise<void> {
