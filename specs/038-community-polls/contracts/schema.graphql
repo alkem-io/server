@@ -262,7 +262,7 @@ Required when framing.type = POLL.
 input CreatePollInput {
   """
   Poll title.
-  Optional. Maximum length 512 characters.
+  Optional. Maximum length 512 characters. Becomes an empty string if not provided.
   """
   title: String
 

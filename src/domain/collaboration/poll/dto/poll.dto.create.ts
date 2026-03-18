@@ -1,9 +1,10 @@
-import { MID_TEXT_LENGTH } from '@common/constants';
+import { MID_TEXT_LENGTH, POLL_OPTIONS_MAX_COUNT } from '@common/constants';
 import { PollResultsDetail } from '@common/enums/poll.results.detail';
 import { PollResultsVisibility } from '@common/enums/poll.results.visibility';
 import { Field, InputType, Int, ObjectType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import {
+  ArrayMaxSize,
   ArrayMinSize,
   IsInt,
   IsOptional,
@@ -77,6 +78,7 @@ export class CreatePollInput {
       'Initial options for the poll. Minimum 2 options required. Options appear in the order provided.',
   })
   @ArrayMinSize(2)
+  @ArrayMaxSize(POLL_OPTIONS_MAX_COUNT)
   @MaxLength(MID_TEXT_LENGTH, { each: true })
   options!: string[];
 }

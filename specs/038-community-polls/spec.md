@@ -300,6 +300,13 @@ A community member viewing a poll in their browser wants the poll display to upd
 
 ---
 
+### Session 2026-03-18 (Review Decisions)
+
+- Q: When a poll option's text is changed or removed and voters had selected that option in a multi-select poll, should we remove only the affected option from their vote or delete the entire vote? → A: Delete the entire vote. The voter's original selection set was a deliberate combination — silently modifying it (removing one option) could misrepresent their intent. Deleting the vote entirely and notifying them to re-vote is the correct behavior, ensuring voters always explicitly confirm their selections.
+- Q: When `resultsVisibility = TOTAL_ONLY` and the user has not voted, `totalVotes` is visible but all per-option details (counts, percentages, voters) are null. Is this asymmetry intentional? → A: Yes. `TOTAL_ONLY` is designed to let unvoted users know that other community members are actively participating (social proof / engagement signal) without revealing which options are popular, thereby avoiding vote biasing. Once the user votes, per-option details become visible per the `resultsDetail` setting.
+
+---
+
 ## Future Scope (Out of Scope for This Iteration)
 
 The following items were identified as future enhancements. The data model and architecture must not prevent these from being added later:

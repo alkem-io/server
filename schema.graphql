@@ -3822,6 +3822,10 @@ type Mutation {
   Remove an option from a Poll. Requires UPDATE privilege. Poll must retain at least 2 options. Votes that selected this option are deleted and affected voters are notified.
   """
   removePollOption(optionData: RemovePollOptionInput!): Poll!
+  """
+  Remove the current user vote from a Poll. Requires CONTRIBUTE privilege on the Poll. If the user has not voted, returns a validation error.
+  """
+  removePollVote(voteData: RemovePollVoteInput!): Poll!
   """Remove a reaction on a message from the specified Room."""
   removeReactionToMessageInRoom(reactionData: RoomRemoveReactionToMessageInput!): Boolean!
   """
@@ -7663,6 +7667,11 @@ input RemovePlatformRoleInput {
 
 input RemovePollOptionInput {
   optionID: UUID!
+  pollID: UUID!
+}
+
+input RemovePollVoteInput {
+  """The ID of the Poll from which to remove the current user vote."""
   pollID: UUID!
 }
 

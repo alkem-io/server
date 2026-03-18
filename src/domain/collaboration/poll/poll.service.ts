@@ -1,3 +1,4 @@
+import { POLL_OPTIONS_MAX_COUNT } from '@common/constants/entity.field.length.constants';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { LogContext } from '@common/enums/logging.context';
 import { PollResultsDetail } from '@common/enums/poll.results.detail';
@@ -127,7 +128,11 @@ export class PollService {
     const savedPoll = await this.pollRepository.save(poll);
 
     this.logger.verbose?.(
-      `Created poll: ${savedPoll.id} with ${options.length} options`,
+      {
+        message: 'Poll created',
+        pollId: savedPoll.id,
+        optionCount: options.length,
+      },
       LogContext.COLLABORATION
     );
 
@@ -241,11 +246,13 @@ export class PollService {
     const votes = poll.votes ?? [];
     const totalVotes = votes.length;
 
-    // HIDDEN + not voted → null
+    // HIDDEN + not voted → null (no information at all)
     if (resultsVisibility === PollResultsVisibility.HIDDEN && !hasVoted) {
       return null;
     }
-    // All other cases → return the value
+    // TOTAL_ONLY + not voted → return totalVotes (but per-option details are null).
+    // This is by design: shows participation level without revealing which options
+    // are popular, avoiding vote biasing while providing social proof.
     return totalVotes;
   }
 
@@ -256,6 +263,21 @@ export class PollService {
       (max, o) => Math.max(max, o.sortOrder),
       0
     );
+
+    if ((poll.options?.length ?? 0) > POLL_OPTIONS_MAX_COUNT * 2) {
+      // Sanity check to prevent excessive options which could cause performance issues.
+      // Theoretically should never happen due to validation on input, but added as a safeguard.
+      // Multiplied by 2 to allow some buffer for concurrent additions before hitting the limit.
+      throw new ValidationException(
+        'Poll has too many options to add another',
+        LogContext.COLLABORATION,
+        {
+          pollId,
+          currentOptionCount: options.length,
+          limit: POLL_OPTIONS_MAX_COUNT,
+        }
+      );
+    }
 
     const newOption = new PollOption();
     newOption.text = text;

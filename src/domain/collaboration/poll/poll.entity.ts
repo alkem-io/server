@@ -20,7 +20,7 @@ export class Poll extends AuthorizableEntity implements IPoll {
   @Column('jsonb', { nullable: false })
   settings!: IPollSettings;
 
-  @Column('timestamp', { nullable: true })
+  @Column('timestamptz', { nullable: true })
   deadline?: Date;
 
   @OneToMany(

@@ -90,7 +90,12 @@ export class PollResolverSubscriptions {
         );
         if (!vote) {
           this.logger.debug?.(
-            `[PollVoteUpdated] Suppressing event '${payload.eventID}' for user ${actorID}: resultsVisibility=HIDDEN and user has not voted`,
+            {
+              message:
+                '[PollVoteUpdated] Suppressing event: resultsVisibility=HIDDEN and user has not voted',
+              eventID: payload.eventID,
+              actorID,
+            },
             LogContext.SUBSCRIPTIONS
           );
           return false;
@@ -98,7 +103,12 @@ export class PollResolverSubscriptions {
       }
 
       this.logger.debug?.(
-        `[PollVoteUpdated] Delivering event '${payload.eventID}' to user ${actorID} for poll ${payload.poll.id}`,
+        {
+          message: '[PollVoteUpdated] Delivering event',
+          eventID: payload.eventID,
+          actorID,
+          pollID: payload.poll.id,
+        },
         LogContext.SUBSCRIPTIONS
       );
       return true;
@@ -110,7 +120,11 @@ export class PollResolverSubscriptions {
     { pollID }: PollSubscriptionArgs
   ) {
     this.logger.debug?.(
-      `[User ${actorContext.actorID}] Subscribing to poll vote updates: ${pollID}`,
+      {
+        message: 'Subscribing to poll vote updates',
+        actorID: actorContext.actorID,
+        pollID,
+      },
       LogContext.SUBSCRIPTIONS
     );
 
@@ -176,7 +190,12 @@ export class PollResolverSubscriptions {
 
       const actorID = context.req.user?.actorID ?? '';
       this.logger.debug?.(
-        `[PollOptionsChanged] Delivering event '${payload.eventID}' to user ${actorID} for poll ${payload.poll.id}`,
+        {
+          message: '[PollOptionsChanged] Delivering event',
+          eventID: payload.eventID,
+          actorID,
+          pollID: payload.poll.id,
+        },
         LogContext.SUBSCRIPTIONS
       );
       return true;
@@ -188,7 +207,11 @@ export class PollResolverSubscriptions {
     { pollID }: PollSubscriptionArgs
   ) {
     this.logger.debug?.(
-      `[User ${actorContext.actorID}] Subscribing to poll options changes: ${pollID}`,
+      {
+        message: 'Subscribing to poll options changes',
+        actorID: actorContext.actorID,
+        pollID,
+      },
       LogContext.SUBSCRIPTIONS
     );
 
