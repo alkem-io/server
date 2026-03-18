@@ -263,6 +263,15 @@ export class PollService {
 
   async addOption(pollId: string, text: string): Promise<Poll> {
     const poll = await this.getPollOrFail(pollId, false);
+
+    if (poll.status !== PollStatus.OPEN) {
+      throw new ValidationException(
+        'Cannot add option to a closed poll',
+        LogContext.COLLABORATION,
+        { pollId, status: poll.status }
+      );
+    }
+
     const options = poll.options ?? [];
     const maxSortOrder = options.reduce(
       (max, o) => Math.max(max, o.sortOrder),
@@ -301,27 +310,50 @@ export class PollService {
     optionId: string,
     newText: string
   ): Promise<{ poll: Poll; deletedVoterIds: string[] }> {
-    const poll = await this.getPollOrFail(pollId);
-
-    const option = (poll.options ?? []).find(o => o.id === optionId);
-    if (!option) {
-      throw new EntityNotFoundException(
-        'Poll option not found',
+    // Pre-flight status check (fast fail before entering transaction)
+    const initialPoll = await this.getPollOrFail(pollId, false);
+    if (initialPoll.status !== PollStatus.OPEN) {
+      throw new ValidationException(
+        'Cannot update option on a closed poll',
         LogContext.COLLABORATION,
-        { optionId, pollId }
+        { pollId, status: initialPoll.status }
       );
     }
 
-    // Find votes that include this option
-    const affectedVotes = (poll.votes ?? []).filter(v =>
-      v.selectedOptionIds.includes(optionId)
-    );
-    const deletedVoterIds = affectedVotes.map(v => v.createdBy);
+    let deletedVoterIds: string[] = [];
 
-    // Ensure vote deletion + option text update are atomic
+    // Read poll+votes and mutate inside a single transaction to avoid
+    // TOCTOU races where a vote is cast between the read and the write.
     await this.pollOptionRepository.manager.transaction(async txManager => {
+      const txPollRepo = txManager.getRepository(Poll);
       const txVoteRepo = txManager.getRepository(PollVote);
       const txOptionRepo = txManager.getRepository(PollOption);
+
+      const poll = await txPollRepo.findOne({
+        where: { id: pollId },
+        relations: { options: true, votes: true },
+      });
+      if (!poll) {
+        throw new EntityNotFoundException(
+          'Poll not found',
+          LogContext.COLLABORATION,
+          { pollId }
+        );
+      }
+
+      const option = (poll.options ?? []).find(o => o.id === optionId);
+      if (!option) {
+        throw new EntityNotFoundException(
+          'Poll option not found',
+          LogContext.COLLABORATION,
+          { optionId, pollId }
+        );
+      }
+
+      const affectedVotes = (poll.votes ?? []).filter(v =>
+        v.selectedOptionIds.includes(optionId)
+      );
+      deletedVoterIds = affectedVotes.map(v => v.createdBy);
 
       const affectedVoteIds = affectedVotes.map(v => v.id);
       if (affectedVoteIds.length > 0) {
@@ -340,36 +372,59 @@ export class PollService {
     pollId: string,
     optionId: string
   ): Promise<{ poll: Poll; deletedVoterIds: string[] }> {
-    const poll = await this.getPollOrFail(pollId);
-    const options = poll.options ?? [];
-
-    if (options.length <= 2) {
+    // Pre-flight status check (fast fail before entering transaction)
+    const initialPoll = await this.getPollOrFail(pollId, false);
+    if (initialPoll.status !== PollStatus.OPEN) {
       throw new ValidationException(
-        'Poll must retain at least 2 options',
-        LogContext.COLLABORATION
-      );
-    }
-
-    const option = options.find(o => o.id === optionId);
-    if (!option) {
-      throw new EntityNotFoundException(
-        'Poll option not found',
+        'Cannot remove option from a closed poll',
         LogContext.COLLABORATION,
-        { optionId, pollId }
+        { pollId, status: initialPoll.status }
       );
     }
 
-    // Find votes that include this option
-    const affectedVotes = (poll.votes ?? []).filter(v =>
-      v.selectedOptionIds.includes(optionId)
-    );
-    const deletedVoterIds = affectedVotes.map(v => v.createdBy);
+    let deletedVoterIds: string[] = [];
 
-    // Ensure vote deletion + option deletion + re-sequencing are atomic.
-    // Use two-pass updates to avoid UNIQUE (pollId, sortOrder) collisions.
+    // Read poll+votes and mutate inside a single transaction to avoid
+    // TOCTOU races where a vote is cast between the read and the write.
     await this.pollOptionRepository.manager.transaction(async txManager => {
+      const txPollRepo = txManager.getRepository(Poll);
       const txVoteRepo = txManager.getRepository(PollVote);
       const txOptionRepo = txManager.getRepository(PollOption);
+
+      const poll = await txPollRepo.findOne({
+        where: { id: pollId },
+        relations: { options: true, votes: true },
+      });
+      if (!poll) {
+        throw new EntityNotFoundException(
+          'Poll not found',
+          LogContext.COLLABORATION,
+          { pollId }
+        );
+      }
+
+      const options = poll.options ?? [];
+
+      if (options.length <= 2) {
+        throw new ValidationException(
+          'Poll must retain at least 2 options',
+          LogContext.COLLABORATION
+        );
+      }
+
+      const option = options.find(o => o.id === optionId);
+      if (!option) {
+        throw new EntityNotFoundException(
+          'Poll option not found',
+          LogContext.COLLABORATION,
+          { optionId, pollId }
+        );
+      }
+
+      const affectedVotes = (poll.votes ?? []).filter(v =>
+        v.selectedOptionIds.includes(optionId)
+      );
+      deletedVoterIds = affectedVotes.map(v => v.createdBy);
 
       const affectedVoteIds = affectedVotes.map(v => v.id);
       if (affectedVoteIds.length > 0) {
@@ -404,6 +459,15 @@ export class PollService {
     orderedOptionIds: string[]
   ): Promise<Poll> {
     const poll = await this.getPollOrFail(pollId, false);
+
+    if (poll.status !== PollStatus.OPEN) {
+      throw new ValidationException(
+        'Cannot reorder options on a closed poll',
+        LogContext.COLLABORATION,
+        { pollId, status: poll.status }
+      );
+    }
+
     const options = poll.options ?? [];
 
     // Validate: orderedOptionIds must be exactly the same set as current options

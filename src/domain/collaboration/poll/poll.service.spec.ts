@@ -607,6 +607,7 @@ describe('PollService — option management (T054)', () => {
     .fn()
     .mockImplementation((entity: unknown) => Promise.resolve(entity));
   const mockTxDelete = vi.fn().mockResolvedValue(undefined);
+  const mockTxFindOne = vi.fn();
   const mockPollOptionRepository = {
     findOne: vi.fn(),
     save: vi
@@ -618,7 +619,11 @@ describe('PollService — option management (T054)', () => {
         .fn()
         .mockImplementation(async (cb: (mgr: unknown) => Promise<void>) => {
           await cb({
-            getRepository: () => ({ save: mockTxSave, delete: mockTxDelete }),
+            getRepository: () => ({
+              save: mockTxSave,
+              delete: mockTxDelete,
+              findOne: mockTxFindOne,
+            }),
           });
         }),
     },
@@ -680,7 +685,10 @@ describe('PollService — option management (T054)', () => {
 
   it('(a) removeOption rejects when poll has exactly 2 options', async () => {
     const poll = buildPoll([makeOpt('a', 1), makeOpt('b', 2)]);
+    // Pre-flight check (loads without votes)
     mockPollRepository.findOne.mockResolvedValue(poll);
+    // Inside transaction (loads with votes)
+    mockTxFindOne.mockResolvedValue(poll);
 
     await expect(service.removeOption('poll-1', 'a')).rejects.toThrow(
       ValidationException
@@ -699,9 +707,12 @@ describe('PollService — option management (T054)', () => {
     const poll = buildPoll([optA, optB, optC], [voteA1, voteA2, voteB]);
 
     const updatedPoll = buildPoll([optB, optC]);
+    // Pre-flight (without votes) + final re-read
     mockPollRepository.findOne
       .mockResolvedValueOnce(poll)
       .mockResolvedValueOnce(updatedPoll);
+    // Inside transaction (with votes)
+    mockTxFindOne.mockResolvedValue(poll);
 
     const { deletedVoterIds } = await service.removeOption('poll-1', 'a');
     expect(deletedVoterIds).toEqual(
@@ -764,9 +775,12 @@ describe('PollService — option management (T054)', () => {
     const voteB = makeVoteWith('v2', 'user-2', ['b']);
     const poll = buildPoll([optA, optB], [voteA, voteB]);
     const updatedPoll = buildPoll([optA, optB]);
+    // Pre-flight (without votes) + final re-read
     mockPollRepository.findOne
       .mockResolvedValueOnce(poll)
       .mockResolvedValueOnce(updatedPoll);
+    // Inside transaction (with votes)
+    mockTxFindOne.mockResolvedValue(poll);
 
     const { deletedVoterIds } = await service.updateOption(
       'poll-1',

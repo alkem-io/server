@@ -53,7 +53,7 @@ export class PollMutationsResolver {
       actorContext,
       poll.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
-      `cast vote on poll: ${poll.id}`
+      'cast vote on poll'
     );
 
     // Capture prior voter IDs before mutating
@@ -92,7 +92,7 @@ export class PollMutationsResolver {
       actorContext,
       poll.authorization,
       AuthorizationPrivilege.CONTRIBUTE,
-      `remove vote from poll: ${poll.id}`
+      'remove vote from poll'
     );
 
     const updatedPoll = await this.pollVoteService.removeVote(
@@ -123,7 +123,7 @@ export class PollMutationsResolver {
         actorContext,
         poll.authorization,
         AuthorizationPrivilege.CONTRIBUTE,
-        `add option to poll: ${poll.id}`
+        'add option to poll'
       );
     } else {
       // Normal voters cannot add options, so we enforce the UPDATE privilege
@@ -131,7 +131,7 @@ export class PollMutationsResolver {
         actorContext,
         poll.authorization,
         AuthorizationPrivilege.UPDATE,
-        `add option to poll: ${poll.id}`
+        'add option to poll'
       );
     }
 
@@ -170,7 +170,7 @@ export class PollMutationsResolver {
       actorContext,
       poll.authorization,
       AuthorizationPrivilege.UPDATE,
-      `update option on poll: ${poll.id}`
+      'update option on poll'
     );
 
     // Capture all voter IDs before mutation
@@ -216,7 +216,7 @@ export class PollMutationsResolver {
       actorContext,
       poll.authorization,
       AuthorizationPrivilege.UPDATE,
-      `remove option from poll: ${poll.id}`
+      'remove option from poll'
     );
 
     // Capture all voter IDs before mutation
@@ -261,7 +261,7 @@ export class PollMutationsResolver {
       actorContext,
       poll.authorization,
       AuthorizationPrivilege.UPDATE,
-      `reorder options on poll: ${poll.id}`
+      'reorder options on poll'
     );
 
     // Capture current voters before mutation
@@ -285,20 +285,35 @@ export class PollMutationsResolver {
     return updatedPoll;
   }
 
-  private publishPollEvent(
+  private async publishPollEvent(
     pollEventType: PollEventType,
     poll: IPoll
   ): Promise<void> {
-    const payload: PollSubscriptionPayload = {
-      eventID: `${pollEventType}-${randomUUID()}`,
-      pollEventType,
-      poll,
-    };
+    try {
+      const payload: PollSubscriptionPayload = {
+        eventID: `${pollEventType}-${randomUUID()}`,
+        pollEventType,
+        poll,
+      };
 
-    if (pollEventType === PollEventType.POLL_VOTE_UPDATED) {
-      return this.subscriptionPublishService.publishPollVoteUpdated(payload);
+      if (pollEventType === PollEventType.POLL_VOTE_UPDATED) {
+        await this.subscriptionPublishService.publishPollVoteUpdated(payload);
+      } else {
+        await this.subscriptionPublishService.publishPollOptionsChanged(
+          payload
+        );
+      }
+    } catch (error) {
+      this.logger.error?.(
+        {
+          message: 'Failed to publish poll subscription event',
+          pollEventType,
+          error: (error as Error)?.message,
+        },
+        (error as Error)?.stack ?? '',
+        LogContext.SUBSCRIPTIONS
+      );
     }
-    return this.subscriptionPublishService.publishPollOptionsChanged(payload);
   }
 
   /** Notify poll creator + prior voters when a new vote is cast (T061). */
