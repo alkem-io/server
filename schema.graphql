@@ -3543,7 +3543,7 @@ type Mutation {
   """Adds a full email address to the platform notification blacklist"""
   addNotificationEmailToBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """
-  Add a new option to a Poll. Requires UPDATE privilege on the Poll. The new option is appended with the next available sort order.
+  Add a new option to a Poll. Requires UPDATE privilege, or CONTRIBUTE privilege when the poll setting allowContributorsAddOptions is enabled. The new option is appended with the next available sort order.
   """
   addPollOption(optionData: AddPollOptionInput!): Poll!
   """Add a reaction to a message from the specified Room."""
@@ -4523,6 +4523,10 @@ type PollOptionsChangedSubscriptionResult {
 
 type PollSettings {
   """
+  Whether users with CONTRIBUTE privilege can add new options to the poll. Immutable after poll creation. Default: false.
+  """
+  allowContributorsAddOptions: Boolean!
+  """
   Maximum number of options a voter may select (0 = unlimited). Immutable after poll creation.
   """
   maxResponses: Int!
@@ -4541,6 +4545,8 @@ type PollSettings {
 }
 
 type PollSettingsData {
+  """Whether voters can add new options to the poll. Defaults to false."""
+  allowContributorsAddOptions: Boolean
   """Maximum selections allowed. Defaults to 1. Set to 0 for unlimited."""
   maxResponses: Int
   """Minimum selections required. Defaults to 1."""
@@ -6652,7 +6658,7 @@ input CastPollVoteInput {
   """The ID of the Poll to vote on."""
   pollID: UUID!
   """
-  The complete set of selected PollOption IDs. When updating an existing vote, the entire selection set must be provided. Count must be ≥ poll.minResponses and ≤ poll.maxResponses (0 = unlimited). All IDs must belong to the specified poll.
+  The complete set of selected PollOption IDs. When updating an existing vote, the entire selection set must be provided. Count must be ≥ poll.minResponses and ≤ poll.maxResponses. All IDs must belong to the specified poll.
   """
   selectedOptionIDs: [UUID!]!
 }
@@ -7594,6 +7600,8 @@ input OrganizationVerificationEventInput {
 }
 
 input PollSettingsInput {
+  """Whether voters can add new options to the poll. Defaults to false."""
+  allowContributorsAddOptions: Boolean
   """Maximum selections allowed. Defaults to 1. Set to 0 for unlimited."""
   maxResponses: Int
   """Minimum selections required. Defaults to 1."""
