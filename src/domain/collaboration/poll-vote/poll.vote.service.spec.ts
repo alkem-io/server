@@ -94,6 +94,21 @@ describe('PollVoteService', () => {
   });
 
   describe('castVoteOnPoll', () => {
+    it('rejects voting on a CLOSED poll', async () => {
+      const poll = makePoll({ status: PollStatus.CLOSED });
+      await expect(
+        service.castVoteOnPoll(poll, 'voter-1', ['option-a'])
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('rejects when poll.options is not loaded (undefined)', async () => {
+      const poll = makePoll();
+      poll.options = undefined as any;
+      await expect(
+        service.castVoteOnPoll(poll, 'voter-1', ['option-a'])
+      ).rejects.toThrow(ValidationException);
+    });
+
     it('(a) rejects option ID from a different poll', async () => {
       const poll = makePoll();
       await expect(
@@ -191,6 +206,16 @@ describe('PollVoteService', () => {
   });
 
   describe('removeVote', () => {
+    it('rejects removing a vote from a CLOSED poll', async () => {
+      const closedPoll = makePoll({ status: PollStatus.CLOSED });
+      mockPollRepository.findOneOrFail.mockResolvedValueOnce(closedPoll);
+
+      await expect(service.removeVote('poll-1', 'voter-1')).rejects.toThrow(
+        ValidationException
+      );
+      expect(mockPollVoteRepository.delete).not.toHaveBeenCalled();
+    });
+
     it('(a) removes existing vote and returns updated poll with decremented counts', async () => {
       const vote = new PollVote();
       vote.id = 'vote-1';

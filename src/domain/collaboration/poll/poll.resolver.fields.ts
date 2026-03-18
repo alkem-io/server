@@ -6,11 +6,13 @@ import { PollOption } from '@domain/collaboration/poll-option/poll.option.entity
 import { IPollOption } from '@domain/collaboration/poll-option/poll.option.interface';
 import { IPollVote } from '@domain/collaboration/poll-vote/poll.vote.interface';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { InstrumentResolver } from '@src/apm/decorators';
 import { PollDataLoader } from './poll.data.loader';
 import { Poll } from './poll.entity';
 import { IPoll } from './poll.interface';
 import { PollService } from './poll.service';
 
+@InstrumentResolver()
 @Resolver(() => IPoll)
 export class PollFieldsResolver {
   constructor(

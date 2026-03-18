@@ -11,6 +11,7 @@ export class CommunityPolls1772569123375 implements MigrationInterface {
     await queryRunner.query(`ALTER TABLE "callout_framing" ADD CONSTRAINT "UQ_1befc5c804ba6c5eb3eb713282e" UNIQUE ("pollId")`);
     await queryRunner.query(`ALTER TABLE "poll_option" ADD CONSTRAINT "FK_a1200fcfcdab6145351545f26ea" FOREIGN KEY ("pollId") REFERENCES "poll"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
     await queryRunner.query(`ALTER TABLE "poll_vote" ADD CONSTRAINT "FK_99f9db6d3dae2a0aebebbf8e10a" FOREIGN KEY ("pollId") REFERENCES "poll"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
+    // ON DELETE CASCADE: when a user is deleted, their votes are silently removed. This is intentional.
     await queryRunner.query(`ALTER TABLE "poll_vote" ADD CONSTRAINT "FK_66e630ffddf3da89979811fe739" FOREIGN KEY ("createdBy") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
     await queryRunner.query(`ALTER TABLE "poll" ADD CONSTRAINT "FK_0f5c276b165d753be4567194977" FOREIGN KEY ("authorizationId") REFERENCES "authorization_policy"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
     await queryRunner.query(`ALTER TABLE "callout_framing" ADD CONSTRAINT "FK_1befc5c804ba6c5eb3eb713282e" FOREIGN KEY ("pollId") REFERENCES "poll"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);

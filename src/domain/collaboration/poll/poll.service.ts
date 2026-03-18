@@ -74,6 +74,9 @@ export class PollService {
     }
 
     // Validate settings
+    // Note: maxResponses is not validated against options.length on purpose.
+    // Clients may create polls where maxResponses > current option count and add
+    // options later. The meaningful constraint is enforced at vote-casting time.
     const minResponses = input.settings?.minResponses ?? 1;
     const maxResponses = input.settings?.maxResponses ?? 1;
 
@@ -265,9 +268,11 @@ export class PollService {
     );
 
     if ((poll.options?.length ?? 0) > POLL_OPTIONS_MAX_COUNT * 2) {
-      // Sanity check to prevent excessive options which could cause performance issues.
-      // Theoretically should never happen due to validation on input, but added as a safeguard.
-      // Multiplied by 2 to allow some buffer for concurrent additions before hitting the limit.
+      // Sanity check: the creation-time limit is POLL_OPTIONS_MAX_COUNT (10), but we
+      // allow up to 2x here intentionally. During poll editing, the client may add new
+      // options before removing old ones (add-first-then-remove flow). Client-side
+      // validates the final count stays <= 10. The 2x buffer prevents a bad client from
+      // growing options unboundedly while tolerating the transient intermediate state.
       throw new ValidationException(
         'Poll has too many options to add another',
         LogContext.COLLABORATION,

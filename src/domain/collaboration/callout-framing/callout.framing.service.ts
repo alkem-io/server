@@ -464,10 +464,13 @@ export class CalloutFramingService {
           );
         }
         if (!calloutFraming.poll && calloutFramingData.poll) {
-          const { poll } = await this.pollService.createPoll(
-            calloutFramingData.poll as CreatePollInput
+          // Callout framing type transitions are currently read-only in the UI,
+          // so this path should not be reached in practice. Throw rather than
+          // attempting an unsafe cast from UpdatePollInput to CreatePollInput.
+          throw new ValidationException(
+            'Cannot create a new poll via callout framing update. Polls must be created with the callout.',
+            LogContext.COLLABORATION
           );
-          calloutFraming.poll = poll;
         }
         // Poll options are managed via separate mutations (addPollOption,
         // updatePollOption, removePollOption, reorderPollOptions), and

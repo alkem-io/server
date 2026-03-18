@@ -1,4 +1,3 @@
-import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { PollResultsDetail } from '@common/enums/poll.results.detail';
 import { PollResultsVisibility } from '@common/enums/poll.results.visibility';
 import { PollStatus } from '@common/enums/poll.status';
@@ -29,6 +28,9 @@ describe('PollService', () => {
         ) as PollOption[];
       }
       return Promise.resolve(poll);
+    }),
+    remove: vi.fn().mockImplementation((entity: unknown) => {
+      return Promise.resolve({ ...entity, id: undefined });
     }),
     createQueryBuilder: vi.fn().mockReturnValue({
       innerJoin: vi.fn().mockReturnThis(),
@@ -175,16 +177,157 @@ describe('PollService', () => {
       );
     });
   });
-});
 
-describe('CalloutFramingService - poll validation', () => {
-  // Test (j) is covered in callout.framing.service.spec.ts
-  // The validation throws ValidationException when type = POLL and poll input is undefined
-  it('validates that POLL type requires poll input', () => {
-    const framingType = CalloutFramingType.POLL;
-    const pollInput = undefined;
-    const shouldThrow = framingType === CalloutFramingType.POLL && !pollInput;
-    expect(shouldThrow).toBe(true);
+  describe('getPollOrFail', () => {
+    it('returns the poll when found', async () => {
+      const poll = new Poll();
+      poll.id = 'poll-1';
+      mockPollRepository.findOne.mockResolvedValue(poll);
+
+      const result = await service.getPollOrFail('poll-1');
+      expect(result.id).toBe('poll-1');
+    });
+
+    it('throws EntityNotFoundException when poll is not found', async () => {
+      mockPollRepository.findOne.mockResolvedValue(null);
+
+      await expect(service.getPollOrFail('nonexistent')).rejects.toThrow(
+        'Poll not found'
+      );
+    });
+
+    it('loads votes by default', async () => {
+      const poll = new Poll();
+      poll.id = 'poll-1';
+      mockPollRepository.findOne.mockResolvedValue(poll);
+
+      await service.getPollOrFail('poll-1');
+      expect(mockPollRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'poll-1' },
+        relations: { options: true, votes: true },
+      });
+    });
+
+    it('skips loading votes when loadVotes = false', async () => {
+      const poll = new Poll();
+      poll.id = 'poll-1';
+      mockPollRepository.findOne.mockResolvedValue(poll);
+
+      await service.getPollOrFail('poll-1', false);
+      expect(mockPollRepository.findOne).toHaveBeenCalledWith({
+        where: { id: 'poll-1' },
+        relations: { options: true },
+      });
+    });
+  });
+
+  describe('deletePoll', () => {
+    it('removes the poll and re-assigns the original ID', async () => {
+      const poll = new Poll();
+      poll.id = 'poll-1';
+      mockPollRepository.findOne.mockResolvedValue(poll);
+      mockPollRepository.save.mockResolvedValue(poll);
+      // TypeORM remove clears the id
+      const mockRemove = vi.fn().mockResolvedValue({ ...poll, id: undefined });
+      (mockPollRepository as any).remove = mockRemove;
+
+      const result = await service.deletePoll('poll-1');
+      expect(mockRemove).toHaveBeenCalledWith(poll);
+      expect(result.id).toBe('poll-1');
+    });
+  });
+
+  describe('getTotalVotes', () => {
+    function makePollWithVotes(
+      visibility: PollResultsVisibility,
+      voteCount: number
+    ): Poll {
+      const poll = new Poll();
+      poll.id = 'poll-t';
+      poll.settings = {
+        minResponses: 1,
+        maxResponses: 1,
+        resultsVisibility: visibility,
+        resultsDetail: PollResultsDetail.FULL,
+      };
+      poll.votes = Array.from({ length: voteCount }, (_, i) => {
+        const v = new PollVote();
+        v.id = `vote-${i}`;
+        v.createdBy = `user-${i}`;
+        v.selectedOptionIds = ['opt-a'];
+        return v;
+      });
+      return poll;
+    }
+
+    it('returns null when HIDDEN and user has not voted', () => {
+      const poll = makePollWithVotes(PollResultsVisibility.HIDDEN, 5);
+      expect(service.getTotalVotes(poll, false)).toBeNull();
+    });
+
+    it('returns count when HIDDEN and user has voted', () => {
+      const poll = makePollWithVotes(PollResultsVisibility.HIDDEN, 5);
+      expect(service.getTotalVotes(poll, true)).toBe(5);
+    });
+
+    it('returns count when TOTAL_ONLY and user has not voted', () => {
+      const poll = makePollWithVotes(PollResultsVisibility.TOTAL_ONLY, 3);
+      expect(service.getTotalVotes(poll, false)).toBe(3);
+    });
+
+    it('returns count when VISIBLE regardless of vote status', () => {
+      const poll = makePollWithVotes(PollResultsVisibility.VISIBLE, 7);
+      expect(service.getTotalVotes(poll, false)).toBe(7);
+      expect(service.getTotalVotes(poll, true)).toBe(7);
+    });
+  });
+
+  describe('canUserSeeDetailedResults', () => {
+    function makePollForVisibility(
+      visibility: PollResultsVisibility,
+      voterIds: string[]
+    ): Poll {
+      const poll = new Poll();
+      poll.id = 'poll-v';
+      poll.settings = {
+        minResponses: 1,
+        maxResponses: 1,
+        resultsVisibility: visibility,
+        resultsDetail: PollResultsDetail.FULL,
+      };
+      poll.votes = voterIds.map(uid => {
+        const v = new PollVote();
+        v.id = `vote-${uid}`;
+        v.createdBy = uid;
+        v.selectedOptionIds = ['opt-a'];
+        return v;
+      });
+      return poll;
+    }
+
+    it('returns true when VISIBLE regardless of voting', () => {
+      const poll = makePollForVisibility(PollResultsVisibility.VISIBLE, []);
+      expect(service.canUserSeeDetailedResults(poll, 'user-x')).toBe(true);
+    });
+
+    it('returns true when HIDDEN and user has voted', () => {
+      const poll = makePollForVisibility(PollResultsVisibility.HIDDEN, [
+        'user-1',
+      ]);
+      expect(service.canUserSeeDetailedResults(poll, 'user-1')).toBe(true);
+    });
+
+    it('returns false when HIDDEN and user has not voted', () => {
+      const poll = makePollForVisibility(PollResultsVisibility.HIDDEN, [
+        'user-1',
+      ]);
+      expect(service.canUserSeeDetailedResults(poll, 'user-2')).toBe(false);
+    });
+
+    it('returns false when TOTAL_ONLY and user has not voted', () => {
+      const poll = makePollForVisibility(PollResultsVisibility.TOTAL_ONLY, []);
+      expect(service.canUserSeeDetailedResults(poll, 'user-x')).toBe(false);
+    });
   });
 });
 

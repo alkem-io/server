@@ -49,6 +49,11 @@ export class PollResolverSubscriptions {
       // a plain object, making `as Poll` casts unreliable).
       const poll = await this.pollService.getPollOrFail(payload.poll.id);
 
+      // NOTE: We intentionally re-query getVoteForUser here even though filter
+      // may have already called it. Caching the filter result was considered but
+      // rejected because it caused stale vote data to be delivered to subscribers
+      // after they changed their vote (the mutation returned the correct new vote,
+      // but the subscription broadcast the cached old value to all clients).
       const vote = actorID
         ? await this.pollVoteService.getVoteForUser(poll.id, actorID)
         : null;

@@ -12,6 +12,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
+import { InstrumentResolver } from '@src/apm/decorators';
 import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
@@ -24,6 +25,7 @@ import { PollSubscriptionPayload } from './dto/poll.subscription.payload';
 import { IPoll } from './poll.interface';
 import { PollService } from './poll.service';
 
+@InstrumentResolver()
 @Resolver()
 export class PollMutationsResolver {
   constructor(
