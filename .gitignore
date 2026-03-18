@@ -44,6 +44,15 @@ subscriptions.log
 
 # Claude Code
 .claude/settings.local.json
+.claude/pipeline/.session-token
+.claude/pipeline/.env
+.claude/pipeline/results/
+.claude/pipeline/live-results/
+.claude/pipeline/fixes/
+.claude/pipeline/reviews/
+.claude/pipeline/signals/
+.claude/pipeline/.last-cycle
+.claude/agent-memory/
 
 # Overmind socket
 .overmind.sock
@@ -77,6 +86,8 @@ subscriptions.log
 .scripts/*
 !.scripts/migrations/
 !.scripts/overmind/
+!.scripts/gql-validate/
+!.scripts/lib/
 .scripts/overmind/.overmind.sock
 .scripts/**/*.psql
 .storage/
