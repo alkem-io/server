@@ -136,7 +136,7 @@ export class PlatformResolverFields {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.READ,
+      AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
       `get Platform well-known Virtual Contributors: ${actorContext.actorID}`
     );
 
