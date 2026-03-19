@@ -2679,6 +2679,8 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
 type InAppNotificationPayloadSpaceCollaborationPoll implements InAppNotificationPayload {
   """The Callout that contains the poll."""
   callout: Callout!
+  """The Poll this notification relates to."""
+  poll: Poll!
   """The ID of the Poll this notification relates to."""
   pollID: UUID!
   """Where the callout is located."""

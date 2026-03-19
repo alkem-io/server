@@ -564,6 +564,7 @@ export class InAppNotificationService {
           payload as InAppNotificationPayloadSpaceCollaborationPoll;
         result.spaceID = typedPayload.spaceID;
         result.calloutID = typedPayload.calloutID;
+        result.pollID = typedPayload.pollID;
         break;
       }
 
