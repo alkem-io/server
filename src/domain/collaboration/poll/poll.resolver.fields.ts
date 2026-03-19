@@ -63,6 +63,7 @@ export class PollFieldsResolver {
       updatedDate: vote.updatedDate,
       createdBy: vote.createdBy,
       selectedOptions,
+      selectedOptionIds: vote.selectedOptionIds,
     };
   }
 
