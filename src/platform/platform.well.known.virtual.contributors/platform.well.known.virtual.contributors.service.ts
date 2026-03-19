@@ -6,7 +6,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Platform } from '@platform/platform/platform.entity';
 import { Repository } from 'typeorm';
 
-// Internal storage type - Record for JSON storage
+// Internal convenience type - flat record for key-based lookups
 type WellKnownVCMappingsRecord = Record<
   VirtualContributorWellKnown,
   string | undefined
@@ -31,7 +31,13 @@ export class PlatformWellKnownVirtualContributorsService {
       );
     }
 
-    return (platform.wellKnownVirtualContributors as any) || {};
+    const record: Partial<WellKnownVCMappingsRecord> = {};
+    for (const mapping of platform.wellKnownVirtualContributors?.mappings ??
+      []) {
+      record[mapping.wellKnown as VirtualContributorWellKnown] =
+        mapping.virtualContributorID;
+    }
+    return record as WellKnownVCMappingsRecord;
   }
 
   async setMapping(
@@ -49,18 +55,26 @@ export class PlatformWellKnownVirtualContributorsService {
       );
     }
 
-    // Initialize if needed
-    const mappings = ((platform.wellKnownVirtualContributors as any) ||
-      {}) as WellKnownVCMappingsRecord;
+    const existingMappings = [
+      ...(platform.wellKnownVirtualContributors?.mappings ?? []),
+    ];
+    const index = existingMappings.findIndex(m => m.wellKnown === wellKnown);
+    if (index >= 0) {
+      existingMappings[index] = { wellKnown, virtualContributorID };
+    } else {
+      existingMappings.push({ wellKnown, virtualContributorID });
+    }
 
-    // Set the mapping
-    mappings[wellKnown] = virtualContributorID;
-
-    platform.wellKnownVirtualContributors = mappings as any;
+    platform.wellKnownVirtualContributors = { mappings: existingMappings };
 
     await this.platformRepository.save(platform);
 
-    return mappings;
+    const record: Partial<WellKnownVCMappingsRecord> = {};
+    for (const mapping of existingMappings) {
+      record[mapping.wellKnown as VirtualContributorWellKnown] =
+        mapping.virtualContributorID;
+    }
+    return record as WellKnownVCMappingsRecord;
   }
 
   async getVirtualContributorID(
