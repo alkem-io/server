@@ -67,8 +67,8 @@ export class PushSubscription extends BaseAlkemioEntity {
 **State Transitions**:
 ```
 [Created] → active
-  active → expired  (on 410 Gone from push service, or stale cleanup)
-  active → [Deleted] (user unsubscribes, or cap replacement)
+  active → expired   (on 410 Gone or 4xx from push service)
+  active → [Deleted] (user unsubscribes, cap replacement, or stale cleanup)
   expired → [Deleted] (cleanup cron removes expired records)
 ```
 

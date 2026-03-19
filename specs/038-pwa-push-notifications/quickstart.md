@@ -83,9 +83,9 @@ Requires authentication. Use a valid session cookie or Bearer token.
 ```graphql
 mutation {
   subscribeToPushNotifications(subscriptionData: {
-    endpoint: "https://fcm.googleapis.com/fcm/send/test-endpoint"
-    p256dh: "BNcRdreALRFXTkOOUHK1EtK2wtaz5Ry4YfYCA_0QTpQtUbVlUls0VJXg7A8u-Ts1XbjhazAkj7I99e8p8REfWM8="
-    auth: "tBHItJI5svbpC7htKmq1Uw=="
+    endpoint: "<push-service-endpoint-url>"
+    p256dh: "<base64url-p256dh-public-key>"
+    auth: "<base64url-auth-secret>"
     userAgent: "Mozilla/5.0 (Test Device)"
   }) {
     id

@@ -99,13 +99,10 @@ export class NotificationUserAdapter {
       );
     }
 
-    // Send push notifications
-    const pushRecipientsFiltered = recipients.pushRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
-    );
-    if (pushRecipientsFiltered.length > 0) {
+    // Send push notifications — no triggeredBy filter for welcome (recipient IS the new user)
+    if (recipients.pushRecipients.length > 0) {
       await this.notificationPushAdapter.sendPushNotifications(
-        pushRecipientsFiltered,
+        recipients.pushRecipients,
         event,
         {
           title: 'Welcome to Alkemio',
@@ -225,14 +222,11 @@ export class NotificationUserAdapter {
       );
     }
 
-    // Send push notifications
-    const pushRecipientsFiltered = recipients.pushRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
-    );
-    if (pushRecipientsFiltered.length > 0) {
+    // Send push notifications — no triggeredBy filter for community joined (recipient IS the new member)
+    if (recipients.pushRecipients.length > 0) {
       const spaceName = space.about?.profile?.displayName ?? 'a space';
       await this.notificationPushAdapter.sendPushNotifications(
-        pushRecipientsFiltered,
+        recipients.pushRecipients,
         event,
         {
           title: `Welcome to ${spaceName}`,

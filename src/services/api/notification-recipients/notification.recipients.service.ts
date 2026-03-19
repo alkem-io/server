@@ -170,7 +170,7 @@ export class NotificationRecipientsService {
       LogContext.NOTIFICATIONS
     );
     this.logger.verbose?.(
-      `[${eventData.eventType}] - 5c. Push has ${pushRecipientsWithPrivilege.length} recipients: ${pushRecipientsWithPrivilege.map(recipient => recipient.email).join(', ')}`,
+      `[${eventData.eventType}] - 5c. Push has ${pushRecipientsWithPrivilege.length} recipients: ${pushRecipientsWithPrivilege.map(recipient => recipient.id).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
 

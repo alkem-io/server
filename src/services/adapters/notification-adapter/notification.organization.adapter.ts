@@ -199,13 +199,10 @@ export class NotificationOrganizationAdapter {
       );
     }
 
-    // Send push notifications for sender confirmation
-    const senderPushRecipientsFiltered = recipientsSender.pushRecipients.filter(
-      recipient => recipient.id !== eventData.triggeredBy
-    );
-    if (senderPushRecipientsFiltered.length > 0) {
+    // Send push notifications for sender confirmation (include the sender)
+    if (recipientsSender.pushRecipients.length > 0) {
       await this.notificationPushAdapter.sendPushNotifications(
-        senderPushRecipientsFiltered,
+        recipientsSender.pushRecipients,
         eventSender,
         {
           title: 'Message sent',

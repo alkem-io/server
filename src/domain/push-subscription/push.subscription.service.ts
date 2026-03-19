@@ -41,6 +41,10 @@ export class PushSubscriptionService {
     });
 
     if (existing) {
+      // If endpoint is being reassigned to a different user, enforce their cap
+      if (existing.userId !== userId) {
+        await this.enforceSubscriptionCap(userId);
+      }
       // Update existing subscription
       existing.p256dh = input.p256dh;
       existing.auth = input.auth;

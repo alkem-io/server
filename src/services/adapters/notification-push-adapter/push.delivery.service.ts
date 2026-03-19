@@ -33,7 +33,7 @@ export class PushDeliveryService {
       'notifications.push.vapid.subject' as any
     );
 
-    if (vapidPublicKey && vapidPrivateKey) {
+    if (vapidPublicKey && vapidPrivateKey && vapidSubject) {
       webpush.setVapidDetails(vapidSubject, vapidPublicKey, vapidPrivateKey);
     }
   }
