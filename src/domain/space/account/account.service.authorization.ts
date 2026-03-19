@@ -56,16 +56,17 @@ export class AccountAuthorizationService {
     const account = await this.accountService.getAccountOrFail(
       accountInput.id,
       {
+        loadEagerRelations: false,
         relations: {
           authorization: true,
           spaces: {
             templatesManager: true,
           },
-          virtualContributors: true,
-          innovationPacks: true,
-          innovationHubs: true,
-          storageAggregator: true,
-          license: true,
+          virtualContributors: { authorization: true },
+          innovationPacks: { authorization: true },
+          innovationHubs: { authorization: true },
+          storageAggregator: { authorization: true },
+          license: { authorization: true },
         },
       }
     );
