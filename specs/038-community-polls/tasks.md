@@ -237,26 +237,26 @@
 ### Infrastructure (parallel, no inter-dependencies)
 
 - [X] T074 [P] [US7] Create `PollEventType` enum in `src/common/enums/poll.event.type.ts` with values `POLL_VOTE_UPDATED = 'POLL_VOTE_UPDATED'`, `POLL_OPTIONS_CHANGED = 'POLL_OPTIONS_CHANGED'`, and `POLL_STATUS_CHANGED = 'POLL_STATUS_CHANGED'`; register with `registerEnumType`. Export from `src/common/enums/index.ts`.
-- [ ] T075 [P] [US7] Add two values to `SubscriptionType` enum in `src/common/enums/subscription.type.ts`: `POLL_VOTE_UPDATED = 'pollVoteUpdated'` and `POLL_OPTIONS_CHANGED = 'pollOptionsChanged'`.
-- [ ] T076 [P] [US7] Add two Symbol constants to `src/common/constants/providers.ts`: `SUBSCRIPTION_POLL_VOTE_UPDATED` and `SUBSCRIPTION_POLL_OPTIONS_CHANGED`.
+- [X] T075 [P] [US7] Add two values to `SubscriptionType` enum in `src/common/enums/subscription.type.ts`: `POLL_VOTE_UPDATED = 'pollVoteUpdated'` and `POLL_OPTIONS_CHANGED = 'pollOptionsChanged'`.
+- [X] T076 [P] [US7] Add two Symbol constants to `src/common/constants/providers.ts`: `SUBSCRIPTION_POLL_VOTE_UPDATED` and `SUBSCRIPTION_POLL_OPTIONS_CHANGED`.
 
 ### Payload & DTO (after T074–T076)
 
-- [ ] T077 [P] [US7] Create subscription payload interface `PollVoteUpdatedSubscriptionPayload` in `src/services/subscriptions/subscription-service/dto/poll.vote.updated.subscription.payload.ts` — extends `BaseSubscriptionPayload` with fields `pollEventType: PollEventType`, `pollID: string`, `poll: IPoll`.
-- [ ] T078 [P] [US7] Create subscription payload interface `PollOptionsChangedSubscriptionPayload` in `src/services/subscriptions/subscription-service/dto/poll.options.changed.subscription.payload.ts` — extends `BaseSubscriptionPayload` with fields `pollEventType: PollEventType`, `pollID: string`, `poll: IPoll`.
-- [ ] T079 [P] [US7] Create `PollVoteUpdatedSubscriptionResult` ObjectType in `src/domain/collaboration/poll/dto/poll.vote.updated.subscription.result.ts` — fields: `pollEventType: PollEventType`, `poll: IPoll` (non-nullable). Follow `VirtualContributorUpdatedSubscriptionResult` pattern.
-- [ ] T080 [P] [US7] Create `PollOptionsChangedSubscriptionResult` ObjectType in `src/domain/collaboration/poll/dto/poll.options.changed.subscription.result.ts` — fields: `pollEventType: PollEventType`, `poll: IPoll` (non-nullable). Same pattern as T079.
-- [ ] T081 [P] [US7] Create `PollSubscriptionArgs` ArgsType in `src/domain/collaboration/poll/dto/poll.subscription.args.ts` — single field `pollID: UUID!` with `@MaxLength(UUID_LENGTH)`.
+- [X] T077 [P] [US7] Create subscription payload interface `PollVoteUpdatedSubscriptionPayload` in `src/services/subscriptions/subscription-service/dto/poll.vote.updated.subscription.payload.ts` — extends `BaseSubscriptionPayload` with fields `pollEventType: PollEventType`, `pollID: string`, `poll: IPoll`.
+- [X] T078 [P] [US7] Create subscription payload interface `PollOptionsChangedSubscriptionPayload` in `src/services/subscriptions/subscription-service/dto/poll.options.changed.subscription.payload.ts` — extends `BaseSubscriptionPayload` with fields `pollEventType: PollEventType`, `pollID: string`, `poll: IPoll`.
+- [X] T079 [P] [US7] Create `PollVoteUpdatedSubscriptionResult` ObjectType in `src/domain/collaboration/poll/dto/poll.vote.updated.subscription.result.ts` — fields: `pollEventType: PollEventType`, `poll: IPoll` (non-nullable). Follow `VirtualContributorUpdatedSubscriptionResult` pattern.
+- [X] T080 [P] [US7] Create `PollOptionsChangedSubscriptionResult` ObjectType in `src/domain/collaboration/poll/dto/poll.options.changed.subscription.result.ts` — fields: `pollEventType: PollEventType`, `poll: IPoll` (non-nullable). Same pattern as T079.
+- [X] T081 [P] [US7] Create `PollSubscriptionArgs` ArgsType in `src/domain/collaboration/poll/dto/poll.subscription.args.ts` — single field `pollID: UUID!` with `@MaxLength(UUID_LENGTH)`.
 
 ### Service Methods (after T076)
 
-- [ ] T082 [US7] Add `subscribeToVoteUpdated(pollID: string): Promise<AsyncIterableIterator<PollVoteUpdatedSubscriptionPayload>>` method to `SubscriptionReadService` — injects `SUBSCRIPTION_POLL_VOTE_UPDATED` PubSubEngine, returns `asyncIterator(pollID)`. Follow `subscribeToVirtualContributorUpdated` pattern.
-- [ ] T083 [US7] Add `subscribeToOptionsChanged(pollID: string): Promise<AsyncIterableIterator<PollOptionsChangedSubscriptionPayload>>` method to `SubscriptionReadService` — injects `SUBSCRIPTION_POLL_OPTIONS_CHANGED` PubSubEngine, returns `asyncIterator(pollID)`.
-- [ ] T084 [US7] Add `publishPollVoteUpdated(payload: PollVoteUpdatedSubscriptionPayload): Promise<void>` to `SubscriptionPublishService` — publishes to `SUBSCRIPTION_POLL_VOTE_UPDATED` engine using `payload.pollID` as topic. Add `publishPollOptionsChanged(payload: PollOptionsChangedSubscriptionPayload): Promise<void>` — publishes to `SUBSCRIPTION_POLL_OPTIONS_CHANGED`.
+- [X] T082 [US7] Add `subscribeToVoteUpdated(pollID: string): Promise<AsyncIterableIterator<PollVoteUpdatedSubscriptionPayload>>` method to `SubscriptionReadService` — injects `SUBSCRIPTION_POLL_VOTE_UPDATED` PubSubEngine, returns `asyncIterator(pollID)`. Follow `subscribeToVirtualContributorUpdated` pattern.
+- [X] T083 [US7] Add `subscribeToOptionsChanged(pollID: string): Promise<AsyncIterableIterator<PollOptionsChangedSubscriptionPayload>>` method to `SubscriptionReadService` — injects `SUBSCRIPTION_POLL_OPTIONS_CHANGED` PubSubEngine, returns `asyncIterator(pollID)`.
+- [X] T084 [US7] Add `publishPollVoteUpdated(payload: PollVoteUpdatedSubscriptionPayload): Promise<void>` to `SubscriptionPublishService` — publishes to `SUBSCRIPTION_POLL_VOTE_UPDATED` engine using `payload.pollID` as topic. Add `publishPollOptionsChanged(payload: PollOptionsChangedSubscriptionPayload): Promise<void>` — publishes to `SUBSCRIPTION_POLL_OPTIONS_CHANGED`.
 
 ### Subscription Resolver (after T079–T084)
 
-- [ ] T085 [US7] Create `PollResolverSubscriptions` in `src/domain/collaboration/poll/poll.resolver.subscriptions.ts`:
+- [X] T085 [US7] Create `PollResolverSubscriptions` in `src/domain/collaboration/poll/poll.resolver.subscriptions.ts`:
   - `pollVoteUpdated(args: PollSubscriptionArgs)` — uses `@TypedSubscription` decorator with `subscribe` → `subscriptionReadService.subscribeToVoteUpdated(args.pollID)`, `filter` → matches `payload.pollID === args.pollID`; for `HIDDEN` visibility with non-voted subscriber → return false (suppress event); `resolve` → returns `PollVoteUpdatedSubscriptionResult` with `pollEventType` and `poll` entity (field resolvers handle per-subscriber visibility).
   - `pollOptionsChanged(args: PollSubscriptionArgs)` — same pattern with `subscribeToOptionsChanged`, no HIDDEN suppression (option events always delivered); `resolve` → returns `PollOptionsChangedSubscriptionResult`.
   - Inject `PollVoteService` for voter-status check in filter.
@@ -275,20 +275,20 @@
 
 ### Module Wiring (after T085–T086)
 
-- [ ] T087 [US7] Update `poll.module.ts` to:
+- [X] T087 [US7] Update `poll.module.ts` to:
   - Register `PollResolverSubscriptions` as a provider.
   - Add two `PubSubEngine` factory providers for `SUBSCRIPTION_POLL_VOTE_UPDATED` and `SUBSCRIPTION_POLL_OPTIONS_CHANGED` — follow pattern in existing subscription modules (e.g., `virtual.contributor.module.ts` or the callout subscription wiring).
   - Import `SubscriptionServiceModule` if not already imported.
 
 ### Tests & Schema (after T085–T087)
 
-- [ ] T088 [US7] Add unit tests for `PollResolverSubscriptions`:
+- [X] T088 [US7] Add unit tests for `PollResolverSubscriptions`:
   - (a) Filter returns false when `resultsVisibility = HIDDEN` and subscriber has not voted (for `pollVoteUpdated`).
   - (b) Filter returns true when `resultsVisibility = HIDDEN` and subscriber has voted.
   - (c) Filter returns true for all `resultsVisibility` values other than `HIDDEN`.
   - (d) `pollOptionsChanged` filter always returns true regardless of visibility settings.
   - (e) Resolve functions return correct `pollEventType` and `poll` entity.
-- [ ] T089 [US7] Run `pnpm run schema:print && pnpm run schema:sort && pnpm run schema:diff`; verify `PollEventType` enum, subscription result types, and `Subscription.pollVoteUpdated` / `Subscription.pollOptionsChanged` fields appear in `change-report.json` as additive (non-breaking).
+- [X] T089 [US7] Run `pnpm run schema:print && pnpm run schema:sort && pnpm run schema:diff`; verify `PollEventType` enum, subscription result types, and `Subscription.pollVoteUpdated` / `Subscription.pollOptionsChanged` fields appear in `change-report.json` as additive (non-breaking).
 
 **Checkpoint**: Two subscription channels functional. HIDDEN visibility suppresses vote events for non-voters. Option events always delivered. Field resolvers filter results per subscriber context. Schema contract passes.
 
@@ -306,7 +306,7 @@
 - [X] T091 [US8] Implement `PollService.updateStatus(pollId: string, status: PollStatus): Promise<Poll>` in `src/domain/collaboration/poll/poll.service.ts`: (1) load `Poll` via `getPollOrFail(pollId)`; (2) set `poll.status = status`; (3) persist via repository save; (4) return updated `Poll`. The method is idempotent — setting to the current status succeeds without error. No notifications are dispatched on status change.
 - [X] T092 [US8] Create `updatePollStatus` mutation in `src/domain/collaboration/poll/poll.resolver.mutations.ts`: `@Mutation(() => IPoll, { description: 'Change the status of a Poll (OPEN ↔ CLOSED).' }) updatePollStatus(@Args('statusData') statusData: UpdatePollStatusInput, @CurrentUser() user: AgentInfo): Promise<IPoll>`; enforce `UPDATE` privilege on the parent Callout (same authorization as `updatePollOption`, `removePollOption`, `reorderPollOptions`); call `PollService.updateStatus(statusData.pollID, statusData.status)`; return updated `Poll`. After status update, publishes a `POLL_STATUS_CHANGED` event through the `pollVoteUpdated` subscription channel so real-time clients see the status change.
 - [X] T093 [US8] Add unit tests in `src/domain/collaboration/poll/poll.service.spec.ts` for `updateStatus()`: (a) OPEN → CLOSED succeeds and returns poll with `status = CLOSED`; (b) CLOSED → OPEN succeeds and returns poll with `status = OPEN`; (c) OPEN → OPEN succeeds idempotently (no error); (d) CLOSED → CLOSED succeeds idempotently (no error). Additionally, unit tests for `POLL_STATUS_CHANGED` subscription events added in `poll.resolver.subscriptions.spec.ts`: (e) resolve returns correct `pollEventType = POLL_STATUS_CHANGED`; (f) filter returns true when pollID matches and visibility is VISIBLE; (g) filter returns false when pollID does not match; (h) filter suppresses event when HIDDEN and subscriber has not voted; (i) filter delivers event when HIDDEN and subscriber has voted. Also added publish service test in `subscription.publish.service.spec.ts` verifying `POLL_STATUS_CHANGED` routes through the poll vote updated channel.
-- [ ] T094 [US8] Run `pnpm run schema:print && pnpm run schema:sort && pnpm run schema:diff`; verify `updatePollStatus` mutation, `UpdatePollStatusInput`, and `POLL_STATUS_CHANGED` enum value appear in `change-report.json` as additive (non-breaking)
+- [X] T094 [US8] Run `pnpm run schema:print && pnpm run schema:sort && pnpm run schema:diff`; verify `updatePollStatus` mutation, `UpdatePollStatusInput`, and `POLL_STATUS_CHANGED` enum value appear in `change-report.json` as additive (non-breaking)
 
 **Checkpoint**: Poll lifecycle is complete. Facilitators can close and reopen polls. All existing closed-poll guards (6 mutations) are now reachable via the `updatePollStatus` mutation.
 
@@ -319,7 +319,7 @@
 - [X] T066 [P] Fix `specs/038-community-polls/quickstart.md` — H1 fix: update all read queries to use `poll { settings { minResponses maxResponses resultsVisibility resultsDetail } status ... }` instead of flat `poll.minResponses` etc. (Steps 1, 4, and Settings Verification section)
 - [X] T067 [P] Fix `specs/038-community-polls/quickstart.md` — H2 fix: update Multi-Select Poll Example mutation to wrap `minResponses`/`maxResponses` inside `settings: { minResponses: 1, maxResponses: 0 }` inside `CreatePollInput`
 - [X] T068 [P] Fix `specs/038-community-polls/plan.md` — H3 fix: update the Summary paragraph to replace "a background cleanup listener removes all Poll votes" with "DB-level `ON DELETE CASCADE` on `poll_vote.createdBy` (FK → user(id)) automatically removes PollVote rows when the user account is deleted — no application-level cleanup listener required"
-- [ ] T069 Run `pnpm run migration:run` and confirm migration applies without error; run `pnpm run migration:revert` and confirm rollback completes; re-run `pnpm run migration:run` to restore the state. Also verify FK cascade behavior for FR-019: using `psql`, insert a test `poll_vote` row for a test user, delete the user row, and confirm the `poll_vote` row is automatically deleted by the DB cascade — this is the only verification of the `createdBy FK → user(id) ON DELETE CASCADE` guarantee.
+- [X] T069 Run `pnpm run migration:run` and confirm migration applies without error; run `pnpm run migration:revert` and confirm rollback completes; re-run `pnpm run migration:run` to restore the state. Also verify FK cascade behavior for FR-019: using `psql`, insert a test `poll_vote` row for a test user, delete the user row, and confirm the `poll_vote` row is automatically deleted by the DB cascade — this is the only verification of the `createdBy FK → user(id) ON DELETE CASCADE` guarantee.
 - [X] T070 [P] Run `pnpm run schema:print && pnpm run schema:sort`; diff against baseline with `pnpm run schema:diff`; review `change-report.json` for BREAKING changes — new types and fields are additive (no breaking changes expected); verify `Poll`, `PollOption`, `PollVote`, `PollSettings` types are present and `CalloutFraming.poll` field is added
 - [X] T071 [P] Run `pnpm lint` (tsc + Biome); fix any reported violations before marking complete — key rules: no `console.*` (use Winston), no explicit `any`, no unused imports
 - [X] T072 Run `pnpm test:ci:no:coverage` to verify all unit tests pass (T034, T039, T047, T054, T065)

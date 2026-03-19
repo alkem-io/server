@@ -602,6 +602,7 @@ enum PlatformFeatureFlagName {
 """The type of event that occurred on a poll."""
 enum PollEventType {
   POLL_OPTIONS_CHANGED
+  POLL_STATUS_CHANGED
   POLL_VOTE_UPDATED
 }
 
