@@ -65,7 +65,7 @@ src/domain/collaboration/
 │   ├── poll.service.authorization.ts
 │   ├── poll.data.loader.ts        # Request-scoped DataLoader — batches getPoll and getUserVote queries across field resolvers (SC-008)
 │   ├── poll.module.ts
-│   ├── poll.resolver.mutations.ts # addPollOption, updatePollOption, removePollOption, reorderPollOptions, castPollVote, removePollVote
+│   ├── poll.resolver.mutations.ts # addPollOption, updatePollOption, removePollOption, reorderPollOptions, castPollVote, removePollVote, updatePollStatus
 │   ├── poll.resolver.fields.ts    # options (enriched), myVote field resolvers — uses PollDataLoader to avoid N+1 queries
 │   └── dto/
 │       ├── poll.dto.create.ts
@@ -148,6 +148,10 @@ src/domain/collaboration/poll/
 src/common/enums/
 └── poll.event.type.ts  # NEW — PollEventType enum (POLL_VOTE_UPDATED, POLL_OPTIONS_CHANGED)
 
+src/domain/collaboration/poll/
+└── dto/
+    └── poll.dto.update.status.ts  # NEW — UpdatePollStatusInput (pollID, status)
+
 src/migrations/
 └── {TIMESTAMP}-CommunityPolls.ts  # NEW — creates poll, poll_option, poll_vote tables; adds pollId to callout_framing
 ```
@@ -189,6 +193,13 @@ src/migrations/
 - **Behavior**: Mutation fails with ValidationException if user has not voted. Vote removal is silent — no notifications sent to poll creator or other voters (per FR-020a/b clarification) — but `pollVoteUpdated` subscription fires so real-time viewers see updated counts.
 - **Affected files**: `spec.md` (FR-012a, FR-012b, US4 scenarios 5-6, SC-006a, edge cases, clarifications), `contracts/schema.graphql` (new mutation), `poll.service.ts`, `poll.resolver.mutations.ts`.
 - **Resolves**: Vote withdrawal capability gap.
+
+**2026-03-19**: Added `updatePollStatus` mutation for poll close/reopen (US8).
+- **Change**: New mutation `updatePollStatus(statusData: UpdatePollStatusInput!)` allows facilitators/admins to toggle poll status between OPEN and CLOSED. Returns updated Poll.
+- **Rationale**: The status column, enum, and all closed-poll guards were already implemented but there was no way to change the status. This completes the poll lifecycle.
+- **Behavior**: Requires UPDATE privilege on parent Callout. Idempotent — setting to current status succeeds without error. No notifications on close/reopen (deferred to future scope).
+- **Affected files**: `spec.md` (US8, FR-032..FR-035, future scope updated), `plan.md` (project structure, revision history), `data-model.md` (authorization table), `tasks.md` (Phase 10), `contracts/schema.graphql` (new mutation + input type).
+- **Resolves**: Poll lifecycle gap — polls could never be closed despite having full guard infrastructure.
 
 **2026-03-18**: Added `allowContributorsAddOptions` poll setting.
 - **Change**: New boolean `allowContributorsAddOptions` (default `false`) in `IPollSettings` / `PollSettingsInput`. When `true`, users with `CONTRIBUTE` privilege (voters) can add new options to the poll via `addPollOption`. Editing, removing, and reordering remain `UPDATE`-only.

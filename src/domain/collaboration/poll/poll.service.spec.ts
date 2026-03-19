@@ -814,3 +814,109 @@ describe('PollService — option management (T054)', () => {
     );
   });
 });
+
+// ─── T093: updateStatus (close/reopen poll) ──
+
+describe('PollService — updateStatus (T093)', () => {
+  let service: PollService;
+
+  const mockPollRepository = {
+    findOne: vi.fn(),
+    save: vi
+      .fn()
+      .mockImplementation((entity: unknown) => Promise.resolve(entity)),
+    createQueryBuilder: vi.fn(),
+  };
+  const mockPollOptionRepository = {
+    findOne: vi.fn(),
+    save: vi.fn(),
+  };
+
+  beforeEach(async () => {
+    vi.clearAllMocks();
+    const module: TestingModule = await Test.createTestingModule({
+      providers: [
+        PollService,
+        { provide: getRepositoryToken(Poll), useValue: mockPollRepository },
+        {
+          provide: getRepositoryToken(PollOption),
+          useValue: mockPollOptionRepository,
+        },
+      ],
+    })
+      .useMocker(defaultMockerFactory)
+      .compile();
+    service = module.get<PollService>(PollService);
+  });
+
+  function buildPoll(status: PollStatus): Poll {
+    const poll = new Poll();
+    poll.id = 'poll-1';
+    poll.title = 'Test';
+    poll.status = status;
+    poll.settings = {
+      minResponses: 1,
+      maxResponses: 1,
+      resultsVisibility: PollResultsVisibility.VISIBLE,
+      resultsDetail: PollResultsDetail.FULL,
+      allowContributorsAddOptions: false,
+    };
+    poll.options = [];
+    poll.votes = [];
+    return poll;
+  }
+
+  it('(a) OPEN → CLOSED succeeds', async () => {
+    const openPoll = buildPoll(PollStatus.OPEN);
+    const closedPoll = buildPoll(PollStatus.CLOSED);
+    mockPollRepository.findOne
+      .mockResolvedValueOnce(openPoll) // getPollOrFail in updateStatus (loadVotes=false)
+      .mockResolvedValueOnce(closedPoll); // getPollOrFail reload at end
+
+    const result = await service.updateStatus('poll-1', PollStatus.CLOSED);
+
+    expect(result.status).toBe(PollStatus.CLOSED);
+    expect(mockPollRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ status: PollStatus.CLOSED })
+    );
+  });
+
+  it('(b) CLOSED → OPEN succeeds', async () => {
+    const closedPoll = buildPoll(PollStatus.CLOSED);
+    const openPoll = buildPoll(PollStatus.OPEN);
+    mockPollRepository.findOne
+      .mockResolvedValueOnce(closedPoll)
+      .mockResolvedValueOnce(openPoll);
+
+    const result = await service.updateStatus('poll-1', PollStatus.OPEN);
+
+    expect(result.status).toBe(PollStatus.OPEN);
+    expect(mockPollRepository.save).toHaveBeenCalledWith(
+      expect.objectContaining({ status: PollStatus.OPEN })
+    );
+  });
+
+  it('(c) OPEN → OPEN succeeds idempotently', async () => {
+    const openPoll = buildPoll(PollStatus.OPEN);
+    mockPollRepository.findOne
+      .mockResolvedValueOnce(openPoll)
+      .mockResolvedValueOnce(openPoll);
+
+    const result = await service.updateStatus('poll-1', PollStatus.OPEN);
+
+    expect(result.status).toBe(PollStatus.OPEN);
+    expect(mockPollRepository.save).toHaveBeenCalled();
+  });
+
+  it('(d) CLOSED → CLOSED succeeds idempotently', async () => {
+    const closedPoll = buildPoll(PollStatus.CLOSED);
+    mockPollRepository.findOne
+      .mockResolvedValueOnce(closedPoll)
+      .mockResolvedValueOnce(closedPoll);
+
+    const result = await service.updateStatus('poll-1', PollStatus.CLOSED);
+
+    expect(result.status).toBe(PollStatus.CLOSED);
+    expect(mockPollRepository.save).toHaveBeenCalled();
+  });
+});

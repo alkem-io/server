@@ -269,6 +269,38 @@ Verify: options are returned in the new order; `voteCount` values are unchanged.
 
 ---
 
+## Step 9 — Close and Reopen a Poll
+
+```graphql
+mutation ClosePoll($pollID: UUID!) {
+  updatePollStatus(statusData: {
+    pollID: $pollID
+    status: CLOSED
+  }) {
+    id
+    status
+  }
+}
+```
+
+Verify: `status` = `CLOSED`. Attempting to vote, add/edit/remove/reorder options, or remove a vote returns a validation error.
+
+```graphql
+mutation ReopenPoll($pollID: UUID!) {
+  updatePollStatus(statusData: {
+    pollID: $pollID
+    status: OPEN
+  }) {
+    id
+    status
+  }
+}
+```
+
+Verify: `status` = `OPEN`. All poll operations are available again.
+
+---
+
 ## Notification Verification
 
 After Step 2 (vote cast):
@@ -338,6 +370,8 @@ Verify: `myVote.selectedOptions` contains both Option A and Option C; each has `
 | Poll with `minResponses = 2` and only 1 option ID submitted | Domain error: below minResponses |
 | Vote with an option ID from a different poll | Not found / domain error |
 | Non-member attempts to vote | Authorization error: CONTRIBUTE privilege required |
+| Vote on a closed poll | Validation error: Cannot cast vote on a closed poll |
+| Non-editor attempts to close poll | Authorization error: UPDATE privilege required |
 | Reorder with missing or extra option IDs | Domain error: option ID list must match exactly |
 
 ---

@@ -352,10 +352,11 @@ The derived field `canSeeDetailedResults` is `true` when the visibility gate is 
 ### Poll Status (future-compat)
 
 ```
-OPEN → CLOSED (via future "closePoll" mutation)
+OPEN → CLOSED (via updatePollStatus mutation)
+CLOSED → OPEN (via updatePollStatus mutation — reopening)
 ```
 
-In this iteration polls are always `OPEN` and cannot be closed via the API.
+Status changes are managed via the `updatePollStatus` mutation (FR-032). The mutation is idempotent — setting to the current status succeeds without error. All votes and options are preserved across close/reopen cycles.
 
 ### Vote Lifecycle
 
@@ -511,6 +512,7 @@ export abstract class IPollVote extends IBaseAlkemio {
 | Add option (admin) | `UPDATE` on Callout | Callout edit permission |
 | Add option (voter, FR-004a) | `CONTRIBUTE` on Poll | Space member credential; only when `settings.allowContributorsAddOptions = true` |
 | Edit / remove / reorder options | `UPDATE` on Callout | Callout edit permission |
+| Close / reopen poll | `UPDATE` on Callout | Callout edit permission |
 | Subscribe to poll events | `READ` on Poll | Same as viewing poll |
 
 ---

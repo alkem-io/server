@@ -21,6 +21,7 @@ import {
   ReorderPollOptionsInput,
   UpdatePollOptionInput,
 } from './dto/poll.dto.option';
+import { UpdatePollStatusInput } from './dto/poll.dto.update.status';
 import { PollSubscriptionPayload } from './dto/poll.subscription.payload';
 import { IPoll } from './poll.interface';
 import { PollService } from './poll.service';
@@ -283,6 +284,26 @@ export class PollMutationsResolver {
     void this.publishPollEvent(PollEventType.POLL_OPTIONS_CHANGED, updatedPoll);
 
     return updatedPoll;
+  }
+
+  @Mutation(() => IPoll, {
+    description:
+      'Change the status of a Poll (OPEN ↔ CLOSED). Requires UPDATE privilege on the parent Callout. When a poll is CLOSED, all state-mutating operations are rejected. Idempotent: setting to current status succeeds without error.',
+  })
+  async updatePollStatus(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('statusData') statusData: UpdatePollStatusInput
+  ): Promise<IPoll> {
+    const poll = await this.pollService.getPollOrFail(statusData.pollID);
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      poll.authorization,
+      AuthorizationPrivilege.UPDATE,
+      'update poll status'
+    );
+
+    return this.pollService.updateStatus(statusData.pollID, statusData.status);
   }
 
   private async publishPollEvent(

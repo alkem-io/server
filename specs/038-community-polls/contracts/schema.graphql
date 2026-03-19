@@ -439,6 +439,27 @@ extend type Mutation {
   Returns the updated Poll with vote counts and myVote reflecting the removal.
   """
   removePollVote(pollID: UUID!): Poll!
+
+  """
+  Change the status of a Poll (OPEN ↔ CLOSED).
+  Requires UPDATE privilege on the parent Callout.
+  When a poll is CLOSED, all state-mutating operations (voting, vote removal, option management) are rejected.
+  Reopening (CLOSED → OPEN) restores full functionality. All votes and options are preserved across status changes.
+  Idempotent: setting a poll to its current status succeeds without error.
+  Returns the updated Poll.
+  """
+  updatePollStatus(statusData: UpdatePollStatusInput!): Poll!
+}
+
+"""
+Input for changing a Poll's status between OPEN and CLOSED.
+"""
+input UpdatePollStatusInput {
+  """The ID of the Poll to update."""
+  pollID: UUID!
+
+  """The new status for the poll."""
+  status: PollStatus!
 }
 
 # ─────────────────────────────────────────────────────────────────────────────

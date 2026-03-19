@@ -292,6 +292,24 @@
 
 ---
 
+## Phase 10: User Story 8 — Close / Reopen Poll (Priority: P8)
+
+**Goal**: Facilitators and admins can close a poll to prevent further votes and option changes, and reopen it later if needed. The status column, enum, and all closed-poll guards already exist — this phase adds only the mutation to change the status.
+
+**Independent Test**: A user with Callout edit permissions calls `updatePollStatus({ pollID, status: CLOSED })`; the returned poll has `status = CLOSED`. Subsequent `castPollVote`, `removePollVote`, `addPollOption`, `updatePollOption`, `removePollOption`, and `reorderPollOptions` all fail with validation errors. Calling `updatePollStatus({ pollID, status: OPEN })` reopens the poll and all operations succeed again.
+
+### Implementation
+
+- [ ] T090 [P] [US8] Create `UpdatePollStatusInput` input DTO in `src/domain/collaboration/poll/dto/poll.dto.update.status.ts`: `pollID: UUID!` (with `@IsUUID()`) and `status: PollStatus!` (with `@IsEnum(PollStatus)`)
+- [ ] T091 [US8] Implement `PollService.updateStatus(pollId: string, status: PollStatus): Promise<Poll>` in `src/domain/collaboration/poll/poll.service.ts`: (1) load `Poll` via `getPollOrFail(pollId)`; (2) set `poll.status = status`; (3) persist via repository save; (4) return updated `Poll`. The method is idempotent — setting to the current status succeeds without error. No notifications are dispatched on status change.
+- [ ] T092 [US8] Create `updatePollStatus` mutation in `src/domain/collaboration/poll/poll.resolver.mutations.ts`: `@Mutation(() => IPoll, { description: 'Change the status of a Poll (OPEN ↔ CLOSED).' }) updatePollStatus(@Args('statusData') statusData: UpdatePollStatusInput, @CurrentUser() user: AgentInfo): Promise<IPoll>`; enforce `UPDATE` privilege on the parent Callout (same authorization as `updatePollOption`, `removePollOption`, `reorderPollOptions`); call `PollService.updateStatus(statusData.pollID, statusData.status)`; return updated `Poll`
+- [ ] T093 [US8] Add unit tests in `src/domain/collaboration/poll/poll.service.spec.ts` for `updateStatus()`: (a) OPEN → CLOSED succeeds and returns poll with `status = CLOSED`; (b) CLOSED → OPEN succeeds and returns poll with `status = OPEN`; (c) OPEN → OPEN succeeds idempotently (no error); (d) CLOSED → CLOSED succeeds idempotently (no error)
+- [ ] T094 [US8] Run `pnpm run schema:print && pnpm run schema:sort && pnpm run schema:diff`; verify `updatePollStatus` mutation and `UpdatePollStatusInput` appear in `change-report.json` as additive (non-breaking)
+
+**Checkpoint**: Poll lifecycle is complete. Facilitators can close and reopen polls. All existing closed-poll guards (6 mutations) are now reachable via the `updatePollStatus` mutation.
+
+---
+
 ## Phase 8: Polish & Cross-Cutting Concerns
 
 **Purpose**: Documentation fixes, schema contract generation, lint/test verification, migration validation, quickstart smoke test.
@@ -320,8 +338,9 @@ Phase 1 (Setup)
                                ├─► Phase 5 (US3 - Results)        ← depends on US2 votes to test
                                ├─► Phase 6 (US5 - Options)        ← depends on US1 data to test
                                ├─► Phase 7 (US6 - Notifications)  ← depends on US2+US4b+US5 hooks
-                               └─► Phase 9 (US7 - Subscriptions)  ← depends on US2+US4b+US5 mutations
-Phase 8 (Polish) ← depends on all phases complete (including Phase 9)
+                               ├─► Phase 9 (US7 - Subscriptions)  ← depends on US2+US4b+US5 mutations
+                               └─► Phase 10 (US8 - Close/Reopen)  ← depends on Phase 2 only (guards already exist)
+Phase 8 (Polish) ← depends on all phases complete (including Phase 9 and Phase 10)
 ```
 
 ### User Story Dependencies
@@ -334,6 +353,7 @@ Phase 8 (Polish) ← depends on all phases complete (including Phase 9)
 - **US5 (P5)**: Requires US1 data; notification stubs reference US6 but mutations work without notifications
 - **US6 (P6)**: Wires into US2 (`castVote`), US4b (`removePollVote`), and US5 (option mutations); must be done after US2, US4b, and US5 service methods exist
 - **US7 (P7)**: Wires into US2 (`castVote`), US4b (`removePollVote`), and US5 (option mutations) for publishing events; requires Poll entities and all vote/option mutations to be functional. Independent of US6 (notifications)
+- **US8 (P8)**: Depends only on Phase 2 — the `PollStatus` enum, entity column, and all mutation guards are already in place; this phase only adds the `updatePollStatus` mutation
 
 ### Within Each Phase: Execution Order
 
@@ -434,11 +454,12 @@ Sequential:       T089                        (schema contract — after T087)
 6. Phase 6 → Option editing works → editorial controls complete
 7. Phase 7 → Notifications → engagement loop closed (including vote removal)
 8. Phase 9 → Subscriptions → real-time updates delivered to browsers
-9. Phase 8 → Polish → production-ready
+9. Phase 10 → Close/Reopen → poll lifecycle complete
+10. Phase 8 → Polish → production-ready
 
 ### Single-Developer Sequence
 
-Complete phases in order: 1 → 2 → 3 → 4 → 4b → 5 → 6 → 7 → 9 → 8. Stop at each **Checkpoint** to validate the story independently before proceeding.
+Complete phases in order: 1 → 2 → 3 → 4 → 4b → 5 → 6 → 7 → 9 → 10 → 8. Stop at each **Checkpoint** to validate the story independently before proceeding.
 
 ---
 

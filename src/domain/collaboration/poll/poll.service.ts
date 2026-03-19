@@ -261,6 +261,23 @@ export class PollService {
     return totalVotes;
   }
 
+  async updateStatus(pollId: string, status: PollStatus): Promise<Poll> {
+    const poll = await this.getPollOrFail(pollId, false);
+    poll.status = status;
+    await this.pollRepository.save(poll);
+
+    this.logger.verbose?.(
+      {
+        message: 'Poll status updated',
+        pollId,
+        status,
+      },
+      LogContext.COLLABORATION
+    );
+
+    return this.getPollOrFail(pollId);
+  }
+
   async addOption(pollId: string, text: string): Promise<Poll> {
     const poll = await this.getPollOrFail(pollId, false);
 

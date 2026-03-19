@@ -159,6 +159,26 @@ A community member viewing a poll in their browser wants the poll display to upd
 
 ---
 
+### User Story 8 - Closing and Reopening a Poll (Priority: P8)
+
+A facilitator or space admin wants to close a poll when enough input has been gathered, preventing further votes and option changes. Later, they may want to reopen the poll if additional input is needed.
+
+**Why this priority**: Completes the poll lifecycle. The status column and all guards already exist — polls always start as OPEN and all mutations reject closed polls — but there is no way to change the status. This story adds the mutation to toggle between OPEN and CLOSED.
+
+**Independent Test**: A user with Callout edit permissions calls `updatePollStatus(pollID, CLOSED)`; the poll status changes to CLOSED. Subsequent attempts to vote, add/edit/remove/reorder options, or remove a vote all fail with validation errors. The same user calls `updatePollStatus(pollID, OPEN)` and the poll becomes open again, accepting votes and option changes.
+
+**Acceptance Scenarios**:
+
+1. **Given** a user with Callout edit permissions views an open poll, **When** they call `updatePollStatus(pollID, CLOSED)`, **Then** the poll status changes to CLOSED and the updated Poll is returned.
+2. **Given** a poll is closed, **When** any space member attempts to cast a vote, **Then** the system rejects the action with a validation error indicating the poll is closed.
+3. **Given** a poll is closed, **When** any user with Callout edit permissions attempts to add, edit, remove, or reorder options, **Then** the system rejects the action with a validation error indicating the poll is closed.
+4. **Given** a poll is closed, **When** a voter attempts to remove their vote via `removePollVote`, **Then** the system rejects the action with a validation error indicating the poll is closed.
+5. **Given** a user with Callout edit permissions views a closed poll, **When** they call `updatePollStatus(pollID, OPEN)`, **Then** the poll status changes to OPEN and voting and option management are available again.
+6. **Given** a user without Callout edit permissions, **When** they attempt to call `updatePollStatus`, **Then** the system rejects the action with an authorization error.
+7. **Given** a poll is already OPEN, **When** a user calls `updatePollStatus(pollID, OPEN)`, **Then** the mutation succeeds idempotently (no error, status remains OPEN).
+
+---
+
 ### Edge Cases
 
 - What happens if a poll option is removed while a member is in the process of voting? The system should prevent submission with the removed option and inform the member the option is no longer available, prompting them to review their selections.
@@ -228,6 +248,13 @@ A community member viewing a poll in their browser wants the poll display to upd
 - **FR-026**: The server MUST expose a derived `canSeeDetailedResults` boolean on the Poll type so clients can determine with a single field check whether the visibility gate is passed for the current user.
 
 - **FR-027**: The poll data model MUST support a "deadline" field per poll (even if auto-close by deadline is not implemented in this iteration), to avoid future breaking changes.
+
+**Poll Status Management**
+
+- **FR-032**: Any user with Callout edit permissions (UPDATE privilege on the parent Callout) MUST be able to change a poll's status between OPEN and CLOSED via `updatePollStatus(statusData: UpdatePollStatusInput!)`. The mutation MUST return the updated Poll object.
+- **FR-033**: When a poll is CLOSED, all state-mutating operations MUST be rejected: casting votes, removing votes, adding options, editing option text, removing options, and reordering options. Each rejection MUST return a validation error indicating the poll is closed.
+- **FR-034**: A closed poll MUST be reopenable by calling `updatePollStatus` with `status = OPEN`. Reopening restores the ability to vote and manage options. All existing votes and options are preserved across close/reopen cycles.
+- **FR-035**: The `updatePollStatus` mutation MUST be idempotent — setting a poll to its current status MUST succeed without error.
 
 **Real-Time Subscriptions**
 
@@ -321,6 +348,5 @@ A community member viewing a poll in their browser wants the poll display to upd
 
 The following items were identified as future enhancements. The data model and architecture must not prevent these from being added later:
 
-- **Poll closing**: Ability to manually close a poll, preventing further votes.
 - **Poll deadline**: A date/time at which the poll automatically closes.
-- **Creator-initiated close with notification**: Closing a poll and notifying all voters of the final result.
+- **Creator-initiated close with notification**: Closing a poll and notifying all voters of the final result (the close/reopen mechanism exists via FR-032, but automated notifications on close are deferred).
