@@ -18,6 +18,7 @@ export abstract class IPollVote extends IBaseAlkemio {
   })
   selectedOptions?: IPollOption[];
 
-  // Internal — not exposed directly
+  // Internal — not exposed via GraphQL
+  selectedOptionIds!: string[];
   poll?: IPoll;
 }

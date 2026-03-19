@@ -216,10 +216,9 @@ export class CalloutService {
 
     if (!callout)
       throw new EntityNotFoundException(
-        `No Callout found with the given id: ${calloutID}, using options: ${JSON.stringify(
-          options
-        )}`,
-        LogContext.COLLABORATION
+        'Callout not found',
+        LogContext.COLLABORATION,
+        { calloutID, options }
       );
     return callout;
   }
