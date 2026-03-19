@@ -43,6 +43,8 @@ hosting:
 authorization:
   # amount of authorization policies saved in a single chunk
   chunk: ${AUTHORIZATION_CHUNK_SIZE}:1000
+  # number of entity IDs per RabbitMQ batch message during auth reset
+  batch_size: ${AUTHORIZATION_BATCH_SIZE}:50
 
 ## security ##
 # The various means by which the security of the Alkemio platform can be configured.

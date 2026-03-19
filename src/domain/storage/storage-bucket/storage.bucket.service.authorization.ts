@@ -57,8 +57,7 @@ export class StorageBucketAuthorizationService {
       updatedAuthorizations.push(...documentAuthorizations);
     }
 
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
-    return [];
+    return updatedAuthorizations;
   }
 
   private appendPrivilegeRules(

@@ -1,6 +1,7 @@
 export type AlkemioConfig = {
   authorization: {
     chunk: number;
+    batch_size: number;
   };
   hosting: {
     environment: string;

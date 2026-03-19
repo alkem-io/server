@@ -8,6 +8,7 @@ import { IVisual } from './visual.interface';
 
 @Entity()
 @Index('IDX_visual_profileId', ['profile'])
+@Index('IDX_visual_mediaGalleryId', ['mediaGallery'])
 export class Visual extends AuthorizableEntity implements IVisual {
   @Column()
   name!: string;

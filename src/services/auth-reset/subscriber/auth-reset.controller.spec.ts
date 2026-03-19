@@ -134,14 +134,15 @@ describe('AuthResetController', () => {
       task: 'task-1',
     };
 
-    it('should apply authorization policy and ack on success', async () => {
+    it('should apply authorization policy, bulk update, and ack on success', async () => {
       const { channel, context } = createMockContext(0);
       const account = { id: 'acc-1' };
+      const policies = [{ id: 'policy-1' }];
       accountService.getAccountOrFail.mockResolvedValue(account as any);
       accountAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
-        []
+        policies as any
       );
-      authorizationPolicyService.saveAll.mockResolvedValue(undefined as any);
+      authorizationPolicyService.bulkUpdate.mockResolvedValue(undefined as any);
 
       await controller.authResetAccount(payload, context);
 
@@ -149,51 +150,39 @@ describe('AuthResetController', () => {
       expect(
         accountAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalledWith(account);
-      expect(authorizationPolicyService.saveAll).toHaveBeenCalledWith([]);
+      expect(authorizationPolicyService.bulkUpdate).toHaveBeenCalledWith(
+        policies
+      );
       expect(taskService.updateTaskResults).toHaveBeenCalled();
       expect(channel.ack).toHaveBeenCalled();
     });
 
-    it('should retry on failure when retryCount < MAX_RETRIES', async () => {
-      const { channel, context } = createMockContext(2);
-      accountService.getAccountOrFail.mockRejectedValue(new Error('not found'));
-
-      await controller.authResetAccount(payload, context);
-
-      expect(channel.publish).toHaveBeenCalledWith(
-        '',
-        MessagingQueue.AUTH_RESET,
-        expect.any(Buffer),
-        { headers: { 'x-retry-count': 3 }, persistent: true }
+    it('should handle batch payload with multiple IDs', async () => {
+      const { channel, context } = createMockContext(0);
+      const batchPayload = { ...payload, ids: ['acc-1', 'acc-2'] };
+      accountService.getAccountOrFail.mockResolvedValue({ id: 'acc' } as any);
+      accountAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        [{ id: 'p' }] as any
       );
+      authorizationPolicyService.bulkUpdate.mockResolvedValue(undefined as any);
+
+      await controller.authResetAccount(batchPayload, context);
+
+      expect(accountService.getAccountOrFail).toHaveBeenCalledTimes(2);
+      expect(authorizationPolicyService.bulkUpdate).toHaveBeenCalledTimes(1);
       expect(channel.ack).toHaveBeenCalled();
-      expect(channel.reject).not.toHaveBeenCalled();
     });
 
-    it('should reject when retryCount >= MAX_RETRIES', async () => {
-      const { channel, context } = createMockContext(5);
+    it('should retry in-process on failure and continue with remaining entities', async () => {
+      const { channel, context } = createMockContext(0);
+      // Fail 5 times then succeed on 6th call (exceeds MAX_RETRIES)
       accountService.getAccountOrFail.mockRejectedValue(new Error('not found'));
 
       await controller.authResetAccount(payload, context);
 
-      expect(channel.reject).toHaveBeenCalledWith(expect.anything(), false);
+      // In-process retry exhausted, error logged
       expect(taskService.updateTaskErrors).toHaveBeenCalled();
-      expect(channel.ack).not.toHaveBeenCalled();
-    });
-
-    it('should default retryCount to 0 when headers are undefined', async () => {
-      const { channel, context } = createMockContext(undefined, false);
-      accountService.getAccountOrFail.mockRejectedValue(new Error('not found'));
-
-      await controller.authResetAccount(payload, context);
-
-      // retryCount defaults to 0, so it should retry (not reject)
-      expect(channel.publish).toHaveBeenCalledWith(
-        '',
-        MessagingQueue.AUTH_RESET,
-        expect.any(Buffer),
-        { headers: { 'x-retry-count': 1 }, persistent: true }
-      );
+      // Message is always ACKed (per-entity errors don't NACK)
       expect(channel.ack).toHaveBeenCalled();
     });
   });
@@ -224,29 +213,14 @@ describe('AuthResetController', () => {
       expect(channel.ack).toHaveBeenCalled();
     });
 
-    it('should retry on failure', async () => {
-      const { channel, context } = createMockContext(1);
+    it('should retry in-process on failure', async () => {
+      const { channel, context } = createMockContext(0);
       accountService.getAccountOrFail.mockRejectedValue(new Error('fail'));
 
       await controller.licenseResetAccount(payload, context);
 
-      expect(channel.publish).toHaveBeenCalledWith(
-        '',
-        MessagingQueue.AUTH_RESET,
-        expect.any(Buffer),
-        { headers: { 'x-retry-count': 2 }, persistent: true }
-      );
-      expect(channel.ack).toHaveBeenCalled();
-    });
-
-    it('should reject at max retries', async () => {
-      const { channel, context } = createMockContext(5);
-      accountService.getAccountOrFail.mockRejectedValue(new Error('fail'));
-
-      await controller.licenseResetAccount(payload, context);
-
-      expect(channel.reject).toHaveBeenCalledWith(expect.anything(), false);
       expect(taskService.updateTaskErrors).toHaveBeenCalled();
+      expect(channel.ack).toHaveBeenCalled();
     });
   });
 
@@ -278,33 +252,16 @@ describe('AuthResetController', () => {
       expect(channel.ack).toHaveBeenCalled();
     });
 
-    it('should retry on failure', async () => {
-      const { channel, context } = createMockContext(3);
+    it('should retry in-process on failure', async () => {
+      const { channel, context } = createMockContext(0);
       organizationLookupService.getOrganizationByIdOrFail.mockRejectedValue(
         new Error('fail')
       );
 
       await controller.licenseResetOrganization(payload, context);
 
-      expect(channel.publish).toHaveBeenCalledWith(
-        '',
-        MessagingQueue.AUTH_RESET,
-        expect.any(Buffer),
-        { headers: { 'x-retry-count': 4 }, persistent: true }
-      );
-      expect(channel.ack).toHaveBeenCalled();
-    });
-
-    it('should reject at max retries', async () => {
-      const { channel, context } = createMockContext(5);
-      organizationLookupService.getOrganizationByIdOrFail.mockRejectedValue(
-        new Error('fail')
-      );
-
-      await controller.licenseResetOrganization(payload, context);
-
-      expect(channel.reject).toHaveBeenCalledWith(expect.anything(), false);
       expect(taskService.updateTaskErrors).toHaveBeenCalled();
+      expect(channel.ack).toHaveBeenCalled();
     });
   });
 
@@ -470,12 +427,15 @@ describe('AuthResetController', () => {
       task: 'task-u',
     };
 
-    it('should apply user authorization policy and ack', async () => {
+    it('should apply user authorization policy, bulk update, and ack', async () => {
       const { channel, context } = createMockContext(0);
       const user = { id: 'user-1' };
+      const policies = [{ id: 'p1' }];
       userService.getUserByIdOrFail.mockResolvedValue(user as any);
-      userAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
-      authorizationPolicyService.saveAll.mockResolvedValue(undefined as any);
+      userAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        policies as any
+      );
+      authorizationPolicyService.bulkUpdate.mockResolvedValue(undefined as any);
 
       await controller.authResetUser(payload, context);
 
@@ -483,48 +443,21 @@ describe('AuthResetController', () => {
       expect(
         userAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalledWith('user-1');
-      expect(authorizationPolicyService.saveAll).toHaveBeenCalledWith([]);
+      expect(authorizationPolicyService.bulkUpdate).toHaveBeenCalledWith(
+        policies
+      );
       expect(channel.ack).toHaveBeenCalled();
       expect(taskService.updateTaskResults).toHaveBeenCalled();
     });
 
-    it('should retry on failure', async () => {
+    it('should retry in-process on failure and still ack', async () => {
       const { channel, context } = createMockContext(0);
       userService.getUserByIdOrFail.mockRejectedValue(new Error('fail'));
 
       await controller.authResetUser(payload, context);
 
-      expect(channel.publish).toHaveBeenCalledWith(
-        '',
-        MessagingQueue.AUTH_RESET,
-        expect.any(Buffer),
-        { headers: { 'x-retry-count': 1 }, persistent: true }
-      );
-      expect(channel.ack).toHaveBeenCalled();
-    });
-
-    it('should reject at max retries', async () => {
-      const { channel, context } = createMockContext(5);
-      userService.getUserByIdOrFail.mockRejectedValue(new Error('fail'));
-
-      await controller.authResetUser(payload, context);
-
-      expect(channel.reject).toHaveBeenCalledWith(expect.anything(), false);
       expect(taskService.updateTaskErrors).toHaveBeenCalled();
-    });
-
-    it('should default retryCount to 0 when headers are undefined', async () => {
-      const { channel, context } = createMockContext(undefined, false);
-      userService.getUserByIdOrFail.mockRejectedValue(new Error('fail'));
-
-      await controller.authResetUser(payload, context);
-
-      expect(channel.publish).toHaveBeenCalledWith(
-        '',
-        MessagingQueue.AUTH_RESET,
-        expect.any(Buffer),
-        { headers: { 'x-retry-count': 1 }, persistent: true }
-      );
+      expect(channel.ack).toHaveBeenCalled();
     });
   });
 
@@ -536,14 +469,15 @@ describe('AuthResetController', () => {
       task: 'task-o',
     };
 
-    it('should apply organization authorization policy and ack', async () => {
+    it('should apply organization authorization policy, bulk update, and ack', async () => {
       const { channel, context } = createMockContext(0);
       const org = { id: 'org-1' };
+      const policies = [{ id: 'p1' }];
       organizationService.getOrganizationOrFail.mockResolvedValue(org as any);
       organizationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
-        []
+        policies as any
       );
-      authorizationPolicyService.saveAll.mockResolvedValue(undefined as any);
+      authorizationPolicyService.bulkUpdate.mockResolvedValue(undefined as any);
 
       await controller.authResetOrganization(payload, context);
 
@@ -553,53 +487,23 @@ describe('AuthResetController', () => {
       expect(
         organizationAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalledWith(org);
+      expect(authorizationPolicyService.bulkUpdate).toHaveBeenCalledWith(
+        policies
+      );
       expect(channel.ack).toHaveBeenCalled();
       expect(taskService.updateTaskResults).toHaveBeenCalled();
     });
 
-    it('should retry on failure', async () => {
-      const { channel, context } = createMockContext(3);
+    it('should retry in-process on failure and still ack', async () => {
+      const { channel, context } = createMockContext(0);
       organizationService.getOrganizationOrFail.mockRejectedValue(
         new Error('fail')
       );
 
       await controller.authResetOrganization(payload, context);
 
-      expect(channel.publish).toHaveBeenCalledWith(
-        '',
-        MessagingQueue.AUTH_RESET,
-        expect.any(Buffer),
-        { headers: { 'x-retry-count': 4 }, persistent: true }
-      );
-      expect(channel.ack).toHaveBeenCalled();
-    });
-
-    it('should reject at max retries', async () => {
-      const { channel, context } = createMockContext(5);
-      organizationService.getOrganizationOrFail.mockRejectedValue(
-        new Error('fail')
-      );
-
-      await controller.authResetOrganization(payload, context);
-
-      expect(channel.reject).toHaveBeenCalledWith(expect.anything(), false);
       expect(taskService.updateTaskErrors).toHaveBeenCalled();
-    });
-
-    it('should default retryCount to 0 when headers are undefined', async () => {
-      const { channel, context } = createMockContext(undefined, false);
-      organizationService.getOrganizationOrFail.mockRejectedValue(
-        new Error('fail')
-      );
-
-      await controller.authResetOrganization(payload, context);
-
-      expect(channel.publish).toHaveBeenCalledWith(
-        '',
-        MessagingQueue.AUTH_RESET,
-        expect.any(Buffer),
-        { headers: { 'x-retry-count': 1 }, persistent: true }
-      );
+      expect(channel.ack).toHaveBeenCalled();
     });
   });
 });

@@ -9,9 +9,13 @@ export interface AuthResetEventPayload {
    */
   type: RESET_EVENT_TYPE;
   /**
-   * the uuid of the entity
+   * the uuid of the entity (first ID for backward compatibility)
    */
   id: string;
+  /**
+   * batch of entity UUIDs (preferred over `id` when present)
+   */
+  ids?: string[];
   /**
    * the task uuid associated with this event
    */

@@ -44,8 +44,7 @@ export class DocumentAuthorizationService {
       );
     updatedAuthorizations.push(document.tagset.authorization);
 
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
-    return [];
+    return updatedAuthorizations;
   }
 
   private appendCredentialRules(document: IDocument): IAuthorizationPolicy {

@@ -3,6 +3,7 @@ import { AlkemioErrorStatus } from '@common/enums';
 import { BaseException } from '@common/exceptions/base.exception';
 import { Account } from '@domain/space/account/account.entity';
 import { ClientProxy } from '@nestjs/microservices';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { TaskService } from '@services/task/task.service';
 import {
@@ -10,6 +11,7 @@ import {
   MockEntityManagerProvider,
   MockWinstonProvider,
 } from '@test/mocks';
+import { MockConfigService } from '@test/mocks/config.service.mock';
 import { MockTaskService } from '@test/mocks/task.service.mock';
 import { EntityManager } from 'typeorm';
 import { type Mocked, vi } from 'vitest';
@@ -23,6 +25,9 @@ describe('AuthResetService', () => {
   let taskService: Mocked<TaskService>;
 
   beforeEach(async () => {
+    const mockConfigService = { ...MockConfigService };
+    (mockConfigService.useValue.get as any) = vi.fn().mockReturnValue(50);
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         AuthResetService,
@@ -30,6 +35,7 @@ describe('AuthResetService', () => {
         MockTaskService,
         MockEntityManagerProvider,
         MockWinstonProvider,
+        mockConfigService,
       ],
     }).compile();
 
@@ -62,19 +68,13 @@ describe('AuthResetService', () => {
       expect(entityManager.find).toHaveBeenCalledWith(Account, {
         select: { id: true },
       });
-      expect(authResetQueue.emit).toHaveBeenCalledTimes(2);
+      // With batch_size=50, 2 accounts fit in one batch
+      expect(authResetQueue.emit).toHaveBeenCalledTimes(1);
       expect(authResetQueue.emit).toHaveBeenCalledWith(
         RESET_EVENT_TYPE.AUTHORIZATION_RESET_ACCOUNT,
         {
           id: 'acc-1',
-          type: RESET_EVENT_TYPE.AUTHORIZATION_RESET_ACCOUNT,
-          task: 'task-123',
-        }
-      );
-      expect(authResetQueue.emit).toHaveBeenCalledWith(
-        RESET_EVENT_TYPE.AUTHORIZATION_RESET_ACCOUNT,
-        {
-          id: 'acc-2',
+          ids: ['acc-1', 'acc-2'],
           type: RESET_EVENT_TYPE.AUTHORIZATION_RESET_ACCOUNT,
           task: 'task-123',
         }
@@ -115,6 +115,7 @@ describe('AuthResetService', () => {
         RESET_EVENT_TYPE.LICENSE_RESET_ACCOUNT,
         {
           id: 'acc-1',
+          ids: ['acc-1'],
           type: RESET_EVENT_TYPE.LICENSE_RESET_ACCOUNT,
           task: 'task-456',
         }
@@ -140,11 +141,13 @@ describe('AuthResetService', () => {
         await service.publishLicenseResetAllOrganizations('task-789');
 
       expect(result).toBe('task-789');
-      expect(authResetQueue.emit).toHaveBeenCalledTimes(2);
+      // With batch_size=50, 2 orgs fit in one batch
+      expect(authResetQueue.emit).toHaveBeenCalledTimes(1);
       expect(authResetQueue.emit).toHaveBeenCalledWith(
         RESET_EVENT_TYPE.LICENSE_RESET_ORGANIZATION,
         {
           id: 'org-1',
+          ids: ['org-1', 'org-2'],
           type: RESET_EVENT_TYPE.LICENSE_RESET_ORGANIZATION,
           task: 'task-789',
         }
@@ -173,6 +176,7 @@ describe('AuthResetService', () => {
         RESET_EVENT_TYPE.AUTHORIZATION_RESET_USER,
         {
           id: 'user-1',
+          ids: ['user-1'],
           type: RESET_EVENT_TYPE.AUTHORIZATION_RESET_USER,
           task: 'task-u',
         }
@@ -202,6 +206,7 @@ describe('AuthResetService', () => {
         RESET_EVENT_TYPE.AUTHORIZATION_RESET_ORGANIZATION,
         {
           id: 'org-a',
+          ids: ['org-a'],
           type: RESET_EVENT_TYPE.AUTHORIZATION_RESET_ORGANIZATION,
           task: 'task-o',
         }

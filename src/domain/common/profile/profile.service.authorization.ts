@@ -22,69 +22,79 @@ export class ProfileAuthorizationService {
     parentAuthorization: IAuthorizationPolicy | undefined,
     credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = []
   ): Promise<IAuthorizationPolicy[]> {
+    const authSelect =
+      this.authorizationPolicyService.authorizationSelectOptions;
+
+    // Query 1: Profile + its own authorization
     const profile = await this.profileService.getProfileOrFail(profileID, {
       loadEagerRelations: false,
-      relations: {
-        authorization: true,
-        references: { authorization: true },
-        tagsets: { authorization: true },
-        visuals: { authorization: true },
-        storageBucket: {
-          authorization: true,
-          documents: {
+      relations: { authorization: true },
+      select: { id: true, authorization: authSelect },
+    });
+
+    if (!profile.authorization) {
+      throw new RelationshipNotFoundException(
+        `Unable to load Profile with entities at start of auth reset: ${profileID} `,
+        LogContext.ACCOUNT
+      );
+    }
+
+    // Query 2: Shallow children — references, tagsets, visuals with authorization
+    const profileWithChildren =
+      await this.profileService.getProfileOrFail(profileID, {
+        loadEagerRelations: false,
+        relations: {
+          references: { authorization: true },
+          tagsets: { authorization: true },
+          visuals: { authorization: true },
+        },
+        select: {
+          id: true,
+          references: { id: true, authorization: authSelect },
+          tagsets: { id: true, authorization: authSelect },
+          visuals: { id: true, authorization: authSelect },
+        },
+      });
+
+    // Query 3: Deep children — storageBucket + documents + document.tagset with authorization
+    const profileWithStorage =
+      await this.profileService.getProfileOrFail(profileID, {
+        loadEagerRelations: false,
+        relations: {
+          storageBucket: {
             authorization: true,
-            tagset: { authorization: true },
-          },
-        },
-      },
-      select: {
-        id: true,
-        authorization:
-          this.authorizationPolicyService.authorizationSelectOptions,
-        references: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-        tagsets: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-        visuals: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-        },
-        storageBucket: {
-          id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
-          documents: {
-            id: true,
-            authorization:
-              this.authorizationPolicyService.authorizationSelectOptions,
-            tagset: {
-              id: true,
-              authorization:
-                this.authorizationPolicyService.authorizationSelectOptions,
+            documents: {
+              authorization: true,
+              tagset: { authorization: true },
             },
           },
         },
-      },
-    });
+        select: {
+          id: true,
+          storageBucket: {
+            id: true,
+            authorization: authSelect,
+            documents: {
+              id: true,
+              authorization: authSelect,
+              tagset: { id: true, authorization: authSelect },
+            },
+          },
+        },
+      });
+
     if (
-      !profile.references ||
-      !profile.tagsets ||
-      !profile.authorization ||
-      !profile.visuals ||
-      !profile.storageBucket
+      !profileWithChildren.references ||
+      !profileWithChildren.tagsets ||
+      !profileWithChildren.visuals ||
+      !profileWithStorage.storageBucket
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Profile with entities at start of auth reset: ${profileID} `,
         LogContext.ACCOUNT
       );
     }
+
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     // Inherit from the parent
@@ -97,7 +107,7 @@ export class ProfileAuthorizationService {
 
     updatedAuthorizations.push(profile.authorization);
 
-    for (const reference of profile.references) {
+    for (const reference of profileWithChildren.references) {
       reference.authorization =
         this.authorizationPolicyService.inheritParentAuthorization(
           reference.authorization,
@@ -106,7 +116,7 @@ export class ProfileAuthorizationService {
       updatedAuthorizations.push(reference.authorization);
     }
 
-    for (const tagset of profile.tagsets) {
+    for (const tagset of profileWithChildren.tagsets) {
       tagset.authorization =
         this.authorizationPolicyService.inheritParentAuthorization(
           tagset.authorization,
@@ -115,7 +125,7 @@ export class ProfileAuthorizationService {
       updatedAuthorizations.push(tagset.authorization);
     }
 
-    for (const visual of profile.visuals) {
+    for (const visual of profileWithChildren.visuals) {
       visual.authorization =
         this.visualAuthorizationService.applyAuthorizationPolicy(
           visual,
@@ -126,7 +136,7 @@ export class ProfileAuthorizationService {
 
     const storageBucketAuthorizations =
       await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
-        profile.storageBucket,
+        profileWithStorage.storageBucket,
         profile.authorization
       );
     updatedAuthorizations.push(...storageBucketAuthorizations);

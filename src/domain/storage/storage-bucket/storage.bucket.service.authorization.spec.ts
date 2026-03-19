@@ -106,7 +106,7 @@ describe('StorageBucketAuthorizationService', () => {
       expect(
         documentAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalledWith(doc1, privilegeAuth);
-      expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
+      // saveAll is no longer called internally — policies are returned to caller
     });
 
     it('should handle empty documents array without cascading', async () => {

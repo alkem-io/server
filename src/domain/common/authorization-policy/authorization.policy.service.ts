@@ -209,6 +209,52 @@ export class AuthorizationPolicyService {
     });
   }
 
+  async bulkUpdate(policies: IAuthorizationPolicy[]): Promise<void> {
+    if (policies.length === 0) return;
+
+    this.logger.verbose?.(
+      `Bulk updating ${policies.length} authorization policies`,
+      LogContext.AUTH
+    );
+
+    try {
+      // Build CASE-based UPDATE: one SQL statement per batch
+      const ids = policies.map(p => p.id);
+      const credentialCases = policies
+        .map(p => `WHEN '${p.id}' THEN :cred_${p.id.replace(/-/g, '_')}`)
+        .join(' ');
+      const privilegeCases = policies
+        .map(p => `WHEN '${p.id}' THEN :priv_${p.id.replace(/-/g, '_')}`)
+        .join(' ');
+
+      const params: Record<string, any> = {};
+      for (const policy of policies) {
+        const safeId = policy.id.replace(/-/g, '_');
+        params[`cred_${safeId}`] = JSON.stringify(policy.credentialRules);
+        params[`priv_${safeId}`] = JSON.stringify(policy.privilegeRules);
+      }
+
+      await this.authorizationPolicyRepository
+        .createQueryBuilder()
+        .update(AuthorizationPolicy)
+        .set({
+          credentialRules: () =>
+            `CASE "id" ${credentialCases} ELSE "credentialRules" END`,
+          privilegeRules: () =>
+            `CASE "id" ${privilegeCases} ELSE "privilegeRules" END`,
+        })
+        .whereInIds(ids)
+        .setParameters(params)
+        .execute();
+    } catch (error: any) {
+      this.logger.warn?.(
+        `Bulk UPDATE failed, falling back to chunked save: ${error.message}`,
+        LogContext.AUTH
+      );
+      await this.saveAll(policies);
+    }
+  }
+
   cloneAuthorizationPolicy(
     originalAuthorization: IAuthorizationPolicy | undefined
   ): IAuthorizationPolicy {

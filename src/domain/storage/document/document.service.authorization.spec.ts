@@ -91,7 +91,7 @@ describe('DocumentAuthorizationService', () => {
         ],
         CREDENTIAL_RULE_DOCUMENT_CREATED_BY
       );
-      expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
+      // saveAll is no longer called internally — policies are returned to caller
     });
 
     it('should skip credential rule creation when document has no createdBy', async () => {
