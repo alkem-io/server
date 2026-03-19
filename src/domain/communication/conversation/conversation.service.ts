@@ -454,18 +454,24 @@ export class ConversationService {
     senderActorID: string,
     receiverActorID: string
   ): Promise<IConversation> {
-    if (conversation.room) {
-      await this.roomService.deleteRoom({
-        roomID: conversation.room.id,
-      });
-    }
+    const oldRoom = conversation.room;
 
-    // Create a new room
+    // Create the new room BEFORE deleting the old one.
+    // The conversation.roomId FK has ON DELETE CASCADE, so deleting the old room
+    // would cascade-delete the conversation itself. By pointing the conversation
+    // at the new room first, the cascade can no longer reach it.
     conversation.room = await this.createConversationRoom(
       [senderActorID, receiverActorID],
       RoomType.CONVERSATION_DIRECT
     );
-    return await this.save(conversation);
+    await this.save(conversation);
+
+    // Now safe to delete the old room: conversation no longer references it.
+    if (oldRoom) {
+      await this.roomService.deleteRoom({ roomID: oldRoom.id });
+    }
+
+    return conversation;
   }
 
   /**
