@@ -278,6 +278,34 @@ describe('SubscriptionPublishService', () => {
         payload
       );
     });
+
+    it('should publish POLL_STATUS_CHANGED event through poll vote updated channel', async () => {
+      const payload: PollSubscriptionPayload = {
+        eventID: 'poll-status-changed-1',
+        poll: {
+          id: 'poll-1',
+          title: 'Favorite color?',
+          status: PollStatus.CLOSED,
+          settings: {
+            maxResponses: 1,
+            minResponses: 1,
+            resultsDetail: PollResultsDetail.FULL,
+            resultsVisibility: PollResultsVisibility.VISIBLE,
+            allowContributorsAddOptions: false,
+          },
+          createdDate: new Date(),
+          updatedDate: new Date(),
+        },
+        pollEventType: PollEventType.POLL_STATUS_CHANGED,
+      };
+
+      await service.publishPollVoteUpdated(payload);
+
+      expect(pollVoteUpdatedPubSub.publish).toHaveBeenCalledWith(
+        SubscriptionType.POLL_VOTE_UPDATED,
+        payload
+      );
+    });
   });
 
   describe('publishPollOptionsChanged', () => {

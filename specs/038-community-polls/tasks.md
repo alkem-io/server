@@ -236,7 +236,7 @@
 
 ### Infrastructure (parallel, no inter-dependencies)
 
-- [ ] T074 [P] [US7] Create `PollEventType` enum in `src/common/enums/poll.event.type.ts` with values `POLL_VOTE_UPDATED = 'pollVoteUpdated'` and `POLL_OPTIONS_CHANGED = 'pollOptionsChanged'`; register with `registerEnumType`. Export from `src/common/enums/index.ts`.
+- [X] T074 [P] [US7] Create `PollEventType` enum in `src/common/enums/poll.event.type.ts` with values `POLL_VOTE_UPDATED = 'POLL_VOTE_UPDATED'`, `POLL_OPTIONS_CHANGED = 'POLL_OPTIONS_CHANGED'`, and `POLL_STATUS_CHANGED = 'POLL_STATUS_CHANGED'`; register with `registerEnumType`. Export from `src/common/enums/index.ts`.
 - [ ] T075 [P] [US7] Add two values to `SubscriptionType` enum in `src/common/enums/subscription.type.ts`: `POLL_VOTE_UPDATED = 'pollVoteUpdated'` and `POLL_OPTIONS_CHANGED = 'pollOptionsChanged'`.
 - [ ] T076 [P] [US7] Add two Symbol constants to `src/common/constants/providers.ts`: `SUBSCRIPTION_POLL_VOTE_UPDATED` and `SUBSCRIPTION_POLL_OPTIONS_CHANGED`.
 
@@ -263,13 +263,15 @@
 
 ### Mutation Wiring (after T084)
 
-- [ ] T086 [US7] Wire publish calls in `poll.resolver.mutations.ts`:
-  - `castPollVote` → after vote persist, publish `PollVoteUpdatedSubscriptionPayload` with `pollEventType = POLL_VOTE_UPDATED`.
-  - `addPollOption` → after option persist, publish `PollOptionsChangedSubscriptionPayload` with `pollEventType = POLL_OPTIONS_CHANGED`.
-  - `updatePollOption` → after option text update + vote cleanup, publish `PollOptionsChangedSubscriptionPayload`.
-  - `removePollOption` → after option removal + vote cleanup, publish `PollOptionsChangedSubscriptionPayload`.
-  - `reorderPollOptions` → after reorder persist, publish `PollOptionsChangedSubscriptionPayload`.
-  - Each publish builds the payload by loading the full Poll entity (for field resolvers) and generating `eventID` via `uuid()`.
+- [X] T086 [US7] Wire publish calls in `poll.resolver.mutations.ts`:
+  - `castPollVote` → after vote persist, publish `PollSubscriptionPayload` with `pollEventType = POLL_VOTE_UPDATED`.
+  - `removePollVote` → after vote removal, publish `PollSubscriptionPayload` with `pollEventType = POLL_VOTE_UPDATED`.
+  - `addPollOption` → after option persist, publish `PollSubscriptionPayload` with `pollEventType = POLL_OPTIONS_CHANGED`.
+  - `updatePollOption` → after option text update + vote cleanup, publish `PollSubscriptionPayload` with `pollEventType = POLL_OPTIONS_CHANGED`.
+  - `removePollOption` → after option removal + vote cleanup, publish `PollSubscriptionPayload` with `pollEventType = POLL_OPTIONS_CHANGED`.
+  - `reorderPollOptions` → after reorder persist, publish `PollSubscriptionPayload` with `pollEventType = POLL_OPTIONS_CHANGED`.
+  - `updatePollStatus` → after status change, publish `PollSubscriptionPayload` with `pollEventType = POLL_STATUS_CHANGED` through the `pollVoteUpdated` channel.
+  - Each publish builds the payload with `pollEventType`, full `poll` entity, and `eventID` via `randomUUID()`.
 
 ### Module Wiring (after T085–T086)
 
@@ -296,15 +298,15 @@
 
 **Goal**: Facilitators and admins can close a poll to prevent further votes and option changes, and reopen it later if needed. The status column, enum, and all closed-poll guards already exist — this phase adds only the mutation to change the status.
 
-**Independent Test**: A user with Callout edit permissions calls `updatePollStatus({ pollID, status: CLOSED })`; the returned poll has `status = CLOSED`. Subsequent `castPollVote`, `removePollVote`, `addPollOption`, `updatePollOption`, `removePollOption`, and `reorderPollOptions` all fail with validation errors. Calling `updatePollStatus({ pollID, status: OPEN })` reopens the poll and all operations succeed again.
+**Independent Test**: A user with Callout edit permissions calls `updatePollStatus({ pollID, status: CLOSED })`; the returned poll has `status = CLOSED`. Subsequent `castPollVote`, `removePollVote`, `addPollOption`, `updatePollOption`, `removePollOption`, and `reorderPollOptions` all fail with validation errors. Calling `updatePollStatus({ pollID, status: OPEN })` reopens the poll and all operations succeed again. Clients subscribed to `pollVoteUpdated(pollID)` receive a `POLL_STATUS_CHANGED` event with the updated poll (no notifications dispatched).
 
 ### Implementation
 
-- [ ] T090 [P] [US8] Create `UpdatePollStatusInput` input DTO in `src/domain/collaboration/poll/dto/poll.dto.update.status.ts`: `pollID: UUID!` (with `@IsUUID()`) and `status: PollStatus!` (with `@IsEnum(PollStatus)`)
-- [ ] T091 [US8] Implement `PollService.updateStatus(pollId: string, status: PollStatus): Promise<Poll>` in `src/domain/collaboration/poll/poll.service.ts`: (1) load `Poll` via `getPollOrFail(pollId)`; (2) set `poll.status = status`; (3) persist via repository save; (4) return updated `Poll`. The method is idempotent — setting to the current status succeeds without error. No notifications are dispatched on status change.
-- [ ] T092 [US8] Create `updatePollStatus` mutation in `src/domain/collaboration/poll/poll.resolver.mutations.ts`: `@Mutation(() => IPoll, { description: 'Change the status of a Poll (OPEN ↔ CLOSED).' }) updatePollStatus(@Args('statusData') statusData: UpdatePollStatusInput, @CurrentUser() user: AgentInfo): Promise<IPoll>`; enforce `UPDATE` privilege on the parent Callout (same authorization as `updatePollOption`, `removePollOption`, `reorderPollOptions`); call `PollService.updateStatus(statusData.pollID, statusData.status)`; return updated `Poll`
-- [ ] T093 [US8] Add unit tests in `src/domain/collaboration/poll/poll.service.spec.ts` for `updateStatus()`: (a) OPEN → CLOSED succeeds and returns poll with `status = CLOSED`; (b) CLOSED → OPEN succeeds and returns poll with `status = OPEN`; (c) OPEN → OPEN succeeds idempotently (no error); (d) CLOSED → CLOSED succeeds idempotently (no error)
-- [ ] T094 [US8] Run `pnpm run schema:print && pnpm run schema:sort && pnpm run schema:diff`; verify `updatePollStatus` mutation and `UpdatePollStatusInput` appear in `change-report.json` as additive (non-breaking)
+- [X] T090 [P] [US8] Create `UpdatePollStatusInput` input DTO in `src/domain/collaboration/poll/dto/poll.dto.update.status.ts`: `pollID: UUID!` (with `@IsUUID()`) and `status: PollStatus!` (with `@IsEnum(PollStatus)`)
+- [X] T091 [US8] Implement `PollService.updateStatus(pollId: string, status: PollStatus): Promise<Poll>` in `src/domain/collaboration/poll/poll.service.ts`: (1) load `Poll` via `getPollOrFail(pollId)`; (2) set `poll.status = status`; (3) persist via repository save; (4) return updated `Poll`. The method is idempotent — setting to the current status succeeds without error. No notifications are dispatched on status change.
+- [X] T092 [US8] Create `updatePollStatus` mutation in `src/domain/collaboration/poll/poll.resolver.mutations.ts`: `@Mutation(() => IPoll, { description: 'Change the status of a Poll (OPEN ↔ CLOSED).' }) updatePollStatus(@Args('statusData') statusData: UpdatePollStatusInput, @CurrentUser() user: AgentInfo): Promise<IPoll>`; enforce `UPDATE` privilege on the parent Callout (same authorization as `updatePollOption`, `removePollOption`, `reorderPollOptions`); call `PollService.updateStatus(statusData.pollID, statusData.status)`; return updated `Poll`. After status update, publishes a `POLL_STATUS_CHANGED` event through the `pollVoteUpdated` subscription channel so real-time clients see the status change.
+- [X] T093 [US8] Add unit tests in `src/domain/collaboration/poll/poll.service.spec.ts` for `updateStatus()`: (a) OPEN → CLOSED succeeds and returns poll with `status = CLOSED`; (b) CLOSED → OPEN succeeds and returns poll with `status = OPEN`; (c) OPEN → OPEN succeeds idempotently (no error); (d) CLOSED → CLOSED succeeds idempotently (no error). Additionally, unit tests for `POLL_STATUS_CHANGED` subscription events added in `poll.resolver.subscriptions.spec.ts`: (e) resolve returns correct `pollEventType = POLL_STATUS_CHANGED`; (f) filter returns true when pollID matches and visibility is VISIBLE; (g) filter returns false when pollID does not match; (h) filter suppresses event when HIDDEN and subscriber has not voted; (i) filter delivers event when HIDDEN and subscriber has voted. Also added publish service test in `subscription.publish.service.spec.ts` verifying `POLL_STATUS_CHANGED` routes through the poll vote updated channel.
+- [ ] T094 [US8] Run `pnpm run schema:print && pnpm run schema:sort && pnpm run schema:diff`; verify `updatePollStatus` mutation, `UpdatePollStatusInput`, and `POLL_STATUS_CHANGED` enum value appear in `change-report.json` as additive (non-breaking)
 
 **Checkpoint**: Poll lifecycle is complete. Facilitators can close and reopen polls. All existing closed-poll guards (6 mutations) are now reachable via the `updatePollStatus` mutation.
 

@@ -176,6 +176,7 @@ A facilitator or space admin wants to close a poll when enough input has been ga
 5. **Given** a user with Callout edit permissions views a closed poll, **When** they call `updatePollStatus(pollID, OPEN)`, **Then** the poll status changes to OPEN and voting and option management are available again.
 6. **Given** a user without Callout edit permissions, **When** they attempt to call `updatePollStatus`, **Then** the system rejects the action with an authorization error.
 7. **Given** a poll is already OPEN, **When** a user calls `updatePollStatus(pollID, OPEN)`, **Then** the mutation succeeds idempotently (no error, status remains OPEN).
+8. **Given** a client is subscribed to `pollVoteUpdated(pollID)`, **When** a facilitator calls `updatePollStatus(pollID, CLOSED)` or `updatePollStatus(pollID, OPEN)`, **Then** the subscription delivers a `POLL_STATUS_CHANGED` event with the updated poll object (no in-app notifications are dispatched).
 
 ---
 
@@ -255,6 +256,7 @@ A facilitator or space admin wants to close a poll when enough input has been ga
 - **FR-033**: When a poll is CLOSED, all state-mutating operations MUST be rejected: casting votes, removing votes, adding options, editing option text, removing options, and reordering options. Each rejection MUST return a validation error indicating the poll is closed.
 - **FR-034**: A closed poll MUST be reopenable by calling `updatePollStatus` with `status = OPEN`. Reopening restores the ability to vote and manage options. All existing votes and options are preserved across close/reopen cycles.
 - **FR-035**: The `updatePollStatus` mutation MUST be idempotent — setting a poll to its current status MUST succeed without error.
+- **FR-036**: When a poll's status is changed via `updatePollStatus`, the system MUST publish a `POLL_STATUS_CHANGED` event through the `pollVoteUpdated` subscription channel so real-time clients can update their UI (e.g., disable/enable voting). No in-app notifications are dispatched on status change.
 
 **Real-Time Subscriptions**
 

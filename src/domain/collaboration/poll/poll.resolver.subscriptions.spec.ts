@@ -1,3 +1,4 @@
+import { PollEventType } from '@common/enums/poll.event.type';
 import { PollResultsDetail } from '@common/enums/poll.results.detail';
 import { PollResultsVisibility } from '@common/enums/poll.results.visibility';
 import { createMock } from '@golevelup/ts-vitest';
@@ -134,5 +135,162 @@ describe('PollResolverSubscriptions', () => {
       true
     );
     expect(result.poll.options).toEqual(visibleOptions);
+  });
+
+  // ─── POLL_STATUS_CHANGED subscription tests ───────────────────────────
+
+  const getPollVoteUpdatedFilter = () => {
+    const metadata = Reflect.getMetadata(
+      SUBSCRIPTION_OPTIONS_METADATA,
+      PollResolverSubscriptions.prototype.pollVoteUpdated
+    ) as {
+      filter: (
+        payload: PollSubscriptionPayload,
+        variables: { pollID: string },
+        context: { req: { user?: { actorID?: string } } }
+      ) => Promise<boolean>;
+    };
+
+    return metadata.filter;
+  };
+
+  it('POLL_STATUS_CHANGED: resolve returns correct pollEventType', async () => {
+    const { resolver, pollService, pollVoteService } = createResolver();
+    const resolve = getPollVoteUpdatedResolve();
+
+    const statusPayload: PollSubscriptionPayload = {
+      ...basePayload,
+      pollEventType: PollEventType.POLL_STATUS_CHANGED,
+    };
+
+    const freshPoll = { ...basePayload.poll, id: 'poll-1' } as any;
+    const enrichedOptions = [] as any;
+    const visibleOptions = [] as any;
+
+    pollService.getPollOrFail.mockResolvedValue(freshPoll);
+    pollVoteService.getVoteForUser.mockResolvedValue(null);
+    pollService.computePollResults.mockReturnValue(enrichedOptions);
+    pollService.applyVisibilityRules.mockReturnValue(visibleOptions);
+
+    const result = (await resolve.call(
+      resolver,
+      statusPayload,
+      { pollID: 'poll-1' },
+      { req: { user: { actorID: 'user-1' } } }
+    )) as any;
+
+    expect(result.pollEventType).toBe(PollEventType.POLL_STATUS_CHANGED);
+  });
+
+  it('POLL_STATUS_CHANGED: filter returns true when pollID matches and visibility is VISIBLE', async () => {
+    const { resolver } = createResolver();
+    const filter = getPollVoteUpdatedFilter();
+
+    const statusPayload: PollSubscriptionPayload = {
+      eventID: 'evt-status-1',
+      pollEventType: PollEventType.POLL_STATUS_CHANGED,
+      poll: {
+        id: 'poll-1',
+        settings: {
+          resultsVisibility: PollResultsVisibility.VISIBLE,
+          resultsDetail: PollResultsDetail.FULL,
+          allowContributorsAddOptions: false,
+        },
+      } as any,
+    };
+
+    const result = await filter.call(
+      resolver,
+      statusPayload,
+      { pollID: 'poll-1' },
+      { req: { user: { actorID: 'user-1' } } }
+    );
+
+    expect(result).toBe(true);
+  });
+
+  it('POLL_STATUS_CHANGED: filter returns false when pollID does not match', async () => {
+    const { resolver } = createResolver();
+    const filter = getPollVoteUpdatedFilter();
+
+    const statusPayload: PollSubscriptionPayload = {
+      eventID: 'evt-status-2',
+      pollEventType: PollEventType.POLL_STATUS_CHANGED,
+      poll: {
+        id: 'poll-1',
+        settings: {
+          resultsVisibility: PollResultsVisibility.VISIBLE,
+          resultsDetail: PollResultsDetail.FULL,
+          allowContributorsAddOptions: false,
+        },
+      } as any,
+    };
+
+    const result = await filter.call(
+      resolver,
+      statusPayload,
+      { pollID: 'different-poll' },
+      { req: { user: { actorID: 'user-1' } } }
+    );
+
+    expect(result).toBe(false);
+  });
+
+  it('POLL_STATUS_CHANGED: filter suppresses event when HIDDEN and subscriber has not voted', async () => {
+    const { resolver, pollVoteService } = createResolver();
+    const filter = getPollVoteUpdatedFilter();
+
+    const statusPayload: PollSubscriptionPayload = {
+      eventID: 'evt-status-3',
+      pollEventType: PollEventType.POLL_STATUS_CHANGED,
+      poll: {
+        id: 'poll-1',
+        settings: {
+          resultsVisibility: PollResultsVisibility.HIDDEN,
+          resultsDetail: PollResultsDetail.FULL,
+          allowContributorsAddOptions: false,
+        },
+      } as any,
+    };
+
+    pollVoteService.getVoteForUser.mockResolvedValue(null);
+
+    const result = await filter.call(
+      resolver,
+      statusPayload,
+      { pollID: 'poll-1' },
+      { req: { user: { actorID: 'user-1' } } }
+    );
+
+    expect(result).toBe(false);
+  });
+
+  it('POLL_STATUS_CHANGED: filter delivers event when HIDDEN and subscriber has voted', async () => {
+    const { resolver, pollVoteService } = createResolver();
+    const filter = getPollVoteUpdatedFilter();
+
+    const statusPayload: PollSubscriptionPayload = {
+      eventID: 'evt-status-4',
+      pollEventType: PollEventType.POLL_STATUS_CHANGED,
+      poll: {
+        id: 'poll-1',
+        settings: {
+          resultsVisibility: PollResultsVisibility.HIDDEN,
+          resultsDetail: PollResultsDetail.FULL,
+          allowContributorsAddOptions: false,
+        },
+      } as any,
+    };
+
+    pollVoteService.getVoteForUser.mockResolvedValue({ id: 'vote-1' });
+
+    const result = await filter.call(
+      resolver,
+      statusPayload,
+      { pollID: 'poll-1' },
+      { req: { user: { actorID: 'user-1' } } }
+    );
+
+    expect(result).toBe(true);
   });
 });

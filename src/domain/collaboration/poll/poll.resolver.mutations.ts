@@ -303,7 +303,15 @@ export class PollMutationsResolver {
       'update poll status'
     );
 
-    return this.pollService.updateStatus(statusData.pollID, statusData.status);
+    const updatedPoll = await this.pollService.updateStatus(
+      statusData.pollID,
+      statusData.status
+    );
+
+    // Publish subscription event so real-time clients see the status change
+    void this.publishPollEvent(PollEventType.POLL_STATUS_CHANGED, updatedPoll);
+
+    return updatedPoll;
   }
 
   private async publishPollEvent(
@@ -317,7 +325,10 @@ export class PollMutationsResolver {
         poll,
       };
 
-      if (pollEventType === PollEventType.POLL_VOTE_UPDATED) {
+      if (
+        pollEventType === PollEventType.POLL_VOTE_UPDATED ||
+        pollEventType === PollEventType.POLL_STATUS_CHANGED
+      ) {
         await this.subscriptionPublishService.publishPollVoteUpdated(payload);
       } else {
         await this.subscriptionPublishService.publishPollOptionsChanged(
