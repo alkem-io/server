@@ -16,7 +16,7 @@ Add server-side push notification infrastructure to the Alkemio platform using W
 **Target Platform**: Linux server (NestJS backend)
 **Project Type**: Single NestJS monolith
 **Performance Goals**: Deliver push notifications within 30 seconds of event trigger (SC-001); handle 10,000 concurrent subscriptions (SC-006)
-**Constraints**: Max 10 subscriptions per user (FR-008); max 10 notifications/min/user throttle (FR-010); 5 retries over ~14.5h (NFR-003)
+**Constraints**: Max 10 subscriptions per user (FR-008); max 10 notifications/min/user throttle (FR-010); no automatic retry — failed deliveries are dropped (NFR-003)
 **Scale/Scope**: 30 existing notification events, estimated ~600 LOC new code across 20–25 files
 
 ## Constitution Check
@@ -116,11 +116,15 @@ NotificationRecipientsService.getRecipients()
          │
          ├── PushSubscriptionService.getActiveSubscriptions(userIds)
          │
-         └── PushDeliveryService.deliver(subscription, payload)
+         └── Publish to alkemio-push-notifications queue
+               │
+               ▼
+         PushDeliveryService (@RabbitSubscribe consumer)
                ├── web-push.sendNotification()
-               ├── on success → log delivery
-               ├── on 410 Gone → mark subscription expired, remove
-               └── on transient error → requeue via RabbitMQ DLX with TTL
+               ├── on success → mark subscription active, log delivery
+               ├── on 410 Gone → mark subscription expired
+               ├── on 4xx error → mark subscription expired
+               └── on transient error → log and drop (no retry)
 ```
 
 ### Push Notification Content Strategy
@@ -137,29 +141,27 @@ Content is English-only for P1 (per spec assumptions). No separate template engi
 
 The `web-push` library sends standard W3C Web Push Protocol messages. iOS Safari (16.4+) supports Web Push for installed PWAs using the same protocol — no server-side differences from Android/desktop delivery. The push payload JSON schema is identical across all platforms. iOS-specific behavior (Home Screen installation requirement, notification grouping) is handled entirely client-side. No additional server-side task is needed for iOS compatibility.
 
-### Retry Architecture
+### Error Handling (Simplified — No DLX Retry)
+
+The original plan specified DLX-based retry queues with escalating TTL intervals. During implementation, a simpler fire-and-forget approach was chosen to avoid the operational complexity of dead-letter exchanges and TTL queue management:
 
 ```
-push-notifications queue
-    │ (consume)
+alkemio-push-notifications queue
+    │ (consume via @RabbitSubscribe)
     ▼
-PushDeliveryService
-    │ (send fails with transient error)
-    ▼
-Nack with requeue=false → message goes to DLX
+PushDeliveryService.handlePushMessage()
     │
-    ▼
-push-notifications-retry exchange (DLX)
+    ├── webpush.sendNotification() succeeds → mark subscription active, ack
     │
-    ▼
-push-notifications-retry-{N} queue (TTL: 1m, 5m, 30m, 2h, 12h)
-    │ (after TTL expires)
-    ▼
-push-notifications queue (re-consumed)
+    ├── 410 Gone → mark subscription expired, ack (no retry)
     │
-    ▼
-After 5 failures → abandon, log as dropped
+    ├── 4xx client error → mark subscription expired, ack (no retry)
+    │
+    └── transient error → log failure, ack and drop message
+                          (next platform event will reattempt naturally)
 ```
+
+**Trade-off**: Individual transient failures may cause a missed notification, but the next platform event will trigger a new push attempt. This is acceptable because push notifications are best-effort and the user also receives in-app/email notifications through parallel channels.
 
 ### Key Integration Points
 
@@ -177,7 +179,7 @@ After 5 failures → abandon, log as dropped
 | `MessagingQueue` enum | Existing queues | Add `PUSH_NOTIFICATIONS` queue |
 | `UserService.deleteUser()` | Cascade deletes settings | Push subscriptions cascade-deleted via FK |
 | `getChannelsSettingsForEvent()` hardcoded returns | `{email, inApp}` literals for `USER_SIGN_UP_WELCOME` and `SPACE_COMMUNITY_INVITATION_USER_PLATFORM` | Add `push` field to both literal objects |
-| `main.ts` | RMQ microservice connections | Add push notifications queue connection |
+| `main.ts` | RMQ microservice connections | **No** `connectMicroservice` for push — uses `@RabbitSubscribe` in `PushDeliveryService` instead. A NestJS Transport.RMQ consumer would compete with the golevelup handler and silently drop messages. |
 
 ## Complexity Tracking
 

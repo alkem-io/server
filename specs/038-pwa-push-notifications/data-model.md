@@ -157,7 +157,7 @@ interface PushNotificationMessage {
     eventType: string;        // NotificationEvent enum value
     timestamp: string;        // ISO 8601 creation timestamp
   };
-  retryCount: number;         // 0-5, increment on each retry
+  retryCount: number;         // Always 0 — no automatic retry implemented (messages are dropped on failure)
 }
 ```
 

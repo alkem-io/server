@@ -2,7 +2,7 @@
 
 **Feature Branch**: `038-pwa-push-notifications`
 **Created**: 2026-03-01
-**Status**: Draft
+**Status**: Implemented
 **Input**: User description: "Add push notifications infrastructure for PWA based on React 19 on the web-client. It should work with both iOS and Android."
 
 ## User Scenarios & Testing _(mandatory)_
@@ -91,7 +91,7 @@ A user who accesses Alkemio from multiple devices (e.g., phone and laptop) recei
 ### Edge Cases
 
 - What happens when a user's subscription expires or becomes invalid (e.g., browser clears data)? The system detects failed delivery and marks the subscription as expired, removing it from the active list.
-- How does the system handle notification delivery when the push notification service is temporarily unavailable? Notifications are retried up to 5 times at intervals of 1m, 5m, 30m, 2h, 12h; abandoned after the final retry fails (~14.5h total).
+- How does the system handle notification delivery when the push notification service is temporarily unavailable? The delivery attempt is logged and the message is dropped. If the failure is a 4xx client error, the subscription is marked as expired. No automatic retry is implemented — the next platform event will trigger a new push to the same subscription if it is still active.
 - What happens when a user revokes browser-level notification permission outside of the app? The next delivery attempt fails, and the system marks the subscription as inactive.
 - How does the system behave when a user is logged in on multiple devices and interacts with the notification on one device? The notification remains visible on other devices; no cross-device dismissal is provided in this phase.
 - What happens when the platform generates a high volume of events in a short time for a single user? Notifications are throttled to a maximum of 10 per minute per user via Redis counters; excess notifications are dropped silently.
@@ -125,9 +125,9 @@ A user who accesses Alkemio from multiple devices (e.g., phone and laptop) recei
 
 ### Non-Functional Requirements
 
-- **NFR-001**: Push notification pipeline MUST emit structured Winston log entries at key stages (subscription created/removed, delivery attempted, delivery succeeded/failed, subscription expired) including fields: subscription ID, user ID, event type, delivery status, latency (ms), and error code when applicable.
+- **NFR-001**: Push notification pipeline MUST emit structured Winston log entries at key stages (subscription created/removed, delivery attempted, delivery succeeded/failed, subscription expired, throttled) including fields: subscription ID, event type, delivery status, and error message when applicable.
 - **NFR-002**: System MUST handle at least 10,000 concurrent subscriptions without delivery degradation (see SC-006).
-- **NFR-003**: Failed deliveries MUST be retried up to 5 times at intervals of 1 minute, 5 minutes, 30 minutes, 2 hours, and 12 hours; notification is abandoned after the final retry fails.
+- **NFR-003**: Failed deliveries are logged and dropped. Subscriptions that return 4xx errors are marked as expired. No automatic retry with backoff is implemented; the next platform event will reattempt delivery to active subscriptions.
 
 ## Success Criteria _(mandatory)_
 
@@ -147,7 +147,7 @@ A user who accesses Alkemio from multiple devices (e.g., phone and laptop) recei
 - Push notification logic (subscription management, VAPID key handling, delivery) is implemented as a new NestJS module within the existing server, co-located with the notification adapter layer and user settings entity.
 - The Alkemio web client already has a service worker or can have one installed as part of a separate client-side effort; this spec delivers the server-side infrastructure and a documented client integration contract.
 - iOS push notification support for PWAs (available since iOS 16.4) is the baseline; users on older iOS versions will see push notifications as unavailable.
-- The platform already has an event system (RabbitMQ) that can be extended to trigger push notifications. The push module creates a new dedicated RabbitMQ queue bound to the existing notification exchange, consuming events independently from the in-app notification consumer. This enables independent scaling and deployment of push delivery without coupling to existing notification processing.
+- The platform already has an event system (RabbitMQ) that can be extended to trigger push notifications. The push module uses a dedicated `alkemio-push-notifications` queue consumed via `@golevelup/nestjs-rabbitmq` `@RabbitSubscribe` decorator (not NestJS `connectMicroservice` Transport.RMQ, which would create a competing consumer and silently drop messages).
 - Notification categories will align with the existing Alkemio event types (comments, mentions, invitations, space updates).
 - VAPID key pair (public + private) is provided via environment variables (`VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, `VAPID_SUBJECT`) and loaded through NestJS `ConfigService`. Keys are generated once offline (e.g., via `web-push generate-vapid-keys`) and deployed as secrets.
 - Users must be authenticated (logged in) to subscribe to push notifications.
@@ -166,9 +166,9 @@ A user who accesses Alkemio from multiple devices (e.g., phone and laptop) recei
 - Q: When a user account is deleted, should all their push subscriptions be immediately purged? → A: Cascade delete — all push subscriptions are immediately and permanently removed when the user account is deleted.
 - Q: Should push notification content be localized to the user's preferred language? → A: Deferred — deliver in English for P1; add localization support in a follow-up iteration.
 - Q: Should the push notification pipeline expose specific observability signals? → A: Structured logging — push-specific structured log fields (subscription ID, delivery status, latency, error codes) at key pipeline stages using the existing Winston logger.
-- Q: What retry policy should be used for failed push notification deliveries? → A: 5 retries at intervals 1m, 5m, 30m, 2h, 12h (~14.5h total within the 24h window); notification abandoned after final retry fails.
-- Q: Should individual push notifications be persisted in a DB table or handled as ephemeral RabbitMQ messages? → A: Ephemeral queue messages — notifications live only in RabbitMQ; retries via delayed requeue with TTL/dead-letter exchanges. No DB table for notifications. Delivery audit via structured Winston logs (NFR-001).
-- Q: How should the push notification module consume platform events from RabbitMQ? → A: New dedicated consumer — a separate RabbitMQ queue bound to the existing notification exchange, allowing independent processing and scaling decoupled from the in-app notification consumer.
+- Q: What retry policy should be used for failed push notification deliveries? → A: No automatic retry with backoff. Failed deliveries are logged and dropped; 4xx errors mark the subscription as expired. The simplicity trade-off was chosen over DLX-based retry queues — the next platform event will reattempt delivery naturally.
+- Q: Should individual push notifications be persisted in a DB table or handled as ephemeral RabbitMQ messages? → A: Ephemeral queue messages — notifications live only in RabbitMQ. No DB table for notifications. Delivery audit via structured Winston logs (NFR-001).
+- Q: How should the push notification module consume platform events from RabbitMQ? → A: `@golevelup/nestjs-rabbitmq` `@RabbitSubscribe` decorator on `PushDeliveryService` — consumes directly from the `alkemio-push-notifications` queue. This approach avoids the NestJS `connectMicroservice` Transport.RMQ pattern, which would create a competing consumer with no handler and silently drop messages.
 - Q: Should there be a maximum number of device subscriptions per user account? → A: Cap at 10 — maximum 10 active device subscriptions per user; oldest subscription is replaced when the limit is exceeded.
 - Q: How should per-user notification throttling (10/min limit) be enforced? → A: Redis counters — per-user key with `INCR` + 60s TTL using the existing Redis instance. Excess notifications within the window are dropped silently.
 

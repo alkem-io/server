@@ -103,8 +103,11 @@ const bootstrap = async () => {
     amqpEndpoint,
     MessagingQueue.COLLABORATION_DOCUMENT_SERVICE
   );
-  connectMicroservice(app, amqpEndpoint, MessagingQueue.PUSH_NOTIFICATIONS);
-  // Note: Matrix Adapter events use @golevelup/nestjs-rabbitmq @RabbitSubscribe decorators
+  // Note: Push notifications use @golevelup/nestjs-rabbitmq @RabbitSubscribe decorators
+  // in PushDeliveryService. No NestJS microservice connection needed — a competing
+  // Transport.RMQ consumer would steal messages from the golevelup handler.
+  //
+  // Matrix Adapter events also use @golevelup/nestjs-rabbitmq @RabbitSubscribe decorators
   // which are compatible with the Go Matrix Adapter's Watermill publishing.
   // No NestJS microservice connection needed for Matrix Adapter queue.
   await app.startAllMicroservices();
