@@ -10,6 +10,7 @@ import { PollVoteService } from '@domain/collaboration/poll-vote/poll.vote.servi
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter/contribution.reporter.service';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service/subscription.publish.service';
 import { InstrumentResolver } from '@src/apm/decorators';
@@ -32,6 +33,7 @@ export class PollMutationsResolver {
   constructor(
     private readonly authorizationService: AuthorizationService,
     private readonly communityResolverService: CommunityResolverService,
+    private readonly contributionReporterService: ContributionReporterService,
     private readonly notificationSpaceAdapter: NotificationSpaceAdapter,
     private readonly pollService: PollService,
     private readonly pollVoteService: PollVoteService,
@@ -66,14 +68,12 @@ export class PollMutationsResolver {
       voteData.selectedOptionIDs
     );
 
-    // Dispatch notifications fire-and-forget
-    void this.dispatchVoteNotifications(
-      poll.id,
+    // Fire-and-forget: notifications + subscription + contribution reporting
+    void this.dispatchVoteNotificationsAndReport(
+      updatedPoll,
       actorContext.actorID,
       priorVoterIds
     );
-
-    // Publish subscription event
     void this.publishPollEvent(PollEventType.POLL_VOTE_UPDATED, updatedPoll);
 
     return updatedPoll;
@@ -144,14 +144,12 @@ export class PollMutationsResolver {
       optionData.text
     );
 
-    // Notify all prior voters that the poll was modified
-    void this.dispatchModifiedNotifications(
-      poll.id,
+    // Fire-and-forget: notifications + subscription + contribution reporting
+    void this.dispatchModifiedNotificationsAndReport(
+      updatedPoll,
       actorContext.actorID,
       voterIds
     );
-
-    // Publish subscription event
     void this.publishPollEvent(PollEventType.POLL_OPTIONS_CHANGED, updatedPoll);
 
     return updatedPoll;
@@ -273,14 +271,12 @@ export class PollMutationsResolver {
       optionData.optionIDs
     );
 
-    // Notify all prior voters that the poll was modified
+    // Fire-and-forget: notifications only (reorder is not a contribution event)
     void this.dispatchModifiedNotifications(
       poll.id,
       actorContext.actorID,
       voterIds
     );
-
-    // Publish subscription event
     void this.publishPollEvent(PollEventType.POLL_OPTIONS_CHANGED, updatedPoll);
 
     return updatedPoll;
@@ -348,26 +344,46 @@ export class PollMutationsResolver {
     }
   }
 
-  /** Notify poll creator + prior voters when a new vote is cast (T061). */
-  private async dispatchVoteNotifications(
-    pollId: string,
+  /** Resolve callout context and space for a poll (shared by notification + reporting helpers). */
+  private async resolvePollSpaceContext(pollId: string): Promise<{
+    calloutID: string;
+    createdBy: string;
+    spaceID: string;
+    levelZeroSpaceID: string;
+  }> {
+    const { calloutID, createdBy } =
+      await this.pollService.getCalloutContextForPoll(pollId);
+    const community =
+      await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
+        calloutID
+      );
+    const space =
+      await this.communityResolverService.getSpaceForCommunityOrFail(
+        community.id
+      );
+    return {
+      calloutID,
+      createdBy,
+      spaceID: space.id,
+      levelZeroSpaceID: space.levelZeroSpaceID,
+    };
+  }
+
+  /** Notify poll creator + prior voters when a vote is cast, and report contribution (T061). */
+  private async dispatchVoteNotificationsAndReport(
+    poll: IPoll,
     voterId: string,
     priorVoterIds: string[]
   ): Promise<void> {
     try {
-      const { calloutID, createdBy: creatorId } =
-        await this.pollService.getCalloutContextForPoll(pollId);
-      const community =
-        await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
-          calloutID
-        );
-      const space =
-        await this.communityResolverService.getSpaceForCommunityOrFail(
-          community.id
-        );
-      const spaceID = space.id;
+      const {
+        calloutID,
+        createdBy: creatorId,
+        spaceID,
+        levelZeroSpaceID,
+      } = await this.resolvePollSpaceContext(poll.id);
 
-      const baseDto = { triggeredBy: voterId, calloutID, pollID: pollId };
+      const baseDto = { triggeredBy: voterId, calloutID, pollID: poll.id };
 
       // Notify poll creator if they are not the voter
       if (creatorId !== voterId) {
@@ -391,10 +407,16 @@ export class PollMutationsResolver {
           )
         )
       );
+
+      // Report contribution to Kibana
+      this.contributionReporterService.pollVoteContribution(
+        { id: poll.id, name: poll.title, space: levelZeroSpaceID },
+        { actorID: voterId }
+      );
     } catch (error) {
       this.logger.error?.(
         {
-          message: 'Failed to dispatch vote notifications for poll',
+          message: 'Failed to dispatch vote notifications/report for poll',
           error: (error as Error)?.message,
         },
         (error as Error)?.stack ?? '',
@@ -403,7 +425,47 @@ export class PollMutationsResolver {
     }
   }
 
-  /** Notify all prior voters when the poll structure is modified (T062). */
+  /** Notify all prior voters when the poll structure is modified, and report contribution (T062). */
+  private async dispatchModifiedNotificationsAndReport(
+    poll: IPoll,
+    actorId: string,
+    voterIds: string[]
+  ): Promise<void> {
+    try {
+      const { calloutID, spaceID, levelZeroSpaceID } =
+        await this.resolvePollSpaceContext(poll.id);
+
+      if (voterIds.length > 0) {
+        const baseDto = { triggeredBy: actorId, calloutID, pollID: poll.id };
+
+        await Promise.allSettled(
+          voterIds.map(voterId =>
+            this.notificationSpaceAdapter.spaceCollaborationPollModifiedOnPollIVotedOn(
+              { ...baseDto, userID: voterId },
+              spaceID
+            )
+          )
+        );
+      }
+
+      // Report contribution to Kibana
+      this.contributionReporterService.pollResponseAddedContribution(
+        { id: poll.id, name: poll.title, space: levelZeroSpaceID },
+        { actorID: actorId }
+      );
+    } catch (error) {
+      this.logger.error?.(
+        {
+          message: 'Failed to dispatch modified notifications/report for poll',
+          error: (error as Error)?.message,
+        },
+        (error as Error)?.stack ?? '',
+        LogContext.COLLABORATION
+      );
+    }
+  }
+
+  /** Notify all prior voters when the poll structure is modified (no reporting). */
   private async dispatchModifiedNotifications(
     pollId: string,
     actorId: string,
@@ -411,17 +473,8 @@ export class PollMutationsResolver {
   ): Promise<void> {
     try {
       if (voterIds.length === 0) return;
-      const { calloutID } =
-        await this.pollService.getCalloutContextForPoll(pollId);
-      const community =
-        await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
-          calloutID
-        );
-      const space =
-        await this.communityResolverService.getSpaceForCommunityOrFail(
-          community.id
-        );
-      const spaceID = space.id;
+
+      const { calloutID, spaceID } = await this.resolvePollSpaceContext(pollId);
       const baseDto = { triggeredBy: actorId, calloutID, pollID: pollId };
 
       await Promise.allSettled(
@@ -459,17 +512,7 @@ export class PollMutationsResolver {
         deletedVoterIds.length > 0 || remainingVoterIds.length > 0;
       if (!hasWork) return;
 
-      const { calloutID } =
-        await this.pollService.getCalloutContextForPoll(pollId);
-      const community =
-        await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
-          calloutID
-        );
-      const space =
-        await this.communityResolverService.getSpaceForCommunityOrFail(
-          community.id
-        );
-      const spaceID = space.id;
+      const { calloutID, spaceID } = await this.resolvePollSpaceContext(pollId);
       const baseDto = { triggeredBy: actorId, calloutID, pollID: pollId };
 
       await Promise.allSettled([

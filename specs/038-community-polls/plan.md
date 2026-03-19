@@ -152,6 +152,15 @@ src/domain/collaboration/poll/
 └── dto/
     └── poll.dto.update.status.ts  # NEW — UpdatePollStatusInput (pollID, status)
 
+src/services/external/elasticsearch/
+├── contribution-reporter/
+│   └── contribution.reporter.service.ts  # + pollVoteContribution(), pollResponseAddedContribution(), calloutPollCreated()
+└── types/
+    └── contribution.type.ts  # + POLL_VOTE_CONTRIBUTION, POLL_RESPONSE_ADDED_CONTRIBUTION, CALLOUT_POLL_CREATED
+
+src/domain/collaboration/callouts-set/
+└── callouts.set.resolver.mutations.ts  # + calloutPollCreated reporting on poll callout creation
+
 src/migrations/
 └── {TIMESTAMP}-CommunityPolls.ts  # NEW — creates poll, poll_option, poll_vote tables; adds pollId to callout_framing
 ```
@@ -200,6 +209,12 @@ src/migrations/
 - **Behavior**: Requires UPDATE privilege on parent Callout. Idempotent — setting to current status succeeds without error. No notifications on close/reopen (deferred to future scope).
 - **Affected files**: `spec.md` (US8, FR-032..FR-035, future scope updated), `plan.md` (project structure, revision history), `data-model.md` (authorization table), `tasks.md` (Phase 10), `contracts/schema.graphql` (new mutation + input type).
 - **Resolves**: Poll lifecycle gap — polls could never be closed despite having full guard infrastructure.
+
+**2026-03-19**: Added Kibana/Elasticsearch contribution reporting (User Story 9).
+- **Change**: Three new contribution types (`POLL_VOTE_CONTRIBUTION`, `POLL_RESPONSE_ADDED_CONTRIBUTION`, `CALLOUT_POLL_CREATED`) tracked via the existing `ContributionReporterService`. Poll vote casting, option adding, and poll callout creation are reported as fire-and-forget Elasticsearch documents.
+- **Rationale**: Observability and platform analytics for poll engagement. Follows the same pattern as all other contribution types (callout created, post created, whiteboard edited, etc.).
+- **Affected files**: `spec.md` (US9), `plan.md` (project structure, revision history), `tasks.md` (Phase 11), `contribution.type.ts`, `contribution.reporter.service.ts`, `contribution.reporter.service.spec.ts`, `poll.module.ts`, `poll.resolver.mutations.ts`, `callouts.set.resolver.mutations.ts`.
+- **Key design decisions**: (1) Reporting is fire-and-forget — mutations never fail due to reporting errors. (2) Space context is resolved via the existing callout → community → space chain. (3) Only vote casting and option adding are reported (not vote removal, option editing, or reordering — these are maintenance operations, not contribution events).
 
 **2026-03-18**: Added `allowContributorsAddOptions` poll setting.
 - **Change**: New boolean `allowContributorsAddOptions` (default `false`) in `IPollSettings` / `PollSettingsInput`. When `true`, users with `CONTRIBUTE` privilege (voters) can add new options to the poll via `addPollOption`. Editing, removing, and reordering remain `UPDATE`-only.

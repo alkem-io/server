@@ -346,6 +346,23 @@ A facilitator or space admin wants to close a poll when enough input has been ga
 
 ---
 
+### User Story 9 - Kibana/Elasticsearch Contribution Reporting (Priority: P9)
+
+Poll actions are tracked in Kibana via the existing Elasticsearch contribution reporting infrastructure, enabling platform analytics and engagement monitoring.
+
+**Why this priority**: Observability and analytics are non-functional requirements that close the operational feedback loop for platform administrators. Reporting follows the same fire-and-forget pattern used by all other contribution types.
+
+**Independent Test**: When a user creates a poll callout, casts a vote, or adds an option, the corresponding contribution event is indexed in Elasticsearch with the correct `type`, `id`, `name`, `space`, and `author` fields.
+
+**Acceptance Scenarios**:
+
+1. **Given** a user creates a Callout with `framing.type = POLL`, **When** the callout is created, **Then** a `CALLOUT_POLL_CREATED` contribution document is indexed in Elasticsearch with the callout ID, poll title, and space ID.
+2. **Given** a member casts or updates a vote on a poll, **When** the vote is recorded, **Then** a `POLL_VOTE_CONTRIBUTION` document is indexed with the poll ID, poll title, and space ID.
+3. **Given** a user adds a new option to a poll, **When** the option is added, **Then** a `POLL_RESPONSE_ADDED_CONTRIBUTION` document is indexed with the poll ID, poll title, and space ID.
+4. **Given** any poll contribution event fails to index, **When** the Elasticsearch call errors, **Then** the mutation still succeeds (fire-and-forget pattern) and the error is logged.
+
+---
+
 ## Future Scope (Out of Scope for This Iteration)
 
 The following items were identified as future enhancements. The data model and architecture must not prevent these from being added later:

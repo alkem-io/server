@@ -682,3 +682,25 @@ Events are published from mutation resolvers (fire-and-forget pattern):
 **Down**: Drop FK from `callout_framing`, drop `poll_vote`, drop `poll_option`, drop `poll`.
 
 Three tables. Clean rollback.
+
+---
+
+## Kibana/Elasticsearch Contribution Reporting
+
+Poll actions are tracked in the existing Elasticsearch contribution reporting infrastructure for platform analytics and engagement monitoring. Three new contribution types are defined:
+
+| Contribution Type | Trigger | Reported Fields |
+|---|---|---|
+| `CALLOUT_POLL_CREATED` | A callout with `framing.type = POLL` is created | `id` = callout ID, `name` = poll title, `space` = level-zero space ID |
+| `POLL_VOTE_CONTRIBUTION` | A member casts or updates a vote on a poll | `id` = poll ID, `name` = poll title, `space` = level-zero space ID |
+| `POLL_RESPONSE_ADDED_CONTRIBUTION` | A member adds a new option to a poll | `id` = poll ID, `name` = poll title, `space` = level-zero space ID |
+
+**Pattern**: All reporting follows the existing fire-and-forget pattern — `ContributionReporterService` methods call `this.createDocument()` which internally uses `void` to avoid blocking the mutation. Failures are logged but never propagate to the caller.
+
+**Not reported** (maintenance operations, not contribution events): vote removal, option text editing, option removal, option reordering, poll status changes.
+
+**Source files**:
+- `src/services/external/elasticsearch/types/contribution.type.ts` — contribution type constants
+- `src/services/external/elasticsearch/contribution-reporter/contribution.reporter.service.ts` — 3 new methods
+- `src/domain/collaboration/poll/poll.resolver.mutations.ts` — `castPollVote` and `addPollOption` reporting
+- `src/domain/collaboration/callouts-set/callouts.set.resolver.mutations.ts` — poll callout creation reporting

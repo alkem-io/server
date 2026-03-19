@@ -35,3 +35,4 @@
 - Option removal behavior: when an option is removed, all votes containing that option are deleted entirely (no re-validation), and affected voters are notified that their vote has been removed with a prompt to re-vote.
 - Vote updates always require the complete new selection set—partial modifications (adding/removing individual options) are not supported. This ensures validation is consistently applied and prevents invalid vote states.
 - Future compatibility requirements (FR-027) are explicitly noted as data-model reservations, not implemented behavior. These are intentional placeholders.
+- Kibana contribution reporting (US9) tracks poll creation, vote casting, and option adding via the existing Elasticsearch infrastructure. Reporting is fire-and-forget and does not affect mutation outcomes.

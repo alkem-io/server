@@ -6,6 +6,7 @@ import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/a
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter/contribution.reporter.module';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service/subscription.service.module';
 import { PollOption } from '../poll-option/poll.option.entity';
@@ -21,6 +22,7 @@ import { PollAuthorizationService } from './poll.service.authorization';
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    ContributionReporterModule,
     EntityResolverModule,
     NotificationAdapterModule,
     PollVoteModule,

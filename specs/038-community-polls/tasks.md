@@ -328,6 +328,27 @@
 
 ---
 
+## Phase 11: User Story 9 — Kibana/Elasticsearch Contribution Reporting (Priority: P9)
+
+**Goal**: Poll actions (poll creation, vote casting, option adding) are reported to Kibana via the existing Elasticsearch contribution reporting infrastructure. Three new contribution types are added following the established fire-and-forget pattern.
+
+**Independent Test**: Create a poll callout → verify `CALLOUT_POLL_CREATED` document indexed. Cast a vote → verify `POLL_VOTE_CONTRIBUTION` indexed. Add an option → verify `POLL_RESPONSE_ADDED_CONTRIBUTION` indexed.
+
+### Implementation
+
+- [X] T095 [P] [US9] Add 3 new contribution type constants to `src/services/external/elasticsearch/types/contribution.type.ts`: `POLL_VOTE_CONTRIBUTION`, `POLL_RESPONSE_ADDED_CONTRIBUTION`, `CALLOUT_POLL_CREATED`
+- [X] T096 [US9] Add 3 new public methods to `src/services/external/elasticsearch/contribution-reporter/contribution.reporter.service.ts`: `pollVoteContribution()`, `pollResponseAddedContribution()`, `calloutPollCreated()` — each follows the existing pattern: accepts `ContributionDetails` + `ContributionActorContext`, calls `this.createDocument()` with the appropriate `CONTRIBUTION_TYPE`
+- [X] T097 [US9] Import `ContributionReporterModule` in `src/domain/collaboration/poll/poll.module.ts`; inject `ContributionReporterService` in `poll.resolver.mutations.ts`. Add fire-and-forget reporting calls:
+  - `castPollVote` → after vote persist, call `reportPollContribution('vote', updatedPoll, actorId)` which resolves space context and calls `pollVoteContribution()`
+  - `addPollOption` → after option persist, call `reportPollContribution('responseAdded', updatedPoll, actorId)` which calls `pollResponseAddedContribution()`
+  - The shared `reportPollContribution()` helper resolves callout context → community → space to get `levelZeroSpaceID`, wrapped in try-catch with error logging
+- [X] T098 [US9] In `src/domain/collaboration/callouts-set/callouts.set.resolver.mutations.ts`, add `calloutPollCreated()` reporting: after `calloutCreated()` reporting, check if `callout.framing?.type === CalloutFramingType.POLL && callout.framing.poll` — if so, call `contributionReporter.calloutPollCreated()` with callout ID, poll title, and level-zero space ID
+- [X] T099 [US9] Add unit tests in `src/services/external/elasticsearch/contribution-reporter/contribution.reporter.service.spec.ts` for the 3 new contribution types: (a) `pollVoteContribution` indexes a `POLL_VOTE_CONTRIBUTION` document with correct fields; (b) `pollResponseAddedContribution` indexes a `POLL_RESPONSE_ADDED_CONTRIBUTION` document; (c) `calloutPollCreated` indexes a `CALLOUT_POLL_CREATED` document
+
+**Checkpoint**: All 3 poll contribution types are reported to Kibana. Existing tests pass. Fire-and-forget pattern ensures mutations never fail due to reporting errors.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -341,8 +362,9 @@ Phase 1 (Setup)
                                ├─► Phase 6 (US5 - Options)        ← depends on US1 data to test
                                ├─► Phase 7 (US6 - Notifications)  ← depends on US2+US4b+US5 hooks
                                ├─► Phase 9 (US7 - Subscriptions)  ← depends on US2+US4b+US5 mutations
-                               └─► Phase 10 (US8 - Close/Reopen)  ← depends on Phase 2 only (guards already exist)
-Phase 8 (Polish) ← depends on all phases complete (including Phase 9 and Phase 10)
+                               ├─► Phase 10 (US8 - Close/Reopen)  ← depends on Phase 2 only (guards already exist)
+                               └─► Phase 11 (US9 - Kibana)        ← depends on Phase 4 (castVote) + Phase 6 (addOption) + callouts-set resolver
+Phase 8 (Polish) ← depends on all phases complete (including Phase 9, Phase 10, and Phase 11)
 ```
 
 ### User Story Dependencies
@@ -356,6 +378,7 @@ Phase 8 (Polish) ← depends on all phases complete (including Phase 9 and Phase
 - **US6 (P6)**: Wires into US2 (`castVote`), US4b (`removePollVote`), and US5 (option mutations); must be done after US2, US4b, and US5 service methods exist
 - **US7 (P7)**: Wires into US2 (`castVote`), US4b (`removePollVote`), and US5 (option mutations) for publishing events; requires Poll entities and all vote/option mutations to be functional. Independent of US6 (notifications)
 - **US8 (P8)**: Depends only on Phase 2 — the `PollStatus` enum, entity column, and all mutation guards are already in place; this phase only adds the `updatePollStatus` mutation
+- **US9 (P9)**: Depends on Phase 4 (`castVote`), Phase 6 (`addOption`), and the callouts-set resolver. Adds Kibana/Elasticsearch contribution reporting for poll actions
 
 ### Within Each Phase: Execution Order
 
@@ -457,11 +480,12 @@ Sequential:       T089                        (schema contract — after T087)
 7. Phase 7 → Notifications → engagement loop closed (including vote removal)
 8. Phase 9 → Subscriptions → real-time updates delivered to browsers
 9. Phase 10 → Close/Reopen → poll lifecycle complete
-10. Phase 8 → Polish → production-ready
+10. Phase 11 → Kibana reporting → observability complete
+11. Phase 8 → Polish → production-ready
 
 ### Single-Developer Sequence
 
-Complete phases in order: 1 → 2 → 3 → 4 → 4b → 5 → 6 → 7 → 9 → 10 → 8. Stop at each **Checkpoint** to validate the story independently before proceeding.
+Complete phases in order: 1 → 2 → 3 → 4 → 4b → 5 → 6 → 7 → 9 → 10 → 11 → 8. Stop at each **Checkpoint** to validate the story independently before proceeding.
 
 ---
 
