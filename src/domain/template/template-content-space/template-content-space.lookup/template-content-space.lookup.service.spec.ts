@@ -14,6 +14,8 @@ describe('TemplateContentSpaceLookupService', () => {
   let entityManager: Mocked<EntityManager>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const mockEntityManager = {
       findOne: vi.fn(),
     };

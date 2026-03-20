@@ -16,6 +16,8 @@ describe('CalloutContributionDefaultsService', () => {
   let repository: Repository<CalloutContributionDefaults>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         CalloutContributionDefaultsService,

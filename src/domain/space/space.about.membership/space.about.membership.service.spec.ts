@@ -11,6 +11,8 @@ describe('SpaceAboutMembershipService', () => {
   let service: SpaceAboutMembershipService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [SpaceAboutMembershipService],
     })

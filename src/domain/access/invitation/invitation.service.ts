@@ -166,6 +166,13 @@ export class InvitationService {
   }
 
   async getCreatedByOrFail(invitation: IInvitation): Promise<IUser | never> {
+    if (!invitation.createdBy) {
+      throw new RelationshipNotFoundException(
+        'Invitation creator has been removed',
+        LogContext.COMMUNITY,
+        { invitationId: invitation.id }
+      );
+    }
     const user = await this.userLookupService.getUserByIdOrFail(
       invitation.createdBy
     );

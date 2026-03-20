@@ -31,6 +31,7 @@ export class VirtualContributor extends Actor implements IVirtualContributor {
 
   @Column({
     unique: true,
+    nullable: false,
   })
   @Generated('increment')
   rowId!: number;
@@ -62,7 +63,7 @@ export class VirtualContributor extends Actor implements IVirtualContributor {
   @Column('jsonb', { nullable: true, transformer: PromptGraphTransformer })
   promptGraphDefinition?: PromptGraphDefinition;
 
-  @Column()
+  @Column({ nullable: false })
   listedInStore!: boolean;
 
   @Column('varchar', {

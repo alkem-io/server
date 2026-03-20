@@ -24,6 +24,8 @@ describe('TemplateDefaultService', () => {
   let templateService: Mocked<TemplateService>;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         TemplateDefaultService,

@@ -8,6 +8,8 @@ describe('OrganizationResolver', () => {
   let resolver: OrganizationResolverMutations;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         OrganizationResolverMutations,

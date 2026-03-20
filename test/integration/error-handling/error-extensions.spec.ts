@@ -42,7 +42,7 @@ describe('Error Extensions (REST)', () => {
   };
 
   beforeEach(async () => {
-    vi.clearAllMocks();
+    vi.restoreAllMocks();
 
     const moduleRef = await Test.createTestingModule({
       controllers: [TestController],

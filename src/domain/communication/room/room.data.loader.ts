@@ -3,38 +3,43 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import DataLoader from 'dataloader';
 import { IMessage } from '../message/message.interface';
 
+/** Composite key for unread count: actorID + roomID */
+interface UnreadCountKey {
+  actorID: string;
+  roomID: string;
+}
+
 /**
  * Request-scoped DataLoader for batching room communication data requests.
  * Prevents N+1 queries when resolving lastMessage and unreadCount for multiple rooms.
+ *
+ * Authorization is handled by the synchronous GraphqlGuard on the resolver.
+ * The guard must remain synchronous to preserve DataLoader batching —
+ * all .load() calls must land in the same event loop tick.
  */
 @Injectable({ scope: Scope.REQUEST })
 export class RoomDataLoader {
   private lastMessageLoader: DataLoader<string, IMessage | null>;
-  private unreadCountLoaders: Map<string, DataLoader<string, number>> =
-    new Map();
+  private unreadCountLoader: DataLoader<UnreadCountKey, number, string>;
 
   constructor(private readonly communicationAdapter: CommunicationAdapter) {
     this.lastMessageLoader = this.createLastMessageLoader();
+    this.unreadCountLoader = this.createUnreadCountLoader();
   }
 
   /**
    * Get the last message for a room using batched loading.
    */
-  async loadLastMessage(roomId: string): Promise<IMessage | null> {
+  loadLastMessage(roomId: string): Promise<IMessage | null> {
     return this.lastMessageLoader.load(roomId);
   }
 
   /**
    * Get the unread count for a room using batched loading.
-   * Creates a separate loader per actorID since unread counts are user-specific.
+   * Uses composite key (actorID + roomID) so different actors get separate cache entries.
    */
-  async loadUnreadCount(roomId: string, actorID: string): Promise<number> {
-    let loader = this.unreadCountLoaders.get(actorID);
-    if (!loader) {
-      loader = this.createUnreadCountLoader(actorID);
-      this.unreadCountLoaders.set(actorID, loader);
-    }
-    return loader.load(roomId);
+  loadUnreadCount(roomId: string, actorID: string): Promise<number> {
+    return this.unreadCountLoader.load({ actorID, roomID: roomId });
   }
 
   private createLastMessageLoader(): DataLoader<string, IMessage | null> {
@@ -43,7 +48,6 @@ export class RoomDataLoader {
         const results = await this.communicationAdapter.batchGetLastMessages([
           ...roomIds,
         ]);
-        // Return results in the same order as input keys
         return roomIds.map(id => results[id] ?? null);
       },
       {
@@ -53,19 +57,45 @@ export class RoomDataLoader {
     );
   }
 
-  private createUnreadCountLoader(actorID: string): DataLoader<string, number> {
-    return new DataLoader<string, number>(
-      async (roomIds: readonly string[]) => {
-        const results = await this.communicationAdapter.batchGetUnreadCounts(
-          actorID,
-          [...roomIds]
+  private createUnreadCountLoader(): DataLoader<
+    UnreadCountKey,
+    number,
+    string
+  > {
+    return new DataLoader<UnreadCountKey, number, string>(
+      async (keys: readonly UnreadCountKey[]) => {
+        // Group by actorID — typically 1 actor per request,
+        // but handles multi-actor correctly
+        const byActor = new Map<string, string[]>();
+        for (const key of keys) {
+          let roomIds = byActor.get(key.actorID);
+          if (!roomIds) {
+            roomIds = [];
+            byActor.set(key.actorID, roomIds);
+          }
+          roomIds.push(key.roomID);
+        }
+
+        // Fetch all actors' unread counts in parallel
+        const allResults = new Map<string, Record<string, number>>();
+        await Promise.all(
+          [...byActor.entries()].map(async ([actorID, roomIds]) => {
+            const results =
+              await this.communicationAdapter.batchGetUnreadCounts(
+                actorID,
+                roomIds
+              );
+            allResults.set(actorID, results);
+          })
         );
-        // Return results in the same order as input keys, defaulting to 0
-        return roomIds.map(id => results[id] ?? 0);
+
+        // Return results in input key order
+        return keys.map(key => allResults.get(key.actorID)?.[key.roomID] ?? 0);
       },
       {
         cache: true,
-        name: `RoomUnreadCountLoader:${actorID}`,
+        cacheKeyFn: (key: UnreadCountKey) => `${key.actorID}:${key.roomID}`,
+        name: 'RoomUnreadCountLoader',
       }
     );
   }

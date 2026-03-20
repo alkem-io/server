@@ -32,6 +32,8 @@ describe('InvitationService', () => {
   let roleSetCacheService: RoleSetCacheService;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     // Mock static Invitation.create to avoid DataSource requirement
     vi.spyOn(Invitation, 'create').mockImplementation((input: any) => {
       const entity = new Invitation();

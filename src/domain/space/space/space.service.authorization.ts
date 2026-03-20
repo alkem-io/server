@@ -62,6 +62,7 @@ export class SpaceAuthorizationService {
     providedParentAuthorization?: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
     const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
+      loadEagerRelations: false,
       relations: {
         authorization: {
           parentAuthorizationPolicy: true,
@@ -75,14 +76,17 @@ export class SpaceAuthorizationService {
         community: {
           roleSet: true,
         },
-        collaboration: true,
+        collaboration: { authorization: true },
         about: {
           profile: true,
         },
-        storageAggregator: true,
+        storageAggregator: {
+          authorization: true,
+          directStorage: { authorization: true },
+        },
         templatesManager: true,
         subspaces: true,
-        license: true,
+        license: { authorization: true },
         account: true,
       },
     });

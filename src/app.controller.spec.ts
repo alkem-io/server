@@ -7,6 +7,8 @@ describe('AppController', () => {
   let appController: AppController;
 
   beforeEach(async () => {
+    vi.restoreAllMocks();
+
     const app: TestingModule = await Test.createTestingModule({
       controllers: [AppController],
     })

@@ -115,6 +115,33 @@ describe('ProfileDocumentsService', () => {
       module.get<StorageBucketService>(StorageBucketService);
   });
   describe('reuploadFileOnStorageBucket', () => {
+    it('should throw EntityNotInitializedException when storageBucket.documents is not initialized', async () => {
+      const fileUrl = EXAMPLE_ALKEMIO_DOCUMENT_URL;
+      const storageBucket = mockStorageBucket({
+        documents: undefined as any,
+      });
+
+      vi.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
+
+      await expect(
+        service.reuploadFileOnStorageBucket(fileUrl, storageBucket, true)
+      ).rejects.toThrow('Documents not initialized on storage bucket');
+    });
+
+    it('should throw EntityNotFoundException when document is not found by URL', async () => {
+      const fileUrl = EXAMPLE_ALKEMIO_DOCUMENT_URL;
+      const storageBucket = mockStorageBucket();
+
+      vi.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
+      vi.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(
+        undefined as any
+      );
+
+      await expect(
+        service.reuploadFileOnStorageBucket(fileUrl, storageBucket, true)
+      ).rejects.toThrow('not found');
+    });
+
     it('should return fileUrl if internalUrlRequired is false and URL is not an Alkemio document', async () => {
       const fileUrl = 'http://external.com/doc/1234';
       const storageBucket = mockStorageBucket();
