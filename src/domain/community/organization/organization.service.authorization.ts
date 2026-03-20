@@ -50,13 +50,17 @@ export class OrganizationAuthorizationService {
     const organization = await this.organizationService.getOrganizationOrFail(
       organizationInput.id,
       {
+        loadEagerRelations: false,
         relations: {
-          storageAggregator: true,
+          storageAggregator: {
+            authorization: true,
+            directStorage: { authorization: true },
+          },
           authorization: true,
-          profile: true,
+          profile: { authorization: true },
           credentials: true,
-          groups: true,
-          verification: true,
+          groups: { authorization: true },
+          verification: { authorization: true },
           roleSet: true,
         },
       }
