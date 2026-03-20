@@ -1,11 +1,18 @@
+import { PollEventType } from '@common/enums/poll.event.type';
+import { PollResultsDetail } from '@common/enums/poll.results.detail';
+import { PollResultsVisibility } from '@common/enums/poll.results.visibility';
+import { PollStatus } from '@common/enums/poll.status';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { MutationType } from '@common/enums/subscriptions';
+import { PollSubscriptionPayload } from '@domain/collaboration/poll/dto/poll.subscription.payload';
 import { Test, TestingModule } from '@nestjs/testing';
 import {
   SUBSCRIPTION_ACTIVITY_CREATED,
   SUBSCRIPTION_CONVERSATION_EVENT,
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
+  SUBSCRIPTION_POLL_OPTIONS_CHANGED,
+  SUBSCRIPTION_POLL_VOTE_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_UPDATED,
 } from '@src/common/constants';
@@ -23,6 +30,8 @@ describe('SubscriptionPublishService', () => {
   let inAppNotifPubSub: { publish: Mock };
   let inAppCounterPubSub: { publish: Mock };
   let conversationPubSub: { publish: Mock };
+  let pollVoteUpdatedPubSub: { publish: Mock };
+  let pollOptionsChangedPubSub: { publish: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -33,6 +42,10 @@ describe('SubscriptionPublishService', () => {
     inAppNotifPubSub = { publish: vi.fn().mockResolvedValue(undefined) };
     inAppCounterPubSub = { publish: vi.fn().mockResolvedValue(undefined) };
     conversationPubSub = { publish: vi.fn().mockResolvedValue(undefined) };
+    pollVoteUpdatedPubSub = { publish: vi.fn().mockResolvedValue(undefined) };
+    pollOptionsChangedPubSub = {
+      publish: vi.fn().mockResolvedValue(undefined),
+    };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -60,6 +73,14 @@ describe('SubscriptionPublishService', () => {
         {
           provide: SUBSCRIPTION_CONVERSATION_EVENT,
           useValue: conversationPubSub,
+        },
+        {
+          provide: SUBSCRIPTION_POLL_VOTE_UPDATED,
+          useValue: pollVoteUpdatedPubSub,
+        },
+        {
+          provide: SUBSCRIPTION_POLL_OPTIONS_CHANGED,
+          useValue: pollOptionsChangedPubSub,
         },
         MockCacheManager,
         MockWinstonProvider,
@@ -225,6 +246,79 @@ describe('SubscriptionPublishService', () => {
 
       expect(conversationPubSub.publish).toHaveBeenCalledWith(
         SubscriptionType.CONVERSATION_EVENTS,
+        payload
+      );
+    });
+  });
+
+  describe('publishPollVoteUpdated', () => {
+    it('should publish poll vote updated event payload', async () => {
+      const payload: PollSubscriptionPayload = {
+        eventID: 'poll-vote-updated-1',
+        poll: {
+          id: 'poll-1',
+          title: 'Favorite color?',
+          status: PollStatus.OPEN,
+          settings: {
+            maxResponses: 1,
+            minResponses: 1,
+            resultsDetail: PollResultsDetail.FULL,
+            resultsVisibility: PollResultsVisibility.VISIBLE,
+          },
+          createdDate: new Date(),
+          updatedDate: new Date(),
+        },
+        pollEventType: PollEventType.POLL_VOTE_UPDATED,
+      };
+
+      await service.publishPollVoteUpdated(payload);
+
+      expect(pollVoteUpdatedPubSub.publish).toHaveBeenCalledWith(
+        SubscriptionType.POLL_VOTE_UPDATED,
+        payload
+      );
+    });
+
+    it('should publish POLL_STATUS_CHANGED event through poll vote updated channel', async () => {
+      const payload: PollSubscriptionPayload = {
+        eventID: 'poll-status-changed-1',
+        poll: {
+          id: 'poll-1',
+          title: 'Favorite color?',
+          status: PollStatus.CLOSED,
+          settings: {
+            maxResponses: 1,
+            minResponses: 1,
+            resultsDetail: PollResultsDetail.FULL,
+            resultsVisibility: PollResultsVisibility.VISIBLE,
+            allowContributorsAddOptions: false,
+          },
+          createdDate: new Date(),
+          updatedDate: new Date(),
+        },
+        pollEventType: PollEventType.POLL_STATUS_CHANGED,
+      };
+
+      await service.publishPollVoteUpdated(payload);
+
+      expect(pollVoteUpdatedPubSub.publish).toHaveBeenCalledWith(
+        SubscriptionType.POLL_VOTE_UPDATED,
+        payload
+      );
+    });
+  });
+
+  describe('publishPollOptionsChanged', () => {
+    it('should publish poll options changed event payload', async () => {
+      const payload = {
+        eventID: 'poll-options-changed-1',
+        pollID: 'poll-1',
+      } as any;
+
+      await service.publishPollOptionsChanged(payload);
+
+      expect(pollOptionsChangedPubSub.publish).toHaveBeenCalledWith(
+        SubscriptionType.POLL_OPTIONS_CHANGED,
         payload
       );
     });

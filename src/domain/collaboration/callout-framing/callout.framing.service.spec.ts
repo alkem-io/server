@@ -18,6 +18,7 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
 import { LinkService } from '../link/link.service';
+import { PollService } from '../poll/poll.service';
 import { CalloutFraming } from './callout.framing.entity';
 import { CalloutFramingService } from './callout.framing.service';
 
@@ -29,6 +30,7 @@ describe('CalloutFramingService', () => {
   let linkService: LinkService;
   let memoService: MemoService;
   let mediaGalleryService: MediaGalleryService;
+  let pollService: PollService;
   let namingService: NamingService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let tagsetService: TagsetService;
@@ -61,6 +63,7 @@ describe('CalloutFramingService', () => {
     linkService = module.get(LinkService);
     memoService = module.get(MemoService);
     mediaGalleryService = module.get(MediaGalleryService);
+    pollService = module.get(PollService);
     namingService = module.get(NamingService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     tagsetService = module.get(TagsetService);
@@ -226,6 +229,52 @@ describe('CalloutFramingService', () => {
 
       expect(result.type).toBe(CalloutFramingType.MEMO);
       expect(memoService.createMemo).toHaveBeenCalled();
+    });
+
+    it('should create framing with POLL type and poll data', async () => {
+      const framingData = {
+        type: CalloutFramingType.POLL,
+        profile: { displayName: 'Poll Framing', tagsets: [] },
+        tags: [],
+        poll: {
+          title: 'My Poll',
+          options: ['Option A', 'Option B'],
+        },
+      } as any;
+
+      vi.mocked(tagsetService.updateTagsetInputs).mockReturnValue([]);
+      vi.mocked(profileService.createProfile).mockResolvedValue({
+        id: 'profile-1',
+      } as any);
+      vi.mocked(pollService.createPoll).mockResolvedValue({
+        poll: { id: 'poll-1', title: 'My Poll' },
+        warnings: [],
+      } as any);
+
+      const result = await service.createCalloutFraming(
+        framingData,
+        storageAggregator
+      );
+
+      expect(result.type).toBe(CalloutFramingType.POLL);
+      expect(pollService.createPoll).toHaveBeenCalledWith(framingData.poll);
+    });
+
+    it('should throw ValidationException when POLL type has no poll data', async () => {
+      const framingData = {
+        type: CalloutFramingType.POLL,
+        profile: { displayName: 'Poll Framing', tagsets: [] },
+        tags: [],
+      } as any;
+
+      vi.mocked(tagsetService.updateTagsetInputs).mockReturnValue([]);
+      vi.mocked(profileService.createProfile).mockResolvedValue({
+        id: 'profile-1',
+      } as any);
+
+      await expect(
+        service.createCalloutFraming(framingData, storageAggregator)
+      ).rejects.toThrow(ValidationException);
     });
 
     it('should create framing with MEDIA_GALLERY type', async () => {
@@ -430,6 +479,38 @@ describe('CalloutFramingService', () => {
       expect(linkService.updateLink).toHaveBeenCalledWith(updateData.link);
     });
 
+    it('should update poll title and keep framing poll in sync', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.POLL,
+        profile: { id: 'profile-1' },
+        poll: { id: 'poll-1', title: 'Old title' },
+      } as any;
+
+      const updateData = {
+        poll: { title: 'New title' },
+      } as any;
+
+      vi.mocked(pollService.getPollOrFail).mockResolvedValue({
+        id: 'poll-1',
+        title: 'Old title',
+      } as any);
+      vi.mocked(pollService.save).mockImplementation(async poll => poll as any);
+
+      const result = await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false
+      );
+
+      expect(pollService.getPollOrFail).toHaveBeenCalledWith('poll-1');
+      expect(pollService.save).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'poll-1', title: 'New title' })
+      );
+      expect(result.poll?.title).toBe('New title');
+    });
+
     it('should return framing unchanged when MEMO type has no content update', async () => {
       const framing = {
         id: 'framing-1',
@@ -618,6 +699,49 @@ describe('CalloutFramingService', () => {
       expect(framing.link).toBeUndefined();
     });
 
+    it('should delete inconsistent poll when type changes away from POLL', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.POLL,
+        profile: { id: 'profile-1' },
+        poll: { id: 'poll-1' },
+      } as any;
+      const updateData = {
+        type: CalloutFramingType.NONE,
+      } as any;
+
+      await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false
+      );
+
+      expect(pollService.deletePoll).toHaveBeenCalledWith('poll-1');
+      expect(framing.poll).toBeUndefined();
+    });
+
+    it('should throw when trying to create a new poll via update (no existing poll)', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.POLL,
+        profile: { id: 'profile-1' },
+        poll: undefined,
+      } as any;
+      const updateData = {
+        poll: { title: 'New poll' },
+      } as any;
+
+      await expect(
+        service.updateCalloutFraming(
+          framing,
+          updateData,
+          storageAggregator,
+          false
+        )
+      ).rejects.toThrow(ValidationException);
+    });
+
     it('should delete inconsistent media gallery when type changes away from MEDIA_GALLERY', async () => {
       const framing = {
         id: 'framing-1',
@@ -705,7 +829,7 @@ describe('CalloutFramingService', () => {
   });
 
   describe('delete', () => {
-    it('should delete all associated entities and preserve ID', async () => {
+    it('should delete all associated entities including poll and preserve ID', async () => {
       const framing = {
         id: 'framing-1',
         profile: { id: 'profile-1' },
@@ -713,6 +837,7 @@ describe('CalloutFramingService', () => {
         link: { id: 'link-1' },
         memo: { id: 'memo-1' },
         mediaGallery: { id: 'mg-1' },
+        poll: { id: 'poll-1' },
         authorization: { id: 'auth-1' },
       } as any;
 
@@ -728,6 +853,7 @@ describe('CalloutFramingService', () => {
       expect(mediaGalleryService.deleteMediaGallery).toHaveBeenCalledWith(
         'mg-1'
       );
+      expect(pollService.deletePoll).toHaveBeenCalledWith('poll-1');
       expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
         framing.authorization
       );
