@@ -33,15 +33,34 @@ describe('PlatformWellKnownVirtualContributorsService', () => {
 
   describe('getMappings', () => {
     it('should return the wellKnownVirtualContributors when platform exists', async () => {
-      const mappings = {
-        [VirtualContributorWellKnown.CHAT_GUIDANCE]: 'vc-1',
-      };
-      const platform = { wellKnownVirtualContributors: mappings } as any;
+      const platform = {
+        wellKnownVirtualContributors: {
+          mappings: [
+            {
+              wellKnown: VirtualContributorWellKnown.CHAT_GUIDANCE,
+              virtualContributorID: 'vc-1',
+            },
+          ],
+        },
+      } as any;
       platformRepository.findOne!.mockResolvedValue(platform);
 
       const result = await service.getMappings();
 
-      expect(result).toEqual(mappings);
+      expect(result).toEqual({
+        [VirtualContributorWellKnown.CHAT_GUIDANCE]: 'vc-1',
+      });
+    });
+
+    it('should return empty object when mappings array is empty', async () => {
+      const platform = {
+        wellKnownVirtualContributors: { mappings: [] },
+      } as any;
+      platformRepository.findOne!.mockResolvedValue(platform);
+
+      const result = await service.getMappings();
+
+      expect(result).toEqual({});
     });
 
     it('should return empty object when wellKnownVirtualContributors is falsy', async () => {
@@ -64,7 +83,9 @@ describe('PlatformWellKnownVirtualContributorsService', () => {
 
   describe('setMapping', () => {
     it('should set a new mapping and save the platform', async () => {
-      const platform = { wellKnownVirtualContributors: {} } as any;
+      const platform = {
+        wellKnownVirtualContributors: { mappings: [] },
+      } as any;
       platformRepository.findOne!.mockResolvedValue(platform);
       platformRepository.save!.mockResolvedValue(platform);
 
@@ -74,13 +95,29 @@ describe('PlatformWellKnownVirtualContributorsService', () => {
       );
 
       expect(result[VirtualContributorWellKnown.CHAT_GUIDANCE]).toBe('vc-new');
-      expect(platformRepository.save).toHaveBeenCalledWith(platform);
+      expect(platformRepository.save).toHaveBeenCalledWith(
+        expect.objectContaining({
+          wellKnownVirtualContributors: {
+            mappings: [
+              {
+                wellKnown: VirtualContributorWellKnown.CHAT_GUIDANCE,
+                virtualContributorID: 'vc-new',
+              },
+            ],
+          },
+        })
+      );
     });
 
     it('should overwrite an existing mapping', async () => {
       const platform = {
         wellKnownVirtualContributors: {
-          [VirtualContributorWellKnown.CHAT_GUIDANCE]: 'vc-old',
+          mappings: [
+            {
+              wellKnown: VirtualContributorWellKnown.CHAT_GUIDANCE,
+              virtualContributorID: 'vc-old',
+            },
+          ],
         },
       } as any;
       platformRepository.findOne!.mockResolvedValue(platform);
@@ -122,7 +159,12 @@ describe('PlatformWellKnownVirtualContributorsService', () => {
     it('should return the VC ID for the given well-known type', async () => {
       const platform = {
         wellKnownVirtualContributors: {
-          [VirtualContributorWellKnown.CHAT_GUIDANCE]: 'vc-1',
+          mappings: [
+            {
+              wellKnown: VirtualContributorWellKnown.CHAT_GUIDANCE,
+              virtualContributorID: 'vc-1',
+            },
+          ],
         },
       } as any;
       platformRepository.findOne!.mockResolvedValue(platform);
@@ -135,7 +177,9 @@ describe('PlatformWellKnownVirtualContributorsService', () => {
     });
 
     it('should return undefined when the well-known type is not mapped', async () => {
-      const platform = { wellKnownVirtualContributors: {} } as any;
+      const platform = {
+        wellKnownVirtualContributors: { mappings: [] },
+      } as any;
       platformRepository.findOne!.mockResolvedValue(platform);
 
       const result = await service.getVirtualContributorID(

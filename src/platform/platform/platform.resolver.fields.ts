@@ -1,6 +1,5 @@
 import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
-import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
@@ -17,7 +16,6 @@ import { ILicensingFramework } from '@platform/licensing/credential-based/licens
 import { IMetadata } from '@platform/metadata/metadata.interface';
 import { MetadataService } from '@platform/metadata/metadata.service';
 import { IPlatformWellKnownVirtualContributors } from '@platform/platform.well.known.virtual.contributors';
-import { PlatformWellKnownVirtualContributorMapping } from '@platform/platform.well.known.virtual.contributors/dto/platform.well.known.virtual.contributor.dto.mapping';
 import { ReleaseDiscussionOutput } from './dto/release.discussion.dto';
 import { IPlatform } from './platform.interface';
 import { PlatformService } from './platform.service';
@@ -138,20 +136,11 @@ export class PlatformResolverFields {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.READ,
+      AuthorizationPrivilege.ACCESS_INTERACTIVE_GUIDANCE,
       `get Platform well-known Virtual Contributors: ${actorContext.actorID}`
     );
 
-    // Convert from JSON storage format to DTO array format
-    const mappingsRecord = platform.wellKnownVirtualContributors as any;
-    const mappingsArray: PlatformWellKnownVirtualContributorMapping[] =
-      Object.entries(mappingsRecord || {}).map(
-        ([wellKnown, virtualContributorID]) => ({
-          wellKnown: wellKnown as VirtualContributorWellKnown,
-          virtualContributorID: virtualContributorID as string,
-        })
-      );
-
-    return { mappings: mappingsArray };
+    const stored = platform.wellKnownVirtualContributors;
+    return { mappings: stored?.mappings ?? [] };
   }
 }
