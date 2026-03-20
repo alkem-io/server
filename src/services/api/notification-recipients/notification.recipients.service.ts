@@ -94,6 +94,14 @@ export class NotificationRecipientsService {
           recipient.settings.notification
         ).inApp
     );
+    const pushRecipientsWithNotificationEnabled = candidateRecipients.filter(
+      recipient =>
+        recipient.settings?.notification &&
+        this.getChannelsSettingsForEvent(
+          eventData.eventType,
+          recipient.settings.notification
+        ).push
+    );
 
     this.logger.verbose?.(
       `[${eventData.eventType}] - 3a. ...for email, ${emailRecipientsWithNotificationEnabled.length} have notification enabled`,
@@ -101,6 +109,10 @@ export class NotificationRecipientsService {
     );
     this.logger.verbose?.(
       `[${eventData.eventType}] - 3b. ...for in-app, ${inAppRecipientsWithNotificationEnabled.length} have notification enabled`,
+      LogContext.NOTIFICATIONS
+    );
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - 3c. ...for push, ${pushRecipientsWithNotificationEnabled.length} have notification enabled`,
       LogContext.NOTIFICATIONS
     );
 
@@ -118,6 +130,12 @@ export class NotificationRecipientsService {
         privilegeRequired,
         eventData
       );
+    const pushRecipientsWithPrivilege =
+      await this.filterRecipientsWithPrivileges(
+        pushRecipientsWithNotificationEnabled,
+        privilegeRequired,
+        eventData
+      );
 
     this.logger.verbose?.(
       `[${eventData.eventType}] - 4a. ...and for email, of those ${emailRecipientsWithPrivilege.length} have the required privilege (${privilegeRequired || 'none'})`,
@@ -125,6 +143,10 @@ export class NotificationRecipientsService {
     );
     this.logger.verbose?.(
       `[${eventData.eventType}] - 4b. ...and for in-app, of those ${inAppRecipientsWithPrivilege.length} have the required privilege (${privilegeRequired || 'none'})`,
+      LogContext.NOTIFICATIONS
+    );
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - 4c. ...and for push, of those ${pushRecipientsWithPrivilege.length} have the required privilege (${privilegeRequired || 'none'})`,
       LogContext.NOTIFICATIONS
     );
 
@@ -147,10 +169,15 @@ export class NotificationRecipientsService {
       `[${eventData.eventType}] - 5b. InApp has ${inAppRecipientsWithPrivilege.length} recipients: ${inAppRecipientsWithPrivilege.map(recipient => recipient.email).join(', ')}`,
       LogContext.NOTIFICATIONS
     );
+    this.logger.verbose?.(
+      `[${eventData.eventType}] - 5c. Push has ${pushRecipientsWithPrivilege.length} recipients: ${pushRecipientsWithPrivilege.map(recipient => recipient.id).join(', ')}`,
+      LogContext.NOTIFICATIONS
+    );
 
     return {
       emailRecipients: emailRecipientsWithPrivilege,
       inAppRecipients: inAppRecipientsWithPrivilege,
+      pushRecipients: pushRecipientsWithPrivilege,
       triggeredBy,
     };
   }
@@ -283,11 +310,13 @@ export class NotificationRecipientsService {
         return {
           email: true,
           inApp: true,
+          push: true,
         };
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
         return {
           email: true,
           inApp: false,
+          push: false,
         };
 
       default:

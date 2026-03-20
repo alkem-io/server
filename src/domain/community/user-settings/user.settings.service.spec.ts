@@ -40,7 +40,11 @@ describe('UserSettingsService', () => {
     repository = module.get(getRepositoryToken(UserSettings));
   });
 
-  const defaultNotificationSetting = () => ({ email: false, inApp: false });
+  const defaultNotificationSetting = () => ({
+    email: false,
+    inApp: false,
+    push: false,
+  });
 
   const buildSettings = (
     overrides: Partial<IUserSettings> = {}

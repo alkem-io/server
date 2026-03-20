@@ -16,4 +16,11 @@ export class CreateUserSettingsNotificationChannelsInput {
   })
   @IsBoolean()
   inApp!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Receive push notifications.',
+  })
+  @IsBoolean()
+  push!: boolean;
 }

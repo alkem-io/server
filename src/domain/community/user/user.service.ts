@@ -253,53 +253,80 @@ export class UserService {
       },
       notification: {
         organization: {
-          adminMessageReceived: { email: true, inApp: true },
-          adminMentioned: { email: true, inApp: true },
+          adminMessageReceived: { email: true, inApp: true, push: true },
+          adminMentioned: { email: true, inApp: true, push: true },
         },
         platform: {
-          forumDiscussionCreated: { email: true, inApp: false },
-          forumDiscussionComment: { email: true, inApp: true },
+          forumDiscussionCreated: { email: true, inApp: false, push: false },
+          forumDiscussionComment: { email: true, inApp: true, push: true },
           admin: {
-            userProfileCreated: { email: false, inApp: false },
-            userProfileRemoved: { email: false, inApp: false },
-            spaceCreated: { email: false, inApp: false },
-            userGlobalRoleChanged: { email: false, inApp: false },
+            userProfileCreated: { email: false, inApp: false, push: false },
+            userProfileRemoved: { email: false, inApp: false, push: false },
+            spaceCreated: { email: false, inApp: false, push: false },
+            userGlobalRoleChanged: { email: false, inApp: false, push: false },
           },
         },
         space: {
           admin: {
-            communityApplicationReceived: { email: true, inApp: true },
-            communityNewMember: { email: true, inApp: true },
-            communicationMessageReceived: { email: true, inApp: true },
+            communityApplicationReceived: {
+              email: true,
+              inApp: true,
+              push: true,
+            },
+            communityNewMember: { email: true, inApp: true, push: true },
+            communicationMessageReceived: {
+              email: true,
+              inApp: true,
+              push: true,
+            },
             collaborationCalloutContributionCreated: {
               email: false,
               inApp: true,
+              push: true,
             },
           },
-          communicationUpdates: { email: true, inApp: true },
+          communicationUpdates: { email: true, inApp: true, push: true },
           collaborationCalloutContributionCreated: {
             email: false,
             inApp: true,
+            push: true,
           },
           collaborationCalloutPostContributionComment: {
             email: false,
             inApp: true,
+            push: true,
           },
-          collaborationCalloutComment: { email: false, inApp: true },
-          collaborationCalloutPublished: { email: true, inApp: true },
-          communityCalendarEvents: { email: true, inApp: true },
+          collaborationCalloutComment: {
+            email: false,
+            inApp: true,
+            push: true,
+          },
+          collaborationCalloutPublished: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
+          communityCalendarEvents: { email: true, inApp: true, push: true },
         },
         user: {
-          mentioned: { email: true, inApp: true },
-          commentReply: { email: false, inApp: true },
-          messageReceived: { email: true, inApp: true },
+          mentioned: { email: true, inApp: true, push: true },
+          commentReply: { email: false, inApp: true, push: true },
+          messageReceived: { email: true, inApp: true, push: true },
           membership: {
-            spaceCommunityInvitationReceived: { email: true, inApp: true },
-            spaceCommunityJoined: { email: true, inApp: true },
+            spaceCommunityInvitationReceived: {
+              email: true,
+              inApp: true,
+              push: true,
+            },
+            spaceCommunityJoined: { email: true, inApp: true, push: true },
           },
         },
         virtualContributor: {
-          adminSpaceCommunityInvitation: { email: true, inApp: true },
+          adminSpaceCommunityInvitation: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
         },
       },
       homeSpace: {

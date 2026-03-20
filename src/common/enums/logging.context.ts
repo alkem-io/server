@@ -17,6 +17,7 @@ export enum LogContext {
   ACTOR = 'actor',
   ACTIVITY = 'activity',
   IN_APP_NOTIFICATION = 'in-app-notification',
+  PUSH_NOTIFICATION = 'push-notification',
   ACTIVITY_FEED = 'activity-feed',
   API = 'api',
   AUTH = 'auth',

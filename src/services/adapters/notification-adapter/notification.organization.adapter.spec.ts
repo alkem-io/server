@@ -57,6 +57,7 @@ describe('NotificationOrganizationAdapter', () => {
       ).mockResolvedValue({
         emailRecipients: [{ id: 'user-2' }],
         inAppRecipients: [],
+        pushRecipients: [],
       } as any);
       vi.mocked(messageDetailsService.getMessageDetails).mockResolvedValue({
         message: 'test',
@@ -80,6 +81,7 @@ describe('NotificationOrganizationAdapter', () => {
       ).mockResolvedValue({
         emailRecipients: [],
         inAppRecipients: [{ id: 'user-2' }],
+        pushRecipients: [],
       } as any);
       vi.mocked(messageDetailsService.getMessageDetails).mockResolvedValue(
         {} as any
@@ -98,6 +100,7 @@ describe('NotificationOrganizationAdapter', () => {
       ).mockResolvedValue({
         emailRecipients: [],
         inAppRecipients: [{ id: 'user-2' }, { id: 'user-3' }],
+        pushRecipients: [],
       } as any);
       vi.mocked(messageDetailsService.getMessageDetails).mockResolvedValue(
         {} as any
@@ -120,6 +123,7 @@ describe('NotificationOrganizationAdapter', () => {
       ).mockResolvedValue({
         emailRecipients: [],
         inAppRecipients: [],
+        pushRecipients: [],
       } as any);
       vi.mocked(messageDetailsService.getMessageDetails).mockResolvedValue(
         {} as any
@@ -144,6 +148,7 @@ describe('NotificationOrganizationAdapter', () => {
       ).mockResolvedValue({
         emailRecipients: [{ id: 'user-2' }],
         inAppRecipients: [{ id: 'user-2' }],
+        pushRecipients: [],
       } as any);
       vi.mocked(
         externalAdapter.buildOrganizationMessageNotificationPayload
@@ -164,6 +169,7 @@ describe('NotificationOrganizationAdapter', () => {
       ).mockResolvedValue({
         emailRecipients: [],
         inAppRecipients: [],
+        pushRecipients: [],
       } as any);
 
       await adapter.organizationSendMessage(eventData);
