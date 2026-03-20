@@ -264,7 +264,14 @@ export class AccountService {
     accountID: string,
     externalSubscriptionID: string
   ) {
-    return this.accountRepository.update(accountID, { externalSubscriptionID });
+    // Cannot use repository.update() on CTI child entities;
+    // use query builder to target the account table directly.
+    return this.accountRepository
+      .createQueryBuilder()
+      .update()
+      .set({ externalSubscriptionID })
+      .where('id = :accountID', { accountID })
+      .execute();
   }
 
   async getAccountOrFail(

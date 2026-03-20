@@ -6,7 +6,7 @@ import {
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Tagset } from '@domain/common/tagset';
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import { Column, Entity, Index, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
 import { StorageBucket } from '../storage-bucket/storage.bucket.entity';
 import { IDocument } from './document.interface';
 
@@ -25,6 +25,7 @@ export class Document extends AuthorizableEntity implements IDocument {
   @Column('uuid', { nullable: true })
   createdBy?: string;
 
+  @Index('IDX_document_storageBucketId')
   @ManyToOne(
     () => StorageBucket,
     storage => storage.documents,

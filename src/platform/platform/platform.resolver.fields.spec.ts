@@ -168,8 +168,10 @@ describe('PlatformResolverFields', () => {
       const platform = {
         id: 'p1',
         wellKnownVirtualContributors: {
-          GUIDANCE: 'vc-1',
-          IMPACT: 'vc-2',
+          mappings: [
+            { wellKnown: 'GUIDANCE', virtualContributorID: 'vc-1' },
+            { wellKnown: 'IMPACT', virtualContributorID: 'vc-2' },
+          ],
         },
       } as any;
       const actorContext = { actorID: 'user-1' } as any;
@@ -192,10 +194,10 @@ describe('PlatformResolverFields', () => {
       });
     });
 
-    it('should handle empty wellKnownVirtualContributors', async () => {
+    it('should handle empty wellKnownVirtualContributors mappings', async () => {
       const platform = {
         id: 'p1',
-        wellKnownVirtualContributors: {},
+        wellKnownVirtualContributors: { mappings: [] },
       } as any;
       const actorContext = { actorID: 'user-1' } as any;
       authorizationService.grantAccessOrFail.mockResolvedValue(
