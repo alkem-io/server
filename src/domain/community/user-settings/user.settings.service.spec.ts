@@ -94,18 +94,22 @@ describe('UserSettingsService', () => {
           collaborationPollVoteCastOnOwnPoll: {
             email: false,
             inApp: true,
+            push: false,
           },
           collaborationPollVoteCastOnPollIVotedOn: {
             email: false,
             inApp: true,
+            push: false,
           },
           collaborationPollModifiedOnPollIVotedOn: {
             email: false,
             inApp: true,
+            push: false,
           },
           collaborationPollVoteAffectedByOptionChange: {
             email: false,
             inApp: true,
+            push: false,
           },
         },
         virtualContributor: {
