@@ -349,6 +349,18 @@
 
 ---
 
+## Phase 12: Template Safety — Skip POLL Callouts During Serialization
+
+**Purpose**: Prevent `createSpaceFromTemplate` and `InputCreator` queries from crashing when a collaboration contains POLL-framed callouts. POLL framing is not templatable in this iteration — the callout is silently skipped with a debug log.
+
+**Background**: `CalloutFramingService.createCalloutFraming()` (T032) throws `ValidationException` when `type === POLL && poll === undefined`. `InputCreatorService.buildCreateCalloutInputFromCallout()` serializes `type: 'poll'` but never loads `framing.poll`, producing an input that triggers this guard on template application. The fix is to skip POLL callouts at the serialization boundary.
+
+- [X] T100 In `src/services/api/input-creator/input.creator.service.ts`, update `buildCreateCalloutInputFromCallout()` to return `null` when `callout.framing.type === CalloutFramingType.POLL`; log a structured debug message `{ message: 'Skipping POLL callout during template serialization — poll framing is not templatable', calloutId }` at `LogContext.INPUT_CREATOR`. Update return type signature to `Promise<CreateCalloutInput | null>`. Update `buildCreateCalloutInputsFromCallouts()` and `buildCreateCalloutsSetInputFromCalloutsSet()` to filter out `null` results instead of pushing them into the result array. Update `input.creator.resolver.fields.ts` `callout()` resolver return type from `Promise<CreateCalloutInput>` to `Promise<CreateCalloutInput | null>` (the `@ResolveField` already carries `nullable: true`). Add unit tests in `src/services/api/input-creator/input.creator.service.spec.ts`: (a) `buildCreateCalloutInputFromCallout` returns `null` for a POLL-framed callout; (b) `buildCreateCalloutInputsFromCallouts` with a mixed array of one POLL callout and one regular callout returns only the regular callout input (length 1). ✅ **Applied** — code changes and tests added in this PR.
+
+**Checkpoint**: Template serialization skips POLL callouts silently. `createSpaceFromTemplate` no longer throws when the source space contains a poll. Non-POLL callouts are unaffected.
+
+---
+
 ## Dependencies & Execution Order
 
 ### Phase Dependencies
@@ -365,6 +377,7 @@ Phase 1 (Setup)
                                ├─► Phase 10 (US8 - Close/Reopen)  ← depends on Phase 2 only (guards already exist)
                                └─► Phase 11 (US9 - Kibana)        ← depends on Phase 4 (castVote) + Phase 6 (addOption) + callouts-set resolver
 Phase 8 (Polish) ← depends on all phases complete (including Phase 9, Phase 10, and Phase 11)
+Phase 12 (Template Safety) ← depends on Phase 3 (T032 POLL guard); independent of all other phases; can be applied at any time
 ```
 
 ### User Story Dependencies

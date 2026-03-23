@@ -304,6 +304,7 @@ A facilitator or space admin wants to close a poll when enough input has been ga
 - Poll option ordering in the creation form determines the display order, and results keep the same `sortOrder` ordering.
 - The notification requirement ("poll creator notified on new vote") applies to both the initial vote and any subsequent vote update by the same voter.
 - Polls are not time-limited in this iteration; they remain open indefinitely until manually closed (future feature).
+- **Template compatibility**: POLL-framed callouts are **not templatable** in this iteration. When a space containing a POLL callout is serialized into a space template (via `InputCreatorService`), that callout is silently skipped with a debug log entry. The resulting template will not include the poll callout. This avoids a crash that would otherwise occur because the template serializer does not load `framing.poll` and the `createCalloutFraming` guard rejects `type = POLL` inputs with no `poll` field. Template support for POLL callouts is deferred to a future iteration.
 
 ## Clarifications
 

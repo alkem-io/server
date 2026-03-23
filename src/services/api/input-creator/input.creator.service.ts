@@ -1,3 +1,4 @@
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { LogContext } from '@common/enums/logging.context';
 import { validateAndConvertVisualTypeName } from '@common/enums/visual.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
@@ -40,8 +41,9 @@ import { CreateSpaceAboutInput, ISpaceAbout } from '@domain/space/space.about';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { CreateTemplateContentSpaceInput } from '@domain/template/template-content-space/dto/template.content.space.dto.create';
 import { TemplateContentSpace } from '@domain/template/template-content-space/template.content.space.entity';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 
 @Injectable()
@@ -51,7 +53,8 @@ export class InputCreatorService {
     private spaceLookupService: SpaceLookupService,
     private calloutService: CalloutService,
     @InjectEntityManager('default')
-    private entityManager: EntityManager
+    private entityManager: EntityManager,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   public async buildCreateCalloutInputsFromCallouts(
@@ -59,14 +62,17 @@ export class InputCreatorService {
   ): Promise<CreateCalloutInput[]> {
     const result: CreateCalloutInput[] = [];
     for (const callout of callouts) {
-      result.push(await this.buildCreateCalloutInputFromCallout(callout.id));
+      const input = await this.buildCreateCalloutInputFromCallout(callout.id);
+      if (input !== null) {
+        result.push(input);
+      }
     }
     return result;
   }
 
   public async buildCreateCalloutInputFromCallout(
     calloutID: string
-  ): Promise<CreateCalloutInput> {
+  ): Promise<CreateCalloutInput | null> {
     const callout = await this.calloutService.getCalloutOrFail(calloutID, {
       relations: {
         contributionDefaults: true,
@@ -114,6 +120,18 @@ export class InputCreatorService {
       );
     }
 
+    if (callout.framing.type === CalloutFramingType.POLL) {
+      this.logger.debug?.(
+        {
+          message:
+            'Skipping POLL callout during template serialization — poll framing is not templatable',
+          calloutId: calloutID,
+        },
+        LogContext.INPUT_CREATOR
+      );
+      return null;
+    }
+
     return {
       nameID: callout.nameID,
       classification: this.buildCreateClassificationInputFromClassification(
@@ -143,9 +161,10 @@ export class InputCreatorService {
 
     const calloutInputs: CreateCalloutInput[] = [];
     for (const callout of calloutsSet.callouts) {
-      calloutInputs.push(
-        await this.buildCreateCalloutInputFromCallout(callout.id)
-      );
+      const input = await this.buildCreateCalloutInputFromCallout(callout.id);
+      if (input !== null) {
+        calloutInputs.push(input);
+      }
     }
 
     const result: CreateCalloutsSetInput = {
