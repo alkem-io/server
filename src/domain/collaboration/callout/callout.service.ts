@@ -34,7 +34,12 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { cloneDeep, keyBy, merge } from 'lodash';
-import { FindManyOptions, FindOneOptions, Repository } from 'typeorm';
+import {
+  DeepPartial,
+  FindManyOptions,
+  FindOneOptions,
+  Repository,
+} from 'typeorm';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
@@ -78,7 +83,9 @@ export class CalloutService {
       calloutData.sortOrder = 10;
     }
 
-    const callout: ICallout = Callout.create(calloutData);
+    const callout: ICallout = Callout.create(
+      calloutData as DeepPartial<Callout>
+    );
     callout.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT
     );
@@ -170,6 +177,24 @@ export class CalloutService {
         LogContext.COLLABORATION
       );
     }
+
+    if (
+      calloutData.framing.type === CalloutFramingType.POLL &&
+      !calloutData.framing.poll
+    ) {
+      throw new ValidationException(
+        'Please provide a poll',
+        LogContext.COLLABORATION
+      );
+    } else if (
+      calloutData.framing.type !== CalloutFramingType.POLL &&
+      calloutData.framing.poll
+    ) {
+      throw new ValidationException(
+        'Poll framing can only be used with poll framing type',
+        LogContext.COLLABORATION
+      );
+    }
   }
 
   private async getStorageAggregator(
@@ -191,10 +216,9 @@ export class CalloutService {
 
     if (!callout)
       throw new EntityNotFoundException(
-        `No Callout found with the given id: ${calloutID}, using options: ${JSON.stringify(
-          options
-        )}`,
-        LogContext.COLLABORATION
+        'Callout not found',
+        LogContext.COLLABORATION,
+        { calloutID, options }
       );
     return callout;
   }
@@ -244,6 +268,7 @@ export class CalloutService {
           link: true,
           memo: true,
           mediaGallery: true,
+          poll: true,
         },
         classification: {
           tagsets: true,

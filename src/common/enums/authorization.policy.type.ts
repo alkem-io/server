@@ -53,6 +53,7 @@ export enum AuthorizationPolicyType {
   TEMPLATES_SET = 'templates-set',
   TEMPLATES_MANAGER = 'templates-manager',
   TEMPLATE_DEFAULT = 'template-default',
+  POLL = 'poll',
   CALENDAR = 'calendar',
   CALENDAR_EVENT = 'calendar-event',
   TIMELINE = 'timeline',

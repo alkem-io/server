@@ -49,6 +49,7 @@ export class UserAuthorizationService {
     userID: string
   ): Promise<IAuthorizationPolicy[]> {
     const user = await this.userLookupService.getUserByIdOrFail(userID, {
+      loadEagerRelations: false,
       relations: {
         authorization: true,
         profile: { authorization: true },
@@ -58,6 +59,31 @@ export class UserAuthorizationService {
         },
         settings: {
           authorization: true,
+        },
+      },
+      select: {
+        id: true,
+        authorization:
+          this.authorizationPolicyService.authorizationSelectOptions,
+        profile: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+        },
+        storageAggregator: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
+          directStorage: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+          },
+        },
+        settings: {
+          id: true,
+          authorization:
+            this.authorizationPolicyService.authorizationSelectOptions,
         },
       },
     });

@@ -1,4 +1,5 @@
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
+import { CalloutLookupModule } from '@domain/collaboration/callout/callout.lookup/callout.lookup.module';
 import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { Module } from '@nestjs/common';
@@ -26,6 +27,7 @@ import { NotificationVirtualContributorAdapter } from './notification.virtual.co
     NotificationExternalAdapterModule,
     NotificationInAppAdapterModule,
     SpaceLookupModule,
+    CalloutLookupModule,
   ],
   providers: [
     NotificationAdapter,

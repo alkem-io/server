@@ -14,6 +14,8 @@ export const MESSAGEID_LENGTH = 44;
 export const NAMEID_MAX_LENGTH_SCHEMA = 36;
 export const NAMEID_MAX_LENGTH = 25;
 export const NAMEID_MIN_LENGTH = 5;
+// polls
+export const POLL_OPTIONS_MAX_COUNT = 10;
 // others
 export const ENUM_LENGTH = 128;
 // https://www.rfc-editor.org/rfc/rfc1034#section-3.1

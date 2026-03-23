@@ -47,4 +47,31 @@ export abstract class IUserSettingsNotificationSpace {
     description: 'Receive a notification when a calendar event is created',
   })
   communityCalendarEvents!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description:
+      'Receive a notification when a vote is cast on a poll you created',
+  })
+  collaborationPollVoteCastOnOwnPoll!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description:
+      'Receive a notification when another user votes on a poll you already voted on',
+  })
+  collaborationPollVoteCastOnPollIVotedOn!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description: 'Receive a notification when a poll you voted on is modified',
+  })
+  collaborationPollModifiedOnPollIVotedOn!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description:
+      'Receive a notification when a poll option you voted for is changed or removed',
+  })
+  collaborationPollVoteAffectedByOptionChange!: IUserSettingsNotificationChannels;
 }

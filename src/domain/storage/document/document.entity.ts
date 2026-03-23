@@ -26,6 +26,7 @@ export class Document extends AuthorizableEntity implements IDocument {
   @Column('uuid', { nullable: true })
   createdBy?: string;
 
+  @Index('IDX_document_storageBucketId')
   @ManyToOne(
     () => StorageBucket,
     storage => storage.documents,
