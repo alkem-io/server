@@ -18,6 +18,10 @@ import {
   NotificationEventPayloadSpaceCommunityInvitation,
   NotificationEventPayloadSpaceCommunityInvitationPlatform,
   NotificationEventPayloadSpaceCommunityInvitationVirtualContributor,
+  NotificationEventPayloadSpacePollModifiedOnPollIVotedOn,
+  NotificationEventPayloadSpacePollVoteAffectedByOptionChange,
+  NotificationEventPayloadSpacePollVoteCastOnOwnPoll,
+  NotificationEventPayloadSpacePollVoteCastOnPollIVotedOn,
   NotificationEventPayloadUserMessageDirect,
   NotificationEventPayloadUserMessageRoom,
   NotificationEventPayloadUserMessageRoomReply,
@@ -37,12 +41,17 @@ import { IActor } from '@domain/actor/actor/actor.interface';
 import { getActorType } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { IPoll } from '@domain/collaboration/poll/poll.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
+import {
+  calculateCalendarEventEndDate,
+  toIsoString,
+} from '@domain/timeline/event/calendar.event.calendar-links';
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config/dist/config.service';
@@ -551,7 +560,6 @@ export class NotificationExternalAdapter {
         description: calendarEvent.profile?.description ?? undefined,
         googleCalendarUrl: '',
         outlookCalendarUrl: '',
-        appleCalendarUrl: '',
         icsDownloadUrl: '',
       },
     };
@@ -572,6 +580,11 @@ export class NotificationExternalAdapter {
       space
     );
 
+    // Load the user who created the calendar event
+    const createdByUser = await this.getUserPayloadOrFail(
+      calendarEvent.createdBy
+    );
+
     const commenter = await this.getUserPayloadOrFail(comment.sender);
     const commentPreview = comment.message.substring(0, 200);
 
@@ -582,13 +595,58 @@ export class NotificationExternalAdapter {
     return {
       ...spacePayload,
       calendarEvent: {
-        id: calendarEvent.id,
+        ...calendarEvent,
         title: calendarEvent.profile.displayName,
         url: calendarEventUrl,
+        startDate: toIsoString(calendarEvent.startDate, 'startDate'),
+        endDate: toIsoString(
+          calculateCalendarEventEndDate(calendarEvent).toISOString(),
+          'endDate'
+        ),
+        createdBy: createdByUser,
+        googleCalendarUrl: calendarEvent.googleCalendarUrl ?? '',
+        outlookCalendarUrl: calendarEvent.outlookCalendarUrl ?? '',
+        icsDownloadUrl: calendarEvent.icsDownloadUrl ?? '',
       },
       comment: {
         text: commentPreview,
         sender: commenter,
+      },
+    };
+  }
+
+  async buildSpaceCollaborationPollPayload(
+    eventType: NotificationEvent,
+    triggeredBy: string,
+    recipients: IUser[],
+    space: ISpace,
+    callout: ICallout,
+    poll: { id: string; title: string } | undefined
+  ): Promise<
+    | NotificationEventPayloadSpacePollVoteCastOnOwnPoll
+    | NotificationEventPayloadSpacePollVoteCastOnPollIVotedOn
+    | NotificationEventPayloadSpacePollModifiedOnPollIVotedOn
+    | NotificationEventPayloadSpacePollVoteAffectedByOptionChange
+  > {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      triggeredBy,
+      recipients,
+      space
+    );
+
+    const calloutURL = await this.urlGeneratorService.getCalloutUrlPath(
+      callout.id
+    );
+
+    return {
+      ...spacePayload,
+      poll: {
+        id: poll?.id ?? '',
+        title: poll?.title ?? '',
+        calloutId: callout.id,
+        calloutTitle: callout.framing.profile.displayName,
+        calloutUrl: calloutURL,
       },
     };
   }
@@ -974,7 +1032,7 @@ export class NotificationExternalAdapter {
         relations: {
           profile: true,
         },
-      } as any
+      }
     );
 
     if (!contributor || !contributor.profile) {
@@ -1008,7 +1066,7 @@ export class NotificationExternalAdapter {
         relations: {
           profile: true,
         },
-      } as any
+      }
     );
 
     if (!contributor || !contributor.profile) {

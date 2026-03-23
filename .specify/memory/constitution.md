@@ -43,7 +43,9 @@ Exception messages are immutable identifiers: never interpolate dynamic data dir
 
 ### 6. Code Quality with Pragmatic Testing
 
-Tests exist to defend domain invariants and observable behaviors that matter. Use a risk-based approach: add unit or integration tests when they deliver real signal, skip trivial pass-through coverage, and call out deliberate omissions in the PR when automation is unnecessary. Snapshot or superficial tests are discouraged unless asserting schema output. 100% coverage is NOT required; tests MUST stay maintainable and purposeful. Placeholder or “future we’ll fix it” tests are forbidden.
+Tests exist to defend domain invariants and observable behaviors that matter. Use a risk-based approach: add unit or integration tests when they deliver real signal, skip trivial pass-through coverage, and call out deliberate omissions in the PR when automation is unnecessary. Snapshot or superficial tests are discouraged unless asserting schema output. 100% coverage is NOT required; tests MUST stay maintainable and purposeful. Placeholder or "future we'll fix it" tests are forbidden.
+
+See [`test-generation-guidelines.md`](test-generation-guidelines.md) for the concrete Vitest patterns, mocking infrastructure, and layer-specific testing strategy used in this project.
 
 ### 7. API Consistency & Evolution Discipline
 

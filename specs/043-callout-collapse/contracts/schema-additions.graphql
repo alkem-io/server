@@ -1,0 +1,68 @@
+# GraphQL Schema Additions for 043-callout-collapse
+# These are ADDITIVE changes only — no breaking modifications.
+
+# --- New Enum ---
+
+enum CalloutDescriptionDisplayMode {
+  COLLAPSED
+  EXPANDED
+}
+
+# --- New Type ---
+
+type SpaceSettingsLayout {
+  """The default display mode for callout descriptions in this Space."""
+  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode!
+}
+
+# --- Modified Type: SpaceSettings (add layout field) ---
+# Existing fields unchanged; only the new field shown.
+
+# type SpaceSettings {
+#   privacy: SpaceSettingsPrivacy!          # unchanged
+#   membership: SpaceSettingsMembership!    # unchanged
+#   collaboration: SpaceSettingsCollaboration!  # unchanged
+#   sortMode: SpaceSortMode!               # unchanged
+#   layout: SpaceSettingsLayout!            # NEW
+# }
+
+# --- Modified Type: Space (add layout field resolver) ---
+# Public field accessible without READ privilege (matches sortMode pattern).
+
+# type Space {
+#   layout: SpaceSettingsLayout!            # NEW - public field resolver
+#   ... existing fields unchanged ...
+# }
+
+# --- New Input Types ---
+
+input CreateSpaceSettingsLayoutInput {
+  """The default display mode for callout descriptions."""
+  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode
+}
+
+input UpdateSpaceSettingsLayoutInput {
+  """The default display mode for callout descriptions."""
+  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode
+}
+
+# --- Modified Input: UpdateSpaceSettingsEntityInput (add layout field) ---
+# Existing fields unchanged; only the new field shown.
+
+# input UpdateSpaceSettingsEntityInput {
+#   privacy: UpdateSpaceSettingsPrivacyInput    # unchanged
+#   membership: UpdateSpaceSettingsMembershipInput  # unchanged
+#   collaboration: UpdateSpaceSettingsCollaborationInput  # unchanged
+#   sortMode: SpaceSortMode                     # unchanged
+#   layout: UpdateSpaceSettingsLayoutInput       # NEW
+# }
+
+# --- Modified Input: CreateSpaceSettingsInput (add layout field) ---
+
+# input CreateSpaceSettingsInput {
+#   privacy: CreateSpaceSettingsPrivacyInput    # unchanged
+#   membership: CreateSpaceSettingsMembershipInput  # unchanged
+#   collaboration: CreateSpaceSettingsCollaborationInput  # unchanged
+#   sortMode: SpaceSortMode                     # unchanged
+#   layout: CreateSpaceSettingsLayoutInput       # NEW
+# }

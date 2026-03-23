@@ -57,6 +57,22 @@ export const userSettingsData: { userSettings: IUserSettings } = {
           email: true,
           inApp: true,
         },
+        collaborationPollVoteCastOnOwnPoll: {
+          email: false,
+          inApp: true,
+        },
+        collaborationPollVoteCastOnPollIVotedOn: {
+          email: false,
+          inApp: true,
+        },
+        collaborationPollModifiedOnPollIVotedOn: {
+          email: false,
+          inApp: true,
+        },
+        collaborationPollVoteAffectedByOptionChange: {
+          email: false,
+          inApp: true,
+        },
       },
       platform: {
         admin: {

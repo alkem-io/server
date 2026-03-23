@@ -300,6 +300,51 @@ export class ContributionReporterService {
     );
   }
 
+  public pollVoteContribution(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.POLL_VOTE_CONTRIBUTION,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
+  public pollResponseAddedContribution(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.POLL_RESPONSE_ADDED_CONTRIBUTION,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
+  public calloutPollCreated(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.CALLOUT_POLL_CREATED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
   private async getAuthorDetails(
     actorContext: ContributionActorContext
   ): Promise<ContributionAuthorDetails> {
