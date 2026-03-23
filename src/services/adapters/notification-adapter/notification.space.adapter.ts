@@ -1282,6 +1282,25 @@ export class NotificationSpaceAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      r => r.id !== dto.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const pollTitle =
+        callout.framing?.poll?.title ?? 'a poll';
+      const spaceName = space.about?.profile?.displayName ?? 'your space';
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: `Poll activity: ${pollTitle}`,
+          body: `New activity on a poll in ${spaceName}`,
+          url: await this.urlGeneratorService.getCalloutUrlPath(dto.calloutID),
+        }
+      );
+    }
   }
 
   private async getNotificationRecipientsSpace(
