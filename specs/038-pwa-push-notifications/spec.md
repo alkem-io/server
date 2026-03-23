@@ -161,7 +161,7 @@ A user who accesses Alkemio from multiple devices (e.g., phone and laptop) recei
 - Q: Where should the push notification server-side logic live? → A: New NestJS module within the existing server — co-located with existing event consumers, notification adapters, and user settings entity.
 - Q: Should push channel default to mirroring inApp preferences or start disabled? → A: Mirror `inApp` — push categories default to whatever the user's current in-app notification settings are.
 - Q: How should VAPID keys be managed? → A: Environment variables — stored in `.env` / K8s secrets, loaded via NestJS `ConfigService`.
-- Q: Which event categories should trigger push notifications in the P1 release? → A: All 30 event types — full parity with in-app notifications from day one.
+- Q: Which event categories should trigger push notifications in the P1 release? → A: All 34 event types (including 4 poll notification events) — full parity with in-app notifications from day one.
 - Q: Does this feature spec cover only the server-side push infrastructure, or also the React web-client changes? → A: Server-primary with client contract — server-side implementation plus a documented client integration contract (API shapes, service worker events) but no client code.
 - Q: When a user account is deleted, should all their push subscriptions be immediately purged? → A: Cascade delete — all push subscriptions are immediately and permanently removed when the user account is deleted.
 - Q: Should push notification content be localized to the user's preferred language? → A: Deferred — deliver in English for P1; add localization support in a follow-up iteration.

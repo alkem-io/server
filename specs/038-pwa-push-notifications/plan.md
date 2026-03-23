@@ -17,7 +17,7 @@ Add server-side push notification infrastructure to the Alkemio platform using W
 **Project Type**: Single NestJS monolith
 **Performance Goals**: Deliver push notifications within 30 seconds of event trigger (SC-001); handle 10,000 concurrent subscriptions (SC-006)
 **Constraints**: Max 10 subscriptions per user (FR-008); max 10 notifications/min/user throttle (FR-010); no automatic retry — failed deliveries are dropped (NFR-003)
-**Scale/Scope**: 30 existing notification events, estimated ~600 LOC new code across 20–25 files
+**Scale/Scope**: 34 notification events (30 original + 4 poll events from develop merge), estimated ~600 LOC new code across 20–25 files
 
 ## Constitution Check
 
@@ -86,8 +86,9 @@ src/
 │   (alkemio.yml additions for VAPID config)
 │
 └── migrations/
-    ├── XXXXXX-CreatePushSubscriptionTable.ts
-    └── XXXXXX-AddPushFieldToNotificationSettings.ts
+    ├── 1772396107069-CreatePushSubscriptionTable.ts
+    ├── 1772396107070-AddPushFieldToNotificationSettings.ts
+    └── 1774254508094-AddPushFieldToPollNotificationSettings.ts
 ```
 
 **Structure Decision**: Follows existing layered architecture. Push subscription is a new domain aggregate under `src/domain/push-subscription/`. Push delivery adapter mirrors the existing `notification-in-app-adapter/` pattern under `src/services/adapters/`. Throttling is co-located with the push adapter since it's push-specific.
@@ -129,7 +130,7 @@ NotificationRecipientsService.getRecipients()
 
 ### Push Notification Content Strategy
 
-Push notifications use a simple `{title, body, url}` payload. Content is constructed per event type in the domain notification adapters (T031 call sites):
+Push notifications use a simple `{title, body, url}` payload. Content is constructed per event type in the domain notification adapters (T031 — 30 call sites across 5 adapters):
 
 - **title**: Short, action-oriented summary (e.g., "New comment on {spaceName}", "You were mentioned"). Derived from the event type and entity names already loaded in each handler.
 - **body**: One-line preview text. Reuse the same summary text that external notification adapters construct for email subjects, truncated to 200 characters.
@@ -172,14 +173,14 @@ PushDeliveryService.handlePushMessage()
 | `NotificationRecipientsService.getChannelsSettingsForEvent()` | Reads `.email`, `.inApp` | Read `.push` for push recipients |
 | `NotificationRecipientResult` | `emailRecipients`, `inAppRecipients` | Add `pushRecipients` |
 | `NotificationAdapterModule` | Imports InApp + External adapter modules | Import `NotificationPushAdapterModule` |
-| Domain notification adapters (Space, User, Platform, Org, VC) | Call `sendInAppNotifications()` + `sendExternalNotifications()` | Add `sendPushNotifications()` calls |
+| Domain notification adapters (Space, User, Platform, Org, VC) | Call `sendInAppNotifications()` + `sendExternalNotifications()` | Add `sendPushNotifications()` calls — 30 total call sites (13 Space incl. polls, 7 User, 6 Platform, 3 Org, 1 VC) |
 | `UserService.getDefaultUserSettings()` | Sets `{email, inApp}` per category | Add `push` mirroring `inApp` value |
 | `alkemio.yml` | `notifications:` section | Add `notifications.push:` with VAPID config |
 | `LogContext` enum | Existing contexts | Add `PUSH_NOTIFICATION` |
 | `MessagingQueue` enum | Existing queues | Add `PUSH_NOTIFICATIONS` queue |
 | `UserService.deleteUser()` | Cascade deletes settings | Push subscriptions cascade-deleted via FK |
 | `getChannelsSettingsForEvent()` hardcoded returns | `{email, inApp}` literals for `USER_SIGN_UP_WELCOME` and `SPACE_COMMUNITY_INVITATION_USER_PLATFORM` | Add `push` field to both literal objects |
-| `main.ts` | RMQ microservice connections | **No** `connectMicroservice` for push — uses `@RabbitSubscribe` in `PushDeliveryService` instead. A NestJS Transport.RMQ consumer would compete with the golevelup handler and silently drop messages. |
+| `main.ts` (line ~106-112) | RMQ microservice connections | **No** `connectMicroservice` for push — uses `@RabbitSubscribe` in `PushDeliveryService` instead. A NestJS Transport.RMQ consumer would compete with the golevelup handler and silently drop messages. Documented with comment in main.ts. |
 
 ## Complexity Tracking
 

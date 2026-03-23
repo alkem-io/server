@@ -178,8 +178,7 @@ After starting the server, verify the push notification queues exist:
 
 1. Open RabbitMQ Management UI: `http://localhost:15672` (guest/guest)
 2. Check for queues:
-   - `alkemio-push-notifications` — main push delivery queue
-   - `alkemio-push-notifications-retry-*` — retry tier queues (created on first retry)
+   - `alkemio-push-notifications` — push delivery queue (fire-and-forget, no retry queues)
 
 ## Configuration Reference
 
@@ -191,5 +190,5 @@ After starting the server, verify the push notification queues exist:
 | `VAPID_SUBJECT` | `mailto:notifications@alkem.io` | VAPID subject (mailto: or https: URL) |
 | `PUSH_MAX_SUBSCRIPTIONS_PER_USER` | `10` | Max active subscriptions per user |
 | `PUSH_THROTTLE_MAX_PER_MINUTE` | `10` | Max push notifications per user per minute |
-| `PUSH_RETRY_MAX_ATTEMPTS` | `5` | Max delivery retry attempts |
+| `PUSH_RETRY_MAX_ATTEMPTS` | `5` | Max delivery retry attempts (messages are acked and dropped on failure; this is a safeguard counter, not an active retry mechanism) |
 | `PUSH_CLEANUP_STALE_DAYS` | `30` | Days after which inactive subscriptions are cleaned |

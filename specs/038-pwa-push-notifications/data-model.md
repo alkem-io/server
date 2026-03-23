@@ -93,12 +93,13 @@ export class PushSubscription extends BaseAlkemioEntity {
 }
 ```
 
-This interface is the leaf node used at every notification event category in the user settings JSONB structure. Adding `push` extends all ~20 leaf nodes simultaneously because they all share this type.
+This interface is the leaf node used at every notification event category in the user settings JSONB structure. Adding `push` extends all ~24 leaf nodes simultaneously because they all share this type (20 original + 4 poll notification categories added by develop merge).
 
 **Migration Strategy**:
 - PostgreSQL JSONB handles missing keys gracefully — existing rows with `{email, inApp}` won't break
-- Data migration uses `jsonb_set` to add `push` field to every leaf node, mirroring the `inApp` value
-- New user defaults in `getDefaultUserSettings()` include `push` mirroring `inApp`
+- Data migration `1772396107070-AddPushFieldToNotificationSettings` uses `jsonb_set` to add `push` field to all original leaf nodes, mirroring the `inApp` value
+- Data migration `1774254508094-AddPushFieldToPollNotificationSettings` backfills `push` field on the 4 poll notification leaf nodes introduced by the `CommunityPolls` migration (which only set `{email, inApp}`)
+- New user defaults in `getDefaultUserSettings()` include `push` mirroring `inApp` for all categories (poll notifications default to `push: false`)
 
 ### NotificationRecipientResult (DTO, no table)
 

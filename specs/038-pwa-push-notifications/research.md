@@ -62,21 +62,22 @@
 - **Separate push preferences table**: Unnecessary duplication of the event-type-to-preference mapping. The existing JSONB structure is purpose-built for this.
 - **Push-specific preference hierarchy**: Over-engineering. The spec says push mirrors the same categories as email/inApp.
 
-## Decision 5: Retry Mechanism
+## Decision 5: Error Handling (Fire-and-Forget)
 
-**Decision**: RabbitMQ dead-letter exchange (DLX) with TTL-based delayed requeue.
+**Decision**: Acknowledge and drop on failure. No automatic retry.
 
 **Rationale**:
-- Existing RabbitMQ infrastructure supports DLX natively.
-- TTL per retry tier (1m, 5m, 30m, 2h, 12h) achieved by routing to tier-specific queues with message TTL, dead-lettering back to the main push queue.
-- No additional dependencies (no separate job scheduler, no database polling).
-- Retry count tracked in message headers — after 5 retries, message is acknowledged and logged as abandoned.
-- Aligns with existing pattern: the codebase uses `@golevelup/nestjs-rabbitmq` with `Nack` for message acknowledgment.
+- The original plan specified DLX-based retry queues with escalating TTL intervals. During implementation, a simpler fire-and-forget approach was chosen to avoid the operational complexity of dead-letter exchanges and TTL queue management.
+- On successful delivery: mark subscription active, ack message.
+- On 410 Gone: mark subscription expired, ack message.
+- On 4xx client error: mark subscription expired, ack message.
+- On transient error: log failure, ack and drop message. The next platform event will reattempt delivery naturally.
+- Push notifications are best-effort — the user also receives in-app and email notifications through parallel channels.
 
 **Alternatives Considered**:
-- **Database-backed job queue (e.g., Bull/BullMQ via Redis)**: Adds new dependency. Existing RabbitMQ already provides durable queuing with retry semantics. Rejected per Principle 10.
-- **In-process setTimeout retries**: Not durable across server restarts. Would lose pending retries on deploy.
-- **Cron-based retry polling**: Adds latency, requires DB table for pending notifications (contradicts spec: notifications are ephemeral).
+- **RabbitMQ DLX with TTL-based delayed requeue**: Originally planned but rejected during implementation. Without a DLX configured on the queue, `Nack` causes immediate redelivery which saturates the CPU. The complexity of setting up tiered retry queues was not justified by the benefit.
+- **Database-backed job queue (e.g., Bull/BullMQ via Redis)**: Adds new dependency. Rejected per Principle 10.
+- **In-process setTimeout retries**: Not durable across server restarts.
 
 ## Decision 6: Throttling Mechanism
 
