@@ -1,0 +1,563 @@
+"""
+Community Polls & Voting — GraphQL Contract
+Branch: 038-community-polls | Date: 2026-03-02
+
+This file defines the NEW types, enums, mutations, and input extensions
+introduced by the Community Polls feature. It is NOT a standalone schema —
+it extends the existing Alkemio schema.
+
+Existing types affected:
+  - CalloutFraming (new optional `poll` field)
+  - CalloutFramingType enum (new POLL value)
+  - CreateCalloutFramingInput (new optional `poll` field, same pattern as whiteboard/link/memo)
+  - Mutation root (poll management mutations — NOT poll creation, which goes through createCallout)
+"""
+
+# ─────────────────────────────────────────────────────────────────────────────
+# ENUMS
+# ─────────────────────────────────────────────────────────────────────────────
+
+"""Lifecycle status of a Poll. Only OPEN is enforced in this iteration; CLOSED is reserved for future use."""
+enum PollStatus {
+  OPEN
+  CLOSED
+}
+
+"""Controls when poll results become visible to voters."""
+enum PollResultsVisibility {
+  """Results hidden until the viewer has cast their own vote."""
+  HIDDEN
+  """Only the total vote count is shown before voting; details (depending on PollResultsDetail) available after voting."""
+  TOTAL_ONLY
+  """Full results always visible regardless of whether the viewer has voted (default)."""
+  VISIBLE
+}
+
+"""Controls the level of detail shown in poll results."""
+enum PollResultsDetail {
+  """Only percentage per option; no vote counts or voter identities."""
+  PERCENTAGE
+  """Vote count per option; no voter identities."""
+  COUNT
+  """Counts and voter list per option — fully transparent (default)."""
+  FULL
+}
+
+# Extension to existing enum — adds POLL alongside WHITEBOARD, LINK, MEMO, MEDIA_GALLERY
+extend enum CalloutFramingType {
+  POLL
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# TYPES
+# ─────────────────────────────────────────────────────────────────────────────
+
+"""
+Configuration settings for a Poll.
+All settings are immutable after the poll is created.
+"""
+type PollSettings {
+  """
+  Minimum number of options a voter must select per submission.
+  Always ≥ 1. Example: 1 for both single-choice and open multi-choice polls.
+  Immutable after poll creation.
+  """
+  minResponses: Int!
+
+  """
+  Maximum number of options a voter may select per submission.
+  0 means unlimited. Must be ≥ minResponses when > 0.
+  Examples: 1 = single-choice, 0 = unlimited multi-choice, 3 = choose up to 3.
+  Immutable after poll creation.
+  """
+  maxResponses: Int!
+
+  """
+  Controls when results become visible to voters.
+  HIDDEN: results hidden until the viewer has voted.
+  TOTAL_ONLY: only total vote count shown before voting.
+  VISIBLE: full results always visible (default).
+  Immutable after poll creation.
+  """
+  resultsVisibility: PollResultsVisibility!
+
+  """
+  Controls the level of detail shown in poll results.
+  PERCENTAGE: only percentage per option (no counts or voter identities).
+  COUNT: vote count per option (no voter identities).
+  FULL: counts + voter list per option (default).
+  Immutable after poll creation.
+  """
+  resultsDetail: PollResultsDetail!
+
+  """
+  Whether users with CONTRIBUTE privilege can add new options to the poll.
+  When true, any user who can vote can also add options via addPollOption.
+  Editing, removing, and reordering options remain restricted to UPDATE privilege.
+  Immutable after poll creation.
+  """
+  allowContributorsAddOptions: Boolean!
+}
+
+"""
+A Poll attached to a Callout Framing.
+The Callout's Framing profile (description/question) serves as the poll prompt.
+Created together with the Callout via the standard createCallout mutation
+by setting framing.type = POLL and providing framing.poll.
+"""
+type Poll implements IAuthorizable {
+  """The unique identifier of the Poll."""
+  id: UUID!
+
+  createdDate: DateTime!
+  updatedDate: DateTime!
+
+  """Authorization policy for this poll (view, contribute, update)."""
+  authorization: IAuthorizationPolicy
+
+  """The poll title (maximum length 512 characters)."""
+  title: String!
+
+  """
+  Current lifecycle status of this poll.
+  Always OPEN in this iteration; CLOSED reserved for future use.
+  """
+  status: PollStatus!
+
+  """
+  Configuration settings for this poll (immutable after creation).
+  """
+  settings: PollSettings!
+
+  """
+  [Future] Date/time after which the poll automatically closes.
+  Always null in this iteration; reserved for future enablement.
+  """
+  deadline: DateTime
+
+  """
+  Total number of votes cast on this poll.
+  Null when settings.resultsVisibility = HIDDEN and the current user has not voted.
+  When settings.resultsVisibility = TOTAL_ONLY and user has not voted, this is the only
+  results data available.
+  """
+  totalVotes: Int
+
+  """
+  Whether the current user can see detailed results.
+  True when the visibility gate is passed (user has voted, or settings.resultsVisibility = VISIBLE).
+  Clients can use this as a simple boolean to decide whether to render results UI.
+  """
+  canSeeDetailedResults: Boolean!
+
+  """
+  The selectable options for this poll, always ordered by sortOrder ascending.
+  """
+  options: [PollOption!]!
+
+  """
+  The current user's vote on this poll, or null if the current user has not voted.
+  Allows the client to highlight the user's current selections.
+  """
+  myVote: PollVote
+}
+
+"""A single selectable option within a Poll."""
+type PollOption {
+  id: UUID!
+  createdDate: DateTime!
+  updatedDate: DateTime!
+
+  """The display text of this option."""
+  text: String!
+
+  """Position of this option in the configured option order."""
+  sortOrder: Int!
+
+  """
+  Number of votes this option has received.
+  Null when results are hidden (settings.resultsVisibility gate not passed) or settings.resultsDetail = PERCENTAGE.
+  """
+  voteCount: Int
+
+  """
+  Percentage of total votes this option has received (0–100).
+  Null when results are hidden or settings.resultsDetail = COUNT.
+  Null when totalVotes = 0 (division by zero).
+  """
+  votePercentage: Float
+
+  """
+  List of space members who voted for this option.
+  Null when results are hidden or settings.resultsDetail is not FULL.
+  """
+  voters: [User!]
+}
+
+"""
+The current user's vote on a specific poll.
+Contains the full list of selected options, supporting both single and multi-select polls.
+"""
+type PollVote {
+  id: UUID!
+  createdDate: DateTime!
+  updatedDate: DateTime!
+
+  """ID of the user who cast this vote."""
+  createdBy: UUID!
+
+  """The options selected in this vote."""
+  selectedOptions: [PollOption!]!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# EXISTING TYPE EXTENSIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+"""
+Extension to the existing CalloutFraming type.
+Adds an optional poll attached to this framing.
+"""
+extend type CalloutFraming {
+  """
+  The Poll attached to this Callout Framing, if any.
+  Present when framing.type = POLL.
+  The Callout's framing profile description/question serves as the poll prompt.
+  """
+  poll: Poll
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INPUTS — CREATION
+# ─────────────────────────────────────────────────────────────────────────────
+
+"""
+Input for Poll configuration settings during creation.
+All settings are immutable after the poll is created.
+"""
+input PollSettingsInput {
+  """
+  Minimum number of options a voter must select. Must be ≥ 1.
+  Optional; defaults to 1. Typical values: 1 (single-choice or open multi-choice).
+  """
+  minResponses: Int
+
+  """
+  Maximum number of options a voter may select. Must be ≥ 0.
+  Optional; defaults to 1. Use 0 for unlimited. Must be ≥ minResponses when > 0.
+  Typical values: 1 (single-choice), 0 (unlimited multi-choice).
+  """
+  maxResponses: Int
+
+  """
+  Controls when results become visible to voters.
+  Optional; defaults to VISIBLE.
+  """
+  resultsVisibility: PollResultsVisibility
+
+  """
+  Controls the level of detail shown in poll results.
+  Optional; defaults to FULL.
+  """
+  resultsDetail: PollResultsDetail
+
+  """
+  Whether users with CONTRIBUTE privilege can add new options to the poll.
+  Optional; defaults to false.
+  """
+  allowContributorsAddOptions: Boolean
+}
+
+"""
+Input for the initial poll data when creating a Callout.
+Used inside CreateCalloutFramingInput.poll (same pattern as whiteboard/link/memo).
+Required when framing.type = POLL.
+"""
+input CreatePollInput {
+  """
+  Poll title.
+  Optional. Maximum length 512 characters. Becomes an empty string if not provided.
+  """
+  title: String
+
+  """
+  Poll configuration settings (all immutable after creation).
+  Optional; uses defaults for any unspecified settings.
+  """
+  settings: PollSettingsInput
+
+  """
+  Initial options for the poll. Minimum 2 options required.
+  Options appear in the order provided; sortOrder is assigned automatically.
+  Each option text must not be empty and has a maximum length of 512 characters.
+  """
+  options: [String!]!
+}
+
+"""
+Extension to existing CreateCalloutFramingInput — adds optional poll field.
+When framing.type = POLL, this field is required; otherwise it is ignored.
+"""
+extend input CreateCalloutFramingInput {
+  """
+  Poll definition to attach to this Callout Framing.
+  Required when type = POLL. Ignored for all other framing types.
+  """
+  poll: CreatePollInput
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INPUTS — OPTION MANAGEMENT
+# ─────────────────────────────────────────────────────────────────────────────
+
+"""Input for adding a new option to an existing Poll."""
+input AddPollOptionInput {
+  """The ID of the Poll to add the option to."""
+  pollID: UUID!
+
+  """Text of the new option. Must not be empty. Maximum length 512 characters."""
+  text: String!
+}
+
+"""Input for updating an existing Poll option's text."""
+input UpdatePollOptionInput {
+  """The ID of the Poll that owns the option."""
+  pollID: UUID!
+
+  """The ID of the PollOption to update."""
+  optionID: UUID!
+
+  """The new display text for this option. Must not be empty. Maximum length 512 characters."""
+  text: String!
+}
+
+"""Input for reordering all options in a Poll."""
+input ReorderPollOptionsInput {
+  """The ID of the Poll whose options will be reordered."""
+  pollID: UUID!
+
+  """
+  All option IDs for this poll in the desired new order.
+  Must contain exactly the same set of option IDs as the poll currently has.
+  """
+  optionIDs: [UUID!]!
+}
+
+"""Input for removing an option from an existing Poll."""
+input RemovePollOptionInput {
+  """The ID of the Poll that owns the option."""
+  pollID: UUID!
+
+  """The ID of the PollOption to remove."""
+  optionID: UUID!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# INPUTS — VOTING
+# ─────────────────────────────────────────────────────────────────────────────
+
+"""Input for casting or updating a vote on a Poll."""
+input CastPollVoteInput {
+  """The ID of the Poll to vote on."""
+  pollID: UUID!
+
+  """
+  The complete set of selected PollOption IDs.
+  When updating an existing vote, the entire selection set must be provided—
+  partial modifications (adding/removing individual options) are not supported.
+  Count must be ≥ poll.minResponses and ≤ poll.maxResponses (0 = unlimited).
+  All IDs must belong to the specified poll.
+  """
+  selectedOptionIDs: [UUID!]!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# MUTATIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+"""
+NOTE: Poll CREATION is NOT a separate mutation.
+A poll is created as part of the standard createCallout mutation by setting:
+  - framing.type = POLL
+  - framing.poll = { settings: { minResponses: 1, maxResponses: 1 }, options: ["Option A", "Option B"] }
+The `settings` field is optional (defaults apply). `title` is optional. `options` (min 2) is required.
+This follows the same pattern as WHITEBOARD, LINK, and MEMO framing types.
+"""
+
+extend type Mutation {
+  """
+  Add a new selectable option to an existing Poll.
+  Requires UPDATE privilege on the parent Callout.
+  The new option is appended after all existing options.
+  Returns the updated Poll.
+  """
+  addPollOption(optionData: AddPollOptionInput!): Poll!
+
+  """
+  Update the display text of a Poll option.
+  Requires UPDATE privilege on the parent Callout.
+  Votes registered for this option will be deleted, and each affected voter receives a notification stating their vote has been removed and inviting them to re-vote.
+  Returns the updated Poll.
+  """
+  updatePollOption(optionData: UpdatePollOptionInput!): Poll!
+
+  """
+  Remove a Poll option.
+  Requires UPDATE privilege on the parent Callout.
+  All votes containing the removed option are deleted entirely,
+  and each affected voter receives a notification stating their vote has been removed and inviting them to re-vote.
+  Returns the updated Poll.
+  """
+  removePollOption(optionData: RemovePollOptionInput!): Poll!
+
+  """
+  Reorder the options of a Poll.
+  Requires UPDATE privilege on the parent Callout.
+  The optionIDs list must contain exactly the same option IDs currently in the poll.
+  Reordering does not affect vote counts or results ranking.
+  Returns the updated Poll.
+  """
+  reorderPollOptions(optionData: ReorderPollOptionsInput!): Poll!
+
+  """
+  Cast or update a vote on a Poll.
+  Requires CONTRIBUTE privilege on the Poll (space member).
+  If the calling user has already voted, their vote is REPLACED ENTIRELY with the new selection set—
+  partial modifications (adding/removing individual options) are not supported.
+  The complete set of selectedOptionIDs must be within [poll.minResponses, poll.maxResponses] (0 = unlimited).
+  Returns the updated Poll including the caller's updated vote and new option counts.
+  """
+  castPollVote(voteData: CastPollVoteInput!): Poll!
+
+  """
+  Remove the current user's vote from a Poll.
+  Requires CONTRIBUTE privilege on the Poll (space member).
+  If the user has not voted on the poll, the mutation returns a validation error.
+  Vote removal clears the user's myVote status and decrements vote counts for all formerly selected options.
+  No notifications are sent (vote removal is silent — unlike vote cast/update which trigger FR-020a/b notifications).
+  The user returns to the unvoted state and can cast a new vote immediately.
+  Returns the updated Poll with vote counts and myVote reflecting the removal.
+  """
+  removePollVote(pollID: UUID!): Poll!
+
+  """
+  Change the status of a Poll (OPEN ↔ CLOSED).
+  Requires UPDATE privilege on the parent Callout.
+  When a poll is CLOSED, all state-mutating operations (voting, vote removal, option management) are rejected.
+  Reopening (CLOSED → OPEN) restores full functionality. All votes and options are preserved across status changes.
+  Idempotent: setting a poll to its current status succeeds without error.
+  Returns the updated Poll.
+  """
+  updatePollStatus(statusData: UpdatePollStatusInput!): Poll!
+}
+
+"""
+Input for changing a Poll's status between OPEN and CLOSED.
+"""
+input UpdatePollStatusInput {
+  """The ID of the Poll to update."""
+  pollID: UUID!
+
+  """The new status for the poll."""
+  status: PollStatus!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# SUBSCRIPTIONS
+# ─────────────────────────────────────────────────────────────────────────────
+
+"""
+The type of event that occurred on a poll.
+"""
+enum PollEventType {
+  """A vote was cast or updated on the poll."""
+  POLL_VOTE_UPDATED
+  """Options were added, removed, updated, or reordered on the poll."""
+  POLL_OPTIONS_CHANGED
+}
+
+"""
+Subscription result for vote updates on a poll.
+Returned by the pollVoteUpdated subscription.
+`eventID` is present in the internal PubSub payload for traceability and is not exposed in this GraphQL result type.
+"""
+type PollVoteUpdatedSubscriptionResult {
+  """The type of poll event."""
+  pollEventType: PollEventType!
+  """The updated Poll. Fields are filtered per subscriber's visibility context."""
+  poll: Poll!
+}
+
+"""
+Subscription result for option changes on a poll.
+Returned by the pollOptionsChanged subscription.
+`eventID` is present in the internal PubSub payload for traceability and is not exposed in this GraphQL result type.
+"""
+type PollOptionsChangedSubscriptionResult {
+  """The type of poll event."""
+  pollEventType: PollEventType!
+  """The updated Poll. Fields are filtered per subscriber's visibility context."""
+  poll: Poll!
+}
+
+extend type Subscription {
+  """
+  Subscribe to vote changes on a specific Poll.
+  Fires when a user casts, updates, or (indirectly via option change) loses a vote.
+  When resultsVisibility = HIDDEN and the subscriber has not voted, vote events are
+  suppressed entirely (the subscriber receives nothing).
+  The returned Poll is filtered per subscriber context: field resolvers apply the
+  visibility/detail matrix so each subscriber sees only what they are entitled to.
+  """
+  pollVoteUpdated(pollID: UUID!): PollVoteUpdatedSubscriptionResult!
+
+  """
+  Subscribe to option changes on a specific Poll.
+  Fires when options are added, removed, updated (text change), or reordered.
+  Always delivered regardless of resultsVisibility — option structure is not secret.
+  Vote data within the returned Poll is still filtered per subscriber context.
+  """
+  pollOptionsChanged(pollID: UUID!): PollOptionsChangedSubscriptionResult!
+}
+
+# ─────────────────────────────────────────────────────────────────────────────
+# NOTIFICATION EVENTS (informational — not part of GraphQL schema)
+# ─────────────────────────────────────────────────────────────────────────────
+#
+# New NotificationEvent enum values (added to existing enum):
+#   SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL
+#   SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON
+#   SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON
+#   SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE
+#
+# New user preference fields (IUserSettingsNotificationSpaceBase):
+#   collaborationPollVoteCastOnOwnPoll: IUserSettingsNotificationChannels!
+#   collaborationPollVoteCastOnPollIVotedOn: IUserSettingsNotificationChannels!
+#   collaborationPollModifiedOnPollIVotedOn: IUserSettingsNotificationChannels!
+#   collaborationPollVoteAffectedByOptionChange: IUserSettingsNotificationChannels!
+#
+# Notification behavior:
+#   SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL:
+#     Recipient: Callout creator (excluding the voter themselves)
+#     Preference: collaborationPollVoteCastOnOwnPoll
+#     Channels: email + in-app per user preference
+#     Trigger: castPollVote mutation (both new votes and vote updates)
+#
+#   SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON:
+#     Recipients: all prior voters on the poll (excluding the current voter)
+#     Preference: collaborationPollVoteCastOnPollIVotedOn
+#     Channels: email + in-app per user preference
+#     Trigger: castPollVote mutation
+#
+#   SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON:
+#     Recipients: all voters on the poll whose votes are not affected by the change
+#     Preference: collaborationPollModifiedOnPollIVotedOn
+#     Channels: email + in-app per user preference
+#     Trigger: addPollOption, reorderPollOptions mutations; updatePollOption when editing an option the user did not vote for; removePollOption when the user did not vote for the removed option
+#
+#   SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE:
+#     Recipients: voters whose vote was deleted due to option removal or text edit
+#     Preference: collaborationPollVoteAffectedByOptionChange
+#     Channels: email + in-app per user preference
+#     Trigger: removePollOption mutation OR updatePollOption mutation (when at least one vote was deleted)
+#     Message: "Your vote has been removed because an option was removed/changed. Please re-vote."

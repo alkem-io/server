@@ -40,6 +40,7 @@ import {
   InAppNotificationPayloadSpaceCommunityInvitation,
   InAppNotificationPayloadSpaceCommunityInvitationPlatform,
 } from '../in-app-notification-payload/dto/space';
+import { InAppNotificationPayloadSpaceCollaborationPoll } from '../in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.poll';
 import {
   InAppNotificationPayloadUser,
   InAppNotificationPayloadUserMessageDirect,
@@ -554,6 +555,19 @@ export class InAppNotificationService {
         result.roomID = typedPayload.roomID;
         break;
       }
+
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL:
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON:
+      case NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON:
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE: {
+        const typedPayload =
+          payload as InAppNotificationPayloadSpaceCollaborationPoll;
+        result.spaceID = typedPayload.spaceID;
+        result.calloutID = typedPayload.calloutID;
+        result.pollID = typedPayload.pollID;
+        break;
+      }
+
       // this is not supported by the in-apps
       case NotificationEvent.SPACE_COMMUNITY_INVITATION_USER_PLATFORM:
         result.spaceID = (

@@ -941,12 +941,14 @@ export class SpaceService {
     levelZeroSpaceID: string,
     visibility: SpaceVisibility
   ) {
-    await this.spaceRepository.update(
-      {
-        levelZeroSpaceID: levelZeroSpaceID,
-      },
-      { visibility }
-    );
+    // Cannot use repository.update() on CTI child entities;
+    // use query builder to target the space table directly.
+    await this.spaceRepository
+      .createQueryBuilder()
+      .update()
+      .set({ visibility })
+      .where('levelZeroSpaceID = :levelZeroSpaceID', { levelZeroSpaceID })
+      .execute();
   }
 
   /**

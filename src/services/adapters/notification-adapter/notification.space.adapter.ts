@@ -4,6 +4,7 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { CalloutLookupService } from '@domain/collaboration/callout/callout.lookup/callout.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
@@ -12,6 +13,7 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.comment';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
+import { InAppNotificationPayloadSpaceCollaborationPoll } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.poll';
 import { InAppNotificationPayloadSpaceCommunicationMessageDirect } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.message.direct';
 import { InAppNotificationPayloadSpaceCommunityActor } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.actor';
 import { InAppNotificationPayloadSpaceCommunityApplication } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.application';
@@ -29,6 +31,13 @@ import { NotificationInputCollaborationCalloutComment } from './dto/space/notifi
 import { NotificationInputCollaborationCalloutContributionCreated } from './dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
 import { NotificationInputCollaborationCalloutPostContributionComment } from './dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCalloutPublished } from './dto/space/notification.dto.input.space.collaboration.callout.published';
+import {
+  NotificationInputCollaborationPoll,
+  NotificationInputCollaborationPollModifiedOnPollIVotedOn,
+  NotificationInputCollaborationPollVoteAffectedByOptionChange,
+  NotificationInputCollaborationPollVoteCastOnOwnPoll,
+  NotificationInputCollaborationPollVoteCastOnPollIVotedOn,
+} from './dto/space/notification.dto.input.space.collaboration.poll';
 import { NotificationInputCommunicationLeadsMessage } from './dto/space/notification.dto.input.space.communication.leads.message';
 import { NotificationInputUpdateSent } from './dto/space/notification.dto.input.space.communication.update.sent';
 import { NotificationInputCommunityApplication } from './dto/space/notification.dto.input.space.community.application';
@@ -53,7 +62,8 @@ export class NotificationSpaceAdapter {
     private communityResolverService: CommunityResolverService,
     private spaceLookupService: SpaceLookupService,
     private urlGeneratorService: UrlGeneratorService,
-    private userLookupService: UserLookupService
+    private userLookupService: UserLookupService,
+    private calloutLookupService: CalloutLookupService
   ) {}
 
   private async getTriggeredByDisplayName(
@@ -1139,6 +1149,139 @@ export class NotificationSpaceAdapter {
     return allRecipients.filter(
       rec => !recipientsToExclude.some(excludeRec => excludeRec.id === rec.id)
     );
+  }
+
+  public spaceCollaborationPollVoteCastOnOwnPoll(
+    dto: NotificationInputCollaborationPollVoteCastOnOwnPoll,
+    spaceID: string
+  ): Promise<void> {
+    return this.sendPollNotification(
+      NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL,
+      dto,
+      spaceID
+    );
+  }
+
+  public spaceCollaborationPollVoteCastOnPollIVotedOn(
+    dto: NotificationInputCollaborationPollVoteCastOnPollIVotedOn,
+    spaceID: string
+  ): Promise<void> {
+    return this.sendPollNotification(
+      NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON,
+      dto,
+      spaceID
+    );
+  }
+
+  public spaceCollaborationPollModifiedOnPollIVotedOn(
+    dto: NotificationInputCollaborationPollModifiedOnPollIVotedOn,
+    spaceID: string
+  ): Promise<void> {
+    return this.sendPollNotification(
+      NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON,
+      dto,
+      spaceID
+    );
+  }
+
+  public spaceCollaborationPollVoteAffectedByOptionChange(
+    dto: NotificationInputCollaborationPollVoteAffectedByOptionChange,
+    spaceID: string
+  ): Promise<void> {
+    return this.sendPollNotification(
+      NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE,
+      dto,
+      spaceID
+    );
+  }
+
+  private async sendPollNotification(
+    event: NotificationEvent,
+    dto: NotificationInputCollaborationPoll,
+    spaceID: string
+  ): Promise<void> {
+    const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
+      relations: {
+        about: {
+          profile: true,
+        },
+      },
+    });
+
+    const callout = await this.calloutLookupService.getCalloutOrFail(
+      dto.calloutID,
+      {
+        relations: {
+          framing: {
+            profile: true,
+            poll: true,
+          },
+        },
+      }
+    );
+
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      dto,
+      spaceID,
+      dto.userID
+    );
+
+    // Send email notifications; skip gracefully if entity was deleted
+    const emailRecipientsWithoutTrigger = recipients.emailRecipients.filter(
+      r => r.id !== dto.triggeredBy
+    );
+    if (emailRecipientsWithoutTrigger.length > 0 && callout.framing.poll) {
+      try {
+        const payload =
+          await this.notificationExternalAdapter.buildSpaceCollaborationPollPayload(
+            event,
+            dto.triggeredBy,
+            emailRecipientsWithoutTrigger,
+            space,
+            callout,
+            callout.framing.poll
+          );
+        this.notificationExternalAdapter.sendExternalNotifications(
+          event,
+          payload
+        );
+      } catch (error) {
+        if (error instanceof EntityNotFoundException) {
+          this.logger.warn(
+            {
+              message:
+                'Skipping poll notification; poll entity was deleted before notification could be sent',
+              calloutId: dto.calloutID,
+              pollId: dto.pollID,
+            },
+            LogContext.NOTIFICATIONS
+          );
+        } else {
+          throw error;
+        }
+      }
+    }
+
+    // Send in-app notifications
+    const inAppReceiverIDs = recipients.inAppRecipients
+      .filter(r => r.id !== dto.triggeredBy)
+      .map(r => r.id);
+    if (inAppReceiverIDs.length > 0) {
+      const inAppPayload: InAppNotificationPayloadSpaceCollaborationPoll = {
+        type: NotificationEventPayload.SPACE_COLLABORATION_POLL,
+        spaceID,
+        calloutID: dto.calloutID,
+        pollID: dto.pollID,
+      };
+      await this.notificationInAppAdapter.sendInAppNotifications(
+        event,
+        NotificationEventCategory.SPACE_MEMBER,
+        dto.triggeredBy,
+        inAppReceiverIDs,
+        inAppPayload
+      );
+    }
   }
 
   private async getNotificationRecipientsSpace(

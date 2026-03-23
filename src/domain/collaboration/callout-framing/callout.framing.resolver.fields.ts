@@ -2,6 +2,7 @@ import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { ILink } from '@domain/collaboration/link/link.interface';
+import { IPoll } from '@domain/collaboration/poll/poll.interface';
 import { IMediaGallery } from '@domain/common/media-gallery/media.gallery.interface';
 import { IMemo } from '@domain/common/memo/types';
 import { IProfile } from '@domain/common/profile/profile.interface';
@@ -61,5 +62,14 @@ export class CalloutFramingResolverFields {
     @Parent() calloutFraming: ICalloutFraming
   ): Promise<IMediaGallery | null> {
     return this.calloutFramingService.getMediaGallery(calloutFraming);
+  }
+
+  @ResolveField('poll', () => IPoll, {
+    nullable: true,
+    description:
+      'The Poll attached to this Callout Framing, if any. Present when framing.type = POLL.',
+  })
+  async poll(@Parent() calloutFraming: ICalloutFraming): Promise<IPoll | null> {
+    return this.calloutFramingService.getPoll(calloutFraming);
   }
 }

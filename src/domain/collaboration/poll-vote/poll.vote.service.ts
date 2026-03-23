@@ -1,0 +1,177 @@
+import { LogContext } from '@common/enums/logging.context';
+import { PollStatus } from '@common/enums/poll.status';
+import { ValidationException } from '@common/exceptions';
+import { Poll } from '@domain/collaboration/poll/poll.entity';
+import { Injectable } from '@nestjs/common';
+import { InjectRepository } from '@nestjs/typeorm';
+import { Repository } from 'typeorm';
+import { PollVote } from './poll.vote.entity';
+
+@Injectable()
+export class PollVoteService {
+  constructor(
+    @InjectRepository(PollVote)
+    private pollVoteRepository: Repository<PollVote>
+  ) {}
+
+  async castVoteOnPoll(
+    poll: Poll,
+    voterId: string,
+    selectedOptionIds: string[]
+  ): Promise<Poll> {
+    // Validate poll is open
+    if (poll.status !== PollStatus.OPEN) {
+      throw new ValidationException(
+        'Cannot cast vote on a closed poll',
+        LogContext.COLLABORATION,
+        { pollId: poll.id, status: poll.status }
+      );
+    }
+
+    if (!poll.options) {
+      throw new ValidationException(
+        'Poll options relation must be loaded before casting a vote',
+        LogContext.COLLABORATION,
+        { pollId: poll.id }
+      );
+    }
+
+    const options = poll.options;
+
+    // Validate all selected option IDs exist in this poll
+    const validOptionIds = new Set(options.map(o => o.id));
+    for (const optionId of selectedOptionIds) {
+      if (!validOptionIds.has(optionId)) {
+        throw new ValidationException(
+          'One or more selected option IDs do not belong to this poll',
+          LogContext.COLLABORATION,
+          { optionId, pollId: poll.id }
+        );
+      }
+    }
+
+    // Validate no duplicates within submission
+    const uniqueIds = new Set(selectedOptionIds);
+    if (uniqueIds.size !== selectedOptionIds.length) {
+      throw new ValidationException(
+        'Duplicate option IDs are not allowed in a vote',
+        LogContext.COLLABORATION
+      );
+    }
+
+    // Validate minResponses
+    if (selectedOptionIds.length < poll.settings.minResponses) {
+      throw new ValidationException(
+        'Selection count is below the minimum required',
+        LogContext.COLLABORATION,
+        {
+          minResponses: poll.settings.minResponses,
+          provided: selectedOptionIds.length,
+        }
+      );
+    }
+
+    // Validate maxResponses (0 = unlimited)
+    if (
+      poll.settings.maxResponses > 0 &&
+      selectedOptionIds.length > poll.settings.maxResponses
+    ) {
+      throw new ValidationException(
+        'Cannot select more than maxResponses option(s)',
+        LogContext.COLLABORATION,
+        { maxResponses: poll.settings.maxResponses }
+      );
+    }
+
+    // Atomic upsert: INSERT ... ON CONFLICT (createdBy, pollId) DO UPDATE
+    // Prevents race condition where concurrent requests from the same user
+    // could both pass a findOne check and attempt duplicate inserts.
+    // Note: validation above and this upsert are not wrapped in a single
+    // transaction, so the poll could be closed or options removed between
+    // validation and insert (TOCTOU). Acceptable risk for a poll feature.
+    await this.pollVoteRepository
+      .createQueryBuilder()
+      .insert()
+      .into(PollVote)
+      .values({
+        createdBy: voterId,
+        selectedOptionIds,
+        poll: { id: poll.id },
+      })
+      .orUpdate(['selectedOptionIds'], ['createdBy', 'pollId'])
+      .execute();
+
+    // Re-fetch poll with fresh relations so callers (including subscription
+    // publishers) receive up-to-date vote data.
+    const freshPoll = await this.pollVoteRepository.manager
+      .getRepository(Poll)
+      .findOneOrFail({
+        where: { id: poll.id },
+        relations: { options: true, votes: true },
+      });
+
+    return freshPoll;
+  }
+
+  async getVoteForUser(
+    pollId: string,
+    userId: string
+  ): Promise<PollVote | null> {
+    return this.pollVoteRepository.findOne({
+      where: { createdBy: userId, poll: { id: pollId } },
+      relations: { poll: true },
+    });
+  }
+
+  async getVotesForPoll(pollId: string): Promise<PollVote[]> {
+    return this.pollVoteRepository.find({
+      where: { poll: { id: pollId } },
+      relations: { poll: true },
+    });
+  }
+
+  async removeVote(pollId: string, voterId: string): Promise<Poll> {
+    const poll = await this.pollVoteRepository.manager
+      .getRepository(Poll)
+      .findOneOrFail({
+        where: { id: pollId },
+        relations: { options: true, votes: true },
+      });
+
+    if (poll.status !== PollStatus.OPEN) {
+      throw new ValidationException(
+        'Cannot remove vote from a closed poll',
+        LogContext.COLLABORATION,
+        { pollId: poll.id, status: poll.status }
+      );
+    }
+
+    const existingVote = await this.pollVoteRepository.findOne({
+      where: { createdBy: voterId, poll: { id: pollId } },
+    });
+
+    if (!existingVote) {
+      throw new ValidationException(
+        'You have not voted on this poll',
+        LogContext.COLLABORATION,
+        { pollId, voterId }
+      );
+    }
+
+    await this.pollVoteRepository.delete(existingVote.id);
+
+    const freshPoll = await this.pollVoteRepository.manager
+      .getRepository(Poll)
+      .findOneOrFail({
+        where: { id: poll.id },
+        relations: { options: true, votes: true },
+      });
+
+    return freshPoll;
+  }
+
+  async deleteVotesByIds(voteIds: string[]): Promise<void> {
+    if (voteIds.length === 0) return;
+    await this.pollVoteRepository.delete(voteIds);
+  }
+}

@@ -107,6 +107,19 @@ describe('NotificationRecipientsService', () => {
               collaborationCalloutComment: { email: false, inApp: false },
               collaborationCalloutPublished: { email: false, inApp: false },
               communityCalendarEvents: { email: false, inApp: false },
+              collaborationPollVoteCastOnOwnPoll: { email: false, inApp: true },
+              collaborationPollVoteCastOnPollIVotedOn: {
+                email: false,
+                inApp: true,
+              },
+              collaborationPollModifiedOnPollIVotedOn: {
+                email: false,
+                inApp: true,
+              },
+              collaborationPollVoteAffectedByOptionChange: {
+                email: false,
+                inApp: true,
+              },
             },
             virtualContributor: {
               adminSpaceCommunityInvitation: { email: false, inApp: false },
@@ -451,6 +464,94 @@ describe('NotificationRecipientsService', () => {
           eventType: 'UNKNOWN_EVENT' as NotificationEvent,
         })
       ).rejects.toThrow(NotificationEventException);
+    });
+
+    describe('poll notification events (T065)', () => {
+      it('(a) POLL_VOTE_CAST_ON_OWN_POLL uses USER_SELF_MANAGEMENT credential for the poll creator', async () => {
+        await service.getRecipients({
+          eventType:
+            NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL,
+          userID: 'creator-id',
+        });
+
+        expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: 'creator-id',
+            },
+          ],
+          undefined,
+          expect.any(Object)
+        );
+      });
+
+      it('(b) POLL_VOTE_CAST_ON_POLL_I_VOTED_ON uses USER_SELF_MANAGEMENT credential for each prior voter', async () => {
+        await service.getRecipients({
+          eventType:
+            NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON,
+          userID: 'prior-voter-id',
+        });
+
+        expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: 'prior-voter-id',
+            },
+          ],
+          undefined,
+          expect.any(Object)
+        );
+      });
+
+      it('(c) POLL_MODIFIED_ON_POLL_I_VOTED_ON uses USER_SELF_MANAGEMENT credential for each remaining voter', async () => {
+        await service.getRecipients({
+          eventType:
+            NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON,
+          userID: 'voter-id',
+        });
+
+        expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: 'voter-id',
+            },
+          ],
+          undefined,
+          expect.any(Object)
+        );
+      });
+
+      it('(d) POLL_VOTE_AFFECTED_BY_OPTION_CHANGE uses USER_SELF_MANAGEMENT credential for each affected voter', async () => {
+        await service.getRecipients({
+          eventType:
+            NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE,
+          userID: 'affected-voter-id',
+        });
+
+        expect(userLookupService.usersWithCredentials).toHaveBeenCalledWith(
+          [
+            {
+              type: AuthorizationCredential.USER_SELF_MANAGEMENT,
+              resourceID: 'affected-voter-id',
+            },
+          ],
+          undefined,
+          expect.any(Object)
+        );
+      });
+
+      it('(e) poll events throw ValidationException when userID is missing', async () => {
+        await expect(
+          service.getRecipients({
+            eventType:
+              NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL,
+            // no userID
+          })
+        ).rejects.toThrow(ValidationException);
+      });
     });
   });
 

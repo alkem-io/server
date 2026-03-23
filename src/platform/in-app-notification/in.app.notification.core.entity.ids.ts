@@ -10,4 +10,5 @@ export type InAppNotificationCoreEntityIds = {
   messageID?: string;
   calendarEventID?: string;
   contributorActorId?: string;
+  pollID?: string;
 };

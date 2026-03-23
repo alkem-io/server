@@ -419,25 +419,38 @@ describe('ConversationService', () => {
   });
 
   describe('resetConversation', () => {
-    it('should delete existing room and create a new one', async () => {
+    it('should create new room before deleting the old one to prevent cascade deletion of conversation', async () => {
       const mockConversation = {
         id: 'conv-1',
         room: { id: 'room-old' },
       } as unknown as IConversation;
 
       const newRoom = { id: 'room-new' } as any;
-      roomService.createRoom.mockResolvedValue(newRoom);
-      conversationRepo.save.mockResolvedValue({
-        ...mockConversation,
-        room: newRoom,
-      } as Conversation);
+      const callOrder: string[] = [];
 
-      const _result = await service.resetConversation(
+      roomService.createRoom.mockImplementation(async () => {
+        callOrder.push('createRoom');
+        return newRoom;
+      });
+      conversationRepo.save.mockImplementation(async (c: any) => {
+        callOrder.push('save');
+        return c;
+      });
+      roomService.deleteRoom.mockImplementation(async () => {
+        callOrder.push('deleteRoom');
+        return {};
+      });
+
+      await service.resetConversation(
         mockConversation,
         'sender-agent',
         'receiver-agent'
       );
 
+      // New room must be created and conversation saved BEFORE the old room is deleted.
+      // conversation.roomId FK has ON DELETE CASCADE — deleting the old room first
+      // would cascade-delete the conversation row.
+      expect(callOrder).toEqual(['createRoom', 'save', 'deleteRoom']);
       expect(roomService.deleteRoom).toHaveBeenCalledWith({
         roomID: 'room-old',
       });

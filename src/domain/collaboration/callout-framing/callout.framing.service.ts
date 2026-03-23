@@ -9,6 +9,8 @@ import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { LinkService } from '@domain/collaboration/link/link.service';
+import { IPoll } from '@domain/collaboration/poll/poll.interface';
+import { PollService } from '@domain/collaboration/poll/poll.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IMediaGallery } from '@domain/common/media-gallery/media.gallery.interface';
@@ -28,7 +30,12 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import {
+  DeepPartial,
+  FindOneOptions,
+  FindOptionsRelations,
+  Repository,
+} from 'typeorm';
 import { ILink } from '../link/link.interface';
 import { CalloutFraming } from './callout.framing.entity';
 import { ICalloutFraming } from './callout.framing.interface';
@@ -47,6 +54,7 @@ export class CalloutFramingService {
     private namingService: NamingService,
     private tagsetService: TagsetService,
     private mediaGalleryService: MediaGalleryService,
+    private pollService: PollService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectRepository(CalloutFraming)
@@ -58,8 +66,9 @@ export class CalloutFramingService {
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<ICalloutFraming> {
-    const calloutFraming: ICalloutFraming =
-      CalloutFraming.create(calloutFramingData);
+    const calloutFraming: ICalloutFraming = CalloutFraming.create(
+      calloutFramingData as DeepPartial<CalloutFraming>
+    );
 
     calloutFraming.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.CALLOUT_FRAMING
@@ -142,6 +151,19 @@ export class CalloutFramingService {
         storageAggregator,
         userID
       );
+    }
+
+    if (calloutFraming.type === CalloutFramingType.POLL) {
+      if (!calloutFramingData.poll) {
+        throw new ValidationException(
+          'Poll input is required when framing type is POLL',
+          LogContext.COLLABORATION
+        );
+      }
+      const { poll } = await this.pollService.createPoll(
+        calloutFramingData.poll
+      );
+      calloutFraming.poll = poll;
     }
 
     return calloutFraming;
@@ -294,6 +316,14 @@ export class CalloutFramingService {
       );
       calloutFraming.whiteboard = undefined;
     }
+
+    if (
+      calloutFraming.poll &&
+      calloutFraming.type !== CalloutFramingType.POLL
+    ) {
+      await this.pollService.deletePoll(calloutFraming.poll.id);
+      calloutFraming.poll = undefined;
+    }
   }
 
   public async updateCalloutFraming(
@@ -425,6 +455,38 @@ export class CalloutFramingService {
         }
         break;
       }
+      case CalloutFramingType.POLL: {
+        if (!calloutFraming.poll && !calloutFramingData.poll) {
+          throw new ValidationException(
+            'Poll data is required when switching to POLL framing type',
+            LogContext.COLLABORATION
+          );
+        }
+        if (!calloutFraming.poll && calloutFramingData.poll) {
+          // Callout framing type transitions are currently read-only in the UI,
+          // so this path should not be reached in practice. Throw rather than
+          // attempting an unsafe cast from UpdatePollInput to CreatePollInput.
+          throw new ValidationException(
+            'Cannot create a new poll via callout framing update. Polls must be created with the callout.',
+            LogContext.COLLABORATION
+          );
+        }
+        // Poll options are managed via separate mutations (addPollOption,
+        // updatePollOption, removePollOption, reorderPollOptions), and
+        // PollSettings are readonly after poll creation.
+        // Only the poll title can be updated through this path.
+        if (
+          calloutFraming.poll &&
+          calloutFramingData.poll?.title !== undefined
+        ) {
+          const poll = await this.pollService.getPollOrFail(
+            calloutFraming.poll.id
+          );
+          poll.title = calloutFramingData.poll.title;
+          calloutFraming.poll = await this.pollService.save(poll);
+        }
+        break;
+      }
       case CalloutFramingType.NONE:
       default: {
         // if the type is NONE we have already deleted any existing framing content
@@ -446,6 +508,7 @@ export class CalloutFramingService {
           link: true,
           memo: true,
           mediaGallery: true,
+          poll: true,
         },
       }
     );
@@ -471,6 +534,10 @@ export class CalloutFramingService {
       await this.mediaGalleryService.deleteMediaGallery(
         calloutFraming.mediaGallery.id
       );
+    }
+
+    if (calloutFraming.poll) {
+      await this.pollService.deletePoll(calloutFraming.poll.id);
     }
 
     if (calloutFraming.authorization) {
@@ -501,8 +568,9 @@ export class CalloutFramingService {
 
     if (!calloutFraming)
       throw new EntityNotFoundException(
-        `No CalloutFraming found with the given id: ${calloutFramingID}`,
-        LogContext.COLLABORATION
+        'No CalloutFraming found with the given id',
+        LogContext.COLLABORATION,
+        { calloutFramingID }
       );
     return calloutFraming;
   }
@@ -519,8 +587,9 @@ export class CalloutFramingService {
     );
     if (!calloutFraming.profile)
       throw new EntityNotFoundException(
-        `Callout profile not initialized: ${calloutFramingInput.id}`,
-        LogContext.COLLABORATION
+        'Callout profile not initialized',
+        LogContext.COLLABORATION,
+        { calloutFramingID: calloutFramingInput.id }
       );
 
     return calloutFraming.profile;
@@ -575,6 +644,12 @@ export class CalloutFramingService {
     }
 
     return calloutFraming.memo;
+  }
+
+  public async getPoll(
+    calloutFramingInput: ICalloutFraming
+  ): Promise<IPoll | null> {
+    return this.pollService.getPollForFraming(calloutFramingInput.id);
   }
 
   public async getMediaGallery(

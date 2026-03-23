@@ -307,6 +307,26 @@ export class UserService {
             push: true,
           },
           communityCalendarEvents: { email: true, inApp: true, push: true },
+          collaborationPollVoteCastOnOwnPoll: {
+            email: false,
+            inApp: true,
+            push: false,
+          },
+          collaborationPollVoteCastOnPollIVotedOn: {
+            email: false,
+            inApp: true,
+            push: false,
+          },
+          collaborationPollModifiedOnPollIVotedOn: {
+            email: false,
+            inApp: true,
+            push: false,
+          },
+          collaborationPollVoteAffectedByOptionChange: {
+            email: false,
+            inApp: true,
+            push: false,
+          },
         },
         user: {
           mentioned: { email: true, inApp: true, push: true },

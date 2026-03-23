@@ -1,4 +1,5 @@
 import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
+import { CalloutLookupModule } from '@domain/collaboration/callout/callout.lookup/callout.lookup.module';
 import { MessageDetailsModule } from '@domain/communication/message.details/message.details.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
@@ -30,6 +31,7 @@ import { NotificationVirtualContributorAdapter } from './notification.virtual.co
     NotificationPushAdapterModule,
     SpaceLookupModule,
     UserLookupModule,
+    CalloutLookupModule,
   ],
   providers: [
     NotificationAdapter,
