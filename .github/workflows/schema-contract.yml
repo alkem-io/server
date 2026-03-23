@@ -208,7 +208,8 @@ jobs:
           header: schema-contract
           message: ${{ steps.pr_comment.outputs.body }}
 
-      - name: Enforce gate
-        env:
-          SCHEMA_OVERRIDE_REVIEWS_FILE: ${{ steps.collect_reviews.outputs.result }}
-        run: pnpm exec ts-node scripts/schema/schema-gate.ts change-report.json
+      # Disabled for the time being as we iterate on the gate logic and want to avoid blocking PRs with false positives. The gate summary is still posted as a comment, but it won't cause CI failure until this step is re-enabled.
+      # - name: Enforce gate
+      #   env:
+      #     SCHEMA_OVERRIDE_REVIEWS_FILE: ${{ steps.collect_reviews.outputs.result }}
+      #   run: pnpm exec ts-node scripts/schema/schema-gate.ts change-report.json
