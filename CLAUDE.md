@@ -189,6 +189,8 @@ Key rules:
 - PostgreSQL 17.5
 - PostgreSQL 17.5 (conversation, conversation_membership, room tables) (040-group-conversations)
 - PostgreSQL 17.5 (space table + JSONB settings column) (041-subspace-sorting-pinning)
+- YAML (GitHub Actions), Dockerfile DSL; TypeScript 5.3 (no source changes) + Docker (multi-stage builds), kubectl, `envsubst` (gettext), GitHub Actions runners (081-k8s-deploy-pipeline)
+- N/A — no database schema changes or new TypeORM entities (081-k8s-deploy-pipeline)
 
 ## Recent Changes
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting

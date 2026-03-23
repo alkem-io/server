@@ -1,0 +1,37 @@
+apiVersion: batch/v1
+kind: Job
+metadata:
+  name: server-migration-job
+spec:
+  # No retries: a failed migration must halt the pipeline, not be retried silently
+  backoffLimit: 0
+  # Auto-delete the job 1 hour after completion (keeps cluster clean)
+  ttlSecondsAfterFinished: 3600
+  template:
+    spec:
+      restartPolicy: Never
+      imagePullSecrets:
+        - name: alkemio-server-secret
+      containers:
+        - name: alkemio-server-migration
+          # MIGRATION_IMAGE is substituted by envsubst in CI before kubectl apply
+          image: ${MIGRATION_IMAGE}
+          command: ["pnpm", "run", "migration:run"]
+          imagePullPolicy: Always
+          env:
+            # Mirror the env mapping from the existing CronJob (26-server-migration.yaml)
+            - name: DATABASE_USERNAME
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-config
+                  key: POSTGRES_USER
+            - name: DATABASE_PASSWORD
+              valueFrom:
+                configMapKeyRef:
+                  name: alkemio-config
+                  key: POSTGRES_PASSWORD
+          envFrom:
+            - secretRef:
+                name: alkemio-secrets
+            - configMapRef:
+                name: alkemio-config

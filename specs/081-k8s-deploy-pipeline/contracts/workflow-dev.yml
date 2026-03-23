@@ -1,0 +1,110 @@
+name: Build, Migrate & Deploy to Dev on Hetzner
+
+on:
+  push:
+    branches: [develop]
+
+jobs:
+  build:
+    runs-on: [self-hosted, m4]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Login to registry
+        uses: azure/docker-login@v2
+        with:
+          login-server: ${{ secrets.REGISTRY_LOGIN_SERVER }}
+          username: ${{ secrets.REGISTRY_USERNAME }}
+          password: ${{ secrets.REGISTRY_PASSWORD }}
+
+      - name: Build & push runtime image
+        run: |
+          docker build -f Dockerfile \
+            -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }} \
+            -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:latest \
+            .
+          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
+          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:latest
+
+      - name: Build & push migration image
+        run: |
+          docker build -f Dockerfile.migration \
+            -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server-migration:${{ github.sha }} \
+            .
+          docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server-migration:${{ github.sha }}
+
+  migrate:
+    needs: build
+    runs-on: [self-hosted, m4]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4.0.1
+
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_DEV }}" > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Refresh image pull secret
+        run: |
+          kubectl create secret docker-registry alkemio-server-secret \
+            --docker-server=${{ secrets.REGISTRY_LOGIN_SERVER }} \
+            --docker-username=${{ secrets.REGISTRY_USERNAME }} \
+            --docker-password=${{ secrets.REGISTRY_PASSWORD }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Delete existing migration job
+        run: kubectl delete job server-migration-job --ignore-not-found=true
+
+      - name: Apply migration job
+        env:
+          MIGRATION_IMAGE: ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server-migration:${{ github.sha }}
+        run: envsubst < manifests/27-server-migration-job.yaml | kubectl apply -f -
+
+      - name: Wait for migration to complete
+        run: |
+          kubectl wait --for=condition=complete job/server-migration-job --timeout=300s || {
+            echo "Migration job did not complete in time. Logs:"
+            kubectl logs -l job-name=server-migration-job --tail=100
+            exit 1
+          }
+
+  deploy:
+    needs: migrate
+    runs-on: [self-hosted, m4]
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v6.0.2
+
+      - name: Install kubectl
+        uses: azure/setup-kubectl@v4.0.1
+
+      - name: Set up kubeconfig
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_DEV }}" > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Refresh image pull secret
+        run: |
+          kubectl create secret docker-registry alkemio-server-secret \
+            --docker-server=${{ secrets.REGISTRY_LOGIN_SERVER }} \
+            --docker-username=${{ secrets.REGISTRY_USERNAME }} \
+            --docker-password=${{ secrets.REGISTRY_PASSWORD }} \
+            --dry-run=client -o yaml | kubectl apply -f -
+
+      - name: Deploy to dev cluster
+        uses: azure/k8s-deploy@v5.1.0
+        with:
+          manifests: |
+            manifests/25-server-deployment-dev.yaml
+            manifests/30-server-service.yaml
+          images: |
+            ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
+          imagepullsecrets: |
+            alkemio-server-secret

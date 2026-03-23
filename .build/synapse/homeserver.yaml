@@ -1,13 +1,12 @@
 # Synapse Homeserver Configuration
 # For more information, see: https://element-hq.github.io/synapse/latest/usage/configuration/config_documentation.html
 
-server_name: "alkemio.matrix.host"
+server_name: "matrix-acc.alkem.io"
 # Public base URL - CRITICAL for SSO redirects
 # This tells Synapse what URL to use when generating redirect URLs
 public_baseurl: "http://localhost:8008"
 pid_file: /data/homeserver.pid
 web_client_location: https://app.element.io/
-
 listeners:
   - port: 8008
     tls: false
@@ -16,7 +15,6 @@ listeners:
     resources:
       - names: [client, federation]
         compress: false
-
 database:
   name: psycopg2
   args:
@@ -27,37 +25,26 @@ database:
     port: 5432
     cp_min: 5
     cp_max: 10
-
 log_config: "/data/log.config"
-
 media_store_path: /data/media_store
 uploads_path: /data/uploads
-
 max_upload_size: 50M
 max_image_pixels: 32M
-
 dynamic_thumbnails: false
-
 url_preview_enabled: false
-
 enable_registration: false
 enable_registration_without_verification: false
-
 app_service_config_files:
   - /data/matrix-adapter.yaml
-
 modules_search_paths:
   - /data
-
 modules:
   - module: alkemio_room_control.AlkemioRoomControl
     config: {}
-
 # Password authentication configuration
 # Disabled to enforce SSO-only authentication (FR-001, FR-002)
 password_config:
   enabled: false
-
 # Optional account validity configuration. This allows for accounts to be denied
 # any request after a given period.
 #
@@ -222,10 +209,10 @@ oidc_providers:
     # Use explicit endpoints instead: public for browser, internal for backend
     discover: false
     # Explicit OIDC endpoints (hybrid approach)
-    authorization_endpoint: "http://localhost:3000/oauth2/auth"  # Public - accessed by browser
-    token_endpoint: "http://hydra:4444/oauth2/token"              # Internal - accessed by Synapse
-    userinfo_endpoint: "http://hydra:4444/userinfo"               # Internal - accessed by Synapse
-    jwks_uri: "http://hydra:4444/.well-known/jwks.json"          # Internal - accessed by Synapse
+    authorization_endpoint: "http://localhost:3000/oauth2/auth" # Public - accessed by browser
+    token_endpoint: "http://hydra:4444/oauth2/token" # Internal - accessed by Synapse
+    userinfo_endpoint: "http://hydra:4444/userinfo" # Internal - accessed by Synapse
+    jwks_uri: "http://hydra:4444/.well-known/jwks.json" # Internal - accessed by Synapse
     # Allow HTTP for development environment (IMPORTANT: Set to false in production!)
     skip_verification: true
     # OAuth2 client credentials (FR-008)
@@ -233,32 +220,25 @@ oidc_providers:
     client_secret: "Ihky1jTsQ21uwdJvhjpiF1ZhHArymSZpK6eiZrPKgPo="
     # OIDC scopes (FR-010)
     scopes: ["openid", "profile", "email"]
-
     # User attribute mapping (FR-005, FR-007)
     user_mapping_provider:
       config:
         localpart_template: "{{ user.alkemio_actor_id }}"
-
         # Display name from Kratos traits.name.first and traits.name.last (FR-007)
         display_name_template: "{{ user.given_name }} {{ user.family_name }}"
         # Email from Kratos traits.email (FR-007)
         email_template: "{{ user.email }}"
-
     # Account linking configuration (FR-013)
     # Allows existing Matrix accounts to be linked with Kratos OIDC authentication
     allow_existing_users: true
-
     # User profile synchronization method (FR-007)
     user_profile_method: "userinfo_endpoint"
-
 # Token refresh configuration (FR-011, NFR-002)
 # Set to 5 minutes (300s) to ensure timely session termination when Kratos accounts are disabled
 # This supports FR-015 (account revocation) while maintaining session usability
 refresh_token_lifetime: 300s
-
 # Session lifetime (48h to match Kratos session lifespan) (FR-011)
 session_lifetime: 48h
-
 # Signing key for tokens
 # CRITICAL: In production, this file MUST persist across container restarts!
 # The signing key authenticates all access tokens and session tokens.
@@ -270,20 +250,15 @@ session_lifetime: 48h
 # - The signing key will be auto-generated on first startup
 # - Ensure /data volume has proper backup and disaster recovery
 signing_key_path: "/data/alkemio.matrix.host.signing.key"
-
 trusted_key_servers:
   - server_name: "matrix.org"
-
 # Enable metrics for monitoring
 enable_metrics: true
 metrics_port: 9000
-
 # Report stats
 report_stats: false
-
 # Suppress key server warning
 suppress_key_server_warning: true
-
 ## Ratelimiting ##
 
 # Ratelimiting settings for client actions (registration, login, messaging).
@@ -317,7 +292,6 @@ suppress_key_server_warning: true
 #
 # The defaults are as shown below.
 #
-
 rc_message:
   per_second: 10
   burst_count: 30
@@ -360,7 +334,6 @@ rc_invites:
   per_user:
     per_second: 5
     burst_count: 5
-
 # Ratelimiting settings for incoming federation
 #
 # The rc_federation configuration is made up of the following settings:
@@ -382,7 +355,6 @@ rc_invites:
 #  sleep_delay: 500
 #  reject_limit: 50
 #  concurrent: 3
-
 # Target outgoing federation transaction frequency for sending read-receipts,
 # per-room.
 #
@@ -390,5 +362,3 @@ rc_invites:
 # into fewer transactions.
 #
 #federation_rr_transactions_per_room_per_second: 50
-
-
