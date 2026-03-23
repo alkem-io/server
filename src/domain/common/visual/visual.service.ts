@@ -14,8 +14,9 @@ import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Readable } from 'stream';
 import { FindOneOptions, Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
@@ -38,7 +39,9 @@ export class VisualService {
     private imageConversionService: ImageConversionService,
     private imageCompressionService: ImageCompressionService,
     @InjectRepository(Visual)
-    private visualRepository: Repository<Visual>
+    private visualRepository: Repository<Visual>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   public createVisual(
@@ -108,8 +111,18 @@ export class VisualService {
         LogContext.DOCUMENT
       );
 
+    const startTime = Date.now();
     try {
       const buffer = await streamToBuffer(readStream);
+      this.logger.verbose?.(
+        {
+          message: 'Stream buffered',
+          fileName,
+          durationMs: Date.now() - startTime,
+          sizeBytes: buffer.length,
+        },
+        LogContext.STORAGE_BUCKET
+      );
 
       // Stage 1: HEIC/HEIF → JPEG conversion
       const conversionResult =
@@ -156,6 +169,15 @@ export class VisualService {
           ID: documentForVisual.id,
         });
       }
+      this.logger.verbose?.(
+        {
+          message: 'Visual upload completed',
+          fileName,
+          visualId: visual.id,
+          durationMs: Date.now() - startTime,
+        },
+        LogContext.STORAGE_BUCKET
+      );
       return newDocument;
     } catch (error: any) {
       if (error instanceof StorageUploadFailedException) {
