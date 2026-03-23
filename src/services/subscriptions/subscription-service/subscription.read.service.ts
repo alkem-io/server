@@ -5,6 +5,8 @@ import {
   SUBSCRIPTION_CONVERSATION_EVENT,
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
+  SUBSCRIPTION_POLL_OPTIONS_CHANGED,
+  SUBSCRIPTION_POLL_VOTE_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_UPDATED,
 } from '@src/common/constants';
@@ -24,7 +26,11 @@ export class SubscriptionReadService {
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER)
     private subscriptionInAppNotificationCounter: TypedPubSubEngine,
     @Inject(SUBSCRIPTION_CONVERSATION_EVENT)
-    private subscriptionConversationEvents: TypedPubSubEngine
+    private subscriptionConversationEvents: TypedPubSubEngine,
+    @Inject(SUBSCRIPTION_POLL_VOTE_UPDATED)
+    private subscriptionPollVoteUpdated: TypedPubSubEngine,
+    @Inject(SUBSCRIPTION_POLL_OPTIONS_CHANGED)
+    private subscriptionPollOptionsChanged: TypedPubSubEngine
   ) {}
 
   public subscribeToActivities() {
@@ -60,6 +66,18 @@ export class SubscriptionReadService {
   public subscribeToConversationEvents() {
     return this.subscriptionConversationEvents.asyncIterableIterator(
       SubscriptionType.CONVERSATION_EVENTS
+    );
+  }
+
+  public subscribeToPollVoteUpdated() {
+    return this.subscriptionPollVoteUpdated.asyncIterableIterator(
+      SubscriptionType.POLL_VOTE_UPDATED
+    );
+  }
+
+  public subscribeToPollOptionsChanged() {
+    return this.subscriptionPollOptionsChanged.asyncIterableIterator(
+      SubscriptionType.POLL_OPTIONS_CHANGED
     );
   }
 }

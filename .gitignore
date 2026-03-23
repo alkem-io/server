@@ -88,6 +88,8 @@ subscriptions.log
 !.scripts/overmind/
 !.scripts/gql-validate/
 !.scripts/lib/
+!.scripts/non-interactive-login.sh
+!.scripts/gql-request.sh
 .scripts/overmind/.overmind.sock
 .scripts/**/*.psql
 .storage/

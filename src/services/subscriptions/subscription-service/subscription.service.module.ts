@@ -8,6 +8,8 @@ import {
   SUBSCRIPTION_CONVERSATION_EVENT,
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
+  SUBSCRIPTION_POLL_OPTIONS_CHANGED,
+  SUBSCRIPTION_POLL_VOTE_UPDATED,
 } from '@src/common/constants';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { SubscriptionPublishService } from './subscription.publish.service';
@@ -29,6 +31,14 @@ const subscriptionConfig: { provide: string; queueName: MessagingQueue }[] = [
   {
     provide: SUBSCRIPTION_CONVERSATION_EVENT,
     queueName: MessagingQueue.SUBSCRIPTION_CONVERSATION_EVENTS,
+  },
+  {
+    provide: SUBSCRIPTION_POLL_VOTE_UPDATED,
+    queueName: MessagingQueue.SUBSCRIPTION_POLL_VOTE_UPDATED,
+  },
+  {
+    provide: SUBSCRIPTION_POLL_OPTIONS_CHANGED,
+    queueName: MessagingQueue.SUBSCRIPTION_POLL_OPTIONS_CHANGED,
   },
 ];
 
@@ -64,7 +74,11 @@ export class SubscriptionServiceModule implements OnModuleDestroy {
     @Inject(SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER)
     private readonly notificationCounter: PubSubEngine,
     @Inject(SUBSCRIPTION_CONVERSATION_EVENT)
-    private readonly conversationEvents: PubSubEngine
+    private readonly conversationEvents: PubSubEngine,
+    @Inject(SUBSCRIPTION_POLL_VOTE_UPDATED)
+    private readonly pollVoteUpdated: PubSubEngine,
+    @Inject(SUBSCRIPTION_POLL_OPTIONS_CHANGED)
+    private readonly pollOptionsChanged: PubSubEngine
   ) {}
 
   async onModuleDestroy() {
@@ -73,6 +87,8 @@ export class SubscriptionServiceModule implements OnModuleDestroy {
       this.notificationReceived,
       this.notificationCounter,
       this.conversationEvents,
+      this.pollVoteUpdated,
+      this.pollOptionsChanged,
     ];
 
     for (const pubSub of pubSubs) {

@@ -415,19 +415,27 @@ describe('AccountService', () => {
   });
 
   describe('updateExternalSubscriptionId', () => {
-    it('should call repository update with correct arguments', async () => {
+    it('should call query builder update with correct arguments', async () => {
       // Arrange
-      const updateSpy = vi
-        .spyOn(accountRepository, 'update')
-        .mockResolvedValue({ affected: 1 } as any);
+      const executeMock = vi.fn().mockResolvedValue({ affected: 1 });
+      const whereMock = vi.fn().mockReturnValue({ execute: executeMock });
+      const setMock = vi.fn().mockReturnValue({ where: whereMock });
+      const updateMock = vi.fn().mockReturnValue({ set: setMock });
+      vi.spyOn(accountRepository, 'createQueryBuilder').mockReturnValue({
+        update: updateMock,
+      } as any);
 
       // Act
       await service.updateExternalSubscriptionId('account-1', 'ext-sub-new');
 
       // Assert
-      expect(updateSpy).toHaveBeenCalledWith('account-1', {
+      expect(setMock).toHaveBeenCalledWith({
         externalSubscriptionID: 'ext-sub-new',
       });
+      expect(whereMock).toHaveBeenCalledWith('id = :accountID', {
+        accountID: 'account-1',
+      });
+      expect(executeMock).toHaveBeenCalled();
     });
   });
 

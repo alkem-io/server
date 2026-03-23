@@ -87,6 +87,22 @@ describe('UserSettingsService', () => {
           collaborationCalloutComment: defaultNotificationSetting(),
           collaborationCalloutPublished: defaultNotificationSetting(),
           communityCalendarEvents: defaultNotificationSetting(),
+          collaborationPollVoteCastOnOwnPoll: {
+            email: false,
+            inApp: true,
+          },
+          collaborationPollVoteCastOnPollIVotedOn: {
+            email: false,
+            inApp: true,
+          },
+          collaborationPollModifiedOnPollIVotedOn: {
+            email: false,
+            inApp: true,
+          },
+          collaborationPollVoteAffectedByOptionChange: {
+            email: false,
+            inApp: true,
+          },
         },
         virtualContributor: {
           adminSpaceCommunityInvitation: defaultNotificationSetting(),
@@ -288,6 +304,75 @@ describe('UserSettingsService', () => {
       const result = service.updateSettings(settings, updateData);
 
       expect(result.notification.space.communicationUpdates.inApp).toBe(true);
+    });
+
+    it('should update collaborationPollVoteCastOnOwnPoll notification', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          space: {
+            collaborationPollVoteCastOnOwnPoll: { email: true },
+          },
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(
+        result.notification.space.collaborationPollVoteCastOnOwnPoll.email
+      ).toBe(true);
+    });
+
+    it('should update collaborationPollVoteCastOnPollIVotedOn notification', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          space: {
+            collaborationPollVoteCastOnPollIVotedOn: { email: true },
+          },
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(
+        result.notification.space.collaborationPollVoteCastOnPollIVotedOn.email
+      ).toBe(true);
+    });
+
+    it('should update collaborationPollModifiedOnPollIVotedOn notification', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          space: {
+            collaborationPollModifiedOnPollIVotedOn: { inApp: false },
+          },
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(
+        result.notification.space.collaborationPollModifiedOnPollIVotedOn.inApp
+      ).toBe(false);
+    });
+
+    it('should update collaborationPollVoteAffectedByOptionChange notification', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {
+          space: {
+            collaborationPollVoteAffectedByOptionChange: { email: true },
+          },
+        },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(
+        result.notification.space.collaborationPollVoteAffectedByOptionChange
+          .email
+      ).toBe(true);
     });
   });
 

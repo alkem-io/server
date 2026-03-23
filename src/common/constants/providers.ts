@@ -18,6 +18,10 @@ export const MATRIX_ADAPTER_SERVICE = 'alkemio-matrix-adapter';
 export const SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event';
 export const SUBSCRIPTION_CONVERSATION_EVENT =
   'alkemio-subscriptions-conversation-event';
+export const SUBSCRIPTION_POLL_VOTE_UPDATED =
+  'alkemio-subscriptions-poll-vote-updated';
+export const SUBSCRIPTION_POLL_OPTIONS_CHANGED =
+  'alkemio-subscriptions-poll-options-changed';
 export const ELASTICSEARCH_CLIENT_PROVIDER = 'elasticsearch-client-provider';
 export const APP_ID = 'app-id';
 export const STORAGE_SERVICE = 'storage-service';

@@ -10,6 +10,7 @@ export * from './platform/in.app.notification.payload.platform.user.profile.remo
 export * from './space/in.app.notification.payload.space.collaboration.callout.comment.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.callout.post.comment.resolver.fields';
 export * from './space/in.app.notification.payload.space.collaboration.callout.resolver.fields';
+export * from './space/in.app.notification.payload.space.collaboration.poll.resolver.fields';
 export * from './space/in.app.notification.payload.space.communication.message.direct.resolver.fields';
 export * from './space/in.app.notification.payload.space.communication.update.resolver.fields';
 export * from './space/in.app.notification.payload.space.community.actor.resolver.fields';

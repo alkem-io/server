@@ -2,6 +2,7 @@ import { ENUM_LENGTH } from '@common/constants';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { ICalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.interface';
 import { Link } from '@domain/collaboration/link/link.entity';
+import { Poll } from '@domain/collaboration/poll/poll.entity';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { MediaGallery } from '@domain/common/media-gallery/media.gallery.entity';
 import { Memo } from '@domain/common/memo/memo.entity';
@@ -71,4 +72,16 @@ export class CalloutFraming
   })
   @JoinColumn()
   mediaGallery?: MediaGallery;
+
+  @OneToOne(
+    () => Poll,
+    (poll: Poll) => poll.framing,
+    {
+      eager: false,
+      cascade: true,
+      onDelete: 'SET NULL',
+    }
+  )
+  @JoinColumn()
+  poll?: Poll;
 }
