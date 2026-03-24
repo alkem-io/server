@@ -210,6 +210,12 @@ src/migrations/
 - **Affected files**: `spec.md` (US8, FR-032..FR-035, future scope updated), `plan.md` (project structure, revision history), `data-model.md` (authorization table), `tasks.md` (Phase 10), `contracts/schema.graphql` (new mutation + input type).
 - **Resolves**: Poll lifecycle gap — polls could never be closed despite having full guard infrastructure.
 
+**2026-03-23**: Fixed template safety — POLL callouts skipped during space template serialization.
+- **Change**: `InputCreatorService.buildCreateCalloutInputFromCallout()` now returns `null` when the callout has `framing.type === POLL`, and both callers (`buildCreateCalloutInputsFromCallouts`, `buildCreateCalloutsSetInputFromCalloutsSet`) filter out `null` results. The `input.creator.resolver.fields.ts` `callout()` resolver return type updated to `CreateCalloutInput | null` (the `@ResolveField` already carried `nullable: true`).
+- **Rationale**: `createCalloutFraming()` (T032) throws a `ValidationException` when `type === POLL` with no `poll` input. The serializer never loads `framing.poll`, so template application of a space containing a poll callout would crash. Silently skipping the callout is the minimal safe fix for this iteration; full template support is deferred.
+- **Affected files**: `input.creator.service.ts` (skip + null-filter), `input.creator.resolver.fields.ts` (return type), `input.creator.service.spec.ts` (new tests), `spec.md` (Assumptions), `plan.md` (revision history), `tasks.md` (Phase 12 + T100).
+- **Resolves**: Analysis finding C1 + C2 (CRITICAL coverage gap — template safety with POLL callouts).
+
 **2026-03-19**: Added Kibana/Elasticsearch contribution reporting (User Story 9).
 - **Change**: Three new contribution types (`POLL_VOTE_CONTRIBUTION`, `POLL_RESPONSE_ADDED_CONTRIBUTION`, `CALLOUT_POLL_CREATED`) tracked via the existing `ContributionReporterService`. Poll vote casting, option adding, and poll callout creation are reported as fire-and-forget Elasticsearch documents.
 - **Rationale**: Observability and platform analytics for poll engagement. Follows the same pattern as all other contribution types (callout created, post created, whiteboard edited, etc.).
