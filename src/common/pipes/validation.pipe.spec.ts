@@ -89,7 +89,8 @@ describe('ValidationPipe', () => {
     });
 
     it('should call plainToInstance for custom metatypes', async () => {
-      const { plainToInstance } = await import('class-transformer');
+      const classTransformer = await import('class-transformer');
+      const spy = vi.spyOn(classTransformer, 'plainToInstance');
 
       class MyDto {
         field!: string;
@@ -98,7 +99,8 @@ describe('ValidationPipe', () => {
       const value = { field: 'data' };
       await pipe.transform(value, { type: 'body', metatype: MyDto });
 
-      expect(plainToInstance).toHaveBeenCalledWith(MyDto, value);
+      expect(spy).toHaveBeenCalledWith(MyDto, value);
+      spy.mockRestore();
     });
 
     it('should delegate to BaseHandler for validation', async () => {

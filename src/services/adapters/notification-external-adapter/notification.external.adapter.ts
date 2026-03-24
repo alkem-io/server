@@ -555,7 +555,6 @@ export class NotificationExternalAdapter {
         description: calendarEvent.profile?.description ?? undefined,
         googleCalendarUrl: '',
         outlookCalendarUrl: '',
-        appleCalendarUrl: '',
         icsDownloadUrl: '',
       },
     };
