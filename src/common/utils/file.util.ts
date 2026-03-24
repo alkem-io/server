@@ -1,10 +1,8 @@
 import { Readable } from 'stream';
 
-const DEFAULT_STREAM_TIMEOUT_MS = 60_000;
-
 export async function streamToBuffer(
   stream: Readable,
-  timeoutMs: number = DEFAULT_STREAM_TIMEOUT_MS
+  timeoutMs: number
 ): Promise<Buffer> {
   return new Promise((resolve, reject) => {
     const data: any[] = [];

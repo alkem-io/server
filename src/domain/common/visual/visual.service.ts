@@ -15,6 +15,7 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Readable } from 'stream';
@@ -41,7 +42,8 @@ export class VisualService {
     @InjectRepository(Visual)
     private visualRepository: Repository<Visual>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private readonly logger: LoggerService,
+    private configService: ConfigService
   ) {}
 
   public createVisual(
@@ -113,7 +115,11 @@ export class VisualService {
 
     const startTime = Date.now();
     try {
-      const buffer = await streamToBuffer(readStream);
+      const streamTimeoutMs = this.configService.get<number>(
+        'storage.file.stream_timeout_ms',
+        { infer: true }
+      )!;
+      const buffer = await streamToBuffer(readStream, streamTimeoutMs);
       this.logger.verbose?.(
         {
           message: 'Stream buffered',
