@@ -264,6 +264,7 @@ describe('SubscriptionPublishService', () => {
             minResponses: 1,
             resultsDetail: PollResultsDetail.FULL,
             resultsVisibility: PollResultsVisibility.VISIBLE,
+            allowContributorsAddOptions: false,
           },
           createdDate: new Date(),
           updatedDate: new Date(),

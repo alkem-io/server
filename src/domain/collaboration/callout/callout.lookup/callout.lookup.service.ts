@@ -1,7 +1,7 @@
 import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
+import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindOneOptions } from 'typeorm';
 import { Callout } from '../callout.entity';
