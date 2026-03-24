@@ -1,0 +1,17 @@
+# Pre-commit hook: mirrors CI checks locally for faster feedback loops
+# 1. Lint staged files (biome auto-fix)
+# 2. Type-check (tsc --noEmit)
+# 3. Run tests (vitest without coverage for speed)
+
+echo "🔍 Running pre-commit checks..."
+
+echo "→ lint-staged (biome check on staged files)"
+pnpm exec lint-staged || exit 1
+
+echo "→ Type checking (tsc --noEmit)"
+pnpm exec tsc --noEmit || exit 1
+
+echo "→ Running tests (vitest)"
+pnpm run test:ci:no:coverage || exit 1
+
+echo "✅ All pre-commit checks passed"

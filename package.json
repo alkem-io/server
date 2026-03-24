@@ -48,7 +48,8 @@
     "schema:print": "ts-node -r tsconfig-paths/register src/tools/schema/print-schema.ts schema.graphql",
     "schema:sort": "ts-node -r tsconfig-paths/register src/tools/schema/sort-sdl.ts schema.graphql",
     "schema:diff": "ts-node -r tsconfig-paths/register src/tools/schema/diff-schema.ts --old tmp/prev.schema.graphql --new schema.graphql --out change-report.json --deprecations deprecations.json",
-    "schema:validate": "ts-node -r tsconfig-paths/register src/tools/schema/validate-artifacts.ts change-report.json deprecations.json"
+    "schema:validate": "ts-node -r tsconfig-paths/register src/tools/schema/validate-artifacts.ts change-report.json deprecations.json",
+    "prepare": "husky"
   },
   "overrides": {
     "fs-capacitor": "6.2.0",
@@ -169,7 +170,7 @@
     "@vitest/coverage-v8": "^4.0.17",
     "ajv-formats": "^3.0.1",
     "coveralls": "^3.1.1",
-    "husky": "^4.3.8",
+    "husky": "^9.1.7",
     "lint-staged": "^15.2.7",
     "rimraf": "^6.0.1",
     "supertest": "^7.0.0",
@@ -180,11 +181,6 @@
   },
   "_moduleAliases": {
     "@src": "./dist"
-  },
-  "husky": {
-    "hooks": {
-      "pre-commit": "lint-staged"
-    }
   },
   "engines": {
     "node": ">=22.0.0",
