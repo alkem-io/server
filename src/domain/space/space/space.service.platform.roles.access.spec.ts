@@ -1,4 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums';
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
@@ -38,6 +39,9 @@ describe('SpacePlatformRolesAccessService', () => {
       allowGuestContributions: false,
     },
     sortMode: SpaceSortMode.ALPHABETICAL,
+    layout: {
+      calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+    },
   };
 
   const createSpace = (overrides: Partial<ISpace> = {}): ISpace =>
