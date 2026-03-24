@@ -6,7 +6,14 @@ import {
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Tagset } from '@domain/common/tagset';
-import { Column, Entity, Index, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Index,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+} from 'typeorm';
 import { StorageBucket } from '../storage-bucket/storage.bucket.entity';
 import { IDocument } from './document.interface';
 

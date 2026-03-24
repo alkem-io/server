@@ -6,6 +6,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomService } from '@domain/communication/room/room.service';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
@@ -438,7 +439,7 @@ describe('ConversationService', () => {
       });
       roomService.deleteRoom.mockImplementation(async () => {
         callOrder.push('deleteRoom');
-        return {};
+        return {} as unknown as IRoom;
       });
 
       await service.resetConversation(

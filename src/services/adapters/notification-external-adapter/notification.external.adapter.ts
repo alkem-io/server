@@ -18,10 +18,6 @@ import {
   NotificationEventPayloadSpaceCommunityInvitation,
   NotificationEventPayloadSpaceCommunityInvitationPlatform,
   NotificationEventPayloadSpaceCommunityInvitationVirtualContributor,
-  NotificationEventPayloadSpacePollModifiedOnPollIVotedOn,
-  NotificationEventPayloadSpacePollVoteAffectedByOptionChange,
-  NotificationEventPayloadSpacePollVoteCastOnOwnPoll,
-  NotificationEventPayloadSpacePollVoteCastOnPollIVotedOn,
   NotificationEventPayloadUserMessageDirect,
   NotificationEventPayloadUserMessageRoom,
   NotificationEventPayloadUserMessageRoomReply,
@@ -41,7 +37,6 @@ import { IActor } from '@domain/actor/actor/actor.interface';
 import { getActorType } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { IPoll } from '@domain/collaboration/poll/poll.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
@@ -560,6 +555,7 @@ export class NotificationExternalAdapter {
         description: calendarEvent.profile?.description ?? undefined,
         googleCalendarUrl: '',
         outlookCalendarUrl: '',
+        appleCalendarUrl: '',
         icsDownloadUrl: '',
       },
     };
@@ -622,12 +618,7 @@ export class NotificationExternalAdapter {
     space: ISpace,
     callout: ICallout,
     poll: { id: string; title: string } | undefined
-  ): Promise<
-    | NotificationEventPayloadSpacePollVoteCastOnOwnPoll
-    | NotificationEventPayloadSpacePollVoteCastOnPollIVotedOn
-    | NotificationEventPayloadSpacePollModifiedOnPollIVotedOn
-    | NotificationEventPayloadSpacePollVoteAffectedByOptionChange
-  > {
+  ): Promise<any> {
     const spacePayload = await this.buildSpacePayload(
       eventType,
       triggeredBy,
