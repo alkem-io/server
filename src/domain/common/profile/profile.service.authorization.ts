@@ -25,38 +25,28 @@ export class ProfileAuthorizationService {
     const authSelect =
       this.authorizationPolicyService.authorizationSelectOptions;
 
-    // Query 1: Profile + its own authorization
+    // Query 1: Profile + authorization + shallow children (references, tagsets, visuals)
+    // Safe to combine: TypeORM's find API issues separate SQL per relation branch,
+    // so sibling one-to-many relations do not produce a cartesian product.
     const profile = await this.profileService.getProfileOrFail(profileID, {
       loadEagerRelations: false,
-      relations: { authorization: true },
-      select: { id: true, authorization: authSelect },
+      relations: {
+        authorization: true,
+        references: { authorization: true },
+        tagsets: { authorization: true },
+        visuals: { authorization: true },
+      },
+      select: {
+        id: true,
+        authorization: authSelect,
+        references: { id: true, authorization: authSelect },
+        tagsets: { id: true, authorization: authSelect },
+        visuals: { id: true, authorization: authSelect },
+      },
     });
 
-    if (!profile.authorization) {
-      throw new RelationshipNotFoundException(
-        `Unable to load Profile with entities at start of auth reset: ${profileID} `,
-        LogContext.ACCOUNT
-      );
-    }
-
-    // Query 2: Shallow children — references, tagsets, visuals with authorization
-    const profileWithChildren =
-      await this.profileService.getProfileOrFail(profileID, {
-        loadEagerRelations: false,
-        relations: {
-          references: { authorization: true },
-          tagsets: { authorization: true },
-          visuals: { authorization: true },
-        },
-        select: {
-          id: true,
-          references: { id: true, authorization: authSelect },
-          tagsets: { id: true, authorization: authSelect },
-          visuals: { id: true, authorization: authSelect },
-        },
-      });
-
-    // Query 3: Deep children — storageBucket + documents + document.tagset with authorization
+    // Query 2: Deep children — storageBucket + documents + document.tagset with authorization
+    // Kept separate to avoid cartesian explosion with documents × shallow children.
     const profileWithStorage =
       await this.profileService.getProfileOrFail(profileID, {
         loadEagerRelations: false,
@@ -84,14 +74,16 @@ export class ProfileAuthorizationService {
       });
 
     if (
-      !profileWithChildren.references ||
-      !profileWithChildren.tagsets ||
-      !profileWithChildren.visuals ||
+      !profile.authorization ||
+      !profile.references ||
+      !profile.tagsets ||
+      !profile.visuals ||
       !profileWithStorage.storageBucket
     ) {
       throw new RelationshipNotFoundException(
-        `Unable to load Profile with entities at start of auth reset: ${profileID} `,
-        LogContext.ACCOUNT
+        'Unable to load Profile with entities at start of auth reset',
+        LogContext.ACCOUNT,
+        { profileID }
       );
     }
 
@@ -107,7 +99,7 @@ export class ProfileAuthorizationService {
 
     updatedAuthorizations.push(profile.authorization);
 
-    for (const reference of profileWithChildren.references) {
+    for (const reference of profile.references) {
       reference.authorization =
         this.authorizationPolicyService.inheritParentAuthorization(
           reference.authorization,
@@ -116,7 +108,7 @@ export class ProfileAuthorizationService {
       updatedAuthorizations.push(reference.authorization);
     }
 
-    for (const tagset of profileWithChildren.tagsets) {
+    for (const tagset of profile.tagsets) {
       tagset.authorization =
         this.authorizationPolicyService.inheritParentAuthorization(
           tagset.authorization,
@@ -125,7 +117,7 @@ export class ProfileAuthorizationService {
       updatedAuthorizations.push(tagset.authorization);
     }
 
-    for (const visual of profileWithChildren.visuals) {
+    for (const visual of profile.visuals) {
       visual.authorization =
         this.visualAuthorizationService.applyAuthorizationPolicy(
           visual,

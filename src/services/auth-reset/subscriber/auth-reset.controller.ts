@@ -1,17 +1,17 @@
 import { LogContext, MessagingQueue } from '@common/enums';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { OrganizationLicenseService } from '@domain/community/organization/organization.service.license';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { Controller, Inject, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   Ctx,
   EventPattern,
@@ -23,6 +23,7 @@ import { PlatformAuthorizationService } from '@platform/platform/platform.servic
 import { PlatformLicenseService } from '@platform/platform/platform.service.license';
 import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
 import { TaskService } from '@services/task/task.service';
+import { AlkemioConfig } from '@src/types';
 import { Channel, Message } from 'amqplib';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthResetEventPayload } from '../auth-reset.payload.interface';
@@ -32,6 +33,8 @@ const MAX_RETRIES = 5;
 const RETRY_HEADER = 'x-retry-count';
 @Controller()
 export class AuthResetController {
+  private readonly concurrency: number;
+
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
@@ -45,39 +48,42 @@ export class AuthResetController {
     private organizationAuthorizationService: OrganizationAuthorizationService,
     private userAuthorizationService: UserAuthorizationService,
     private organizationService: OrganizationService,
-    private organizationLookupService: OrganizationLookupService,
     private organizationLicenseService: OrganizationLicenseService,
     private aiServerAuthorizationService: AiServerAuthorizationService,
-    private userService: UserService,
-    private taskService: TaskService
-  ) {}
+    private taskService: TaskService,
+    private readonly configService: ConfigService<AlkemioConfig, true>
+  ) {
+    this.concurrency =
+      this.configService.get('authorization.concurrency', {
+        infer: true,
+      }) ?? 5;
+  }
 
-  private async processEntityWithRetry(
-    entityId: string,
-    entityType: string,
-    taskId: string,
-    processor: (id: string) => Promise<void>
-  ): Promise<void> {
-    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
-      try {
-        await processor(entityId);
-        const message = `Finished resetting authorization for ${entityType} with id ${entityId}.`;
-        this.logger.verbose?.(message, LogContext.AUTH_POLICY);
-        this.taskService.updateTaskResults(taskId, message);
-        return;
-      } catch (error: any) {
-        if (attempt >= MAX_RETRIES) {
-          const message = `Resetting authorization for ${entityType} with id ${entityId} failed after ${MAX_RETRIES} retries.`;
-          this.logger.error(message, error?.stack, LogContext.AUTH);
-          this.taskService.updateTaskErrors(taskId, message);
-        } else {
-          this.logger.warn(
-            `Processing authorization reset for ${entityType} with id ${entityId} failed. Retrying (${attempt + 1}/${MAX_RETRIES})`,
-            LogContext.AUTH
-          );
-        }
+  /**
+   * Processes items concurrently with a bounded concurrency limit.
+   * Returns results in the same order as the input.
+   */
+  private async mapWithConcurrency<T, R>(
+    items: T[],
+    concurrency: number,
+    fn: (item: T) => Promise<R>
+  ): Promise<R[]> {
+    const results: R[] = new Array(items.length);
+    let nextIndex = 0;
+
+    const worker = async () => {
+      while (nextIndex < items.length) {
+        const index = nextIndex++;
+        results[index] = await fn(items[index]);
       }
-    }
+    };
+
+    await Promise.all(
+      Array.from({ length: Math.min(concurrency, items.length) }, () =>
+        worker()
+      )
+    );
+    return results;
   }
 
   private async collectAuthPoliciesWithRetry(
@@ -109,6 +115,35 @@ export class AuthResetController {
     return [];
   }
 
+  private async collectLicensesWithRetry(
+    entityId: string,
+    entityType: string,
+    taskId: string,
+    processor: (id: string) => Promise<ILicense[]>
+  ): Promise<ILicense[]> {
+    for (let attempt = 0; attempt <= MAX_RETRIES; attempt++) {
+      try {
+        const licenses = await processor(entityId);
+        const message = `Finished resetting license for ${entityType} with id ${entityId}.`;
+        this.logger.verbose?.(message, LogContext.AUTH_POLICY);
+        this.taskService.updateTaskResults(taskId, message);
+        return licenses;
+      } catch (error: any) {
+        if (attempt >= MAX_RETRIES) {
+          const message = `Resetting license for ${entityType} with id ${entityId} failed after ${MAX_RETRIES} retries.`;
+          this.logger.error(message, error?.stack, LogContext.AUTH);
+          this.taskService.updateTaskErrors(taskId, message);
+        } else {
+          this.logger.warn(
+            `Processing license reset for ${entityType} with id ${entityId} failed. Retrying (${attempt + 1}/${MAX_RETRIES})`,
+            LogContext.AUTH
+          );
+        }
+      }
+    }
+    return [];
+  }
+
   @EventPattern(RESET_EVENT_TYPE.AUTHORIZATION_RESET_ACCOUNT, Transport.RMQ)
   public async authResetAccount(
     @Payload() payload: AuthResetEventPayload,
@@ -122,21 +157,24 @@ export class AuthResetController {
     const channel: Channel = context.getChannelRef();
     const originalMsg = context.getMessage() as Message;
 
-    const allPolicies: IAuthorizationPolicy[] = [];
-    for (const entityId of entityIds) {
-      const policies = await this.collectAuthPoliciesWithRetry(
-        entityId,
-        'account',
-        payload.task,
-        async (id: string) => {
-          const account = await this.accountService.getAccountOrFail(id);
-          return this.accountAuthorizationService.applyAuthorizationPolicy(
-            account
-          );
-        }
-      );
-      allPolicies.push(...policies);
-    }
+    const policyArrays = await this.mapWithConcurrency(
+      entityIds,
+      this.concurrency,
+      async (entityId) => {
+        return this.collectAuthPoliciesWithRetry(
+          entityId,
+          'account',
+          payload.task,
+          async (id: string) => {
+            const account = await this.accountService.getAccountOrFail(id);
+            return this.accountAuthorizationService.applyAuthorizationPolicy(
+              account
+            );
+          }
+        );
+      }
+    );
+    const allPolicies = policyArrays.flat();
     if (allPolicies.length > 0) {
       await this.authorizationPolicyService.bulkUpdate(allPolicies);
     }
@@ -156,18 +194,23 @@ export class AuthResetController {
     const channel: Channel = context.getChannelRef();
     const originalMsg = context.getMessage() as Message;
 
-    for (const entityId of entityIds) {
-      await this.processEntityWithRetry(
-        entityId,
-        'account license',
-        payload.task,
-        async (id: string) => {
-          const account = await this.accountService.getAccountOrFail(id);
-          const updatedLicenses =
-            await this.accountLicenseService.applyLicensePolicy(account.id);
-          await this.licenseService.saveAll(updatedLicenses);
-        }
-      );
+    const licenseArrays = await this.mapWithConcurrency(
+      entityIds,
+      this.concurrency,
+      async (entityId) => {
+        return this.collectLicensesWithRetry(
+          entityId,
+          'account license',
+          payload.task,
+          async (id: string) => {
+            return this.accountLicenseService.applyLicensePolicy(id);
+          }
+        );
+      }
+    );
+    const allLicenses = licenseArrays.flat();
+    if (allLicenses.length > 0) {
+      await this.licenseService.saveAll(allLicenses);
     }
     channel.ack(originalMsg);
   }
@@ -185,21 +228,23 @@ export class AuthResetController {
     const channel: Channel = context.getChannelRef();
     const originalMsg = context.getMessage() as Message;
 
-    for (const entityId of entityIds) {
-      await this.processEntityWithRetry(
-        entityId,
-        'organization license',
-        payload.task,
-        async (id: string) => {
-          const organization =
-            await this.organizationLookupService.getOrganizationByIdOrFail(id);
-          const updatedLicenses =
-            await this.organizationLicenseService.applyLicensePolicy(
-              organization.id
-            );
-          await this.licenseService.saveAll(updatedLicenses);
-        }
-      );
+    const licenseArrays = await this.mapWithConcurrency(
+      entityIds,
+      this.concurrency,
+      async (entityId) => {
+        return this.collectLicensesWithRetry(
+          entityId,
+          'organization license',
+          payload.task,
+          async (id: string) => {
+            return this.organizationLicenseService.applyLicensePolicy(id);
+          }
+        );
+      }
+    );
+    const allLicenses = licenseArrays.flat();
+    if (allLicenses.length > 0) {
+      await this.licenseService.saveAll(allLicenses);
     }
     channel.ack(originalMsg);
   }
@@ -348,21 +393,21 @@ export class AuthResetController {
     const channel: Channel = context.getChannelRef();
     const originalMsg = context.getMessage() as Message;
 
-    const allPolicies: IAuthorizationPolicy[] = [];
-    for (const entityId of entityIds) {
-      const policies = await this.collectAuthPoliciesWithRetry(
-        entityId,
-        'user',
-        payload.task,
-        async (id: string) => {
-          const user = await this.userService.getUserByIdOrFail(id);
-          return this.userAuthorizationService.applyAuthorizationPolicy(
-            user.id
-          );
-        }
-      );
-      allPolicies.push(...policies);
-    }
+    const policyArrays = await this.mapWithConcurrency(
+      entityIds,
+      this.concurrency,
+      async (entityId) => {
+        return this.collectAuthPoliciesWithRetry(
+          entityId,
+          'user',
+          payload.task,
+          async (id: string) => {
+            return this.userAuthorizationService.applyAuthorizationPolicy(id);
+          }
+        );
+      }
+    );
+    const allPolicies = policyArrays.flat();
     if (allPolicies.length > 0) {
       await this.authorizationPolicyService.bulkUpdate(allPolicies);
     }
@@ -385,22 +430,25 @@ export class AuthResetController {
     const channel: Channel = context.getChannelRef();
     const originalMsg = context.getMessage() as Message;
 
-    const allPolicies: IAuthorizationPolicy[] = [];
-    for (const entityId of entityIds) {
-      const policies = await this.collectAuthPoliciesWithRetry(
-        entityId,
-        'organization',
-        payload.task,
-        async (id: string) => {
-          const organization =
-            await this.organizationService.getOrganizationOrFail(id);
-          return this.organizationAuthorizationService.applyAuthorizationPolicy(
-            organization
-          );
-        }
-      );
-      allPolicies.push(...policies);
-    }
+    const policyArrays = await this.mapWithConcurrency(
+      entityIds,
+      this.concurrency,
+      async (entityId) => {
+        return this.collectAuthPoliciesWithRetry(
+          entityId,
+          'organization',
+          payload.task,
+          async (id: string) => {
+            const organization =
+              await this.organizationService.getOrganizationOrFail(id);
+            return this.organizationAuthorizationService.applyAuthorizationPolicy(
+              organization
+            );
+          }
+        );
+      }
+    );
+    const allPolicies = policyArrays.flat();
     if (allPolicies.length > 0) {
       await this.authorizationPolicyService.bulkUpdate(allPolicies);
     }

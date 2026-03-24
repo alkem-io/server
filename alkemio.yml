@@ -45,6 +45,10 @@ authorization:
   chunk: ${AUTHORIZATION_CHUNK_SIZE}:1000
   # number of entity IDs per RabbitMQ batch message during auth reset
   batch_size: ${AUTHORIZATION_BATCH_SIZE}:50
+  # max concurrent entity processing within a single batch message
+  concurrency: ${AUTHORIZATION_CONCURRENCY}:5
+  # RabbitMQ prefetch count for the auth-reset consumer
+  prefetch: ${AUTHORIZATION_PREFETCH}:3
 
 ## security ##
 # The various means by which the security of the Alkemio platform can be configured.

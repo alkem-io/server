@@ -94,7 +94,15 @@ const bootstrap = async () => {
 
   const heartbeat = process.env.NODE_ENV === 'production' ? 30 : 120;
   const amqpEndpoint = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=${heartbeat}`;
-  connectMicroservice(app, amqpEndpoint, MessagingQueue.AUTH_RESET);
+  const authPrefetch = configService.get('authorization.prefetch', {
+    infer: true,
+  });
+  connectMicroservice(
+    app,
+    amqpEndpoint,
+    MessagingQueue.AUTH_RESET,
+    authPrefetch
+  );
   connectMicroservice(app, amqpEndpoint, MessagingQueue.WHITEBOARDS);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.FILES);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.IN_APP_NOTIFICATIONS);
@@ -112,7 +120,8 @@ const bootstrap = async () => {
 const connectMicroservice = (
   app: INestApplication,
   amqpEndpoint: string,
-  queue: MessagingQueue
+  queue: MessagingQueue,
+  prefetchCount?: number
 ) => {
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,
@@ -127,6 +136,7 @@ const connectMicroservice = (
       },
       //be careful with this flag, if set to true, message acknowledgment will be automatic. Double acknowledgment throws an error and disconnects the queue.
       noAck: false,
+      ...(prefetchCount !== undefined && { prefetchCount }),
     },
   });
 };

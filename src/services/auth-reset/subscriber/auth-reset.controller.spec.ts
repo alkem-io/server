@@ -4,12 +4,11 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { OrganizationLicenseService } from '@domain/community/organization/organization.service.license';
-import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
-import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
+import { ConfigService } from '@nestjs/config';
 import { RmqContext } from '@nestjs/microservices';
 import { Test, TestingModule } from '@nestjs/testing';
 import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
@@ -60,10 +59,8 @@ describe('AuthResetController', () => {
   let platformAuthorizationService: Mocked<PlatformAuthorizationService>;
   let platformLicenseService: Mocked<PlatformLicenseService>;
   let aiServerAuthorizationService: Mocked<AiServerAuthorizationService>;
-  let userService: Mocked<UserService>;
   let userAuthorizationService: Mocked<UserAuthorizationService>;
   let organizationService: Mocked<OrganizationService>;
-  let organizationLookupService: Mocked<OrganizationLookupService>;
   let organizationAuthorizationService: Mocked<OrganizationAuthorizationService>;
   let organizationLicenseService: Mocked<OrganizationLicenseService>;
   let taskService: Mocked<TaskService>;
@@ -75,7 +72,13 @@ describe('AuthResetController', () => {
       providers: [MockWinstonProvider],
       controllers: [AuthResetController],
     })
-      .useMocker(defaultMockerFactory)
+      .useMocker((token) => {
+        // ConfigService needs to return a value in the constructor
+        if (token === ConfigService) {
+          return { get: vi.fn().mockReturnValue(5) };
+        }
+        return defaultMockerFactory(token);
+      })
       .compile();
 
     controller = module.get<AuthResetController>(AuthResetController);
@@ -99,16 +102,12 @@ describe('AuthResetController', () => {
     aiServerAuthorizationService = module.get(
       AiServerAuthorizationService
     ) as Mocked<AiServerAuthorizationService>;
-    userService = module.get(UserService) as Mocked<UserService>;
     userAuthorizationService = module.get(
       UserAuthorizationService
     ) as Mocked<UserAuthorizationService>;
     organizationService = module.get(
       OrganizationService
     ) as Mocked<OrganizationService>;
-    organizationLookupService = module.get(
-      OrganizationLookupService
-    ) as Mocked<OrganizationLookupService>;
     organizationAuthorizationService = module.get(
       OrganizationAuthorizationService
     ) as Mocked<OrganizationAuthorizationService>;
@@ -195,27 +194,30 @@ describe('AuthResetController', () => {
       task: 'task-2',
     };
 
-    it('should apply license policy and ack on success', async () => {
+    it('should apply license policy, save all licenses, and ack on success', async () => {
       const { channel, context } = createMockContext(0);
-      const account = { id: 'acc-2' };
-      accountService.getAccountOrFail.mockResolvedValue(account as any);
-      accountLicenseService.applyLicensePolicy.mockResolvedValue([]);
+      const licenses = [{ id: 'lic-1' }];
+      accountLicenseService.applyLicensePolicy.mockResolvedValue(
+        licenses as any
+      );
       licenseService.saveAll.mockResolvedValue(undefined as any);
 
       await controller.licenseResetAccount(payload, context);
 
-      expect(accountService.getAccountOrFail).toHaveBeenCalledWith('acc-2');
+      // Passes ID directly — no redundant entity load
       expect(accountLicenseService.applyLicensePolicy).toHaveBeenCalledWith(
         'acc-2'
       );
-      expect(licenseService.saveAll).toHaveBeenCalledWith([]);
+      expect(licenseService.saveAll).toHaveBeenCalledWith(licenses);
       expect(taskService.updateTaskResults).toHaveBeenCalled();
       expect(channel.ack).toHaveBeenCalled();
     });
 
     it('should retry in-process on failure', async () => {
       const { channel, context } = createMockContext(0);
-      accountService.getAccountOrFail.mockRejectedValue(new Error('fail'));
+      accountLicenseService.applyLicensePolicy.mockRejectedValue(
+        new Error('fail')
+      );
 
       await controller.licenseResetAccount(payload, context);
 
@@ -232,29 +234,27 @@ describe('AuthResetController', () => {
       task: 'task-3',
     };
 
-    it('should apply license policy and ack on success', async () => {
+    it('should apply license policy, save all licenses, and ack on success', async () => {
       const { channel, context } = createMockContext(0);
-      const org = { id: 'org-1' };
-      organizationLookupService.getOrganizationByIdOrFail.mockResolvedValue(
-        org as any
+      const licenses = [{ id: 'lic-1' }];
+      organizationLicenseService.applyLicensePolicy.mockResolvedValue(
+        licenses as any
       );
-      organizationLicenseService.applyLicensePolicy.mockResolvedValue([]);
       licenseService.saveAll.mockResolvedValue(undefined as any);
 
       await controller.licenseResetOrganization(payload, context);
 
-      expect(
-        organizationLookupService.getOrganizationByIdOrFail
-      ).toHaveBeenCalledWith('org-1');
+      // Passes ID directly — no redundant entity load
       expect(
         organizationLicenseService.applyLicensePolicy
       ).toHaveBeenCalledWith('org-1');
+      expect(licenseService.saveAll).toHaveBeenCalledWith(licenses);
       expect(channel.ack).toHaveBeenCalled();
     });
 
     it('should retry in-process on failure', async () => {
       const { channel, context } = createMockContext(0);
-      organizationLookupService.getOrganizationByIdOrFail.mockRejectedValue(
+      organizationLicenseService.applyLicensePolicy.mockRejectedValue(
         new Error('fail')
       );
 
@@ -429,9 +429,7 @@ describe('AuthResetController', () => {
 
     it('should apply user authorization policy, bulk update, and ack', async () => {
       const { channel, context } = createMockContext(0);
-      const user = { id: 'user-1' };
       const policies = [{ id: 'p1' }];
-      userService.getUserByIdOrFail.mockResolvedValue(user as any);
       userAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
         policies as any
       );
@@ -439,7 +437,7 @@ describe('AuthResetController', () => {
 
       await controller.authResetUser(payload, context);
 
-      expect(userService.getUserByIdOrFail).toHaveBeenCalledWith('user-1');
+      // Passes ID directly — no redundant entity load
       expect(
         userAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalledWith('user-1');
@@ -452,7 +450,9 @@ describe('AuthResetController', () => {
 
     it('should retry in-process on failure and still ack', async () => {
       const { channel, context } = createMockContext(0);
-      userService.getUserByIdOrFail.mockRejectedValue(new Error('fail'));
+      userAuthorizationService.applyAuthorizationPolicy.mockRejectedValue(
+        new Error('fail')
+      );
 
       await controller.authResetUser(payload, context);
 

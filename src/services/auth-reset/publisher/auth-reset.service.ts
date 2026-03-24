@@ -45,17 +45,18 @@ export class AuthResetService {
     const task = taskId ? { id: taskId } : await this.taskService.create();
 
     try {
-      await this.publishAuthorizationResetAllAccounts(task.id);
-      await this.publishAuthorizationResetAllOrganizations(task.id);
-      await this.publishAuthorizationResetAllUsers(task.id);
-      await this.publishAuthorizationResetPlatform();
-      await this.publishAuthorizationResetAiServer();
-      // And reset licenses
-      await this.publishLicenseResetAllAccounts(task.id);
-      await this.publishLicenseResetAllOrganizations(task.id);
+      await Promise.all([
+        this.publishAuthorizationResetAllAccounts(task.id),
+        this.publishAuthorizationResetAllOrganizations(task.id),
+        this.publishAuthorizationResetAllUsers(task.id),
+        this.publishAuthorizationResetPlatform(),
+        this.publishAuthorizationResetAiServer(),
+        this.publishLicenseResetAllAccounts(task.id),
+        this.publishLicenseResetAllOrganizations(task.id),
+      ]);
     } catch (error) {
       throw new BaseException(
-        `Error while initializing authorization reset: ${error}`,
+        'Error while initializing authorization reset',
         LogContext.AUTH,
         AlkemioErrorStatus.AUTHORIZATION_RESET
       );
