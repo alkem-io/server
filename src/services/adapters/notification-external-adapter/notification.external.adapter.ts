@@ -41,7 +41,6 @@ import { IActor } from '@domain/actor/actor/actor.interface';
 import { getActorType } from '@domain/actor/actor/actor.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { IPoll } from '@domain/collaboration/poll/poll.interface';
 import { IMessage } from '@domain/communication/message/message.interface';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
