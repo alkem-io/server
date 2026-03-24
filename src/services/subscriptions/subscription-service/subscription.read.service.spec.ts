@@ -5,6 +5,8 @@ import {
   SUBSCRIPTION_CONVERSATION_EVENT,
   SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER,
   SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED,
+  SUBSCRIPTION_POLL_OPTIONS_CHANGED,
+  SUBSCRIPTION_POLL_VOTE_UPDATED,
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_VIRTUAL_UPDATED,
 } from '@src/common/constants';
@@ -23,6 +25,8 @@ describe('SubscriptionReadService', () => {
   let inAppNotifPubSub: { asyncIterableIterator: Mock };
   let inAppCounterPubSub: { asyncIterableIterator: Mock };
   let conversationPubSub: { asyncIterableIterator: Mock };
+  let pollVoteUpdatedPubSub: { asyncIterableIterator: Mock };
+  let pollOptionsChangedPubSub: { asyncIterableIterator: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -41,6 +45,12 @@ describe('SubscriptionReadService', () => {
     const conversationProvider = pubSubEngineMockFactory(
       SUBSCRIPTION_CONVERSATION_EVENT
     );
+    const pollVoteUpdatedProvider = pubSubEngineMockFactory(
+      SUBSCRIPTION_POLL_VOTE_UPDATED
+    );
+    const pollOptionsChangedProvider = pubSubEngineMockFactory(
+      SUBSCRIPTION_POLL_OPTIONS_CHANGED
+    );
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -51,6 +61,8 @@ describe('SubscriptionReadService', () => {
         inAppNotifProvider,
         inAppCounterProvider,
         conversationProvider,
+        pollVoteUpdatedProvider,
+        pollOptionsChangedProvider,
         MockCacheManager,
         MockWinstonProvider,
       ],
@@ -65,6 +77,8 @@ describe('SubscriptionReadService', () => {
     inAppNotifPubSub = module.get(SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED);
     inAppCounterPubSub = module.get(SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER);
     conversationPubSub = module.get(SUBSCRIPTION_CONVERSATION_EVENT);
+    pollVoteUpdatedPubSub = module.get(SUBSCRIPTION_POLL_VOTE_UPDATED);
+    pollOptionsChangedPubSub = module.get(SUBSCRIPTION_POLL_OPTIONS_CHANGED);
   });
 
   it('should be defined', () => {
@@ -151,6 +165,36 @@ describe('SubscriptionReadService', () => {
       expect(conversationPubSub.asyncIterableIterator).toHaveBeenCalledWith(
         SubscriptionType.CONVERSATION_EVENTS
       );
+      expect(result).toBe(mockIterator);
+    });
+  });
+
+  describe('subscribeToPollVoteUpdated', () => {
+    it('should call asyncIterableIterator with POLL_VOTE_UPDATED', () => {
+      const mockIterator = {} as AsyncIterableIterator<SubscriptionType>;
+      pollVoteUpdatedPubSub.asyncIterableIterator.mockReturnValue(mockIterator);
+
+      const result = service.subscribeToPollVoteUpdated();
+
+      expect(pollVoteUpdatedPubSub.asyncIterableIterator).toHaveBeenCalledWith(
+        SubscriptionType.POLL_VOTE_UPDATED
+      );
+      expect(result).toBe(mockIterator);
+    });
+  });
+
+  describe('subscribeToPollOptionsChanged', () => {
+    it('should call asyncIterableIterator with POLL_OPTIONS_CHANGED', () => {
+      const mockIterator = {} as AsyncIterableIterator<SubscriptionType>;
+      pollOptionsChangedPubSub.asyncIterableIterator.mockReturnValue(
+        mockIterator
+      );
+
+      const result = service.subscribeToPollOptionsChanged();
+
+      expect(
+        pollOptionsChangedPubSub.asyncIterableIterator
+      ).toHaveBeenCalledWith(SubscriptionType.POLL_OPTIONS_CHANGED);
       expect(result).toBe(mockIterator);
     });
   });

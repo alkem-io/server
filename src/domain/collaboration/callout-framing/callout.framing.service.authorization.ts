@@ -1,5 +1,7 @@
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { IPoll } from '@domain/collaboration/poll/poll.interface';
+import { PollAuthorizationService } from '@domain/collaboration/poll/poll.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { MediaGalleryAuthorizationService } from '@domain/common/media-gallery/media.gallery.service.authorization';
@@ -19,7 +21,8 @@ export class CalloutFramingAuthorizationService {
     private profileAuthorizationService: ProfileAuthorizationService,
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private memoAuthorizationService: MemoAuthorizationService,
-    private mediaGalleryAuthorizationService: MediaGalleryAuthorizationService
+    private mediaGalleryAuthorizationService: MediaGalleryAuthorizationService,
+    private pollAuthorizationService: PollAuthorizationService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -40,6 +43,7 @@ export class CalloutFramingAuthorizationService {
             mediaGallery: {
               storageBucket: true,
             },
+            poll: true,
           },
           select: {
             id: true,
@@ -58,14 +62,18 @@ export class CalloutFramingAuthorizationService {
               id: true,
               storageBucket: { id: true },
             },
+            poll: {
+              id: true,
+            },
           },
         }
       );
 
     if (!calloutFraming.profile) {
       throw new RelationshipNotFoundException(
-        `Unable to load Profile on calloutFraming:  ${calloutFraming.id} `,
-        LogContext.COLLABORATION
+        'Unable to load Profile on calloutFraming',
+        LogContext.COLLABORATION,
+        { calloutFramingId: calloutFraming.id }
       );
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
@@ -110,6 +118,15 @@ export class CalloutFramingAuthorizationService {
           calloutFraming.authorization
         );
       updatedAuthorizations.push(...mediaGalleryAuthorizations);
+    }
+
+    if (calloutFraming.poll) {
+      const pollAuthorizations =
+        await this.pollAuthorizationService.applyAuthorizationPolicy(
+          calloutFraming.poll,
+          calloutFraming.authorization
+        );
+      updatedAuthorizations.push(...pollAuthorizations);
     }
 
     return updatedAuthorizations;

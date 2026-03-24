@@ -1,5 +1,6 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -137,6 +138,20 @@ export class CalloutsSetResolverMutations {
         },
         actorContext
       );
+
+      if (
+        callout.framing?.type === CalloutFramingType.POLL &&
+        callout.framing.poll
+      ) {
+        this.contributionReporter.calloutPollCreated(
+          {
+            id: callout.id,
+            name: callout.framing.poll.title,
+            space: levelZeroSpaceID,
+          },
+          actorContext
+        );
+      }
     }
 
     return await this.calloutService.getCalloutOrFail(callout.id);

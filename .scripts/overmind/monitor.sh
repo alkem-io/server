@@ -30,7 +30,7 @@ overmind echo 2>/dev/null | while IFS= read -r line; do
   timestamp=$(date +%H:%M:%S)
 
   # Check for errors in the line
-  if echo "$line" | grep -qiE '(error|FAIL|exception|✕|TS[0-9]+)'; then
+  if echo "$line" | grep -qiE '(error|FAIL|exception|✕|TS[0-9]+|SCHEMA_MISMATCH|GQL_ERROR)'; then
     # Strip ANSI codes for cleaner logging
     clean_line=$(echo "$line" | sed 's/\x1b\[[0-9;]*m//g')
     echo "[$timestamp] $clean_line" >> "$LOG_FILE"

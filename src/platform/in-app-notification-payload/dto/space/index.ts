@@ -3,6 +3,7 @@ export * from './notification.in.app.payload.space.base';
 export * from './notification.in.app.payload.space.collaboration.callout';
 export * from './notification.in.app.payload.space.collaboration.callout.comment';
 export * from './notification.in.app.payload.space.collaboration.callout.post.comment';
+export * from './notification.in.app.payload.space.collaboration.poll';
 export * from './notification.in.app.payload.space.communication.message.direct';
 export * from './notification.in.app.payload.space.communication.update';
 export * from './notification.in.app.payload.space.community.actor';

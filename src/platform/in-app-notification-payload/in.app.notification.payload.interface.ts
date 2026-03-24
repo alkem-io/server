@@ -22,6 +22,7 @@ import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-noti
 import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.room';
 import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-notification-payload/dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from './dto/space/notification.in.app.payload.space.collaboration.callout.comment';
+import { InAppNotificationPayloadSpaceCollaborationPoll } from './dto/space/notification.in.app.payload.space.collaboration.poll';
 import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from './dto/space/notification.in.app.payload.space.community.calendar.event';
 import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from './dto/space/notification.in.app.payload.space.community.calendar.event.comment';
 
@@ -69,6 +70,8 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from './dt
         return InAppNotificationPayloadSpaceCommunityCalendarEvent;
       case NotificationEventPayload.SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT:
         return InAppNotificationPayloadSpaceCommunityCalendarEventComment;
+      case NotificationEventPayload.SPACE_COLLABORATION_POLL:
+        return InAppNotificationPayloadSpaceCollaborationPoll;
 
       // User notifications
       case NotificationEventPayload.USER:

@@ -62,4 +62,39 @@ export class UpdateUserSettingsNotificationSpaceInput {
   @ValidateNested()
   @Type(() => NotificationSettingInput)
   communityCalendarEvents?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when a vote is cast on a poll you created',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  collaborationPollVoteCastOnOwnPoll?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when another user votes on a poll you already voted on',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  collaborationPollVoteCastOnPollIVotedOn?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description: 'Receive a notification when a poll you voted on is modified',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  collaborationPollModifiedOnPollIVotedOn?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when a poll option you voted for is changed or removed',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  collaborationPollVoteAffectedByOptionChange?: NotificationSettingInput;
 }

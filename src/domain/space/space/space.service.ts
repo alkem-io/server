@@ -11,7 +11,6 @@ import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
-import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { SpaceVisibility } from '@common/enums/space.visibility';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
@@ -152,9 +151,16 @@ export class SpaceService {
     );
 
     space.settings = templateContentSpace.settings;
-    if (!space.settings.sortMode) {
-      space.settings.sortMode = SpaceSortMode.ALPHABETICAL;
+    // Merge any user-provided settings on top of the template defaults
+    if (spaceData.settings) {
+      space.settings = this.spaceSettingsService.updateSettings(
+        space.settings,
+        spaceData.settings
+      );
     }
+    space.settings = this.spaceSettingsService.applyCreationDefaults(
+      space.settings
+    );
     space.platformRolesAccess =
       this.spacePlatformRolesAccessService.createPlatformRolesAccess(
         space,
