@@ -6,7 +6,9 @@ import { PublicPart } from '../utils/public-part';
 export const MockWinstonProvider: ValueProvider<PublicPart<LoggerService>> = {
   provide: WINSTON_MODULE_NEST_PROVIDER,
   useValue: {
+    debug: vi.fn(),
     error: vi.fn(),
+    log: vi.fn(),
     warn: vi.fn(),
     verbose: vi.fn(),
   },

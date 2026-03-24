@@ -481,10 +481,35 @@ describe('InputCreatorService', () => {
       const result =
         await service.buildCreateCalloutInputFromCallout('callout-1');
 
-      expect(result.nameID).toBe('test-callout');
-      expect(result.sortOrder).toBe(1);
-      expect(result.framing).toBeDefined();
-      expect(result.settings).toEqual({ mode: 'standard' });
+      expect(result?.nameID).toBe('test-callout');
+      expect(result?.sortOrder).toBe(1);
+      expect(result?.framing).toBeDefined();
+      expect(result?.settings).toEqual({ mode: 'standard' });
+    });
+
+    it('should return null for a POLL framing callout (not templatable)', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'poll-callout-1',
+        nameID: 'my-poll',
+        sortOrder: 2,
+        framing: {
+          id: 'framing-poll',
+          type: CalloutFramingType.POLL,
+          profile: {
+            displayName: 'Poll',
+            description: '',
+            tagsets: [],
+          },
+        },
+        contributionDefaults: {},
+        settings: {},
+        classification: { tagsets: [] },
+      });
+
+      const result =
+        await service.buildCreateCalloutInputFromCallout('poll-callout-1');
+
+      expect(result).toBeNull();
     });
   });
 
@@ -521,6 +546,51 @@ describe('InputCreatorService', () => {
 
       expect(result).toHaveLength(2);
       expect(calloutService.getCalloutOrFail).toHaveBeenCalledTimes(2);
+    });
+
+    it('should skip POLL callouts and return only non-POLL callout inputs', async () => {
+      const regularCallout = {
+        id: 'callout-1',
+        nameID: 'regular',
+        sortOrder: 1,
+        framing: {
+          id: 'f-1',
+          type: CalloutFramingType.NONE,
+          profile: { displayName: 'Regular', description: '', tagsets: [] },
+        },
+        contributionDefaults: {
+          defaultDisplayName: '',
+          postDescription: '',
+          whiteboardContent: '',
+        },
+        settings: {},
+        classification: { tagsets: [] },
+      };
+      const pollCallout = {
+        id: 'callout-2',
+        nameID: 'poll-callout',
+        sortOrder: 2,
+        framing: {
+          id: 'f-2',
+          type: CalloutFramingType.POLL,
+          profile: { displayName: 'Poll', description: '', tagsets: [] },
+        },
+        contributionDefaults: {},
+        settings: {},
+        classification: { tagsets: [] },
+      };
+
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce(regularCallout)
+        .mockResolvedValueOnce(pollCallout);
+
+      const result = await service.buildCreateCalloutInputsFromCallouts([
+        { id: 'callout-1' } as any,
+        { id: 'callout-2' } as any,
+      ]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].nameID).toBe('regular');
     });
   });
 
