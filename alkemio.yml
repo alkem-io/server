@@ -292,6 +292,8 @@ storage:
   file:
     # 20MB
     max_file_size: ${STORAGE_MAX_FILE_SIZE}:20971520
+    # Timeout in milliseconds for reading file upload streams
+    stream_timeout_ms: ${STORAGE_STREAM_TIMEOUT_MS}:60000
   # Database configuration for usage by the Alkemio Server.
   # Uses PostgreSQL as the database backend.
   # Note: both schema / database name are used for configuration and they need to have the same value.
