@@ -115,6 +115,7 @@ export type AlkemioConfig = {
     enabled: boolean;
     file: {
       max_file_size: number;
+      stream_timeout_ms: number;
     };
     database: {
       host: string;

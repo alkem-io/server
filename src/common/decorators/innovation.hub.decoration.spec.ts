@@ -9,7 +9,6 @@ import { InnovationHub } from './innovation.hub.decoration';
 // createParamDecorator returns a factory: calling InnovationHub() returns a ParameterDecorator.
 function getParamDecoratorFactory(decoratorFactory: any) {
   class TestClass {
-    // biome-ignore lint/suspicious/noExplicitAny: test helper
     testMethod(@decoratorFactory() _param: any) {}
   }
 

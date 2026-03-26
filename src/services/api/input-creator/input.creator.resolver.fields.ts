@@ -100,7 +100,7 @@ export class InputCreatorResolverFields {
   async callout(
     @CurrentActor() actorContext: ActorContext,
     @Args('ID', { type: () => UUID }) id: string
-  ): Promise<CreateCalloutInput> {
+  ): Promise<CreateCalloutInput | null> {
     const callout = await this.calloutService.getCalloutOrFail(id);
     this.authorizationService.grantAccessOrFail(
       actorContext,
