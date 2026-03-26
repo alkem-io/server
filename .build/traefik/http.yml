@@ -273,7 +273,6 @@ http:
         - 'web'
       priority: 150
 
-
     kratos-public:
       rule: 'PathPrefix(`/ory/kratos/public`)'
       service: 'kratos-public'
