@@ -180,10 +180,10 @@ Logic: Before sending push to user, `INCR` key. If value > 10, drop notification
 notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
   push:
-    enabled: ${PUSH_NOTIFICATIONS_ENABLED}:false
+    enabled: ${PUSH_NOTIFICATIONS_ENABLED}:true
     vapid:
-      public_key: ${VAPID_PUBLIC_KEY}:
-      private_key: ${VAPID_PRIVATE_KEY}:
+      public_key: ${VAPID_PUBLIC_KEY}:BKqdDhb3qBD7lNiqe-sxXQQqmxdMNfBjLPcj9kypfXfxv1LT_c4JS5gukL0Np3lhdd_jqqlZNR714gr2SGT-V44
+      private_key: ${VAPID_PRIVATE_KEY}:KGcZQvup8fMXYxkK1HZTfYJRqvnAOZ6x_F85dqiYcq8
       subject: ${VAPID_SUBJECT}:mailto:notifications@alkem.io
     max_subscriptions_per_user: ${PUSH_MAX_SUBSCRIPTIONS_PER_USER}:10
     throttle:

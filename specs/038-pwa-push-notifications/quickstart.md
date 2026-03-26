@@ -7,38 +7,15 @@
 - Node.js 22 LTS (Volta-managed)
 - pnpm 10.17.1
 - Docker + Compose (for PostgreSQL, RabbitMQ, Redis)
-- `web-push` CLI for VAPID key generation
+- `web-push` CLI for VAPID key generation (only needed for production — dev defaults are built in)
 
 ## Setup
 
-### 1. Generate VAPID Keys
+Push notifications work out of the box for local development. The `alkemio.yml` config includes default dev VAPID keys and enables push notifications by default. No `.env` changes needed.
 
-```bash
-# Install web-push CLI globally (or use npx)
-npx web-push generate-vapid-keys
-```
+> **Production**: Override `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` with production keys generated via `npx web-push generate-vapid-keys`. Keys must remain stable across deployments — changing them invalidates all existing subscriptions.
 
-This outputs:
-```
-Public Key:  BNxRj_aNZr...
-Private Key: 3KZhVB_c2p...
-```
-
-Save both keys — they must remain stable across deployments.
-
-### 2. Configure Environment Variables
-
-Add to `.env` (or set in your environment):
-
-```bash
-# Push notification configuration
-PUSH_NOTIFICATIONS_ENABLED=true
-VAPID_PUBLIC_KEY=<your-public-key-from-step-1>
-VAPID_PRIVATE_KEY=<your-private-key-from-step-1>
-VAPID_SUBJECT=mailto:notifications@alkem.io
-```
-
-### 3. Start Services
+### 1. Start Services
 
 ```bash
 pnpm run start:services   # PostgreSQL, RabbitMQ, Redis
@@ -184,9 +161,9 @@ After starting the server, verify the push notification queues exist:
 
 | Environment Variable | Default | Description |
 |---------------------|---------|-------------|
-| `PUSH_NOTIFICATIONS_ENABLED` | `false` | Enable/disable push notification feature |
-| `VAPID_PUBLIC_KEY` | (none) | VAPID public key for Web Push |
-| `VAPID_PRIVATE_KEY` | (none) | VAPID private key for Web Push |
+| `PUSH_NOTIFICATIONS_ENABLED` | `true` | Enable/disable push notification feature |
+| `VAPID_PUBLIC_KEY` | (dev key built in) | VAPID public key for Web Push |
+| `VAPID_PRIVATE_KEY` | (dev key built in) | VAPID private key for Web Push |
 | `VAPID_SUBJECT` | `mailto:notifications@alkem.io` | VAPID subject (mailto: or https: URL) |
 | `PUSH_MAX_SUBSCRIPTIONS_PER_USER` | `10` | Max active subscriptions per user |
 | `PUSH_THROTTLE_MAX_PER_MINUTE` | `10` | Max push notifications per user per minute |
