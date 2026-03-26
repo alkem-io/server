@@ -413,7 +413,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter-go:v0.8.6
+    image: alkemio/matrix-adapter-go:latest
     depends_on:
       - rabbitmq
     environment:
@@ -423,6 +423,7 @@ services:
       - SYNAPSE_HOMESERVER_NAME
       - SYNAPSE_SERVER_URL
       - SYNAPSE_SERVER_NAME
+      - SYNAPSE_SERVER_SHARED_SECRET
       - MATRIX_AS_TOKEN
       - MATRIX_HS_TOKEN
 #      - MATRIX_BOT_ACTOR_ID

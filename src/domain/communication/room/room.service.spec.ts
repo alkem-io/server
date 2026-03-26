@@ -68,6 +68,8 @@ describe('RoomService', () => {
         'Test Room',
         undefined,
         undefined,
+        undefined,
+        undefined,
         undefined
       );
     });
@@ -92,6 +94,8 @@ describe('RoomService', () => {
         RoomType.CALLOUT,
         'Test Room',
         ['agent-1'],
+        undefined,
+        undefined,
         undefined,
         undefined
       );
@@ -118,6 +122,8 @@ describe('RoomService', () => {
         RoomType.CONVERSATION_DIRECT,
         'DM Room',
         ['agent-1', 'agent-2'],
+        undefined,
+        undefined,
         undefined,
         undefined
       );

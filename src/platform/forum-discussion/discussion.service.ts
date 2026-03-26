@@ -1,3 +1,4 @@
+import { JoinRulePublic } from '@alkemio/matrix-adapter-lib';
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoomType } from '@common/enums/room.type';
@@ -52,9 +53,12 @@ export class DiscussionService {
       AuthorizationPolicyType.DISCUSSION
     );
 
+    const isForumDiscussion = roomType === RoomType.DISCUSSION_FORUM;
     discussion.comments = await this.roomService.createRoom({
-      displayName: `${communicationDisplayName}-discussion-${discussion.profile.displayName}`,
+      displayName: discussion.profile.displayName,
       type: roomType,
+      joinRule: isForumDiscussion ? JoinRulePublic : undefined,
+      isPublic: isForumDiscussion || undefined,
     });
 
     discussion.createdBy = userID;
@@ -118,10 +122,9 @@ export class DiscussionService {
         discussion.profile.displayName !==
           updateDiscussionData.profileData.displayName
       ) {
-        const newRoomName = `discussion-${updateDiscussionData.profileData.displayName}`;
         await this.roomService.updateRoomDisplayName(
           discussion.comments,
-          newRoomName
+          updateDiscussionData.profileData.displayName
         );
       }
 

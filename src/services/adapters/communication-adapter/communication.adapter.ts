@@ -29,6 +29,8 @@ import {
   GetSpaceRequest,
   GetThreadMessagesRequest,
   GetUnreadCountsRequest,
+  // Join rule constants
+  JoinRule,
   ListRoomsRequest,
   ListSpacesRequest,
   MarkMessageReadRequest,
@@ -243,7 +245,9 @@ export class CommunicationAdapter {
     name?: string,
     initialMembers?: AlkemioActorID[],
     parentContextId?: AlkemioContextID,
-    avatarUrl?: string
+    avatarUrl?: string,
+    joinRule?: JoinRule,
+    isPublic?: boolean
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
@@ -265,6 +269,8 @@ export class CommunicationAdapter {
         initial_members: initialMembers,
         parent_context_id: parentContextId,
         avatar_url: avatarUrl,
+        join_rule: joinRule,
+        is_public: isPublic,
       } satisfies CreateRoomRequest,
       errorContext: { alkemioRoomId, roomType },
     });
@@ -286,8 +292,9 @@ export class CommunicationAdapter {
     alkemioRoomId: AlkemioRoomID,
     name?: string,
     topic?: string,
-    isPublic?: boolean,
-    avatarUrl?: string
+    joinRule?: JoinRule,
+    avatarUrl?: string,
+    isPublic?: boolean
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
@@ -298,8 +305,9 @@ export class CommunicationAdapter {
         alkemio_room_id: alkemioRoomId,
         name,
         topic,
-        is_public: isPublic,
+        join_rule: joinRule,
         avatar_url: avatarUrl,
+        is_public: isPublic,
       } satisfies UpdateRoomRequest,
       errorContext: { alkemioRoomId },
     });
@@ -469,7 +477,10 @@ export class CommunicationAdapter {
   async createSpace(
     alkemioContextId: AlkemioContextID,
     name: string,
-    parentContextId?: AlkemioContextID
+    parentContextId?: AlkemioContextID,
+    avatarUrl?: string,
+    joinRule?: JoinRule,
+    isPublic?: boolean
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
@@ -480,6 +491,9 @@ export class CommunicationAdapter {
         alkemio_context_id: alkemioContextId,
         name,
         parent_context_id: parentContextId,
+        avatar_url: avatarUrl,
+        join_rule: joinRule,
+        is_public: isPublic,
       } satisfies CreateSpaceRequest,
       errorContext: { alkemioContextId },
     });
@@ -500,7 +514,10 @@ export class CommunicationAdapter {
   async updateSpace(
     alkemioContextId: AlkemioContextID,
     name?: string,
-    topic?: string
+    topic?: string,
+    avatarUrl?: string,
+    joinRule?: JoinRule,
+    isPublic?: boolean
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
@@ -511,6 +528,9 @@ export class CommunicationAdapter {
         alkemio_context_id: alkemioContextId,
         name,
         topic,
+        avatar_url: avatarUrl,
+        join_rule: joinRule,
+        is_public: isPublic,
       } satisfies UpdateSpaceRequest,
       errorContext: { alkemioContextId },
     });
@@ -1104,7 +1124,7 @@ export class CommunicationAdapter {
       onError: 'silent',
     });
 
-    if (!response) return null;
+    if (!response || !response.success) return null;
 
     return {
       contextId: response.alkemio_context_id,

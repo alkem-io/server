@@ -80,6 +80,7 @@ describe('CalloutContributionService', () => {
         contributionData,
         storageAggregator,
         contributionSettings,
+        undefined,
         userID
       );
 
@@ -90,7 +91,8 @@ describe('CalloutContributionService', () => {
       expect(postService.createPost).toHaveBeenCalledWith(
         contributionData.post,
         storageAggregator,
-        userID
+        userID,
+        undefined
       );
     });
 
@@ -112,6 +114,7 @@ describe('CalloutContributionService', () => {
         contributionData,
         storageAggregator,
         contributionSettings,
+        undefined,
         userID
       );
 
@@ -134,6 +137,7 @@ describe('CalloutContributionService', () => {
         contributionData,
         storageAggregator,
         contributionSettings,
+        undefined,
         userID
       );
 
@@ -156,6 +160,7 @@ describe('CalloutContributionService', () => {
         contributionData,
         storageAggregator,
         contributionSettings,
+        undefined,
         userID
       );
 
@@ -177,6 +182,7 @@ describe('CalloutContributionService', () => {
         contributionData,
         storageAggregator,
         contributionSettings,
+        undefined,
         userID
       );
 
@@ -197,6 +203,7 @@ describe('CalloutContributionService', () => {
           contributionData,
           storageAggregator,
           contributionSettings,
+          undefined,
           userID
         )
       ).rejects.toThrow(ValidationException);
@@ -216,6 +223,7 @@ describe('CalloutContributionService', () => {
           contributionData,
           storageAggregator,
           contributionSettings,
+          undefined,
           userID
         )
       ).rejects.toThrow(ValidationException);
@@ -236,6 +244,7 @@ describe('CalloutContributionService', () => {
           contributionData,
           storageAggregator,
           contributionSettings,
+          undefined,
           userID
         )
       ).rejects.toThrow(ValidationException);

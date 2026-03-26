@@ -119,7 +119,7 @@ export class RoomService {
       room.id,
       undefined, // name
       undefined, // topic
-      undefined, // isPublic
+      undefined, // joinRule
       avatarUrl
     );
   }
@@ -219,10 +219,12 @@ export class RoomService {
       await this.communicationAdapter.createRoom(
         room.id,
         roomData.type,
-        roomData.displayName,
+        roomData.displayName, // Empty string = "do not set" (Matrix adapter treats "" as no-op)
         initialMembers,
-        undefined, // parentContextId
-        roomData.avatarUrl
+        roomData.parentContextId,
+        roomData.avatarUrl,
+        roomData.joinRule,
+        roomData.isPublic
       );
     } catch (error: unknown) {
       const err = error as Error;

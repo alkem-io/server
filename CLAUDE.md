@@ -189,6 +189,8 @@ Key rules:
 - PostgreSQL 17.5
 - PostgreSQL 17.5 (conversation, conversation_membership, room tables) (040-group-conversations)
 - PostgreSQL 17.5 (space table + JSONB settings column) (041-subspace-sorting-pinning)
+- TypeScript 5.3, Node.js 22 LTS (Volta 22.21.1) + NestJS 10, TypeORM 0.3, Apollo Server 4, `@alkemio/matrix-adapter-lib`, `@golevelup/nestjs-rabbitmq` (082-matrix-space-lifecycle)
+- PostgreSQL 17.5 (no schema changes needed — Go adapter manages Matrix ID mapping) (082-matrix-space-lifecycle)
 
 ## Recent Changes
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting

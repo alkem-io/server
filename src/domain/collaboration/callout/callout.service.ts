@@ -75,7 +75,8 @@ export class CalloutService {
     calloutData: CreateCalloutInput,
     classificationTagsetTemplates: ITagsetTemplate[],
     storageAggregator: IStorageAggregator,
-    userID?: string
+    userID?: string,
+    parentSpaceId?: string
   ): Promise<ICallout> {
     this.validateCreateCalloutData(calloutData);
 
@@ -122,7 +123,8 @@ export class CalloutService {
           calloutData.contributions,
           storageAggregator,
           callout.settings.contribution,
-          userID
+          userID,
+          parentSpaceId
         );
     }
 
@@ -130,6 +132,7 @@ export class CalloutService {
       callout.comments = await this.roomService.createRoom({
         displayName: `callout-comments-${callout.nameID}`,
         type: RoomType.CALLOUT,
+        parentContextId: parentSpaceId,
       });
     }
 
@@ -602,6 +605,7 @@ export class CalloutService {
         contributionData,
         storageAggregator,
         callout.settings.contribution,
+        undefined, // parentSpaceId — resolved by admin sync for user-initiated contributions
         userID
       );
     contribution.callout = callout;

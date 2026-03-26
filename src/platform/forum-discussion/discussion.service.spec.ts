@@ -150,7 +150,7 @@ describe('DiscussionService', () => {
 
       expect(vi.mocked(roomService.updateRoomDisplayName)).toHaveBeenCalledWith(
         discussion.comments,
-        'discussion-New Name'
+        'New Name'
       );
     });
 

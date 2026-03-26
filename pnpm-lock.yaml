@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@alkemio/matrix-adapter-lib':
-        specifier: 0.8.5
-        version: 0.8.5
+        specifier: https://pkg.pr.new/@alkemio/matrix-adapter-lib@e7c3913
+        version: https://pkg.pr.new/@alkemio/matrix-adapter-lib@e7c3913
       '@alkemio/notifications-lib':
         specifier: 0.14.2
         version: 0.14.2(@types/express@4.17.23)
@@ -242,6 +242,9 @@ importers:
       typeorm:
         specifier: https://pkg.pr.new/antst/typeorm@2c8f380
         version: https://pkg.pr.new/antst/typeorm@2c8f380(mysql2@3.15.1)(pg@8.16.3)(redis@3.1.2)(ts-node@10.9.2(@swc/core@1.15.8(@swc/helpers@0.5.17))(@types/node@22.19.2)(typescript@5.3.3))
+      uuid:
+        specifier: ^13.0.0
+        version: 13.0.0
       winston:
         specifier: ^3.13.1
         version: 3.17.0
@@ -367,8 +370,9 @@ packages:
     resolution: {integrity: sha512-Gd7gsI/RLjDgTO42pgcewsirbAr0WCj6Gktiq0pjV1N2ZGSf1dBOEIhMCX+wHPoekCY0qs4EY1puYwBxi8/PQA==}
     engines: {node: '>=16.15.0', npm: '>=8.5.5'}
 
-  '@alkemio/matrix-adapter-lib@0.8.5':
-    resolution: {integrity: sha512-JK6pGnE2DjWra0qHy7Z5RSZ5sQOyLsYqWGRv9qJr4AWuSh713et3OeV5B4ox/JvkvgiO0hu3VijBcySIDGo1mA==}
+  '@alkemio/matrix-adapter-lib@https://pkg.pr.new/@alkemio/matrix-adapter-lib@e7c3913':
+    resolution: {tarball: https://pkg.pr.new/@alkemio/matrix-adapter-lib@e7c3913}
+    version: 0.0.0-develop
     engines: {node: '>=22.x', pnpm: '>=9.x'}
 
   '@alkemio/notifications-lib@0.14.2':
@@ -5616,6 +5620,10 @@ packages:
     resolution: {integrity: sha512-0/A9rDy9P7cJ+8w1c9WD9V//9Wj15Ce2MPz8Ri6032usz+NfePxx5AcN3bN+r6ZL6jEo066/yNYB3tn4pQEx+A==}
     hasBin: true
 
+  uuid@13.0.0:
+    resolution: {integrity: sha512-XQegIaBTVUjSHliKqcnFqYypAd4S+WCYt5NIeRs6w/UAry7z8Y9j5ZwRRL4kzq9U3sD6v+85er9FvkEaBpji2w==}
+    hasBin: true
+
   uuid@3.4.0:
     resolution: {integrity: sha512-HjSDRw6gZE5JMggctHBcjVak08+KEVhSIiDzFnT9S9aegmp85S/bReBVTb4QTFaRNptJ9kuYaNhnbNEOkbKb/A==}
     deprecated: Please upgrade  to version 7 or higher.  Older versions may use Math.random() in certain circumstances, which is known to be problematic.  See https://v8.dev/blog/math-random for details.
@@ -5994,7 +6002,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@alkemio/matrix-adapter-lib@0.8.5': {}
+  '@alkemio/matrix-adapter-lib@https://pkg.pr.new/@alkemio/matrix-adapter-lib@e7c3913': {}
 
   '@alkemio/notifications-lib@0.14.2(@types/express@4.17.23)':
     dependencies:
@@ -11509,6 +11517,8 @@ snapshots:
   uuid@11.0.3: {}
 
   uuid@11.1.0: {}
+
+  uuid@13.0.0: {}
 
   uuid@3.4.0: {}
 

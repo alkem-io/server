@@ -33,7 +33,8 @@ export class PostService {
   public async createPost(
     postInput: CreatePostInput,
     storageAggregator: IStorageAggregator,
-    userID: string
+    userID: string,
+    parentSpaceId?: string
   ): Promise<IPost> {
     const post: IPost = Post.create(postInput);
     post.profile = await this.profileService.createProfile(
@@ -56,6 +57,7 @@ export class PostService {
     post.comments = await this.roomService.createRoom({
       displayName: `post-comments-${post.nameID}`,
       type: RoomType.POST,
+      parentContextId: parentSpaceId,
     });
 
     return post;
