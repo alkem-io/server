@@ -24,6 +24,7 @@ describe('NotificationPlatformAdapter', () => {
     vi.mocked(notificationAdapter.getNotificationRecipients).mockResolvedValue({
       emailRecipients,
       inAppRecipients,
+      pushRecipients: [],
     } as any);
   };
 

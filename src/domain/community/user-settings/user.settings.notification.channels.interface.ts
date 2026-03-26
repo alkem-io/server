@@ -16,4 +16,11 @@ export abstract class IUserSettingsNotificationChannels {
   })
   @IsBoolean()
   inApp!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description: 'Receive push notifications.',
+  })
+  @IsBoolean()
+  push!: boolean;
 }

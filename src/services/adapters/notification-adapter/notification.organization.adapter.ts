@@ -9,6 +9,7 @@ import { NotificationRecipientResult } from '@services/api/notification-recipien
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
+import { NotificationPushAdapter } from '../notification-push-adapter/notification.push.adapter';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputOrganizationMention } from './dto/organization/notification.dto.input.organization.mention';
 import { NotificationInputOrganizationMessage } from './dto/organization/notification.input.organization.message';
@@ -22,6 +23,7 @@ export class NotificationOrganizationAdapter {
     private notificationAdapter: NotificationAdapter,
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationInAppAdapter: NotificationInAppAdapter,
+    private notificationPushAdapter: NotificationPushAdapter,
     private messageDetailsService: MessageDetailsService
   ) {}
 
@@ -75,6 +77,22 @@ export class NotificationOrganizationAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'Organization mentioned',
+          body: 'Your organization was mentioned in a conversation',
+          url: '/',
+        }
+      );
+    }
   }
 
   public async organizationSendMessage(
@@ -122,6 +140,22 @@ export class NotificationOrganizationAdapter {
       );
     }
 
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New organization message',
+          body: 'Your organization received a new message',
+          url: '/',
+        }
+      );
+    }
+
     // And for the sender
     const eventSender = NotificationEvent.ORGANIZATION_MESSAGE_SENDER;
     const recipientsSender = await this.getNotificationRecipientsOrganization(
@@ -162,6 +196,19 @@ export class NotificationOrganizationAdapter {
         eventData.triggeredBy,
         inAppReceiverSenderIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications for sender confirmation (include the sender)
+    if (recipientsSender.pushRecipients.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        recipientsSender.pushRecipients,
+        eventSender,
+        {
+          title: 'Message sent',
+          body: 'Your message to the organization was sent',
+          url: '/',
+        }
       );
     }
   }

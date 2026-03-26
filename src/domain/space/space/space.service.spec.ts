@@ -1572,6 +1572,7 @@ describe('SpaceService', () => {
     it('should sort spaces based on query builder result', async () => {
       const mockSpaces = [{ id: 'space-1' }, { id: 'space-2' }] as any[];
       const mockQb = {
+        leftJoin: vi.fn().mockReturnThis(),
         leftJoinAndSelect: vi.fn().mockReturnThis(),
         where: vi.fn().mockReturnThis(),
         getMany: vi.fn().mockResolvedValue([

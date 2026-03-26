@@ -513,26 +513,6 @@ services:
     ports:
       - 4003
 
-  collaborative-document:
-    container_name: alkemio_dev_collaborative-document
-    hostname: collaborative-document
-    image: alkemio/collaborative-document-service:v0.3.0
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      - RABBITMQ_HOST
-      - RABBITMQ_USER
-      - RABBITMQ_PASSWORD
-      - LOGGING_CONSOLE_ENABLED
-      - LOGGING_LEVEL_CONSOLE
-      - ENVIRONMENT=dev
-    restart: always
-    networks:
-      - alkemio_dev_net
-    ports:
-      - 4004
-
   kratos-hooks:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
@@ -563,3 +543,23 @@ services:
       - alkemio_dev_net
     ports:
       - 8080
+
+  collaborative-document:
+    container_name: alkemio_dev_collaborative-document
+    hostname: collaborative-document
+    image: alkemio/collaborative-document-service:v0.3.0
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    environment:
+      - RABBITMQ_HOST
+      - RABBITMQ_USER
+      - RABBITMQ_PASSWORD
+      - LOGGING_CONSOLE_ENABLED
+      - LOGGING_LEVEL_CONSOLE
+      - ENVIRONMENT=dev
+    restart: always
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 4004

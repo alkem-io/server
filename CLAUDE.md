@@ -187,7 +187,8 @@ Key rules:
 - TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, TypeORM 0.3, Apollo Server 4, GraphQL 16 (034-unit-tests)
 - N/A (no data model changes — test-only feature) (034-unit-tests)
 - PostgreSQL 17.5
-- PostgreSQL 17.5 (conversation, conversation_membership, room tables) (040-group-conversations)
+- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, TypeORM 0.3, Apollo Server 4, GraphQL 16, `web-push` (new), `@golevelup/nestjs-rabbitmq` 6.1.0 (existing), `cache-manager-redis-store` 2.0.0 (existing) (038-pwa-push-notifications)
+- PostgreSQL 17.5 (new `push_subscription` table), Redis (throttling counters), RabbitMQ (push delivery queue) (038-pwa-push-notifications)
 - PostgreSQL 17.5 (space table + JSONB settings column) (041-subspace-sorting-pinning)
 
 ## Recent Changes

@@ -40,7 +40,11 @@ describe('UserSettingsService', () => {
     repository = module.get(getRepositoryToken(UserSettings));
   });
 
-  const defaultNotificationSetting = () => ({ email: false, inApp: false });
+  const defaultNotificationSetting = () => ({
+    email: false,
+    inApp: false,
+    push: false,
+  });
 
   const buildSettings = (
     overrides: Partial<IUserSettings> = {}
@@ -90,18 +94,22 @@ describe('UserSettingsService', () => {
           collaborationPollVoteCastOnOwnPoll: {
             email: false,
             inApp: true,
+            push: false,
           },
           collaborationPollVoteCastOnPollIVotedOn: {
             email: false,
             inApp: true,
+            push: false,
           },
           collaborationPollModifiedOnPollIVotedOn: {
             email: false,
             inApp: true,
+            push: false,
           },
           collaborationPollVoteAffectedByOptionChange: {
             email: false,
             inApp: true,
+            push: false,
           },
         },
         virtualContributor: {
