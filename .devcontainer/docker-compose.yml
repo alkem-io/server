@@ -310,7 +310,7 @@ services:
       - "4004:4004"
 
   notification:
-    image: alkemio/notifications:v0.28.1
+    image: alkemio/notifications:v0.32.0
     platform: linux/amd64
     extra_hosts:
       - "host.docker.internal:host-gateway"

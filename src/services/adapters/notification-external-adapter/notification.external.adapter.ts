@@ -48,8 +48,12 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import {
+  CalendarEventCalendarData,
   calculateCalendarEventEndDate,
+  formatLocation,
+  generateCalendarUrls,
   toIsoString,
+  validateCalendarDateRange,
 } from '@domain/timeline/event/calendar.event.calendar-links';
 import { ICalendarEvent } from '@domain/timeline/event/event.interface';
 import { Inject, Injectable } from '@nestjs/common';
@@ -544,7 +548,32 @@ export class NotificationExternalAdapter {
     const calendarEventUrl =
       await this.urlGeneratorService.getCalendarEventUrlPath(calendarEvent.id);
 
-    // Add calendar event details - will be properly typed once notifications-lib is updated
+    const startDateIso = toIsoString(calendarEvent.startDate, 'startDate');
+    const endDateIso = toIsoString(
+      calculateCalendarEventEndDate(calendarEvent).toISOString(),
+      'endDate'
+    );
+    validateCalendarDateRange(startDateIso, endDateIso, calendarEvent.id);
+
+    const description = calendarEvent.profile?.description ?? undefined;
+    const location = formatLocation(calendarEvent.profile?.location);
+
+    const calendarEventData: CalendarEventCalendarData = {
+      id: calendarEvent.id,
+      title: calendarEvent.profile.displayName,
+      url: calendarEventUrl,
+      startDate: startDateIso,
+      endDate: endDateIso,
+      wholeDay: calendarEvent.wholeDay,
+      description,
+      location,
+    };
+
+    const icsRestUrl = this.urlGeneratorService.getCalendarEventIcsRestUrl(
+      calendarEvent.id
+    );
+    const calendarUrls = generateCalendarUrls(calendarEventData, icsRestUrl);
+
     return {
       ...spacePayload,
       calendarEvent: {
@@ -553,13 +582,14 @@ export class NotificationExternalAdapter {
         type: calendarEvent.type,
         createdBy: createdByUser,
         url: calendarEventUrl,
-        startDate: calendarEvent.startDate.toISOString(),
-        endDate: '',
+        startDate: startDateIso,
+        endDate: endDateIso,
         wholeDay: calendarEvent.wholeDay,
-        description: calendarEvent.profile?.description ?? undefined,
-        googleCalendarUrl: '',
-        outlookCalendarUrl: '',
-        icsDownloadUrl: '',
+        description,
+        location,
+        googleCalendarUrl: calendarUrls.googleCalendarUrl,
+        outlookCalendarUrl: calendarUrls.outlookCalendarUrl,
+        icsDownloadUrl: calendarUrls.icsDownloadUrl,
       },
     };
   }
