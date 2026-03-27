@@ -1,4 +1,4 @@
-version: v1.3.0
+version: v26.2.0
 
 dsn: memory
 
@@ -89,6 +89,7 @@ selfservice:
 
     verification:
       enabled: true
+      use: link  # Explicitly use 'link' method — v26.2.0 defaults to 'code' which auto-creates a session after verification, breaking the registration→verify→login flow
       ui_url: http://localhost:3000/verify
       after:
         default_browser_return_url: http://localhost:3000/login
