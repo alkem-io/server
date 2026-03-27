@@ -89,6 +89,7 @@ selfservice:
 
     verification:
       enabled: true
+      use: link
       ui_url: http://localhost:3000/verify
       after:
         default_browser_return_url: http://localhost:3000/login
