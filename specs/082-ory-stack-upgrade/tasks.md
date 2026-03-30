@@ -34,6 +34,7 @@ No project setup needed — all changes are in-place upgrades to existing files 
 
 - [X] T003b Update config schema `version` from `v1.3.0` to `v26.2.0` in .build/ory/kratos/kratos.yml — eliminates config version mismatch warning at Kratos startup
 - [X] T003c Add `use: link` to `selfservice.flows.verification` in .build/ory/kratos/kratos.yml — v26.2.0 defaults to `code` which auto-creates a session after verification, breaking the registration→verify→login flow
+- [X] T003d Add `subject_source: userinfo` to Microsoft OIDC provider in .build/ory/kratos/kratos.yml — v25.4.0+ defaults to `oid` instead of `sub`, which would orphan existing Microsoft-linked production identities (ref: server#5941)
 
 **Checkpoint**: All Ory configuration files verified compatible and updated — image and SDK upgrades can proceed.
 

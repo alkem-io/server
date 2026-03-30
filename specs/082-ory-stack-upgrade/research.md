@@ -172,10 +172,13 @@ Audit all Kratos configuration files in `.build/ory/kratos/` for v26.2.0 compati
 - **OIDC mappers**: The `oidc/*.jsonnet` claim mappers use standard Jsonnet → traits mapping. Verified compatible.
 - **Courier templates**: HTML/plaintext templates are version-independent. Verified compatible.
 
+3. **Microsoft OIDC `subject_source: userinfo`**: Kratos v25.4.0+ changed the default subject identifier for the Microsoft OIDC provider from `sub` (via userinfo) to `oid`. Existing production identities were linked using `sub`. Without pinning `subject_source: userinfo`, upgraded Kratos would look up by `oid` and fail to match existing identities, causing login failures or duplicate accounts. Fix: add `subject_source: userinfo` to the Microsoft provider config. (Ref: server#5941)
+
 ### Verification Performed
 1. `pnpm run start:services` with v26.2.0 images — Kratos starts, migrations complete.
 2. `True-Client-Ip` confirmed in Kratos v26.2.0's hardcoded header allowlist (login-backoff webhook works).
 3. Verification flow with `use: link` confirmed working — no auto-session, redirect to `/login` succeeds.
+4. Microsoft OIDC login tested locally — works with `subject_source: userinfo`.
 
 ---
 
@@ -237,3 +240,4 @@ Upgrade the SDK and fix compilation errors. The API surface (FrontendApi, Identi
 | True-Client-Ip removed from Kratos allowlist | Low | Verify at implementation time; fallback exists in backoff hook | **Resolved** — still in allowlist |
 | Verification auto-session breaks login flow | **High** | Set `verification.use: link` in kratos.yml | **Resolved** — discovered during testing, v26.2.0 defaults verification to `code` which auto-creates sessions |
 | Config version mismatch causes unexpected defaults | Medium | Update `version` in kratos.yml from `v1.3.0` to `v26.2.0` | **Resolved** |
+| Microsoft OIDC subject remapping orphans existing identities | **High** | Pin `subject_source: userinfo` on Microsoft provider in kratos.yml | **Resolved** — v25.4.0+ defaults to `oid` instead of `sub`; not visible in fresh dev environments, only affects production data |

@@ -245,6 +245,18 @@ selfservice:
 |---------|-------------------|---------------|--------|
 | `verification.use` | `code` | `link` | `code` verification auto-creates a session after email verification, breaking the registration→verify→login flow (Kratos returns 400 `session_already_available` when redirected to `/login`) |
 
+### New: Microsoft OIDC `subject_source: userinfo`
+
+```yaml
+# .build/ory/kratos/kratos.yml — under selfservice.methods.oidc.config.providers
+- id: microsoft
+  subject_source: userinfo  # Pin to 'sub' claim — v25.4.0+ defaults to 'oid'
+```
+
+| Setting | Default (v25.4.0+) | Required Value | Reason |
+|---------|-------------------|---------------|--------|
+| `subject_source` | `oid` (Microsoft provider) | `userinfo` | Existing production identities were linked using `sub` from userinfo. Without pinning, v26.2.0 resolves by `oid`, orphaning existing Microsoft-linked accounts. Not visible in fresh dev environments. (Ref: server#5941) |
+
 ---
 
 ## 5. Docker Image Tag Mapping
