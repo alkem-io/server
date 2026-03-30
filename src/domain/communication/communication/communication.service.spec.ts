@@ -181,9 +181,10 @@ describe('CommunicationService', () => {
   });
 
   describe('addContributorToCommunications', () => {
-    it('should add contributor to all room IDs', async () => {
+    it('should add contributor to all room IDs and Matrix space hierarchy', async () => {
       const mockComm = {
         id: 'comm-1',
+        spaceID: 'space-1',
         updates: { id: 'room-1' },
       } as ICommunication;
 
@@ -197,11 +198,16 @@ describe('CommunicationService', () => {
         'actor-1',
         ['room-1']
       );
+      expect(communicationAdapter.batchAddSpaceMember).toHaveBeenCalledWith(
+        'actor-1',
+        ['space-1']
+      );
     });
 
     it('should return true without calling adapter when actorID is empty', async () => {
       const mockComm = {
         id: 'comm-1',
+        spaceID: 'space-1',
         updates: { id: 'room-1' },
       } as ICommunication;
 
@@ -209,6 +215,7 @@ describe('CommunicationService', () => {
 
       expect(result).toBe(true);
       expect(communicationAdapter.batchAddMember).not.toHaveBeenCalled();
+      expect(communicationAdapter.batchAddSpaceMember).not.toHaveBeenCalled();
     });
   });
 
