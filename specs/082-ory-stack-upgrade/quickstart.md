@@ -122,5 +122,12 @@ Run `pnpm build` and fix each error. Common patterns:
 Check `trust_forwarded_headers: true` is set in `.build/ory/oathkeeper/oathkeeper.yml` under `serve.proxy`.
 Check `forward_http_headers` lists are present on both `bearer_token` and `cookie_session` authenticators.
 
+### Login fails with "session_already_available" after email verification
+Kratos v26.2.0 defaults the verification method to `code`, which auto-creates a session after successful verification. When the user is then redirected to `/login`, Kratos returns 400 because they're already logged in.
+**Fix**: Ensure `selfservice.flows.verification.use: link` is set in `.build/ory/kratos/kratos.yml`.
+
+### Kratos warns "Config version is 'v1.3.0' but kratos runs on version 'v26.2.0'"
+Update the `version` field at the top of `.build/ory/kratos/kratos.yml` from `v1.3.0` to `v26.2.0`.
+
 ### 429 rate limit returns as 401
 This is expected Oathkeeper v26.2.0 behavior. When Kratos returns 429 (rate limit), Oathkeeper maps it to 401. The server cannot distinguish this from a genuine auth failure. Document this for operators.

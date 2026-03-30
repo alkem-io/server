@@ -32,7 +32,10 @@ No project setup needed — all changes are in-place upgrades to existing files 
 - [X] T003 [P] Verify OIDC claim mapper jsonnet files in .build/ory/kratos/oidc/*.jsonnet are compatible with v26.2.0 — confirm claim field names and traits mapping syntax unchanged
 - [X] T003a [P] Verify courier email templates in .build/ory/kratos/ are compatible with v26.2.0 — research.md §8 assesses them as version-independent but FR-013 requires explicit audit
 
-**Checkpoint**: All Ory configuration files verified compatible — image and SDK upgrades can proceed.
+- [X] T003b Update config schema `version` from `v1.3.0` to `v26.2.0` in .build/ory/kratos/kratos.yml — eliminates config version mismatch warning at Kratos startup
+- [X] T003c Add `use: link` to `selfservice.flows.verification` in .build/ory/kratos/kratos.yml — v26.2.0 defaults to `code` which auto-creates a session after verification, breaking the registration→verify→login flow
+
+**Checkpoint**: All Ory configuration files verified compatible and updated — image and SDK upgrades can proceed.
 
 ---
 

@@ -218,7 +218,36 @@ cookie_session:
 
 ---
 
-## 4. Docker Image Tag Mapping
+## 4. Kratos Configuration Schema Changes
+
+### Updated: Config `version` field
+
+```yaml
+# .build/ory/kratos/kratos.yml
+version: v26.2.0  # Was v1.3.0 — must match the Kratos binary version
+```
+
+| Setting | Before | After | Reason |
+|---------|--------|-------|--------|
+| `version` | `v1.3.0` | `v26.2.0` | Eliminates config version mismatch warning; ensures correct default behaviors |
+
+### New: `selfservice.flows.verification.use: link`
+
+```yaml
+# .build/ory/kratos/kratos.yml
+selfservice:
+  flows:
+    verification:
+      use: link  # Explicitly use 'link' — v26.2.0 defaults to 'code'
+```
+
+| Setting | Default (v26.2.0) | Required Value | Reason |
+|---------|-------------------|---------------|--------|
+| `verification.use` | `code` | `link` | `code` verification auto-creates a session after email verification, breaking the registration→verify→login flow (Kratos returns 400 `session_already_available` when redirected to `/login`) |
+
+---
+
+## 5. Docker Image Tag Mapping
 
 | Component | Before | After |
 |-----------|--------|-------|
@@ -230,6 +259,6 @@ Files affected: `quickstart-services.yml`, `quickstart-services-kratos-debug.yml
 
 ---
 
-## 5. No Database Schema Changes
+## 6. No Database Schema Changes
 
 This feature does not modify any Alkemio database entities or migrations. Kratos manages its own database schema internally via `migrate sql -e --yes` at container startup. The Kratos migration from v1.3.1 → v26.2.0 is handled automatically by the Kratos container.

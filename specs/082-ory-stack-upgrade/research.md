@@ -157,19 +157,25 @@ Existing access rules in `.build/ory/oathkeeper/access-rules.yml` remain structu
 ## 8. Kratos Configuration Compatibility
 
 ### Decision
-Audit all Kratos configuration files in `.build/ory/kratos/` for v26.2.0 compatibility. Most config should remain compatible, but specific areas need verification.
+Audit all Kratos configuration files in `.build/ory/kratos/` for v26.2.0 compatibility. Two config changes are required; all other config is compatible.
+
+### Required Changes
+
+1. **Config schema `version`**: Update `version: v1.3.0` → `version: v26.2.0`. Kratos v26.2.0 logs a warning when the config version doesn't match the binary version. While it still starts, the mismatch can cause new default behaviors to be applied inconsistently.
+
+2. **Verification method `use: link`**: Kratos v26.2.0 changes the default verification method from `link` to `code`. The `code` method **auto-creates a session** after successful email verification. This breaks the registration → verify → login flow because the user is redirected to `/login` with an active session, causing Kratos to return 400 `session_already_available`. Fix: explicitly set `selfservice.flows.verification.use: link` to preserve the v1.3.1 behavior (no auto-session after verification).
 
 ### Rationale
 - **kratos.yml**: Session configuration (`lifespan`, `earliest_possible_extend`, cookie settings) is structurally stable across versions.
 - **identity.schema.json**: JSON Schema format is version-independent. No changes needed.
-- **Jsonnet webhooks**: The webhook hook syntax and Jsonnet payload mappers should work. The `login-backoff-after.jsonnet` references `True-Client-Ip` which is in Kratos's hardcoded header allowlist — verify this remains in v26.2.0.
-- **OIDC mappers**: The `oidc/*.jsonnet` claim mappers use standard Jsonnet → traits mapping. Verify claim field names haven't changed.
-- **Courier templates**: HTML/plaintext templates are version-independent. No changes expected.
+- **Jsonnet webhooks**: The webhook hook syntax and Jsonnet payload mappers should work. The `login-backoff-after.jsonnet` references `True-Client-Ip` which is in Kratos's hardcoded header allowlist — verified present in v26.2.0.
+- **OIDC mappers**: The `oidc/*.jsonnet` claim mappers use standard Jsonnet → traits mapping. Verified compatible.
+- **Courier templates**: HTML/plaintext templates are version-independent. Verified compatible.
 
-### Verification Required at Implementation Time
-1. Run `pnpm run start:services` with v26.2.0 images and confirm Kratos starts without config errors.
-2. Verify `True-Client-Ip` is still in Kratos v26.2.0's hardcoded header allowlist.
-3. Test all OIDC flows (LinkedIn, Microsoft, GitHub) with the updated stack.
+### Verification Performed
+1. `pnpm run start:services` with v26.2.0 images — Kratos starts, migrations complete.
+2. `True-Client-Ip` confirmed in Kratos v26.2.0's hardcoded header allowlist (login-backoff webhook works).
+3. Verification flow with `use: link` confirmed working — no auto-session, redirect to `/login` succeeds.
 
 ---
 
@@ -221,11 +227,13 @@ Upgrade the SDK and fix compilation errors. The API surface (FrontendApi, Identi
 
 ## 10. Risk Assessment
 
-| Risk | Severity | Mitigation |
-|------|----------|------------|
-| SDK type changes break compilation | Medium | Fix incrementally guided by `pnpm build` errors |
-| Oathkeeper silently strips headers | High | Set `trust_forwarded_headers: true` before upgrading |
-| 429→401 mapping confuses error handling | Low | Document for operators; server already treats 401 as auth failure |
-| Kratos DB migration failure | Medium | Test migration on local dev DB first; backup before prod |
-| OIDC flows break due to claim mapping changes | Medium | Test all three providers (LinkedIn, Microsoft, GitHub) |
-| True-Client-Ip removed from Kratos allowlist | Low | Verify at implementation time; fallback exists in backoff hook |
+| Risk | Severity | Mitigation | Status |
+|------|----------|------------|--------|
+| SDK type changes break compilation | Medium | Fix incrementally guided by `pnpm build` errors | **Resolved** — v26.2.0 types are fully backward-compatible, zero code changes needed |
+| Oathkeeper silently strips headers | High | Set `trust_forwarded_headers: true` before upgrading | **Resolved** — config applied, headers verified forwarded |
+| 429→401 mapping confuses error handling | Low | Document for operators; server already treats 401 as auth failure | **Documented** in oathkeeper.yml comment |
+| Kratos DB migration failure | Medium | Test migration on local dev DB first; backup before prod | **Resolved** — migrations complete successfully |
+| OIDC flows break due to claim mapping changes | Medium | Test all three providers (LinkedIn, Microsoft, GitHub) | Pending production verification |
+| True-Client-Ip removed from Kratos allowlist | Low | Verify at implementation time; fallback exists in backoff hook | **Resolved** — still in allowlist |
+| Verification auto-session breaks login flow | **High** | Set `verification.use: link` in kratos.yml | **Resolved** — discovered during testing, v26.2.0 defaults verification to `code` which auto-creates sessions |
+| Config version mismatch causes unexpected defaults | Medium | Update `version` in kratos.yml from `v1.3.0` to `v26.2.0` | **Resolved** |

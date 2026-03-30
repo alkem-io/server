@@ -115,7 +115,9 @@ package.json                                 # @ory/kratos-client version bump
    - Add `serve.proxy.trust_forwarded_headers: true`
    - Add `forward_http_headers` to `bearer_token` authenticator (Authorization + custom headers)
    - Add `forward_http_headers` to `cookie_session` authenticator (Cookie + custom headers)
-3. Audit `.build/ory/kratos/kratos.yml` for deprecated config keys.
+3. Update `.build/ory/kratos/kratos.yml`:
+   - Update config schema `version` from `v1.3.0` to `v26.2.0`
+   - Add `selfservice.flows.verification.use: link` (v26.2.0 defaults to `code` which auto-creates a session after verification, breaking the login redirect)
 4. Verify Kratos webhook configs (jsonnet files) work with v26.2.0.
 
 **Verification**: `pnpm run start:services` → all containers start, Kratos migrations complete, Oathkeeper serves proxy.
