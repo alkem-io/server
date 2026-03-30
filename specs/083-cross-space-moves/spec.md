@@ -78,9 +78,9 @@ The new operations are added to the existing **Space Conversions** section on th
 - **NameID collision across L0 boundaries**: The moved space or descendants may have nameIDs that collide with existing entities scoped to the target L0. The system validates before executing.
 - **Content in active use**: The move proceeds within its database transaction. Concurrent edits receive a conflict error.
 - **Authorization chain reset**: The moved space and its entire subtree must inherit the new parent's authorization chain.
-- **Innovation flow mismatch**: When crossing L0 boundaries, the target L0 may have a different innovation flow template. Callout classification tagsets in the moved subtree must be synchronized with the target's flow configuration.
+- **Innovation flow mismatch**: When crossing L0 boundaries, the target L0 may have a different innovation flow template. Callout classification tagsets in the moved subtree are synchronized using the existing conversion service's sync pattern — unmatched states fall back to the target's default.
 - **Storage references**: All file and media references remain valid. The storage aggregator parent is updated to the new context.
-- **Visibility and privacy preservation**: The space's visibility state (ACTIVE, ARCHIVED, DEMO, INACTIVE) and privacy mode (PUBLIC, PRIVATE) are preserved on move.
+- **Visibility and privacy preservation**: The space's visibility state (ACTIVE, ARCHIVED, DEMO, INACTIVE) and privacy mode (PUBLIC, PRIVATE) are preserved on move. All visibility states are eligible for cross-L0 moves — no reactivation required.
 - **Empty source parent**: After the move, the source L0 may have zero L1 children — this is valid.
 - **Network failure during admin UI operation**: Backend mutations are atomic — no partial state. The admin sees an error and can safely retry.
 
@@ -97,7 +97,7 @@ The new operations are added to the existing **Space Conversions** section on th
 - **FR-005**: The move MUST update the authorization chain of the moved space and its subtree to inherit from the target L0's authorization policies.
 - **FR-006**: The move MUST update storage aggregator parent references for the moved space and its nested entities.
 - **FR-007**: The move MUST invalidate all cached URLs for the moved space, its subtree, and all contained entities (profiles, collaborations, callouts, contributions).
-- **FR-008**: The move MUST validate that no nameID in the moved subtree collides with existing nameIDs scoped to the target L0. If a collision is detected, the move is rejected with a clear error identifying the conflicting nameID.
+- **FR-008**: The move MUST validate that no space nameID in the moved subtree collides with existing space nameIDs scoped to the target L0 (L0 itself + all L1/L2 children). Callout, post, and profile nameIDs are not in scope. If a collision is detected, the move is rejected with a clear error identifying the conflicting nameID.
 - **FR-009**: The move MUST reject self-moves (moving an L1 to its current parent L0) with a clear message.
 - **FR-010**: The move MUST be atomic — single database transaction. If any step fails, the entire operation rolls back. Non-transactional side effects (cache invalidation) use best-effort after commit.
 - **FR-011**: The move MUST require platform admin privileges.
@@ -113,10 +113,11 @@ The new operations are added to the existing **Space Conversions** section on th
 
 #### Backend — Shared Concerns
 
-- **FR-018**: When a move crosses L0 boundaries, system MUST synchronize callout classification tagsets in the moved subtree with the target L0's innovation flow template configuration.
+- **FR-018**: When a move crosses L0 boundaries, system MUST synchronize callout classification tagsets in the moved subtree with the target L0's innovation flow template configuration, using the same sync pattern as the existing within-L0 conversion service. Unmatched flow states fall back to the target's default state.
 - **FR-019**: System MUST recalculate platform role access (anonymous, guest, registered user visibility) for the moved space and its subtree based on the new parent's access configuration.
 - **FR-020**: System MUST update sort order and display position of the moved space within its new parent context.
 - **FR-021**: System MUST preserve the space's visibility state and privacy mode on move.
+- **FR-021b**: The move MUST update the Account association of the moved space and its subtree to the target L0's Account. Storage and license quotas are recalculated against the target Account.
 
 #### Frontend — Admin UI Integration
 
@@ -159,6 +160,10 @@ The new operations are added to the existing **Space Conversions** section on th
 
 - Q: When an L1 moves to a different L0 (stays L1), should user admins be preserved or should ALL community roles be cleared? → A: Clear ALL roles including admins. The target L0's admins inherit management via authorization chain. This differs from L1→L2 demotion (which preserves user admins) because a lateral move into a completely different space context warrants a clean slate.
 - Q: How should the two cross-L0 operations be exposed in the GraphQL API — new mutations, extend existing, or single generic? → A: Two new dedicated mutations (`moveSpaceL1ToSpaceL0`, `moveSpaceL1ToSpaceL2`). The existing `convertSpaceL1ToSpaceL2` remains unchanged. This eliminates regression risk to existing operations and gives each move operation a clear semantic name aligned with the frontend's "Move" toggle.
+- Q: When source and target L0s have different innovation flow states, how should callout classification tagsets be synchronized? → A: Reuse the existing sync pattern from the within-L0 conversion service. Callouts are remapped to the target flow's state set; unmatched states fall back to the target's default state. No new synchronization logic is needed — the cross-L0 move delegates to the same classification sync path.
+- Q: When source and target L0s have different Accounts (billing/licensing), what happens to the moved space's Account association? → A: Inherit the target L0's Account. The moved space and its subtree switch to the target's Account, with storage and license quotas recalculated against the target. Consistent with the principle that the moved space fully belongs to the new parent context.
+- Q: Can non-ACTIVE spaces (ARCHIVED, DEMO, INACTIVE) be moved cross-L0? → A: Allow all states. Any L1 space can be moved regardless of visibility state. The state is preserved as-is at the new location. No reactivation step required — platform admin privileges are sufficient safeguard.
+- Q: What is the exact scope of nameID collision validation (FR-008)? → A: Space nameIDs only — the L0 and all its L1/L2 children. Callouts, posts, and profiles don't have nameIDs that participate in URL routing collisions.
 
 ## Assumptions
 
