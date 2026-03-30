@@ -5,6 +5,7 @@ log:
 
 serve:
   proxy:
+    trust_forwarded_headers: true  # Required for v26.2.0: trust Traefik's X-Forwarded-* headers (CVE-2026-33495 fix strips ALL X-Forwarded-* when untrusted)
     timeout:
       read: 120s
       write: 120s
@@ -60,6 +61,7 @@ authenticators:
     config:
       subject: guest
 
+  # Note: Oathkeeper v26.2.0 maps Kratos 429 (rate limit) to 401 — server cannot distinguish from genuine auth failure
   bearer_token:
     enabled: true
     config:
@@ -69,6 +71,15 @@ authenticators:
       subject_from: "identity.id"
       token_from:
         header: Authorization
+      forward_http_headers:
+        - Authorization
+        - X-Forwarded-For
+        - X-Forwarded-Proto
+        - X-Real-Ip
+        - True-Client-Ip
+        - X-Request-ID
+        - x-alkemio-hub
+        - X-Geo
 
   cookie_session:
     enabled: true
@@ -79,6 +90,15 @@ authenticators:
       subject_from: "identity.id"
       only:
         - ory_kratos_session
+      forward_http_headers:
+        - Cookie
+        - X-Forwarded-For
+        - X-Forwarded-Proto
+        - X-Real-Ip
+        - True-Client-Ip
+        - X-Request-ID
+        - x-alkemio-hub
+        - X-Geo
 
   noop:
     enabled: true
