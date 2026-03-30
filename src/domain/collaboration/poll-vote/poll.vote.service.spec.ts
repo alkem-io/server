@@ -124,6 +124,7 @@ describe('PollVoteService', () => {
           maxResponses: 0,
           resultsVisibility: PollResultsVisibility.VISIBLE,
           resultsDetail: PollResultsDetail.FULL,
+          allowContributorsAddOptions: false,
         },
       });
       await expect(
@@ -138,6 +139,7 @@ describe('PollVoteService', () => {
           maxResponses: 2,
           resultsVisibility: PollResultsVisibility.VISIBLE,
           resultsDetail: PollResultsDetail.FULL,
+          allowContributorsAddOptions: false,
         },
       });
       await expect(
@@ -152,6 +154,7 @@ describe('PollVoteService', () => {
           maxResponses: 1,
           resultsVisibility: PollResultsVisibility.VISIBLE,
           resultsDetail: PollResultsDetail.FULL,
+          allowContributorsAddOptions: false,
         },
       });
       await expect(

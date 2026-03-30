@@ -53,6 +53,7 @@ describe('NotificationVirtualContributorAdapter', () => {
       ).mockResolvedValue({
         emailRecipients: [{ id: 'admin-1' }],
         inAppRecipients: [{ id: 'admin-1' }],
+        pushRecipients: [],
       } as any);
       vi.mocked(
         externalAdapter.buildSpaceCommunityInvitationVirtualContributorCreatedNotificationPayload
@@ -85,6 +86,7 @@ describe('NotificationVirtualContributorAdapter', () => {
       ).mockResolvedValue({
         emailRecipients: [],
         inAppRecipients: [],
+        pushRecipients: [],
       } as any);
       vi.mocked(
         externalAdapter.buildSpaceCommunityInvitationVirtualContributorCreatedNotificationPayload
@@ -118,6 +120,7 @@ describe('NotificationVirtualContributorAdapter', () => {
       ).mockResolvedValue({
         emailRecipients: [{ id: 'admin-1' }],
         inAppRecipients: [],
+        pushRecipients: [],
       } as any);
       vi.mocked(
         externalAdapter.buildSpaceCommunityInvitationVirtualContributorCreatedNotificationPayload

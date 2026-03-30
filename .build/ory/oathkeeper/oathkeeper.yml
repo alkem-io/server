@@ -5,6 +5,10 @@ log:
 
 serve:
   proxy:
+    timeout:
+      read: 120s
+      write: 120s
+      idle: 120s
     cors:
       enabled: true
       allowed_origins:

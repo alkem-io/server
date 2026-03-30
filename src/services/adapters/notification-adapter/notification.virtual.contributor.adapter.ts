@@ -5,9 +5,11 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InAppNotificationPayloadVirtualContributor } from '@platform/in-app-notification-payload/dto/virtual-contributor/notification.in.app.payload.virtual.contributor';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
+import { NotificationPushAdapter } from '../notification-push-adapter/notification.push.adapter';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputCommunityInvitationVirtualContributor } from './dto/space/notification.dto.input.space.community.invitation.vc';
 import { NotificationAdapter } from './notification.adapter';
@@ -20,7 +22,9 @@ export class NotificationVirtualContributorAdapter {
     private notificationAdapter: NotificationAdapter,
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationInAppAdapter: NotificationInAppAdapter,
-    private communityResolverService: CommunityResolverService
+    private notificationPushAdapter: NotificationPushAdapter,
+    private communityResolverService: CommunityResolverService,
+    private urlGeneratorService: UrlGeneratorService
   ) {}
 
   public async spaceCommunityInvitationVirtualContributorCreated(
@@ -67,6 +71,23 @@ export class NotificationVirtualContributorAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const spaceName = space.about?.profile?.displayName ?? 'a space';
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New VC invitation',
+          body: `A virtual contributor has been invited to ${spaceName}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+        }
       );
     }
   }

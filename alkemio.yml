@@ -292,6 +292,8 @@ storage:
   file:
     # 20MB
     max_file_size: ${STORAGE_MAX_FILE_SIZE}:20971520
+    # Timeout in milliseconds for reading file upload streams
+    stream_timeout_ms: ${STORAGE_STREAM_TIMEOUT_MS}:60000
   # Database configuration for usage by the Alkemio Server.
   # Uses PostgreSQL as the database backend.
   # Note: both schema / database name are used for configuration and they need to have the same value.
@@ -411,6 +413,19 @@ integrations:
 
 notifications:
   enabled: ${NOTIFICATIONS_ENABLED}:true
+  push:
+    enabled: ${PUSH_NOTIFICATIONS_ENABLED}:true
+    vapid:
+      public_key: ${VAPID_PUBLIC_KEY}:BKqdDhb3qBD7lNiqe-sxXQQqmxdMNfBjLPcj9kypfXfxv1LT_c4JS5gukL0Np3lhdd_jqqlZNR714gr2SGT-V44
+      private_key: ${VAPID_PRIVATE_KEY}:KGcZQvup8fMXYxkK1HZTfYJRqvnAOZ6x_F85dqiYcq8
+      subject: ${VAPID_SUBJECT}:mailto:notifications@alkem.io
+    max_subscriptions_per_user: ${PUSH_MAX_SUBSCRIPTIONS_PER_USER}:10
+    throttle:
+      max_per_minute: ${PUSH_THROTTLE_MAX_PER_MINUTE}:10
+    retry:
+      max_attempts: ${PUSH_RETRY_MAX_ATTEMPTS}:5
+    cleanup:
+      stale_days: ${PUSH_CLEANUP_STALE_DAYS}:30
   in_app:
     max_notifications_per_user: ${IN_APP_MAX_NOTIFICATIONS_PER_USER}:100
     max_retention_period_days: ${IN_APP_MAX_RETENTION_PERIOD_DAYS}:90

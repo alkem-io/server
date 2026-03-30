@@ -40,7 +40,7 @@ export class UserSettingsService {
   }
 
   private updateNotificationSetting(
-    currentSetting: { email: boolean; inApp: boolean },
+    currentSetting: { email: boolean; inApp: boolean; push: boolean },
     updateData?: NotificationSettingInput
   ): void {
     if (updateData) {
@@ -49,6 +49,9 @@ export class UserSettingsService {
       }
       if (updateData.inApp !== undefined) {
         currentSetting.inApp = updateData.inApp;
+      }
+      if (updateData.push !== undefined) {
+        currentSetting.push = updateData.push;
       }
     }
   }

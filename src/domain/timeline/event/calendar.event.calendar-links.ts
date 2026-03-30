@@ -107,6 +107,7 @@ export const generateICS = (
     'BEGIN:VCALENDAR',
     'VERSION:2.0',
     'PRODID:-//Alkemio//Calendar Event//EN',
+    'X-WR-TIMEZONE:Europe/Amsterdam',
     'BEGIN:VEVENT',
     `UID:${event.id}@alkem.io`,
     `DTSTAMP:${formatDateForCalendar(new Date().toISOString())}`,

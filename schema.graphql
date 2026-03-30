@@ -662,6 +662,12 @@ enum ProfileType {
   WHITEBOARD
 }
 
+"""Status of a push notification subscription."""
+enum PushSubscriptionStatus {
+  ACTIVE
+  EXPIRED
+}
+
 enum RoleName {
   ADMIN
   ANONYMOUS
@@ -3878,6 +3884,10 @@ type Mutation {
   """
   setPlatformWellKnownVirtualContributor(mappingData: SetPlatformWellKnownVirtualContributorInput!): PlatformWellKnownVirtualContributors!
   """
+  Subscribe the current user's device to push notifications. If the subscription endpoint already exists, it is updated. If the user has reached the maximum number of subscriptions (10), the oldest subscription is automatically replaced.
+  """
+  subscribeToPushNotifications(subscriptionData: SubscribeToPushNotificationsInput!): PushSubscription!
+  """
   Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet. Note: this is experimental, and only for GlobalAdmins. The user that executes the transfer becomes the creator of the Callout.
   """
   transferCallout(transferData: TransferCalloutInput!): Callout!
@@ -3889,6 +3899,8 @@ type Mutation {
   transferSpaceToAccount(transferData: TransferAccountSpaceInput!): Space!
   """Transfer the specified Virtual Contributor to another Account."""
   transferVirtualContributorToAccount(transferData: TransferAccountVirtualContributorInput!): InnovationPack!
+  """Remove a push notification subscription for the current user."""
+  unsubscribeFromPushNotifications(subscriptionData: UnsubscribeFromPushNotificationsInput!): PushSubscription!
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
   """Update the baseline License Plan on the specified Account."""
@@ -4043,6 +4055,8 @@ type NotificationRecipientResult {
   emailRecipients: [User!]!
   """The in-app recipients for the notification."""
   inAppRecipients: [User!]!
+  """The push recipients for the notification."""
+  pushRecipients: [User!]!
   """The user that triggered the event."""
   triggeredBy: User
 }
@@ -4720,6 +4734,24 @@ type PruneInAppNotificationAdminResult {
   removedCountOutsideRetentionPeriod: Int!
 }
 
+"""
+Represents a user's push notification subscription for a specific device/browser.
+"""
+type PushSubscription {
+  """When this subscription was created."""
+  createdDate: DateTime!
+  """Unique identifier for this subscription."""
+  id: UUID!
+  """
+  Last time a notification was successfully delivered to this subscription.
+  """
+  lastActiveDate: DateTime
+  """Current status of the subscription."""
+  status: PushSubscriptionStatus!
+  """Browser/device user agent string for display purposes."""
+  userAgent: String
+}
+
 type Query {
   """
   The Accounts on this platform; If accessed through an Innovation Hub will return ONLY the Accounts defined in it.
@@ -4763,6 +4795,10 @@ type Query {
   lookupByName: LookupByNameQueryResults!
   """Information about the current authenticated user"""
   me: MeQueryResults!
+  """
+  Returns the current user's active push notification subscriptions. Requires authentication.
+  """
+  myPushSubscriptions: [PushSubscription!]!
   """The notificationRecipients for the provided event on the given entity."""
   notificationRecipients(eventData: NotificationRecipientsInput!): NotificationRecipientResult!
   """A particular Organization"""
@@ -4864,6 +4900,10 @@ type Query {
   ): PaginatedUsers!
   """All Users that hold credentials matching the supplied criteria."""
   usersWithAuthorizationCredential(credentialsCriteriaData: UsersWithAuthorizationCredentialInput!): [User!]!
+  """
+  Returns the VAPID public key needed by clients to subscribe to push notifications. Returns null if push notifications are not enabled on this server.
+  """
+  vapidPublicKey: String
   """A particular VirtualContributor"""
   virtualContributor(ID: UUID!): VirtualContributor!
   """
@@ -6184,6 +6224,8 @@ type UserSettingsNotificationChannels {
   email: Boolean!
   """Receive notifications by inApp."""
   inApp: Boolean!
+  """Receive push notifications."""
+  push: Boolean!
 }
 
 type UserSettingsNotificationOrganization {
@@ -7584,6 +7626,8 @@ input NotificationSettingInput {
   email: Boolean
   """Enable in-app notifications for this setting"""
   inApp: Boolean
+  """Enable push notifications for this setting"""
+  push: Boolean
 }
 
 input OrganizationAuthorizationResetInput {
@@ -7856,6 +7900,21 @@ input StorageBucketUploadFileOnReferenceInput {
   referenceID: String!
 }
 
+input SubscribeToPushNotificationsInput {
+  """The auth key from PushSubscription.getKey('auth'), Base64URL-encoded"""
+  auth: String!
+  """The push service endpoint URL from PushSubscription.endpoint"""
+  endpoint: String!
+  """
+  The p256dh key from PushSubscription.getKey('p256dh'), Base64URL-encoded
+  """
+  p256dh: String!
+  """
+  Optional browser/device user agent for display in subscription management UI
+  """
+  userAgent: String
+}
+
 input TagsetArgs {
   """
   Return only Callouts that match one of the tagsets and any of the tags in them.
@@ -7898,6 +7957,11 @@ input TransferCalloutInput {
   calloutID: UUID!
   """The target CalloutsSet to which the Callout will be transferred."""
   targetCalloutsSetID: UUID!
+}
+
+input UnsubscribeFromPushNotificationsInput {
+  """The ID of the push subscription to remove."""
+  subscriptionID: UUID!
 }
 
 input UpdateAiPersonaInput {
