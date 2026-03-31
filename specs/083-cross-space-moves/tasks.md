@@ -100,9 +100,9 @@
 
 ## Phase 4: User Story 2 — Move Subspace to Be a Sub-subspace in Another Space (Priority: P2)
 
-**Goal**: Platform admin can move an L1 subspace to become an L2 under a target L1 in a different L0. The space is demoted, community roles cleared except user admins.
+**Goal**: Platform admin can move an L1 subspace to become an L2 under a target L1 in a different L0. The space is demoted, ALL community roles cleared (crossing L0 boundary invalidates the entire community hierarchy).
 
-**Independent Test**: Create two L0 spaces, each with an L1 subspace. Move the L1 from the first L0 to become an L2 under the L1 in the second L0. Verify the space is now L2, content is preserved, community roles cleared except admins, and levelZeroSpaceID reflects the new L0.
+**Independent Test**: Create two L0 spaces, each with an L1 subspace. Move the L1 from the first L0 to become an L2 under the L1 in the second L0. Verify the space is now L2, content is preserved, ALL community roles cleared including admins, and levelZeroSpaceID reflects the new L0.
 
 ### Implementation for User Story 2
 
@@ -156,7 +156,7 @@
 
 **NOTE**: This phase is **client-web** (React) scope — out of scope for the server repo. Tasks are documented here for cross-service coordination.
 
-- [ ] T-US3-PRE [US3] **Blocker for T016/T017**: Verify the existing `spaces` GraphQL query supports filtering by level (e.g., `filter: { level: L0 }`). If not supported, add server-side level filter before proceeding with space pickers
+- [ ] T-US3-PRE [US3] **Blocker for T016/T017**: Verify the existing `spaces` GraphQL query supports filtering by level (e.g., `filter: { level: L0 }`). If not supported, add a `SpaceLevel` filter option to the spaces query resolver in `src/services/api/roles/space/space.resolver.queries.ts` (or equivalent resolver) and regenerate schema before proceeding with space pickers
 
 ### Implementation for User Story 3 (client-web repo)
 
@@ -164,22 +164,53 @@
 - [ ] T015 [US3] Add move-type selector component — two options: "Move to another Space (stays L1)" and "Move under a Subspace in another Space (becomes L2)". Disable "Move under a Subspace" when source L1 has L2 children (FR-026)
 - [ ] T016 [P] [US3] Add searchable L0 space picker for "Move to another Space" — queries `spaces(filter: { level: L0 })` excluding current parent L0. Uses existing space search patterns from the admin UI
 - [ ] T017 [P] [US3] Add searchable L1 space picker for "Move under a Subspace" — queries L1 spaces in other L0s, excluding sibling L1s in the same L0
-- [ ] T018 [US3] Add confirmation dialog with move-specific warnings — for L1→L1: warns community cleared + content moves + innovation flow may differ. For L1→L2: warns demotion + ALL community roles cleared including admins (cross-L0 boundary)
+- [ ] T018 [US3] Add confirmation dialog with move-specific warnings — for L1→L1: warns community cleared + content moves + innovation flow may differ + existing URLs/bookmarks will break (no redirects). For L1→L2: warns demotion + ALL community roles cleared including admins (cross-L0 boundary) + existing URLs/bookmarks will break (no redirects). Per FR-027/FR-028
 - [ ] T019 [US3] Wire GraphQL mutations (`moveSpaceL1ToSpaceL0`, `moveSpaceL1ToSpaceL2`) with loading indicator, duplicate submission prevention, success/error message display (FR-030, FR-031, FR-032)
 
 **Checkpoint**: Admin UI complete — platform admins can trigger cross-space moves from the web interface.
 
 ---
 
-## Phase 6: Polish & Cross-Cutting Concerns
+## Phase 6: User Story 4 — Auto-Invite Overlapping Members After Move (Priority: P3)
+
+**Goal**: After a cross-L0 move clears community memberships, the platform admin can opt in to sending automatic invitations to former community members who are also members of the target L0 space's community (the overlap set).
+
+**Independent Test**: Create two L0 spaces with overlapping members. Create an L1 subspace under the first L0 with community members. Move the L1 to the second L0 with auto-invite enabled. Verify that only overlapping members receive invitations with the admin's custom message.
+
+**Dependencies**: Requires US1 (T008-T009) to be complete. Modifies the same service/resolver files.
+
+### Implementation for User Story 4
+
+- [ ] T-US4-01 [US4] Add optional `autoInvite` (boolean, default false) and `invitationMessage` (string, nullable) fields to `MoveSpaceL1ToSpaceL0Input` in `src/services/api/conversion/dto/move.dto.space.l1.to.space.l0.input.ts` — `@Field(() => Boolean, { nullable: true, defaultValue: false })` and `@Field(() => String, { nullable: true })`. Per FR-033
+- [ ] T-US4-02 [P] [US4] Add the same optional `autoInvite` and `invitationMessage` fields to `MoveSpaceL1ToSpaceL2Input` in `src/services/api/conversion/dto/move.dto.space.l1.to.space.l2.input.ts`. Per FR-033
+- [ ] T-US4-03 [US4] Add private method `dispatchAutoInvitesAfterMove(removedActorIds: string[], targetL0Id: string, movedSpaceId: string, invitationMessage?: string): Promise<void>` to `src/services/api/conversion/conversion.service.ts`:
+  1. Load target L0 community members via `getSpaceCommunityRoles(targetL0.community.roleSet)` — extract user IDs only (not orgs/VCs)
+  2. Compute overlap: `removedActorIds.filter(id => targetL0MemberIds.includes(id))`
+  3. For each overlap user: call existing `invitationService.createInvitation()` (or equivalent) to create an invitation to join the moved subspace. Use `invitationMessage` or generate default per FR-042: "The subspace '[name]' has moved from '[source]' to '[destination]'. You are invited to join it in its new location."
+  4. This is a best-effort post-commit operation — wrap in try/catch, log errors with `LogContext.CONVERSION`, never throw (FR-036)
+- [ ] T-US4-04 [US4] Wire auto-invite into both resolver mutations in `src/services/api/conversion/conversion.resolver.mutations.ts` — after fire-and-forget room handling (T009 step 9, T012 step 7): if `moveData.autoInvite === true`, call `void this.conversionService.dispatchAutoInvitesAfterMove(removedActorIds, targetL0Id, space.id, moveData.invitationMessage)` as fire-and-forget. Per FR-036: MUST NOT block or delay the move response
+- [ ] T-US4-05 [US4] Add unit tests for `dispatchAutoInvitesAfterMove` in `src/services/api/conversion/conversion.service.move.spec.ts`:
+  - Sends invitations only to overlap set (old members ∩ target L0 members)
+  - Does NOT invite users who were in old community but NOT in target L0 community
+  - Uses admin's custom message when provided
+  - Uses generated default message when invitationMessage is undefined
+  - Does not throw on invitation failure (logs error, continues)
+  - Sends zero invitations when overlap set is empty (FR-038)
+- [ ] T-US4-06 [US4] (client-web) Add auto-invite checkbox and message textbox to both move confirmation dialogs — checkbox labeled "Send invitations to community members who are already in the destination space" (unchecked by default, FR-039). Helper text explains overlap logic (FR-040). Message textbox visible only when checked, pre-populated with default message referencing subspace/source/destination names (FR-041, FR-042). Pass `autoInvite` flag and `invitationMessage` to mutation input (FR-044)
+
+**Checkpoint**: US4 complete — auto-invite works for both move types. Overlap logic independently testable.
+
+---
+
+## Phase 7: Polish & Cross-Cutting Concerns
 
 **Purpose**: Schema contract, integration tests, regression validation
 
-- [ ] T020 [BLOCKED: requires running services] Regenerate GraphQL schema: run `pnpm run schema:print && pnpm run schema:sort` — verify two new mutations appear in `schema.graphql` with correct Input types and return types. No breaking changes to existing schema
+- [ ] T020 [BLOCKED: requires running services] Regenerate GraphQL schema: run `pnpm run schema:print && pnpm run schema:sort` — verify two new mutations appear in `schema.graphql` with correct Input types (including optional autoInvite/invitationMessage fields) and return types. No breaking changes to existing schema
 - [ ] T021 [BLOCKED: requires T020] Run `pnpm run schema:diff` against baseline — confirm `change-report.json` shows only ADDITIONS (two mutations, two input types). No BREAKING changes
-- [ ] T022 Create integration test in `test/integration/conversion/move-space-cross-l0.it-spec.ts`:
+- [ ] T022 Create integration test in `test/functional/integration/conversion/move-space-cross-l0.it-spec.ts`:
   - Test 1: Move L1 with callouts and L2 children to different L0 → verify content accessible, levelZeroSpaceID updated for all descendants, community empty, authorization reflects new parent
-  - Test 2: Move L1 to become L2 under L1 in different L0 → verify level=L2, user admins preserved, content intact
+  - Test 2: Move L1 to become L2 under L1 in different L0 → verify level=L2, ALL community roles cleared including admins (cross-L0), content intact
   - Test 3: Reject self-move (same L0) with clear error
   - Test 4: Reject nameID collision with error containing `conflictingNameID`
   - Test 5: Reject depth overflow for L1→L2 when source has L2 children
@@ -200,7 +231,8 @@
 - **US1 (Phase 3)**: Depends on Phase 2 completion. Depends on T001 (DTO)
 - **US2 (Phase 4)**: Depends on Phase 2 completion. Depends on T002 (DTO). Independent of US1 — can run in parallel
 - **US3 (Phase 5)**: Depends on US1 (T009) and US2 (T012) being merged — needs mutations to exist in schema. Client-web repo scope
-- **Polish (Phase 6)**: Depends on US1 and US2 backend completion (T009, T012)
+- **US4 (Phase 6)**: Depends on US1 (T009) completion — modifies same service/resolver files. Can start after US1 is done
+- **Polish (Phase 7)**: Depends on US1 and US2 backend completion (T009, T012). US4 is optional before polish
 
 ### User Story Dependencies
 
@@ -223,7 +255,11 @@ Phase 3: US1   Phase 4: US2    ← Can run in PARALLEL
 Phase 5: US3 (client-web, needs schema from US1+US2)
   T014→T015→T016∥T017→T018→T019
          ↓
-Phase 6: Polish
+Phase 6: US4 (depends on US1, modifies same files)
+  T-US4-01∥T-US4-02→T-US4-03→T-US4-04→T-US4-05
+  T-US4-06 (client-web, parallel with server tasks)
+         ↓
+Phase 7: Polish
   T020→T021→T022→T023→T024→T025
 ```
 
@@ -276,23 +312,24 @@ Task: T013 "Unit tests for moveSpaceL1ToSpaceL2OrFail"
 1. Setup + Foundational → Foundation ready
 2. Add US1 → Test independently → Schema updated (MVP!)
 3. Add US2 → Test independently → Full backend API complete
-4. Add US3 (client-web) → Test via admin UI → Feature fully delivered
-5. Polish → Integration tests + regression validation → Production ready
+4. Add US3 (client-web) → Test via admin UI → Core feature delivered
+5. Add US4 → Test auto-invite independently → Feature fully delivered
+6. Polish → Integration tests + regression validation → Production ready
 
 ### Single Developer Strategy
 
 Execute sequentially in priority order:
-1. Phase 1 → Phase 2 → Phase 3 (US1) → Phase 4 (US2) → Phase 6 (Polish)
+1. Phase 1 → Phase 2 → Phase 3 (US1) → Phase 4 (US2) → Phase 6 (US4) → Phase 7 (Polish)
 2. US3 (client-web) can be deferred or handled by frontend developer
 
 ### Parallel Team Strategy
 
 With two developers on the server repo:
 1. Both complete Phase 1 + Phase 2 together
-2. Developer A: US1 (Phase 3)
+2. Developer A: US1 (Phase 3) then US4 (Phase 6)
 3. Developer B: US2 (Phase 4)
-4. Merge both, then Phase 6 together
-5. Frontend developer: US3 (Phase 5) after schema is merged to develop
+4. Merge both, then Phase 7 together
+5. Frontend developer: US3 (Phase 5) + US4 frontend (T-US4-06) after schema is merged to develop
 
 ---
 
@@ -302,6 +339,7 @@ With two developers on the server repo:
 - [Story] label maps task to specific user story for traceability
 - US1 and US2 are independently testable — each adds a working mutation
 - US3 depends on US1+US2 mutations being in the schema but is a separate repo
+- US4 depends on US1 (modifies same service/resolver files) but is independently testable as P3 convenience feature
 - Both service methods return `{ space, removedActorIds }` so the resolver can pass actor IDs to `handleRoomsDuringMove()`
 - Both service methods share the same file — coordinate if working in parallel to avoid merge conflicts in `conversion.service.ts`
 - Existing conversion mutations (`convertSpaceL1ToSpaceL2`, etc.) must NOT be modified — regression risk per spec FR-012

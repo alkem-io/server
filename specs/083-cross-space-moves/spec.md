@@ -70,6 +70,27 @@ The new operations are added to the existing **Space Conversions** section on th
 
 ---
 
+### User Story 4 — Auto-Invite Overlapping Members After Move (Priority: P3)
+
+As a platform administrator moving a subspace, I want the option to automatically invite former community members who are also members of the new parent L0 space so that interested users can quickly rejoin the moved subspace without manual re-invitation.
+
+After a cross-L0 move clears community memberships, the platform admin can opt in to sending automatic invitations. The eligible recipients are users who were members of the old community **and** are currently members of the target L0 space's community (the overlap set). The admin can toggle auto-invitations on or off and can edit a pre-generated invitation message before confirming the move.
+
+**Why this priority**: This is a convenience feature that reduces friction after a move. The core move (US1/US2) works without it — admins can always invite members manually afterwards. Auto-invite adds value when a subspace moves between related spaces where most members overlap.
+
+**Independent Test**: Create two L0 spaces with overlapping members. Create an L1 subspace under the first L0 with community members. Move the L1 to the second L0 with auto-invite enabled. Verify that only overlapping members (present in both the old L1 community and the target L0 community) receive invitations with the admin's custom message.
+
+**Acceptance Scenarios**:
+
+1. **Given** the admin enables auto-invite and confirms the move, **When** the move completes, **Then** invitations are sent only to users who were members of the old L1 community and are currently members of the target L0 community.
+2. **Given** a user was a member of the old L1 but is NOT a member of the target L0, **When** the move completes with auto-invite enabled, **Then** that user does NOT receive an invitation.
+3. **Given** the admin edits the pre-generated invitation message before confirming, **When** invitations are sent, **Then** each invitation contains the admin's custom message.
+4. **Given** the admin leaves auto-invite disabled (the default), **When** the move completes, **Then** no invitations are sent — the community is simply cleared.
+5. **Given** the overlap set is empty (no old members are members of the target L0), **When** the admin enables auto-invite and confirms the move, **Then** zero invitations are sent and the move succeeds normally.
+6. **Given** auto-invite is enabled for an L1→L2 cross-L0 demotion, **When** the move completes, **Then** invitations are sent to the same overlap set (old L1 members ∩ target L0 members). The behavior is identical to L1→L1 moves.
+
+---
+
 ### Edge Cases
 
 - **Circular hierarchy prevention**: Moving L1-A under L1-B which is itself under L0-X, when L1-A has an L2 that references L0-X — the system must update all level-zero space references correctly and prevent any structural inconsistency.
@@ -83,6 +104,9 @@ The new operations are added to the existing **Space Conversions** section on th
 - **Visibility and privacy preservation**: The space's visibility state (ACTIVE, ARCHIVED, DEMO, INACTIVE) and privacy mode (PUBLIC, PRIVATE) are preserved on move. All visibility states are eligible for cross-L0 moves — no reactivation required.
 - **Empty source parent**: After the move, the source L0 may have zero L1 children — this is valid.
 - **Network failure during admin UI operation**: Backend mutations are atomic — no partial state. The admin sees an error and can safely retry.
+- **Auto-invite with large overlap set**: If hundreds of users overlap, invitations are sent in bulk. The invitation dispatch does not block the move operation's response — it is a post-commit side effect.
+- **User is admin/lead in old community but only member in target L0**: The user still receives an invitation (as a regular member invite). The old role level is not carried over.
+- **Auto-invite when messaging service is unavailable**: Invitation creation succeeds (database records), but the notification side effect may fail silently — consistent with the fire-and-forget pattern for communication side effects.
 
 ## Requirements *(mandatory)*
 
@@ -119,6 +143,15 @@ The new operations are added to the existing **Space Conversions** section on th
 - **FR-021**: System MUST preserve the space's visibility state and privacy mode on move.
 - **FR-021b**: The move MUST update the Account association of the moved space and its subtree to the target L0's Account. License entitlements MUST be explicitly propagated to the moved subtree after the Account context changes. Quota overflow does not block the move — platform admin authority is sufficient safeguard.
 
+#### Backend — Post-Move Auto-Invitations
+
+- **FR-033**: Both move mutations MUST accept an optional auto-invite flag (default: off) and an optional invitation message string.
+- **FR-034**: When auto-invite is enabled, the system MUST compute the overlap set: users who were members of the old L1 community (any role) AND are currently members of the target L0 space's community.
+- **FR-035**: For each user in the overlap set, the system MUST create an invitation to join the moved subspace using the existing invitation mechanism. The invitation MUST include the admin-provided message (or the pre-generated default if unedited).
+- **FR-036**: Auto-invite processing MUST be a post-commit side effect — it MUST NOT block or delay the move operation's response, and failures MUST NOT roll back the move.
+- **FR-037**: The invitation triggers the existing invitation notification. No new notification type is introduced.
+- **FR-038**: If the overlap set is empty, no invitations are created and the move succeeds normally.
+
 #### Frontend — Admin UI Integration
 
 - **FR-022**: The existing Space Conversions section on the Conversions & Transfers admin page MUST be extended to include a "Move" option in the toggle button group when an L1 space is resolved, making the toggle "Promote | Demote | Move".
@@ -126,12 +159,21 @@ The new operations are added to the existing **Space Conversions** section on th
 - **FR-024**: For "Move to another Space", the UI MUST provide a searchable picker showing L0 spaces (excluding the current parent L0). The picker filters by spaces where the admin has access.
 - **FR-025**: For "Move under a Subspace", the UI MUST provide a searchable picker showing L1 spaces in other L0 spaces (excluding sibling L1 spaces in the same L0 — those are handled by the existing "Demote" operation).
 - **FR-026**: "Move under a Subspace" MUST be disabled with an explanation when the source L1 has L2 children (depth overflow).
-- **FR-027**: The confirmation dialog for "Move to another Space" MUST warn that community memberships will be cleared, content will move to the new space, and innovation flow may differ.
-- **FR-028**: The confirmation dialog for "Move under a Subspace" MUST warn that the space will be demoted to L2, all community roles will be cleared (including admins), and the space will be nested under the selected subspace.
+- **FR-027**: The confirmation dialog for "Move to another Space" MUST warn that community memberships will be cleared, content will move to the new space, innovation flow may differ, and existing URLs/bookmarks to the space will break (no redirects are created).
+- **FR-028**: The confirmation dialog for "Move under a Subspace" MUST warn that the space will be demoted to L2, all community roles will be cleared (including admins), the space will be nested under the selected subspace, and existing URLs/bookmarks to the space will break (no redirects are created).
 - **FR-029**: The "Move" option MUST only be shown for L1 spaces. L0 and L2 spaces do not show a "Move" toggle option.
 - **FR-030**: System MUST display a loading indicator during mutation execution and prevent duplicate submissions.
 - **FR-031**: System MUST display clear success messages after successful move operations.
 - **FR-032**: System MUST display clear error messages when moves fail (nameID collision, authorization failure, depth overflow).
+
+#### Frontend — Auto-Invite Controls in Confirmation Dialog
+
+- **FR-039**: Both move confirmation dialogs ("Move to another Space" and "Move under a Subspace") MUST include an auto-invite section with a checkbox labeled "Send invitations to community members who are already in the destination space". The checkbox MUST be unchecked by default.
+- **FR-040**: The auto-invite section MUST display helper text explaining what it does: that it identifies former community members who are currently members of the target space and sends them an invitation to rejoin. The helper text MUST clarify that only the overlap set is invited — members not present in the target L0 community will not be invited.
+- **FR-041**: When the auto-invite checkbox is checked, a message textbox MUST become visible and enabled, pre-populated with a generated invitation message. When unchecked, the textbox MUST be hidden.
+- **FR-042**: The pre-generated message MUST reference the subspace name, the source space name, and the destination space name in a human-readable format (e.g., "The subspace '[name]' has moved from '[source]' to '[destination]'. You are invited to join it in its new location.").
+- **FR-043**: The admin MUST be able to edit the pre-generated message before confirming. The textbox MUST allow free-form text input.
+- **FR-044**: When the admin confirms the move, the UI MUST pass the auto-invite flag (true/false) and the current textbox content (if auto-invite is enabled) to the respective move mutation input.
 
 ### Key Entities
 
@@ -153,6 +195,8 @@ The new operations are added to the existing **Space Conversions** section on th
 - **SC-007**: Platform admins can initiate and complete a cross-space move from the admin UI in under 60 seconds of wall-clock time.
 - **SC-008**: The existing promote, demote, and within-L0 operations continue to work identically after the new "Move" option is added.
 - **SC-009**: The "Move" option only appears for L1 spaces — L0 and L2 spaces cannot trigger cross-space moves from the UI.
+- **SC-010**: When auto-invite is enabled, 100% of overlap-set members (users present in both the cleared community and the target L0 community) receive invitations via the existing invitation mechanism.
+- **SC-011**: When auto-invite is disabled (the default), zero invitations are sent as a result of the move operation.
 
 ## Clarifications
 
@@ -168,6 +212,9 @@ The new operations are added to the existing **Space Conversions** section on th
 ### Session 2026-03-31
 
 - Q: Should user admins be preserved during cross-L0 L1→L2 demotion (consistent with same-L0 demotion), or cleared like the L1→L1 cross-L0 move? → A: Clear ALL roles. The boundary is same-L0 vs cross-L0, not the level change direction. Admin credentials are sub-community of the source L0 — they cannot be preserved across L0 boundaries because the community hierarchy changes entirely. Same-L0 `convertSpaceL1ToSpaceL2` continues to preserve admins (same hierarchy).
+- Q: When a space moves and its URL path changes, should the system create redirects from old URLs to new URLs? → A: No redirects — old URLs return not-found after the move. Broken links are accepted for this admin-only operation. The confirmation dialog must warn the admin that existing links to the space will break.
+- Q: Should cross-L0 move operations produce a dedicated audit event or activity log entry? → A: No dedicated audit event. Standard server logs (Winston) are sufficient. This is a low-frequency admin operation — existing server logging captures the operation context.
+- Q: When community memberships are cleared during a cross-L0 move, should removed members receive a notification? → A: No notification — silent removal. Platform admins communicate the change via their own channels if needed. The auto-invite mechanism (US4) handles re-engagement for overlap members separately.
 
 ## Assumptions
 
@@ -175,7 +222,7 @@ The new operations are added to the existing **Space Conversions** section on th
 - **Content moves, users don't**: All community role assignments are cleared. The community entity is preserved but emptied. The moved space inherits authorization from the new parent — the new parent's admins manage the moved space.
 - **Existing mutations unchanged**: The current `convertSpaceL1ToSpaceL2` (same-L0 constraint) and all other existing conversion mutations remain untouched. Cross-L0 operations use two new dedicated mutations (`moveSpaceL1ToSpaceL0`, `moveSpaceL1ToSpaceL2`), avoiding any regression risk to existing behavior.
 - **Subtree moves intact**: The entire subtree (L2 children and their content) moves with the L1. Individual child extraction is not in scope.
-- **No cascading notifications**: The initial implementation does not notify former community members about the move. This may be added later.
+- **Auto-invite is opt-in (US4)**: The admin may optionally invite former community members who overlap with the target L0's community. This is off by default. When enabled, invitations are sent via the existing invitation mechanism and notification — no new notification type is introduced. Members who are not part of the target L0's community are not eligible and receive no invitation.
 - **Storage references remain valid**: Files and media remain accessible via existing references after the storage aggregator parent is updated.
 - **Frontend integrates into existing page**: The UI for cross-space moves is added to the existing Conversions & Transfers page (`025-admin-transfer-ui`) — not a new page. It extends the L1 space toggle from "Promote | Demote" to "Promote | Demote | Move".
 - **Innovation flow synchronization uses existing patterns**: Callout classification tagset synchronization follows the same approach already used by the conversion service for within-L0 operations.

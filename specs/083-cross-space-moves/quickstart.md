@@ -45,7 +45,7 @@ src/services/api/conversion/dto/
 └── move.dto.space.l1.to.space.l2.input.ts   # MoveSpaceL1ToSpaceL2Input
 ```
 
-Follow the pattern of existing `ConvertSpaceL1ToSpaceL2Input`. Each has two UUID fields.
+Follow the pattern of existing `ConvertSpaceL1ToSpaceL2Input`. Each has two UUID fields plus optional auto-invite fields (`autoInvite: boolean = false`, `invitationMessage?: string`) per FR-033.
 
 ### Step 2: Service Methods (in ConversionService)
 
@@ -68,8 +68,10 @@ High-level flow:
 10. setParentRoleSetAndCredentials(roleSetL1, roleSetL0)
 11. Sync FLOW_STATE tagsets with target L0's innovation flow template
 12. Update sortOrder to last position
-13. Save and return space
+13. Save and return space + removedActorIds + autoInvite flag
 ```
+
+**Post-commit (in resolver)**: If `autoInvite` is true, compute overlap set (old L1 members ∩ target L0 members) and create invitations as fire-and-forget (FR-034–FR-038).
 
 #### `moveSpaceL1ToSpaceL2OrFail(moveData: MoveSpaceL1ToSpaceL2Input): Promise<ISpace>`
 
@@ -139,7 +141,7 @@ Key test cases:
 - Rejects L1→L2 when source has L2 children
 - Updates levelZeroSpaceID for moved space and descendants
 - Clears ALL community roles for L1→L1
-- Preserves user admins for L1→L2
+- Clears ALL community roles for L1→L2 (cross-L0 invalidates hierarchy)
 - Updates storage aggregator parent
 - Updates roleSet parent and credentials
 

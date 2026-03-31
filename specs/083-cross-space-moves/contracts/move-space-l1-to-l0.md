@@ -25,6 +25,12 @@ input MoveSpaceL1ToSpaceL0Input {
 
   """UUID of the target L0 space (must be different from current parent L0)."""
   targetSpaceL0ID: UUID!
+
+  """Send invitations to former community members who are also in the target L0 community. Default: false."""
+  autoInvite: Boolean = false
+
+  """Custom invitation message. Used only when autoInvite is true."""
+  invitationMessage: String
 }
 ```
 
@@ -63,6 +69,7 @@ Returns the full `Space` object at its new location. The space retains its ID bu
 
 9. **Invalidate URL caches**: Space profile caches revoked for moved subtree
 10. **Handle rooms (084)**: `SpaceMoveRoomsService.handleRoomsDuringMove(spaceId, removedActorIds)` — membership revocation, updates room recreation
+11. **Auto-invite (if enabled)**: Compute overlap set (old L1 members ∩ target L0 members), create invitations via existing invitation mechanism. Failures do not roll back the move (FR-036)
 
 ## Sequence Diagram
 
@@ -100,6 +107,19 @@ export class MoveSpaceL1ToSpaceL0Input {
 
   @Field(() => UUID, { description: 'UUID of the target L0 space.' })
   targetSpaceL0ID!: string;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    defaultValue: false,
+    description: 'Send invitations to former community members who are also in the target L0 community.',
+  })
+  autoInvite?: boolean;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'Custom invitation message. Used only when autoInvite is true.',
+  })
+  invitationMessage?: string;
 }
 ```
 

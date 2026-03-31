@@ -16,7 +16,7 @@ Two new GraphQL mutations (`moveSpaceL1ToSpaceL0`, `moveSpaceL1ToSpaceL2`) allow
 **Testing**: Vitest 4.x — unit (`*.spec.ts`), integration (`*.it-spec.ts`)
 **Target Platform**: Linux server (Docker/k8s), web client (React)
 **Project Type**: Cross-service (server + client-web)
-**Performance Goals**: Move operation < 10s wall-clock for typical L1 with ≤ 50 callouts, ≤ 5 L2 children
+**Performance Goals**: Move operation < 10s wall-clock for typical L1 with ≤ 50 callouts, ≤ 5 L2 children (design target; spec SC-007 allows up to 60s end-to-end including admin UI interaction)
 **Constraints**: Single DB transaction for all structural changes; fire-and-forget for Matrix side effects
 **Scale/Scope**: ~8-10 files modified/created server-side; ~5 files modified client-side
 
@@ -40,6 +40,8 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 **Deviations**: None. The design follows existing conversion service patterns closely.
 
 **Post-design re-check (2026-03-31)**: All gates confirmed PASS after Phase 1 artifacts (data-model.md, contracts/, quickstart.md) were reviewed. No new violations introduced. Stale admin-preservation references in research.md §6 and quickstart.md corrected to align with spec revision 2026-03-31 (ALL roles cleared for cross-L0 moves regardless of type).
+
+**Artifact sync (2026-03-31 — clarify session 2)**: Spec updated with 3 new clarifications: (1) no URL redirects after move — FR-027/FR-028 updated to warn admin about broken links, (2) no dedicated audit events — standard Winston logs sufficient, (3) no notification to removed members — silent removal. Contracts updated to include auto-invite optional fields (`autoInvite`, `invitationMessage`) per FR-033. Quickstart updated to reflect auto-invite post-commit step and corrected stale L1→L2 test case.
 
 ## Project Structure
 

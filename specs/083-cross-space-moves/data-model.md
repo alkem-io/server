@@ -73,7 +73,7 @@ Updated via `RoleSetService.setParentRoleSetAndCredentials(childRoleSet, parentR
 Rows **deleted** during community clearing:
 - `SPACE_MEMBER` credentials for all cleared members
 - `SPACE_LEAD` credentials for all cleared leads
-- `SPACE_ADMIN` credentials for all cleared admins (L1→L1 move only)
+- `SPACE_ADMIN` credentials for all cleared admins (both cross-L0 mutations — crossing L0 boundary invalidates the entire community hierarchy)
 - `SPACE_SUBSPACE_ADMIN` implicit credentials on parent space
 
 No credentials re-created for cross-L0 moves — all roles are cleared because the community hierarchy changes entirely.
