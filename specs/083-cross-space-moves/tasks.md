@@ -39,7 +39,7 @@
   3. For each space ID in the subtree: load space's collaboration → calloutsSet → callouts with `{ classification: { tagsets: true } }` relation chain
   4. For each callout: call `classificationService.updateTagsetTemplateOnSelectTagset(callout.classification.id, flowStateTemplate)`
   5. Follow the pattern in `CalloutTransferService.updateClassificationFromTemplates()` at `src/domain/collaboration/callout-transfer/callout.transfer.service.ts`
-- [ ] T006 [P] Add private method `collectRemovedActorIds(spaceCommunityRoles: SpaceCommunityRoles, includeAdmins: boolean): string[]` to `src/services/api/conversion/conversion.service.ts` — collects all actor IDs (users, orgs, VCs) from the roles object. When `includeAdmins=true` (L1→L1), includes `userAdmins`. When `false` (L1→L2), excludes admins. Returns flat array of UUIDs for passing to `SpaceMoveRoomsService.handleRoomsDuringMove()`
+- [ ] T006 [P] Add private method `collectRemovedActorIds(spaceCommunityRoles: SpaceCommunityRoles, includeAdmins: boolean): string[]` to `src/services/api/conversion/conversion.service.ts` — collects all actor IDs (users, orgs, VCs) from the roles object. For cross-L0 moves, `includeAdmins=true` for BOTH mutations (L1→L1 and L1→L2) because crossing the L0 boundary invalidates the entire community hierarchy. The `includeAdmins` parameter is retained for reuse by same-L0 operations that preserve admins. Returns flat array of UUIDs for passing to `SpaceMoveRoomsService.handleRoomsDuringMove()`
 - [ ] T007 [P] Add private method `invalidateUrlCachesForSubtree(movedSpaceId: string): Promise<void>` to `src/services/api/conversion/conversion.service.ts` (or as a resolver-level helper) — loads all spaces in the moved subtree with `about.profile` relation, calls `urlGeneratorCacheService.revokeUrlCache(space.about.profile.id)` for each. Follow the pattern in `SpaceService.updateSpacePlatformSettings()` at `src/domain/space/space/space.service.ts` (nameID change handler, ~line 822)
 
 **Checkpoint**: Foundation ready — shared helpers tested via unit tests in Phase 3/4. User story implementation can now begin.
@@ -63,12 +63,12 @@
   6. Call `removeContributors(roleSetL1, roles)` to clear members + leads + orgs + VCs
   7. Explicitly remove ALL user admins: `removeActorFromRole(roleSetL1, RoleName.ADMIN, adminId, false)` for each. **Note (FR-004)**: descendant communities are cascade-cleared automatically via `revokeSpaceTreeCredentials()` when removing L1 MEMBER roles — no explicit per-descendant clearing needed
   8. Update structural fields: `sourceL1.parentSpace = targetL0`, `sourceL1.levelZeroSpaceID = targetL0.id`
-  9. Bulk update descendant levelZeroSpaceIDs via QueryBuilder: `spaceRepository.createQueryBuilder().update(Space).set({ levelZeroSpaceID: targetL0.id }).whereInIds([...descendantIds]).execute()`. **Note (FR-010)**: this QueryBuilder statement runs on the same DB connection as the cascade save in step 14; if the save throws, a wrapping `queryRunner` transaction ensures the bulk update rolls back too — use explicit `queryRunner.startTransaction()` if the save + bulk update must be atomic
+  9. Bulk update descendant levelZeroSpaceIDs via QueryBuilder: `spaceRepository.createQueryBuilder().update(Space).set({ levelZeroSpaceID: targetL0.id }).whereInIds([...descendantIds]).execute()`. **Note (FR-010)**: Follow the existing conversion service pattern — no explicit `queryRunner.startTransaction()` (existing conversions rely on TypeORM cascade saves on the same connection). The QueryBuilder bulk update and entity save execute on the same default connection, providing implicit transactional consistency. If implementation reveals the bulk UPDATE runs outside the entity save's transaction boundary, escalate to explicit queryRunner
   10. Update storage: `sourceL1.storageAggregator.parentStorageAggregator = targetL0.storageAggregator`
   11. Update roleSet: `roleSetService.setParentRoleSetAndCredentials(roleSetL1, roleSetL0)`
   12. Call `syncInnovationFlowTagsetsForSubtree(sourceL1.id, targetL0.id)` (T005)
   13. Update sortOrder: count target L0's existing children, set `sourceL1.sortOrder = count`
-  14. Save space: `spaceService.save(sourceL1)` — **Note (FR-021b)**: license and Account association are inherited automatically via the updated `levelZeroSpaceID` → target L0 → Account path; no explicit `AccountHostService` call needed (only L0 spaces carry direct Account references)
+  14. Save space: `spaceService.save(sourceL1)` — **Note (FR-021b)**: Account association is inherited via the updated `levelZeroSpaceID` → target L0 → Account path. After save, propagate license entitlements via `accountHostService.assignLicensePlansToSpace(sourceL1.id, account.accountType)` (same pattern as existing `convertSpaceL1ToSpaceL0OrFail` at line ~163). Quota overflow does not block the move
   15. Return `{ space: sourceL1, removedActorIds }`
 
 - [ ] T009 [US1] Implement `moveSpaceL1ToSpaceL0` resolver mutation in `src/services/api/conversion/conversion.resolver.mutations.ts` — follow the pattern of existing `convertSpaceL2ToSpaceL1` resolver:
@@ -92,6 +92,7 @@
   - Updates `storageAggregator.parentStorageAggregator` to target L0's
   - Calls `setParentRoleSetAndCredentials` with target L0's roleSet
   - Updates `sortOrder` to last position
+  - Calls `syncInnovationFlowTagsetsForSubtree` for moved space AND all descendants (verify `ClassificationService.updateTagsetTemplateOnSelectTagset` called per callout in subtree)
 
 **Checkpoint**: US1 fully functional — L1→L1 cross-L0 move works end-to-end. Test via GraphQL playground per quickstart.md manual testing steps.
 
@@ -112,16 +113,15 @@
   4. Validate: source is L1, target is L1, different L0s (`sourceL1.levelZeroSpaceID !== targetL1.levelZeroSpaceID`)
   5. Validate depth: source L1 has NO L2 children (`sourceL1.subspaces.length === 0`). Throw `ValidationException('Cannot demote: source L1 has L2 children that would exceed max nesting depth', LogContext.CONVERSION)`
   6. Call `validateNameIDsInTargetL0Scope(sourceL1.id, targetL0.id)` — only source nameID (no descendants since blocked by step 5)
-  7. Call `getSpaceCommunityRoles(roleSetL1)` → collect removed actor IDs via `collectRemovedActorIds(roles, false)` (admins excluded) — store as `removedActorIds` for return
-  8. Call `removeContributors(roleSetL1, roles)` to clear members + leads + orgs + VCs (admins preserved)
+  7. Call `getSpaceCommunityRoles(roleSetL1)` → collect ALL actor IDs via `collectRemovedActorIds(roles, true)` (admins included — cross-L0 boundary invalidates the entire community hierarchy) — store as `removedActorIds` for return
+  8. Call `removeContributors(roleSetL1, roles)` to clear members + leads + orgs + VCs, then explicitly remove ALL user admins: `removeActorFromRole(roleSetL1, RoleName.ADMIN, adminId, false)` for each. Same pattern as L1→L1 cross-L0 (T008 step 7)
   9. Update structural fields: `sourceL1.level = SpaceLevel.L2`, `sourceL1.parentSpace = targetL1`, `sourceL1.levelZeroSpaceID = targetL0.id`
   10. Update storage: `sourceL1.storageAggregator.parentStorageAggregator = targetL1.storageAggregator`
   11. Update roleSet: `roleSetService.setParentRoleSetAndCredentials(roleSetL1, roleSetTargetL1)`
   12. Call `syncInnovationFlowTagsetsForSubtree(sourceL1.id, targetL0.id)` (T005) — no descendants to sync here (blocked by step 5), but using the subtree method for consistency
   13. Update sortOrder: count target L1's existing children, set `sourceL1.sortOrder = count`
-  14. Save space: `spaceService.save(sourceL1)` — **Note (FR-021b)**: license inherits automatically via updated `levelZeroSpaceID` path
-  15. Re-add user admins: `roleSetService.assignActorToRole(roleSetL1, RoleName.ADMIN, adminId)` for each preserved admin
-  16. Return `{ space: sourceL1, removedActorIds }`
+  14. Save space: `spaceService.save(sourceL1)` — **Note (FR-021b)**: Account association is inherited via updated `levelZeroSpaceID` path. After save, propagate license entitlements via `accountHostService.assignLicensePlansToSpace(sourceL1.id, account.accountType)` (same pattern as existing conversion). Quota overflow does not block the move
+  15. Return `{ space: sourceL1, removedActorIds }`
 
 - [ ] T012 [US2] Implement `moveSpaceL1ToSpaceL2` resolver mutation in `src/services/api/conversion/conversion.resolver.mutations.ts` — same pattern as T009 but:
   1. `@Mutation(() => ISpace, { description: 'Move an L1 subspace to become an L2 under a target L1 in a different L0...' })`
@@ -139,8 +139,7 @@
   - Rejects when source L1 has L2 children (depth overflow)
   - Rejects nameID collision in target L0 scope
   - Changes level from L1 to L2
-  - Clears members/leads/orgs/VCs but PRESERVES user admins
-  - Re-adds user admins after roleSet parent update
+  - Clears ALL community roles including user admins (cross-L0 boundary invalidates community hierarchy — differs from same-L0 `convertSpaceL1ToSpaceL2` which preserves admins)
   - Updates `levelZeroSpaceID` to target L0's ID
   - Updates `storageAggregator.parentStorageAggregator` to target L1's
   - Calls `setParentRoleSetAndCredentials` with target L1's roleSet
@@ -157,7 +156,7 @@
 
 **NOTE**: This phase is **client-web** (React) scope — out of scope for the server repo. Tasks are documented here for cross-service coordination.
 
-**Pre-check**: Verify the existing `spaces` GraphQL query supports filtering by level (e.g., `filter: { level: L0 }`). If not, a server-side task to add level filtering must be completed before T016/T017.
+- [ ] T-US3-PRE [US3] **Blocker for T016/T017**: Verify the existing `spaces` GraphQL query supports filtering by level (e.g., `filter: { level: L0 }`). If not supported, add server-side level filter before proceeding with space pickers
 
 ### Implementation for User Story 3 (client-web repo)
 
@@ -165,7 +164,7 @@
 - [ ] T015 [US3] Add move-type selector component — two options: "Move to another Space (stays L1)" and "Move under a Subspace in another Space (becomes L2)". Disable "Move under a Subspace" when source L1 has L2 children (FR-026)
 - [ ] T016 [P] [US3] Add searchable L0 space picker for "Move to another Space" — queries `spaces(filter: { level: L0 })` excluding current parent L0. Uses existing space search patterns from the admin UI
 - [ ] T017 [P] [US3] Add searchable L1 space picker for "Move under a Subspace" — queries L1 spaces in other L0s, excluding sibling L1s in the same L0
-- [ ] T018 [US3] Add confirmation dialog with move-specific warnings — for L1→L1: warns community cleared + content moves + innovation flow may differ. For L1→L2: warns demotion + community roles cleared except admins
+- [ ] T018 [US3] Add confirmation dialog with move-specific warnings — for L1→L1: warns community cleared + content moves + innovation flow may differ. For L1→L2: warns demotion + ALL community roles cleared including admins (cross-L0 boundary)
 - [ ] T019 [US3] Wire GraphQL mutations (`moveSpaceL1ToSpaceL0`, `moveSpaceL1ToSpaceL2`) with loading indicator, duplicate submission prevention, success/error message display (FR-030, FR-031, FR-032)
 
 **Checkpoint**: Admin UI complete — platform admins can trigger cross-space moves from the web interface.
@@ -178,12 +177,14 @@
 
 - [ ] T020 Regenerate GraphQL schema: run `pnpm run schema:print && pnpm run schema:sort` — verify two new mutations appear in `schema.graphql` with correct Input types and return types. No breaking changes to existing schema
 - [ ] T021 Run `pnpm run schema:diff` against baseline — confirm `change-report.json` shows only ADDITIONS (two mutations, two input types). No BREAKING changes
-- [ ] T022 Create integration test in `test/functional/integration/conversion/move-space-cross-l0.it-spec.ts`:
+- [ ] T022 Create integration test in `test/integration/conversion/move-space-cross-l0.it-spec.ts`:
   - Test 1: Move L1 with callouts and L2 children to different L0 → verify content accessible, levelZeroSpaceID updated for all descendants, community empty, authorization reflects new parent
   - Test 2: Move L1 to become L2 under L1 in different L0 → verify level=L2, user admins preserved, content intact
   - Test 3: Reject self-move (same L0) with clear error
   - Test 4: Reject nameID collision with error containing `conflictingNameID`
   - Test 5: Reject depth overflow for L1→L2 when source has L2 children
+  - Test 6: After L1→L1 cross-L0 move, verify visibility state and privacy mode are unchanged (FR-021)
+  - Test 7: After L1→L1 cross-L0 move, verify moved space resolves to the target L0's Account and license entitlements are propagated (FR-021b)
 - [ ] T023 Regression validation: run existing conversion tests to verify `convertSpaceL1ToSpaceL2`, `convertSpaceL2ToSpaceL1`, and `convertSpaceL1ToSpaceL0` continue to work unchanged. Run `pnpm test -- src/services/api/conversion/`
 - [ ] T024 Run full CI test suite: `pnpm test:ci:no:coverage` — verify no regressions across the codebase
 - [ ] T025 Run quickstart.md manual validation — follow the 6-step manual testing procedure in `specs/083-cross-space-moves/quickstart.md`

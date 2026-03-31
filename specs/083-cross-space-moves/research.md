@@ -103,16 +103,13 @@ No new authorization logic is needed — the existing recursive propagation hand
 
 ## 6. Community Membership Clearing
 
-**Decision**: Two different clearing strategies based on move type:
-- **L1→L1 cross-L0**: Clear ALL roles including admins (clean slate for new L0 context)
-- **L1→L2 cross-L0**: Clear all except user admins (consistent with existing L1→L2 demotion)
+**Decision**: Clear ALL community roles including admins for BOTH cross-L0 move types (L1→L1 and L1→L2).
 
-**Rationale**: Per spec clarification (2026-03-30): "a lateral move into a completely different space context warrants a clean slate." The L1→L2 case preserves admins for consistency with the existing within-L0 demotion pattern, since the operational context is the same (demotion = loss of independence, admin continuity aids transition).
+**Rationale**: Per spec clarification (2026-03-31): the determining factor is same-L0 vs cross-L0, not the level change direction. Admin credentials are rooted in the source L0's community chain and are meaningless in the target L0's context. The same-L0 `convertSpaceL1ToSpaceL2` continues to preserve admins (same hierarchy), but any cross-L0 operation clears all roles.
 
 **Implementation approach**:
 - Reuse `getSpaceCommunityRoles(roleSet)` to fetch all role assignments
-- For L1→L1: call `removeContributors(roleSet, roles)` then also remove admins explicitly
-- For L1→L2: call `removeContributors(roleSet, roles)` (admins preserved, re-added after parent set)
+- For BOTH cross-L0 moves: call `removeContributors(roleSet, roles)` then also remove admins explicitly via `removeActorFromRole(roleSet, RoleName.ADMIN, adminId, false)` for each admin
 
 **Descendant clearing**: The moved space's direct community is cleared. For descendants, `removeActorFromRole(MEMBER)` already cascades via `revokeSpaceTreeCredentials()` — removing a member from the L1 revokes their credentials from all L2 children. No explicit per-descendant clearing needed.
 

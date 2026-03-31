@@ -10,7 +10,7 @@ type Mutation {
   """
   Move an L1 subspace to become an L2 sub-subspace under a target L1 in a
   different L0 space. The space is demoted from level 1 to level 2 and nested
-  under the target L1. Community roles are cleared except user admins.
+  under the target L1. All community roles are cleared.
   Requires platform admin privileges.
   """
   moveSpaceL1ToSpaceL2(moveData: MoveSpaceL1ToSpaceL2Input!): Space!
@@ -55,7 +55,7 @@ Returns the full `Space` object at its new location. The space now has `level: L
 1. **Demote level**: `space.level` → L2
 2. **Re-parent**: `space.parentSpace` → target L1
 3. **Update levelZeroSpaceID**: Moved space → target L0's ID (no descendants since L2 children are blocked)
-4. **Clear community roles except user admins**: Members, leads, orgs, VCs removed; user admins preserved and re-added
+4. **Clear ALL community roles**: Members, leads, admins, orgs, VCs — all removed. Differs from same-L0 `convertSpaceL1ToSpaceL2` (which preserves admins) because crossing the L0 boundary invalidates the community hierarchy
 5. **Update storage aggregator parent**: Points to target L1's storage aggregator
 6. **Update roleSet parent**: Links to target L1's community roleSet + propagates credentials
 7. **Update sort order**: Set to last position in target L1's children
@@ -78,12 +78,12 @@ Client → Resolver: moveSpaceL1ToSpaceL2(moveData)
     Service → NamingService: validate nameID (source only, no descendants)
     Service → RoleSetService: getSpaceCommunityRoles() → collect actors
     Service → RoleSetService: removeContributors() (members, leads, orgs, VCs)
+    Service → RoleSetService: removeActorFromRole() for each admin
     Service → Space: update level=L2, parentSpace=targetL1, levelZeroSpaceID=targetL0.id
     Service → StorageAggregator: update parent reference
     Service → RoleSetService: setParentRoleSetAndCredentials(roleSetL1, roleSetTargetL1)
     Service → ClassificationService: sync FLOW_STATE tagsets
     Service → SpaceService: save(space)
-    Service → RoleSetService: re-add user admins to ADMIN role
     Service → return space
   Resolver → SpaceService: save(space)
   Resolver → SpaceAuthService: applyAuthorizationPolicy(spaceId, targetL1Auth)
@@ -140,6 +140,7 @@ mutation MoveSubspaceUnderAnotherSubspace {
 | Room handling | None needed | 084 fire-and-forget post-commit |
 | Cache invalidation | None needed | URL caches revoked (L0 prefix changes) |
 | NameID validation | Not needed (same scope) | Required (different scope) |
+| Community/Admins | All cleared except user admins (preserved) | ALL cleared including admins (cross-L0 invalidates community hierarchy) |
 
 ## Related
 

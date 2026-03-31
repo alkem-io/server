@@ -39,6 +39,8 @@ _GATE: Must pass before Phase 0 research. Re-check after Phase 1 design._
 
 **Deviations**: None. The design follows existing conversion service patterns closely.
 
+**Post-design re-check (2026-03-31)**: All gates confirmed PASS after Phase 1 artifacts (data-model.md, contracts/, quickstart.md) were reviewed. No new violations introduced. Stale admin-preservation references in research.md §6 and quickstart.md corrected to align with spec revision 2026-03-31 (ALL roles cleared for cross-L0 moves regardless of type).
+
 ## Project Structure
 
 ### Documentation (this feature)
@@ -98,4 +100,4 @@ No constitution violations — table intentionally empty.
 
 | Violation | Why Needed | Simpler Alternative Rejected Because |
 |-----------|-----------|--------------------------------------|
-| — | — | — |
+| Principle 1: Move business rules in `src/services/api/conversion/` instead of `src/domain/` | Move operations share 80%+ of structural update logic with existing conversions already in the services layer | Separate domain service would duplicate helper methods and split the single entry point for all space reorganization operations |

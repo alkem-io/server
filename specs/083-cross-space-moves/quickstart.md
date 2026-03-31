@@ -80,16 +80,15 @@ High-level flow:
 3. Load target L0 (via target L1's levelZeroSpaceID) with:
      collaboration.calloutsSet.tagsetTemplateSet.tagsetTemplates
 4. Validate: source is L1, target is L1, different L0s, no L2 children on source, no nameID collision
-5. getSpaceCommunityRoles(roleSetL1) → collect actor IDs (note: admins preserved)
+5. getSpaceCommunityRoles(roleSetL1) → collect ALL actor IDs (admins cleared for cross-L0)
 6. removeContributors(roleSetL1, roles) → clear members + leads + orgs + VCs
-7. Update: level = L2, parentSpace = targetL1, levelZeroSpaceID = targetL0.id
-8. Update: storageAggregator.parentStorageAggregator = targetL1.storageAggregator
-9. setParentRoleSetAndCredentials(roleSetL1, roleSetTargetL1)
-10. Sync FLOW_STATE tagsets with target L0's innovation flow template
-11. Update sortOrder to last position
-12. Save space
-13. Re-add user admins to ADMIN role
-14. Return space
+7. Remove admins explicitly: removeActorFromRole(ADMIN, adminId) for each
+8. Update: level = L2, parentSpace = targetL1, levelZeroSpaceID = targetL0.id
+9. Update: storageAggregator.parentStorageAggregator = targetL1.storageAggregator
+10. setParentRoleSetAndCredentials(roleSetL1, roleSetTargetL1)
+11. Sync FLOW_STATE tagsets with target L0's innovation flow template
+12. Update sortOrder to last position
+13. Save and return space
 ```
 
 ### Step 3: Resolver Mutations

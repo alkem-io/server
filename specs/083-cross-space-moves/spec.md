@@ -44,7 +44,7 @@ A platform administrator selects an L1 subspace and converts it to an L2 sub-sub
 
 1. **Given** L1 Subspace A in Space X and L1 Subspace B in Space Y (different L0), **When** a platform admin moves Subspace A to be an L2 under Subspace B, **Then** Subspace A becomes an L2 sub-subspace of Subspace B in Space Y.
 2. **Given** Subspace A has L2 children, **When** the admin attempts to move it to be an L2 under another L1, **Then** the operation is rejected because the children would exceed the maximum nesting depth.
-3. **Given** Subspace A has community members and leads, **When** it is moved cross-L0 to become an L2, **Then** all community roles are cleared except user admins (consistent with existing L1→L2 behavior).
+3. **Given** Subspace A has community members and leads, **When** it is moved cross-L0 to become an L2, **Then** ALL community roles are cleared including user admins (crossing L0 boundary invalidates the entire community hierarchy).
 4. **Given** Subspace A's nameID collides with an existing entity in the target L0 scope, **When** the move is attempted, **Then** it is rejected with a collision error.
 
 ---
@@ -64,7 +64,7 @@ The new operations are added to the existing **Space Conversions** section on th
 1. **Given** the admin resolves an L1 space URL on the Conversions & Transfers page, **When** the operations are displayed, **Then** a three-option toggle appears: "Promote | Demote | Move" (defaulting to "Promote" as before).
 2. **Given** the admin selects "Move" for an L1 space, **When** the move form appears, **Then** a move-type selector offers "Move to another Space (stays L1)" and "Move under a Subspace in another Space (becomes L2)", and a searchable target picker is shown based on the selected move type.
 3. **Given** the admin selects "Move to another Space" and picks a target L0 from the picker, **When** they confirm, **Then** a confirmation dialog warns that community memberships will be cleared and content will be moved. After confirmation the mutation executes and a success message is shown.
-4. **Given** the admin selects "Move under a Subspace" and picks a target L1 in a different L0, **When** they confirm, **Then** the confirmation dialog warns that the space will be demoted to L2, community roles will be cleared (except user admins), and content will be moved.
+4. **Given** the admin selects "Move under a Subspace" and picks a target L1 in a different L0, **When** they confirm, **Then** the confirmation dialog warns that the space will be demoted to L2, all community roles will be cleared, and content will be moved.
 5. **Given** the L1 space has L2 children and the admin selects "Move under a Subspace", **When** the picker appears, **Then** the option is disabled with an explanation that nesting depth would be exceeded.
 6. **Given** the resolved space is L0 or L2, **When** the toggle appears, **Then** the "Move" option is not shown (move operations apply only to L1 spaces).
 
@@ -107,7 +107,7 @@ The new operations are added to the existing **Space Conversions** section on th
 - **FR-012**: System MUST provide a new dedicated mutation (`moveSpaceL1ToSpaceL2`) to move an L1 space to L2 under a target L1 in a different L0 space. The existing `convertSpaceL1ToSpaceL2` mutation remains unchanged (same-L0 constraint preserved).
 - **FR-013**: Cross-L0 demotion MUST reject moves where the source L1 has L2 children, because the children would exceed the maximum nesting depth.
 - **FR-014**: Cross-L0 demotion MUST update the level-zero space reference for the moved space to the target L0's ID.
-- **FR-015**: Cross-L0 demotion MUST clear all community roles except user admins (consistent with existing within-L0 demotion behavior).
+- **FR-015**: Cross-L0 demotion MUST clear ALL community roles including user admins. This differs from the existing within-L0 demotion (which preserves user admins) because crossing the L0 boundary changes the community hierarchy entirely — admin credentials are rooted in the source L0's chain and are meaningless in the target L0's context.
 - **FR-016**: Cross-L0 demotion MUST validate nameID uniqueness within the target L0 scope.
 - **FR-017**: Cross-L0 demotion MUST require platform admin privileges.
 
@@ -117,7 +117,7 @@ The new operations are added to the existing **Space Conversions** section on th
 - **FR-019**: System MUST recalculate platform role access (anonymous, guest, registered user visibility) for the moved space and its subtree based on the new parent's access configuration.
 - **FR-020**: System MUST update sort order and display position of the moved space within its new parent context.
 - **FR-021**: System MUST preserve the space's visibility state and privacy mode on move.
-- **FR-021b**: The move MUST update the Account association of the moved space and its subtree to the target L0's Account. Storage and license quotas are recalculated against the target Account.
+- **FR-021b**: The move MUST update the Account association of the moved space and its subtree to the target L0's Account. License entitlements MUST be explicitly propagated to the moved subtree after the Account context changes. Quota overflow does not block the move — platform admin authority is sufficient safeguard.
 
 #### Frontend — Admin UI Integration
 
@@ -127,7 +127,7 @@ The new operations are added to the existing **Space Conversions** section on th
 - **FR-025**: For "Move under a Subspace", the UI MUST provide a searchable picker showing L1 spaces in other L0 spaces (excluding sibling L1 spaces in the same L0 — those are handled by the existing "Demote" operation).
 - **FR-026**: "Move under a Subspace" MUST be disabled with an explanation when the source L1 has L2 children (depth overflow).
 - **FR-027**: The confirmation dialog for "Move to another Space" MUST warn that community memberships will be cleared, content will move to the new space, and innovation flow may differ.
-- **FR-028**: The confirmation dialog for "Move under a Subspace" MUST warn that the space will be demoted to L2, community roles will be cleared except user admins, and the space will be nested under the selected subspace.
+- **FR-028**: The confirmation dialog for "Move under a Subspace" MUST warn that the space will be demoted to L2, all community roles will be cleared (including admins), and the space will be nested under the selected subspace.
 - **FR-029**: The "Move" option MUST only be shown for L1 spaces. L0 and L2 spaces do not show a "Move" toggle option.
 - **FR-030**: System MUST display a loading indicator during mutation execution and prevent duplicate submissions.
 - **FR-031**: System MUST display clear success messages after successful move operations.
@@ -136,7 +136,7 @@ The new operations are added to the existing **Space Conversions** section on th
 ### Key Entities
 
 - **Space**: Organizational unit at level 0 (space), 1 (subspace), or 2 (sub-subspace). Has a level-zero space reference that tracks which L0 it belongs to. The cross-space move changes this reference for the entire subtree.
-- **Community**: Membership container for a space. Contains role assignments (members, admins, leads, facilitators). For L1→L1 cross-L0 moves, all roles are cleared. For L1→L2 cross-L0 demotion, all roles except user admins are cleared (consistent with existing L1→L2 behavior).
+- **Community**: Membership container for a space. Contains role assignments (members, admins, leads, facilitators). For L1→L1 cross-L0 moves, all roles are cleared. For L1→L2 cross-L0 demotion, ALL roles are cleared including user admins (crossing L0 boundary invalidates the community hierarchy).
 - **Collaboration**: Content container for a space. Holds callouts, posts, whiteboards, discussions, innovation flows — all move intact with the space. Classification tagsets must be resynchronized when crossing L0 boundaries.
 - **Authorization**: Hierarchical policy chain. When a space moves to a new parent, the moved subtree must inherit the new parent's authorization chain.
 
@@ -147,7 +147,7 @@ The new operations are added to the existing **Space Conversions** section on th
 - **SC-001**: Platform admins can move an L1 subspace from one L0 space to another in a single operation, with all content intact and no data loss.
 - **SC-002**: Platform admins can move an L1 subspace to become an L2 under an L1 in a different L0 space, with content preserved and community roles cleared.
 - **SC-003**: After any cross-space move, 100% of content (callouts, posts, whiteboards, sub-subspaces) is accessible in the new location.
-- **SC-004**: After any cross-space move, 0% of community memberships from the source context persist — all non-admin roles are cleared.
+- **SC-004**: After any cross-space move, 0% of community memberships from the source context persist — ALL roles are cleared (crossing L0 boundary invalidates the entire community hierarchy).
 - **SC-005**: NameID collision attempts and depth-overflow attempts are rejected 100% of the time with user-understandable error messages.
 - **SC-006**: The move operation completes atomically — either fully succeeds or fully rolls back, with no partial state observable.
 - **SC-007**: Platform admins can initiate and complete a cross-space move from the admin UI in under 60 seconds of wall-clock time.
@@ -158,12 +158,16 @@ The new operations are added to the existing **Space Conversions** section on th
 
 ### Session 2026-03-30
 
-- Q: When an L1 moves to a different L0 (stays L1), should user admins be preserved or should ALL community roles be cleared? → A: Clear ALL roles including admins. The target L0's admins inherit management via authorization chain. This differs from L1→L2 demotion (which preserves user admins) because a lateral move into a completely different space context warrants a clean slate.
+- Q: When an L1 moves to a different L0 (stays L1), should user admins be preserved or should ALL community roles be cleared? → A: Clear ALL roles including admins. The target L0's admins inherit management via authorization chain. ~~This differs from L1→L2 demotion (which preserves user admins)~~ — **Revised 2026-03-31**: L1→L2 cross-L0 also clears ALL roles including admins (see FR-015). The same-L0 vs cross-L0 boundary is the determining factor, not the level change direction. Community memberships are hierarchical under the L0; admin credentials rooted in the source L0's chain are meaningless in the target L0's context.
 - Q: How should the two cross-L0 operations be exposed in the GraphQL API — new mutations, extend existing, or single generic? → A: Two new dedicated mutations (`moveSpaceL1ToSpaceL0`, `moveSpaceL1ToSpaceL2`). The existing `convertSpaceL1ToSpaceL2` remains unchanged. This eliminates regression risk to existing operations and gives each move operation a clear semantic name aligned with the frontend's "Move" toggle.
 - Q: When source and target L0s have different innovation flow states, how should callout classification tagsets be synchronized? → A: Reuse the existing sync pattern from the within-L0 conversion service. Callouts are remapped to the target flow's state set; unmatched states fall back to the target's default state. No new synchronization logic is needed — the cross-L0 move delegates to the same classification sync path.
 - Q: When source and target L0s have different Accounts (billing/licensing), what happens to the moved space's Account association? → A: Inherit the target L0's Account. The moved space and its subtree switch to the target's Account, with storage and license quotas recalculated against the target. Consistent with the principle that the moved space fully belongs to the new parent context.
 - Q: Can non-ACTIVE spaces (ARCHIVED, DEMO, INACTIVE) be moved cross-L0? → A: Allow all states. Any L1 space can be moved regardless of visibility state. The state is preserved as-is at the new location. No reactivation step required — platform admin privileges are sufficient safeguard.
 - Q: What is the exact scope of nameID collision validation (FR-008)? → A: Space nameIDs only — the L0 and all its L1/L2 children. Callouts, posts, and profiles don't have nameIDs that participate in URL routing collisions.
+
+### Session 2026-03-31
+
+- Q: Should user admins be preserved during cross-L0 L1→L2 demotion (consistent with same-L0 demotion), or cleared like the L1→L1 cross-L0 move? → A: Clear ALL roles. The boundary is same-L0 vs cross-L0, not the level change direction. Admin credentials are sub-community of the source L0 — they cannot be preserved across L0 boundaries because the community hierarchy changes entirely. Same-L0 `convertSpaceL1ToSpaceL2` continues to preserve admins (same hierarchy).
 
 ## Assumptions
 

@@ -76,8 +76,7 @@ Rows **deleted** during community clearing:
 - `SPACE_ADMIN` credentials for all cleared admins (L1→L1 move only)
 - `SPACE_SUBSPACE_ADMIN` implicit credentials on parent space
 
-Rows **created** during admin re-assignment (L1→L2 move only):
-- `SPACE_ADMIN` credentials re-granted to preserved user admins
+No credentials re-created for cross-L0 moves — all roles are cleared because the community hierarchy changes entirely.
 
 ### StorageAggregator
 
@@ -185,7 +184,7 @@ Space (L1)                          Space (L2)
   .sortOrder = N                      .sortOrder = (last in target)
   .community.roleSet                  .community.roleSet
     .parentRoleSet = sourceL0.rs        .parentRoleSet = targetL1.rs
-    [members, leads, admins]            [admins only — members/leads cleared]
+    [members, leads, admins]            [EMPTY — all cleared (cross-L0)]
   .storageAggregator                  .storageAggregator
     .parent = sourceL0.sa               .parent = targetL1.sa
   .authorization                      .authorization
