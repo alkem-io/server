@@ -29,6 +29,8 @@ import { ConversionVcSpaceToVcKnowledgeBaseInput } from './dto/conversion.dto.vc
 import { ConvertSpaceL1ToSpaceL0Input } from './dto/convert.dto.space.l1.to.space.l0.input';
 import { ConvertSpaceL1ToSpaceL2Input } from './dto/convert.dto.space.l1.to.space.l2.input';
 import { ConvertSpaceL2ToSpaceL1Input } from './dto/convert.dto.space.l2.to.space.l1.input';
+import { MoveSpaceL1ToSpaceL0Input } from './dto/move.dto.space.l1.to.space.l0.input';
+import { MoveSpaceL1ToSpaceL2Input } from './dto/move.dto.space.l1.to.space.l2.input';
 
 @InstrumentResolver()
 @Resolver()
@@ -148,6 +150,88 @@ export class ConversionResolverMutations {
       );
     await this.authorizationPolicyService.saveAll(spaceL1Authorizations);
     return await this.spaceService.getSpaceOrFail(spaceL2.id);
+  }
+
+  @Mutation(() => ISpace, {
+    description:
+      'Move an L1 subspace to a different L0 space. The subspace remains at level 1 \
+      but changes parent. All content moves with it. All community memberships are cleared. \
+      Requires platform admin privileges.',
+  })
+  async moveSpaceL1ToSpaceL0(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('moveData') moveData: MoveSpaceL1ToSpaceL0Input
+  ): Promise<ISpace> {
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      this.authorizationGlobalAdminPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `move space L1 to different L0: ${actorContext.actorID}`
+    );
+
+    const { space, removedActorIds } =
+      await this.conversionService.moveSpaceL1ToSpaceL0OrFail(moveData);
+    const savedSpace = await this.spaceService.save(space);
+
+    const parentAuthorization = await this.getParentSpaceAuthorization(
+      savedSpace.id
+    );
+    const updatedAuthorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        savedSpace.id,
+        parentAuthorization
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    // Post-commit: fire-and-forget
+    await this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
+    void this.conversionService.moveRoomsService.handleRoomsDuringMove(
+      savedSpace.id,
+      removedActorIds
+    );
+
+    return this.spaceService.getSpaceOrFail(savedSpace.id);
+  }
+
+  @Mutation(() => ISpace, {
+    description:
+      'Move an L1 subspace to become an L2 sub-subspace under a target L1 in a different L0 space. \
+      The space is demoted from level 1 to level 2. All community roles are cleared. \
+      Requires platform admin privileges.',
+  })
+  async moveSpaceL1ToSpaceL2(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('moveData') moveData: MoveSpaceL1ToSpaceL2Input
+  ): Promise<ISpace> {
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      this.authorizationGlobalAdminPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `move space L1 to L2 in different L0: ${actorContext.actorID}`
+    );
+
+    const { space, removedActorIds } =
+      await this.conversionService.moveSpaceL1ToSpaceL2OrFail(moveData);
+    const savedSpace = await this.spaceService.save(space);
+
+    const parentAuthorization = await this.getParentSpaceAuthorization(
+      savedSpace.id
+    );
+    const updatedAuthorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        savedSpace.id,
+        parentAuthorization
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    // Post-commit: fire-and-forget
+    await this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
+    void this.conversionService.moveRoomsService.handleRoomsDuringMove(
+      savedSpace.id,
+      removedActorIds
+    );
+
+    return this.spaceService.getSpaceOrFail(savedSpace.id);
   }
 
   @Mutation(() => IVirtualContributor, {

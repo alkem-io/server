@@ -1,17 +1,22 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
+import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
+import { ClassificationModule } from '@domain/common/classification/classification.module';
+import { SpaceMoveRoomsModule } from '@domain/communication/space-move-rooms/space.move.rooms.module';
 import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
 import { SpaceModule } from '@domain/space/space/space.module';
+import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { TemplateModule } from '@domain/template/template/template.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { Module } from '@nestjs/common';
 import { PlatformModule } from '@platform/platform/platform.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
+import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 import { InputCreatorModule } from '../input-creator/input.creator.module';
 import { ConversionResolverMutations } from './conversion.resolver.mutations';
 import { ConversionService } from './conversion.service';
@@ -20,6 +25,7 @@ import { ConversionService } from './conversion.service';
   imports: [
     AuthorizationModule,
     SpaceModule,
+    SpaceLookupModule,
     AccountHostModule,
     RoleSetModule,
     AuthorizationModule,
@@ -30,7 +36,11 @@ import { ConversionService } from './conversion.service';
     TemplatesManagerModule,
     InnovationFlowModule,
     TemplateModule,
+    CalloutsSetModule,
     CalloutTransferModule,
+    ClassificationModule,
+    SpaceMoveRoomsModule,
+    UrlGeneratorModule,
     VirtualActorModule,
     AiServerAdapterModule,
   ],

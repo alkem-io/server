@@ -20,9 +20,9 @@
 
 **Purpose**: DTOs, module wiring, and shared dependency injection for both mutations
 
-- [ ] T001 [P] Create `MoveSpaceL1ToSpaceL0Input` DTO in `src/services/api/conversion/dto/move.dto.space.l1.to.space.l0.input.ts` — two UUID fields (`spaceL1ID`, `targetSpaceL0ID`) with `@InputType()` and `@Field(() => UUID)` decorators, following `ConvertSpaceL1ToSpaceL2Input` pattern
-- [ ] T002 [P] Create `MoveSpaceL1ToSpaceL2Input` DTO in `src/services/api/conversion/dto/move.dto.space.l1.to.space.l2.input.ts` — two UUID fields (`spaceL1ID`, `targetSpaceL1ID`) with `@InputType()` and `@Field(() => UUID)` decorators
-- [ ] T003 Update `src/services/api/conversion/conversion.module.ts` — add imports for `SpaceMoveRoomsModule` (from `@domain/communication/space-move-rooms/space.move.rooms.module`), `NamingModule` (if not present), `CalloutsSetModule`, and `ClassificationModule`. Inject `SpaceMoveRoomsService`, `NamingService`, `CalloutsSetService`, `ClassificationService`, `UrlGeneratorCacheService`, and `SpaceLookupService` into `ConversionService` and `ConversionResolverMutations` constructors as needed
+- [x] T001 [P] Create `MoveSpaceL1ToSpaceL0Input` DTO in `src/services/api/conversion/dto/move.dto.space.l1.to.space.l0.input.ts` — two UUID fields (`spaceL1ID`, `targetSpaceL0ID`) with `@InputType()` and `@Field(() => UUID)` decorators, following `ConvertSpaceL1ToSpaceL2Input` pattern
+- [x] T002 [P] Create `MoveSpaceL1ToSpaceL2Input` DTO in `src/services/api/conversion/dto/move.dto.space.l1.to.space.l2.input.ts` — two UUID fields (`spaceL1ID`, `targetSpaceL1ID`) with `@InputType()` and `@Field(() => UUID)` decorators
+- [x] T003 Update `src/services/api/conversion/conversion.module.ts` — add imports for `SpaceMoveRoomsModule` (from `@domain/communication/space-move-rooms/space.move.rooms.module`), `NamingModule` (if not present), `CalloutsSetModule`, and `ClassificationModule`. Inject `SpaceMoveRoomsService`, `NamingService`, `CalloutsSetService`, `ClassificationService`, `UrlGeneratorCacheService`, and `SpaceLookupService` into `ConversionService` and `ConversionResolverMutations` constructors as needed
 
 ---
 
@@ -32,15 +32,15 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T004 [P] Add private method `validateNameIDsInTargetL0Scope(movedSpaceId: string, targetL0Id: string): Promise<void>` to `src/services/api/conversion/conversion.service.ts` — loads moved subtree nameIDs (source L1 + its L2 children via `spaceRepository.find`), calls `namingService.getReservedNameIDsInLevelZeroSpace(targetL0Id)`, throws `ValidationException('NameID collision in target L0 scope', LogContext.CONVERSION, { conflictingNameID })` on collision. Per FR-008: only space nameIDs, not callout/post/profile nameIDs
-- [ ] T005 [P] Add private method `syncInnovationFlowTagsetsForSubtree(movedSpaceId: string, targetL0Id: string): Promise<void>` to `src/services/api/conversion/conversion.service.ts` — syncs the **entire moved subtree** (FR-018), not just the moved space:
+- [x] T004 [P] Add private method `validateNameIDsInTargetL0Scope(movedSpaceId: string, targetL0Id: string): Promise<void>` to `src/services/api/conversion/conversion.service.ts` — loads moved subtree nameIDs (source L1 + its L2 children via `spaceRepository.find`), calls `namingService.getReservedNameIDsInLevelZeroSpace(targetL0Id)`, throws `ValidationException('NameID collision in target L0 scope', LogContext.CONVERSION, { conflictingNameID })` on collision. Per FR-008: only space nameIDs, not callout/post/profile nameIDs
+- [x] T005 [P] Add private method `syncInnovationFlowTagsetsForSubtree(movedSpaceId: string, targetL0Id: string): Promise<void>` to `src/services/api/conversion/conversion.service.ts` — syncs the **entire moved subtree** (FR-018), not just the moved space:
   1. Resolve all descendant space IDs via `spaceLookupService.getAllDescendantSpaceIDs(movedSpaceId)`, prepend `movedSpaceId`
   2. Load target L0's collaboration with `{ calloutsSet: { tagsetTemplateSet: { tagsetTemplates: true } } }` — extract the FLOW_STATE tagset template
   3. For each space ID in the subtree: load space's collaboration → calloutsSet → callouts with `{ classification: { tagsets: true } }` relation chain
   4. For each callout: call `classificationService.updateTagsetTemplateOnSelectTagset(callout.classification.id, flowStateTemplate)`
   5. Follow the pattern in `CalloutTransferService.updateClassificationFromTemplates()` at `src/domain/collaboration/callout-transfer/callout.transfer.service.ts`
-- [ ] T006 [P] Add private method `collectRemovedActorIds(spaceCommunityRoles: SpaceCommunityRoles, includeAdmins: boolean): string[]` to `src/services/api/conversion/conversion.service.ts` — collects all actor IDs (users, orgs, VCs) from the roles object. For cross-L0 moves, `includeAdmins=true` for BOTH mutations (L1→L1 and L1→L2) because crossing the L0 boundary invalidates the entire community hierarchy. The `includeAdmins` parameter is retained for reuse by same-L0 operations that preserve admins. Returns flat array of UUIDs for passing to `SpaceMoveRoomsService.handleRoomsDuringMove()`
-- [ ] T007 [P] Add private method `invalidateUrlCachesForSubtree(movedSpaceId: string): Promise<void>` to `src/services/api/conversion/conversion.service.ts` (or as a resolver-level helper) — loads all spaces in the moved subtree with `about.profile` relation, calls `urlGeneratorCacheService.revokeUrlCache(space.about.profile.id)` for each. Follow the pattern in `SpaceService.updateSpacePlatformSettings()` at `src/domain/space/space/space.service.ts` (nameID change handler, ~line 822)
+- [x] T006 [P] Add private method `collectRemovedActorIds(spaceCommunityRoles: SpaceCommunityRoles, includeAdmins: boolean): string[]` to `src/services/api/conversion/conversion.service.ts` — collects all actor IDs (users, orgs, VCs) from the roles object. For cross-L0 moves, `includeAdmins=true` for BOTH mutations (L1→L1 and L1→L2) because crossing the L0 boundary invalidates the entire community hierarchy. The `includeAdmins` parameter is retained for reuse by same-L0 operations that preserve admins. Returns flat array of UUIDs for passing to `SpaceMoveRoomsService.handleRoomsDuringMove()`
+- [x] T007 [P] Add private method `invalidateUrlCachesForSubtree(movedSpaceId: string): Promise<void>` to `src/services/api/conversion/conversion.service.ts` (or as a resolver-level helper) — loads all spaces in the moved subtree with `about.profile` relation, calls `urlGeneratorCacheService.revokeUrlCache(space.about.profile.id)` for each. Follow the pattern in `SpaceService.updateSpacePlatformSettings()` at `src/domain/space/space/space.service.ts` (nameID change handler, ~line 822)
 
 **Checkpoint**: Foundation ready — shared helpers tested via unit tests in Phase 3/4. User story implementation can now begin.
 
@@ -54,7 +54,7 @@
 
 ### Implementation for User Story 1
 
-- [ ] T008 [US1] Implement `moveSpaceL1ToSpaceL0OrFail(moveData: MoveSpaceL1ToSpaceL0Input): Promise<{ space: ISpace; removedActorIds: string[] }>` in `src/services/api/conversion/conversion.service.ts` — follow the sequence from `contracts/move-space-l1-to-l0.md`:
+- [x] T008 [US1] Implement `moveSpaceL1ToSpaceL0OrFail(moveData: MoveSpaceL1ToSpaceL0Input): Promise<{ space: ISpace; removedActorIds: string[] }>` in `src/services/api/conversion/conversion.service.ts` — follow the sequence from `contracts/move-space-l1-to-l0.md`:
   1. Load source L1 with relations: `{ community: { roleSet: true }, storageAggregator: true, subspaces: true }`
   2. Load target L0 with relations: `{ storageAggregator: true, community: { roleSet: true } }`
   3. Validate: source is L1 (`space.level === SpaceLevel.L1`), target is L0 (`target.level === SpaceLevel.L0`), different L0s (`sourceL1.levelZeroSpaceID !== targetL0.id`). Throw `ValidationException` per data-model.md validation rules
@@ -71,7 +71,7 @@
   14. Save space: `spaceService.save(sourceL1)` — **Note (FR-021b)**: Account association is inherited via the updated `levelZeroSpaceID` → target L0 → Account path. After save, propagate license entitlements via `accountHostService.assignLicensePlansToSpace(sourceL1.id, account.accountType)` (same pattern as existing `convertSpaceL1ToSpaceL0OrFail` at line ~163). Quota overflow does not block the move
   15. Return `{ space: sourceL1, removedActorIds }`
 
-- [ ] T009 [US1] Implement `moveSpaceL1ToSpaceL0` resolver mutation in `src/services/api/conversion/conversion.resolver.mutations.ts` — follow the pattern of existing `convertSpaceL2ToSpaceL1` resolver:
+- [x] T009 [US1] Implement `moveSpaceL1ToSpaceL0` resolver mutation in `src/services/api/conversion/conversion.resolver.mutations.ts` — follow the pattern of existing `convertSpaceL2ToSpaceL1` resolver:
   1. `@Mutation(() => ISpace, { description: 'Move an L1 subspace to a different L0 space...' })`
   2. Authorization: check `AuthorizationPrivilege.PLATFORM_ADMIN` against global policy (same pattern as `convertSpaceL1ToSpaceL0`)
   3. Call `conversionService.moveSpaceL1ToSpaceL0OrFail(moveData)` → destructure `{ space, removedActorIds }`
@@ -106,7 +106,7 @@
 
 ### Implementation for User Story 2
 
-- [ ] T011 [US2] Implement `moveSpaceL1ToSpaceL2OrFail(moveData: MoveSpaceL1ToSpaceL2Input): Promise<{ space: ISpace; removedActorIds: string[] }>` in `src/services/api/conversion/conversion.service.ts` — follow the sequence from `contracts/move-space-l1-to-l2.md`:
+- [x] T011 [US2] Implement `moveSpaceL1ToSpaceL2OrFail(moveData: MoveSpaceL1ToSpaceL2Input): Promise<{ space: ISpace; removedActorIds: string[] }>` in `src/services/api/conversion/conversion.service.ts` — follow the sequence from `contracts/move-space-l1-to-l2.md`:
   1. Load source L1 with relations: `{ community: { roleSet: true }, storageAggregator: true, subspaces: true }`
   2. Load target L1 with relations: `{ storageAggregator: true, community: { roleSet: true } }`
   3. Load target L0 via `spaceService.getSpaceOrFail(targetL1.levelZeroSpaceID)`
@@ -123,7 +123,7 @@
   14. Save space: `spaceService.save(sourceL1)` — **Note (FR-021b)**: Account association is inherited via updated `levelZeroSpaceID` path. After save, propagate license entitlements via `accountHostService.assignLicensePlansToSpace(sourceL1.id, account.accountType)` (same pattern as existing conversion). Quota overflow does not block the move
   15. Return `{ space: sourceL1, removedActorIds }`
 
-- [ ] T012 [US2] Implement `moveSpaceL1ToSpaceL2` resolver mutation in `src/services/api/conversion/conversion.resolver.mutations.ts` — same pattern as T009 but:
+- [x] T012 [US2] Implement `moveSpaceL1ToSpaceL2` resolver mutation in `src/services/api/conversion/conversion.resolver.mutations.ts` — same pattern as T009 but:
   1. `@Mutation(() => ISpace, { description: 'Move an L1 subspace to become an L2 under a target L1 in a different L0...' })`
   2. Authorization: PLATFORM_ADMIN
   3. Call `conversionService.moveSpaceL1ToSpaceL2OrFail(moveData)` → destructure `{ space, removedActorIds }`
@@ -175,8 +175,8 @@
 
 **Purpose**: Schema contract, integration tests, regression validation
 
-- [ ] T020 Regenerate GraphQL schema: run `pnpm run schema:print && pnpm run schema:sort` — verify two new mutations appear in `schema.graphql` with correct Input types and return types. No breaking changes to existing schema
-- [ ] T021 Run `pnpm run schema:diff` against baseline — confirm `change-report.json` shows only ADDITIONS (two mutations, two input types). No BREAKING changes
+- [ ] T020 [BLOCKED: requires running services] Regenerate GraphQL schema: run `pnpm run schema:print && pnpm run schema:sort` — verify two new mutations appear in `schema.graphql` with correct Input types and return types. No breaking changes to existing schema
+- [ ] T021 [BLOCKED: requires T020] Run `pnpm run schema:diff` against baseline — confirm `change-report.json` shows only ADDITIONS (two mutations, two input types). No BREAKING changes
 - [ ] T022 Create integration test in `test/integration/conversion/move-space-cross-l0.it-spec.ts`:
   - Test 1: Move L1 with callouts and L2 children to different L0 → verify content accessible, levelZeroSpaceID updated for all descendants, community empty, authorization reflects new parent
   - Test 2: Move L1 to become L2 under L1 in different L0 → verify level=L2, user admins preserved, content intact
