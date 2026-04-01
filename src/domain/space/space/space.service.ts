@@ -613,11 +613,6 @@ export class SpaceService {
     const qb = this.spaceRepository.createQueryBuilder('space');
 
     qb.leftJoinAndSelect('space.subspaces', 'subspace');
-    qb.leftJoin('space.actor', 'actor_for_auth');
-    qb.leftJoinAndSelect(
-      'actor_for_auth.authorization',
-      'authorization_policy'
-    );
     qb.leftJoinAndSelect('subspace.subspaces', 'subspaces');
     qb.where({
       level: SpaceLevel.L0,
