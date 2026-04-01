@@ -64,7 +64,7 @@ Returns the full `Space` object at its new location. The space now has `level: L
 4. **Clear ALL community roles**: Members, leads, admins, orgs, VCs — all removed. Differs from same-L0 `convertSpaceL1ToSpaceL2` (which preserves admins) because crossing the L0 boundary invalidates the community hierarchy
 5. **Update storage aggregator parent**: Points to target L1's storage aggregator
 6. **Update roleSet parent**: Links to target L1's community roleSet + propagates credentials
-7. **Update sort order**: Set to last position in target L1's children
+7. **Update sort order**: Set to position 0 (first) in target L1's children, shifting existing children up by 1
 8. **Sync innovation flow tagsets**: Callout FLOW_STATE tagsets remapped to target L0's states
 9. **Apply authorization policy**: Auth chain rebuilt from target L1
 

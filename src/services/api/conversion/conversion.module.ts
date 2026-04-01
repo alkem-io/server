@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
@@ -24,6 +25,7 @@ import { ConversionService } from './conversion.service';
 @Module({
   imports: [
     AuthorizationModule,
+    InvitationModule,
     SpaceModule,
     SpaceLookupModule,
     AccountHostModule,

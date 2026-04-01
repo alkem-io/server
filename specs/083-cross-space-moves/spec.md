@@ -120,7 +120,7 @@ After a cross-L0 move clears community memberships, the platform admin can opt i
 - **FR-004**: The move MUST clear ALL community memberships (members, leads, admins, organizations, virtual contributors) in the moved space and its descendants. No roles are preserved — the target L0's admins manage the moved space via authorization chain inheritance.
 - **FR-005**: The move MUST update the authorization chain of the moved space and its subtree to inherit from the target L0's authorization policies.
 - **FR-006**: The move MUST update storage aggregator parent references for the moved space and its nested entities.
-- **FR-007**: The move MUST invalidate all cached URLs for the moved space, its subtree, and all contained entities (profiles, collaborations, callouts, contributions).
+- **FR-007**: The move MUST invalidate cached URLs for the moved space and its subtree by revoking each space's profile URL cache entry (following the existing conversion service pattern). Non-space entity caches (callouts, contributions) self-heal via the 1-second cache TTL and require no explicit invalidation.
 - **FR-008**: The move MUST validate that no space nameID in the moved subtree collides with existing space nameIDs scoped to the target L0 (L0 itself + all L1/L2 children). Callout, post, and profile nameIDs are not in scope. If a collision is detected, the move is rejected with a clear error identifying the conflicting nameID.
 - **FR-009**: The move MUST reject self-moves (moving an L1 to its current parent L0) with a clear message.
 - **FR-010**: The move MUST be atomic — single database transaction. If any step fails, the entire operation rolls back. Non-transactional side effects (cache invalidation) use best-effort after commit.
@@ -139,7 +139,7 @@ After a cross-L0 move clears community memberships, the platform admin can opt i
 
 - **FR-018**: When a move crosses L0 boundaries, system MUST synchronize callout classification tagsets in the moved subtree with the target L0's innovation flow template configuration, using the same sync pattern as the existing within-L0 conversion service. Unmatched flow states fall back to the target's default state.
 - **FR-019**: System MUST recalculate platform role access (anonymous, guest, registered user visibility) for the moved space and its subtree based on the new parent's access configuration.
-- **FR-020**: System MUST update sort order and display position of the moved space within its new parent context.
+- **FR-020**: System MUST set the moved space's sort order to position 0 (first) within its new parent, shifting existing children's sort orders up by 1. The admin can rearrange the order manually afterwards.
 - **FR-021**: System MUST preserve the space's visibility state and privacy mode on move.
 - **FR-021b**: The move MUST update the Account association of the moved space and its subtree to the target L0's Account. License entitlements MUST be explicitly propagated to the moved subtree after the Account context changes. Quota overflow does not block the move — platform admin authority is sufficient safeguard.
 

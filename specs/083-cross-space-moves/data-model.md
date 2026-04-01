@@ -20,7 +20,7 @@ No new entities or database migrations are required. All changes operate on exis
 | `level` | `int` (SpaceLevel enum) | `moveSpaceL1ToSpaceL2` only | Changed from L1 (1) to L2 (2) |
 | `parentSpace` | `ManyToOne(Space)` | Both mutations | FK updated to target parent |
 | `levelZeroSpaceID` | `uuid` | Both mutations | Updated to target L0's ID for moved space + all descendants |
-| `sortOrder` | `int` | Both mutations | Set to next available position in target parent's children |
+| `sortOrder` | `int` | Both mutations | Set to 0 (first position); existing children shifted up by 1 |
 | `settings` | `jsonb` (ISpaceSettings) | Preserved | No changes — settings carry over |
 | `visibility` | `varchar` (SpaceVisibility) | Preserved | FR-021: state preserved on move |
 | `platformRolesAccess` | `jsonb` | Both mutations | Recalculated by `applyAuthorizationPolicy()` |
@@ -155,7 +155,7 @@ BEFORE                              AFTER
 Space (L1)                          Space (L1)
   .parentSpace = sourceL0             .parentSpace = targetL0
   .levelZeroSpaceID = sourceL0.id     .levelZeroSpaceID = targetL0.id
-  .sortOrder = N                      .sortOrder = (last in target)
+  .sortOrder = N                      .sortOrder = 0 (first in target)
   .community.roleSet                  .community.roleSet
     .parentRoleSet = sourceL0.rs        .parentRoleSet = targetL0.rs
     [members, leads, admins]            [EMPTY — all cleared]
@@ -181,7 +181,7 @@ Space (L1)                          Space (L2)
   .level = 1                          .level = 2
   .parentSpace = sourceL0             .parentSpace = targetL1
   .levelZeroSpaceID = sourceL0.id     .levelZeroSpaceID = targetL0.id
-  .sortOrder = N                      .sortOrder = (last in target)
+  .sortOrder = N                      .sortOrder = 0 (first in target)
   .community.roleSet                  .community.roleSet
     .parentRoleSet = sourceL0.rs        .parentRoleSet = targetL1.rs
     [members, leads, admins]            [EMPTY — all cleared (cross-L0)]

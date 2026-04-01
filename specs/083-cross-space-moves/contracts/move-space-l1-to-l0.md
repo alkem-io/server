@@ -61,7 +61,7 @@ Returns the full `Space` object at its new location. The space retains its ID bu
 3. **Clear ALL community roles**: Members, leads, admins, orgs, VCs — all removed
 4. **Update storage aggregator parent**: Points to target L0's storage aggregator
 5. **Update roleSet parent**: Links to target L0's community roleSet + propagates credentials
-6. **Update sort order**: Set to last position in target L0's children
+6. **Update sort order**: Set to position 0 (first) in target L0's children, shifting existing children up by 1
 7. **Sync innovation flow tagsets**: Callout FLOW_STATE tagsets remapped to target L0's states
 8. **Apply authorization policy**: Full subtree auth chain rebuilt from target L0
 

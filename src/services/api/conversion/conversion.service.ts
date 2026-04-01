@@ -7,6 +7,7 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
@@ -53,6 +54,7 @@ export class ConversionService {
     private spaceLookupService: SpaceLookupService,
     private classificationService: ClassificationService,
     private calloutsSetService: CalloutsSetService,
+    private invitationService: InvitationService,
     private urlGeneratorCacheService: UrlGeneratorCacheService,
     private spaceMoveRoomsService: SpaceMoveRoomsService,
     private readonly entityManager: EntityManager,
@@ -602,8 +604,14 @@ export class ConversionService {
     // 12. Sync innovation flow tagsets
     await this.syncInnovationFlowTagsetsForSubtree(sourceL1.id, targetL0.id);
 
-    // 13. Update sort order
-    sourceL1.sortOrder = targetL0.subspaces.length;
+    // 13. Update sort order: insert at first position, shift existing children
+    await this.entityManager
+      .createQueryBuilder()
+      .update(Space)
+      .set({ sortOrder: () => '"sortOrder" + 1' })
+      .where('"parentSpaceId" = :parentId', { parentId: targetL0.id })
+      .execute();
+    sourceL1.sortOrder = 0;
 
     // 14. Save and propagate license entitlements
     const savedSpace = await this.spaceService.save(sourceL1);
@@ -747,8 +755,14 @@ export class ConversionService {
     // 12. Sync innovation flow tagsets
     await this.syncInnovationFlowTagsetsForSubtree(sourceL1.id, targetL0.id);
 
-    // 13. Update sort order
-    sourceL1.sortOrder = targetL1.subspaces.length;
+    // 13. Update sort order: insert at first position, shift existing children
+    await this.entityManager
+      .createQueryBuilder()
+      .update(Space)
+      .set({ sortOrder: () => '"sortOrder" + 1' })
+      .where('"parentSpaceId" = :parentId', { parentId: targetL1.id })
+      .execute();
+    sourceL1.sortOrder = 0;
 
     // 14. Save and propagate license entitlements
     const savedSpace = await this.spaceService.save(sourceL1);
@@ -791,40 +805,19 @@ export class ConversionService {
   }
 
   /**
-   * Syncs callout classification tagsets in the entire moved subtree
-   * with the target L0's innovation flow template.
+   * Syncs callout classification tagsets in the entire moved subtree.
+   * Each space's callouts are synced using that space's OWN calloutsSet
+   * tagsetTemplate — not the target L0's — because L1/L2 spaces retain their
+   * own innovation flow after a cross-L0 move.
    */
   private async syncInnovationFlowTagsetsForSubtree(
     movedSpaceId: string,
-    targetL0Id: string
+    _targetL0Id: string
   ): Promise<void> {
-    // Get all space IDs in the subtree
     const descendantIds =
       await this.spaceLookupService.getAllDescendantSpaceIDs(movedSpaceId);
     const allSpaceIds = [movedSpaceId, ...descendantIds];
 
-    // Load target L0's collaboration → calloutsSet → tagsetTemplateSet
-    const targetL0 = await this.spaceService.getSpaceOrFail(targetL0Id, {
-      relations: {
-        collaboration: {
-          calloutsSet: true,
-        },
-      },
-    });
-    if (!targetL0.collaboration?.calloutsSet) {
-      return; // No calloutsSet on target — nothing to sync
-    }
-
-    const tagsetTemplateSet =
-      await this.calloutsSetService.getTagsetTemplatesSet(
-        targetL0.collaboration.calloutsSet.id
-      );
-    const tagsetTemplates = tagsetTemplateSet.tagsetTemplates;
-    if (!tagsetTemplates || tagsetTemplates.length === 0) {
-      return;
-    }
-
-    // For each space in the subtree, load its callouts and sync classification
     for (const spaceId of allSpaceIds) {
       const space = await this.spaceService.getSpaceOrFail(spaceId, {
         relations: {
@@ -838,7 +831,15 @@ export class ConversionService {
         },
       });
 
-      const callouts = space.collaboration?.calloutsSet?.callouts;
+      const calloutsSet = space.collaboration?.calloutsSet;
+      if (!calloutsSet) continue;
+
+      const tagsetTemplateSet =
+        await this.calloutsSetService.getTagsetTemplatesSet(calloutsSet.id);
+      const tagsetTemplates = tagsetTemplateSet.tagsetTemplates;
+      if (!tagsetTemplates || tagsetTemplates.length === 0) continue;
+
+      const callouts = calloutsSet.callouts;
       if (!callouts) continue;
 
       for (const callout of callouts) {
@@ -857,7 +858,7 @@ export class ConversionService {
    * Collects all actor IDs from the community roles object.
    * When includeAdmins is true (cross-L0), admin IDs are included.
    */
-  collectRemovedActorIds(
+  private collectRemovedActorIds(
     spaceCommunityRoles: SpaceCommunityRoles,
     includeAdmins: boolean
   ): string[] {
@@ -872,6 +873,71 @@ export class ConversionService {
     for (const vc of spaceCommunityRoles.vcMembers) ids.push(vc.id);
     // Deduplicate — an actor can appear in multiple roles
     return [...new Set(ids)];
+  }
+
+  /**
+   * Dispatches auto-invite invitations to former community members who are
+   * also members of the target L0 community (the overlap set).
+   * Best-effort: logs errors, never throws (FR-036).
+   */
+  async dispatchAutoInvitesAfterMove(
+    removedActorIds: string[],
+    targetL0Id: string,
+    movedSpaceId: string,
+    createdBy: string,
+    invitationMessage?: string
+  ): Promise<void> {
+    try {
+      // 1. Load target L0 community members (user IDs only)
+      const targetL0 = await this.spaceService.getSpaceOrFail(targetL0Id, {
+        relations: { community: { roleSet: true } },
+      });
+      if (!targetL0.community?.roleSet) return;
+
+      const targetRoles = await this.getSpaceCommunityRoles(
+        targetL0.community.roleSet
+      );
+      const targetL0MemberIds = new Set(targetRoles.userMembers.map(u => u.id));
+
+      // 2. Compute overlap: former members ∩ target L0 members
+      const overlapUserIds = removedActorIds.filter(id =>
+        targetL0MemberIds.has(id)
+      );
+      if (overlapUserIds.length === 0) return;
+
+      // 3. Load moved space to get its roleSet ID
+      const movedSpace = await this.spaceService.getSpaceOrFail(movedSpaceId, {
+        relations: { community: { roleSet: true } },
+      });
+      if (!movedSpace.community?.roleSet) return;
+
+      const roleSetID = movedSpace.community.roleSet.id;
+
+      // 4. Create invitations for each overlap user
+      for (const userId of overlapUserIds) {
+        try {
+          await this.invitationService.createInvitation({
+            invitedActorID: userId,
+            welcomeMessage: invitationMessage,
+            createdBy,
+            roleSetID,
+            invitedToParent: false,
+          });
+        } catch (err) {
+          this.logger.error(
+            `Failed to create auto-invite for user after move`,
+            (err as Error)?.stack ?? '',
+            LogContext.CONVERSION
+          );
+        }
+      }
+    } catch (err) {
+      this.logger.error(
+        `Failed to dispatch auto-invites after move`,
+        (err as Error)?.stack ?? '',
+        LogContext.CONVERSION
+      );
+    }
   }
 
   /**

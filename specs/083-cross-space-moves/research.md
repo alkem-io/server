@@ -168,9 +168,8 @@ The existing `CalloutTransferService` already handles this when transferring cal
 **Implementation approach**: Follow the pattern from `SpaceService.updateSpacePlatformSettings()` (nameID change handler):
 1. Load all spaces in the moved subtree with `about.profile` relation
 2. For each space: `urlGeneratorCacheService.revokeUrlCache(space.about.profile.id)`
-3. For callout/contribution profiles within those spaces: delegate to `CalloutTransferService.revokeUrlCaches()` pattern per CalloutsSet
 
-**Note**: Given the 1s TTL, only the space profile caches need explicit invalidation. Callout/contribution caches will naturally expire. However, for correctness during the immediate post-move window, revoking space-level caches is sufficient since the URL generator walks the parent chain and detects the new hierarchy.
+**Note**: Only space profile caches need explicit revocation. Non-space entity caches (callouts, posts, contributions) self-heal via the 1-second cache TTL — no explicit invalidation required.
 
 **Alternatives considered**:
 - **Full subtree profile cache flush**: Traverse every callout and contribution in every space. Correct but expensive for large moves. Rejected for first version — space-level invalidation plus 1s TTL is sufficient.
@@ -180,13 +179,13 @@ The existing `CalloutTransferService` already handles this when transferring cal
 
 ## 10. Sort Order and Display Position
 
-**Decision**: Set the moved space's `sortOrder` to the next available position in the target parent's children list.
+**Decision**: Set the moved space's `sortOrder` to position 0 (first) within the target parent, shifting existing children up by 1. The admin can rearrange order manually afterwards.
 
-**Rationale**: FR-020 requires updating sort order within the new parent context. The existing subspace creation pattern sets `sortOrder` based on the current count of children.
+**Rationale**: FR-020 requires updating sort order within the new parent context. Placing the moved space first makes it immediately visible, confirming the operation succeeded. This differs from the existing subspace creation pattern (which appends to end) — a deliberate choice for move operations where admin verification is the priority.
 
 **Implementation approach**:
-1. Count existing children of the target parent: `spaceRepository.count({ where: { parentSpace: { id: targetParentId } } })`
-2. Set `movedSpace.sortOrder = childCount` (0-indexed, so this places it at the end)
+1. Shift existing children: `spaceRepository.createQueryBuilder().update(Space).set({ sortOrder: () => '"sortOrder" + 1' }).where('parentSpace.id = :parentId', { parentId: targetParentId }).execute()`
+2. Set `movedSpace.sortOrder = 0` (first position)
 
 ---
 

@@ -15,4 +15,19 @@ export class MoveSpaceL1ToSpaceL2Input {
       'The target L1 subspace in a different L0 (new parent for the demoted space).',
   })
   targetSpaceL1ID!: string;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    defaultValue: false,
+    description:
+      'Send invitations to former community members who are also in the target L0 community.',
+  })
+  autoInvite?: boolean;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'Custom invitation message. Used only when autoInvite is true.',
+  })
+  invitationMessage?: string;
 }

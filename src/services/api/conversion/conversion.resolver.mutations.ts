@@ -189,6 +189,15 @@ export class ConversionResolverMutations {
       savedSpace.id,
       removedActorIds
     );
+    if (moveData.autoInvite) {
+      void this.conversionService.dispatchAutoInvitesAfterMove(
+        removedActorIds,
+        moveData.targetSpaceL0ID,
+        savedSpace.id,
+        actorContext.actorID,
+        moveData.invitationMessage
+      );
+    }
 
     return this.spaceService.getSpaceOrFail(savedSpace.id);
   }
@@ -230,6 +239,15 @@ export class ConversionResolverMutations {
       savedSpace.id,
       removedActorIds
     );
+    if (moveData.autoInvite) {
+      void this.conversionService.dispatchAutoInvitesAfterMove(
+        removedActorIds,
+        savedSpace.levelZeroSpaceID,
+        savedSpace.id,
+        actorContext.actorID,
+        moveData.invitationMessage
+      );
+    }
 
     return this.spaceService.getSpaceOrFail(savedSpace.id);
   }

@@ -51,7 +51,7 @@ Follow the pattern of existing `ConvertSpaceL1ToSpaceL2Input`. Each has two UUID
 
 Add to `src/services/api/conversion/conversion.service.ts`:
 
-#### `moveSpaceL1ToSpaceL0OrFail(moveData: MoveSpaceL1ToSpaceL0Input): Promise<ISpace>`
+#### `moveSpaceL1ToSpaceL0OrFail(moveData: MoveSpaceL1ToSpaceL0Input): Promise<{ space: ISpace; removedActorIds: string[] }>`
 
 High-level flow:
 ```
@@ -67,13 +67,13 @@ High-level flow:
 9. Update: storageAggregator.parentStorageAggregator = targetL0.storageAggregator
 10. setParentRoleSetAndCredentials(roleSetL1, roleSetL0)
 11. Sync FLOW_STATE tagsets with target L0's innovation flow template
-12. Update sortOrder to last position
+12. Update sortOrder: shift existing children up by 1, set moved space to position 0 (first)
 13. Save and return space + removedActorIds + autoInvite flag
 ```
 
 **Post-commit (in resolver)**: If `autoInvite` is true, compute overlap set (old L1 members ∩ target L0 members) and create invitations as fire-and-forget (FR-034–FR-038).
 
-#### `moveSpaceL1ToSpaceL2OrFail(moveData: MoveSpaceL1ToSpaceL2Input): Promise<ISpace>`
+#### `moveSpaceL1ToSpaceL2OrFail(moveData: MoveSpaceL1ToSpaceL2Input): Promise<{ space: ISpace; removedActorIds: string[] }>`
 
 High-level flow:
 ```
@@ -89,7 +89,7 @@ High-level flow:
 9. Update: storageAggregator.parentStorageAggregator = targetL1.storageAggregator
 10. setParentRoleSetAndCredentials(roleSetL1, roleSetTargetL1)
 11. Sync FLOW_STATE tagsets with target L0's innovation flow template
-12. Update sortOrder to last position
+12. Update sortOrder: shift existing children up by 1, set moved space to position 0 (first)
 13. Save and return space
 ```
 
