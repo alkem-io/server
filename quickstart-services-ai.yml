@@ -510,10 +510,22 @@ services:
       - CHROMA_SERVER_AUTHN_CREDENTIALS
       - CHROMA_SERVER_AUTHN_PROVIDER
 
+  sglang_proxy:
+    container_name: alkemio_dev_sglang_proxy
+    hostname: sglang-proxy
+    image: openresty/openresty:alpine
+    restart: always
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    volumes:
+      - ./.build/sglang-proxy/nginx.conf:/etc/nginx/conf.d/default.conf:ro
+    networks:
+      - alkemio_dev_net
+
   virtual_contributor_engine_guidance:
     container_name: alkemio_dev_virtual_contributor_engine_guidance
     hostname: virtual-contributor-engine-guidance
-    image: alkemio/virtual-contributor-engine-guidance:v0.15.0
+    image: alkemio/virtual-contributor-engine-guidance:v0.16.0
     platform: linux/amd64
     restart: always
     volumes:
@@ -560,7 +572,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_engine_expert
     hostname: virtual-contributor-engine-expert
-    image: alkemio/virtual-contributor-engine-expert:v0.18.0
+    image: alkemio/virtual-contributor-engine-expert:v0.20.0
     platform: linux/amd64
     restart: always
     volumes:
@@ -607,7 +619,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_ingest_website
     hostname: virtual-contributor-ingest-website
-    image: alkemio/virtual-contributor-ingest-website:v0.4.0
+    image: alkemio/virtual-contributor-ingest-website:v0.5.0
     platform: linux/amd64
     restart: always
     volumes:
@@ -626,19 +638,21 @@ services:
       - RABBITMQ_EVENT_BUS_EXCHANGE
       - RABBITMQ_RESULT_QUEUE
       - RABBITMQ_RESULT_ROUTING_KEY
-      - AZURE_MISTRAL_ENDPOINT
-      - AZURE_MISTRAL_API_KEY
       - API_ENDPOINT_PRIVATE_GRAPHQL=http://host.docker.internal:3000/api/private/non-interactive/graphql
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://host.docker.internal:3000/ory/kratos/public
       - AUTH_ADMIN_EMAIL
       - AUTH_ADMIN_PASSWORD
-      - OPENAI_API_VERSION
       - AI_MODEL_TEMPERATURE
       - LOG_LEVEL=DEBUG
-      - AZURE_OPENAI_ENDPOINT=https://alkemio-gpt.openai.azure.com
-      - AZURE_OPENAI_API_KEY
-      - LLM_DEPLOYMENT_NAME=deploy-gpt-35-turbo
-      - EMBEDDINGS_DEPLOYMENT_NAME=embedding
+      - EMBEDDINGS_ENDPOINT=http://spark:8889/v1
+      - EMBEDDINGS_API_KEY=none
+      - EMBEDDINGS_MODEL_NAME=qwen3-embed
+      - MISTRAL_API_KEY=none
+      - MISTRAL_SMALL_MODEL_NAME=Mistral-Small-4
+      - MISTRAL_BASE_URL=http://sglang-proxy/v1
+      - VECTOR_DB_HOST
+      - VECTOR_DB_PORT
+      - VECTOR_DB_CREDENTIALS
       - LANGCHAIN_TRACING_V2
       - LANGCHAIN_ENDPOINT
       - LANGCHAIN_API_KEY
@@ -652,7 +666,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_engine_libra_flow
     hostname: virtual-contributor-engine-libra-flow
-    image: alkemio/virtual-contributor-engine-libra-flow:v0.5.0
+    image: alkemio/virtual-contributor-engine-libra-flow:v0.6.0
     platform: linux/amd64
     restart: always
     volumes:
@@ -748,7 +762,7 @@ services:
   virtual_contributor_engine_generic:
     container_name: alkemio_dev_virtual_contributor_engine_generic
     hostname: virtual-contributor-engine-generic
-    image: alkemio/virtual-contributor-engine-generic:v0.7.0
+    image: alkemio/virtual-contributor-engine-generic:v0.8.0
     platform: linux/amd64
     restart: always
     volumes:
@@ -786,7 +800,7 @@ services:
   virtual_contributor_engine_openai_assistant:
     container_name: alkemio_dev_virtual_contributor_engine_openai_assistant
     hostname: virtual-contributor-engine-openai-assistant
-    image: alkemio/virtual-contributor-engine-openai-assistant:v0.4.0
+    image: alkemio/virtual-contributor-engine-openai-assistant:v0.6.0
     platform: linux/amd64
     restart: always
     volumes:
