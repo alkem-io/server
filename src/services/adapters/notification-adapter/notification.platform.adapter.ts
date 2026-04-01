@@ -1,3 +1,4 @@
+import { RoleChangeType } from '@alkemio/notifications-lib';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
@@ -57,6 +58,17 @@ export class NotificationPlatformAdapter {
     }
   }
 
+  private async getDisplayNameForUser(userId: string): Promise<string> {
+    try {
+      const user = await this.userLookupService.getUserByIdOrFail(userId, {
+        relations: { profile: true },
+      });
+      return user?.profile?.displayName ?? 'a user';
+    } catch {
+      return 'a user';
+    }
+  }
+
   public async platformGlobalRoleChanged(
     eventData: NotificationInputPlatformGlobalRoleChange
   ): Promise<void> {
@@ -103,12 +115,20 @@ export class NotificationPlatformAdapter {
       recipient => recipient.id !== eventData.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const affectedUserName = await this.getDisplayNameForUser(
+        eventData.userID
+      );
+      const action =
+        eventData.type === RoleChangeType.ADDED ? 'assigned' : 'removed';
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
-          title: 'Role changed',
-          body: 'Your platform role has been updated',
+          title: 'Platform role changed',
+          body: `${actorName} ${action} the ${eventData.role} role for ${affectedUserName}`,
           url: '/',
         }
       );
