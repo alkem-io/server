@@ -180,7 +180,9 @@ export class NotificationPlatformAdapter {
         {
           title: `New discussion: ${discussionName}`,
           body: `${actorName} started a new forum discussion`,
-          url: await this.urlGeneratorService.getForumDiscussionUrlPath(eventData.discussion.id),
+          url: await this.urlGeneratorService.getForumDiscussionUrlPath(
+            eventData.discussion.id
+          ),
         }
       );
     }
@@ -273,7 +275,9 @@ export class NotificationPlatformAdapter {
         {
           title: `Comment on ${discussionName}`,
           body: `${actorName} commented on a discussion`,
-          url: await this.urlGeneratorService.getForumDiscussionUrlPath(eventData.discussion.id),
+          url: await this.urlGeneratorService.getForumDiscussionUrlPath(
+            eventData.discussion.id
+          ),
         }
       );
     }
@@ -354,7 +358,9 @@ export class NotificationPlatformAdapter {
         {
           title: `New space: ${spaceName}`,
           body: `${actorName} created a new space`,
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(eventData.space.id),
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(
+            eventData.space.id
+          ),
         }
       );
     }
