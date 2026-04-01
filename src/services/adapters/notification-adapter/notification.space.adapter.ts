@@ -3,13 +3,13 @@ import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { CalloutLookupService } from '@domain/collaboration/callout/callout.lookup/callout.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.comment';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
@@ -21,6 +21,7 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from '@platform/i
 import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event.comment';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InAppNotificationPayloadSpaceCommunicationUpdate } from '../../../platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
@@ -149,7 +150,9 @@ export class NotificationSpaceAdapter {
       const calloutName =
         eventData.callout.framing?.profile?.displayName ?? 'A callout';
       const spaceName = space.about?.profile?.displayName ?? 'your space';
-      const calloutUrl = await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id);
+      const calloutUrl = await this.urlGeneratorService.getCalloutUrlPath(
+        eventData.callout.id
+      );
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
@@ -243,7 +246,9 @@ export class NotificationSpaceAdapter {
         {
           title: 'New calendar event',
           body: `${actorName} created a calendar event in ${spaceName}`,
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.getCalendarEventUrlPath(
+            eventData.calendarEvent.id
+          ),
         }
       );
     }
@@ -335,7 +340,9 @@ export class NotificationSpaceAdapter {
         {
           title: 'New comment on calendar event',
           body: `${actorName} commented on your calendar event`,
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.getCalendarEventUrlPath(
+            eventData.calendarEvent.id
+          ),
         }
       );
     }
@@ -439,7 +446,9 @@ export class NotificationSpaceAdapter {
         {
           title: `New contribution in ${calloutName}`,
           body: `${actorName} added a contribution in ${spaceName}`,
-          url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
+          url: await this.urlGeneratorService.getCalloutUrlPath(
+            eventData.callout.id
+          ),
         }
       );
     }
@@ -525,15 +534,16 @@ export class NotificationSpaceAdapter {
       const adminActorName = await this.getTriggeredByDisplayName(
         eventData.triggeredBy
       );
-      const adminSpaceName =
-        space.about?.profile?.displayName ?? 'your space';
+      const adminSpaceName = space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         adminPushRecipientsFiltered,
         adminEvent,
         {
           title: `New contribution in ${adminCalloutName}`,
           body: `${adminActorName} added a contribution in ${adminSpaceName}`,
-          url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
+          url: await this.urlGeneratorService.getCalloutUrlPath(
+            eventData.callout.id
+          ),
         }
       );
     }
@@ -634,7 +644,9 @@ export class NotificationSpaceAdapter {
         {
           title: 'Comment on your post',
           body: `${actorName} commented on your post`,
-          url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
+          url: await this.urlGeneratorService.getCalloutUrlPath(
+            eventData.callout.id
+          ),
         }
       );
     }
@@ -726,7 +738,9 @@ export class NotificationSpaceAdapter {
         {
           title: `Comment in ${calloutName}`,
           body: `${actorName} commented in ${spaceName}`,
-          url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
+          url: await this.urlGeneratorService.getCalloutUrlPath(
+            eventData.callout.id
+          ),
         }
       );
     }
@@ -795,9 +809,7 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== eventData.actorID
     );
     if (adminPushRecipientsFiltered.length > 0) {
-      const actorName = await this.getTriggeredByDisplayName(
-        eventData.actorID
-      );
+      const actorName = await this.getTriggeredByDisplayName(eventData.actorID);
       const spaceName = space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         adminPushRecipientsFiltered,
@@ -805,7 +817,9 @@ export class NotificationSpaceAdapter {
         {
           title: `New member in ${spaceName}`,
           body: `${actorName} joined your space`,
-          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(space.id),
+          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(
+            space.id
+          ),
         }
       );
     }
@@ -940,7 +954,9 @@ export class NotificationSpaceAdapter {
         {
           title: `New application for ${spaceName}`,
           body: 'A new application has been submitted',
-          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(space.id),
+          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(
+            space.id
+          ),
         }
       );
     }
@@ -1046,7 +1062,10 @@ export class NotificationSpaceAdapter {
         {
           title: `Message in ${spaceName}`,
           body: `${actorName} sent a message`,
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(
+            space.id,
+            UrlPathElementSpace.UPDATES
+          ),
         }
       );
     }
@@ -1132,7 +1151,10 @@ export class NotificationSpaceAdapter {
         {
           title: `Update in ${spaceName}`,
           body: `New update posted in ${spaceName}`,
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(
+            space.id,
+            UrlPathElementSpace.UPDATES
+          ),
         }
       );
     }
@@ -1288,18 +1310,56 @@ export class NotificationSpaceAdapter {
       r => r.id !== dto.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
-      const pollTitle =
-        callout.framing?.poll?.title ?? 'a poll';
+      const pollTitle = callout.framing?.poll?.title || 'a poll';
       const spaceName = space.about?.profile?.displayName ?? 'your space';
+      const { title, body } = this.getPollPushMessage(
+        event,
+        pollTitle,
+        spaceName
+      );
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
-          title: `Poll activity: ${pollTitle}`,
-          body: `New activity on a poll in ${spaceName}`,
+          title,
+          body,
           url: await this.urlGeneratorService.getCalloutUrlPath(dto.calloutID),
         }
       );
+    }
+  }
+
+  private getPollPushMessage(
+    event: NotificationEvent,
+    pollTitle: string,
+    spaceName: string
+  ): { title: string; body: string } {
+    switch (event) {
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL:
+        return {
+          title: `New vote on your poll`,
+          body: `Someone voted on "${pollTitle}" in ${spaceName}`,
+        };
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON:
+        return {
+          title: `New vote on a poll you voted on`,
+          body: `Someone else voted on "${pollTitle}" in ${spaceName}`,
+        };
+      case NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON:
+        return {
+          title: `Poll updated`,
+          body: `"${pollTitle}" in ${spaceName} has been modified`,
+        };
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE:
+        return {
+          title: `Your vote was affected`,
+          body: `An option change in "${pollTitle}" in ${spaceName} affected your vote`,
+        };
+      default:
+        return {
+          title: `Poll activity: ${pollTitle}`,
+          body: `New activity on a poll in ${spaceName}`,
+        };
     }
   }
 
