@@ -9,7 +9,6 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
-import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { InAppNotificationPayloadSpaceCollaborationCallout } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout';
 import { InAppNotificationPayloadSpaceCollaborationCalloutComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.comment';
 import { InAppNotificationPayloadSpaceCollaborationCalloutPostComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.collaboration.callout.post.comment';
@@ -21,6 +20,7 @@ import { InAppNotificationPayloadSpaceCommunityCalendarEvent } from '@platform/i
 import { InAppNotificationPayloadSpaceCommunityCalendarEventComment } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.community.calendar.event.comment';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InAppNotificationPayloadSpaceCommunicationUpdate } from '../../../platform/in-app-notification-payload/dto/space/notification.in.app.payload.space.communication.update';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
@@ -149,7 +149,9 @@ export class NotificationSpaceAdapter {
       const calloutName =
         eventData.callout.framing?.profile?.displayName ?? 'A callout';
       const spaceName = space.about?.profile?.displayName ?? 'your space';
-      const calloutUrl = await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id);
+      const calloutUrl = await this.urlGeneratorService.getCalloutUrlPath(
+        eventData.callout.id
+      );
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
@@ -439,7 +441,9 @@ export class NotificationSpaceAdapter {
         {
           title: `New contribution in ${calloutName}`,
           body: `${actorName} added a contribution in ${spaceName}`,
-          url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
+          url: await this.urlGeneratorService.getCalloutUrlPath(
+            eventData.callout.id
+          ),
         }
       );
     }
@@ -525,15 +529,16 @@ export class NotificationSpaceAdapter {
       const adminActorName = await this.getTriggeredByDisplayName(
         eventData.triggeredBy
       );
-      const adminSpaceName =
-        space.about?.profile?.displayName ?? 'your space';
+      const adminSpaceName = space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         adminPushRecipientsFiltered,
         adminEvent,
         {
           title: `New contribution in ${adminCalloutName}`,
           body: `${adminActorName} added a contribution in ${adminSpaceName}`,
-          url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
+          url: await this.urlGeneratorService.getCalloutUrlPath(
+            eventData.callout.id
+          ),
         }
       );
     }
@@ -634,7 +639,9 @@ export class NotificationSpaceAdapter {
         {
           title: 'Comment on your post',
           body: `${actorName} commented on your post`,
-          url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
+          url: await this.urlGeneratorService.getCalloutUrlPath(
+            eventData.callout.id
+          ),
         }
       );
     }
@@ -726,7 +733,9 @@ export class NotificationSpaceAdapter {
         {
           title: `Comment in ${calloutName}`,
           body: `${actorName} commented in ${spaceName}`,
-          url: await this.urlGeneratorService.getCalloutUrlPath(eventData.callout.id),
+          url: await this.urlGeneratorService.getCalloutUrlPath(
+            eventData.callout.id
+          ),
         }
       );
     }
@@ -795,9 +804,7 @@ export class NotificationSpaceAdapter {
       recipient => recipient.id !== eventData.actorID
     );
     if (adminPushRecipientsFiltered.length > 0) {
-      const actorName = await this.getTriggeredByDisplayName(
-        eventData.actorID
-      );
+      const actorName = await this.getTriggeredByDisplayName(eventData.actorID);
       const spaceName = space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         adminPushRecipientsFiltered,
@@ -805,7 +812,9 @@ export class NotificationSpaceAdapter {
         {
           title: `New member in ${spaceName}`,
           body: `${actorName} joined your space`,
-          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(space.id),
+          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(
+            space.id
+          ),
         }
       );
     }
@@ -940,7 +949,9 @@ export class NotificationSpaceAdapter {
         {
           title: `New application for ${spaceName}`,
           body: 'A new application has been submitted',
-          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(space.id),
+          url: await this.urlGeneratorService.createSpaceAdminCommunityURL(
+            space.id
+          ),
         }
       );
     }
@@ -1288,8 +1299,7 @@ export class NotificationSpaceAdapter {
       r => r.id !== dto.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
-      const pollTitle =
-        callout.framing?.poll?.title ?? 'a poll';
+      const pollTitle = callout.framing?.poll?.title ?? 'a poll';
       const spaceName = space.about?.profile?.displayName ?? 'your space';
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,

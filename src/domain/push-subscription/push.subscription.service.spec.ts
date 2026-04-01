@@ -115,6 +115,30 @@ describe('PushSubscriptionService', () => {
       expect(repository.create).not.toHaveBeenCalled();
     });
 
+    it('should preserve DISABLED status when re-subscribing with same endpoint', async () => {
+      const existingSub = {
+        id: 'sub-disabled',
+        endpoint: 'https://push.example.com/send/abc',
+        p256dh: 'old-key',
+        auth: 'old-auth',
+        status: PushSubscriptionStatus.DISABLED,
+        userId: 'user-123',
+      };
+
+      repository.findOne!.mockResolvedValue(existingSub);
+      repository.save!.mockImplementation(async (entity: any) => entity);
+
+      const result = await service.subscribe('user-123', {
+        endpoint: 'https://push.example.com/send/abc',
+        p256dh: 'new-key',
+        auth: 'new-auth',
+      });
+
+      expect(result.status).toBe(PushSubscriptionStatus.DISABLED);
+      expect(result.p256dh).toBe('new-key');
+      expect(result.auth).toBe('new-auth');
+    });
+
     it('should enforce cap by removing oldest when over max subscriptions', async () => {
       const userId = 'user-123';
       const existingSubscriptions = Array.from({ length: 10 }, (_, i) => ({
@@ -152,7 +176,7 @@ describe('PushSubscriptionService', () => {
   });
 
   describe('unsubscribe', () => {
-    it('should delete subscription by id and userId', async () => {
+    it('should mark subscription as DISABLED', async () => {
       const subscription = {
         id: 'sub-1',
         userId: 'user-123',
@@ -160,12 +184,13 @@ describe('PushSubscriptionService', () => {
       };
 
       repository.findOne!.mockResolvedValue(subscription);
-      repository.remove!.mockResolvedValue(subscription);
+      repository.save!.mockImplementation(async (entity: any) => entity);
 
       const result = await service.unsubscribe('sub-1', 'user-123');
 
       expect(result.id).toBe('sub-1');
-      expect(repository.remove).toHaveBeenCalledWith(subscription);
+      expect(result.status).toBe(PushSubscriptionStatus.DISABLED);
+      expect(repository.save).toHaveBeenCalledWith(subscription);
     });
 
     it('should throw when subscription not found', async () => {
@@ -173,6 +198,32 @@ describe('PushSubscriptionService', () => {
 
       await expect(
         service.unsubscribe('sub-nonexistent', 'user-123')
+      ).rejects.toThrow('Push subscription not found');
+    });
+  });
+
+  describe('enableSubscription', () => {
+    it('should set subscription status to ACTIVE', async () => {
+      const subscription = {
+        id: 'sub-1',
+        userId: 'user-123',
+        status: PushSubscriptionStatus.DISABLED,
+      };
+
+      repository.findOne!.mockResolvedValue(subscription);
+      repository.save!.mockImplementation(async (entity: any) => entity);
+
+      const result = await service.enableSubscription('sub-1', 'user-123');
+
+      expect(result.status).toBe(PushSubscriptionStatus.ACTIVE);
+      expect(repository.save).toHaveBeenCalledWith(subscription);
+    });
+
+    it('should throw when subscription not found', async () => {
+      repository.findOne!.mockResolvedValue(null);
+
+      await expect(
+        service.enableSubscription('sub-nonexistent', 'user-123')
       ).rejects.toThrow('Push subscription not found');
     });
   });

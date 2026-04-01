@@ -42,7 +42,9 @@ describe('streamToBuffer', () => {
       },
     });
 
-    await expect(streamToBuffer(stream, DEFAULT_TIMEOUT_MS)).rejects.toThrow('stream failure');
+    await expect(streamToBuffer(stream, DEFAULT_TIMEOUT_MS)).rejects.toThrow(
+      'stream failure'
+    );
   });
 
   it('should handle a stream with a single large chunk', async () => {
