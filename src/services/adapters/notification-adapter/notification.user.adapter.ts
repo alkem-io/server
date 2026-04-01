@@ -521,7 +521,9 @@ export class NotificationUserAdapter {
         {
           title: 'Application declined',
           body: 'Your application was declined',
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(eventData.spaceID),
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(
+            eventData.spaceID
+          ),
         }
       );
     }

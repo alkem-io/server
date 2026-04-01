@@ -45,13 +45,16 @@ export class PushSubscriptionService {
       if (existing.userId !== userId) {
         await this.enforceSubscriptionCap(userId);
       }
-      // Update existing subscription
+      // Update existing subscription credentials
       existing.p256dh = input.p256dh;
       existing.auth = input.auth;
-      existing.status = PushSubscriptionStatus.ACTIVE;
       existing.userId = userId;
       if (input.userAgent) {
         existing.userAgent = input.userAgent;
+      }
+      // Preserve DISABLED status — only reactivate EXPIRED subscriptions
+      if (existing.status !== PushSubscriptionStatus.DISABLED) {
+        existing.status = PushSubscriptionStatus.ACTIVE;
       }
       const saved = await this.pushSubscriptionRepository.save(existing);
       this.logger.verbose?.(
@@ -98,10 +101,28 @@ export class PushSubscriptionService {
       );
     }
 
-    await this.pushSubscriptionRepository.remove(subscription);
-    // Return the removed entity with its id preserved for the response
-    subscription.id = subscriptionId;
-    return subscription;
+    subscription.status = PushSubscriptionStatus.DISABLED;
+    return this.pushSubscriptionRepository.save(subscription);
+  }
+
+  async enableSubscription(
+    subscriptionId: string,
+    userId: string
+  ): Promise<PushSubscription> {
+    const subscription = await this.pushSubscriptionRepository.findOne({
+      where: { id: subscriptionId, userId },
+    });
+
+    if (!subscription) {
+      throw new EntityNotFoundException(
+        'Push subscription not found',
+        LogContext.PUSH_NOTIFICATION,
+        { subscriptionId, userId }
+      );
+    }
+
+    subscription.status = PushSubscriptionStatus.ACTIVE;
+    return this.pushSubscriptionRepository.save(subscription);
   }
 
   async getActiveSubscriptions(userIds: string[]): Promise<PushSubscription[]> {
@@ -110,6 +131,18 @@ export class PushSubscriptionService {
       where: {
         userId: In(userIds),
         status: PushSubscriptionStatus.ACTIVE,
+      },
+    });
+  }
+
+  async getUserSubscriptions(userId: string): Promise<PushSubscription[]> {
+    return this.pushSubscriptionRepository.find({
+      where: {
+        userId,
+        status: In([
+          PushSubscriptionStatus.ACTIVE,
+          PushSubscriptionStatus.DISABLED,
+        ]),
       },
     });
   }
