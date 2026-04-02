@@ -10,7 +10,7 @@
 
 ## Module Location
 
-```
+```text
 src/domain/communication/space-move-rooms/
 ├── space.move.rooms.module.ts        # NestJS module
 ├── space.move.rooms.service.ts       # Domain service
@@ -82,7 +82,7 @@ export class ConversionModule {}
 ### RabbitMQ Management Console
 
 Monitor AMQP RPC traffic for adapter calls:
-```
+```text
 http://localhost:15672 (guest/guest)
 ```
 

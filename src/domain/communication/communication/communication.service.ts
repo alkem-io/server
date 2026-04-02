@@ -140,6 +140,9 @@ export class CommunicationService {
   ): Promise<boolean> {
     const roomIds = this.getRoomIds(communication);
     await this.communicationAdapter.batchRemoveMember(actorID, roomIds);
+    await this.communicationAdapter.batchRemoveSpaceMember(actorID, [
+      communication.spaceID,
+    ]);
     return true;
   }
 }

@@ -184,7 +184,7 @@ export class ConversionResolverMutations {
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     // Post-commit: fire-and-forget
-    await this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
+    void this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
     void this.conversionService.moveRoomsService.handleRoomsDuringMove(
       savedSpace.id,
       removedActorIds
@@ -234,7 +234,7 @@ export class ConversionResolverMutations {
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     // Post-commit: fire-and-forget
-    await this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
+    void this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
     void this.conversionService.moveRoomsService.handleRoomsDuringMove(
       savedSpace.id,
       removedActorIds

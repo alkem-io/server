@@ -30,7 +30,6 @@ import { ConversionService } from './conversion.service';
     SpaceLookupModule,
     AccountHostModule,
     RoleSetModule,
-    AuthorizationModule,
     AuthorizationPolicyModule,
     InputCreatorModule,
     NamingModule,

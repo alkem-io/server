@@ -265,9 +265,10 @@ describe('CommunicationService', () => {
   });
 
   describe('removeActorFromCommunications', () => {
-    it('should remove actor from all room IDs', async () => {
+    it('should remove actor from all room IDs and space hierarchy', async () => {
       const mockComm = {
         id: 'comm-1',
+        spaceID: 'space-1',
         updates: { id: 'room-1' },
       } as ICommunication;
 
@@ -280,6 +281,10 @@ describe('CommunicationService', () => {
       expect(communicationAdapter.batchRemoveMember).toHaveBeenCalledWith(
         'actor-1',
         ['room-1']
+      );
+      expect(communicationAdapter.batchRemoveSpaceMember).toHaveBeenCalledWith(
+        'actor-1',
+        ['space-1']
       );
     });
   });

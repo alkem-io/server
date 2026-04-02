@@ -48,7 +48,7 @@ This feature introduces **no new entities** and **no schema migrations**. All ch
 
 ## Entity Relationship Graph (Move Context)
 
-```
+```text
 Space (moved) ─────────────────────────────────────────────
 │
 ├── Collaboration
@@ -115,7 +115,7 @@ WHERE comm."spaceID" IN (:...spaceIds)
 
 ### Room Lifecycle During Move
 
-```
+```text
 [Before Move]                              [After Move]
   Callout Room: has members, has messages → exists, NO members, messages PRESERVED
   Post Room:    has members, has messages → exists, NO members, messages PRESERVED
@@ -128,7 +128,7 @@ WHERE comm."spaceID" IN (:...spaceIds)
 
 ### Matrix Membership States per Actor
 
-```
+```text
                           batchRemoveMember
   Room member ──────────────────────────────────► Not a member (cannot write)
 

@@ -562,7 +562,7 @@ export class ConversionService {
     // 4. Validate nameIDs
     await this.validateNameIDsInTargetL0Scope(sourceL1.id, targetL0.id);
 
-    // 5. Collect community roles and actor IDs
+    // 5. Collect community roles and actor IDs (root L1)
     const roleSetL1 = sourceL1.community.roleSet;
     const spaceCommunityRoles = await this.getSpaceCommunityRoles(roleSetL1);
     const removedActorIds = this.collectRemovedActorIds(
@@ -570,7 +570,33 @@ export class ConversionService {
       true
     );
 
-    // 6-7. Clear ALL community roles including admins
+    // 5b. Also collect and clear descendant L2 community roles
+    const descendantSpaceIds =
+      await this.spaceLookupService.getAllDescendantSpaceIDs(sourceL1.id);
+    for (const descId of descendantSpaceIds) {
+      const descSpace = await this.spaceService.getSpaceOrFail(descId, {
+        relations: { community: { roleSet: true } },
+      });
+      if (!descSpace.community?.roleSet) continue;
+      const descRoles = await this.getSpaceCommunityRoles(
+        descSpace.community.roleSet
+      );
+      const descActorIds = this.collectRemovedActorIds(descRoles, true);
+      removedActorIds.push(...descActorIds);
+      await this.removeContributors(descSpace.community.roleSet, descRoles);
+      for (const userAdmin of descRoles.userAdmins) {
+        await this.roleSetService.removeActorFromRole(
+          descSpace.community.roleSet,
+          RoleName.ADMIN,
+          userAdmin.id,
+          false
+        );
+      }
+    }
+    // Deduplicate — actors may appear across multiple levels
+    const uniqueRemovedActorIds = [...new Set(removedActorIds)];
+
+    // 6-7. Clear ALL community roles including admins (root L1)
     await this.removeContributors(roleSetL1, spaceCommunityRoles);
     for (const userAdmin of spaceCommunityRoles.userAdmins) {
       await this.roleSetService.removeActorFromRole(
@@ -585,15 +611,13 @@ export class ConversionService {
     sourceL1.parentSpace = targetL0;
     sourceL1.levelZeroSpaceID = targetL0.id;
 
-    // 9. Bulk update descendant levelZeroSpaceIDs
-    const descendantIds =
-      await this.spaceLookupService.getAllDescendantSpaceIDs(sourceL1.id);
-    if (descendantIds.length > 0) {
+    // 9. Bulk update descendant levelZeroSpaceIDs (reuse IDs from step 5b)
+    if (descendantSpaceIds.length > 0) {
       await this.entityManager
         .createQueryBuilder()
         .update(Space)
         .set({ levelZeroSpaceID: targetL0.id })
-        .whereInIds(descendantIds)
+        .whereInIds(descendantSpaceIds)
         .execute();
     }
 
@@ -627,7 +651,7 @@ export class ConversionService {
       targetL0.account.accountType
     );
 
-    return { space: savedSpace, removedActorIds };
+    return { space: savedSpace, removedActorIds: uniqueRemovedActorIds };
   }
 
   // ── Cross-L0 Move: L1 → L2 (demoted, changes parent L0) ──────────
@@ -945,9 +969,15 @@ export class ConversionService {
             invitedContributorID: userId,
             welcomeMessage: invitationMessage,
           };
-          void this.notificationUserAdapter.userSpaceCommunityInvitationCreated(
-            notificationInput
-          );
+          this.notificationUserAdapter
+            .userSpaceCommunityInvitationCreated(notificationInput)
+            .catch(error =>
+              this.logger.error(
+                `Failed to send invitation notification for user ${userId}`,
+                (error as Error)?.stack ?? '',
+                LogContext.CONVERSION
+              )
+            );
         } catch (err) {
           this.logger.error(
             `Failed to create auto-invite for user after move`,
