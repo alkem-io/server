@@ -3,6 +3,7 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
 import { MessageDetailsService } from '@domain/communication/message.details/message.details.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InAppNotificationPayloadSpace } from '@platform/in-app-notification-payload/dto/space/notification.in.app.payload.space';
@@ -13,9 +14,11 @@ import { InAppNotificationPayloadUserMessageDirect } from '@platform/in-app-noti
 import { InAppNotificationPayloadUserMessageRoom } from '@platform/in-app-notification-payload/dto/user/notification.in.app.payload.user.message.room';
 import { NotificationRecipientResult } from '@services/api/notification-recipients/dto/notification.recipients.dto.result';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
+import { NotificationPushAdapter } from '../notification-push-adapter/notification.push.adapter';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputPlatformUserRegistered } from './dto/platform/notification.dto.input.platform.user.registered';
 import { NotificationInputCommentReply } from './dto/space/notification.dto.input.space.communication.user.comment.reply';
@@ -34,9 +37,28 @@ export class NotificationUserAdapter {
     private notificationAdapter: NotificationAdapter,
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationInAppAdapter: NotificationInAppAdapter,
+    private notificationPushAdapter: NotificationPushAdapter,
     private communityResolverService: CommunityResolverService,
-    private messageDetailsService: MessageDetailsService
+    private messageDetailsService: MessageDetailsService,
+    private urlGeneratorService: UrlGeneratorService,
+    private userLookupService: UserLookupService
   ) {}
+
+  private async getTriggeredByDisplayName(
+    triggeredById: string
+  ): Promise<string> {
+    try {
+      const user = await this.userLookupService.getUserByIdOrFail(
+        triggeredById,
+        {
+          relations: { profile: true },
+        }
+      );
+      return user?.profile?.displayName ?? 'Someone';
+    } catch {
+      return 'Someone';
+    }
+  }
 
   public async userSignUpWelcome(
     eventData: NotificationInputPlatformUserRegistered
@@ -74,6 +96,19 @@ export class NotificationUserAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications — no triggeredBy filter for welcome (recipient IS the new user)
+    if (recipients.pushRecipients.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        recipients.pushRecipients,
+        event,
+        {
+          title: 'Welcome to Alkemio',
+          body: 'Your account has been created successfully',
+          url: '/',
+        }
       );
     }
   }
@@ -124,6 +159,23 @@ export class NotificationUserAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const spaceName = space.about?.profile?.displayName ?? 'a space';
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: `Invitation to ${spaceName}`,
+          body: 'You have been invited to join a space',
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+        }
+      );
+    }
   }
 
   public async userSpaceCommunityJoined(
@@ -167,6 +219,20 @@ export class NotificationUserAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications — no triggeredBy filter for community joined (recipient IS the new member)
+    if (recipients.pushRecipients.length > 0) {
+      const spaceName = space.about?.profile?.displayName ?? 'a space';
+      await this.notificationPushAdapter.sendPushNotifications(
+        recipients.pushRecipients,
+        event,
+        {
+          title: `Welcome to ${spaceName}`,
+          body: `You are now a member of ${spaceName}`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+        }
       );
     }
   }
@@ -225,6 +291,25 @@ export class NotificationUserAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'You were mentioned',
+          body: `${actorName} mentioned you`,
+          url: await this.urlGeneratorService.getRoomUrlPath(eventData.roomID),
+        }
+      );
+    }
   }
 
   public async userToUserMessageDirect(
@@ -269,6 +354,25 @@ export class NotificationUserAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'New direct message',
+          body: `${actorName} sent you a message`,
+          url: '/',
+        }
       );
     }
   }
@@ -331,6 +435,27 @@ export class NotificationUserAdapter {
           inAppPayload
         );
       }
+
+      // Send push notifications
+      const pushRecipientsFiltered = recipients.pushRecipients.filter(
+        recipient => recipient.id !== eventData.triggeredBy
+      );
+      if (pushRecipientsFiltered.length > 0) {
+        const actorName = await this.getTriggeredByDisplayName(
+          eventData.triggeredBy
+        );
+        await this.notificationPushAdapter.sendPushNotifications(
+          pushRecipientsFiltered,
+          event,
+          {
+            title: 'Reply to your comment',
+            body: `${actorName} replied to your comment`,
+            url: await this.urlGeneratorService.getRoomUrlPath(
+              eventData.roomId
+            ),
+          }
+        );
+      }
     } catch (error: any) {
       this.logger.error(
         'Error while building comment reply notification payload',
@@ -384,6 +509,24 @@ export class NotificationUserAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'Application declined',
+          body: 'Your application was declined',
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(
+            eventData.spaceID
+          ),
+        }
       );
     }
   }

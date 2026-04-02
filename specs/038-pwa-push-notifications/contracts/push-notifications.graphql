@@ -1,0 +1,156 @@
+# GraphQL Contract: PWA Push Notifications
+# All additions are NON-BREAKING (additive only).
+
+# =============================================================================
+# Extended Types
+# =============================================================================
+
+"""
+Extended: add push channel to notification preferences.
+This field appears on every notification category leaf node.
+"""
+type UserSettingsNotificationChannels {
+  email: Boolean!
+  inApp: Boolean!
+  push: Boolean!  # NEW — mirrors inApp default for new users
+}
+
+# =============================================================================
+# New Types
+# =============================================================================
+
+"""
+Represents a user's push notification subscription for a specific device/browser.
+"""
+type PushSubscription {
+  """Unique identifier for this subscription."""
+  id: UUID!
+
+  """When this subscription was created."""
+  createdDate: DateTime!
+
+  """Current status of the subscription."""
+  status: PushSubscriptionStatus!
+
+  """Browser/device user agent string for display purposes."""
+  userAgent: String
+
+  """Last time a notification was successfully delivered to this subscription."""
+  lastActiveDate: DateTime
+}
+
+"""Status of a push notification subscription."""
+enum PushSubscriptionStatus {
+  ACTIVE
+  EXPIRED
+}
+
+# =============================================================================
+# Inputs
+# =============================================================================
+
+"""
+Input for subscribing a device to push notifications.
+Fields correspond to the PushSubscription object from the Web Push API.
+"""
+input SubscribeToPushNotificationsInput {
+  """The push service endpoint URL from PushSubscription.endpoint"""
+  endpoint: String!
+
+  """The p256dh key from PushSubscription.getKey('p256dh'), Base64URL-encoded"""
+  p256dh: String!
+
+  """The auth key from PushSubscription.getKey('auth'), Base64URL-encoded"""
+  auth: String!
+
+  """Optional browser/device user agent for display in subscription management UI"""
+  userAgent: String
+}
+
+"""Input for removing a push notification subscription."""
+input UnsubscribeFromPushNotificationsInput {
+  """The ID of the push subscription to remove."""
+  subscriptionID: UUID!
+}
+
+# =============================================================================
+# Queries
+# =============================================================================
+
+extend type Query {
+  """
+  Returns the VAPID public key needed by clients to subscribe to push notifications.
+  Returns null if push notifications are not enabled on this server.
+  """
+  vapidPublicKey: String
+
+  """
+  Returns the current user's active push notification subscriptions.
+  Requires authentication.
+  """
+  myPushSubscriptions: [PushSubscription!]!
+}
+
+# =============================================================================
+# Mutations
+# =============================================================================
+
+extend type Mutation {
+  """
+  Subscribe the current user's device to push notifications.
+  If the subscription endpoint already exists, it is updated.
+  If the user has reached the maximum number of subscriptions (10),
+  the oldest subscription is automatically replaced.
+  """
+  subscribeToPushNotifications(
+    subscriptionData: SubscribeToPushNotificationsInput!
+  ): PushSubscription!
+
+  """
+  Remove a push notification subscription for the current user.
+  """
+  unsubscribeFromPushNotifications(
+    subscriptionData: UnsubscribeFromPushNotificationsInput!
+  ): PushSubscription!
+}
+
+# =============================================================================
+# Client Integration Contract (Service Worker)
+# =============================================================================
+
+# The server sends push notifications with the following JSON payload.
+# The client service worker should parse this in its 'push' event handler.
+#
+# Push Notification Payload Schema:
+# {
+#   "title": "string — notification title",
+#   "body": "string — notification body text",
+#   "url": "string — deep link path (relative to app root)",
+#   "eventType": "string — NotificationEvent enum value",
+#   "timestamp": "string — ISO 8601 creation timestamp"
+# }
+#
+# Client Service Worker Example:
+#
+#   self.addEventListener('push', (event) => {
+#     const data = event.data?.json();
+#     event.waitUntil(
+#       self.registration.showNotification(data.title, {
+#         body: data.body,
+#         data: { url: data.url },
+#         tag: data.eventType,
+#         timestamp: Date.parse(data.timestamp),
+#       })
+#     );
+#   });
+#
+#   self.addEventListener('notificationclick', (event) => {
+#     event.notification.close();
+#     event.waitUntil(
+#       clients.openWindow(event.notification.data.url)
+#     );
+#   });
+#
+# VAPID Public Key Retrieval:
+#   query { vapidPublicKey }
+#   → Use the returned string as applicationServerKey in PushManager.subscribe()

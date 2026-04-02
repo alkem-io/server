@@ -64,6 +64,7 @@ http:
       loadBalancer:
         servers:
           - url: 'http://oathkeeper:4455/'
+        serversTransport: oathkeeper-transport@file
 
     oathkeeper-admin:
       loadBalancer:
@@ -344,6 +345,12 @@ http:
       service: 'rabbitmq-management'
       entryPoints:
         - 'rabbitmq-management'
+
+  serversTransports:
+    oathkeeper-transport:
+      forwardingTimeouts:
+        responseHeaderTimeout: 120s
+        idleConnTimeout: 120s
 
 tcp:
   services:

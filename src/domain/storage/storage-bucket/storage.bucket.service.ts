@@ -21,6 +21,7 @@ import { Profile } from '@domain/common/profile/profile.entity';
 import { ImageCompressionService } from '@domain/common/visual/image.compression.service';
 import { ImageConversionService } from '@domain/common/visual/image.conversion.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
@@ -55,7 +56,8 @@ export class StorageBucketService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectRepository(Profile)
-    private profileRepository: Repository<Profile>
+    private profileRepository: Repository<Profile>,
+    private configService: ConfigService
   ) {}
 
   public createStorageBucket(
@@ -152,7 +154,11 @@ export class StorageBucketService {
     temporaryDocument = false
   ): Promise<IDocument> {
     try {
-      const buffer = await streamToBuffer(readStream);
+      const streamTimeoutMs = this.configService.get<number>(
+        'storage.file.stream_timeout_ms',
+        { infer: true }
+      )!;
+      const buffer = await streamToBuffer(readStream, streamTimeoutMs);
 
       // Process image: HEIC conversion + optimization
       const conversionResult =

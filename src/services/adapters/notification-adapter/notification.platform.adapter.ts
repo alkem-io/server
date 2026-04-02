@@ -1,6 +1,8 @@
+import { RoleChangeType } from '@alkemio/notifications-lib';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InAppNotificationPayloadPlatformForumDiscussion } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.forum.discussion';
 import { InAppNotificationPayloadPlatformGlobalRoleChange } from '@platform/in-app-notification-payload/dto/platform/notification.in.app.payload.platform.global.role.change';
@@ -13,6 +15,7 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { NotificationExternalAdapter } from '../notification-external-adapter/notification.external.adapter';
 import { NotificationInAppAdapter } from '../notification-in-app-adapter/notification.in.app.adapter';
+import { NotificationPushAdapter } from '../notification-push-adapter/notification.push.adapter';
 import { NotificationInputBase } from './dto/notification.dto.input.base';
 import { NotificationInputPlatformForumDiscussionComment } from './dto/platform/notification.dto.input.platform.forum.discussion.comment';
 import { NotificationInputPlatformForumDiscussionCreated } from './dto/platform/notification.dto.input.platform.forum.discussion.created';
@@ -32,10 +35,39 @@ export class NotificationPlatformAdapter {
     private notificationAdapter: NotificationAdapter,
     private notificationExternalAdapter: NotificationExternalAdapter,
     private notificationInAppAdapter: NotificationInAppAdapter,
+    private notificationPushAdapter: NotificationPushAdapter,
     private notificationUserAdapter: NotificationUserAdapter,
     private communityResolverService: CommunityResolverService,
-    private urlGeneratorService: UrlGeneratorService
+    private urlGeneratorService: UrlGeneratorService,
+    private userLookupService: UserLookupService
   ) {}
+
+  private async getTriggeredByDisplayName(
+    triggeredById: string
+  ): Promise<string> {
+    try {
+      const user = await this.userLookupService.getUserByIdOrFail(
+        triggeredById,
+        {
+          relations: { profile: true },
+        }
+      );
+      return user?.profile?.displayName ?? 'Someone';
+    } catch {
+      return 'Someone';
+    }
+  }
+
+  private async getDisplayNameForUser(userId: string): Promise<string> {
+    try {
+      const user = await this.userLookupService.getUserByIdOrFail(userId, {
+        relations: { profile: true },
+      });
+      return user?.profile?.displayName ?? 'a user';
+    } catch {
+      return 'a user';
+    }
+  }
 
   public async platformGlobalRoleChanged(
     eventData: NotificationInputPlatformGlobalRoleChange
@@ -75,6 +107,30 @@ export class NotificationPlatformAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const affectedUserName = await this.getDisplayNameForUser(
+        eventData.userID
+      );
+      const action =
+        eventData.type === RoleChangeType.ADDED ? 'assigned' : 'removed';
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'Platform role changed',
+          body: `${actorName} ${action} the ${eventData.role} role for ${affectedUserName}`,
+          url: '/',
+        }
       );
     }
   }
@@ -125,6 +181,29 @@ export class NotificationPlatformAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const discussionName =
+        eventData.discussion?.profile?.displayName ?? 'a discussion';
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: `New discussion: ${discussionName}`,
+          body: `${actorName} started a new forum discussion`,
+          url: await this.urlGeneratorService.getForumDiscussionUrlPath(
+            eventData.discussion.id
+          ),
+        }
       );
     }
   }
@@ -199,6 +278,29 @@ export class NotificationPlatformAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const discussionName =
+        eventData.discussion?.profile?.displayName ?? 'a discussion';
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: `Comment on ${discussionName}`,
+          body: `${actorName} commented on a discussion`,
+          url: await this.urlGeneratorService.getForumDiscussionUrlPath(
+            eventData.discussion.id
+          ),
+        }
+      );
+    }
   }
 
   public async platformInvitationCreated(
@@ -259,6 +361,29 @@ export class NotificationPlatformAdapter {
         inAppPayload
       );
     }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      const actorName = await this.getTriggeredByDisplayName(
+        eventData.triggeredBy
+      );
+      const spaceName =
+        eventData.space.about?.profile?.displayName ?? 'New space';
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: `New space: ${spaceName}`,
+          body: `${actorName} created a new space`,
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(
+            eventData.space.id
+          ),
+        }
+      );
+    }
   }
 
   public async platformUserProfileCreated(
@@ -300,6 +425,22 @@ export class NotificationPlatformAdapter {
         adminInAppPayload
       );
     }
+
+    // Send admin push notifications
+    const adminPushRecipientsFiltered = adminRecipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (adminPushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        adminPushRecipientsFiltered,
+        adminEvent,
+        {
+          title: 'New user registered',
+          body: 'A new user profile has been created on the platform',
+          url: '/',
+        }
+      );
+    }
   }
 
   public async platformUserRemoved(
@@ -338,6 +479,22 @@ export class NotificationPlatformAdapter {
         eventData.triggeredBy,
         inAppReceiverIDs,
         inAppPayload
+      );
+    }
+
+    // Send push notifications
+    const pushRecipientsFiltered = recipients.pushRecipients.filter(
+      recipient => recipient.id !== eventData.triggeredBy
+    );
+    if (pushRecipientsFiltered.length > 0) {
+      await this.notificationPushAdapter.sendPushNotifications(
+        pushRecipientsFiltered,
+        event,
+        {
+          title: 'User profile removed',
+          body: 'A user profile has been removed from the platform',
+          url: '/',
+        }
       );
     }
   }

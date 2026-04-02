@@ -1,3 +1,4 @@
+import { plainToInstance } from 'class-transformer';
 import { vi } from 'vitest';
 import { ValidationPipe } from './validation.pipe';
 
@@ -89,8 +90,6 @@ describe('ValidationPipe', () => {
     });
 
     it('should call plainToInstance for custom metatypes', async () => {
-      const { plainToInstance } = await import('class-transformer');
-
       class MyDto {
         field!: string;
       }

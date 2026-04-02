@@ -115,6 +115,7 @@ export type AlkemioConfig = {
     enabled: boolean;
     file: {
       max_file_size: number;
+      stream_timeout_ms: number;
     };
     database: {
       host: string;
@@ -198,6 +199,24 @@ export type AlkemioConfig = {
   };
   notifications: {
     enabled: boolean;
+    push: {
+      enabled: boolean;
+      vapid: {
+        public_key: string;
+        private_key: string;
+        subject: string;
+      };
+      max_subscriptions_per_user: number;
+      throttle: {
+        max_per_minute: number;
+      };
+      retry: {
+        max_attempts: number;
+      };
+      cleanup: {
+        stale_days: number;
+      };
+    };
     in_app: {
       max_notifications_per_user: number;
       max_retention_period_days: number;
