@@ -76,6 +76,9 @@ src/domain/space/space/
 ├── space.service.ts                 # Existing: getAccountForLevelZeroSpaceOrFail()
 └── space.service.authorization.ts   # Existing: applyAuthorizationPolicy()
 
+src/domain/common/classification/
+└── classification.service.ts        # FIXED: updateTagsetTemplateOnSelectTagset() — preserves valid flow state values
+
 src/domain/collaboration/callout-transfer/
 └── callout.transfer.service.ts      # Reference: classification sync + cache patterns
 
@@ -111,7 +114,7 @@ Complete. See [research.md](./research.md) for all 15 resolved topics:
 | 4 | Account re-association | Implicit via updated `levelZeroSpaceID` → L0 → Account; license propagation explicit |
 | 5 | Authorization chain reset | Reuse existing `applyAuthorizationPolicy()` recursive propagation |
 | 6 | Community membership clearing | Clear ALL roles including admins for BOTH cross-L0 moves |
-| 7 | Innovation flow tagset sync | Reuse `ClassificationService.updateTagsetTemplateOnSelectTagset()` per callout |
+| 7 | Innovation flow tagset sync | Reuse `ClassificationService.updateTagsetTemplateOnSelectTagset()` per callout. **Bug fix (2026-04-02)**: method now preserves valid flow state values instead of unconditionally resetting to default |
 | 8 | NameID collision validation | Application-level via `NamingService.getReservedNameIDsInLevelZeroSpace()` |
 | 9 | URL cache invalidation | Revoke space profile caches; 1s TTL self-heals non-space entity caches |
 | 10 | Sort order | Set moved space to position 0 (first); shift existing children up by 1 |

@@ -1,5 +1,4 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
-import { InvitationModule } from '@domain/access/invitation/invitation.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
 import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/callout.transfer.module';
 import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
@@ -16,6 +15,8 @@ import { TemplatesManagerModule } from '@domain/template/templates-manager/templ
 import { Module } from '@nestjs/common';
 import { PlatformModule } from '@platform/platform/platform.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
+import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
 import { InputCreatorModule } from '../input-creator/input.creator.module';
@@ -25,7 +26,6 @@ import { ConversionService } from './conversion.service';
 @Module({
   imports: [
     AuthorizationModule,
-    InvitationModule,
     SpaceModule,
     SpaceLookupModule,
     AccountHostModule,
@@ -45,6 +45,8 @@ import { ConversionService } from './conversion.service';
     UrlGeneratorModule,
     VirtualActorModule,
     AiServerAdapterModule,
+    NotificationAdapterModule,
+    EntityResolverModule,
   ],
   providers: [ConversionService, ConversionResolverMutations],
   exports: [ConversionService, ConversionResolverMutations],

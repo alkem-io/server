@@ -3,7 +3,6 @@ import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
-import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { SpaceService } from '@domain/space/space/space.service';
@@ -24,7 +23,6 @@ describe('ConversionService — Cross-L0 Moves', () => {
   let entityManager: Record<string, Mock>;
   let spaceLookupService: Record<string, Mock>;
   let calloutsSetService: Record<string, Mock>;
-  let invitationService: Record<string, Mock>;
 
   // Reusable mock chain for EntityManager.createQueryBuilder()
   const mockQueryBuilder = () => {
@@ -131,10 +129,6 @@ describe('ConversionService — Cross-L0 Moves', () => {
       Mock
     >;
     calloutsSetService = module.get(CalloutsSetService) as unknown as Record<
-      string,
-      Mock
-    >;
-    invitationService = module.get(InvitationService) as unknown as Record<
       string,
       Mock
     >;
@@ -485,6 +479,10 @@ describe('ConversionService — Cross-L0 Moves', () => {
       vi.mocked(
         roleSetService.getVirtualContributorsWithRole
       ).mockResolvedValue([]);
+      // Return an invitation with an id for notification dispatch
+      vi.mocked(roleSetService.createInvitationExistingActor).mockResolvedValue(
+        { id: 'invitation-1' } as never
+      );
     };
 
     it('should send invitations only to overlap set', async () => {
@@ -498,14 +496,19 @@ describe('ConversionService — Cross-L0 Moves', () => {
         'Welcome!'
       );
 
-      expect(invitationService.createInvitation).toHaveBeenCalledTimes(1);
-      expect(invitationService.createInvitation).toHaveBeenCalledWith({
-        invitedActorID: 'user-a',
-        welcomeMessage: 'Welcome!',
-        createdBy: 'admin-user',
-        roleSetID: 'roleset-moved',
-        invitedToParent: false,
-      });
+      expect(
+        roleSetService.createInvitationExistingActor
+      ).toHaveBeenCalledTimes(1);
+      expect(roleSetService.createInvitationExistingActor).toHaveBeenCalledWith(
+        {
+          invitedActorID: 'user-a',
+          welcomeMessage: 'Welcome!',
+          createdBy: 'admin-user',
+          roleSetID: 'roleset-moved',
+          invitedToParent: false,
+          extraRoles: [],
+        }
+      );
     });
 
     it('should send zero invitations when overlap set is empty', async () => {
@@ -518,12 +521,14 @@ describe('ConversionService — Cross-L0 Moves', () => {
         'admin-user'
       );
 
-      expect(invitationService.createInvitation).not.toHaveBeenCalled();
+      expect(
+        roleSetService.createInvitationExistingActor
+      ).not.toHaveBeenCalled();
     });
 
     it('should not throw when invitation creation fails', async () => {
       setupAutoInviteMocks([{ id: 'user-a' }]);
-      vi.mocked(invitationService.createInvitation).mockRejectedValue(
+      vi.mocked(roleSetService.createInvitationExistingActor).mockRejectedValue(
         new Error('Invitation service unavailable')
       );
 
@@ -549,7 +554,7 @@ describe('ConversionService — Cross-L0 Moves', () => {
         'Custom welcome message'
       );
 
-      expect(invitationService.createInvitation).toHaveBeenCalledWith(
+      expect(roleSetService.createInvitationExistingActor).toHaveBeenCalledWith(
         expect.objectContaining({
           welcomeMessage: 'Custom welcome message',
         })

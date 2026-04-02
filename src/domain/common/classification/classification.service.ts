@@ -206,7 +206,13 @@ export class ClassificationService {
 
     if (existingTagset) {
       existingTagset.tagsetTemplate = tagsetTemplate;
-      existingTagset.tags = defaultTags;
+      // Preserve current value when it is still valid in the target template;
+      // only fall back to the default when the current value is not allowed.
+      const currentValue = existingTagset.tags?.[0];
+      const isCurrentValueValid =
+        currentValue != null &&
+        tagsetTemplate.allowedValues?.includes(currentValue);
+      existingTagset.tags = isCurrentValueValid ? [currentValue] : defaultTags;
       return await this.tagsetService.save(existingTagset);
     }
 

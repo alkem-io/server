@@ -7,13 +7,14 @@ import {
   RelationshipNotFoundException,
   ValidationException,
 } from '@common/exceptions';
-import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto';
 import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ClassificationService } from '@domain/common/classification/classification.service';
 import { SpaceMoveRoomsService } from '@domain/communication/space-move-rooms/space.move.rooms.service';
 import { IOrganization } from '@domain/community/organization/organization.interface';
@@ -29,6 +30,9 @@ import { TemplateService } from '@domain/template/template/template.service';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { PlatformService } from '@platform/platform/platform.service';
+import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation';
+import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -54,9 +58,12 @@ export class ConversionService {
     private spaceLookupService: SpaceLookupService,
     private classificationService: ClassificationService,
     private calloutsSetService: CalloutsSetService,
-    private invitationService: InvitationService,
     private urlGeneratorCacheService: UrlGeneratorCacheService,
     private spaceMoveRoomsService: SpaceMoveRoomsService,
+    private notificationUserAdapter: NotificationUserAdapter,
+    private communityResolverService: CommunityResolverService,
+    private roleSetAuthorizationService: RoleSetAuthorizationService,
+    private authorizationPolicyService: AuthorizationPolicyService,
     private readonly entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -911,18 +918,36 @@ export class ConversionService {
       });
       if (!movedSpace.community?.roleSet) return;
 
-      const roleSetID = movedSpace.community.roleSet.id;
+      const roleSet = movedSpace.community.roleSet;
+      const roleSetID = roleSet.id;
 
-      // 4. Create invitations for each overlap user
+      // 4. Resolve community for notification payloads
+      const community =
+        await this.communityResolverService.getCommunityForRoleSet(roleSetID);
+
+      // 5. Create invitations and send notifications for each overlap user
       for (const userId of overlapUserIds) {
         try {
-          await this.invitationService.createInvitation({
-            invitedActorID: userId,
+          const invitation =
+            await this.roleSetService.createInvitationExistingActor({
+              invitedActorID: userId,
+              welcomeMessage: invitationMessage,
+              createdBy,
+              roleSetID,
+              invitedToParent: false,
+              extraRoles: [],
+            });
+
+          const notificationInput: NotificationInputCommunityInvitation = {
+            triggeredBy: createdBy,
+            community,
+            invitationID: invitation.id,
+            invitedContributorID: userId,
             welcomeMessage: invitationMessage,
-            createdBy,
-            roleSetID,
-            invitedToParent: false,
-          });
+          };
+          void this.notificationUserAdapter.userSpaceCommunityInvitationCreated(
+            notificationInput
+          );
         } catch (err) {
           this.logger.error(
             `Failed to create auto-invite for user after move`,
@@ -931,6 +956,10 @@ export class ConversionService {
           );
         }
       }
+
+      // 6. Apply authorization policies on newly created invitations
+      // Without this, invitations have bare AuthorizationPolicy with no credential rules
+      await this.resetAuthorizationsOnRoleSetInvitations(roleSetID);
     } catch (err) {
       this.logger.error(
         `Failed to dispatch auto-invites after move`,
@@ -938,6 +967,23 @@ export class ConversionService {
         LogContext.CONVERSION
       );
     }
+  }
+
+  private async resetAuthorizationsOnRoleSetInvitations(
+    roleSetID: string
+  ): Promise<void> {
+    const roleSet = await this.roleSetService.getRoleSetOrFail(roleSetID, {
+      relations: {
+        invitations: true,
+        platformInvitations: true,
+        applications: true,
+      },
+    });
+    const authorizations =
+      await this.roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications(
+        roleSet
+      );
+    await this.authorizationPolicyService.saveAll(authorizations);
   }
 
   /**
