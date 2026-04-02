@@ -107,5 +107,8 @@ Registration & Verification Complete
   Email:      $EMAIL
   Name:       $FIRST_NAME $LAST_NAME
   Kratos ID:  $IDENTITY_ID
-  Session:    $SESSION_TOKEN
 EOF
+
+if [[ "${PRINT_SESSION_TOKEN:-false}" == "true" ]]; then
+  echo "  Session:    $SESSION_TOKEN"
+fi
