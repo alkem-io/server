@@ -40,7 +40,7 @@ export class PushSubscriptionResolverQueries {
   @Query(() => [IPushSubscription], {
     nullable: false,
     description:
-      "Returns the current user's active push notification subscriptions. Requires authentication.",
+      "Returns the current user's push notification subscriptions (active and disabled). Requires authentication.",
   })
   @Profiling.api
   async myPushSubscriptions(
@@ -52,8 +52,8 @@ export class PushSubscriptionResolverQueries {
         LogContext.PUSH_NOTIFICATION
       );
     }
-    return this.pushSubscriptionService.getActiveSubscriptions([
-      actorContext.actorID,
-    ]);
+    return this.pushSubscriptionService.getUserSubscriptions(
+      actorContext.actorID
+    );
   }
 }
