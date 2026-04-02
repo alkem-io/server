@@ -1310,7 +1310,7 @@ export class NotificationSpaceAdapter {
       r => r.id !== dto.triggeredBy
     );
     if (pushRecipientsFiltered.length > 0) {
-      const pollTitle = callout.framing?.poll?.title || 'a poll';
+      const pollTitle = callout.framing?.poll?.title ?? 'a poll';
       const spaceName = space.about?.profile?.displayName ?? 'your space';
       const { title, body } = this.getPollPushMessage(
         event,

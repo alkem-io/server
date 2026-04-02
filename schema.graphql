@@ -665,6 +665,7 @@ enum ProfileType {
 """Status of a push notification subscription."""
 enum PushSubscriptionStatus {
   ACTIVE
+  DISABLED
   EXPIRED
 }
 
@@ -3767,6 +3768,10 @@ type Mutation {
   deleteVisualFromMediaGallery(deleteData: DeleteVisualFromMediaGalleryInput!): Visual!
   """Deletes the specified Whiteboard."""
   deleteWhiteboard(whiteboardData: DeleteWhiteboardInput!): Whiteboard!
+  """
+  Re-enable a previously disabled push notification subscription for the current user.
+  """
+  enablePushSubscription(subscriptionData: UnsubscribeFromPushNotificationsInput!): PushSubscription!
   """Trigger an event on the Application."""
   eventOnApplication(eventData: ApplicationEventInput!): Application!
   """Trigger an event on the Invitation."""
@@ -3899,7 +3904,9 @@ type Mutation {
   transferSpaceToAccount(transferData: TransferAccountSpaceInput!): Space!
   """Transfer the specified Virtual Contributor to another Account."""
   transferVirtualContributorToAccount(transferData: TransferAccountVirtualContributorInput!): InnovationPack!
-  """Remove a push notification subscription for the current user."""
+  """
+  Disable a push notification subscription for the current user. The subscription is retained but will not receive notifications until re-enabled.
+  """
   unsubscribeFromPushNotifications(subscriptionData: UnsubscribeFromPushNotificationsInput!): PushSubscription!
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
@@ -4796,7 +4803,7 @@ type Query {
   """Information about the current authenticated user"""
   me: MeQueryResults!
   """
-  Returns the current user's active push notification subscriptions. Requires authentication.
+  Returns the current user's push notification subscriptions (active and disabled). Requires authentication.
   """
   myPushSubscriptions: [PushSubscription!]!
   """The notificationRecipients for the provided event on the given entity."""
