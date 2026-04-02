@@ -3,6 +3,7 @@ import { Field, ObjectType, registerEnumType } from '@nestjs/graphql';
 
 export enum PushSubscriptionStatus {
   ACTIVE = 'active',
+  DISABLED = 'disabled',
   EXPIRED = 'expired',
 }
 

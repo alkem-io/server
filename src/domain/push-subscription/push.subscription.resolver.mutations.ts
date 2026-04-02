@@ -36,7 +36,7 @@ export class PushSubscriptionResolverMutations {
 
   @Mutation(() => IPushSubscription, {
     description:
-      'Remove a push notification subscription for the current user.',
+      'Disable a push notification subscription for the current user. The subscription is retained but will not receive notifications until re-enabled.',
   })
   @Profiling.api
   async unsubscribeFromPushNotifications(
@@ -51,6 +51,28 @@ export class PushSubscriptionResolverMutations {
       );
     }
     return this.pushSubscriptionService.unsubscribe(
+      subscriptionData.subscriptionID,
+      actorContext.actorID
+    );
+  }
+
+  @Mutation(() => IPushSubscription, {
+    description:
+      'Re-enable a previously disabled push notification subscription for the current user.',
+  })
+  @Profiling.api
+  async enablePushSubscription(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('subscriptionData')
+    subscriptionData: UnsubscribeFromPushNotificationsInput
+  ): Promise<IPushSubscription> {
+    if (!actorContext.actorID) {
+      throw new ForbiddenException(
+        'Authentication required to enable push notifications',
+        LogContext.PUSH_NOTIFICATION
+      );
+    }
+    return this.pushSubscriptionService.enableSubscription(
       subscriptionData.subscriptionID,
       actorContext.actorID
     );
