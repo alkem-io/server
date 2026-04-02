@@ -1,9 +1,9 @@
 import { PushSubscriptionService } from '@domain/push-subscription/push.subscription.service';
 
 import { beforeEach, describe, expect, it, vi } from 'vitest';
+import webpush from 'web-push';
 import { PushDeliveryService } from './push.delivery.service';
 import { PushNotificationMessage } from './push.notification.message';
-import webpush from 'web-push';
 
 const mockLogger = {
   verbose: vi.fn(),

@@ -306,7 +306,7 @@ export class NotificationUserAdapter {
         {
           title: 'You were mentioned',
           body: `${actorName} mentioned you`,
-          url: '/',
+          url: await this.urlGeneratorService.getRoomUrlPath(eventData.roomID),
         }
       );
     }
@@ -450,7 +450,9 @@ export class NotificationUserAdapter {
           {
             title: 'Reply to your comment',
             body: `${actorName} replied to your comment`,
-            url: '/',
+            url: await this.urlGeneratorService.getRoomUrlPath(
+              eventData.roomId
+            ),
           }
         );
       }

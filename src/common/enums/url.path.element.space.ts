@@ -4,4 +4,5 @@ export enum UrlPathElementSpace {
   COMMUNITY = 'community',
   KNOWLEDGE_BASE = 'knowledge-base',
   SETTINGS = 'settings',
+  UPDATES = 'updates',
 }

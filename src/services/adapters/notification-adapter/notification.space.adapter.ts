@@ -3,6 +3,7 @@ import { LogContext } from '@common/enums/logging.context';
 import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { NotificationEventPayload } from '@common/enums/notification.event.payload';
+import { UrlPathElementSpace } from '@common/enums/url.path.element.space';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { CalloutLookupService } from '@domain/collaboration/callout/callout.lookup/callout.lookup.service';
 import { IUser } from '@domain/community/user/user.interface';
@@ -245,7 +246,9 @@ export class NotificationSpaceAdapter {
         {
           title: 'New calendar event',
           body: `${actorName} created a calendar event in ${spaceName}`,
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.getCalendarEventUrlPath(
+            eventData.calendarEvent.id
+          ),
         }
       );
     }
@@ -337,7 +340,9 @@ export class NotificationSpaceAdapter {
         {
           title: 'New comment on calendar event',
           body: `${actorName} commented on your calendar event`,
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.getCalendarEventUrlPath(
+            eventData.calendarEvent.id
+          ),
         }
       );
     }
@@ -1057,7 +1062,10 @@ export class NotificationSpaceAdapter {
         {
           title: `Message in ${spaceName}`,
           body: `${actorName} sent a message`,
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(
+            space.id,
+            UrlPathElementSpace.UPDATES
+          ),
         }
       );
     }
@@ -1143,7 +1151,10 @@ export class NotificationSpaceAdapter {
         {
           title: `Update in ${spaceName}`,
           body: `New update posted in ${spaceName}`,
-          url: await this.urlGeneratorService.getSpaceUrlPathByID(space.id),
+          url: await this.urlGeneratorService.getSpaceUrlPathByID(
+            space.id,
+            UrlPathElementSpace.UPDATES
+          ),
         }
       );
     }
@@ -1301,15 +1312,54 @@ export class NotificationSpaceAdapter {
     if (pushRecipientsFiltered.length > 0) {
       const pollTitle = callout.framing?.poll?.title ?? 'a poll';
       const spaceName = space.about?.profile?.displayName ?? 'your space';
+      const { title, body } = this.getPollPushMessage(
+        event,
+        pollTitle,
+        spaceName
+      );
       await this.notificationPushAdapter.sendPushNotifications(
         pushRecipientsFiltered,
         event,
         {
-          title: `Poll activity: ${pollTitle}`,
-          body: `New activity on a poll in ${spaceName}`,
+          title,
+          body,
           url: await this.urlGeneratorService.getCalloutUrlPath(dto.calloutID),
         }
       );
+    }
+  }
+
+  private getPollPushMessage(
+    event: NotificationEvent,
+    pollTitle: string,
+    spaceName: string
+  ): { title: string; body: string } {
+    switch (event) {
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL:
+        return {
+          title: `New vote on your poll`,
+          body: `Someone voted on "${pollTitle}" in ${spaceName}`,
+        };
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON:
+        return {
+          title: `New vote on a poll you voted on`,
+          body: `Someone else voted on "${pollTitle}" in ${spaceName}`,
+        };
+      case NotificationEvent.SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON:
+        return {
+          title: `Poll updated`,
+          body: `"${pollTitle}" in ${spaceName} has been modified`,
+        };
+      case NotificationEvent.SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE:
+        return {
+          title: `Your vote was affected`,
+          body: `An option change in "${pollTitle}" in ${spaceName} affected your vote`,
+        };
+      default:
+        return {
+          title: `Poll activity: ${pollTitle}`,
+          body: `New activity on a poll in ${spaceName}`,
+        };
     }
   }
 

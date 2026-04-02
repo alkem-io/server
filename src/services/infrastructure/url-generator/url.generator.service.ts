@@ -12,6 +12,7 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
@@ -1235,6 +1236,32 @@ export class UrlGeneratorService {
     );
     const spaceUrl = `${l1SpaceUrlPath}/${UrlPathElement.OPPORTUNITIES}/${l2SpaceNameID}`;
     return this.appendSpacePathToUrl(spaceUrl, spacePath);
+  }
+
+  public async getRoomUrlPath(roomID: string): Promise<string> {
+    // Check if the room belongs to a callout
+    const callout = await this.entityManager.findOne(Callout, {
+      where: { comments: { id: roomID } },
+      select: { id: true },
+    });
+    if (callout) {
+      return this.getCalloutUrlPath(callout.id);
+    }
+
+    // Check if the room belongs to a post
+    const post = await this.entityManager.findOne(Post, {
+      where: { comments: { id: roomID } },
+      select: { id: true },
+    });
+    if (post) {
+      return this.getPostUrlPath(post.id);
+    }
+
+    this.logger.verbose?.(
+      `Unable to resolve URL for room: ${roomID}, falling back to '/'`,
+      LogContext.URL_GENERATOR
+    );
+    return '/';
   }
 
   private appendSpacePathToUrl(
