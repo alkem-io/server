@@ -1,7 +1,7 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-# Register and verify a new user via Kratos + MailSlurper, then create Alkemio profile
+# Register and verify a new user via Kratos + MailSlurper
 #
 # Usage: ./register-user.sh <email> [firstName] [lastName]
 #
@@ -15,7 +15,6 @@ set -euo pipefail
 
 SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/kratos.sh"
-source "$SCRIPT_DIR/lib/graphql.sh"
 
 EMAIL="${1:?Usage: $0 <email> [firstName] [lastName]}"
 FIRST_NAME="${2:-Test}"
@@ -79,14 +78,14 @@ if [ "$ALREADY_EXISTS" = false ]; then
   done
   [ -n "$EMAIL_BODY" ] || fail "No verification email found for $EMAIL"
 
-  CODE=$(echo "$EMAIL_BODY" | grep -oP 'code=\K[0-9]+' | head -1)
+  TOKEN=$(echo "$EMAIL_BODY" | grep -oP 'token=\K[a-zA-Z0-9]+' | head -1)
   VFLOW=$(echo "$EMAIL_BODY" | grep -oP 'flow=\K[a-f0-9-]+' | head -1)
-  [ -n "$CODE" ] && [ -n "$VFLOW" ] || fail "Could not extract verification code/flow from email"
+  [ -n "$TOKEN" ] && [ -n "$VFLOW" ] || fail "Could not extract verification token/flow from email"
 
   VERIFY_RESULT=$(curl -s -X POST "$KRATOS_PUBLIC_URL/self-service/verification?flow=$VFLOW" \
     -H 'Content-Type: application/json' \
     -H 'Accept: application/json' \
-    -d "$(jq -n --arg code "$CODE" '{method:"code", code:$code}')")
+    -d "$(jq -n --arg token "$TOKEN" '{method:"link", token:$token}')")
 
   VERIFY_STATE=$(echo "$VERIFY_RESULT" | jq -r '.state // empty')
   [ "$VERIFY_STATE" = "passed_challenge" ] || fail "Verification failed: $(echo "$VERIFY_RESULT" | jq -c '.')"
@@ -101,16 +100,6 @@ if [ -z "${IDENTITY_ID:-}" ]; then
   : # IDENTITY_ID already set by kratos_login
 fi
 
-# ─── Create Alkemio user profile ──────────────────────────────
-GQL_RESPONSE=$(gql_request 'mutation { createUserNewRegistration { id nameID profile { displayName } } }') \
-  || fail "GraphQL mutation failed"
-
-ALKEMIO_ID=$(echo "$GQL_RESPONSE" | jq -r '.data.createUserNewRegistration.id // empty')
-ALKEMIO_NAMEID=$(echo "$GQL_RESPONSE" | jq -r '.data.createUserNewRegistration.nameID // empty')
-ALKEMIO_DISPLAY=$(echo "$GQL_RESPONSE" | jq -r '.data.createUserNewRegistration.profile.displayName // empty')
-
-[ -n "$ALKEMIO_ID" ] || fail "GraphQL mutation returned no data: $(echo "$GQL_RESPONSE" | jq -c '.errors // .')"
-
 # ─── Summary ──────────────────────────────────────────────────
 cat <<EOF
 
@@ -118,8 +107,5 @@ Registration & Verification Complete
   Email:      $EMAIL
   Name:       $FIRST_NAME $LAST_NAME
   Kratos ID:  $IDENTITY_ID
-  Alkemio User:
-    ID:       $ALKEMIO_ID
-    NameID:   $ALKEMIO_NAMEID
-    Display:  $ALKEMIO_DISPLAY
+  Session:    $SESSION_TOKEN
 EOF
