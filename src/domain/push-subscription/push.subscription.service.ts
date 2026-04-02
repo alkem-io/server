@@ -113,9 +113,12 @@ export class PushSubscriptionService {
       where: { id: subscriptionId, userId },
     });
 
-    if (!subscription) {
+    if (
+      !subscription ||
+      subscription.status !== PushSubscriptionStatus.DISABLED
+    ) {
       throw new EntityNotFoundException(
-        'Push subscription not found',
+        'Push subscription not found or not eligible for re-enabling',
         LogContext.PUSH_NOTIFICATION,
         { subscriptionId, userId }
       );

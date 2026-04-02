@@ -224,7 +224,41 @@ describe('PushSubscriptionService', () => {
 
       await expect(
         service.enableSubscription('sub-nonexistent', 'user-123')
-      ).rejects.toThrow('Push subscription not found');
+      ).rejects.toThrow(
+        'Push subscription not found or not eligible for re-enabling'
+      );
+    });
+
+    it('should throw when subscription is EXPIRED', async () => {
+      const subscription = {
+        id: 'sub-expired',
+        userId: 'user-123',
+        status: PushSubscriptionStatus.EXPIRED,
+      };
+
+      repository.findOne!.mockResolvedValue(subscription);
+
+      await expect(
+        service.enableSubscription('sub-expired', 'user-123')
+      ).rejects.toThrow(
+        'Push subscription not found or not eligible for re-enabling'
+      );
+    });
+
+    it('should throw when subscription is already ACTIVE', async () => {
+      const subscription = {
+        id: 'sub-active',
+        userId: 'user-123',
+        status: PushSubscriptionStatus.ACTIVE,
+      };
+
+      repository.findOne!.mockResolvedValue(subscription);
+
+      await expect(
+        service.enableSubscription('sub-active', 'user-123')
+      ).rejects.toThrow(
+        'Push subscription not found or not eligible for re-enabling'
+      );
     });
   });
 
