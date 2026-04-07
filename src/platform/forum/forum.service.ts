@@ -63,7 +63,7 @@ export class ForumService {
 
   /**
    * Create the forum Matrix space and all category Matrix spaces.
-   * Called during forum creation and idempotent for re-runs.
+   * Called during forum creation.
    */
   private async createForumMatrixSpaces(forum: IForum): Promise<void> {
     try {
