@@ -52,6 +52,11 @@ export class AdminCommunicationSpaceSyncService {
       order: { level: 'ASC' },
       relations: {
         parentSpace: true,
+        about: {
+          profile: {
+            visuals: true,
+          },
+        },
         community: {
           communication: {
             updates: true,
@@ -72,21 +77,34 @@ export class AdminCommunicationSpaceSyncService {
 
     for (const space of spaces) {
       try {
+        const displayName = space.about?.profile?.displayName || space.nameID;
+        const avatarVisual = space.about?.profile?.visuals?.find(
+          (v: { name: string }) => v.name === 'avatar'
+        );
+        const avatarUrl = avatarVisual?.uri || undefined;
+
         const existing = await this.communicationAdapter.getSpace(space.id);
         if (!existing) {
           await this.communicationAdapter.createSpace(
             space.id,
-            space.nameID,
+            displayName,
             space.parentSpace?.id,
-            undefined,
+            avatarUrl,
             JoinRuleInvite
           );
           spacesCreated++;
           this.logger.verbose?.(
-            `Created Matrix space for: ${space.id} (${space.nameID})`,
+            `Created Matrix space for: ${space.id} (${displayName})`,
             LogContext.COMMUNICATION
           );
         } else {
+          // Update existing space with current displayName and avatar
+          await this.communicationAdapter.updateSpace(
+            space.id,
+            displayName,
+            undefined,
+            avatarUrl
+          );
           spacesSkipped++;
         }
       } catch (_error) {
@@ -125,6 +143,11 @@ export class AdminCommunicationSpaceSyncService {
         }
       }
     }
+
+    // Anchor callout and post rooms to their owning space
+    const anchorResult = await this.syncCalloutAndPostRoomAnchoring();
+    roomsAnchored += anchorResult.anchored;
+    roomsFailed += anchorResult.failed;
 
     // Anchor forum discussion rooms
     await this.syncForumRoomAnchoring();
@@ -285,6 +308,85 @@ export class AdminCommunicationSpaceSyncService {
         }
       }
     }
+  }
+
+  /**
+   * Pass 2c: Anchor callout and post rooms to their owning space's Matrix space.
+   * Uses raw queries to traverse: Space → Collaboration → CalloutsSet → Callout → Room
+   * and Space → Collaboration → CalloutsSet → Callout → Contribution → Post → Room.
+   */
+  private async syncCalloutAndPostRoomAnchoring(): Promise<{
+    anchored: number;
+    failed: number;
+  }> {
+    let anchored = 0;
+    let failed = 0;
+
+    // Callout comment rooms → owning space
+    const calloutRooms: { roomId: string; spaceId: string }[] =
+      await this.roomRepository.manager
+        .createQueryBuilder()
+        .select('r.id', 'roomId')
+        .addSelect('s.id', 'spaceId')
+        .from('room', 'r')
+        .innerJoin('callout', 'cal', 'cal."commentsId" = r.id')
+        .innerJoin('callouts_set', 'cs', 'cs.id = cal."calloutsSetId"')
+        .innerJoin('collaboration', 'col', 'col."calloutsSetId" = cs.id')
+        .innerJoin('space', 's', 's."collaborationId" = col.id')
+        .getRawMany();
+
+    this.logger.verbose?.(
+      `Anchoring ${calloutRooms.length} callout rooms to spaces`,
+      LogContext.COMMUNICATION
+    );
+
+    for (const { roomId, spaceId } of calloutRooms) {
+      try {
+        await this.communicationAdapter.setParent(roomId, false, spaceId);
+        anchored++;
+      } catch (_error) {
+        failed++;
+        this.logger.warn?.(
+          `Failed to anchor callout room ${roomId} to space ${spaceId}`,
+          LogContext.COMMUNICATION
+        );
+      }
+    }
+
+    // Post comment rooms → owning space
+    const postRooms: { roomId: string; spaceId: string }[] =
+      await this.roomRepository.manager
+        .createQueryBuilder()
+        .select('r.id', 'roomId')
+        .addSelect('s.id', 'spaceId')
+        .from('room', 'r')
+        .innerJoin('post', 'p', 'p."commentsId" = r.id')
+        .innerJoin('callout_contribution', 'cc', 'cc."postId" = p.id')
+        .innerJoin('callout', 'cal', 'cal.id = cc."calloutId"')
+        .innerJoin('callouts_set', 'cs', 'cs.id = cal."calloutsSetId"')
+        .innerJoin('collaboration', 'col', 'col."calloutsSetId" = cs.id')
+        .innerJoin('space', 's', 's."collaborationId" = col.id')
+        .getRawMany();
+
+    this.logger.verbose?.(
+      `Anchoring ${postRooms.length} post rooms to spaces`,
+      LogContext.COMMUNICATION
+    );
+
+    for (const { roomId, spaceId } of postRooms) {
+      try {
+        await this.communicationAdapter.setParent(roomId, false, spaceId);
+        anchored++;
+      } catch (_error) {
+        failed++;
+        this.logger.warn?.(
+          `Failed to anchor post room ${roomId} to space ${spaceId}`,
+          LogContext.COMMUNICATION
+        );
+      }
+    }
+
+    return { anchored, failed };
   }
 
   /**
