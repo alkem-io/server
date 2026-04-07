@@ -69,7 +69,13 @@ import { SpaceFilterService } from '@services/infrastructure/space-filter/space.
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { keyBy } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindManyOptions, FindOneOptions, In, Repository } from 'typeorm';
+import {
+  EntityManager,
+  FindManyOptions,
+  FindOneOptions,
+  In,
+  Repository,
+} from 'typeorm';
 import { IAccount } from '../account/account.interface';
 import { ISpaceAbout } from '../space.about/space.about.interface';
 import { SpaceAboutService } from '../space.about/space.about.service';
@@ -642,7 +648,6 @@ export class SpaceService {
     const qb = this.spaceRepository.createQueryBuilder('space');
 
     qb.leftJoinAndSelect('space.subspaces', 'subspace');
-    qb.leftJoinAndSelect('space.authorization', 'authorization_policy');
     qb.leftJoinAndSelect('subspace.subspaces', 'subspaces');
     qb.where({
       level: SpaceLevel.L0,

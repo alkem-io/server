@@ -41,7 +41,7 @@ services:
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
-    image: oryd/kratos:v1.3.1
+    image: oryd/kratos:v26.2.0
     depends_on:
       postgres:
         condition: service_healthy
@@ -58,7 +58,7 @@ services:
 
   kratos:
     container_name: alkemio_dev_kratos
-    image: oryd/kratos:v1.3.1
+    image: oryd/kratos:v26.2.0
     depends_on:
       kratos-migrate:
         condition: service_completed_successfully
@@ -79,7 +79,7 @@ services:
 
   hydra-migrate:
     container_name: alkemio_dev_hydra_migrate
-    image: oryd/hydra:v2.3.0
+    image: oryd/hydra:v26.2.0
     depends_on:
       postgres:
         condition: service_healthy
@@ -92,7 +92,7 @@ services:
 
   hydra:
     container_name: alkemio_dev_hydra
-    image: oryd/hydra:v2.3.0
+    image: oryd/hydra:v26.2.0
     depends_on:
       hydra-migrate:
         condition: service_completed_successfully
@@ -237,7 +237,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oathkeeper
-    image: oryd/oathkeeper:v0.38.19-beta.1
+    image: oryd/oathkeeper:v26.2.0
     restart: always
     platform: linux/amd64
     depends_on:
@@ -366,7 +366,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.28.1
+    image: alkemio/notifications:v0.32.0
     platform: linux/amd64
     depends_on:
       rabbitmq:

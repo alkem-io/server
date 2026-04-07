@@ -1,0 +1,171 @@
+# Quickstart: PWA Push Notifications
+
+**Feature**: 038-pwa-push-notifications | **Date**: 2026-03-01
+
+## Prerequisites
+
+- Node.js 22 LTS (Volta-managed)
+- pnpm 10.17.1
+- Docker + Compose (for PostgreSQL, RabbitMQ, Redis)
+- `web-push` CLI for VAPID key generation (only needed for production — dev defaults are built in)
+
+## Setup
+
+Push notifications work out of the box for local development. The `alkemio.yml` config includes default dev VAPID keys and enables push notifications by default. No `.env` changes needed.
+
+> **Production**: Override `VAPID_PUBLIC_KEY`, `VAPID_PRIVATE_KEY`, and `VAPID_SUBJECT` with production keys generated via `npx web-push generate-vapid-keys`. Keys must remain stable across deployments — changing them invalidates all existing subscriptions.
+
+### 1. Start Services
+
+```bash
+pnpm run start:services   # PostgreSQL, RabbitMQ, Redis
+```
+
+### 4. Install Dependencies
+
+```bash
+pnpm install   # Installs web-push and other new deps
+```
+
+### 5. Run Migrations
+
+```bash
+pnpm run migration:run
+```
+
+This creates the `push_subscription` table and adds the `push` field to existing user notification settings.
+
+### 6. Start Server
+
+```bash
+pnpm start:dev
+```
+
+## Verification
+
+### Check VAPID Key Availability
+
+```graphql
+query {
+  vapidPublicKey
+}
+```
+
+Expected: Returns the VAPID public key string (same as `VAPID_PUBLIC_KEY` env var).
+
+### Test Subscription (via GraphQL Playground)
+
+Requires authentication. Use a valid session cookie or Bearer token.
+
+```graphql
+mutation {
+  subscribeToPushNotifications(subscriptionData: {
+    endpoint: "<push-service-endpoint-url>"
+    p256dh: "<base64url-p256dh-public-key>"
+    auth: "<base64url-auth-secret>"
+    userAgent: "Mozilla/5.0 (Test Device)"
+  }) {
+    id
+    status
+    createdDate
+    userAgent
+  }
+}
+```
+
+### Query Subscriptions
+
+```graphql
+query {
+  myPushSubscriptions {
+    id
+    status
+    userAgent
+    lastActiveDate
+    createdDate
+  }
+}
+```
+
+### Test Unsubscribe
+
+```graphql
+mutation {
+  unsubscribeFromPushNotifications(subscriptionData: {
+    ID: "<subscription-id-from-above>"
+  }) {
+    id
+    status
+  }
+}
+```
+
+### Verify Push Channel in Notification Settings
+
+After subscribing, the user's notification settings should include `push` fields:
+
+```graphql
+query {
+  me {
+    settings {
+      notification {
+        user {
+          mentioned {
+            email
+            inApp
+            push
+          }
+          commentReply {
+            email
+            inApp
+            push
+          }
+        }
+      }
+    }
+  }
+}
+```
+
+## Testing Push Delivery (End-to-End)
+
+To test actual push notification delivery, you need a real browser subscription:
+
+1. Set up a test page with a service worker that registers for push
+2. Use the subscription data from `PushManager.subscribe()` in the GraphQL mutation
+3. Trigger a platform event (e.g., mention a user in a comment)
+4. Verify the push notification appears on the device
+
+For local testing without a real browser, check the server logs for push delivery attempts:
+
+```bash
+# Look for push notification log entries
+grep "push-notification" <log-output>
+```
+
+Log entries to expect:
+- `Push subscription created` — on successful subscribe mutation
+- `Push notification delivery attempted` — when an event triggers push
+- `Push notification delivered` — on successful web-push send
+- `Push subscription expired` — on 410 Gone from push service
+
+## RabbitMQ Queue Verification
+
+After starting the server, verify the push notification queues exist:
+
+1. Open RabbitMQ Management UI: `http://localhost:15672` (guest/guest)
+2. Check for queues:
+   - `alkemio-push-notifications` — push delivery queue (fire-and-forget, no retry queues)
+
+## Configuration Reference
+
+| Environment Variable | Default | Description |
+|---------------------|---------|-------------|
+| `PUSH_NOTIFICATIONS_ENABLED` | `true` | Enable/disable push notification feature |
+| `VAPID_PUBLIC_KEY` | (dev key built in) | VAPID public key for Web Push |
+| `VAPID_PRIVATE_KEY` | (dev key built in) | VAPID private key for Web Push |
+| `VAPID_SUBJECT` | `mailto:notifications@alkem.io` | VAPID subject (mailto: or https: URL) |
+| `PUSH_MAX_SUBSCRIPTIONS_PER_USER` | `10` | Max active subscriptions per user |
+| `PUSH_THROTTLE_MAX_PER_MINUTE` | `10` | Max push notifications per user per minute |
+| `PUSH_RETRY_MAX_ATTEMPTS` | `5` | Max delivery retry attempts (messages are acked and dropped on failure; this is a safeguard counter, not an active retry mechanism) |
+| `PUSH_CLEANUP_STALE_DAYS` | `30` | Days after which inactive subscriptions are cleaned |
