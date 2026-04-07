@@ -120,7 +120,7 @@ All rooms that fall under the forum hierarchy (forum > category > discussion roo
 
 **Why this priority**: Forums are designed for open community discussion. If rooms are not publicly accessible, the forum hierarchy loses its purpose as a transparent, community-wide communication channel.
 
-**Independent Test**: Create a forum discussion room under a space's forum hierarchy and verify that the Matrix room is configured as publicly readable and writable (world-readable history, open join policy, guest-writable).
+**Independent Test**: Create a forum discussion room under a space's forum hierarchy and verify that the Matrix room is configured with `JoinRulePublic` (joinable by any authenticated local Synapse user without invitation, not open to guests or federated users).
 
 **Acceptance Scenarios**:
 
@@ -206,7 +206,7 @@ The Synapse homeserver configuration and development Docker Compose stack must b
 - **FR-007**: System MUST create and maintain a Matrix space hierarchy for forums: forum (Matrix space) -> category (Matrix space) -> discussion room.
 - **FR-011**: System MUST create all rooms within the forum hierarchy (forum > category > discussion room) as readable and writable by any authenticated user on the Alkemio Synapse server (joinable without invitation, not open to anonymous or federated users).
 - **FR-012**: System MUST NOT apply public visibility settings to non-forum rooms (updates, callout, conversation rooms) when anchoring them to Matrix spaces.
-- **FR-017**: Forum and category Matrix spaces MUST be visible and joinable by all authenticated Synapse server users.
+- **FR-017**: Forum and category Matrix spaces MUST be publicly joinable (`JoinRulePublic`) by all authenticated Synapse server users. They are hidden from Element `/sync` via `io.alkemio.visibility: {visible: false}` like all other non-conversation entities, but remain joinable via room ID or directory link.
 - **FR-018**: Alkemio space container Matrix spaces MUST require invitation to join (membership management is out of scope for this feature and deferred to a future PR).
 - **FR-015**: System MUST provide an admin-only GQL mutation to synchronize existing Alkemio spaces into the Matrix hierarchy.
 - **FR-016**: The admin sync mutation MUST be idempotent - running it multiple times produces the same result without creating duplicate Matrix spaces or breaking existing hierarchy.
@@ -226,7 +226,7 @@ The Synapse homeserver configuration and development Docker Compose stack must b
 - **Room**: A Matrix room used for communication (updates, discussions, callouts, conversations). Belongs to a space's communication context.
 - **Forum**: A discussion forum belonging to a space, containing categories which contain discussion rooms.
 - **Forum Category**: A grouping within a forum, represented as a Matrix space in the hierarchy.
-- **Room Visibility State Event**: A custom Matrix state event (`io.alkemio.visibility`) that controls whether a room appears in Element clients. Set by the AppService bot to hide non-forum rooms from regular users.
+- **Room Visibility State Event**: A custom Matrix state event (`io.alkemio.visibility`) that controls whether a room or space appears in Element clients' `/sync` responses. Set by the AppService bot. All rooms and spaces are hidden (`visible: false`) except conversation rooms (`CONVERSATION`, `CONVERSATION_DIRECT`, `CONVERSATION_GROUP`) which remain visible.
 
 ## Success Criteria _(mandatory)_
 
@@ -241,7 +241,7 @@ The Synapse homeserver configuration and development Docker Compose stack must b
 - **SC-007**: Matrix adapter failures do not cause any Alkemio space operations to fail or degrade for end users.
 - **SC-008**: Forum discussions are organized in a three-level Matrix hierarchy (forum > category > room) matching the Alkemio forum structure.
 - **SC-009**: 100% of rooms within the forum hierarchy are readable and writable by any authenticated Synapse server user without invitation; non-forum rooms retain their existing visibility settings.
-- **SC-010**: Non-forum rooms are invisible in Element clients — they do not appear in `/sync` responses for regular users, only for the AppService bot.
+- **SC-010**: All rooms and spaces except conversation rooms (`CONVERSATION`, `CONVERSATION_DIRECT`, `CONVERSATION_GROUP`) are invisible in Element clients — they do not appear in `/sync` responses for regular users, only for the AppService bot.
 - **SC-011**: The Synapse public room directory only contains rooms published by the AppService bot; regular users cannot publish rooms.
 
 ## Assumptions
