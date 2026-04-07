@@ -323,9 +323,13 @@ export class CalloutService {
       callout.settings.framing.commentsEnabled &&
       !callout.comments
     ) {
+      const parentSpaceId = callout.calloutsSet
+        ? await this.getParentSpaceId(callout.calloutsSet.id)
+        : undefined;
       callout.comments = await this.roomService.createRoom({
         displayName: `callout-comments-${callout.nameID}`,
         type: RoomType.CALLOUT,
+        parentContextId: parentSpaceId,
       });
     }
 
@@ -784,5 +788,27 @@ export class CalloutService {
     }
 
     return result;
+  }
+
+  /**
+   * Look up the parent space ID for a calloutsSet by joining through Collaboration → Space.
+   * Returns undefined if the calloutsSet is not attached to a space (e.g., template).
+   */
+  private async getParentSpaceId(
+    calloutsSetId: string
+  ): Promise<string | undefined> {
+    try {
+      const result = await this.calloutRepository.manager
+        .createQueryBuilder()
+        .select('s.id', 'spaceId')
+        .from('callouts_set', 'cs')
+        .innerJoin('collaboration', 'c', 'c."calloutsSetId" = cs.id')
+        .innerJoin('space', 's', 's."collaborationId" = c.id')
+        .where('cs.id = :id', { id: calloutsSetId })
+        .getRawOne();
+      return result?.spaceId;
+    } catch {
+      return undefined;
+    }
   }
 }
