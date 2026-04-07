@@ -87,6 +87,7 @@ export class AdminCommunicationSpaceSyncService {
         const avatarUrl = avatarVisual?.uri || undefined;
 
         const existing = await this.communicationAdapter.getSpace(space.id);
+        await this.throttle();
         if (!existing) {
           await this.communicationAdapter.createSpace(
             space.id,
@@ -189,6 +190,7 @@ export class AdminCommunicationSpaceSyncService {
         const existingForum = await this.communicationAdapter.getSpace(
           forum.id
         );
+        await this.throttle();
         if (!existingForum) {
           await this.communicationAdapter.createSpace(
             forum.id,
@@ -230,6 +232,7 @@ export class AdminCommunicationSpaceSyncService {
           );
           const existingCategory =
             await this.communicationAdapter.getSpace(categoryContextId);
+          await this.throttle();
           if (!existingCategory) {
             await this.communicationAdapter.createSpace(
               categoryContextId,
@@ -508,6 +511,7 @@ export class AdminCommunicationSpaceSyncService {
           room.id,
           ['io.alkemio.visibility']
         );
+        await this.throttle();
 
         const currentVisible = currentState?.['io.alkemio.visibility']?.visible;
 
@@ -516,6 +520,7 @@ export class AdminCommunicationSpaceSyncService {
         await this.communicationAdapter.setRoomState(room.id, {
           'io.alkemio.visibility': { visible: expectedVisible },
         });
+        await this.throttle();
         roomsUpdated++;
       } catch (_error) {
         this.logger.warn?.(
@@ -523,7 +528,6 @@ export class AdminCommunicationSpaceSyncService {
           LogContext.COMMUNICATION
         );
       }
-      await this.throttle();
     }
 
     // === Spaces (all invisible) ===
@@ -550,6 +554,7 @@ export class AdminCommunicationSpaceSyncService {
           contextId,
           ['io.alkemio.visibility']
         );
+        await this.throttle();
 
         const currentVisible = currentState?.['io.alkemio.visibility']?.visible;
 
@@ -558,6 +563,7 @@ export class AdminCommunicationSpaceSyncService {
         await this.communicationAdapter.setSpaceState(contextId, {
           'io.alkemio.visibility': { visible: false },
         });
+        await this.throttle();
         spacesUpdated++;
       } catch (_error) {
         this.logger.warn?.(
@@ -565,7 +571,6 @@ export class AdminCommunicationSpaceSyncService {
           LogContext.COMMUNICATION
         );
       }
-      await this.throttle();
     }
 
     this.logger.verbose?.(
