@@ -5,6 +5,8 @@ import { CommunicationModule } from '@domain/communication/communication/communi
 import { ConversationModule } from '@domain/communication/conversation/conversation.module';
 import { Room } from '@domain/communication/room/room.entity';
 import { CommunityModule } from '@domain/community/community/community.module';
+import { User } from '@domain/community/user/user.entity';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -23,7 +25,7 @@ import { AdminCommunicationSpaceSyncService } from './admin.communication.space.
     CommunicationModule,
     CommunicationAdapterModule,
     ConversationModule,
-    TypeOrmModule.forFeature([Space, Forum, Room]),
+    TypeOrmModule.forFeature([Space, Forum, Room, User, VirtualContributor]),
   ],
   providers: [
     AdminCommunicationService,

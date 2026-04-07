@@ -2,6 +2,8 @@ import { JoinRuleInvite, JoinRulePublic } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { Room } from '@domain/communication/room/room.entity';
+import { User } from '@domain/community/user/user.entity';
+import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -24,6 +26,10 @@ export class AdminCommunicationSpaceSyncService {
     private forumRepository: Repository<Forum>,
     @InjectRepository(Room)
     private roomRepository: Repository<Room>,
+    @InjectRepository(User)
+    private userRepository: Repository<User>,
+    @InjectRepository(VirtualContributor)
+    private vcRepository: Repository<VirtualContributor>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -125,6 +131,12 @@ export class AdminCommunicationSpaceSyncService {
 
     // Erase display names on direct conversation rooms so Matrix shows member names
     await this.syncDirectConversationNames();
+
+    // Sync actor display names to Matrix for all users and VCs
+    await this.syncActorDisplayNames();
+
+    // Ensure io.alkemio.visibility custom state is correct on all rooms and spaces
+    await this.syncVisibilityState();
 
     this.logger.verbose?.(
       `Matrix space hierarchy sync complete: spaces(${spacesCreated} created, ${spacesSkipped} existed, ${spacesFailed} failed), rooms(${roomsAnchored} anchored, ${roomsFailed} failed)`,
@@ -302,5 +314,144 @@ export class AdminCommunicationSpaceSyncService {
         );
       }
     }
+  }
+
+  /**
+   * Sync display names to Matrix for all users and virtual contributors.
+   */
+  private async syncActorDisplayNames(): Promise<void> {
+    const users = await this.userRepository.find();
+    const vcs = await this.vcRepository.find({
+      relations: { profile: true },
+    });
+
+    this.logger.verbose?.(
+      `Syncing display names for ${users.length} users and ${vcs.length} virtual contributors`,
+      LogContext.COMMUNICATION
+    );
+
+    let synced = 0;
+    for (const user of users) {
+      const displayName =
+        `${user.firstName} ${user.lastName}`.trim() || user.email;
+      try {
+        await this.communicationAdapter.syncActor(user.id, displayName);
+        synced++;
+      } catch (_error) {
+        this.logger.warn?.(
+          `Failed to sync display name for user ${user.id} — skipping`,
+          LogContext.COMMUNICATION
+        );
+      }
+    }
+
+    for (const vc of vcs) {
+      const displayName = vc.profile?.displayName || vc.nameID;
+      try {
+        await this.communicationAdapter.syncActor(vc.id, displayName);
+        synced++;
+      } catch (_error) {
+        this.logger.warn?.(
+          `Failed to sync display name for VC ${vc.id} — skipping`,
+          LogContext.COMMUNICATION
+        );
+      }
+    }
+
+    this.logger.verbose?.(
+      `Synced display names for ${synced} actors`,
+      LogContext.COMMUNICATION
+    );
+  }
+
+  /**
+   * Ensure io.alkemio.visibility custom state is correct on all rooms and spaces.
+   * Conversation rooms (direct, group) → visible: true
+   * All other rooms and ALL spaces → visible: false
+   * Only updates if the current state is missing or incorrect.
+   */
+  private async syncVisibilityState(): Promise<void> {
+    // === Rooms ===
+    const allRooms = await this.roomRepository.find();
+
+    this.logger.verbose?.(
+      `Checking io.alkemio.visibility state on ${allRooms.length} rooms`,
+      LogContext.COMMUNICATION
+    );
+
+    let roomsUpdated = 0;
+    for (const room of allRooms) {
+      const isConversation =
+        room.type === RoomType.CONVERSATION_DIRECT ||
+        room.type === RoomType.CONVERSATION_GROUP;
+      const expectedVisible = isConversation;
+
+      try {
+        const currentState = await this.communicationAdapter.getRoomState(
+          room.id,
+          ['io.alkemio.visibility']
+        );
+
+        const currentVisible = currentState?.['io.alkemio.visibility']?.visible;
+
+        if (currentVisible === expectedVisible) continue;
+
+        await this.communicationAdapter.setRoomState(room.id, {
+          'io.alkemio.visibility': { visible: expectedVisible },
+        });
+        roomsUpdated++;
+      } catch (_error) {
+        this.logger.warn?.(
+          `Failed to sync visibility state for room ${room.id} — skipping`,
+          LogContext.COMMUNICATION
+        );
+      }
+    }
+
+    // === Spaces (all invisible) ===
+    const allSpaces = await this.spaceRepository.find();
+    const forums = await this.forumRepository.find({
+      relations: { discussions: true },
+    });
+
+    // Collect all space context IDs: alkemio spaces + forum + category spaces
+    const spaceContextIds: string[] = allSpaces.map(s => s.id);
+    for (const forum of forums) {
+      spaceContextIds.push(forum.id);
+      for (const category of forum.discussionCategories ?? []) {
+        spaceContextIds.push(
+          uuidv5(`${forum.id}:category:${category}`, FORUM_CATEGORY_NAMESPACE)
+        );
+      }
+    }
+
+    let spacesUpdated = 0;
+    for (const contextId of spaceContextIds) {
+      try {
+        const currentState = await this.communicationAdapter.getSpaceState(
+          contextId,
+          ['io.alkemio.visibility']
+        );
+
+        const currentVisible = currentState?.['io.alkemio.visibility']?.visible;
+
+        if (currentVisible === false) continue;
+
+        await this.communicationAdapter.setSpaceState(contextId, {
+          'io.alkemio.visibility': { visible: false },
+        });
+        spacesUpdated++;
+      } catch (_error) {
+        this.logger.warn?.(
+          `Failed to sync visibility state for space ${contextId} — skipping`,
+          LogContext.COMMUNICATION
+        );
+      }
+    }
+
+    this.logger.verbose?.(
+      `Updated io.alkemio.visibility: ${roomsUpdated} rooms, ${spacesUpdated} spaces`,
+      LogContext.COMMUNICATION
+    );
   }
 }

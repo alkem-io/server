@@ -252,7 +252,9 @@ export class SpaceService {
       spaceData.about.profileData.displayName,
       parentSpaceId,
       undefined, // avatarUrl — set later when user uploads avatar
-      JoinRuleInvite
+      JoinRuleInvite,
+      undefined,
+      { 'io.alkemio.visibility': { visible: false } }
     );
     // Anchor the UPDATES room to this space's Matrix space
     if (space.community?.communication?.updates) {

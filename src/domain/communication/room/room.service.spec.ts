@@ -70,7 +70,8 @@ describe('RoomService', () => {
         undefined,
         undefined,
         undefined,
-        undefined
+        undefined,
+        { 'io.alkemio.visibility': { visible: false } }
       );
     });
 
@@ -97,7 +98,8 @@ describe('RoomService', () => {
         undefined,
         undefined,
         undefined,
-        undefined
+        undefined,
+        { 'io.alkemio.visibility': { visible: false } }
       );
     });
 
@@ -125,7 +127,8 @@ describe('RoomService', () => {
         undefined,
         undefined,
         undefined,
-        undefined
+        undefined,
+        { 'io.alkemio.visibility': { visible: true } }
       );
     });
 

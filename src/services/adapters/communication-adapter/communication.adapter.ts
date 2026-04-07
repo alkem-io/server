@@ -26,7 +26,9 @@ import {
   GetRoomRequest,
   // Response type for converter helper
   GetRoomResponse,
+  GetRoomStateRequest,
   GetSpaceRequest,
+  GetSpaceStateRequest,
   GetThreadMessagesRequest,
   GetUnreadCountsRequest,
   // Join rule constants
@@ -45,6 +47,8 @@ import {
   RoomTypeDirect,
   SendMessageRequest,
   SetParentRequest,
+  SetRoomStateRequest,
+  SetSpaceStateRequest,
   // Request types (used with `satisfies` for payload validation)
   SyncActorRequest,
   UpdateRoomRequest,
@@ -247,7 +251,8 @@ export class CommunicationAdapter {
     parentContextId?: AlkemioContextID,
     avatarUrl?: string,
     joinRule?: JoinRule,
-    isPublic?: boolean
+    isPublic?: boolean,
+    customState?: { [key: string]: { [key: string]: any } }
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
@@ -271,6 +276,7 @@ export class CommunicationAdapter {
         avatar_url: avatarUrl,
         join_rule: joinRule,
         is_public: isPublic,
+        custom_state: customState,
       } satisfies CreateRoomRequest,
       errorContext: { alkemioRoomId, roomType },
     });
@@ -310,6 +316,100 @@ export class CommunicationAdapter {
         is_public: isPublic,
       } satisfies UpdateRoomRequest,
       errorContext: { alkemioRoomId },
+    });
+
+    return response?.success ?? false;
+  }
+
+  /**
+   * Get custom state events from a room.
+   */
+  async getRoomState(
+    alkemioRoomId: AlkemioRoomID,
+    eventTypes?: string[]
+  ): Promise<{ [key: string]: { [key: string]: any } } | null> {
+    if (!this.enabled) return null;
+
+    const response = await this.sendCommand({
+      operation: 'getRoomState',
+      topic: 'communication.room.state.get' as CommandTopic,
+      payload: {
+        alkemio_room_id: alkemioRoomId,
+        event_types: eventTypes,
+      } satisfies GetRoomStateRequest,
+      errorContext: { alkemioRoomId },
+      onError: 'silent',
+    });
+
+    if (!response || !response.success) return null;
+
+    return (response as any).state;
+  }
+
+  /**
+   * Set custom state events on a room.
+   */
+  async setRoomState(
+    alkemioRoomId: AlkemioRoomID,
+    state: { [key: string]: { [key: string]: any } }
+  ): Promise<boolean> {
+    if (!this.enabled) return true;
+
+    const response = await this.sendCommand({
+      operation: 'setRoomState',
+      topic: 'communication.room.state.set' as CommandTopic,
+      payload: {
+        alkemio_room_id: alkemioRoomId,
+        state,
+      } satisfies SetRoomStateRequest,
+      errorContext: { alkemioRoomId },
+    });
+
+    return response?.success ?? false;
+  }
+
+  /**
+   * Get custom state events from a space.
+   */
+  async getSpaceState(
+    alkemioContextId: AlkemioContextID,
+    eventTypes?: string[]
+  ): Promise<{ [key: string]: { [key: string]: any } } | null> {
+    if (!this.enabled) return null;
+
+    const response = await this.sendCommand({
+      operation: 'getSpaceState',
+      topic: 'communication.space.state.get' as CommandTopic,
+      payload: {
+        alkemio_context_id: alkemioContextId,
+        event_types: eventTypes,
+      } satisfies GetSpaceStateRequest,
+      errorContext: { alkemioContextId },
+      onError: 'silent',
+    });
+
+    if (!response || !response.success) return null;
+
+    return (response as any).state;
+  }
+
+  /**
+   * Set custom state events on a space.
+   */
+  async setSpaceState(
+    alkemioContextId: AlkemioContextID,
+    state: { [key: string]: { [key: string]: any } }
+  ): Promise<boolean> {
+    if (!this.enabled) return true;
+
+    const response = await this.sendCommand({
+      operation: 'setSpaceState',
+      topic: 'communication.space.state.set' as CommandTopic,
+      payload: {
+        alkemio_context_id: alkemioContextId,
+        state,
+      } satisfies SetSpaceStateRequest,
+      errorContext: { alkemioContextId },
     });
 
     return response?.success ?? false;
@@ -480,7 +580,8 @@ export class CommunicationAdapter {
     parentContextId?: AlkemioContextID,
     avatarUrl?: string,
     joinRule?: JoinRule,
-    isPublic?: boolean
+    isPublic?: boolean,
+    customState?: { [key: string]: { [key: string]: any } }
   ): Promise<boolean> {
     if (!this.enabled) return true;
 
@@ -494,6 +595,7 @@ export class CommunicationAdapter {
         avatar_url: avatarUrl,
         join_rule: joinRule,
         is_public: isPublic,
+        custom_state: customState,
       } satisfies CreateSpaceRequest,
       errorContext: { alkemioContextId },
     });

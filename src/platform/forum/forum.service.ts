@@ -66,13 +66,15 @@ export class ForumService {
    */
   private async createForumMatrixSpaces(forum: IForum): Promise<void> {
     try {
+      const invisibleState = { 'io.alkemio.visibility': { visible: false } };
       await this.communicationAdapter.createSpace(
         forum.id,
         'Forum',
         undefined,
         undefined,
         JoinRulePublic,
-        true // publish to room directory
+        true,
+        invisibleState
       );
 
       for (const category of forum.discussionCategories) {
@@ -83,7 +85,8 @@ export class ForumService {
           forum.id,
           undefined,
           JoinRulePublic,
-          true // publish to room directory
+          true,
+          invisibleState
         );
       }
     } catch (_error) {
@@ -203,6 +206,7 @@ export class ForumService {
     // Ensure forum Matrix space exists (top-level, publicly joinable)
     const existingForumSpace =
       await this.communicationAdapter.getSpace(forumId);
+    const invisibleState = { 'io.alkemio.visibility': { visible: false } };
     if (!existingForumSpace) {
       await this.communicationAdapter.createSpace(
         forumId,
@@ -210,7 +214,8 @@ export class ForumService {
         undefined, // no parent — platform-level
         undefined,
         JoinRulePublic,
-        true
+        true,
+        invisibleState
       );
     }
 
@@ -224,7 +229,8 @@ export class ForumService {
         forumId,
         undefined,
         JoinRulePublic,
-        true
+        true,
+        invisibleState
       );
     }
   }

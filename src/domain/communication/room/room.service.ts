@@ -216,6 +216,12 @@ export class RoomService {
         logContext
       );
 
+      // Conversation rooms are visible in Element; all other rooms are hidden
+      const isConversation = isDirect || isGroup;
+      const customState = {
+        'io.alkemio.visibility': { visible: isConversation },
+      };
+
       await this.communicationAdapter.createRoom(
         room.id,
         roomData.type,
@@ -224,7 +230,8 @@ export class RoomService {
         roomData.parentContextId,
         roomData.avatarUrl,
         roomData.joinRule,
-        roomData.isPublic
+        roomData.isPublic,
+        customState
       );
     } catch (error: unknown) {
       const err = error as Error;
