@@ -14,8 +14,13 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { v5 as uuidv5 } from 'uuid';
 
+// Throttle: pause for THROTTLE_DELAY_MS every THROTTLE_BATCH_SIZE adapter calls
+const THROTTLE_BATCH_SIZE = 20;
+const THROTTLE_DELAY_MS = 500;
+
 @Injectable()
 export class AdminCommunicationSpaceSyncService {
+  private opsCount = 0;
   constructor(
     private communicationAdapter: CommunicationAdapter,
     @InjectRepository(Space)
@@ -41,6 +46,7 @@ export class AdminCommunicationSpaceSyncService {
    *   Pass 2: Anchor all rooms to their owning Matrix spaces
    */
   async syncSpaceHierarchy(): Promise<boolean> {
+    this.opsCount = 0;
     this.logger.verbose?.(
       'Starting Matrix space hierarchy synchronization',
       LogContext.COMMUNICATION
@@ -105,6 +111,7 @@ export class AdminCommunicationSpaceSyncService {
           );
           spacesSkipped++;
         }
+        await this.throttle();
       } catch (_error) {
         spacesFailed++;
         this.logger.warn?.(
@@ -132,6 +139,7 @@ export class AdminCommunicationSpaceSyncService {
             space.id
           );
           roomsAnchored++;
+          await this.throttle();
         } catch (_error) {
           roomsFailed++;
           this.logger.warn?.(
@@ -207,6 +215,8 @@ export class AdminCommunicationSpaceSyncService {
           );
         }
 
+        await this.throttle();
+
         this.logger.verbose?.(
           `Forum ${forum.id}: ${forum.discussions?.length ?? 0} discussions, defined categories: [${forum.discussionCategories}]`,
           LogContext.COMMUNICATION
@@ -249,6 +259,7 @@ export class AdminCommunicationSpaceSyncService {
               LogContext.COMMUNICATION
             );
           }
+          await this.throttle();
         }
       } catch (_error) {
         this.logger.warn?.(
@@ -298,6 +309,7 @@ export class AdminCommunicationSpaceSyncService {
             undefined,
             true
           );
+          await this.throttle();
         } catch (_error) {
           this.logger.warn?.(
             `Failed to anchor/update discussion room ${discussion.comments.id} — skipping`,
@@ -342,6 +354,7 @@ export class AdminCommunicationSpaceSyncService {
       try {
         await this.communicationAdapter.setParent(roomId, false, spaceId);
         anchored++;
+        await this.throttle();
       } catch (_error) {
         failed++;
         this.logger.warn?.(
@@ -375,6 +388,7 @@ export class AdminCommunicationSpaceSyncService {
       try {
         await this.communicationAdapter.setParent(roomId, false, spaceId);
         anchored++;
+        await this.throttle();
       } catch (_error) {
         failed++;
         this.logger.warn?.(
@@ -407,6 +421,7 @@ export class AdminCommunicationSpaceSyncService {
           room.id,
           '' // Empty string = erase name
         );
+        await this.throttle();
       } catch (_error) {
         this.logger.warn?.(
           `Failed to erase display name for direct room ${room.id} — skipping`,
@@ -437,6 +452,7 @@ export class AdminCommunicationSpaceSyncService {
       try {
         await this.communicationAdapter.syncActor(user.id, displayName);
         synced++;
+        await this.throttle();
       } catch (_error) {
         this.logger.warn?.(
           `Failed to sync display name for user ${user.id} — skipping`,
@@ -450,6 +466,7 @@ export class AdminCommunicationSpaceSyncService {
       try {
         await this.communicationAdapter.syncActor(vc.id, displayName);
         synced++;
+        await this.throttle();
       } catch (_error) {
         this.logger.warn?.(
           `Failed to sync display name for VC ${vc.id} — skipping`,
@@ -507,6 +524,7 @@ export class AdminCommunicationSpaceSyncService {
           LogContext.COMMUNICATION
         );
       }
+      await this.throttle();
     }
 
     // === Spaces (all invisible) ===
@@ -548,11 +566,23 @@ export class AdminCommunicationSpaceSyncService {
           LogContext.COMMUNICATION
         );
       }
+      await this.throttle();
     }
 
     this.logger.verbose?.(
       `Updated io.alkemio.visibility: ${roomsUpdated} rooms, ${spacesUpdated} spaces`,
       LogContext.COMMUNICATION
     );
+  }
+
+  /**
+   * Throttle adapter calls: pause for THROTTLE_DELAY_MS every THROTTLE_BATCH_SIZE operations.
+   * Call after each adapter operation to avoid overwhelming the Matrix adapter.
+   */
+  private async throttle(): Promise<void> {
+    this.opsCount++;
+    if (this.opsCount % THROTTLE_BATCH_SIZE === 0) {
+      await new Promise(resolve => setTimeout(resolve, THROTTLE_DELAY_MS));
+    }
   }
 }
