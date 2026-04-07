@@ -187,6 +187,7 @@ export class RoomService {
     room: IRoom,
     roomData: CreateRoomInput
   ): Promise<void> {
+    const isConversationLegacy = roomData.type === RoomType.CONVERSATION;
     const isDirect = roomData.type === RoomType.CONVERSATION_DIRECT;
     const isGroup = roomData.type === RoomType.CONVERSATION_GROUP;
 
@@ -217,7 +218,7 @@ export class RoomService {
       );
 
       // Conversation rooms are visible in Element; all other rooms are hidden
-      const isConversation = isDirect || isGroup;
+      const isConversation = isConversationLegacy || isDirect || isGroup;
       const customState = {
         'io.alkemio.visibility': { visible: isConversation },
       };
