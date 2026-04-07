@@ -14,13 +14,13 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { v5 as uuidv5 } from 'uuid';
 
-// Throttle: pause for THROTTLE_DELAY_MS every THROTTLE_BATCH_SIZE adapter calls
-const THROTTLE_BATCH_SIZE = 20;
-const THROTTLE_DELAY_MS = 500;
+// Throttle: pause after every adapter call to avoid overwhelming the Matrix adapter.
+// Each RPC call goes through AMQP with a 30s timeout; sending too many in parallel
+// causes cascading timeouts on the adapter side.
+const THROTTLE_DELAY_MS = 200;
 
 @Injectable()
 export class AdminCommunicationSpaceSyncService {
-  private opsCount = 0;
   constructor(
     private communicationAdapter: CommunicationAdapter,
     @InjectRepository(Space)
@@ -46,7 +46,6 @@ export class AdminCommunicationSpaceSyncService {
    *   Pass 2: Anchor all rooms to their owning Matrix spaces
    */
   async syncSpaceHierarchy(): Promise<boolean> {
-    this.opsCount = 0;
     this.logger.verbose?.(
       'Starting Matrix space hierarchy synchronization',
       LogContext.COMMUNICATION
@@ -576,13 +575,10 @@ export class AdminCommunicationSpaceSyncService {
   }
 
   /**
-   * Throttle adapter calls: pause for THROTTLE_DELAY_MS every THROTTLE_BATCH_SIZE operations.
-   * Call after each adapter operation to avoid overwhelming the Matrix adapter.
+   * Throttle adapter calls: pause after every operation to avoid overwhelming
+   * the Matrix adapter with AMQP RPC calls.
    */
   private async throttle(): Promise<void> {
-    this.opsCount++;
-    if (this.opsCount % THROTTLE_BATCH_SIZE === 0) {
-      await new Promise(resolve => setTimeout(resolve, THROTTLE_DELAY_MS));
-    }
+    await new Promise(resolve => setTimeout(resolve, THROTTLE_DELAY_MS));
   }
 }
