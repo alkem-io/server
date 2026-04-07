@@ -153,6 +153,9 @@ Winston logger signatures:
 - Use Assign/Remove naming for relation mutations
 - Naming: mutations = imperative (`createSpace`), queries = descriptive (`spaceById`)
 - Inputs end with `Input`, payloads end with `Result` or entity name
+- New queries about the current user go under the `me` root query
+- New queries for admin operations go under the `platformAdmin` root query
+- New queries about the platform operations go under the `platform` root query
 
 ### General Rules
 
