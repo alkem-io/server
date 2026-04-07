@@ -149,20 +149,21 @@ Platform administrators can trigger an idempotent GQL mutation to synchronize ex
 
 ---
 
-### User Story 9 - Non-Forum Rooms Hidden from Element Users (Priority: P1)
+### User Story 9 - Room Visibility Control in Element (Priority: P1)
 
-Non-forum rooms (updates, callout, post, conversation) exist in the Matrix hierarchy for organizational purposes but must not appear in Element clients for regular users. Only forum discussion rooms and their containing spaces should be discoverable and visible to Element users browsing the Matrix space hierarchy.
+All rooms and spaces are hidden from Element clients by default, except conversation rooms (`CONVERSATION`, `CONVERSATION_DIRECT`, `CONVERSATION_GROUP`) which are the primary user-to-user communication channels. This includes forum discussion rooms (which remain publicly joinable via their join rule but are not surfaced in `/sync`), updates rooms, callout rooms, post rooms, and all Matrix spaces in the hierarchy.
 
-**Why this priority**: Without this, Element users would see a cluttered list of internal rooms (updates, callout comments) that are managed by Alkemio and not intended for direct Matrix interaction. This directly complements FR-012 by enforcing visibility at the Synapse level.
+**Why this priority**: Without this, Element users would see a cluttered list of internal rooms (updates, callout comments, forum discussions managed by Alkemio) that are not intended for direct Matrix interaction. Only DMs and group chats should appear naturally in Element. This directly complements FR-012 by enforcing visibility at the Synapse level.
 
-**Independent Test**: Join a user to several rooms (both forum and non-forum). Verify that `/sync` responses for that user exclude rooms marked as hidden. Verify the AppService bot still sees all rooms.
+**Independent Test**: Join a user to several rooms (conversations, forum, updates). Verify that `/sync` responses for that user include only direct and group conversation rooms. Verify the AppService bot still sees all rooms.
 
 **Acceptance Scenarios**:
 
-1. **Given** a user is joined to both forum rooms and non-forum rooms (updates, callout), **When** the user syncs via Element, **Then** only forum rooms appear in their room list; non-forum rooms are filtered out.
+1. **Given** a user is joined to direct conversations, group conversations, forum rooms, and updates rooms, **When** the user syncs via Element, **Then** only direct and group conversation rooms appear in their room list; all other rooms are filtered out.
 2. **Given** a room has a custom state event `io.alkemio.visibility` with `{"visible": false}`, **When** the Synapse `/sync` endpoint is called, **Then** the room is excluded from the response for regular users.
 3. **Given** the AppService bot user, **When** it performs `/sync`, **Then** all rooms are included regardless of visibility state (the bot needs full access for management).
 4. **Given** the room directory, **When** a regular user browses it, **Then** only rooms published by the AppService bot are listed; regular users cannot publish rooms to the directory.
+5. **Given** a forum discussion room with `JoinRulePublic` and `io.alkemio.visibility: {visible: false}`, **When** a user explicitly joins via room ID or directory link, **Then** the join succeeds (public join rule) but the room does not appear in their `/sync` until the visibility state is changed.
 
 ---
 
@@ -212,7 +213,7 @@ The Synapse homeserver configuration and development Docker Compose stack must b
 - **FR-008**: System MUST handle Matrix adapter unavailability gracefully, logging warnings without blocking primary Alkemio operations.
 - **FR-009**: System MUST use stable Alkemio entity IDs as context identifiers for all Matrix space operations, enabling the Go adapter to maintain its own internal mapping for subsequent lifecycle operations (update, delete, relocate, anchor).
 - **FR-010**: System MUST handle idempotent creation - if a Matrix space already exists for a given Alkemio space, it should be reused rather than duplicated.
-- **FR-019**: Non-forum rooms (updates, callout, post, conversation) MUST be hidden from Element users' `/sync` responses via a custom `io.alkemio.visibility` state event with `{"visible": false}`. The Synapse module filters these rooms at the sync level so they do not appear in Element clients.
+- **FR-019**: All rooms EXCEPT conversation rooms (`CONVERSATION`, `CONVERSATION_DIRECT`, `CONVERSATION_GROUP`) MUST be hidden from Element users' `/sync` responses via a custom `io.alkemio.visibility` state event with `{"visible": false}`. This includes updates, callout, post, forum discussion, and calendar event rooms. Conversation rooms remain visible because they are the primary user-to-user communication channels in Element. The Synapse module filters hidden rooms at the sync level so they do not appear in Element clients.
 - **FR-020**: The AppService bot MUST be exempt from room visibility filtering — it needs full access to all rooms for management operations.
 - **FR-021**: Only the AppService bot MUST be allowed to publish rooms to the Synapse public room directory. Regular users MUST be denied room list publication via `room_list_publication_rules` in Synapse configuration.
 - **FR-022**: The Synapse homeserver MUST expose a `registration_shared_secret` to allow the Matrix adapter to register and manage users via Synapse's admin API.

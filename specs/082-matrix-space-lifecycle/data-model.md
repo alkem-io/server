@@ -78,15 +78,17 @@ Space L0                          →  Matrix Space (contextId = space.id)
 
 ### Sync Visibility (Synapse Module Level)
 
-Non-forum rooms are hidden from Element clients via the `io.alkemio.visibility` custom state event, enforced by the `AlkemioRoomControl` Synapse module.
+All rooms and spaces are hidden from Element clients via the `io.alkemio.visibility` custom state event, **except** direct and group conversations which are the primary user-to-user communication channels in Element. Enforced by the `AlkemioRoomControl` Synapse module.
 
 | Matrix Entity Type | `io.alkemio.visibility` | Appears in `/sync` | Reason |
 |-------------------|------------------------|--------------------|--------|
-| Forum rooms | Not set (or `{"visible": true}`) | Yes | FR-011: publicly accessible |
-| Forum/Category Matrix spaces | Not set | Yes | FR-017: discoverable |
+| Conversations (`CONVERSATION`) | `{"visible": true}` | Yes | User conversations in Element |
+| Direct conversations (`CONVERSATION_DIRECT`) | `{"visible": true}` | Yes | User-to-user DMs in Element |
+| Group conversations (`CONVERSATION_GROUP`) | `{"visible": true}` | Yes | Group chats in Element |
+| Forum discussion rooms | `{"visible": false}` | No (hidden) | FR-019: managed by Alkemio, joinable via public join rule |
 | Updates room | `{"visible": false}` | No (hidden) | FR-019: managed by Alkemio |
 | Callout/Post rooms | `{"visible": false}` | No (hidden) | FR-019: managed by Alkemio |
-| Conversation rooms | `{"visible": false}` | No (hidden) | FR-019: managed by Alkemio |
+| All Matrix spaces (Alkemio, forum, category) | `{"visible": false}` | No (hidden) | FR-019: hierarchy is organizational |
 
 **AppService bot exemption**: The bot user (`@00000000-...:alkemio.matrix.host`) is never filtered — it sees all rooms for management operations (FR-020).
 

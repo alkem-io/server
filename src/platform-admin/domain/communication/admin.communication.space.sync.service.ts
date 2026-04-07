@@ -366,7 +366,7 @@ export class AdminCommunicationSpaceSyncService {
 
   /**
    * Ensure io.alkemio.visibility custom state is correct on all rooms and spaces.
-   * Conversation rooms (direct, group) → visible: true
+   * Conversation rooms (conversation, direct, group) → visible: true
    * All other rooms and ALL spaces → visible: false
    * Only updates if the current state is missing or incorrect.
    */
@@ -382,6 +382,7 @@ export class AdminCommunicationSpaceSyncService {
     let roomsUpdated = 0;
     for (const room of allRooms) {
       const isConversation =
+        room.type === RoomType.CONVERSATION ||
         room.type === RoomType.CONVERSATION_DIRECT ||
         room.type === RoomType.CONVERSATION_GROUP;
       const expectedVisible = isConversation;
