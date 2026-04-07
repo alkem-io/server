@@ -1,6 +1,7 @@
 import { JoinRuleInvite, JoinRulePublic } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
+import { FORUM_CATEGORY_NAMESPACE } from '@constants/forum.constants';
 import { Room } from '@domain/communication/room/room.entity';
 import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
@@ -12,9 +13,6 @@ import { CommunicationAdapter } from '@services/adapters/communication-adapter/c
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { v5 as uuidv5 } from 'uuid';
-
-// Must match the namespace used in ForumService
-const FORUM_CATEGORY_NAMESPACE = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
 @Injectable()
 export class AdminCommunicationSpaceSyncService {

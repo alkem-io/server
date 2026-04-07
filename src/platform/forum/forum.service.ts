@@ -9,6 +9,7 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
+import { FORUM_CATEGORY_NAMESPACE } from '@constants/forum.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -25,9 +26,6 @@ import { DiscussionService } from '../forum-discussion/discussion.service';
 import { ForumCreateDiscussionInput } from './dto/forum.dto.create.discussion';
 import { Forum } from './forum.entity';
 import { IForum } from './forum.interface';
-
-// Fixed UUID v5 namespace for generating deterministic category context IDs
-const FORUM_CATEGORY_NAMESPACE = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
 // Custom state event to hide spaces/rooms from Element sync responses
 const INVISIBLE_STATE = { 'io.alkemio.visibility': { visible: false } };
