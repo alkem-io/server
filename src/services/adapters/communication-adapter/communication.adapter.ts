@@ -27,8 +27,10 @@ import {
   // Response type for converter helper
   GetRoomResponse,
   GetRoomStateRequest,
+  GetRoomStateResponse,
   GetSpaceRequest,
   GetSpaceStateRequest,
+  GetSpaceStateResponse,
   GetThreadMessagesRequest,
   GetUnreadCountsRequest,
   // Join rule constants
@@ -332,7 +334,7 @@ export class CommunicationAdapter {
 
     const response = await this.sendCommand({
       operation: 'getRoomState',
-      topic: 'communication.room.state.get' as CommandTopic,
+      topic: 'communication.room.state.get',
       payload: {
         alkemio_room_id: alkemioRoomId,
         event_types: eventTypes,
@@ -343,7 +345,7 @@ export class CommunicationAdapter {
 
     if (!response || !response.success) return null;
 
-    return (response as any).state;
+    return (response as GetRoomStateResponse).state;
   }
 
   /**
@@ -357,7 +359,7 @@ export class CommunicationAdapter {
 
     const response = await this.sendCommand({
       operation: 'setRoomState',
-      topic: 'communication.room.state.set' as CommandTopic,
+      topic: 'communication.room.state.set',
       payload: {
         alkemio_room_id: alkemioRoomId,
         state,
@@ -379,7 +381,7 @@ export class CommunicationAdapter {
 
     const response = await this.sendCommand({
       operation: 'getSpaceState',
-      topic: 'communication.space.state.get' as CommandTopic,
+      topic: 'communication.space.state.get',
       payload: {
         alkemio_context_id: alkemioContextId,
         event_types: eventTypes,
@@ -390,7 +392,7 @@ export class CommunicationAdapter {
 
     if (!response || !response.success) return null;
 
-    return (response as any).state;
+    return (response as GetSpaceStateResponse).state;
   }
 
   /**
@@ -404,7 +406,7 @@ export class CommunicationAdapter {
 
     const response = await this.sendCommand({
       operation: 'setSpaceState',
-      topic: 'communication.space.state.set' as CommandTopic,
+      topic: 'communication.space.state.set',
       payload: {
         alkemio_context_id: alkemioContextId,
         state,

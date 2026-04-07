@@ -29,6 +29,9 @@ import { IForum } from './forum.interface';
 // Fixed UUID v5 namespace for generating deterministic category context IDs
 const FORUM_CATEGORY_NAMESPACE = 'f47ac10b-58cc-4372-a567-0e02b2c3d479';
 
+// Custom state event to hide spaces/rooms from Element sync responses
+const INVISIBLE_STATE = { 'io.alkemio.visibility': { visible: false } };
+
 @Injectable()
 export class ForumService {
   constructor(
@@ -66,7 +69,6 @@ export class ForumService {
    */
   private async createForumMatrixSpaces(forum: IForum): Promise<void> {
     try {
-      const invisibleState = { 'io.alkemio.visibility': { visible: false } };
       await this.communicationAdapter.createSpace(
         forum.id,
         'Forum',
@@ -74,7 +76,7 @@ export class ForumService {
         undefined,
         JoinRulePublic,
         true,
-        invisibleState
+        INVISIBLE_STATE
       );
 
       for (const category of forum.discussionCategories) {
@@ -86,12 +88,16 @@ export class ForumService {
           undefined,
           JoinRulePublic,
           true,
-          invisibleState
+          INVISIBLE_STATE
         );
       }
-    } catch (_error) {
+    } catch (error) {
       this.logger.warn?.(
-        `Failed to create Matrix spaces for forum ${forum.id} — continuing`,
+        {
+          message: 'Failed to create Matrix spaces for forum — continuing',
+          forumId: forum.id,
+          error: error instanceof Error ? error.message : String(error),
+        },
         LogContext.PLATFORM_FORUM
       );
     }
@@ -170,9 +176,14 @@ export class ForumService {
           categoryContextId
         );
       }
-    } catch (_error) {
+    } catch (error) {
       this.logger.warn?.(
-        `Failed to set up Matrix hierarchy for forum discussion ${discussion.id} — continuing`,
+        {
+          message:
+            'Failed to set up Matrix hierarchy for forum discussion — continuing',
+          discussionId: discussion.id,
+          error: error instanceof Error ? error.message : String(error),
+        },
         LogContext.PLATFORM_FORUM
       );
     }
@@ -206,7 +217,6 @@ export class ForumService {
     // Ensure forum Matrix space exists (top-level, publicly joinable)
     const existingForumSpace =
       await this.communicationAdapter.getSpace(forumId);
-    const invisibleState = { 'io.alkemio.visibility': { visible: false } };
     if (!existingForumSpace) {
       await this.communicationAdapter.createSpace(
         forumId,
@@ -215,7 +225,7 @@ export class ForumService {
         undefined,
         JoinRulePublic,
         true,
-        invisibleState
+        INVISIBLE_STATE
       );
     }
 
@@ -230,7 +240,7 @@ export class ForumService {
         undefined,
         JoinRulePublic,
         true,
-        invisibleState
+        INVISIBLE_STATE
       );
     }
   }

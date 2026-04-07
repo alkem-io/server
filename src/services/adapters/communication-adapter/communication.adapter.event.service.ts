@@ -10,6 +10,7 @@ import {
   RoomMemberLeftEvent as MatrixRoomMemberLeftEvent,
   RoomMemberUpdatedEvent as MatrixRoomMemberUpdatedEvent,
   RoomUpdatedEvent as MatrixRoomUpdatedEvent,
+  SpaceUpdatedEvent as MatrixSpaceUpdatedEvent,
   MessageReceivedPayload,
 } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
@@ -481,11 +482,7 @@ export class CommunicationAdapterEventService {
     createQueueIfNotExists: true,
     queueOptions: { durable: true },
   })
-  async onSpaceUpdated(payload: {
-    alkemio_context_id: string;
-    display_name?: string;
-    avatar_url?: string;
-  }): Promise<void | Nack> {
+  async onSpaceUpdated(payload: MatrixSpaceUpdatedEvent): Promise<void | Nack> {
     try {
       this.logger.verbose?.(
         `[${MatrixAdapterEventType.COMMUNICATION_SPACE_UPDATED}] - Event received: contextId=${payload.alkemio_context_id}, displayName=${payload.display_name}`,

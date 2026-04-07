@@ -108,7 +108,7 @@ class AlkemioRoomControl:
                 )
 
                 user_id = sync_config.user.to_string()
-                logger.info("Sync filter: user=%s, rooms=%d", user_id, len(result_builder.joined_room_ids))
+                logger.debug("Sync filter: user=%s, rooms=%d", user_id, len(result_builder.joined_room_ids))
 
                 # Don't filter for the bot — it needs to see everything
                 if user_id == bot_mxid:
@@ -151,7 +151,6 @@ class AlkemioRoomControl:
                         "Filtered %d hidden rooms from /sync for %s",
                         len(hidden_room_ids), user_id,
                     )
-
 
                 return result_builder
 

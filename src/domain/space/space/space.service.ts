@@ -433,8 +433,14 @@ export class SpaceService {
     }
 
     // Delete the corresponding Matrix space BEFORE cascade deletion of child entities.
-    // Uses onError: 'boolean' — won't block if Matrix space doesn't exist.
-    await this.communicationAdapter.deleteSpace(space.id);
+    try {
+      await this.communicationAdapter.deleteSpace(space.id);
+    } catch (_error) {
+      this.logger.warn?.(
+        `Failed to delete Matrix space for ${space.id} — continuing with Alkemio deletion`,
+        LogContext.SPACES
+      );
+    }
 
     await this.spaceAboutService.removeSpaceAbout(space.about.id);
     await this.collaborationService.deleteCollaborationOrFail(
@@ -1519,7 +1525,9 @@ export class SpaceService {
     const space = await this.getSpaceOrFail(spaceData.ID, {
       relations: {
         about: {
-          profile: true,
+          profile: {
+            visuals: true,
+          },
         },
       },
     });
