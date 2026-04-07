@@ -60,7 +60,7 @@
     }
   },
   "dependencies": {
-    "@alkemio/matrix-adapter-lib": "https://pkg.pr.new/@alkemio/matrix-adapter-lib@7570eff",
+    "@alkemio/matrix-adapter-lib": "^0.8.8",
     "@alkemio/notifications-lib": "0.14.2",
     "@apollo/server": "^4.10.4",
     "@elastic/elasticsearch": "^8.12.2",
