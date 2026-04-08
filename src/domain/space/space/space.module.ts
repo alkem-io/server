@@ -23,6 +23,7 @@ import { LicenseIssuerModule } from '@platform/licensing/credential-based/licens
 import { LicensingCredentialBasedModule } from '@platform/licensing/credential-based/licensing-credential-based-entitlements-engine/licensing.credential.based.module';
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
 import { ActivityAdapterModule } from '@services/adapters/activity-adapter/activity.adapter.module';
+import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
@@ -58,6 +59,7 @@ import { SpacePlatformRolesAccessService } from './space.service.platform.roles.
     StorageAggregatorModule,
     ContributionReporterModule,
     CollaborationModule,
+    CommunicationAdapterModule,
     InputCreatorModule,
     SpaceFilterModule,
     ActivityAdapterModule,

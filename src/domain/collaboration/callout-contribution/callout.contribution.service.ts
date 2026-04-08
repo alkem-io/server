@@ -43,7 +43,8 @@ export class CalloutContributionService {
     calloutContributionsData: CreateCalloutContributionInput[],
     storageAggregator: IStorageAggregator,
     contributionSettings: ICalloutSettingsContribution,
-    userID: string
+    userID: string,
+    parentSpaceId?: string
   ): Promise<ICalloutContribution[]> {
     const contributions: ICalloutContribution[] = [];
 
@@ -52,6 +53,7 @@ export class CalloutContributionService {
         calloutContributionData,
         storageAggregator,
         contributionSettings,
+        parentSpaceId,
         userID
       );
       contributions.push(contribution);
@@ -64,6 +66,7 @@ export class CalloutContributionService {
     calloutContributionData: CreateCalloutContributionInput,
     storageAggregator: IStorageAggregator,
     contributionSettings: ICalloutSettingsContribution,
+    parentSpaceId: string | undefined,
     userID: string
   ): Promise<ICalloutContribution> {
     this.validateContributionType(
@@ -95,7 +98,8 @@ export class CalloutContributionService {
       contribution.post = await this.postService.createPost(
         post,
         storageAggregator,
-        userID
+        userID,
+        parentSpaceId
       );
     }
 

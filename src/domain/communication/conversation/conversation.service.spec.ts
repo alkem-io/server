@@ -456,7 +456,7 @@ describe('ConversationService', () => {
         roomID: 'room-old',
       });
       expect(roomService.createRoom).toHaveBeenCalledWith({
-        displayName: 'conversation-sender-agent-receiver-agent',
+        displayName: '',
         type: RoomType.CONVERSATION_DIRECT,
         senderActorID: 'sender-agent',
         receiverActorID: 'receiver-agent',
@@ -616,7 +616,7 @@ describe('ConversationService', () => {
 
       expect(result).toBe(savedConversation);
       expect(roomService.createRoom).toHaveBeenCalledWith({
-        displayName: 'conversation-agent-1-agent-2',
+        displayName: '',
         type: RoomType.CONVERSATION_DIRECT,
         senderActorID: 'agent-1',
         receiverActorID: 'agent-2',
