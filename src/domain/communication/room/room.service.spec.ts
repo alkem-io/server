@@ -68,7 +68,10 @@ describe('RoomService', () => {
         'Test Room',
         undefined,
         undefined,
-        undefined
+        undefined,
+        undefined,
+        undefined,
+        { 'io.alkemio.visibility': { visible: false } }
       );
     });
 
@@ -93,7 +96,10 @@ describe('RoomService', () => {
         'Test Room',
         ['agent-1'],
         undefined,
-        undefined
+        undefined,
+        undefined,
+        undefined,
+        { 'io.alkemio.visibility': { visible: false } }
       );
     });
 
@@ -119,7 +125,10 @@ describe('RoomService', () => {
         'DM Room',
         ['agent-1', 'agent-2'],
         undefined,
-        undefined
+        undefined,
+        undefined,
+        undefined,
+        { 'io.alkemio.visibility': { visible: true } }
       );
     });
 

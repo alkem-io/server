@@ -25,7 +25,7 @@ All config values are automatically detected from the AppService with id 'alkemi
 
 import logging
 from datetime import datetime, timezone
-from typing import Optional
+from typing import Optional, Set
 
 from synapse.module_api import ModuleApi
 from synapse.module_api.errors import Codes, SynapseError
@@ -33,6 +33,9 @@ from synapse.http.client import SimpleHttpClient
 from synapse.types import Requester
 
 logger = logging.getLogger(__name__)
+
+# Custom state event type for room visibility control
+ALKEMIO_VISIBILITY_EVENT = "io.alkemio.visibility"
 
 
 class AlkemioRoomControl:
@@ -71,13 +74,91 @@ class AlkemioRoomControl:
             on_create_room=self.on_create_room,
         )
 
+        # Monkey-patch SyncHandler to filter rooms based on io.alkemio.visibility
+        self._patch_sync_handler()
+
         logger.info(
-            "AlkemioRoomControl initialized - AppService: @%s:%s, Adapter: %s, Token: %s",
+            "AlkemioRoomControl initialized - AppService: @%s:%s, Adapter: %s, Token: %s, SyncFilter: enabled",
             self.appservice_sender,
             self.homeserver_domain,
             self.adapter_url,
             "configured" if self.hs_token else "NOT FOUND",
         )
+
+    def _patch_sync_handler(self) -> None:
+        """
+        Monkey-patch SyncHandler.get_sync_result_builder to filter rooms
+        based on the io.alkemio.visibility state event.
+
+        Rooms with {"visible": false} are excluded from /sync responses
+        for all users except the AppService bot.
+
+        Compatible with Synapse v1.132.0.
+        """
+        try:
+            sync_handler = self.api._hs.get_sync_handler()
+            original_get_sync_result_builder = sync_handler.get_sync_result_builder
+            store = self.api._hs.get_datastores().main
+            state_storage = self.api._hs.get_storage_controllers().state
+            bot_mxid = f"@{self.appservice_sender}:{self.homeserver_domain}"
+
+            async def patched_get_sync_result_builder(sync_config, since_token=None, full_state=False):
+                result_builder = await original_get_sync_result_builder(
+                    sync_config, since_token, full_state
+                )
+
+                user_id = sync_config.user.to_string()
+                logger.debug("Sync filter: user=%s, rooms=%d", user_id, len(result_builder.joined_room_ids))
+
+                # Don't filter for the bot — it needs to see everything
+                if user_id == bot_mxid:
+                    logger.debug("Sync filter: skipping bot user %s", user_id)
+                    return result_builder
+
+                logger.debug(
+                    "Sync filter: checking %d rooms for user %s",
+                    len(result_builder.joined_room_ids), user_id,
+                )
+
+                # Find rooms to hide based on io.alkemio.visibility state
+                hidden_room_ids = set()
+                for room_id in result_builder.joined_room_ids:
+                    try:
+                        visibility_event = await state_storage.get_current_state_event(
+                            room_id, ALKEMIO_VISIBILITY_EVENT, ""
+                        )
+                        if visibility_event:
+                            visible = visibility_event.content.get("visible")
+                            logger.debug(
+                                "Sync filter: room %s visibility=%s",
+                                room_id, visible,
+                            )
+                            if visible is False:
+                                hidden_room_ids.add(room_id)
+                    except Exception as e:
+                        logger.debug("Sync filter: error checking room %s: %s", room_id, e)
+
+                if hidden_room_ids:
+                    # Rebuild with hidden rooms excluded
+                    result_builder.joined_room_ids = frozenset(
+                        rid for rid in result_builder.joined_room_ids
+                        if rid not in hidden_room_ids
+                    )
+                    result_builder.excluded_room_ids = frozenset(
+                        set(result_builder.excluded_room_ids) | hidden_room_ids
+                    )
+                    logger.debug(
+                        "Filtered %d hidden rooms from /sync for %s",
+                        len(hidden_room_ids), user_id,
+                    )
+
+                return result_builder
+
+            sync_handler.get_sync_result_builder = patched_get_sync_result_builder
+            logger.info("SyncHandler patched for io.alkemio.visibility filtering")
+
+        except Exception as e:
+            logger.error("Failed to patch SyncHandler: %s", str(e))
 
     def _detect_appservice_config(self) -> dict:
         """

@@ -10,6 +10,7 @@ import {
   RoomMemberLeftEvent as MatrixRoomMemberLeftEvent,
   RoomMemberUpdatedEvent as MatrixRoomMemberUpdatedEvent,
   RoomUpdatedEvent as MatrixRoomUpdatedEvent,
+  SpaceUpdatedEvent as MatrixSpaceUpdatedEvent,
   MessageReceivedPayload,
 } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
@@ -463,6 +464,34 @@ export class CommunicationAdapterEventService {
     } catch (error) {
       this.logger.error(
         `Error handling room updated event: ${error}`,
+        error instanceof Error ? error.stack : undefined,
+        LogContext.COMMUNICATION
+      );
+      return new Nack(true);
+    }
+  }
+
+  /**
+   * Receives space updated events from Matrix Adapter via RabbitMQ.
+   *
+   * Fired when space properties (name, avatar, topic) change in Matrix.
+   * Currently a no-op — space metadata is managed by the server, not synced back from Matrix.
+   */
+  @RabbitSubscribe({
+    queue: MatrixAdapterEventType.COMMUNICATION_SPACE_UPDATED,
+    createQueueIfNotExists: true,
+    queueOptions: { durable: true },
+  })
+  async onSpaceUpdated(payload: MatrixSpaceUpdatedEvent): Promise<void | Nack> {
+    try {
+      this.logger.verbose?.(
+        `[${MatrixAdapterEventType.COMMUNICATION_SPACE_UPDATED}] - Event received: contextId=${payload.alkemio_context_id}, displayName=${payload.display_name}`,
+        LogContext.COMMUNICATION
+      );
+      // No action needed — space metadata is managed server-side
+    } catch (error) {
+      this.logger.error(
+        `Error handling space updated event: ${error}`,
         error instanceof Error ? error.stack : undefined,
         LogContext.COMMUNICATION
       );
