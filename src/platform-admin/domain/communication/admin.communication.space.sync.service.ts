@@ -14,6 +14,8 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { v5 as uuidv5 } from 'uuid';
 
+const INVISIBLE_STATE = { 'io.alkemio.visibility': { visible: false } };
+
 // Throttle: pause after every adapter call to avoid overwhelming the Matrix adapter.
 // Each RPC call goes through AMQP with a 30s timeout; sending too many in parallel
 // causes cascading timeouts on the adapter side.
@@ -198,7 +200,8 @@ export class AdminCommunicationSpaceSyncService {
             undefined,
             undefined,
             JoinRulePublic,
-            true
+            true,
+            INVISIBLE_STATE
           );
           this.logger.verbose?.(
             `Created Matrix space for forum: ${forum.id}`,
@@ -240,7 +243,8 @@ export class AdminCommunicationSpaceSyncService {
               forum.id,
               undefined,
               JoinRulePublic,
-              true
+              true,
+              INVISIBLE_STATE
             );
             this.logger.verbose?.(
               `Created Matrix space for forum category: ${category} (${categoryContextId})`,
