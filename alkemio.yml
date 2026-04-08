@@ -340,6 +340,17 @@ storage:
     # Absolute path
     path: ${LOCAL_STORAGE_PATH}:.storage
 
+  # Go file-service-go HTTP API configuration
+  file_service:
+    # Base URL of the Go file-service-go internal API
+    url: ${FILE_SERVICE_URL}:http://file-service:4003
+    # HTTP request timeout in milliseconds (30s default for large file uploads)
+    timeout: ${FILE_SERVICE_TIMEOUT}:30000
+    # Number of retry attempts for transient errors
+    retries: ${FILE_SERVICE_RETRIES}:2
+    # Feature flag for gradual rollout
+    enabled: ${FILE_SERVICE_ENABLED}:true
+
   # Redis configuration
   redis:
     # Redis host

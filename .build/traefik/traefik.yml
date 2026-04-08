@@ -32,6 +32,8 @@ entryPoints:
     address: ':15672'
   redis:
     address: ':6379'
+  auth-evaluation:
+    address: ':6060'
   hydra-public:
     address: ':4444'
   hydra-admin:

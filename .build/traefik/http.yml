@@ -91,6 +91,11 @@ http:
         servers:
           - url: 'http://collaborative-document:4004/'
 
+    authorization-evaluation:
+      loadBalancer:
+        servers:
+          - url: 'h2c://authorization-evaluation:6060/'
+
     file-service:
       loadBalancer:
         servers:
@@ -254,6 +259,14 @@ http:
       entryPoints:
         - 'web'
 
+    # file-service-go internal endpoints (cluster-only, no auth)
+    file-service-internal:
+      rule: 'PathPrefix(`/internal/document`)'
+      service: 'file-service'
+      entryPoints:
+        - 'web'
+      priority: 160
+
     # Login backoff proxy: intercepts login submissions for brute-force protection
     kratos-login-backoff:
       rule: 'PathPrefix(`/ory/kratos/public/self-service/login`)'
@@ -339,6 +352,12 @@ http:
       service: 'mailslurper-client'
       entryPoints:
         - 'mailslurper-client'
+
+    authorization-evaluation:
+      rule: 'PathPrefix(`/`)'
+      service: 'authorization-evaluation'
+      entryPoints:
+        - 'auth-evaluation'
 
     rabbitmq-management:
       rule: 'PathPrefix(`/`)'

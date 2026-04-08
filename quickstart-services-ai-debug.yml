@@ -587,3 +587,21 @@ services:
       - alkemio_dev_net
     ports:
       - 8080
+
+  authorization-evaluation:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_authorization_evaluation
+    hostname: authorization-evaluation
+    image: alkemio/authorization-evaluation-service:v0.0.2
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${DATABASE_NAME}?sslmode=disable
+      - LOG_LEVEL=info
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 6060
