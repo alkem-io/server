@@ -1215,6 +1215,7 @@ export class CommunicationAdapter {
     joinRule: string;
     memberActorIDs: string[];
     parentContextId?: string;
+    children: Array<{ childId: string; isSpace: boolean }>;
   } | null> {
     if (!this.enabled) return null;
 
@@ -1238,6 +1239,10 @@ export class CommunicationAdapter {
       joinRule: response.join_rule,
       memberActorIDs: response.member_actor_ids,
       parentContextId: response.parent_context_id,
+      children: (response.children ?? []).map(c => ({
+        childId: c.child_id,
+        isSpace: c.is_space,
+      })),
     };
   }
 

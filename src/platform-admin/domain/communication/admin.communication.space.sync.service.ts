@@ -128,13 +128,23 @@ export class AdminCommunicationSpaceSyncService {
 
     // === Pass 2: Anchor all rooms ===
     let roomsAnchored = 0;
+    let roomsSkippedAnchor = 0;
     let roomsFailed = 0;
 
     for (const space of spaces) {
-      // Anchor UPDATES room
+      // Anchor UPDATES room — check if already a child first
       const updatesRoom = space.community?.communication?.updates;
       if (updatesRoom) {
         try {
+          const spaceInfo = await this.communicationAdapter.getSpace(space.id);
+          await this.throttle();
+          const alreadyChild = spaceInfo?.children.some(
+            c => c.childId === updatesRoom.id
+          );
+          if (alreadyChild) {
+            roomsSkippedAnchor++;
+            continue;
+          }
           await this.communicationAdapter.setParent(
             updatesRoom.id,
             false,
@@ -170,7 +180,7 @@ export class AdminCommunicationSpaceSyncService {
     await this.syncVisibilityState();
 
     this.logger.verbose?.(
-      `Matrix space hierarchy sync complete: spaces(${spacesCreated} created, ${spacesSkipped} existed, ${spacesFailed} failed), rooms(${roomsAnchored} anchored, ${roomsFailed} failed)`,
+      `Matrix space hierarchy sync complete: spaces(${spacesCreated} created, ${spacesSkipped} existed, ${spacesFailed} failed), rooms(${roomsAnchored} anchored, ${roomsSkippedAnchor} already anchored, ${roomsFailed} failed)`,
       LogContext.COMMUNICATION
     );
 
@@ -289,39 +299,70 @@ export class AdminCommunicationSpaceSyncService {
       },
     });
 
+    // Group discussions by category context ID for efficient children checks
+    const discussionsByCategory = new Map<
+      string,
+      Array<{ roomId: string; displayName?: string }>
+    >();
+
     for (const forum of forums) {
       if (!forum.discussions) continue;
-
       for (const discussion of forum.discussions) {
         if (!discussion.comments) continue;
-
         const categoryContextId = uuidv5(
           `${forum.id}:category:${discussion.category}`,
           FORUM_CATEGORY_NAMESPACE
         );
+        const entries = discussionsByCategory.get(categoryContextId) ?? [];
+        entries.push({
+          roomId: discussion.comments.id,
+          displayName: discussion.profile?.displayName,
+        });
+        discussionsByCategory.set(categoryContextId, entries);
+      }
+    }
 
-        try {
-          await this.communicationAdapter.setParent(
-            discussion.comments.id,
-            false,
-            categoryContextId
-          );
-          // Ensure discussion room is public, visible in directory, with clean display name
-          await this.communicationAdapter.updateRoom(
-            discussion.comments.id,
-            discussion.profile?.displayName,
-            undefined,
-            JoinRulePublic,
-            undefined,
-            true
-          );
-          await this.throttle();
-        } catch (_error) {
-          this.logger.warn?.(
-            `Failed to anchor/update discussion room ${discussion.comments.id} — skipping`,
-            LogContext.COMMUNICATION
-          );
+    for (const [categoryContextId, discussions] of discussionsByCategory) {
+      try {
+        const categorySpace =
+          await this.communicationAdapter.getSpace(categoryContextId);
+        await this.throttle();
+        const existingChildIds = new Set(
+          categorySpace?.children.map(c => c.childId) ?? []
+        );
+
+        for (const { roomId, displayName } of discussions) {
+          try {
+            if (!existingChildIds.has(roomId)) {
+              await this.communicationAdapter.setParent(
+                roomId,
+                false,
+                categoryContextId
+              );
+              await this.throttle();
+            }
+            // Ensure discussion room is public, visible in directory, with clean display name
+            await this.communicationAdapter.updateRoom(
+              roomId,
+              displayName,
+              undefined,
+              JoinRulePublic,
+              undefined,
+              true
+            );
+            await this.throttle();
+          } catch (_error) {
+            this.logger.warn?.(
+              `Failed to anchor/update discussion room ${roomId} — skipping`,
+              LogContext.COMMUNICATION
+            );
+          }
         }
+      } catch (_error) {
+        this.logger.warn?.(
+          `Failed to get category space ${categoryContextId} — skipping ${discussions.length} rooms`,
+          LogContext.COMMUNICATION
+        );
       }
     }
   }
@@ -351,25 +392,6 @@ export class AdminCommunicationSpaceSyncService {
         .innerJoin('space', 's', 's."collaborationId" = col.id')
         .getRawMany();
 
-    this.logger.verbose?.(
-      `Anchoring ${calloutRooms.length} callout rooms to spaces`,
-      LogContext.COMMUNICATION
-    );
-
-    for (const { roomId, spaceId } of calloutRooms) {
-      try {
-        await this.communicationAdapter.setParent(roomId, false, spaceId);
-        anchored++;
-        await this.throttle();
-      } catch (_error) {
-        failed++;
-        this.logger.warn?.(
-          `Failed to anchor callout room ${roomId} to space ${spaceId}`,
-          LogContext.COMMUNICATION
-        );
-      }
-    }
-
     // Post comment rooms → owning space
     const postRooms: { roomId: string; spaceId: string }[] =
       await this.roomRepository.manager
@@ -385,20 +407,47 @@ export class AdminCommunicationSpaceSyncService {
         .innerJoin('space', 's', 's."collaborationId" = col.id')
         .getRawMany();
 
+    const allRoomMappings = [...calloutRooms, ...postRooms];
+
     this.logger.verbose?.(
-      `Anchoring ${postRooms.length} post rooms to spaces`,
+      `Checking anchoring for ${calloutRooms.length} callout + ${postRooms.length} post rooms`,
       LogContext.COMMUNICATION
     );
 
-    for (const { roomId, spaceId } of postRooms) {
+    // Group rooms by space, load children once per space, only anchor missing
+    const roomsBySpace = new Map<string, string[]>();
+    for (const { roomId, spaceId } of allRoomMappings) {
+      const rooms = roomsBySpace.get(spaceId) ?? [];
+      rooms.push(roomId);
+      roomsBySpace.set(spaceId, rooms);
+    }
+
+    for (const [spaceId, roomIds] of roomsBySpace) {
       try {
-        await this.communicationAdapter.setParent(roomId, false, spaceId);
-        anchored++;
+        const spaceInfo = await this.communicationAdapter.getSpace(spaceId);
         await this.throttle();
+        const existingChildIds = new Set(
+          spaceInfo?.children.map(c => c.childId) ?? []
+        );
+
+        for (const roomId of roomIds) {
+          if (existingChildIds.has(roomId)) continue;
+          try {
+            await this.communicationAdapter.setParent(roomId, false, spaceId);
+            anchored++;
+            await this.throttle();
+          } catch (_error) {
+            failed++;
+            this.logger.warn?.(
+              `Failed to anchor room ${roomId} to space ${spaceId}`,
+              LogContext.COMMUNICATION
+            );
+          }
+        }
       } catch (_error) {
-        failed++;
+        failed += roomIds.length;
         this.logger.warn?.(
-          `Failed to anchor post room ${roomId} to space ${spaceId}`,
+          `Failed to get space ${spaceId} for anchoring — skipping ${roomIds.length} rooms`,
           LogContext.COMMUNICATION
         );
       }
