@@ -503,7 +503,7 @@ export class AdminCommunicationSpaceSyncService {
     let synced = 0;
     for (const user of users) {
       const displayName =
-        `${user.firstName} ${user.lastName}`.trim() || user.email;
+        `${user.firstName} ${user.lastName}`.trim() || user.nameID;
       try {
         await this.communicationAdapter.syncActor(user.id, displayName);
         synced++;
