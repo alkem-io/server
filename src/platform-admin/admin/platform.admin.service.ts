@@ -12,6 +12,8 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { IAccount } from '@domain/space/account/account.interface';
+import { AccountService } from '@domain/space/account/account.service';
 import { SpacesQueryArgs } from '@domain/space/space/dto/space.args.query.spaces';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceService } from '@domain/space/space/space.service';
@@ -26,6 +28,7 @@ import { EntityManager, In } from 'typeorm';
 @Injectable()
 export class PlatformAdminService {
   constructor(
+    private accountService: AccountService,
     private spaceService: SpaceService,
     private organizationService: OrganizationService,
     private userService: UserService,
@@ -34,6 +37,10 @@ export class PlatformAdminService {
     private entityManager: EntityManager,
     private libraryService: LibraryService
   ) {}
+
+  public getAllAccounts(): Promise<IAccount[]> {
+    return this.accountService.getAccounts();
+  }
 
   public getAllInnovationHubs(): Promise<IInnovationHub[]> {
     return this.entityManager.find(InnovationHub);
