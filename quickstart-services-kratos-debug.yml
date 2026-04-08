@@ -418,7 +418,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter-go:v0.8.11
+    image: alkemio/matrix-adapter-go:v0.8.12
     depends_on:
       - rabbitmq
     environment:
