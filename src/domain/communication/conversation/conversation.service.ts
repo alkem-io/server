@@ -135,7 +135,7 @@ export class ConversationService {
   ): Promise<IRoom> {
     if (roomType === RoomType.CONVERSATION_DIRECT) {
       return await this.roomService.createRoom({
-        displayName: `conversation-${memberActorIDs[0]}-${memberActorIDs[1]}`,
+        displayName: '', // No display name for direct conversations — Matrix shows the other member's name
         type: roomType,
         senderActorID: memberActorIDs[0],
         receiverActorID: memberActorIDs[1],

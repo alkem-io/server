@@ -3578,6 +3578,10 @@ type Mutation {
   adminCommunicationMigrateOrphanedConversations: CommunicationAdminMigrateRoomsResult!
   """Remove an orphaned room from messaging platform."""
   adminCommunicationRemoveOrphanedRoom(orphanedRoomData: CommunicationAdminRemoveOrphanedRoomInput!): Boolean!
+  """
+  Synchronize all Alkemio spaces into the Matrix space hierarchy. Idempotent — safe to call multiple times.
+  """
+  adminCommunicationSyncSpaceHierarchy: Boolean!
   """Allow updating the state flags of a particular rule."""
   adminCommunicationUpdateRoomState(roomStateData: CommunicationAdminUpdateRoomStateInput!): Boolean!
   """Delete a Kratos identity by ID."""

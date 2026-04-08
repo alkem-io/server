@@ -60,7 +60,7 @@
     }
   },
   "dependencies": {
-    "@alkemio/matrix-adapter-lib": "0.8.5",
+    "@alkemio/matrix-adapter-lib": "^0.8.12",
     "@alkemio/notifications-lib": "0.14.2",
     "@apollo/server": "^4.10.4",
     "@elastic/elasticsearch": "^8.12.2",
@@ -138,6 +138,7 @@
     "ts-node": "^10.9.2",
     "tsconfig-paths": "4.2.0",
     "typeorm": "https://pkg.pr.new/antst/typeorm@2c8f380",
+    "uuid": "^13.0.0",
     "web-push": "^3.6.7",
     "winston": "^3.13.1",
     "xstate": "5.18.0",
