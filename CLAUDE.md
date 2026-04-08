@@ -208,4 +208,27 @@ Migration validation harness: `.scripts/migrations/run_validate_migration.sh` (s
 
 ## Documentation
 
-See `docs/` directory. Key references: `Developing.md` (setup), `Running.md`, `Design.md` (architecture), `authorization-forest.md`, `credential-based-authorization.md`, `Pagination.md`. SDD constitution: `.specify/memory/constitution.md`.
+The project uses **Biome** for linting and formatting (replaced ESLint + Prettier).
+
+- Configuration: `biome.json` at repository root
+- Inline ignore: `// biome-ignore lint/rule-name: reason`
+- VS Code extension: `biomejs.biome`
+
+Key rules:
+- `noConsole`: error (use Winston logger instead)
+- `noDebugger`: error
+- `noExplicitAny`: off (legacy codebase compatibility)
+- Underscore prefix (`_param`) ignores unused parameters
+
+## Active Technologies
+- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, TypeORM 0.3, Apollo Server 4, GraphQL 16 (034-unit-tests)
+- N/A (no data model changes — test-only feature) (034-unit-tests)
+- PostgreSQL 17.5
+- PostgreSQL 17.5 (conversation, conversation_membership, room tables) (040-group-conversations)
+- PostgreSQL 17.5 (space table + JSONB settings column) (041-subspace-sorting-pinning)
+- TypeScript 5.3, Node.js 22 LTS (Volta 22.21.1) + NestJS 10, TypeORM 0.3, Apollo Server 4, `@alkemio/matrix-adapter-lib`, `@golevelup/nestjs-rabbitmq` (082-matrix-space-lifecycle)
+- PostgreSQL 17.5 (no schema changes needed — Go adapter manages Matrix ID mapping) (082-matrix-space-lifecycle)
+
+## Recent Changes
+- 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting
+- 027-vitest-migration: Migrated from Jest to Vitest for testing

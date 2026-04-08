@@ -119,7 +119,7 @@ export class RoomService {
       room.id,
       undefined, // name
       undefined, // topic
-      undefined, // isPublic
+      undefined, // joinRule
       avatarUrl
     );
   }
@@ -187,6 +187,7 @@ export class RoomService {
     room: IRoom,
     roomData: CreateRoomInput
   ): Promise<void> {
+    const isConversationLegacy = roomData.type === RoomType.CONVERSATION;
     const isDirect = roomData.type === RoomType.CONVERSATION_DIRECT;
     const isGroup = roomData.type === RoomType.CONVERSATION_GROUP;
 
@@ -216,13 +217,22 @@ export class RoomService {
         logContext
       );
 
+      // Conversation rooms are visible in Element; all other rooms are hidden
+      const isConversation = isConversationLegacy || isDirect || isGroup;
+      const customState = {
+        'io.alkemio.visibility': { visible: isConversation },
+      };
+
       await this.communicationAdapter.createRoom(
         room.id,
         roomData.type,
-        roomData.displayName,
+        roomData.displayName, // Empty string = "do not set" (Matrix adapter treats "" as no-op)
         initialMembers,
-        undefined, // parentContextId
-        roomData.avatarUrl
+        roomData.parentContextId,
+        roomData.avatarUrl,
+        roomData.joinRule,
+        roomData.isPublic,
+        customState
       );
     } catch (error: unknown) {
       const err = error as Error;

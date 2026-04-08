@@ -25,4 +25,7 @@ export class CreateCollaborationInput {
   calloutsSetData!: CreateCalloutsSetInput;
 
   isTemplate?: boolean;
+
+  // Parent Matrix space context ID for anchoring rooms in the hierarchy (not a GQL field)
+  parentSpaceId?: string;
 }

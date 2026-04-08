@@ -43,7 +43,7 @@ services:
 
   kratos-migrate:
     container_name: alkemio_dev_kratos_migrate
-    image: oryd/kratos:v1.3.1
+    image: oryd/kratos:v26.2.0
     depends_on:
       postgres:
         condition: service_healthy
@@ -96,7 +96,7 @@ services:
 
   hydra-migrate:
     container_name: alkemio_dev_hydra_migrate
-    image: oryd/hydra:v2.3.0
+    image: oryd/hydra:v26.2.0
     depends_on:
       postgres:
         condition: service_healthy
@@ -109,7 +109,7 @@ services:
 
   hydra:
     container_name: alkemio_dev_hydra
-    image: oryd/hydra:v2.3.0
+    image: oryd/hydra:v26.2.0
     depends_on:
       hydra-migrate:
         condition: service_completed_successfully
@@ -254,7 +254,7 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oathkeeper
-    image: oryd/oathkeeper:v0.38.19-beta.1
+    image: oryd/oathkeeper:v26.2.0
     restart: always
     depends_on:
       - kratos
@@ -418,7 +418,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter-go:v0.8.6
+    image: alkemio/matrix-adapter-go:v0.8.12
     depends_on:
       - rabbitmq
     environment:
@@ -428,6 +428,7 @@ services:
       - SYNAPSE_HOMESERVER_NAME
       - SYNAPSE_SERVER_URL
       - SYNAPSE_SERVER_NAME
+      - SYNAPSE_SERVER_SHARED_SECRET
       - MATRIX_AS_TOKEN
       - MATRIX_HS_TOKEN
       #      - MATRIX_BOT_ACTOR_ID

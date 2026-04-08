@@ -1,3 +1,4 @@
+import { JoinRuleInvite, JoinRulePublic } from '@alkemio/matrix-adapter-lib';
 import { GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT } from '@common/constants/authorization/global.policy.constants';
 import { CurrentActor, Profiling } from '@common/decorators';
 import { AuthorizationPrivilege, AuthorizationRoleGlobal } from '@common/enums';
@@ -9,6 +10,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CommunicationRoomResult } from '@services/adapters/communication-adapter/dto/communication.dto.room.result';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { AdminCommunicationService } from './admin.communication.service';
+import { AdminCommunicationSpaceSyncService } from './admin.communication.space.sync.service';
 import { CommunicationAdminEnsureAccessInput } from './dto/admin.communication.dto.ensure.access.input';
 import { CommunicationAdminMigrateRoomsResult } from './dto/admin.communication.dto.migrate.rooms.result';
 import { CommunicationAdminRemoveOrphanedRoomInput } from './dto/admin.communication.dto.remove.orphaned.room';
@@ -22,7 +24,8 @@ export class AdminCommunicationResolverMutations {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
-    private adminCommunicationService: AdminCommunicationService
+    private adminCommunicationService: AdminCommunicationService,
+    private adminCommunicationSpaceSyncService: AdminCommunicationSpaceSyncService
   ) {
     this.communicationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
@@ -90,8 +93,8 @@ export class AdminCommunicationResolverMutations {
     );
     return await this.adminCommunicationService.updateRoomState(
       roomStateData.roomID,
-      roomStateData.isWorldVisible,
-      roomStateData.isPublic
+      roomStateData.isPublic ? JoinRulePublic : JoinRuleInvite,
+      roomStateData.isWorldVisible
     );
   }
 
@@ -110,5 +113,22 @@ export class AdminCommunicationResolverMutations {
       `communications admin migrate orphaned conversations: ${actorContext.actorID}`
     );
     return await this.adminCommunicationService.migrateConversationRooms();
+  }
+
+  @Mutation(() => Boolean, {
+    description:
+      'Synchronize all Alkemio spaces into the Matrix space hierarchy. Idempotent — safe to call multiple times.',
+  })
+  @Profiling.api
+  async adminCommunicationSyncSpaceHierarchy(
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<boolean> {
+    await this.authorizationService.grantAccessOrFail(
+      actorContext,
+      this.communicationGlobalAdminPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `communications admin sync space hierarchy: ${actorContext.actorID}`
+    );
+    return await this.adminCommunicationSpaceSyncService.syncSpaceHierarchy();
   }
 }
