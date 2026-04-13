@@ -36,10 +36,10 @@
 
 **CRITICAL**: No user story work can begin until this phase is complete.
 
-- [ ] T007 Import `FileServiceAdapterModule` into `StorageBucketModule` in `src/domain/storage/storage-bucket/storage.bucket.module.ts` and inject `FileServiceAdapter` into `StorageBucketService`
-- [ ] T008 Import `FileServiceAdapterModule` into `DocumentModule` in `src/domain/storage/document/document.module.ts` and inject `FileServiceAdapter` into `DocumentService`
-- [ ] T009 Import `FileServiceAdapterModule` into `TemporaryStorageModule` and inject `FileServiceAdapter` into `TemporaryStorageService` in `src/services/infrastructure/temporary-storage/`
-- [ ] T010 Import `FileServiceAdapterModule` into `ProfileDocumentsModule` and inject `FileServiceAdapter` into `ProfileDocumentsService` in `src/domain/profile-documents/`
+- [x] T007 Import `FileServiceAdapterModule` into `StorageBucketModule` in `src/domain/storage/storage-bucket/storage.bucket.module.ts` and inject `FileServiceAdapter` into `StorageBucketService`
+- [x] T008 Import `FileServiceAdapterModule` into `DocumentModule` in `src/domain/storage/document/document.module.ts` and inject `FileServiceAdapter` into `DocumentService`
+- [x] T009 Import `FileServiceAdapterModule` into `TemporaryStorageModule` and inject `FileServiceAdapter` into `TemporaryStorageService` in `src/services/infrastructure/temporary-storage/`
+- [x] T010 Import `FileServiceAdapterModule` into `ProfileDocumentsModule` and inject `FileServiceAdapter` into `ProfileDocumentsService` in `src/domain/profile-documents/`
 
 **Checkpoint**: Adapter injected everywhere. No behavioral changes yet -- existing code paths still active.
 

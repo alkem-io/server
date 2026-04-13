@@ -23,6 +23,7 @@ import { ImageConversionService } from '@domain/common/visual/image.conversion.s
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -57,7 +58,8 @@ export class StorageBucketService {
     private readonly logger: LoggerService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private fileServiceAdapter: FileServiceAdapter
   ) {}
 
   public createStorageBucket(

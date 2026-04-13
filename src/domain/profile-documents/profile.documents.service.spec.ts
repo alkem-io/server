@@ -7,6 +7,7 @@ import { DocumentAuthorizationService } from '@domain/storage/document/document.
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { uniqueId } from 'lodash';
 import { vi } from 'vitest';
 import { IAuthorizationPolicy } from '../common/authorization-policy';
@@ -104,6 +105,15 @@ describe('ProfileDocumentsService', () => {
           provide: DocumentAuthorizationService,
           useValue: {
             applyAuthorizationPolicy: vi.fn(),
+          },
+        },
+        {
+          provide: FileServiceAdapter,
+          useValue: {
+            createDocument: vi.fn(),
+            getDocumentContent: vi.fn(),
+            updateDocument: vi.fn(),
+            deleteDocument: vi.fn(),
           },
         },
       ],

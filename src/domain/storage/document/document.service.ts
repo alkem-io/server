@@ -11,6 +11,7 @@ import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { StorageService } from '@services/adapters/storage';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -32,7 +33,9 @@ export class DocumentService {
     private storageService: StorageService,
     @InjectRepository(Document)
     private documentRepository: Repository<Document>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private fileServiceAdapter: FileServiceAdapter
   ) {}
 
   public async createDocument(

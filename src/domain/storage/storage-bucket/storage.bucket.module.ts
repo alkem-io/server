@@ -5,6 +5,7 @@ import { ImageCompressionService } from '@domain/common/visual/image.compression
 import { ImageConversionService } from '@domain/common/visual/image.conversion.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
 import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { Document } from '../document/document.entity';
@@ -19,6 +20,7 @@ import { StorageBucketAuthorizationService } from './storage.bucket.service.auth
   imports: [
     AvatarCreatorModule,
     DocumentModule,
+    FileServiceAdapterModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     UrlGeneratorModule,

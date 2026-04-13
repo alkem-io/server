@@ -8,13 +8,15 @@ import { DocumentAuthorizationService } from '@domain/storage/document/document.
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Injectable } from '@nestjs/common';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 
 @Injectable()
 export class ProfileDocumentsService {
   constructor(
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
-    private documentAuthorizationService: DocumentAuthorizationService
+    private documentAuthorizationService: DocumentAuthorizationService,
+    private fileServiceAdapter: FileServiceAdapter
   ) {}
 
   /***

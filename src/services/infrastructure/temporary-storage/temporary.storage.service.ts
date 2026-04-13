@@ -5,7 +5,8 @@ import { CreateVirtualContributorOnAccountInput } from '@domain/space/account/dt
 import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { Inject, LoggerService } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 export type temporaryDocumentDTO =
@@ -18,6 +19,7 @@ export class TemporaryStorageService {
 
   constructor(
     private documentService: DocumentService,
+    private fileServiceAdapter: FileServiceAdapter,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
