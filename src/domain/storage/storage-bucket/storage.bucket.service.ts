@@ -18,8 +18,6 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
-import { ImageCompressionService } from '@domain/common/visual/image.compression.service';
-import { ImageConversionService } from '@domain/common/visual/image.conversion.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -47,8 +45,6 @@ export class StorageBucketService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private urlGeneratorService: UrlGeneratorService,
-    private imageConversionService: ImageConversionService,
-    private imageCompressionService: ImageCompressionService,
     @InjectRepository(StorageBucket)
     private storageBucketRepository: Repository<StorageBucket>,
     @InjectRepository(Document)

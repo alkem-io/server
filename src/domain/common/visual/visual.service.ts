@@ -22,8 +22,6 @@ import { Readable } from 'stream';
 import { FindOneOptions, Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { DeleteVisualInput } from './dto/visual.dto.delete';
-import { ImageCompressionService } from './image.compression.service';
-import { ImageConversionService } from './image.conversion.service';
 import {
   DEFAULT_VISUAL_CONSTRAINTS,
   VISUAL_ALLOWED_TYPES,
@@ -37,8 +35,6 @@ export class VisualService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
-    private imageConversionService: ImageConversionService,
-    private imageCompressionService: ImageCompressionService,
     @InjectRepository(Visual)
     private visualRepository: Repository<Visual>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)

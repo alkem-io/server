@@ -138,17 +138,17 @@
 
 ### Implementation for User Story 5
 
-- [ ] T031 [P] [US5] Remove `LocalStorageAdapter` at `src/services/adapters/storage/local-storage/local.storage.adapter.ts`
-- [ ] T032 [P] [US5] Remove `StorageServiceInterface` at `src/services/adapters/storage/storage.service.interface.ts`
-- [ ] T033 [P] [US5] Remove `StorageServiceProvider` at `src/services/adapters/storage/storage.service.provider.ts`
-- [ ] T034 [P] [US5] Remove `ImageConversionService` at `src/domain/common/visual/image.conversion.service.ts`
-- [ ] T035 [P] [US5] Remove `ImageCompressionService` at `src/domain/common/visual/image.compression.service.ts`
-- [ ] T036 [P] [US5] Remove `FileIntegrationService` and `FileIntegrationController` at `src/services/file-integration/` (entire directory)
-- [ ] T037 [US5] Remove `DocumentService.uploadFile()` and `DocumentService.removeFile()` and `DocumentService.getDocumentContents()` methods from `src/domain/storage/document/document.service.ts`
-- [ ] T038 [US5] Remove STORAGE_SERVICE injection token and references from `src/domain/storage/document/document.module.ts` and `src/domain/storage/storage-bucket/storage.bucket.module.ts`
-- [ ] T039 [US5] Remove unused imports of `ImageConversionService` and `ImageCompressionService` from `VisualModule` in `src/domain/common/visual/visual.module.ts`
-- [ ] T040 [US5] Evaluate removal of `heic-convert`, `sharp`, `image-size` packages from `package.json` -- remove if no longer used elsewhere. Run `pnpm install` after changes.
-- [ ] T041 [US5] Update all affected unit tests to remove mocks for LocalStorageAdapter, ImageConversionService, ImageCompressionService, FileIntegrationService
+- [x] T031 [P] [US5] Remove `LocalStorageAdapter` at `src/services/adapters/storage/local-storage/local.storage.adapter.ts`
+- [x] T032 [P] [US5] Remove `StorageServiceInterface` at `src/services/adapters/storage/storage.service.interface.ts`
+- [x] T033 [P] [US5] Remove `StorageServiceProvider` at `src/services/adapters/storage/storage.service.provider.ts`
+- [x] T034 [P] [US5] Remove `ImageConversionService` at `src/domain/common/visual/image.conversion.service.ts`
+- [x] T035 [P] [US5] Remove `ImageCompressionService` at `src/domain/common/visual/image.compression.service.ts`
+- [x] T036 [P] [US5] Remove `FileIntegrationService` and `FileIntegrationController` at `src/services/file-integration/` (entire directory)
+- [x] T037 [US5] Remove `DocumentService.uploadFile()` and `DocumentService.removeFile()` and `DocumentService.getDocumentContents()` methods from `src/domain/storage/document/document.service.ts`
+- [x] T038 [US5] Remove STORAGE_SERVICE injection token and references from `src/domain/storage/document/document.module.ts` and `src/domain/storage/storage-bucket/storage.bucket.module.ts`
+- [x] T039 [US5] Remove unused imports of `ImageConversionService` and `ImageCompressionService` from `VisualModule` in `src/domain/common/visual/visual.module.ts`
+- [x] T040 [US5] Evaluate removal of `heic-convert`, `sharp`, `image-size` packages from `package.json` -- remove if no longer used elsewhere. Run `pnpm install` after changes.
+- [x] T041 [US5] Update all affected unit tests to remove mocks for LocalStorageAdapter, ImageConversionService, ImageCompressionService, FileIntegrationService
 
 **Checkpoint**: Server builds clean. No local file I/O code. No image processing code. No RMQ file integration.
 

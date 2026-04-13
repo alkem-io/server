@@ -1,16 +1,13 @@
-import { STORAGE_SERVICE } from '@common/constants';
 import { MimeFileType } from '@common/enums/mime.file.type';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions';
-import { DocumentSaveFailedException } from '@common/exceptions/document/document.save.failed.exception';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
-import { StorageService } from '@services/adapters/storage';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -31,7 +28,6 @@ describe('DocumentService', () => {
   let documentRepository: Repository<Document>;
   let tagsetService: TagsetService;
   let authorizationPolicyService: AuthorizationPolicyService;
-  let storageService: StorageService;
   let fileServiceAdapter: FileServiceAdapter;
 
   beforeEach(async () => {
@@ -50,16 +46,6 @@ describe('DocumentService', () => {
         repositoryProviderMockFactory(Document),
         MockCacheManager,
         MockWinstonProvider,
-        {
-          provide: STORAGE_SERVICE,
-          useValue: {
-            save: vi.fn(),
-            read: vi.fn(),
-            delete: vi.fn(),
-            exists: vi.fn(),
-            getType: vi.fn(),
-          },
-        },
         {
           provide: FileServiceAdapter,
           useValue: {
@@ -89,7 +75,6 @@ describe('DocumentService', () => {
     authorizationPolicyService = module.get<AuthorizationPolicyService>(
       AuthorizationPolicyService
     );
-    storageService = module.get<StorageService>(STORAGE_SERVICE);
     fileServiceAdapter = module.get<FileServiceAdapter>(FileServiceAdapter);
   });
 
@@ -375,31 +360,6 @@ describe('DocumentService', () => {
     });
   });
 
-  // ── uploadFile ──────────────────────────────────────────────────
-
-  describe('uploadFile', () => {
-    it('should delegate to storage service and return the external ID when upload succeeds', async () => {
-      const buffer = Buffer.from('file-content');
-      (storageService.save as Mock).mockResolvedValue('external-id-abc');
-
-      const result = await service.uploadFile(buffer, 'test.png');
-
-      expect(storageService.save).toHaveBeenCalledWith(buffer);
-      expect(result).toBe('external-id-abc');
-    });
-
-    it('should throw DocumentSaveFailedException when storage service fails', async () => {
-      const buffer = Buffer.from('file-content');
-      (storageService.save as Mock).mockRejectedValue(
-        new Error('Storage write error')
-      );
-
-      await expect(service.uploadFile(buffer, 'test.png')).rejects.toThrow(
-        DocumentSaveFailedException
-      );
-    });
-  });
-
   // ── getUploadedDate ─────────────────────────────────────────────
 
   describe('getUploadedDate', () => {
@@ -421,25 +381,6 @@ describe('DocumentService', () => {
       await expect(service.getUploadedDate('missing')).rejects.toThrow(
         EntityNotFoundException
       );
-    });
-  });
-
-  // ── getDocumentContents ─────────────────────────────────────────
-
-  describe('getDocumentContents', () => {
-    it('should return a Readable stream from storage service content', async () => {
-      const content = Buffer.from('document-bytes');
-      (storageService.read as Mock).mockResolvedValue(content);
-      const document = { externalID: 'ext-id-1' } as any;
-
-      const result = await service.getDocumentContents(document);
-
-      expect(storageService.read).toHaveBeenCalledWith('ext-id-1');
-      const chunks: Buffer[] = [];
-      for await (const chunk of result) {
-        chunks.push(chunk);
-      }
-      expect(Buffer.concat(chunks).toString()).toBe('document-bytes');
     });
   });
 });

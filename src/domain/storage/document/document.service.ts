@@ -1,10 +1,7 @@
-import { STORAGE_SERVICE } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions';
-import { DocumentDeleteFailedException } from '@common/exceptions/document/document.delete.failed.exception';
-import { DocumentSaveFailedException } from '@common/exceptions/document/document.save.failed.exception';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
@@ -12,10 +9,8 @@ import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
-import { StorageService } from '@services/adapters/storage';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Readable } from 'stream';
 import { FindOneOptions, Repository } from 'typeorm';
 import { Document } from './document.entity';
 import { IDocument } from './document.interface';
@@ -29,8 +24,6 @@ export class DocumentService {
     private configService: ConfigService<AlkemioConfig, true>,
     private authorizationPolicyService: AuthorizationPolicyService,
     private tagsetService: TagsetService,
-    @Inject(STORAGE_SERVICE)
-    private storageService: StorageService,
     @InjectRepository(Document)
     private documentRepository: Repository<Document>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -147,15 +140,6 @@ export class DocumentService {
     return document.createdDate;
   }
 
-  /**
-   * Retrieves the contents of a document as a Readable stream.
-   * @throws {Error} if the storage service fails to read the document.
-   */
-  public async getDocumentContents(document: IDocument): Promise<Readable> {
-    const content = await this.storageService.read(document.externalID);
-    return Readable.from(content);
-  }
-
   public async updateDocument(
     documentData: UpdateDocumentInput
   ): Promise<IDocument> {
@@ -222,36 +206,5 @@ export class DocumentService {
       { infer: true }
     );
     return `${endpoint_cluster}${path_api_private_rest}/storage/document`;
-  }
-
-  private async removeFile(CID: string): Promise<boolean> {
-    try {
-      await this.storageService.delete(CID);
-    } catch (error: any) {
-      throw new DocumentDeleteFailedException(
-        `Removing file ${CID} failed!`,
-        LogContext.LOCAL_STORAGE,
-        {
-          message: error?.message,
-          originalException: error,
-        }
-      );
-    }
-    return true;
-  }
-
-  public async uploadFile(buffer: Buffer, fileName: string): Promise<string> {
-    try {
-      return await this.storageService.save(buffer);
-    } catch (error: any) {
-      throw new DocumentSaveFailedException(
-        `Uploading ${fileName} failed!`,
-        LogContext.LOCAL_STORAGE,
-        {
-          message: error?.message,
-          originalException: error,
-        }
-      );
-    }
   }
 }

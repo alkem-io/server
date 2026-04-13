@@ -1,8 +1,6 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Profile } from '@domain/common/profile/profile.entity';
-import { ImageCompressionService } from '@domain/common/visual/image.compression.service';
-import { ImageConversionService } from '@domain/common/visual/image.conversion.service';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
@@ -33,8 +31,6 @@ import { StorageBucketAuthorizationService } from './storage.bucket.service.auth
     StorageBucketService,
     StorageBucketResolverMutations,
     StorageBucketAuthorizationService,
-    ImageConversionService,
-    ImageCompressionService,
   ],
   exports: [StorageBucketService, StorageBucketAuthorizationService],
 })
