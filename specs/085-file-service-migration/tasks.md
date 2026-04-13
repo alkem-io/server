@@ -158,13 +158,13 @@
 
 **Purpose**: Final validation and cleanup
 
-- [ ] T042 Run `pnpm lint` and fix any linting errors across all modified files
-- [ ] T043 Run `pnpm test:ci:no:coverage` and fix any broken tests
-- [ ] T044 Verify `pnpm build` succeeds with no errors
-- [ ] T045 Verify FR-006 compliance: grep codebase for `documentRepository.save\|documentRepository.remove\|documentRepository.insert` and confirm zero remaining write paths outside of migrations
-- [ ] T046 Manual test: upload avatar via GraphQL, verify served correctly by Go service
-- [ ] T047 Manual test: delete document, verify auth policy + tagset cleaned up
-- [ ] T048 Manual test: create post with embedded image (temporary doc), save post, verify doc moved to permanent bucket
+- [x] T042 Run `pnpm lint` and fix any linting errors across all modified files
+- [x] T043 Run `pnpm test:ci:no:coverage` and fix any broken tests
+- [x] T044 Verify `pnpm build` succeeds with no errors
+- [x] T045 Verify FR-006 compliance: grep codebase for `documentRepository.save\|documentRepository.remove\|documentRepository.insert` and confirm zero remaining write paths outside of migrations
+- [x] T046 Manual test: upload avatar via GraphQL, verify served correctly by Go service
+- [x] T047 Manual test: delete document, verify auth policy + tagset cleaned up
+- [x] T048 Manual test: create post with embedded image (temporary doc), save post, verify doc moved to permanent bucket
 
 ---
 
