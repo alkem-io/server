@@ -53,14 +53,14 @@
 
 ### Implementation for User Story 1
 
-- [ ] T011 [US1] Modify `StorageBucketService.uploadFileAsDocumentFromBuffer()` in `src/domain/storage/storage-bucket/storage.bucket.service.ts`: replace `documentService.uploadFile()` + `documentService.createDocument()` with pre-creating auth policy + tagset, then calling `fileServiceAdapter.createDocument(buffer, {displayName, storageBucketId, authorizationId, tagsetId, createdBy, temporaryLocation, allowedMimeTypes, maxFileSize})`. On adapter failure, roll back auth policy + tagset with best-effort cleanup (log warning if rollback itself fails, don't throw -- orphaned auth policies are low-impact). Construct document entity from Go service response for return value.
-- [ ] T012 [US1] Modify `StorageBucketService.uploadFileAsDocument()` in `src/domain/storage/storage-bucket/storage.bucket.service.ts`: remove `imageConversionService.convertIfNeeded()` and `imageCompressionService.compressIfNeeded()` calls. Convert stream to buffer, then delegate to modified `uploadFileAsDocumentFromBuffer()`.
-- [ ] T013 [US1] Modify `VisualService.uploadImageOnVisual()` in `src/domain/common/visual/visual.service.ts`: remove `imageConversionService.convertIfNeeded()` and `imageCompressionService.compressIfNeeded()` calls. Keep dimension validation via `getImageDimensions()`. Delegate upload to `storageBucketService.uploadFileAsDocumentFromBuffer()` with raw buffer (Go service handles image processing).
-- [ ] T014 [US1] Verify `uploadFileOnStorageBucket` resolver in `src/domain/storage/storage-bucket/storage.bucket.resolver.mutations.ts` works without changes (it calls `storageBucketService.uploadFileAsDocument()` which is now rewired)
-- [ ] T015 [US1] Verify `uploadImageOnVisual` resolver in `src/domain/common/visual/visual.resolver.mutations.ts` works without changes
-- [ ] T016 [US1] Verify `uploadFileOnLink` resolver in `src/domain/collaboration/link/link.resolver.mutations.ts` works without changes
-- [ ] T017 [US1] Verify `uploadFileOnReference` resolver in `src/domain/common/reference/reference.resolver.mutations.ts` works without changes
-- [ ] T018 [US1] Update existing upload-related unit tests in `src/domain/storage/storage-bucket/storage.bucket.service.spec.ts` to mock FileServiceAdapter instead of LocalStorageAdapter and DocumentService.createDocument
+- [x] T011 [US1] Modify `StorageBucketService.uploadFileAsDocumentFromBuffer()` in `src/domain/storage/storage-bucket/storage.bucket.service.ts`: replace `documentService.uploadFile()` + `documentService.createDocument()` with pre-creating auth policy + tagset, then calling `fileServiceAdapter.createDocument(buffer, {displayName, storageBucketId, authorizationId, tagsetId, createdBy, temporaryLocation, allowedMimeTypes, maxFileSize})`. On adapter failure, roll back auth policy + tagset with best-effort cleanup (log warning if rollback itself fails, don't throw -- orphaned auth policies are low-impact). Construct document entity from Go service response for return value.
+- [x] T012 [US1] Modify `StorageBucketService.uploadFileAsDocument()` in `src/domain/storage/storage-bucket/storage.bucket.service.ts`: remove `imageConversionService.convertIfNeeded()` and `imageCompressionService.compressIfNeeded()` calls. Convert stream to buffer, then delegate to modified `uploadFileAsDocumentFromBuffer()`.
+- [x] T013 [US1] Modify `VisualService.uploadImageOnVisual()` in `src/domain/common/visual/visual.service.ts`: remove `imageConversionService.convertIfNeeded()` and `imageCompressionService.compressIfNeeded()` calls. Keep dimension validation via `getImageDimensions()`. Delegate upload to `storageBucketService.uploadFileAsDocumentFromBuffer()` with raw buffer (Go service handles image processing).
+- [x] T014 [US1] Verify `uploadFileOnStorageBucket` resolver in `src/domain/storage/storage-bucket/storage.bucket.resolver.mutations.ts` works without changes (it calls `storageBucketService.uploadFileAsDocument()` which is now rewired)
+- [x] T015 [US1] Verify `uploadImageOnVisual` resolver in `src/domain/common/visual/visual.resolver.mutations.ts` works without changes
+- [x] T016 [US1] Verify `uploadFileOnLink` resolver in `src/domain/collaboration/link/link.resolver.mutations.ts` works without changes
+- [x] T017 [US1] Verify `uploadFileOnReference` resolver in `src/domain/common/reference/reference.resolver.mutations.ts` works without changes
+- [x] T018 [US1] Update existing upload-related unit tests in `src/domain/storage/storage-bucket/storage.bucket.service.spec.ts` to mock FileServiceAdapter instead of LocalStorageAdapter and DocumentService.createDocument
 
 **Checkpoint**: All file uploads go through Go service. No local disk writes. No direct document table inserts.
 
@@ -74,10 +74,10 @@
 
 ### Implementation for User Story 2
 
-- [ ] T019 [US2] Modify `DocumentService.deleteDocument()` in `src/domain/storage/document/document.service.ts`: replace `documentRepository.remove()` + `removeFile()` with `fileServiceAdapter.deleteDocument(id)`. Use returned `authorizationId` to delete auth policy and `tagsetId` to delete tagset. Remove the `DELETE_FILE` flag logic.
-- [ ] T020 [US2] Modify `StorageBucketService.deleteStorageBucket()` in `src/domain/storage/storage-bucket/storage.bucket.service.ts`: verify cascade deletion of documents goes through the modified `documentService.deleteDocument()` path (not direct repository remove)
-- [ ] T021 [US2] Modify `DocumentService.updateDocument()` in `src/domain/storage/document/document.service.ts`: replace direct document entity update + `documentRepository.save()` with `fileServiceAdapter.updateDocument(id, {storageBucketId, temporaryLocation})` for fields the Go service manages. Keep server-side tagset updates (tagset is managed by server). If `updateDocument` GraphQL mutation is unused, mark for removal in US5 cleanup.
-- [ ] T022 [US2] Update existing delete-related and update-related unit tests in `src/domain/storage/document/document.service.spec.ts` to mock FileServiceAdapter
+- [x] T019 [US2] Modify `DocumentService.deleteDocument()` in `src/domain/storage/document/document.service.ts`: replace `documentRepository.remove()` + `removeFile()` with `fileServiceAdapter.deleteDocument(id)`. Use returned `authorizationId` to delete auth policy and `tagsetId` to delete tagset. Remove the `DELETE_FILE` flag logic.
+- [x] T020 [US2] Modify `StorageBucketService.deleteStorageBucket()` in `src/domain/storage/storage-bucket/storage.bucket.service.ts`: verify cascade deletion of documents goes through the modified `documentService.deleteDocument()` path (not direct repository remove)
+- [x] T021 [US2] Modify `DocumentService.updateDocument()` in `src/domain/storage/document/document.service.ts`: replace direct document entity update + `documentRepository.save()` with `fileServiceAdapter.updateDocument(id, {storageBucketId, temporaryLocation})` for fields the Go service manages. Keep server-side tagset updates (tagset is managed by server). If `updateDocument` GraphQL mutation is unused, mark for removal in US5 cleanup.
+- [x] T022 [US2] Update existing delete-related and update-related unit tests in `src/domain/storage/document/document.service.spec.ts` to mock FileServiceAdapter
 
 **Checkpoint**: All document deletions and updates go through Go service. Auth policies and tagsets cleaned up correctly.
 
@@ -91,9 +91,9 @@
 
 ### Implementation for User Story 6
 
-- [ ] T023 [US6] Verify Oathkeeper rule in `.build/ory/oathkeeper/access-rules.yml` points to `file-service:4003` (already done in docker stack update)
-- [ ] T024 [US6] Verify traefik route for `/api/private/rest/storage` goes through Oathkeeper to Go service (already done in docker stack update)
-- [ ] T025 [US6] Verify `DocumentService.getPubliclyAccessibleURL()` in `src/domain/storage/document/document.service.ts` generates correct URLs that the Go service can serve (URL format unchanged)
+- [x] T023 [US6] Verify Oathkeeper rule in `.build/ory/oathkeeper/access-rules.yml` points to `file-service:4003` (already done in docker stack update)
+- [x] T024 [US6] Verify traefik route for `/api/private/rest/storage` goes through Oathkeeper to Go service (already done in docker stack update)
+- [x] T025 [US6] Verify `DocumentService.getPubliclyAccessibleURL()` in `src/domain/storage/document/document.service.ts` generates correct URLs that the Go service can serve (URL format unchanged)
 
 **Checkpoint**: File serving works end-to-end through Go service.
 
@@ -107,8 +107,8 @@
 
 ### Implementation for User Story 3
 
-- [ ] T026 [US3] Modify `TemporaryStorageService.moveTemporaryDocuments()` in `src/services/infrastructure/temporary-storage/temporary.storage.service.ts`: replace direct `document.storageBucket = destination; document.temporaryLocation = false; documentService.save()` with `fileServiceAdapter.updateDocument(docId, {storageBucketId: destination.id, temporaryLocation: false})`
-- [ ] T027 [US3] Verify that the document URL parsing in `TemporaryStorageService.getDocumentsFromString()` still works (reads document from DB -- this is read-only access, unchanged)
+- [x] T026 [US3] Modify `TemporaryStorageService.moveTemporaryDocuments()` in `src/services/infrastructure/temporary-storage/temporary.storage.service.ts`: replace direct `document.storageBucket = destination; document.temporaryLocation = false; documentService.save()` with `fileServiceAdapter.updateDocument(docId, {storageBucketId: destination.id, temporaryLocation: false})`
+- [x] T027 [US3] Verify that the document URL parsing in `TemporaryStorageService.getDocumentsFromString()` still works (reads document from DB -- this is read-only access, unchanged)
 
 **Checkpoint**: Temporary documents move to permanent bucket via Go service PATCH.
 
@@ -122,9 +122,9 @@
 
 ### Implementation for User Story 4
 
-- [ ] T028 [US4] Modify `ProfileDocumentsService.reuploadFileOnStorageBucket()` in `src/domain/profile-documents/profile.documents.service.ts`: replace the "different bucket" branch that copies document entity with: fetch content via `fileServiceAdapter.getDocumentContent(docId)`, upload to new bucket via `storageBucketService.uploadFileAsDocumentFromBuffer()` (which now goes through Go service), delete old document via `documentService.deleteDocument()`
-- [ ] T029 [US4] Modify `ProfileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket()` in `src/domain/profile-documents/profile.documents.service.ts`: verify it delegates to `reuploadFileOnStorageBucket()` which is now rewired
-- [ ] T030 [US4] Verify `StorageBucketService.ensureAvatarUrlIsDocument()` in `src/domain/storage/storage-bucket/storage.bucket.service.ts` works -- it downloads from external URL then uploads locally, which now goes through Go service
+- [x] T028 [US4] Modify `ProfileDocumentsService.reuploadFileOnStorageBucket()` in `src/domain/profile-documents/profile.documents.service.ts`: replace the "different bucket" branch that copies document entity with: fetch content via `fileServiceAdapter.getDocumentContent(docId)`, upload to new bucket via `storageBucketService.uploadFileAsDocumentFromBuffer()` (which now goes through Go service), delete old document via `documentService.deleteDocument()`
+- [x] T029 [US4] Modify `ProfileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket()` in `src/domain/profile-documents/profile.documents.service.ts`: verify it delegates to `reuploadFileOnStorageBucket()` which is now rewired
+- [x] T030 [US4] Verify `StorageBucketService.ensureAvatarUrlIsDocument()` in `src/domain/storage/storage-bucket/storage.bucket.service.ts` works -- it downloads from external URL then uploads locally, which now goes through Go service
 
 **Checkpoint**: Cross-bucket moves work through Go service API.
 

@@ -58,33 +58,39 @@ export class DocumentService {
     deleteData: DeleteDocumentInput
   ): Promise<IDocument> {
     const documentID = deleteData.ID;
-    const document = await this.getDocumentOrFail(documentID, {
-      relations: { tagset: true },
-    });
-    const DELETE_FILE = false;
-    if (DELETE_FILE) {
-      // Delete the underlying document
+    // Read document before deletion (for return value)
+    const document = await this.getDocumentOrFail(documentID);
+
+    // Delegate deletion to Go file-service-go
+    const deleteResult =
+      await this.fileServiceAdapter.deleteDocument(documentID);
+
+    // Clean up server-owned entities using IDs from Go service response
+    if (deleteResult.authorizationId) {
       try {
-        await this.removeFile(document.externalID);
-      } catch (error: any) {
-        this.logger.error(
-          `Unable to delete underlying file for document '${documentID}': ${error}`,
-          error?.stack,
+        await this.authorizationPolicyService.delete({
+          id: deleteResult.authorizationId,
+        } as any);
+      } catch (_error) {
+        this.logger.warn?.(
+          `Failed to delete auth policy ${deleteResult.authorizationId} after document deletion`,
+          LogContext.STORAGE_BUCKET
+        );
+      }
+    }
+    if (deleteResult.tagsetId) {
+      try {
+        await this.tagsetService.removeTagset(deleteResult.tagsetId);
+      } catch (_error) {
+        this.logger.warn?.(
+          `Failed to delete tagset ${deleteResult.tagsetId} after document deletion`,
           LogContext.STORAGE_BUCKET
         );
       }
     }
 
-    if (document.authorization) {
-      await this.authorizationPolicyService.delete(document.authorization);
-    }
-    if (document.tagset) {
-      await this.tagsetService.removeTagset(document.tagset.id);
-    }
-
-    const result = await this.documentRepository.remove(document as Document);
-    result.id = documentID;
-    return result;
+    document.id = documentID;
+    return document;
   }
 
   public async getDocumentOrFail(
@@ -157,7 +163,7 @@ export class DocumentService {
       relations: { tagset: true },
     });
 
-    // Copy over the received data
+    // Tagset is server-managed — update via tagset service (not Go file-service)
     if (documentData.tagset) {
       if (!document.tagset) {
         throw new EntityNotFoundException(
@@ -169,8 +175,6 @@ export class DocumentService {
         documentData.tagset
       );
     }
-
-    await this.documentRepository.save(document);
 
     return document;
   }

@@ -71,29 +71,25 @@ export class ProfileDocumentsService {
       // It should be just `fileUrl` but rewrite it just in case
       return this.documentService.getPubliclyAccessibleURL(docInThisBucket);
     } else if (docInContent.temporaryLocation) {
-      // If it was temporary just move the document to the new bucket
-      docInContent.storageBucket = storageBucket;
-      docInContent.temporaryLocation = false;
-      storageBucket.documents.push(docInContent);
-      return this.documentService.getPubliclyAccessibleURL(docInContent);
-    } else {
-      // if not in this bucket - create it inside it
-      const newDoc = await this.documentService.createDocument({
-        createdBy: docInContent.createdBy, // TODO: This should be the current user
-        displayName: docInContent.displayName,
-        externalID: docInContent.externalID, // Point to the same content
-        mimeType: docInContent.mimeType,
-        size: docInContent.size,
+      // Move temporary document to the new bucket via Go file-service-go
+      await this.fileServiceAdapter.updateDocument(docInContent.id, {
+        storageBucketId: storageBucket.id,
         temporaryLocation: false,
       });
-      await this.storageBucketService.addDocumentToStorageBucketOrFail(
-        storageBucket,
-        newDoc
+      return this.documentService.getPubliclyAccessibleURL(docInContent);
+    } else {
+      // Different bucket: fetch content from Go service, re-upload to new bucket
+      const content = await this.fileServiceAdapter.getDocumentContent(
+        docInContent.id
       );
-      await this.documentAuthorizationService.applyAuthorizationPolicy(
-        newDoc,
-        storageBucket.authorization
-      );
+      const newDoc =
+        await this.storageBucketService.uploadFileAsDocumentFromBuffer(
+          storageBucket.id,
+          content,
+          docInContent.displayName,
+          docInContent.mimeType,
+          docInContent.createdBy
+        );
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
   }

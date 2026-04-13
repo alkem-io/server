@@ -5,7 +5,7 @@ import { CreateVirtualContributorOnAccountInput } from '@domain/space/account/dt
 import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Inject, LoggerService } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
@@ -36,13 +36,14 @@ export class TemporaryStorageService {
     const documents = await this.getDocumentsFromString(serializedJSON);
     for (const document of documents) {
       if (document.temporaryLocation) {
-        document.storageBucket = destinationStorageBucket;
-        document.temporaryLocation = false;
         this.logger.verbose?.(
           `Identified temporary document ${document.id}, moving to storage bucket: ${destinationStorageBucket.id}`,
           LogContext.DOCUMENT
         );
-        await this.documentService.save(document);
+        await this.fileServiceAdapter.updateDocument(document.id, {
+          storageBucketId: destinationStorageBucket.id,
+          temporaryLocation: false,
+        });
       }
     }
   }

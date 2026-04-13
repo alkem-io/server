@@ -80,6 +80,7 @@ describe('ProfileDocumentsService', () => {
   let service: ProfileDocumentsService;
   let documentService: DocumentService;
   let storageBucketService: StorageBucketService;
+  let fileServiceAdapter: FileServiceAdapter;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -99,6 +100,7 @@ describe('ProfileDocumentsService', () => {
           provide: StorageBucketService,
           useValue: {
             addDocumentToStorageBucketOrFail: vi.fn(),
+            uploadFileAsDocumentFromBuffer: vi.fn(),
           },
         },
         {
@@ -123,6 +125,7 @@ describe('ProfileDocumentsService', () => {
     documentService = module.get<DocumentService>(DocumentService);
     storageBucketService =
       module.get<StorageBucketService>(StorageBucketService);
+    fileServiceAdapter = module.get<FileServiceAdapter>(FileServiceAdapter);
   });
   describe('reuploadFileOnStorageBucket', () => {
     it('should throw EntityNotInitializedException when storageBucket.documents is not initialized', async () => {
@@ -223,6 +226,11 @@ describe('ProfileDocumentsService', () => {
       vi.spyOn(documentService, 'getPubliclyAccessibleURL').mockReturnValue(
         EXAMPLE_ALKEMIO_DOCUMENT_URL
       );
+      vi.spyOn(fileServiceAdapter, 'updateDocument').mockResolvedValue({
+        id: doc.id,
+        storageBucketId: storageBucketDestination.id,
+        temporaryLocation: false,
+      });
 
       const result = await service.reuploadFileOnStorageBucket(
         fileUrl,
@@ -231,8 +239,10 @@ describe('ProfileDocumentsService', () => {
       );
 
       expect(result).toBe(fileUrl);
-      expect(doc.temporaryLocation).toBe(false);
-      expect(doc.storageBucket).toBe(storageBucketDestination);
+      expect(fileServiceAdapter.updateDocument).toHaveBeenCalledWith(doc.id, {
+        storageBucketId: storageBucketDestination.id,
+        temporaryLocation: false,
+      });
     });
 
     it('should return a copy of the document in the new StorageBucket', async () => {
@@ -258,14 +268,18 @@ describe('ProfileDocumentsService', () => {
         resultUrl
       );
 
+      const contentBuffer = Buffer.from('file-content');
+      vi.spyOn(fileServiceAdapter, 'getDocumentContent').mockResolvedValue(
+        contentBuffer
+      );
+
       const newDocMock = mockDocument(storageBucketDestination, {
         ...doc,
         id: uniqueId(),
       });
-      vi.spyOn(documentService, 'createDocument').mockResolvedValue(newDocMock);
       vi.spyOn(
         storageBucketService,
-        'addDocumentToStorageBucketOrFail'
+        'uploadFileAsDocumentFromBuffer'
       ).mockResolvedValue(newDocMock);
 
       const result = await service.reuploadFileOnStorageBucket(
@@ -276,13 +290,18 @@ describe('ProfileDocumentsService', () => {
 
       expect(result).toBe(resultUrl);
       expect(result !== fileUrl).toBe(true);
-      expect(storageBucketDestination.documents).toHaveLength(4);
-      const newDoc = storageBucketDestination.documents[3];
-      expect(newDoc.storageBucket).toBe(storageBucketDestination);
-      expect(newDoc.id === doc.id).toBe(false);
-      expect(newDoc.externalID).toBe(doc.externalID);
-      expect(newDoc.temporaryLocation).toBe(false);
-      expect(newDoc.displayName).toBe(doc.displayName);
+      expect(fileServiceAdapter.getDocumentContent).toHaveBeenCalledWith(
+        doc.id
+      );
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).toHaveBeenCalledWith(
+        storageBucketDestination.id,
+        contentBuffer,
+        doc.displayName,
+        doc.mimeType,
+        doc.createdBy
+      );
     });
 
     describe('reuploadDocumentsInMarkdownProfile', () => {
@@ -322,11 +341,7 @@ describe('ProfileDocumentsService', () => {
           resultUrl
         );
 
-        vi.spyOn(documentService, 'createDocument').mockResolvedValue(doc);
-        vi.spyOn(
-          storageBucketService,
-          'addDocumentToStorageBucketOrFail'
-        ).mockResolvedValue(doc);
+        // Doc is already in storageBucketDestination.documents so the early-return path is taken
 
         const result = await service.reuploadDocumentsInMarkdownToStorageBucket(
           markdown,

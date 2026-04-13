@@ -9,6 +9,7 @@ import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { StorageService } from '@services/adapters/storage';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -31,6 +32,7 @@ describe('DocumentService', () => {
   let tagsetService: TagsetService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let storageService: StorageService;
+  let fileServiceAdapter: FileServiceAdapter;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -58,6 +60,15 @@ describe('DocumentService', () => {
             getType: vi.fn(),
           },
         },
+        {
+          provide: FileServiceAdapter,
+          useValue: {
+            createDocument: vi.fn(),
+            getDocumentContent: vi.fn(),
+            updateDocument: vi.fn(),
+            deleteDocument: vi.fn(),
+          },
+        },
       ],
     })
       .useMocker(token => {
@@ -79,6 +90,7 @@ describe('DocumentService', () => {
       AuthorizationPolicyService
     );
     storageService = module.get<StorageService>(STORAGE_SERVICE);
+    fileServiceAdapter = module.get<FileServiceAdapter>(FileServiceAdapter);
   });
 
   // ── createDocument ──────────────────────────────────────────────
@@ -117,32 +129,32 @@ describe('DocumentService', () => {
   // ── deleteDocument ──────────────────────────────────────────────
 
   describe('deleteDocument', () => {
-    it('should delete authorization policy, tagset, and remove document when document exists', async () => {
-      const mockAuth = { id: 'auth-1' };
-      const mockTagset = { id: 'tagset-1' };
+    it('should delegate deletion to file-service adapter and clean up auth policy and tagset', async () => {
       const document = {
         id: 'doc-1',
         externalID: 'ext-1',
-        authorization: mockAuth,
-        tagset: mockTagset,
+        authorization: { id: 'auth-1' },
+        tagset: { id: 'tagset-1' },
       };
       (documentRepository.findOne as Mock).mockResolvedValue(document);
-      (documentRepository.remove as Mock).mockResolvedValue({
-        ...document,
-        id: '',
+      (fileServiceAdapter.deleteDocument as Mock).mockResolvedValue({
+        authorizationId: 'auth-1',
+        tagsetId: 'tagset-1',
       });
       (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
       (tagsetService.removeTagset as Mock).mockResolvedValue(undefined);
 
       const result = await service.deleteDocument({ ID: 'doc-1' });
 
-      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(mockAuth);
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith('doc-1');
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'auth-1' })
+      );
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-1');
-      expect(documentRepository.remove).toHaveBeenCalled();
       expect(result.id).toBe('doc-1');
     });
 
-    it('should skip authorization deletion when document has no authorization policy', async () => {
+    it('should skip authorization deletion when file-service returns no authorizationId', async () => {
       const document = {
         id: 'doc-2',
         externalID: 'ext-2',
@@ -150,9 +162,9 @@ describe('DocumentService', () => {
         tagset: { id: 'tagset-2' },
       };
       (documentRepository.findOne as Mock).mockResolvedValue(document);
-      (documentRepository.remove as Mock).mockResolvedValue({
-        ...document,
-        id: '',
+      (fileServiceAdapter.deleteDocument as Mock).mockResolvedValue({
+        authorizationId: '',
+        tagsetId: 'tagset-2',
       });
       (tagsetService.removeTagset as Mock).mockResolvedValue(undefined);
 
@@ -162,7 +174,7 @@ describe('DocumentService', () => {
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-2');
     });
 
-    it('should skip tagset deletion when document has no tagset', async () => {
+    it('should skip tagset deletion when file-service returns no tagsetId', async () => {
       const document = {
         id: 'doc-3',
         externalID: 'ext-3',
@@ -170,9 +182,9 @@ describe('DocumentService', () => {
         tagset: undefined,
       };
       (documentRepository.findOne as Mock).mockResolvedValue(document);
-      (documentRepository.remove as Mock).mockResolvedValue({
-        ...document,
-        id: '',
+      (fileServiceAdapter.deleteDocument as Mock).mockResolvedValue({
+        authorizationId: 'auth-3',
+        tagsetId: null,
       });
       (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
 

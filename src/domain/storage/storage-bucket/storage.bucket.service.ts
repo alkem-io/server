@@ -32,7 +32,6 @@ import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { Document } from '../document/document.entity';
 import { IDocument } from '../document/document.interface';
 import { DocumentService } from '../document/document.service';
-import { CreateDocumentInput } from '../document/dto/document.dto.create';
 import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
 import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
@@ -162,25 +161,12 @@ export class StorageBucketService {
       )!;
       const buffer = await streamToBuffer(readStream, streamTimeoutMs);
 
-      // Process image: HEIC conversion + optimization
-      const conversionResult =
-        await this.imageConversionService.convertIfNeeded(
-          buffer,
-          mimeType,
-          filename
-        );
-      const compressionResult =
-        await this.imageCompressionService.compressIfNeeded(
-          conversionResult.buffer,
-          conversionResult.mimeType,
-          conversionResult.fileName
-        );
-
+      // Go file-service-go handles image processing (HEIC→JPEG, compression)
       return await this.uploadFileAsDocumentFromBuffer(
         storageBucketId,
-        compressionResult.buffer,
-        compressionResult.fileName,
-        compressionResult.mimeType,
+        buffer,
+        filename,
+        mimeType,
         userID,
         temporaryDocument
       );
@@ -214,46 +200,47 @@ export class StorageBucketService {
     });
 
     this.validateMimeTypes(storage, mimeType);
+    this.validateSize(storage, buffer.length);
 
-    // Upload the document
-    const size = buffer.length;
-    this.validateSize(storage, size);
-    const externalID = await this.documentService.uploadFile(buffer, filename);
+    // Pre-create auth policy and tagset (server owns these)
+    const authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.DOCUMENT
+    );
+    const savedAuth = await this.authorizationPolicyService.save(authorization);
 
-    const createDocumentInput: CreateDocumentInput = {
-      mimeType: mimeType as MimeFileType,
-      externalID: externalID,
-      displayName: filename,
-      size: size,
-      createdBy: userID || undefined,
-      temporaryLocation: temporaryLocation,
-    };
-
+    let result;
     try {
-      const docByExternalId =
-        await this.documentService.getDocumentByExternalIdOrFail(externalID, {
-          where: {
-            storageBucket: {
-              id: storageBucketId,
-            },
-          },
-        });
-      if (docByExternalId) {
-        return docByExternalId;
+      // Delegate to Go file-service-go
+      result = await this.fileServiceAdapter.createDocument(buffer, {
+        displayName: filename,
+        storageBucketId,
+        authorizationId: savedAuth.id,
+        createdBy: userID || undefined,
+        temporaryLocation,
+        allowedMimeTypes: storage.allowedMimeTypes.join(','),
+        maxFileSize: storage.maxFileSize,
+      });
+    } catch (error) {
+      // Rollback: delete pre-created auth policy on failure
+      try {
+        await this.authorizationPolicyService.delete(savedAuth);
+      } catch (_rollbackError) {
+        this.logger.warn?.(
+          `Failed to rollback auth policy ${savedAuth.id} after upload failure`,
+          LogContext.STORAGE_BUCKET
+        );
       }
-    } catch (_e) {
-      /* just consume */
+      throw error;
     }
 
-    const document =
-      await this.documentService.createDocument(createDocumentInput);
-    document.storageBucket = storage;
+    // Load the document created by the Go service (it's now in the DB)
+    const document = await this.documentService.getDocumentOrFail(result.id);
 
     this.logger.verbose?.(
-      `Uploaded document '${document.externalID}' on storage bucket: ${storage.id}`,
+      `Uploaded document '${result.externalID}' via file-service on storage bucket: ${storage.id}`,
       LogContext.STORAGE_BUCKET
     );
-    return await this.documentService.save(document);
+    return document;
   }
 
   async uploadFileFromURI(
