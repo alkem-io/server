@@ -161,7 +161,8 @@ account_validity:
 # If set, allows registration of standard or admin accounts by anyone who
 # has the shared secret, even if registration is otherwise disabled.
 #
-#registration_shared_secret:
+#registration_shared_secret: ${SYNAPSE_SERVER_SHARED_SECRET}
+registration_shared_secret: n#P.uIl8IDOYPR-fiLzDoFw9ZPvTIlYg7*F9*~eaDZFK#;.KRg
 
 # Set the number of bcrypt rounds used to generate password hash.
 # Larger numbers increase the work factor needed to generate the hash.
@@ -250,6 +251,12 @@ oidc_providers:
 
     # User profile synchronization method (FR-007)
     user_profile_method: "userinfo_endpoint"
+
+
+room_list_publication_rules:
+  - user_id: "@00000000-0000-0000-0000-000000000000:alkemio.matrix.host"
+    action: allow
+  - action: deny
 
 # Token refresh configuration (FR-011, NFR-002)
 # Set to 5 minutes (300s) to ensure timely session termination when Kratos accounts are disabled
