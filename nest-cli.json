@@ -7,15 +7,15 @@
       "**/*.yml",
       {
         "include": "domain/collaboration/collabora-document/templates/*.docx",
-        "outDir": "dist/src"
+        "outDir": "dist"
       },
       {
         "include": "domain/collaboration/collabora-document/templates/*.xlsx",
-        "outDir": "dist/src"
+        "outDir": "dist"
       },
       {
         "include": "domain/collaboration/collabora-document/templates/*.pptx",
-        "outDir": "dist/src"
+        "outDir": "dist"
       }
     ]
   }
