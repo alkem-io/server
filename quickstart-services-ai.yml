@@ -30,8 +30,6 @@ services:
       - 15672:15672
       - 6379:6379
       - 6060:6060
-      - 8880:8880
-      - 9980:9980
       - 8188:8188
     networks:
       - alkemio_dev_net
@@ -905,9 +903,10 @@ services:
       - AUTH_SERVICE_URL=http://authorization-evaluation:6060
       - FILE_SERVICE_URL=http://file-service:4003
       - WOPI_COLLABORA_URL=http://collabora:9980
-      - WOPI_BASE_URL=http://localhost:8880
+      - WOPI_BASE_URL=http://localhost:3000
       - WOPI_TOKEN_SECRET=dev-wopi-token-secret-change-in-production
       - WOPI_SERVER_PORT=8080
+      - WOPI_PROOF_VALIDATION=false
       - LOG_LEVEL=info
     restart: unless-stopped
     networks:
