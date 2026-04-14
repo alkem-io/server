@@ -1,5 +1,4 @@
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
-import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
 import { IMemo } from '@domain/common/memo/memo.interface';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
@@ -20,7 +19,7 @@ export abstract class ICalloutContribution extends IAuthorizable {
 
   memo?: IMemo;
 
-  collaboraDocument?: ICollaboraDocument;
+  collaboraDocument?: any; // Resolved by field resolver; type-imported in resolver
 
   createdBy?: string;
 

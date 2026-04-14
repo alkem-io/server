@@ -21,7 +21,7 @@ export class CollaboraDocumentResolverFields {
   ) {}
 
   @ResolveField('profile', () => IProfile, {
-    nullable: false,
+    nullable: true,
     description: 'The Profile for this CollaboraDocument.',
   })
   async profile(

@@ -1,5 +1,6 @@
 import { CurrentActor, Headers } from '@common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { AuthenticationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
@@ -40,6 +41,13 @@ export class CollaboraDocumentResolverQueries {
 
     // Extract the JWT from the Authorization header
     const jwt = authorizationHeader?.replace('Bearer ', '') ?? '';
+
+    if (!jwt) {
+      throw new AuthenticationException(
+        'Authorization header with a valid Bearer token is required to obtain a Collabora editor URL',
+        LogContext.COLLABORATION
+      );
+    }
 
     return this.collaboraDocumentService.getEditorUrl(collaboraDocumentID, jwt);
   }

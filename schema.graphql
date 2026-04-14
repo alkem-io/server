@@ -127,6 +127,7 @@ enum AuthorizationPolicyType {
   CALLOUT_FRAMING
   CALLOUTS_SET
   CLASSIFICATION
+  COLLABORA_DOCUMENT
   COLLABORATION
   COMMUNICATION
   COMMUNICATION_CONVERSATION
@@ -251,6 +252,7 @@ enum CalloutAllowedActors {
 }
 
 enum CalloutContributionType {
+  COLLABORA_DOCUMENT
   LINK
   MEMO
   POST
@@ -279,6 +281,12 @@ enum CalloutsSetType {
 enum CalloutVisibility {
   DRAFT
   PUBLISHED
+}
+
+enum CollaboraDocumentType {
+  PRESENTATION
+  SPREADSHEET
+  TEXT_DOCUMENT
 }
 
 enum CommunityMembershipPolicy {
@@ -642,6 +650,7 @@ enum ProfileType {
   ACCOUNT
   CALENDAR_EVENT
   CALLOUT_FRAMING
+  COLLABORA_DOCUMENT
   COMMUNITY_GUIDELINES
   CONTRIBUTION_LINK
   DISCUSSION
@@ -1693,6 +1702,8 @@ type Callout {
 type CalloutContribution {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """The CollaboraDocument that was contributed."""
+  collaboraDocument: CollaboraDocument
   """The user that created this Document"""
   createdBy: User
   """The date at which the entity was created."""
@@ -1866,6 +1877,30 @@ type Classification {
   tagsets: [Tagset!]
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type CollaboraDocument {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The user that created this CollaboraDocument."""
+  createdBy: User
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The type of the collaborative document."""
+  documentType: CollaboraDocumentType!
+  """The ID of the entity"""
+  id: UUID!
+  """The Profile for this CollaboraDocument."""
+  profile: Profile
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+type CollaboraEditorUrlResult {
+  """The time-to-live of the access token in seconds."""
+  accessTokenTTL: Float!
+  """The URL to open the document in the Collabora editor."""
+  editorUrl: String!
 }
 
 type Collaboration {
@@ -2188,6 +2223,7 @@ type ConversationUpdatedEvent {
 }
 
 type CreateCalloutContributionData {
+  collaboraDocument: CreateCollaboraDocumentData
   link: CreateLinkData
   memo: CreateMemoData
   post: CreatePostData
@@ -2270,6 +2306,13 @@ type CreateCalloutsSetData {
 
 type CreateClassificationData {
   tagsets: [CreateTagsetData!]!
+}
+
+type CreateCollaboraDocumentData {
+  """Title for the new collaborative document."""
+  displayName: String!
+  """Type of document to create."""
+  documentType: CollaboraDocumentType!
 }
 
 type CreateCollaborationData {
@@ -3724,6 +3767,8 @@ type Mutation {
   deleteCalendarEvent(deleteData: DeleteCalendarEventInput!): CalendarEvent!
   """Delete a Callout."""
   deleteCallout(deleteData: DeleteCalloutInput!): Callout!
+  """Deletes the specified CollaboraDocument."""
+  deleteCollaboraDocument(deleteData: DeleteCollaboraDocumentInput!): CollaboraDocument!
   """Deletes a contribution."""
   deleteContribution(deleteData: DeleteContributionInput!): CalloutContribution!
   """
@@ -3932,6 +3977,8 @@ type Mutation {
   updateCalloutVisibility(calloutData: UpdateCalloutVisibilityInput!): Callout!
   """Updates a Tagset on a Classification."""
   updateClassificationTagset(updateData: UpdateClassificationSelectTagsetValueInput!): Tagset!
+  """Updates the specified CollaboraDocument."""
+  updateCollaboraDocument(updateData: UpdateCollaboraDocumentInput!): CollaboraDocument!
   """
   Updates a Collaboration using the Space content from the specified Template. Behavior depends on parameter combinations: (1) Flow Only: deleteExistingCallouts=false, addCallouts=false - updates only InnovationFlow states; (2) Add Posts: deleteExistingCallouts=false, addCallouts=true - keeps existing and adds template callouts; (3) Replace All: deleteExistingCallouts=true, addCallouts=true - deletes existing then adds template callouts; (4) Delete Only: deleteExistingCallouts=true, addCallouts=false - deletes existing callouts and updates InnovationFlow states. Execution order: delete (if requested) → update flow states (always) → add (if requested).
   """
@@ -4794,6 +4841,8 @@ type Query {
   adminIdentitiesUnverified: [KratosIdentity!]!
   """Alkemio AiServer"""
   aiServer: AiServer!
+  """Retrieves the editor URL for the specified CollaboraDocument."""
+  collaboraEditorUrl(collaboraDocumentID: UUID!): CollaboraEditorUrlResult!
   """Active Spaces only, order by most active in the past X days."""
   exploreSpaces(options: ExploreSpacesInput): [Space!]!
   """
@@ -6836,6 +6885,7 @@ input CreateCalloutContributionDefaultsInput {
 }
 
 input CreateCalloutContributionInput {
+  collaboraDocument: CreateCollaboraDocumentInput
   link: CreateLinkInput
   memo: CreateMemoInput
   post: CreatePostInput
@@ -6930,6 +6980,13 @@ input CreateClassificationInput {
   tagsets: [CreateTagsetInput!]!
 }
 
+input CreateCollaboraDocumentInput {
+  """Title for the new collaborative document."""
+  displayName: String!
+  """Type of document to create."""
+  documentType: CollaboraDocumentType!
+}
+
 input CreateCollaborationInput {
   """The CalloutsSet to use for this Collaboration."""
   calloutsSetData: CreateCalloutsSetInput!
@@ -6954,6 +7011,7 @@ input CreateCommunityGuidelinesInput {
 
 input CreateContributionOnCalloutInput {
   calloutID: UUID!
+  collaboraDocument: CreateCollaboraDocumentInput
   link: CreateLinkInput
   memo: CreateMemoInput
   post: CreatePostInput
@@ -7393,6 +7451,11 @@ input DeleteCalendarEventInput {
 }
 
 input DeleteCalloutInput {
+  ID: UUID!
+}
+
+input DeleteCollaboraDocumentInput {
+  """The ID of the CollaboraDocument to delete."""
   ID: UUID!
 }
 
@@ -8126,6 +8189,13 @@ input UpdateClassificationSelectTagsetValueInput {
   classificationID: UUID!
   selectedValue: String!
   tagsetName: String!
+}
+
+input UpdateCollaboraDocumentInput {
+  """Updated display name for the document."""
+  displayName: String
+  """The ID of the CollaboraDocument to update."""
+  ID: UUID!
 }
 
 input UpdateCollaborationFromSpaceTemplateInput {

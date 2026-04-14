@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
+import { DocumentModule } from '@domain/storage/document/document.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -16,6 +17,7 @@ import { CollaboraDocumentAuthorizationService } from './collabora.document.serv
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    DocumentModule,
     ProfileModule,
     StorageBucketModule,
     WopiServiceAdapterModule,

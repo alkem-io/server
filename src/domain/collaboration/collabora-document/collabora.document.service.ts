@@ -11,6 +11,7 @@ import {
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -31,6 +32,7 @@ export class CollaboraDocumentService {
     private collaboraDocumentRepository: Repository<CollaboraDocument>,
     private authorizationPolicyService: AuthorizationPolicyService,
     private profileService: ProfileService,
+    private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
     private wopiServiceAdapter: WopiServiceAdapter
   ) {}
@@ -142,6 +144,12 @@ export class CollaboraDocumentService {
         },
       }
     );
+
+    if (collaboraDocument.document) {
+      await this.documentService.deleteDocument({
+        ID: collaboraDocument.document.id,
+      });
+    }
 
     if (collaboraDocument.profile) {
       await this.profileService.deleteProfile(collaboraDocument.profile.id);

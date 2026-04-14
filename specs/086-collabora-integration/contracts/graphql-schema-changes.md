@@ -100,12 +100,24 @@ extend type Query {
 }
 ```
 
-## New Mutation
+## New Input Type (Delete)
+
+```graphql
+input DeleteCollaboraDocumentInput {
+  """The ID of the CollaboraDocument to delete."""
+  ID: UUID!
+}
+```
+
+## New Mutations
 
 ```graphql
 extend type Mutation {
   """Update a Collabora document (rename)."""
   updateCollaboraDocument(updateData: UpdateCollaboraDocumentInput!): CollaboraDocument!
+
+  """Delete a Collabora document and its underlying file."""
+  deleteCollaboraDocument(deleteData: DeleteCollaboraDocumentInput!): CollaboraDocument!
 }
 ```
 
@@ -118,4 +130,4 @@ extend type Mutation {
 - 1 new optional field on `CalloutContribution`
 - 1 new optional field on `CreateContributionOnCalloutInput`
 - 1 new query
-- 1 new mutation
+- 2 new mutations (update + delete)
