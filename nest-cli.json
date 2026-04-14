@@ -2,6 +2,21 @@
   "collection": "@nestjs/schematics",
   "sourceRoot": "src",
   "compilerOptions": {
-    "assets": ["**/*.yaml", "**/*.yml", "**/*.docx", "**/*.xlsx", "**/*.pptx"]
+    "assets": [
+      "**/*.yaml",
+      "**/*.yml",
+      {
+        "include": "domain/collaboration/collabora-document/templates/*.docx",
+        "outDir": "dist/src"
+      },
+      {
+        "include": "domain/collaboration/collabora-document/templates/*.xlsx",
+        "outDir": "dist/src"
+      },
+      {
+        "include": "domain/collaboration/collabora-document/templates/*.pptx",
+        "outDir": "dist/src"
+      }
+    ]
   }
 }
