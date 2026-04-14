@@ -332,27 +332,27 @@ export class CalloutAuthorizationService {
   private getPrivilegesForCalloutAllowedContributions(
     allowedContributions: CalloutContributionType[] | undefined
   ): AuthorizationPrivilege[] {
-    const privilegesToGrant: AuthorizationPrivilege[] = [];
     if (!allowedContributions || allowedContributions.length === 0) {
-      return privilegesToGrant;
-    } else {
-      if (allowedContributions.includes(CalloutContributionType.LINK)) {
-        privilegesToGrant.push(AuthorizationPrivilege.CONTRIBUTE);
-      }
-      if (allowedContributions.includes(CalloutContributionType.POST)) {
-        privilegesToGrant.push(AuthorizationPrivilege.CREATE_POST);
-      }
-      if (allowedContributions.includes(CalloutContributionType.WHITEBOARD)) {
-        privilegesToGrant.push(AuthorizationPrivilege.CREATE_WHITEBOARD);
-      }
-      if (
-        allowedContributions.includes(
-          CalloutContributionType.COLLABORA_DOCUMENT
-        )
-      ) {
-        privilegesToGrant.push(AuthorizationPrivilege.CONTRIBUTE);
-      }
-      return privilegesToGrant;
+      return [];
     }
+
+    const privilegesToGrant = new Set<AuthorizationPrivilege>();
+
+    if (allowedContributions.includes(CalloutContributionType.LINK)) {
+      privilegesToGrant.add(AuthorizationPrivilege.CONTRIBUTE);
+    }
+    if (allowedContributions.includes(CalloutContributionType.POST)) {
+      privilegesToGrant.add(AuthorizationPrivilege.CREATE_POST);
+    }
+    if (allowedContributions.includes(CalloutContributionType.WHITEBOARD)) {
+      privilegesToGrant.add(AuthorizationPrivilege.CREATE_WHITEBOARD);
+    }
+    if (
+      allowedContributions.includes(CalloutContributionType.COLLABORA_DOCUMENT)
+    ) {
+      privilegesToGrant.add(AuthorizationPrivilege.CONTRIBUTE);
+    }
+
+    return Array.from(privilegesToGrant);
   }
 }

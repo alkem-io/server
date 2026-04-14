@@ -772,6 +772,7 @@ export class CalloutService {
       link: 0,
       whiteboard: 0,
       memo: 0,
+      collaboraDocument: 0,
     };
 
     for (const { type, count } of counts) {
@@ -784,6 +785,8 @@ export class CalloutService {
         result.whiteboard = numCount;
       } else if (type === CalloutContributionType.MEMO) {
         result.memo = numCount;
+      } else if (type === CalloutContributionType.COLLABORA_DOCUMENT) {
+        result.collaboraDocument = numCount;
       }
     }
 

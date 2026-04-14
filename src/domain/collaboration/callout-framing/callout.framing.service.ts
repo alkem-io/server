@@ -517,6 +517,26 @@ export class CalloutFramingService {
         }
         break;
       }
+      case CalloutFramingType.COLLABORA_DOCUMENT: {
+        // Collabora documents are immutable once created; updates are done
+        // through the Collabora editor via WOPI. If the framing was switched
+        // to COLLABORA_DOCUMENT and no document exists, create one.
+        if (!calloutFraming.collaboraDocument) {
+          if (!calloutFramingData.collaboraDocument) {
+            throw new ValidationException(
+              'Collabora document input is required when switching to COLLABORA_DOCUMENT framing type',
+              LogContext.COLLABORATION
+            );
+          }
+          calloutFraming.collaboraDocument =
+            await this.collaboraDocumentService.createCollaboraDocument(
+              calloutFramingData.collaboraDocument,
+              storageAggregator,
+              userID
+            );
+        }
+        break;
+      }
       case CalloutFramingType.NONE:
       default: {
         // if the type is NONE we have already deleted any existing framing content

@@ -265,6 +265,7 @@ enum CalloutDescriptionDisplayMode {
 }
 
 enum CalloutFramingType {
+  COLLABORA_DOCUMENT
   LINK
   MEDIA_GALLERY
   MEMO
@@ -1740,6 +1741,8 @@ type CalloutContributionDefaults {
 }
 
 type CalloutContributionsCountOutput {
+  """The number of contributions of type CollaboraDocument in this callout"""
+  collaboraDocument: Float!
   """The number of contributions of type Link in this callout"""
   link: Float!
   """The number of contributions of type Memo in this callout"""
@@ -1753,6 +1756,10 @@ type CalloutContributionsCountOutput {
 type CalloutFraming {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """
+  The Collabora document attached to this Callout Framing, if any. Present when framing.type = COLLABORA_DOCUMENT.
+  """
+  collaboraDocument: CollaboraDocument
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
@@ -2259,6 +2266,8 @@ type CreateCalloutData {
 }
 
 type CreateCalloutFramingData {
+  """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
+  collaboraDocument: CreateCollaboraDocumentData
   link: CreateLinkData
   memo: CreateMemoData
   """
@@ -6896,6 +6905,8 @@ input CreateCalloutContributionInput {
 }
 
 input CreateCalloutFramingInput {
+  """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
+  collaboraDocument: CreateCollaboraDocumentInput
   link: CreateLinkInput
   memo: CreateMemoInput
   """
@@ -8117,6 +8128,10 @@ input UpdateCalloutEntityInput {
 }
 
 input UpdateCalloutFramingInput {
+  """
+  Collabora document input. Used when switching framing type to COLLABORA_DOCUMENT.
+  """
+  collaboraDocument: CreateCollaboraDocumentInput
   link: UpdateLinkInput
   """The new markdown content for the Memo."""
   memoContent: Markdown

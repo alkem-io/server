@@ -74,6 +74,12 @@ export class WopiServiceAdapter {
               `[WopiService] issueToken failed: HTTP ${error.response.status}`,
               LogContext.COLLABORATION
             );
+          } else {
+            this.logger.error?.(
+              `[WopiService] issueToken failed: ${error.message ?? error}`,
+              error.stack,
+              LogContext.COLLABORATION
+            );
           }
           throw error;
         })
