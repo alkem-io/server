@@ -42,9 +42,9 @@ These are internal `CommunicationAdapter` method signature changes, not GraphQL 
 
 ```typescript
 // New parameters added (lib already supports these fields)
-createSpace(contextId, name, parentContextId?, avatarUrl?, joinRule?): Promise<boolean>
-updateSpace(contextId, name?, topic?, avatarUrl?, joinRule?): Promise<boolean>
-createRoom(roomId, type, name?, members?, parentContextId?, avatarUrl?, joinRule?): Promise<boolean>
+createSpace(contextId, name, parentContextId?, avatarUrl?, joinRule?, isPublic?, customState?): Promise<boolean>
+updateSpace(contextId, name?, topic?, avatarUrl?, joinRule?, isPublic?): Promise<boolean>
+createRoom(roomId, type, name?, members?, parentContextId?, avatarUrl?, joinRule?, isPublic?, customState?): Promise<boolean>
 
 // Breaking migration: isPublic removed, replaced by joinRule
 updateRoom(roomId, name?, topic?, joinRule?, avatarUrl?): Promise<boolean>  // was: isPublic?

@@ -76,6 +76,12 @@ export class ProfileDocumentsService {
         storageBucketId: storageBucket.id,
         temporaryLocation: false,
       });
+      // Keep in-memory state in sync so subsequent hits in the same pass
+      // find the document in the destination bucket
+      docInContent.temporaryLocation = false;
+      if (!storageBucket.documents.some(doc => doc.id === docInContent.id)) {
+        storageBucket.documents.push(docInContent);
+      }
       return this.documentService.getPubliclyAccessibleURL(docInContent);
     } else {
       // Different bucket: fetch content from Go service, re-upload to new bucket

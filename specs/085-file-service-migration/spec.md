@@ -113,7 +113,7 @@ End users accessing files via the public URL (`/api/private/rest/storage/documen
 - What happens when the Go file-service-go is down during a file upload? The server returns an error to the user. No partial state is left in the database.
 - What happens when the Go service returns a 409 Conflict during a PATCH? The server retries with a fresh version (optimistic locking).
 - What happens when a document is deleted while its file is being served? The Go service handles this atomically -- the serve request either completes with the old data or returns 404.
-- What happens when the server's authorization policy or tagset creation fails after the Go service has created the document? The server should call DELETE on the Go service to roll back the document creation.
+- What happens when the Go service call fails after the server has pre-created the authorization policy and tagset? The server rolls back by deleting the pre-created auth policy and tagset (each independently, best-effort). No document record exists in the Go service since it never received the request.
 - What happens when the Go service detects an unsupported MIME type during upload? It returns 415, and the server propagates the error to the user via the GraphQL response.
 
 ## Requirements _(mandatory)_

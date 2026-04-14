@@ -269,12 +269,21 @@ http:
       entryPoints:
         - 'web'
 
-    # file-service-go: all requests on :4003 go to file-service container
-    file-service-all:
-      rule: 'PathPrefix(`/`)'
+    # file-service-go internal endpoints (no auth, routed on web entrypoint)
+    file-service-internal:
+      rule: 'PathPrefix(`/internal/document`)'
       service: 'file-service'
       entryPoints:
-        - 'file-service'
+        - 'web'
+      priority: 160
+
+    # file-service-go health endpoint
+    file-service-health:
+      rule: 'Path(`/file-service/health`)'
+      service: 'file-service'
+      entryPoints:
+        - 'web'
+      priority: 160
 
     # Login backoff proxy: intercepts login submissions for brute-force protection
     kratos-login-backoff:

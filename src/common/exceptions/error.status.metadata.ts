@@ -390,7 +390,7 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
   [AlkemioErrorStatus.STORAGE_SERVICE_UNAVAILABLE]: {
     category: ErrorCategory.SYSTEM,
     specificCode: 120,
-    userMessage: 'File storage service is currently unavailable',
+    userMessage: 'userMessages.system.storageServiceUnavailable',
   },
   [AlkemioErrorStatus.EXCALIDRAW_AMQP_RESULT_ERROR]: {
     category: ErrorCategory.SYSTEM,

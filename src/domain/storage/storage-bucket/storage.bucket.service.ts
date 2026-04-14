@@ -201,20 +201,23 @@ export class StorageBucketService {
     this.validateMimeTypes(storage, mimeType);
     this.validateSize(storage, buffer.length);
 
-    // Pre-create auth policy and tagset (server owns these)
-    const authorization = new AuthorizationPolicy(
-      AuthorizationPolicyType.DOCUMENT
-    );
-    const savedAuth = await this.authorizationPolicyService.save(authorization);
-
-    const tagset = this.tagsetService.createTagset({
-      name: TagsetReservedName.DEFAULT,
-      tags: [],
-    });
-    const savedTagset = await this.tagsetService.save(tagset);
-
+    // Pre-create auth policy and tagset, call Go service, load result.
+    // Full compensation: any failure rolls back all previously created resources.
+    let savedAuth;
+    let savedTagset;
     let result;
     try {
+      const authorization = new AuthorizationPolicy(
+        AuthorizationPolicyType.DOCUMENT
+      );
+      savedAuth = await this.authorizationPolicyService.save(authorization);
+
+      const tagset = this.tagsetService.createTagset({
+        name: TagsetReservedName.DEFAULT,
+        tags: [],
+      });
+      savedTagset = await this.tagsetService.save(tagset);
+
       // Delegate to Go file-service-go
       result = await this.fileServiceAdapter.createDocument(buffer, {
         displayName: filename,
@@ -227,15 +230,26 @@ export class StorageBucketService {
         maxFileSize: storage.maxFileSize,
       });
     } catch (error) {
-      // Rollback: delete pre-created auth policy + tagset on failure
-      try {
-        await this.authorizationPolicyService.delete(savedAuth);
-        await this.tagsetService.removeTagset(savedTagset.id);
-      } catch (_rollbackError) {
-        this.logger.warn?.(
-          `Failed to rollback auth policy/tagset after upload failure`,
-          LogContext.STORAGE_BUCKET
-        );
+      // Rollback: delete each pre-created resource independently
+      if (savedAuth) {
+        try {
+          await this.authorizationPolicyService.delete(savedAuth);
+        } catch (_e) {
+          this.logger.warn?.(
+            `Failed to rollback auth policy ${savedAuth.id}`,
+            LogContext.STORAGE_BUCKET
+          );
+        }
+      }
+      if (savedTagset) {
+        try {
+          await this.tagsetService.removeTagset(savedTagset.id);
+        } catch (_e) {
+          this.logger.warn?.(
+            `Failed to rollback tagset ${savedTagset.id}`,
+            LogContext.STORAGE_BUCKET
+          );
+        }
       }
       throw error;
     }
