@@ -7,8 +7,9 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class ProfileDocumentsService {
@@ -16,7 +17,9 @@ export class ProfileDocumentsService {
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
     private documentAuthorizationService: DocumentAuthorizationService,
-    private fileServiceAdapter: FileServiceAdapter
+    private fileServiceAdapter: FileServiceAdapter,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   /***
@@ -96,10 +99,23 @@ export class ProfileDocumentsService {
           docInContent.mimeType,
           docInContent.createdBy
         );
-      await this.documentAuthorizationService.applyAuthorizationPolicy(
-        newDoc,
-        storageBucket.authorization
-      );
+      try {
+        await this.documentAuthorizationService.applyAuthorizationPolicy(
+          newDoc,
+          storageBucket.authorization
+        );
+      } catch (error) {
+        // Compensate: delete the uploaded document to avoid orphan without auth
+        try {
+          await this.documentService.deleteDocument({ ID: newDoc.id });
+        } catch (_cleanupError) {
+          this.logger.warn?.(
+            `Failed to clean up document ${newDoc.id} after auth policy failure`,
+            LogContext.STORAGE_BUCKET
+          );
+        }
+        throw error;
+      }
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
   }

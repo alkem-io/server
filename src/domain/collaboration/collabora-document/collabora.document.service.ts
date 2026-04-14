@@ -65,7 +65,8 @@ export class CollaboraDocumentService {
       }
     );
 
-    // Read template file and upload as a document to the storage bucket
+    // Read template file and upload as a document to the storage bucket.
+    // If upload fails, clean up the already-created profile to avoid orphans.
     const templateBuffer = this.readTemplateFile(input.documentType);
     const mimeType = this.getMimeType(input.documentType);
     const fileName = `${input.displayName}${this.getFileExtension(input.documentType)}`;
@@ -76,14 +77,27 @@ export class CollaboraDocumentService {
       );
     const storageBucketId = directStorage.id;
 
-    const document =
-      await this.storageBucketService.uploadFileAsDocumentFromBuffer(
+    let document;
+    try {
+      document = await this.storageBucketService.uploadFileAsDocumentFromBuffer(
         storageBucketId,
         templateBuffer,
         fileName,
         mimeType,
         userID
       );
+    } catch (error) {
+      // Compensate: remove the profile created above
+      try {
+        await this.profileService.deleteProfile(collaboraDocument.profile.id);
+      } catch (_cleanupError) {
+        this.logger.warn?.(
+          `Failed to clean up profile ${collaboraDocument.profile.id} after document upload failure`,
+          LogContext.COLLABORATION
+        );
+      }
+      throw error;
+    }
 
     collaboraDocument.document = document;
 

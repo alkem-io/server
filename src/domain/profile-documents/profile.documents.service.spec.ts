@@ -118,6 +118,14 @@ describe('ProfileDocumentsService', () => {
             deleteDocument: vi.fn(),
           },
         },
+        {
+          provide: 'NestWinston',
+          useValue: {
+            verbose: vi.fn(),
+            warn: vi.fn(),
+            error: vi.fn(),
+          },
+        },
       ],
     }).compile();
 
