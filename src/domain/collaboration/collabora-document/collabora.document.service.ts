@@ -13,6 +13,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -34,6 +35,7 @@ export class CollaboraDocumentService {
     private profileService: ProfileService,
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
+    private storageAggregatorService: StorageAggregatorService,
     private wopiServiceAdapter: WopiServiceAdapter
   ) {}
 
@@ -68,13 +70,11 @@ export class CollaboraDocumentService {
     const mimeType = this.getMimeType(input.documentType);
     const fileName = `${input.displayName}${this.getFileExtension(input.documentType)}`;
 
-    if (!collaboraDocument.profile?.storageBucket) {
-      throw new RelationshipNotFoundException(
-        'Storage bucket not found on collabora document profile',
-        LogContext.COLLABORATION
+    const directStorage =
+      await this.storageAggregatorService.getDirectStorageBucket(
+        storageAggregator
       );
-    }
-    const storageBucketId = collaboraDocument.profile.storageBucket.id;
+    const storageBucketId = directStorage.id;
 
     const document =
       await this.storageBucketService.uploadFileAsDocumentFromBuffer(
