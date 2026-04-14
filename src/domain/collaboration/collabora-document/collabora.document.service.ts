@@ -68,7 +68,13 @@ export class CollaboraDocumentService {
     const mimeType = this.getMimeType(input.documentType);
     const fileName = `${input.displayName}${this.getFileExtension(input.documentType)}`;
 
-    const storageBucketId = this.getStorageBucketId(storageAggregator);
+    if (!collaboraDocument.profile?.storageBucket) {
+      throw new RelationshipNotFoundException(
+        'Storage bucket not found on collabora document profile',
+        LogContext.COLLABORATION
+      );
+    }
+    const storageBucketId = collaboraDocument.profile.storageBucket.id;
 
     const document =
       await this.storageBucketService.uploadFileAsDocumentFromBuffer(
