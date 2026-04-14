@@ -1,5 +1,6 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { VisualType } from '@common/enums/visual.type';
+import { CreateCollaboraDocumentInput } from '@domain/collaboration/collabora-document/dto/collabora.document.dto.create';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { CreatePollInput } from '@domain/collaboration/poll/dto/poll.dto.create';
 import { CreateMemoInput } from '@domain/common/memo/types';
@@ -56,6 +57,16 @@ export class CreateCalloutFramingInput {
   @ValidateNested()
   @Type(() => CreatePollInput)
   poll?: CreatePollInput;
+
+  @Field(() => CreateCollaboraDocumentInput, {
+    nullable: true,
+    description:
+      'Collabora document input. Required when type = COLLABORA_DOCUMENT.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateCollaboraDocumentInput)
+  collaboraDocument?: CreateCollaboraDocumentInput;
 
   // Don't expose in the GraphQL schema
   // Used to create associated MediaGallery and Visuals from templates, but it's not sendable from the clients

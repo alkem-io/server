@@ -96,6 +96,10 @@ export class ProfileDocumentsService {
           docInContent.mimeType,
           docInContent.createdBy
         );
+      await this.documentAuthorizationService.applyAuthorizationPolicy(
+        newDoc,
+        storageBucket.authorization
+      );
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
   }

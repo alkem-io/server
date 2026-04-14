@@ -7,6 +7,7 @@ export enum CalloutFramingType {
   MEMO = 'memo',
   MEDIA_GALLERY = 'media_gallery',
   POLL = 'poll',
+  COLLABORA_DOCUMENT = 'collabora_document',
 }
 
 registerEnumType(CalloutFramingType, {

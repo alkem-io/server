@@ -42,7 +42,7 @@ export class CollaboraDocumentService {
   public async createCollaboraDocument(
     input: CreateCollaboraDocumentInput,
     storageAggregator: IStorageAggregator,
-    userID: string
+    userID?: string
   ): Promise<ICollaboraDocument> {
     const collaboraDocument: ICollaboraDocument = new CollaboraDocument();
     collaboraDocument.documentType = input.documentType;

@@ -345,6 +345,13 @@ export class CalloutAuthorizationService {
       if (allowedContributions.includes(CalloutContributionType.WHITEBOARD)) {
         privilegesToGrant.push(AuthorizationPrivilege.CREATE_WHITEBOARD);
       }
+      if (
+        allowedContributions.includes(
+          CalloutContributionType.COLLABORA_DOCUMENT
+        )
+      ) {
+        privilegesToGrant.push(AuthorizationPrivilege.CONTRIBUTE);
+      }
       return privilegesToGrant;
     }
   }

@@ -40,6 +40,9 @@ export class CollaboraDocumentAuthorizationService {
             profile: {
               authorization: true,
             },
+            document: {
+              authorization: true,
+            },
           },
           select: {
             id: true,
@@ -48,6 +51,11 @@ export class CollaboraDocumentAuthorizationService {
               this.authorizationPolicyService.authorizationSelectOptions,
             profile: {
               id: true,
+            },
+            document: {
+              id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
             },
           },
         }
@@ -82,6 +90,28 @@ export class CollaboraDocumentAuthorizationService {
         collaboraDocument.authorization
       );
     updatedAuthorizations.push(...profileAuthorizations);
+
+    // Cascade authorization to the underlying Document entity so that
+    // external services (WOPI, file-service-go) can evaluate access
+    // using the document's own authorizationPolicyId.
+    if (collaboraDocument.document?.authorization) {
+      collaboraDocument.document.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          collaboraDocument.document.authorization,
+          collaboraDocument.authorization
+        );
+      // Also copy privilege rules (inheritParentAuthorization only copies
+      // credential rules); the WOPI service needs the contribute→update-content
+      // mapping on the document's own policy.
+      collaboraDocument.document.authorization =
+        this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+          collaboraDocument.document.authorization,
+          this.authorizationPolicyService.getPrivilegeRules(
+            collaboraDocument.authorization
+          )
+        );
+      updatedAuthorizations.push(collaboraDocument.document.authorization);
+    }
 
     return updatedAuthorizations;
   }
