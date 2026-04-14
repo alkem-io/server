@@ -145,6 +145,12 @@ http:
           - /hydra/admin
         forceSlash: false
 
+    oathkeeper-auth-socket-io:
+      forwardAuth:
+        address: 'http://oathkeeper:4456/decisions'
+        authResponseHeaders:
+          - Authorization
+
   routers:
     oidc-public:
       rule: 'PathPrefix(`/oidc`)'
@@ -231,9 +237,10 @@ http:
 
     whiteboard-collaboration:
       rule: 'PathPrefix(`/api/private/ws`)'
-      service: 'oathkeeper-proxy'
+      service: 'whiteboard-collaboration'
       middlewares:
         - strip-api-private-prefix-socket-io
+        - oathkeeper-auth-socket-io
       entryPoints:
         - 'web'
 
