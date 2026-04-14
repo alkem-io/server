@@ -50,7 +50,7 @@ export class StorageBucketResolverMutations {
 
     const readStream = createReadStream();
 
-    let document = await this.storageBucketService.uploadFileAsDocument(
+    const document = await this.storageBucketService.uploadFileAsDocument(
       storageBucket.id,
       readStream,
       filename,
@@ -58,7 +58,6 @@ export class StorageBucketResolverMutations {
       actorContext.actorID,
       uploadData.temporaryLocation
     );
-    document = await this.documentService.saveDocument(document);
 
     const documentAuthorizations =
       await this.documentAuthorizationService.applyAuthorizationPolicy(

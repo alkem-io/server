@@ -1,8 +1,5 @@
 import { LogContext } from '@common/enums';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -14,7 +11,6 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { Document } from './document.entity';
 import { IDocument } from './document.interface';
-import { CreateDocumentInput } from './dto/document.dto.create';
 import { DeleteDocumentInput } from './dto/document.dto.delete';
 import { UpdateDocumentInput } from './dto/document.dto.update';
 
@@ -30,22 +26,6 @@ export class DocumentService {
     private readonly logger: LoggerService,
     private fileServiceAdapter: FileServiceAdapter
   ) {}
-
-  public async createDocument(
-    documentInput: CreateDocumentInput
-  ): Promise<IDocument> {
-    const document: IDocument = Document.create({ ...documentInput });
-    document.tagset = this.tagsetService.createTagset({
-      name: TagsetReservedName.DEFAULT,
-      tags: [],
-    });
-
-    document.authorization = new AuthorizationPolicy(
-      AuthorizationPolicyType.DOCUMENT
-    );
-
-    return await this.documentRepository.save(document);
-  }
 
   public async deleteDocument(
     deleteData: DeleteDocumentInput
@@ -124,10 +104,6 @@ export class DocumentService {
     return document;
   }
 
-  public async save(document: IDocument): Promise<IDocument> {
-    return await this.documentRepository.save(document);
-  }
-
   public async getUploadedDate(documentID: string): Promise<Date> {
     const document = await this.documentRepository.findOne({
       where: { id: documentID },
@@ -161,10 +137,6 @@ export class DocumentService {
     }
 
     return document;
-  }
-
-  public async saveDocument(document: IDocument): Promise<IDocument> {
-    return await this.documentRepository.save(document);
   }
 
   public getPubliclyAccessibleURL(document: IDocument): string {

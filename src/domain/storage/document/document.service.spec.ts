@@ -1,6 +1,3 @@
-import { MimeFileType } from '@common/enums/mime.file.type';
-import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
@@ -76,39 +73,6 @@ describe('DocumentService', () => {
       AuthorizationPolicyService
     );
     fileServiceAdapter = module.get<FileServiceAdapter>(FileServiceAdapter);
-  });
-
-  // ── createDocument ──────────────────────────────────────────────
-
-  describe('createDocument', () => {
-    it('should create a document with tagset, authorization policy, and persist it when valid input provided', async () => {
-      const input = {
-        displayName: 'test.png',
-        mimeType: MimeTypeVisual.PNG as MimeFileType,
-        size: 1024,
-        externalID: 'ext-123',
-        temporaryLocation: false,
-      };
-      const mockTagset = {
-        id: 'tagset-1',
-        name: TagsetReservedName.DEFAULT,
-        tags: [],
-      };
-      (tagsetService.createTagset as Mock).mockReturnValue(mockTagset);
-      (documentRepository.save as Mock).mockImplementation(
-        async (doc: any) => ({ ...doc, id: 'doc-1' })
-      );
-
-      const result = await service.createDocument(input);
-
-      expect(tagsetService.createTagset).toHaveBeenCalledWith({
-        name: TagsetReservedName.DEFAULT,
-        tags: [],
-      });
-      expect(result.tagset).toBe(mockTagset);
-      expect(result.authorization).toBeDefined();
-      expect(documentRepository.save).toHaveBeenCalledTimes(1);
-    });
   });
 
   // ── deleteDocument ──────────────────────────────────────────────

@@ -156,6 +156,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
           synchronize: false,
           cache: true,
           entities: [join(__dirname, '**', '*.entity.{ts,js}')],
+          subscribers: [join(__dirname, '**', '*.write.guard.{ts,js}')],
           host: dbOptions.host,
           port: dbOptions.port,
           username: dbOptions.username,

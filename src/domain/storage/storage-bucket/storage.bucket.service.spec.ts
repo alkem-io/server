@@ -321,7 +321,14 @@ describe('StorageBucketService', () => {
         })
       );
       expect(documentService.getDocumentOrFail).toHaveBeenCalledWith(
-        'doc-created'
+        'doc-created',
+        {
+          relations: {
+            authorization: true,
+            tagset: { authorization: true },
+            storageBucket: true,
+          },
+        }
       );
       expect(result).toBe(createdDoc);
     });
@@ -610,7 +617,6 @@ describe('StorageBucketService', () => {
     it('should download external avatar, detect file type, upload, and return document when URL is external', async () => {
       const imageBuffer = Buffer.from('image-data');
       const uploadedDoc = mockDocument({ externalID: 'ext-avatar' });
-      const savedDoc = { ...uploadedDoc };
       const bucket = mockStorageBucket({ id: 'bucket-avatar' });
 
       (documentService.isAlkemioDocumentURL as Mock).mockReturnValue(false);
@@ -633,7 +639,6 @@ describe('StorageBucketService', () => {
       (documentService.getDocumentOrFail as Mock).mockResolvedValue(
         uploadedDoc
       );
-      (documentService.saveDocument as Mock).mockResolvedValue(savedDoc);
 
       const result = await service.ensureAvatarUrlIsDocument(
         'https://external.com/avatar.jpg',
@@ -647,8 +652,7 @@ describe('StorageBucketService', () => {
       expect(avatarCreatorService.getFileType).toHaveBeenCalledWith(
         imageBuffer
       );
-      expect(documentService.saveDocument).toHaveBeenCalled();
-      expect(result).toBe(savedDoc);
+      expect(result).toBe(uploadedDoc);
     });
 
     it('should default to PNG MIME type when file type detection returns falsy', async () => {
@@ -674,7 +678,6 @@ describe('StorageBucketService', () => {
       (documentService.getDocumentOrFail as Mock).mockResolvedValue(
         uploadedDoc
       );
-      (documentService.saveDocument as Mock).mockResolvedValue(uploadedDoc);
 
       await service.ensureAvatarUrlIsDocument(
         'https://external.com/unknown',

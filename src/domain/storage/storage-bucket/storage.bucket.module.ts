@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Profile } from '@domain/common/profile/profile.entity';
+import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
@@ -21,6 +22,7 @@ import { StorageBucketAuthorizationService } from './storage.bucket.service.auth
     FileServiceAdapterModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
+    TagsetModule,
     UrlGeneratorModule,
     TypeOrmModule.forFeature([StorageBucket]),
     TypeOrmModule.forFeature([Document]),

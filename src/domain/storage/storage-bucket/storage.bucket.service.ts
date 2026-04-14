@@ -7,6 +7,7 @@ import {
   MimeFileType,
 } from '@common/enums/mime.file.type';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
 import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
@@ -18,6 +19,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -54,7 +56,8 @@ export class StorageBucketService {
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
     private configService: ConfigService,
-    private fileServiceAdapter: FileServiceAdapter
+    private fileServiceAdapter: FileServiceAdapter,
+    private tagsetService: TagsetService
   ) {}
 
   public createStorageBucket(
@@ -204,6 +207,12 @@ export class StorageBucketService {
     );
     const savedAuth = await this.authorizationPolicyService.save(authorization);
 
+    const tagset = this.tagsetService.createTagset({
+      name: TagsetReservedName.DEFAULT,
+      tags: [],
+    });
+    const savedTagset = await this.tagsetService.save(tagset);
+
     let result;
     try {
       // Delegate to Go file-service-go
@@ -211,26 +220,34 @@ export class StorageBucketService {
         displayName: filename,
         storageBucketId,
         authorizationId: savedAuth.id,
+        tagsetId: savedTagset.id,
         createdBy: userID || undefined,
         temporaryLocation,
         allowedMimeTypes: storage.allowedMimeTypes.join(','),
         maxFileSize: storage.maxFileSize,
       });
     } catch (error) {
-      // Rollback: delete pre-created auth policy on failure
+      // Rollback: delete pre-created auth policy + tagset on failure
       try {
         await this.authorizationPolicyService.delete(savedAuth);
+        await this.tagsetService.removeTagset(savedTagset.id);
       } catch (_rollbackError) {
         this.logger.warn?.(
-          `Failed to rollback auth policy ${savedAuth.id} after upload failure`,
+          `Failed to rollback auth policy/tagset after upload failure`,
           LogContext.STORAGE_BUCKET
         );
       }
       throw error;
     }
 
-    // Load the document created by the Go service (it's now in the DB)
-    const document = await this.documentService.getDocumentOrFail(result.id);
+    // Load the document created by the Go service with relations needed for auth
+    const document = await this.documentService.getDocumentOrFail(result.id, {
+      relations: {
+        authorization: true,
+        tagset: { authorization: true },
+        storageBucket: true,
+      },
+    });
 
     this.logger.verbose?.(
       `Uploaded document '${result.externalID}' via file-service on storage bucket: ${storage.id}`,
@@ -473,9 +490,6 @@ export class StorageBucketService {
       userId
     );
 
-    const storageBucket = await this.getStorageBucketOrFail(storageBucketId);
-    document.storageBucket = storageBucket;
-
-    return await this.documentService.saveDocument(document);
+    return document;
   }
 }
