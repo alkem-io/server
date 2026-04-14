@@ -269,13 +269,12 @@ http:
       entryPoints:
         - 'web'
 
-    # file-service-go internal endpoints (cluster-only, no auth)
-    file-service-internal:
-      rule: 'PathPrefix(`/internal/document`)'
+    # file-service-go: all requests on :4003 go to file-service container
+    file-service-all:
+      rule: 'PathPrefix(`/`)'
       service: 'file-service'
       entryPoints:
-        - 'web'
-      priority: 160
+        - 'file-service'
 
     # Login backoff proxy: intercepts login submissions for brute-force protection
     kratos-login-backoff:
@@ -432,11 +431,6 @@ tcp:
         servers:
           - address: 'matrix-adapter:8280'
 
-    file-service:
-      loadBalancer:
-        servers:
-          - address: 'file-service:4003'
-
   routers:
     postgres:
       rule: 'HostSNI(`*`)'
@@ -468,8 +462,3 @@ tcp:
       entryPoints:
         - 'matrix-adapter'
 
-    file-service:
-      rule: 'HostSNI(`*`)'
-      service: 'file-service'
-      entryPoints:
-        - 'file-service'
