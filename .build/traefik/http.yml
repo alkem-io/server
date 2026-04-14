@@ -432,6 +432,11 @@ tcp:
         servers:
           - address: 'matrix-adapter:8280'
 
+    file-service:
+      loadBalancer:
+        servers:
+          - address: 'file-service:4003'
+
   routers:
     postgres:
       rule: 'HostSNI(`*`)'
@@ -462,3 +467,9 @@ tcp:
       service: 'matrix-adapter'
       entryPoints:
         - 'matrix-adapter'
+
+    file-service:
+      rule: 'HostSNI(`*`)'
+      service: 'file-service'
+      entryPoints:
+        - 'file-service'

@@ -16,6 +16,8 @@ entryPoints:
     address: ':8008'
   synapse-admin:
     address: ':8088'
+  file-service:
+    address: ':4003'
   matrix-adapter:
     address: ':8280'
   kratos-admin-ui:
