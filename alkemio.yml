@@ -351,6 +351,11 @@ storage:
     # Feature flag for gradual rollout
     enabled: ${FILE_SERVICE_ENABLED}:true
 
+  # Collabora / WOPI service configuration
+  collabora:
+    # URL of the WOPI service (token issuance endpoint)
+    wopi_service_url: ${WOPI_SERVICE_URL}:http://localhost:3000
+
   # Redis configuration
   redis:
     # Redis host

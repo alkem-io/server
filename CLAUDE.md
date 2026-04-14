@@ -230,6 +230,8 @@ Key rules:
 - PostgreSQL 17.5 (no schema changes needed — Go adapter manages Matrix ID mapping) (082-matrix-space-lifecycle)
 - TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, TypeORM 0.3, `@nestjs/axios` (axios ^1.12.2), `rxjs` (085-file-service-migration)
 - PostgreSQL 17.5 (document table becomes read-only for server) (085-file-service-migration)
+- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, TypeORM 0.3, `@nestjs/axios` (axios), GraphQL 16 (086-collabora-integration)
+- PostgreSQL 17.5 (new `collabora_document` table + FK on `callout_contribution`) (086-collabora-integration)
 
 ## Recent Changes
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting
