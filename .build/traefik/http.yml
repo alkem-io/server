@@ -96,10 +96,20 @@ http:
         servers:
           - url: 'h2c://authorization-evaluation:6060/'
 
+    wopi-service:
+      loadBalancer:
+        servers:
+          - url: 'http://wopi-service:8080/'
+
+    collabora:
+      loadBalancer:
+        servers:
+          - url: 'http://collabora:9980/'
+
     file-service:
       loadBalancer:
         servers:
-          - url: 'http://file-service:4003/'
+          - url: 'h2c://file-service:4003/'
 
   middlewares:
     strip-api-private-non-interactive-prefix:
@@ -358,6 +368,30 @@ http:
       service: 'authorization-evaluation'
       entryPoints:
         - 'auth-evaluation'
+
+    # WOPI token issuance (through Oathkeeper for JWT auth)
+    wopi-token:
+      rule: 'PathPrefix(`/api/private/wopi/token`)'
+      service: 'oathkeeper-proxy'
+      middlewares:
+        - strip-api-private-prefix
+      entryPoints:
+        - 'web'
+      priority: 155
+
+    # WOPI protocol endpoints (direct, opaque token auth)
+    wopi-protocol:
+      rule: 'PathPrefix(`/`)'
+      service: 'wopi-service'
+      entryPoints:
+        - 'wopi'
+
+    # Collabora Online editor
+    collabora:
+      rule: 'PathPrefix(`/`)'
+      service: 'collabora'
+      entryPoints:
+        - 'collabora'
 
     rabbitmq-management:
       rule: 'PathPrefix(`/`)'

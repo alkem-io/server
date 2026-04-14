@@ -65,6 +65,22 @@
   mutators:
     - handler: id_token
 
+- id: 'alkemio:api:private:wopi:token'
+  upstream:
+    preserve_host: true
+    url: 'http://wopi-service:8080'
+  match:
+    url: 'http://localhost:3000/wopi/token'
+    methods:
+      - POST
+  authenticators:
+    - handler: bearer_token
+    - handler: cookie_session
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: id_token
+
 - id: 'alkemio:api:rest:calendar:private'
   upstream:
     preserve_host: true
