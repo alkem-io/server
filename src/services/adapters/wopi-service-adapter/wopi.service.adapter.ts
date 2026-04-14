@@ -41,7 +41,7 @@ export class WopiServiceAdapter {
     documentId: string,
     actorJWT: string
   ): Promise<WopiTokenResult> {
-    const url = `${this.baseUrl}/wopi/token/`;
+    const url = `${this.baseUrl}/wopi/token`;
 
     this.logger.verbose?.(
       `[WopiService] issueToken for document: ${documentId}`,
