@@ -109,6 +109,12 @@ export class CommunicationService {
     }
     const roomIds = this.getRoomIds(communication);
     await this.communicationAdapter.batchAddMember(contributorActorID, roomIds);
+    // Add to Matrix space hierarchy so the contributor can access callout/post rooms
+    // (room-level batchAddMember only covers the updates room; space-level access
+    // is needed for rooms placed inside the Matrix space via parentContextId)
+    await this.communicationAdapter.batchAddSpaceMember(contributorActorID, [
+      communication.spaceID,
+    ]);
     return true;
   }
 
@@ -134,6 +140,9 @@ export class CommunicationService {
   ): Promise<boolean> {
     const roomIds = this.getRoomIds(communication);
     await this.communicationAdapter.batchRemoveMember(actorID, roomIds);
+    await this.communicationAdapter.batchRemoveSpaceMember(actorID, [
+      communication.spaceID,
+    ]);
     return true;
   }
 }

@@ -12,7 +12,7 @@ export const pathResolve = (path: string) => {
   }
   // resolve the cases where ~ was used
   if (path.startsWith('~')) {
-    return untildify(path);
+    return pathLib.normalize(untildify(path));
   }
   // resolve relative paths to the current working directory
   return pathLib.resolve(process.cwd(), path);

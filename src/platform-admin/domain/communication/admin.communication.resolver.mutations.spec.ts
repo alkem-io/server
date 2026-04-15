@@ -93,8 +93,8 @@ describe('AdminCommunicationResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
       expect(adminCommunicationService.updateRoomState).toHaveBeenCalledWith(
         'room-1',
-        true,
-        false
+        'invite', // isPublic=false → JoinRuleInvite
+        true
       );
       expect(result).toEqual(roomResult);
     });

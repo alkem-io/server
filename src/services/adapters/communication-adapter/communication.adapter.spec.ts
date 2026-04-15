@@ -1,5 +1,7 @@
 import {
   BaseResponse,
+  JoinRuleInvite,
+  JoinRulePublic,
   MatrixAdapterEventType,
 } from '@alkemio/matrix-adapter-lib';
 import { RoomType as AlkemioRoomType } from '@common/enums/room.type';
@@ -251,6 +253,51 @@ describe('CommunicationAdapter', () => {
         expect.any(String)
       );
     });
+
+    it('should pass avatarUrl and joinRule for createSpace', async () => {
+      const response = createSuccessResponse({});
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      await adapter.createSpace(
+        'ctx-123',
+        'Space Name',
+        'parent-123',
+        'https://example.com/avatar.png',
+        JoinRuleInvite
+      );
+
+      expect(mockAmqpConnection.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            avatar_url: 'https://example.com/avatar.png',
+            join_rule: JoinRuleInvite,
+          }),
+        })
+      );
+    });
+
+    it('should pass joinRule for createRoom', async () => {
+      const response = createSuccessResponse({});
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      await adapter.createRoom(
+        'room-123',
+        AlkemioRoomType.DISCUSSION_FORUM,
+        'Room',
+        [],
+        'parent-123',
+        undefined,
+        JoinRulePublic
+      );
+
+      expect(mockAmqpConnection.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          payload: expect.objectContaining({
+            join_rule: JoinRulePublic,
+          }),
+        })
+      );
+    });
   });
 
   describe('sendMessage (T039)', () => {
@@ -449,6 +496,55 @@ describe('CommunicationAdapter', () => {
 
         expect(result).toBe(false);
       });
+    });
+  });
+
+  describe('updateSpace and updateRoom', () => {
+    it('should pass avatarUrl and joinRule for updateSpace', async () => {
+      const response = createSuccessResponse({});
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      await adapter.updateSpace(
+        'ctx-123',
+        'New Name',
+        undefined,
+        'https://example.com/avatar.png',
+        JoinRulePublic
+      );
+
+      expect(mockAmqpConnection.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          routingKey: MatrixAdapterEventType.COMMUNICATION_SPACE_UPDATE,
+          payload: expect.objectContaining({
+            alkemio_context_id: 'ctx-123',
+            name: 'New Name',
+            avatar_url: 'https://example.com/avatar.png',
+            join_rule: JoinRulePublic,
+          }),
+        })
+      );
+    });
+
+    it('should pass joinRule for updateRoom (migrated from isPublic)', async () => {
+      const response = createSuccessResponse({});
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      await adapter.updateRoom(
+        'room-123',
+        undefined,
+        undefined,
+        JoinRulePublic
+      );
+
+      expect(mockAmqpConnection.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          routingKey: MatrixAdapterEventType.COMMUNICATION_ROOM_UPDATE,
+          payload: expect.objectContaining({
+            alkemio_room_id: 'room-123',
+            join_rule: JoinRulePublic,
+          }),
+        })
+      );
     });
   });
 
