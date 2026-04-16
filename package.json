@@ -13,7 +13,7 @@
   "scripts": {
     "prebuild": "rimraf dist",
     "build": "nest build",
-    "postbuild": "cp alkemio.yml dist/alkemio.yml && (cp -r dist/domain/collaboration/collabora-document/templates dist/src/domain/collaboration/collabora-document/templates 2>/dev/null || true)",
+    "postbuild": "cp alkemio.yml dist/alkemio.yml",
     "format": "biome format --write src/",
     "format:check": "biome format src/",
     "start-nodemon": "nodemon -w src --ext ts --exec ts-node src/main.ts",

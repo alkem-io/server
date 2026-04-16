@@ -14,6 +14,7 @@ import {
 
 export interface CreateDocumentMetadata {
   displayName: string;
+  mimeType?: string;
   storageBucketId: string;
   authorizationId: string;
   tagsetId?: string;
@@ -95,7 +96,7 @@ export class FileServiceAdapter {
     const form = new FormData();
     form.append('file', file, {
       filename: metadata.displayName,
-      contentType: 'application/octet-stream',
+      contentType: metadata.mimeType ?? 'application/octet-stream',
     });
     form.append('displayName', metadata.displayName);
     form.append('storageBucketId', metadata.storageBucketId);

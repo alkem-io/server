@@ -1,5 +1,3 @@
-import * as fs from 'node:fs';
-import * as path from 'node:path';
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CollaboraDocumentType } from '@common/enums/collabora.document.type';
@@ -65,9 +63,11 @@ export class CollaboraDocumentService {
       }
     );
 
-    // Read template file and upload as a document to the storage bucket.
+    // Create a zero-byte file with the correct MIME type and extension.
+    // Collabora detects Size=0 in CheckFileInfo and auto-generates a blank
+    // document via PutFile (WOPI "editnew" pattern).
     // If upload fails, clean up the already-created profile to avoid orphans.
-    const templateBuffer = this.readTemplateFile(input.documentType);
+    const emptyBuffer = Buffer.alloc(0);
     const mimeType = this.getMimeType(input.documentType);
     const fileName = `${input.displayName}${this.getFileExtension(input.documentType)}`;
 
@@ -81,7 +81,7 @@ export class CollaboraDocumentService {
     try {
       document = await this.storageBucketService.uploadFileAsDocumentFromBuffer(
         storageBucketId,
-        templateBuffer,
+        emptyBuffer,
         fileName,
         mimeType,
         userID
@@ -214,24 +214,6 @@ export class CollaboraDocumentService {
     return this.getCollaboraDocumentOrFail(collaboraDocumentID, {
       relations: { profile: true },
     });
-  }
-
-  private readTemplateFile(documentType: CollaboraDocumentType): Buffer {
-    const templateDir = path.resolve(__dirname, 'templates');
-    const fileMap: Record<CollaboraDocumentType, string> = {
-      [CollaboraDocumentType.SPREADSHEET]: 'empty.xlsx',
-      [CollaboraDocumentType.PRESENTATION]: 'empty.pptx',
-      [CollaboraDocumentType.TEXT_DOCUMENT]: 'empty.docx',
-    };
-    const filename = fileMap[documentType];
-    const filePath = path.join(templateDir, filename);
-
-    this.logger.verbose?.(
-      `Reading template file: ${filePath}`,
-      LogContext.COLLABORATION
-    );
-
-    return fs.readFileSync(filePath);
   }
 
   private getMimeType(documentType: CollaboraDocumentType): string {

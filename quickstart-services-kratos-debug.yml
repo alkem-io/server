@@ -550,7 +550,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service-go:v0.0.5
+    image: alkemio/file-service-go:v0.0.6
     depends_on:
       postgres:
         condition: service_healthy
@@ -579,7 +579,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_wopi_service
     hostname: wopi-service
-    image: alkemio/wopi-service:v0.0.4
+    image: alkemio/wopi-service:v0.0.5
     depends_on:
       postgres:
         condition: service_healthy
@@ -626,6 +626,8 @@ services:
       - DONT_GEN_SSL_CERT=1
     cap_add:
       - MKNOD
+    tmpfs:
+      - /opt/cool/child-roots:exec,size=512m
     restart: unless-stopped
     networks:
       - alkemio_dev_net
