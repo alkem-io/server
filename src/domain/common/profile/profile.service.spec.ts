@@ -1042,24 +1042,17 @@ describe('ProfileService', () => {
       expect(warnSpy).toHaveBeenCalled();
     });
 
-    // NOTE: the committed change puts DEFAULT_AVATAR_SERVICE_URL (a full URL,
-    // 'https://eu.ui-avatars.com/api/') into a Set that is matched against
-    // URL.hostname — so the platform's own fallback avatar service is never
-    // accepted. This test pins that (buggy) behavior so a fix flips it to pass
-    // via the positive branch.
-    it('FIXME: currently rejects our own DEFAULT_AVATAR_SERVICE_URL hostname (bug: full URL stored in hostname allowlist)', async () => {
+    it('allows our own DEFAULT_AVATAR_SERVICE_URL hostname', async () => {
       const uri = `${DEFAULT_AVATAR_SERVICE_URL}?name=Foo&size=64`;
       expect(uri.startsWith('https://eu.ui-avatars.com/')).toBe(true);
 
       await addAvatarWithUri(uri);
-      assertReuploadInternalUrlRequired(true);
+      assertReuploadInternalUrlRequired(false);
     });
 
-    // Same class of bug: 'ui-avatars.com' is in the allowlist but URL.hostname
-    // returns the full 'eu.ui-avatars.com', and Set.has is strict equality.
-    it('FIXME: currently rejects eu.ui-avatars.com despite ui-avatars.com being in the allowlist (no suffix match)', async () => {
+    it('allows eu.ui-avatars.com avatar URL', async () => {
       await addAvatarWithUri('https://eu.ui-avatars.com/api/?name=Foo');
-      assertReuploadInternalUrlRequired(true);
+      assertReuploadInternalUrlRequired(false);
     });
   });
 

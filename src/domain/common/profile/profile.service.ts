@@ -500,7 +500,7 @@ export class ProfileService {
   }
 
   private static readonly TRUSTED_EXTERNAL_AVATAR_HOSTS = new Set<string>([
-    DEFAULT_AVATAR_SERVICE_URL,
+    new URL(DEFAULT_AVATAR_SERVICE_URL).hostname.toLowerCase(),
     'ui-avatars.com',
     'media.licdn.com',
     'media.licdn-ei.com',
