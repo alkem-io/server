@@ -217,6 +217,21 @@ export class ProfileService {
     return await this.profileRepository.save(profile);
   }
 
+  private isTrustedExternalAvatarHost(candidate: string): boolean {
+    let parsed: URL;
+    try {
+      parsed = new URL(candidate);
+    } catch {
+      return false;
+    }
+    if (parsed.protocol !== 'https:') {
+      return false;
+    }
+    return ProfileService.TRUSTED_EXTERNAL_AVATAR_HOSTS.has(
+      parsed.hostname.toLowerCase()
+    );
+  }
+
   public async addVisualsOnProfile(
     profile: IProfile,
     visualsData: CreateVisualOnProfileInput[] | undefined,
@@ -261,10 +276,14 @@ export class ProfileService {
       }
       const providedVisual = visualsData?.find(v => v.name === visualType);
       if (providedVisual && providedVisual.uri.length > 0) {
-        // Only allow external URL if we are creating an Avatar and if it comes from https://eu.ui-avatars.com
+        // External AVATAR URLs are allowed only from a small allowlist of trusted
+        // hosts (our own fallback service and supported OIDC provider CDNs); the
+        // subsequent ensureAvatarIsStoredInLocalStorageBucket step downloads and
+        // re-hosts the image locally. Keeping the allowlist narrow limits SSRF
+        // exposure in user-controlled profile inputs.
         const allowExternalUrl =
           visualType === VisualType.AVATAR &&
-          providedVisual.uri.startsWith(DEFAULT_AVATAR_SERVICE_URL);
+          this.isTrustedExternalAvatarHost(providedVisual.uri);
 
         const url =
           await this.profileDocumentsService.reuploadFileOnStorageBucket(
@@ -479,4 +498,13 @@ export class ProfileService {
     }
     return result;
   }
+
+  private static readonly TRUSTED_EXTERNAL_AVATAR_HOSTS = new Set<string>([
+    DEFAULT_AVATAR_SERVICE_URL,
+    'ui-avatars.com',
+    'media.licdn.com',
+    'media.licdn-ei.com',
+    'avatars.githubusercontent.com',
+    'graph.microsoft.com',
+  ]);
 }
