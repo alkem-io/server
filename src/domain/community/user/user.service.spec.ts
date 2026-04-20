@@ -15,10 +15,12 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
+import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { QueryFailedError } from 'typeorm';
 import { type Mock, vi } from 'vitest';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { UserSettingsService } from '../user-settings/user.settings.service';
@@ -61,6 +63,10 @@ describe('UserService', () => {
   let storageAggregatorService: { delete: Mock };
   let actorService: { deleteActorById: Mock };
   let kratosService: { deleteIdentityById: Mock };
+  let namingService: {
+    getReservedNameIDsInUsers: Mock;
+    createNameIdAvoidingReservedNameIDs: Mock;
+  };
   let repository: {
     findOne: Mock;
     save: Mock;
@@ -103,6 +109,7 @@ describe('UserService', () => {
     storageAggregatorService = module.get(StorageAggregatorService) as any;
     actorService = module.get(ActorService) as any;
     kratosService = module.get(KratosService) as any;
+    namingService = module.get(NamingService) as any;
   });
 
   it('should be defined', () => {
@@ -865,6 +872,107 @@ describe('UserService', () => {
       expect(result).toBeDefined();
       expect(repository.count).not.toHaveBeenCalled();
       expect(userLookupService.isRegisteredUser).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createUser nameID collision retry', () => {
+    const makeUniqueViolation = () => {
+      const err = new QueryFailedError('query', [], new Error('dup'));
+      (err as any).driverError = {
+        code: '23505',
+        constraint: 'UQ_actor_nameID_user',
+      };
+      return err;
+    };
+
+    it('regenerates nameID and retries when UQ_actor_nameID_user fires, for server-generated nameIDs', async () => {
+      namingService.getReservedNameIDsInUsers = vi
+        .fn()
+        .mockResolvedValueOnce(['evgeni-dimitrov']) // initial reservation read
+        .mockResolvedValueOnce(['evgeni-dimitrov', 'evgeni-dimitrov-1']); // after collision
+      namingService.createNameIdAvoidingReservedNameIDs = vi
+        .fn()
+        .mockReturnValueOnce('evgeni-dimitrov-1')
+        .mockReturnValueOnce('evgeni-dimitrov-2');
+      userLookupService.getUserByAuthenticationID.mockResolvedValue(null);
+      userLookupService.isRegisteredUser.mockResolvedValue(false);
+
+      const savedUser = {
+        id: 'user-1',
+        nameID: 'evgeni-dimitrov-2',
+        profile: { id: 'profile-1' },
+        firstName: 'Evgeni',
+        lastName: 'Dimitrov',
+        email: 'ev.dimitrovv@gmail.com',
+      } as any;
+      (repository as any).manager = {
+        transaction: vi
+          .fn()
+          .mockRejectedValueOnce(makeUniqueViolation())
+          .mockResolvedValueOnce(savedUser),
+      };
+      userLookupService.getUserById.mockResolvedValue(savedUser);
+
+      await service.createUser({
+        firstName: 'Evgeni',
+        lastName: 'Dimitrov',
+        email: 'ev.dimitrovv@gmail.com',
+        profileData: { displayName: 'Evgeni Dimitrov' },
+      } as any);
+
+      expect((repository as any).manager.transaction).toHaveBeenCalledTimes(2);
+      expect(
+        namingService.createNameIdAvoidingReservedNameIDs
+      ).toHaveBeenCalledTimes(2);
+    });
+
+    it('does not retry when caller supplied an explicit nameID (collision must surface)', async () => {
+      userLookupService.getUserByAuthenticationID.mockResolvedValue(null);
+      userLookupService.isRegisteredUser.mockResolvedValue(false);
+      repository.count.mockResolvedValue(0); // isUserNameIdAvailableOrFail passes
+      const err = makeUniqueViolation();
+      (repository as any).manager = {
+        transaction: vi.fn().mockRejectedValueOnce(err),
+      };
+
+      await expect(
+        service.createUser({
+          nameID: 'explicit-name',
+          firstName: 'A',
+          lastName: 'B',
+          email: 'a@b.com',
+          profileData: { displayName: 'A B' },
+        } as any)
+      ).rejects.toBe(err);
+      expect((repository as any).manager.transaction).toHaveBeenCalledTimes(1);
+    });
+
+    it('rethrows non-nameID unique violations without retry', async () => {
+      namingService.getReservedNameIDsInUsers = vi.fn().mockResolvedValue([]);
+      namingService.createNameIdAvoidingReservedNameIDs = vi
+        .fn()
+        .mockReturnValue('some-name');
+      userLookupService.getUserByAuthenticationID.mockResolvedValue(null);
+      userLookupService.isRegisteredUser.mockResolvedValue(false);
+
+      const err = new QueryFailedError('q', [], new Error('dup'));
+      (err as any).driverError = {
+        code: '23505',
+        constraint: 'UQ_user_email',
+      };
+      (repository as any).manager = {
+        transaction: vi.fn().mockRejectedValueOnce(err),
+      };
+
+      await expect(
+        service.createUser({
+          firstName: 'A',
+          lastName: 'B',
+          email: 'a@b.com',
+          profileData: { displayName: 'A B' },
+        } as any)
+      ).rejects.toBe(err);
+      expect((repository as any).manager.transaction).toHaveBeenCalledTimes(1);
     });
   });
 });
