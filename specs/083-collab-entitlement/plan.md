@@ -21,7 +21,7 @@ Technical approach is "mirror the memo multi-user precedent end-to-end". Every f
 **Constraints**: Migration MUST be idempotent and reversible; MUST NOT touch any Space-level data; MUST NOT trigger a license-policy reapplication; bootstrap JSON MUST stay in sync with migration so fresh installs and upgrades converge
 **Scale/Scope**: One new enum value in each of two enums; one new CredentialRule entry in a single jsonb column; one new license_plan row; ~6 file edits in `src/` plus one new migration file and one bootstrap JSON edit
 
-**No NEEDS CLARIFICATION remain.** All three clarification questions from `/speckit.clarify` were resolved (see `spec.md` → Clarifications section).
+**No NEEDS CLARIFICATION remain.** All four clarification questions from `/speckit.clarify` were resolved (see `spec.md` → Clarifications section).
 
 ## Constitution Check
 
