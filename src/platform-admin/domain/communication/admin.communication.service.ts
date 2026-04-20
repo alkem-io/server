@@ -1,3 +1,4 @@
+import { JoinRule } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
 import { RoleName } from '@common/enums/role.name';
 import { ValidationException } from '@common/exceptions';
@@ -136,14 +137,14 @@ export class AdminCommunicationService {
 
   async updateRoomState(
     roomID: string,
-    isPublic: boolean,
+    joinRule: JoinRule,
     _isWorldVisible: boolean
   ) {
     await this.communicationAdapter.updateRoom(
       roomID,
       undefined,
       undefined,
-      isPublic
+      joinRule
     );
     return await this.communicationAdapter.getRoom(roomID);
   }

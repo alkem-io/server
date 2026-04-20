@@ -47,26 +47,21 @@ export class LibraryService {
   }
 
   public async getListedVirtualContributors(): Promise<IVirtualContributor[]> {
-    const virtualContributors = await this.entityManager.find(
-      VirtualContributor,
-      {
-        where: {
-          listedInStore: true,
-          searchVisibility: SearchVisibility.PUBLIC,
-        },
-      }
-    );
-    return virtualContributors;
-  }
-
-  public async getListedInnovationHubs(): Promise<IInnovationHub[]> {
-    const innovationHubs = await this.entityManager.find(InnovationHub, {
+    return this.entityManager.find(VirtualContributor, {
       where: {
         listedInStore: true,
         searchVisibility: SearchVisibility.PUBLIC,
       },
     });
-    return innovationHubs;
+  }
+
+  public async getListedInnovationHubs(): Promise<IInnovationHub[]> {
+    return this.entityManager.find(InnovationHub, {
+      where: {
+        listedInStore: true,
+        searchVisibility: SearchVisibility.PUBLIC,
+      },
+    });
   }
 
   public async getListedInnovationPacks(

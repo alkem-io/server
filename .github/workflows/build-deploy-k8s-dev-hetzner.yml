@@ -1,12 +1,17 @@
 name: Build, Migrate & Deploy to Dev on Hetzner
 
 on:
+  workflow_dispatch:
   push:
     branches: [develop]
+
+env:
+  DEPLOY_BRANCH: develop
 
 jobs:
   build:
     runs-on: ubuntu-latest
+    if: github.ref == 'refs/heads/develop'
     steps:
       - name: 'Checkout GitHub Action'
         uses: actions/checkout@v4.1.7

@@ -1,3 +1,4 @@
+import { JoinRulePublic } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { DiscussionsOrderBy } from '@common/enums/discussions.orderBy';
@@ -8,6 +9,7 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { ForumDiscussionCategoryException } from '@common/exceptions/forum.discussion.category.exception';
+import { FORUM_CATEGORY_NAMESPACE } from '@constants/forum.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { IUser } from '@domain/community/user/user.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -17,12 +19,16 @@ import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
+import { v5 as uuidv5 } from 'uuid';
 import { Discussion } from '../forum-discussion/discussion.entity';
 import { IDiscussion } from '../forum-discussion/discussion.interface';
 import { DiscussionService } from '../forum-discussion/discussion.service';
 import { ForumCreateDiscussionInput } from './dto/forum.dto.create.discussion';
 import { Forum } from './forum.entity';
 import { IForum } from './forum.interface';
+
+// Custom state event to hide spaces/rooms from Element sync responses
+const INVISIBLE_STATE = { 'io.alkemio.visibility': { visible: false } };
 
 @Injectable()
 export class ForumService {
@@ -47,7 +53,52 @@ export class ForumService {
     forum.discussions = [];
     forum.discussionCategories = discussionCategories;
 
-    return await this.save(forum);
+    const savedForum = await this.save(forum);
+
+    // Create forum Matrix space + all category Matrix spaces
+    await this.createForumMatrixSpaces(savedForum);
+
+    return savedForum;
+  }
+
+  /**
+   * Create the forum Matrix space and all category Matrix spaces.
+   * Called during forum creation.
+   */
+  private async createForumMatrixSpaces(forum: IForum): Promise<void> {
+    try {
+      await this.communicationAdapter.createSpace(
+        forum.id,
+        'Forum',
+        undefined,
+        undefined,
+        JoinRulePublic,
+        true,
+        INVISIBLE_STATE
+      );
+
+      for (const category of forum.discussionCategories) {
+        const categoryContextId = this.getCategoryContextId(forum.id, category);
+        await this.communicationAdapter.createSpace(
+          categoryContextId,
+          category,
+          forum.id,
+          undefined,
+          JoinRulePublic,
+          true,
+          INVISIBLE_STATE
+        );
+      }
+    } catch (error) {
+      this.logger.warn?.(
+        {
+          message: 'Failed to create Matrix spaces for forum — continuing',
+          forumId: forum.id,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        LogContext.PLATFORM_FORUM
+      );
+    }
   }
 
   async save(forum: IForum): Promise<IForum> {
@@ -104,11 +155,92 @@ export class ForumService {
 
     discussion = await this.discussionService.save(discussion);
 
+    // Ensure forum/category Matrix space hierarchy and anchor the discussion room
+    try {
+      const categoryContextId = this.getCategoryContextId(
+        forum.id,
+        discussionData.category
+      );
+      await this.ensureForumMatrixHierarchy(
+        forum.id,
+        discussionData.category,
+        categoryContextId
+      );
+      // Anchor the discussion room under the category Matrix space
+      if (discussion.comments) {
+        await this.communicationAdapter.setParent(
+          discussion.comments.id,
+          false,
+          categoryContextId
+        );
+      }
+    } catch (error) {
+      this.logger.warn?.(
+        {
+          message:
+            'Failed to set up Matrix hierarchy for forum discussion — continuing',
+          discussionId: discussion.id,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        LogContext.PLATFORM_FORUM
+      );
+    }
+
     // Trigger a room membership request for the current user that is not awaited
     const room = await this.discussionService.getComments(discussion.id);
     await this.communicationAdapter.batchAddMember(userForumID, [room.id]);
 
     return discussion;
+  }
+
+  /**
+   * Generate a deterministic UUID v5 context ID for a forum category.
+   */
+  private getCategoryContextId(forumId: string, categoryName: string): string {
+    return uuidv5(
+      `${forumId}:category:${categoryName}`,
+      FORUM_CATEGORY_NAMESPACE
+    );
+  }
+
+  /**
+   * Ensure that the forum and category Matrix spaces exist in the hierarchy.
+   * Creates them if missing (idempotent via adapter).
+   */
+  private async ensureForumMatrixHierarchy(
+    forumId: string,
+    categoryName: string,
+    categoryContextId: string
+  ): Promise<void> {
+    // Ensure forum Matrix space exists (top-level, publicly joinable)
+    const existingForumSpace =
+      await this.communicationAdapter.getSpace(forumId);
+    if (!existingForumSpace) {
+      await this.communicationAdapter.createSpace(
+        forumId,
+        'Forum',
+        undefined, // no parent — platform-level
+        undefined,
+        JoinRulePublic,
+        true,
+        INVISIBLE_STATE
+      );
+    }
+
+    // Ensure category Matrix space exists under the forum
+    const existingCategorySpace =
+      await this.communicationAdapter.getSpace(categoryContextId);
+    if (!existingCategorySpace) {
+      await this.communicationAdapter.createSpace(
+        categoryContextId,
+        categoryName,
+        forumId,
+        undefined,
+        JoinRulePublic,
+        true,
+        INVISIBLE_STATE
+      );
+    }
   }
 
   public async getDiscussions(

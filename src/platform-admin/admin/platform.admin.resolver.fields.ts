@@ -10,6 +10,7 @@ import { PaginationArgs } from '@core/pagination/pagination.args';
 import { ContributorQueryArgs } from '@domain/actor/actor/dto/actor.query.args';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { IAccount } from '@domain/space/account/account.interface';
 import { SpacesQueryArgs } from '@domain/space/space/dto/space.args.query.spaces';
 import { ISpace } from '@domain/space/space/space.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
@@ -29,6 +30,24 @@ export class PlatformAdminResolverFields {
     private authorizationService: AuthorizationService,
     private platformAdminService: PlatformAdminService
   ) {}
+
+  @ResolveField(() => [IAccount], {
+    nullable: false,
+    description:
+      'Retrieve all Accounts on the Platform. This is only available to Platform Admins.',
+  })
+  async accounts(
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<IAccount[]> {
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      'platformAdmin Accounts'
+    );
+
+    return this.platformAdminService.getAllAccounts();
+  }
 
   @ResolveField(() => [IInnovationHub], {
     nullable: false,

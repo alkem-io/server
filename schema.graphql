@@ -1010,9 +1010,19 @@ type Account implements ActorFull {
   """The ID of the Actor"""
   id: UUID!
   """The InnovationHubs for this Account."""
-  innovationHubs: [InnovationHub!]!
+  innovationHubs(
+    """
+    Filter InnovationHubs by SearchVisibility. If not specified, all InnovationHubs are returned.
+    """
+    searchVisibility: [SearchVisibility!]
+  ): [InnovationHub!]!
   """The InnovationPacks for this Account."""
-  innovationPacks: [InnovationPack!]!
+  innovationPacks(
+    """
+    Filter InnovationPacks by SearchVisibility. If not specified, all InnovationPacks are returned.
+    """
+    searchVisibility: [SearchVisibility!]
+  ): [InnovationPack!]!
   """The License operating on this Account."""
   license: License!
   """A name identifier of the Account, unique within the platform."""
@@ -3571,6 +3581,10 @@ type Mutation {
   adminCommunicationMigrateOrphanedConversations: CommunicationAdminMigrateRoomsResult!
   """Remove an orphaned room from messaging platform."""
   adminCommunicationRemoveOrphanedRoom(orphanedRoomData: CommunicationAdminRemoveOrphanedRoomInput!): Boolean!
+  """
+  Synchronize all Alkemio spaces into the Matrix space hierarchy. Idempotent — safe to call multiple times.
+  """
+  adminCommunicationSyncSpaceHierarchy: Boolean!
   """Allow updating the state flags of a particular rule."""
   adminCommunicationUpdateRoomState(roomStateData: CommunicationAdminUpdateRoomStateInput!): Boolean!
   """Delete a Kratos identity by ID."""

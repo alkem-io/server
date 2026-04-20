@@ -178,7 +178,8 @@ export class CalloutsSetService {
     calloutsSet: ICalloutsSet,
     calloutsData: CreateCalloutInput[],
     storageAggregator: IStorageAggregator,
-    userID: string | undefined
+    userID: string | undefined,
+    parentSpaceId?: string
   ): Promise<ICallout[]> {
     if (!calloutsSet.tagsetTemplateSet || !calloutsSet.callouts) {
       throw new EntityNotInitializedException(
@@ -208,7 +209,8 @@ export class CalloutsSetService {
         calloutDefault,
         calloutsSet.tagsetTemplateSet.tagsetTemplates,
         storageAggregator,
-        userID
+        userID,
+        parentSpaceId
       );
       callouts.push(callout);
     }
@@ -299,11 +301,13 @@ export class CalloutsSetService {
       await this.storageAggregatorResolverService.getStorageAggregatorForCalloutsSet(
         calloutsSet.id
       );
+    const parentSpaceId = await this.getParentSpaceId(calloutsSet.id);
     const callout = await this.calloutService.createCallout(
       calloutData,
       tagsetTemplates,
       storageAggregator,
-      userID
+      userID,
+      parentSpaceId
     );
     // this has the effect of adding the callout to the collaboration
     callout.calloutsSet = calloutsSet;
@@ -356,14 +360,37 @@ export class CalloutsSetService {
 
     // TODO: Implement tagset templates / move from collaboraiton
     const tagsetTemplates: ITagsetTemplate[] = [];
+    const parentSpaceId = await this.getParentSpaceId(calloutsSet.id);
     const callout = await this.calloutService.createCallout(
       calloutInput,
       tagsetTemplates,
       storageAggregator,
-      actorContext?.actorID
+      actorContext?.actorID,
+      parentSpaceId
     );
     callout.calloutsSet = calloutsSet;
     return await this.calloutService.save(callout);
+  }
+
+  /**
+   * Look up the parent space ID for a calloutsSet by joining through Collaboration → Space.
+   * Returns undefined if the calloutsSet is not attached to a space (e.g., template).
+   */
+  private async getParentSpaceId(
+    calloutsSetId: string
+  ): Promise<string | undefined> {
+    try {
+      const result = await this.calloutsSetRepository
+        .createQueryBuilder('cs')
+        .innerJoin('collaboration', 'c', 'c."calloutsSetId" = cs.id')
+        .innerJoin('space', 's', 's."collaborationId" = c.id')
+        .select('s.id', 'spaceId')
+        .where('cs.id = :id', { id: calloutsSetId })
+        .getRawOne();
+      return result?.spaceId;
+    } catch {
+      return undefined;
+    }
   }
 
   public async save(calloutsSet: ICalloutsSet): Promise<ICalloutsSet> {

@@ -1,3 +1,4 @@
+import { JoinRuleInvite } from '@alkemio/matrix-adapter-lib';
 import { UUID_LENGTH } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
@@ -61,6 +62,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { Activity } from '@platform/activity';
 import { ILicensePlan } from '@platform/licensing/credential-based/license-plan/license.plan.interface';
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
+import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { SpaceFilterInput } from '@services/infrastructure/space-filter/dto/space.filter.dto.input';
 import { SpaceFilterService } from '@services/infrastructure/space-filter/space.filter.service';
@@ -123,6 +125,7 @@ export class SpaceService {
     private urlGeneratorCacheService: UrlGeneratorCacheService,
     private spacePlatformRolesAccessService: SpacePlatformRolesAccessService,
     private profileService: ProfileService,
+    private communicationAdapter: CommunicationAdapter,
     @InjectRepository(Space)
     private spaceRepository: Repository<Space>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
@@ -241,6 +244,33 @@ export class SpaceService {
       space.templatesManager = await this.createTemplatesManagerForSpaceL0();
     }
 
+    // Create corresponding Matrix space for hierarchy management.
+    // Must happen AFTER the space is persisted (needs stable ID)
+    // but BEFORE recursive subspace creation (parent must exist first).
+    // If Matrix space creation fails, the entire space creation fails —
+    // Matrix is a hard prerequisite for a functioning space.
+    const parentSpaceId =
+      'spaceID' in spaceData
+        ? (spaceData as CreateSubspaceInput).spaceID
+        : undefined;
+    await this.communicationAdapter.createSpace(
+      space.id,
+      spaceData.about.profileData.displayName,
+      parentSpaceId,
+      undefined, // avatarUrl — set later when user uploads avatar
+      JoinRuleInvite,
+      undefined,
+      { 'io.alkemio.visibility': { visible: false } }
+    );
+    // Anchor the UPDATES room to this space's Matrix space
+    if (space.community?.communication?.updates) {
+      await this.communicationAdapter.setParent(
+        space.community.communication.updates.id,
+        false,
+        space.id
+      );
+    }
+
     //// Collaboration
     let updatedCollaborationData: CreateCollaborationInput =
       spaceData.collaborationData;
@@ -257,6 +287,7 @@ export class SpaceService {
           updatedCollaborationData
         );
     }
+    updatedCollaborationData.parentSpaceId = space.id;
     space.collaboration = await this.collaborationService.createCollaboration(
       updatedCollaborationData,
       space.storageAggregator!,
@@ -403,6 +434,16 @@ export class SpaceService {
     if (space.subspaces.length > 0) {
       throw new OperationNotAllowedException(
         `Unable to remove Space (${space.id}), with level ${space.level}, as it contains ${space.subspaces.length} subspaces`,
+        LogContext.SPACES
+      );
+    }
+
+    // Delete the corresponding Matrix space BEFORE cascade deletion of child entities.
+    try {
+      await this.communicationAdapter.deleteSpace(space.id);
+    } catch (_error) {
+      this.logger.warn?.(
+        `Failed to delete Matrix space for ${space.id} — continuing with Alkemio deletion`,
         LogContext.SPACES
       );
     }
@@ -1370,6 +1411,16 @@ export class SpaceService {
       subspace.community
     );
 
+    // Re-anchor the Matrix space under the new parent
+    try {
+      await this.communicationAdapter.setParent(subspace.id, true, space.id);
+    } catch (_error) {
+      this.logger.warn?.(
+        `Failed to re-anchor Matrix space for ${subspace.id} under ${space.id} — continuing`,
+        LogContext.SPACES
+      );
+    }
+
     return subspace;
   }
 
@@ -1480,7 +1531,9 @@ export class SpaceService {
     const space = await this.getSpaceOrFail(spaceData.ID, {
       relations: {
         about: {
-          profile: true,
+          profile: {
+            visuals: true,
+          },
         },
       },
     });
@@ -1497,6 +1550,30 @@ export class SpaceService {
         space.about,
         spaceData.about
       );
+
+      // Sync display name and avatar changes to Matrix space
+      try {
+        const newDisplayName = spaceData.about.profile?.displayName;
+        // Extract current avatar URL from the updated profile
+        const avatarVisual = space.about.profile?.visuals?.find(
+          (v: { name: string }) => v.name === 'avatar'
+        );
+        const avatarUrl = avatarVisual?.uri || undefined;
+
+        if (newDisplayName || avatarUrl !== undefined) {
+          await this.communicationAdapter.updateSpace(
+            space.id,
+            newDisplayName,
+            undefined, // topic
+            avatarUrl ?? ''
+          );
+        }
+      } catch (_error) {
+        this.logger.warn?.(
+          `Failed to update Matrix space for ${space.id} — continuing`,
+          LogContext.SPACES
+        );
+      }
     }
 
     return await this.save(space);
