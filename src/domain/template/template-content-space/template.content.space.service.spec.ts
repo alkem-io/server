@@ -364,6 +364,11 @@ describe('TemplateContentSpaceService', () => {
               type: 'space-flag-memo-multi-user',
               enabled: true,
             }),
+            expect.objectContaining({
+              type: 'space-flag-office-documents',
+              enabled: true,
+              limit: 0,
+            }),
           ]),
         })
       );

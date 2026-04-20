@@ -113,6 +113,12 @@ export class CollaborationService {
           limit: 0,
           enabled: false,
         },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
       ],
     });
 
