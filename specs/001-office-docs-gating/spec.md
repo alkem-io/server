@@ -28,7 +28,7 @@ Without this logic, all spaces can perform write operations on documents regardl
 
 ## Assumptions
 
-- The `SPACE_FLAG_OFFICE_DOCUMENTS` entitlement is already seeded in the database and propagated to Collaboration licenses via the existing license cascade (PR #5967). No migration or seeding work is needed here.
+- PR #5967 is assumed to have established the prerequisite commercial/licensing pattern for office documents and the existing Collaboration license cascade. This feature still needs to deliver any remaining codebase changes called out in the accompanying research/tasks — specifically the missing `SPACE_FLAG_OFFICE_DOCUMENTS` enum/seed wiring if not already present from that PR, plus the new database migration needed for the `OfficeDocument` entity.
 - The `OfficeDocument` entity is traversable via the path: `OfficeDocument → CalloutContribution → Callout → CalloutsSet → Collaboration → License`.
 - The gating pattern established for `SPACE_FLAG_MEMO_MULTI_USER` (via `collaborative-document-integration.service.ts` and `CommunityResolverService.getCollaborationLicenseFromMemoOrFail`) is the authoritative reference implementation.
 - Platform admin and Space admin roles receive no bypass — entitlement gates capability regardless of role, matching memo/whiteboard multi-user behavior.
