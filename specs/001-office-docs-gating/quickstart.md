@@ -56,7 +56,7 @@ pnpm run migration:run
 pnpm start:dev
 ```
 
-GraphQL Playground available at: `http://localhost:3000/graphiql`
+GraphiQL available at: `http://localhost:3000/graphiql`
 
 ---
 
