@@ -1,0 +1,107 @@
+"""
+GraphQL Schema Contract for Office Documents Feature Gating
+Feature: 001-office-docs-gating
+Date: 2026-04-21
+
+This file describes the GraphQL schema additions and mutations for the 
+OfficeDocument gating implementation.
+"""
+
+# ============================================================
+# NEW TYPE: OfficeDocument
+# ============================================================
+
+"""Represents a collaborative office document within a Callout contribution."""
+type OfficeDocument {
+  """The unique identifier for this OfficeDocument."""
+  id: UUID!
+
+  """The NameID for this OfficeDocument."""
+  nameID: NameID!
+
+  """The authorization rules for this OfficeDocument."""
+  authorization: Authorization
+
+  """The Profile for this OfficeDocument (name, description, tags)."""
+  profile: Profile!
+
+  """The user ID of the contributor who created this OfficeDocument."""
+  createdBy: UUID
+
+  """
+  Whether the OfficeDocument feature entitlement is enabled for the 
+  Collaboration containing this document. 
+  Returns true when SPACE_FLAG_OFFICE_DOCUMENTS is enabled on the 
+  containing Collaboration license; false otherwise.
+  Clients should use this field to conditionally render create/edit/delete 
+  controls without performing a separate license traversal.
+  """
+  isEntitlementEnabled: Boolean!
+}
+
+# ============================================================
+# MODIFIED TYPE: CalloutContribution
+# ============================================================
+
+"""
+Extension to CalloutContribution — adds optional officeDocument relation.
+The existing CalloutContribution type gains this nullable field.
+"""
+extend type CalloutContribution {
+  """Office Document associated with this Contribution."""
+  officeDocument: OfficeDocument
+}
+
+# ============================================================
+# INPUT TYPES
+# ============================================================
+
+input CreateOfficeDocumentOnContributionInput {
+  """The ID of the Callout to create the OfficeDocument within."""
+  calloutID: UUID!
+
+  """Profile information for the new OfficeDocument."""
+  profileData: CreateProfileInput!
+
+  """The content update policy for this document. Defaults to 'author'."""
+  contentUpdatePolicy: ContentUpdatePolicy
+}
+
+input UpdateOfficeDocumentInput {
+  """The ID of the OfficeDocument to update."""
+  ID: UUID!
+
+  """Updated profile data (name, description)."""
+  profileData: UpdateProfileInput
+}
+
+input DeleteOfficeDocumentInput {
+  """The ID of the OfficeDocument to delete."""
+  ID: UUID!
+}
+
+# ============================================================
+# MUTATIONS
+# ============================================================
+
+extend type Mutation {
+  """
+  Creates a new OfficeDocument within a CalloutContribution. 
+  Requires SPACE_FLAG_OFFICE_DOCUMENTS entitlement on the 
+  containing Collaboration; rejected with LICENSE_ENTITLEMENT_NOT_AVAILABLE 
+  if the entitlement is not enabled.
+  """
+  createOfficeDocument(officeDocumentData: CreateOfficeDocumentOnContributionInput!): OfficeDocument!
+
+  """
+  Updates an existing OfficeDocument (metadata: name, description).
+  Requires SPACE_FLAG_OFFICE_DOCUMENTS entitlement.
+  """
+  updateOfficeDocument(officeDocumentData: UpdateOfficeDocumentInput!): OfficeDocument!
+
+  """
+  Deletes an OfficeDocument.
+  Requires SPACE_FLAG_OFFICE_DOCUMENTS entitlement.
+  """
+  deleteOfficeDocument(officeDocumentData: DeleteOfficeDocumentInput!): OfficeDocument!
+}
