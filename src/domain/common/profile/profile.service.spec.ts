@@ -18,6 +18,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { DEFAULT_AVATAR_SERVICE_URL } from '@services/external/avatar-creator/avatar.creator.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -880,6 +881,178 @@ describe('ProfileService', () => {
       expect(visualService.createVisualBannerWide).toHaveBeenCalled();
       expect(visualService.createVisualMediaGalleryImage).toHaveBeenCalled();
       expect(visualService.createVisualMediaGalleryVideo).toHaveBeenCalled();
+    });
+  });
+
+  describe('addVisualsOnProfile - trusted external avatar host allowlist', () => {
+    const trustedHosts = [
+      'media.licdn.com',
+      'media.licdn-ei.com',
+      'avatars.githubusercontent.com',
+      'graph.microsoft.com',
+    ];
+
+    const buildProfile = (): Profile =>
+      ({
+        id: 'p-1',
+        visuals: [],
+        storageBucket: { id: 'sb-1' },
+      }) as unknown as Profile;
+
+    const addAvatarWithUri = async (uri: string) => {
+      vi.mocked(visualService.createVisualAvatar).mockReturnValue({
+        id: 'av-1',
+        name: VisualType.AVATAR,
+        uri: '',
+      } as any);
+      vi.mocked(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).mockResolvedValue(uri);
+
+      await service.addVisualsOnProfile(
+        buildProfile(),
+        [{ name: VisualType.AVATAR, uri }],
+        [VisualType.AVATAR]
+      );
+    };
+
+    const assertReuploadInternalUrlRequired = (expected: boolean) => {
+      expect(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).toHaveBeenCalledWith(expect.any(String), expect.anything(), expected);
+    };
+
+    it.each(
+      trustedHosts
+    )('allows external AVATAR URL from trusted host %s (internalUrlRequired=false)', async host => {
+      await addAvatarWithUri(`https://${host}/path/img.png`);
+      assertReuploadInternalUrlRequired(false);
+    });
+
+    it('matches trusted host case-insensitively', async () => {
+      await addAvatarWithUri('https://MEDIA.LICDN.COM/path/img.png');
+      assertReuploadInternalUrlRequired(false);
+    });
+
+    it('rejects external AVATAR URL from non-allowlisted host', async () => {
+      await addAvatarWithUri('https://evil.example.com/img.png');
+      assertReuploadInternalUrlRequired(true);
+    });
+
+    it('rejects non-https URL even for allowlisted host', async () => {
+      await addAvatarWithUri('http://media.licdn.com/img.png');
+      assertReuploadInternalUrlRequired(true);
+    });
+
+    it('rejects malformed URL', async () => {
+      await addAvatarWithUri('not-a-url');
+      assertReuploadInternalUrlRequired(true);
+    });
+
+    it('rejects empty-string uri by not invoking reupload at all', async () => {
+      vi.mocked(visualService.createVisualAvatar).mockReturnValue({
+        id: 'av-1',
+        name: VisualType.AVATAR,
+        uri: '',
+      } as any);
+
+      await service.addVisualsOnProfile(
+        buildProfile(),
+        [{ name: VisualType.AVATAR, uri: '' }],
+        [VisualType.AVATAR]
+      );
+
+      expect(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).not.toHaveBeenCalled();
+    });
+
+    it('rejects external URL for non-AVATAR visual type even when host is trusted', async () => {
+      vi.mocked(visualService.createVisualBanner).mockReturnValue({
+        id: 'bv-1',
+        name: VisualType.BANNER,
+        uri: '',
+      } as any);
+      vi.mocked(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).mockResolvedValue('https://media.licdn.com/img.png');
+
+      await service.addVisualsOnProfile(
+        buildProfile(),
+        [
+          {
+            name: VisualType.BANNER,
+            uri: 'https://media.licdn.com/img.png',
+          },
+        ],
+        [VisualType.BANNER]
+      );
+
+      assertReuploadInternalUrlRequired(true);
+    });
+
+    it('persists returned URL onto the visual when reupload resolves a value', async () => {
+      vi.mocked(visualService.createVisualAvatar).mockReturnValue({
+        id: 'av-1',
+        name: VisualType.AVATAR,
+        uri: '',
+      } as any);
+      vi.mocked(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).mockResolvedValue('https://media.licdn.com/final.png');
+
+      const profile = buildProfile();
+      const result = await service.addVisualsOnProfile(
+        profile,
+        [
+          {
+            name: VisualType.AVATAR,
+            uri: 'https://media.licdn.com/raw.png',
+          },
+        ],
+        [VisualType.AVATAR]
+      );
+
+      expect(result.visuals![0].uri).toBe('https://media.licdn.com/final.png');
+    });
+
+    it('logs a warning when reupload returns undefined', async () => {
+      vi.mocked(visualService.createVisualAvatar).mockReturnValue({
+        id: 'av-1',
+        name: VisualType.AVATAR,
+        uri: '',
+      } as any);
+      vi.mocked(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).mockResolvedValue(undefined);
+
+      const warnSpy = vi.spyOn((service as any).logger, 'warn');
+
+      await service.addVisualsOnProfile(
+        buildProfile(),
+        [
+          {
+            name: VisualType.AVATAR,
+            uri: 'https://evil.example.com/img.png',
+          },
+        ],
+        [VisualType.AVATAR]
+      );
+
+      expect(warnSpy).toHaveBeenCalled();
+    });
+
+    it('allows our own DEFAULT_AVATAR_SERVICE_URL hostname', async () => {
+      const uri = `${DEFAULT_AVATAR_SERVICE_URL}?name=Foo&size=64`;
+      expect(uri.startsWith('https://eu.ui-avatars.com/')).toBe(true);
+
+      await addAvatarWithUri(uri);
+      assertReuploadInternalUrlRequired(false);
+    });
+
+    it('allows eu.ui-avatars.com avatar URL', async () => {
+      await addAvatarWithUri('https://eu.ui-avatars.com/api/?name=Foo');
+      assertReuploadInternalUrlRequired(false);
     });
   });
 
