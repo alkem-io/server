@@ -314,9 +314,12 @@ describe('SpaceLicenseService', () => {
         (licenseService.reset as any).mockImplementation(
           (license: any) => license as any
         );
-        // Engine returns false for everything since the L0 agent (parent) does NOT hold the credential
-        (licenseEngineService.isEntitlementGranted as any).mockResolvedValue(
-          false
+        // Simulate only the intermediate sub-space holding the credential.
+        // Correct behavior must still evaluate the L0 parent and therefore return false.
+        (licenseEngineService.isEntitlementGranted as any).mockImplementation(
+          async (type: LicenseEntitlementType, agent: { id?: string }) =>
+            type === LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS &&
+            agent?.id === 'subspace-1'
         );
         (roleSetLicenseService.applyLicensePolicy as any).mockResolvedValue([]);
         (

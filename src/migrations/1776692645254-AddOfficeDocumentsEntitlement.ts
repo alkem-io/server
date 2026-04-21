@@ -90,13 +90,16 @@ export class AddOfficeDocumentsEntitlement1776692645254
 
       await queryRunner.query(
         `UPDATE license_policy
-         SET "credentialRules" = "credentialRules" || $1::jsonb
+         SET "credentialRules" = COALESCE("credentialRules", '[]'::jsonb) || $1::jsonb
          WHERE id = $2`,
         [JSON.stringify([newRule]), row.id]
       );
     }
   }
 
+  // Rollback: removes the Office Documents license plan and credential rule
+  // seeded by this migration. Other license plans and credential rules are left untouched.
+  // Safe to run multiple times (idempotent).
   public async down(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`DELETE FROM license_plan WHERE name = $1`, [
       LICENSE_PLAN_NAME,

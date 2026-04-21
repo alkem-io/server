@@ -31,6 +31,6 @@
 
 ## Notes
 
-- Clarification resolved 2026-04-08: the new entitlement is `SPACE_FLAG_DOCUMENTS` (credential `space-feature-documents`, plan `SPACE_FEATURE_DOCUMENTS`), gating the ability to view and edit **office documents** inside a Collaboration. Explicitly NOT related to the `Document` entity in the Alkemio domain model. FR-011, Overview, and Assumptions updated accordingly.
+- Clarification resolved 2026-04-08: the new entitlement is `SPACE_FLAG_OFFICE_DOCUMENTS` (credential `space-feature-office-documents`, plan `SPACE_FEATURE_OFFICE_DOCUMENTS`), gating the ability to create posts with **office documents** inside a Collaboration. Explicitly NOT related to the `Document` entity in the Alkemio domain model. FR-011, Overview, and Assumptions updated accordingly.
 - The referenced `LicenseEntitlementType` / `LicensingCredentialBasedCredentialType` names appear in the spec as pattern anchors and as the confirmed identifiers for the new entitlement.
 - All checklist items pass. Feature is ready for `/speckit.plan`.

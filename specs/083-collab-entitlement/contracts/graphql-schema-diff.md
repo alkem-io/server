@@ -2,9 +2,21 @@
 
 **Feature**: 083-collab-entitlement
 
-This feature produces a single **additive** change to the public GraphQL schema: one new enum value on `LicenseEntitlementType`.
+This feature produces **additive** changes to the public GraphQL schema: new enum values on `CredentialType`, `LicenseEntitlementType`, and `LicensingCredentialBasedCredentialType`.
 
 ## Expected delta in `schema.graphql`
+
+### CredentialType
+
+```diff
+ enum CredentialType {
+   SPACE_FEATURE_MEMO_MULTI_USER
++  SPACE_FEATURE_OFFICE_DOCUMENTS
+   SPACE_FEATURE_SAVE_AS_TEMPLATE
+ }
+```
+
+### LicenseEntitlementType
 
 ```diff
  enum LicenseEntitlementType {
@@ -58,7 +70,7 @@ The same delta appears in `schema-lite.graphql`. The `schema-baseline.graphql` f
 
 ## Classification
 
-- **Breaking**: **NO**. Adding enum values is non-breaking; no existing client code that handles `LicenseEntitlementType` will fail.
+- **Breaking**: **NO**. These are additive enum values; clients using generated/exhaustive enum handling should refresh codegen or tolerate unknown enum values.
 - **Deprecation required**: **NO**.
 - **BREAKING-APPROVED label**: **NOT REQUIRED**.
 
@@ -75,4 +87,4 @@ Review `change-report.json` for the additive change confirmation before committi
 
 ## Downstream consumers
 
-The `ecosystem-analytics/server` BFF (separate repo, per root `CLAUDE.md`) consumes this schema via `graphql-codegen`. An additive enum change is safe; the BFF will pick up the new value on its next codegen run. No coordinated release is required.
+The `ecosystem-analytics/server` BFF (separate repo, per root `CLAUDE.md`) consumes this schema via `graphql-codegen`. These additive enum changes are schema-safe; the BFF will pick up the new values on its next codegen run. No coordinated release is required.

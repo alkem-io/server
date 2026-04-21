@@ -71,9 +71,10 @@ FROM license_plan
 WHERE name = 'SPACE_FEATURE_OFFICE_DOCUMENTS';
 
 -- Should return exactly one credential rule entry matching the new rule
-SELECT jsonb_array_elements("credentialRules")
-FROM license_policy
-WHERE jsonb_array_elements("credentialRules") @> '{"credentialType":"space-feature-office-documents"}'::jsonb;
+SELECT rule
+FROM license_policy lp
+CROSS JOIN LATERAL jsonb_array_elements(lp."credentialRules") AS rule
+WHERE rule @> '{"credentialType":"space-feature-office-documents"}'::jsonb;
 ```
 
 ## Rollback check

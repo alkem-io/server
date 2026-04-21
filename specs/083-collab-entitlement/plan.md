@@ -33,7 +33,7 @@ Evaluated against `.specify/memory/constitution.md` v2.0.0:
 |---|-----------|---------|-------|
 | 1 | Domain-Centric Design First | **PASS** | All changes live in `src/domain/*` (collaboration, space) and `src/common/enums/*`. No business logic added to controllers or resolvers. |
 | 2 | Modular NestJS Boundaries | **PASS** | No new NestJS modules introduced. Existing `collaboration` and `space` modules are extended in-place; no new providers; no new cross-module dependencies. |
-| 3 | GraphQL Schema as Stable Contract | **PASS (additive)** | Adds one new enum value (`SPACE_FLAG_OFFICE_DOCUMENTS`) to `LicenseEntitlementType`. Additive change, not breaking. `schema.graphql`, `schema-lite.graphql`, and `schema-baseline.graphql` must be regenerated and diffed; schema-baseline automation will pick up the change on merge to `develop`. |
+| 3 | GraphQL Schema as Stable Contract | **PASS (additive)** | Adds enum values for `SPACE_FLAG_OFFICE_DOCUMENTS` / `SPACE_FEATURE_OFFICE_DOCUMENTS` to the public schema enums (`CredentialType`, `LicenseEntitlementType`, `LicensingCredentialBasedCredentialType`). Additive change, not breaking. `schema.graphql`, `schema-lite.graphql`, and `schema-baseline.graphql` must be regenerated and diffed; schema-baseline automation will pick up the change on merge to `develop`. |
 | 4 | Explicit Data & Event Flow | **PASS** | No write path added; the migration is the only data mutation and it runs platform-scoped, not per-request. Existing license-policy application path is reused without change. |
 | 5 | Observability & Operational Readiness | **PASS** | The licensing engine's existing debug logging on entitlement decisions is reused. No new metrics or dashboards added (per "instrument only what we ingest today"). Migration logs its own up/down steps via TypeORM's runner. |
 | 6 | Code Quality with Pragmatic Testing | **PASS** | Tests added where they deliver signal: extend `space.service.license.spec.ts` and `collaboration.service.license.spec.ts` with the new enum value in the existing parameterized cases. No new harness. Manual end-to-end verification via the quickstart script (Phase 1) covers SC-008. |
@@ -113,7 +113,7 @@ Research scope: identify every file and code path that references `SPACE_FLAG_ME
 Outputs:
 
 - [`data-model.md`](./data-model.md) — enum additions, the new `CredentialRule` object shape, the new `license_plan` row shape, and the new entitlement initialization objects embedded in Space / Collaboration / Template services.
-- [`contracts/graphql-schema-diff.md`](./contracts/graphql-schema-diff.md) — the expected additive delta to `LicenseEntitlementType` in the public GraphQL schema.
+- [`contracts/graphql-schema-diff.md`](./contracts/graphql-schema-diff.md) — the expected additive enum deltas in the public GraphQL schema.
 - [`quickstart.md`](./quickstart.md) — manual three-phase end-to-end verification matching the Desired Outcome (Definition of Done) in the spec.
 - Agent context: run `.specify/scripts/bash/update-agent-context.sh claude` (done at end of this command).
 
