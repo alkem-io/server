@@ -197,6 +197,19 @@ export class SpaceLicenseService {
           break;
         }
 
+        case LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS: {
+          const officeDocuments =
+            await this.licenseEngineService.isEntitlementGranted(
+              LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS,
+              levelZeroSpaceAgent
+            );
+          if (officeDocuments) {
+            entitlement.limit = 1;
+            entitlement.enabled = true;
+          }
+          break;
+        }
+
         default:
           throw new EntityNotInitializedException(
             `Unknown entitlement type for Space: ${entitlement.type}`,
