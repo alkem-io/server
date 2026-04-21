@@ -262,9 +262,11 @@ ALTER TABLE callout_contribution
     ON DELETE SET NULL;
 ```
 
-### Migration 3: Seed `SPACE_FLAG_OFFICE_DOCUMENTS` entitlement
+### Migration 3: Licensing seed handling
 
-Insert `space-flag-office-documents` entitlement records into existing Collaboration licenses with `enabled = false, limit = 0`.
+No database migration should be added to seed `SPACE_FLAG_OFFICE_DOCUMENTS`.
+Entitlement seeding for `space-flag-office-documents` is handled by the existing TypeScript/template seed logic used for Collaboration licenses, with `enabled = false` and `limit = 0`.
+This plan only covers the schema changes above and should not introduce SQL insert migration steps for licensing data.
 
 ---
 
