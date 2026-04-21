@@ -14,6 +14,7 @@ export enum LicenseEntitlementType {
   SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS = 'space-flag-virtual-contributor-access',
   SPACE_FLAG_WHITEBOARD_MULTI_USER = 'space-flag-whiteboard-multi-user',
   SPACE_FLAG_MEMO_MULTI_USER = 'space-flag-memo-multi-user',
+  SPACE_FLAG_OFFICE_DOCUMENTS = 'space-flag-office-documents',
 }
 
 registerEnumType(LicenseEntitlementType, {
