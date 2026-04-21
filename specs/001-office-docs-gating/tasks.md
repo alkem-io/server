@@ -110,7 +110,7 @@
 
 **Purpose**: Schema contract gate, migration validation, and final CI gate. Affects all stories.
 
-- [ ] T024 Run `pnpm run schema:print && pnpm run schema:sort && pnpm run schema:diff`; inspect `change-report.json` to confirm **zero** `BREAKING` or `PREMATURE_REMOVAL` entries; commit updated `schema.graphql` — `schema.graphql` + `change-report.json`
+- [ ] T024 Run `pnpm run schema:print && pnpm run schema:sort && pnpm run schema:diff`; inspect `change-report.json` to confirm **zero** `BREAKING` or `PREMATURE_REMOVAL` entries; commit updated `schema.graphql` only (do not commit generated JSON artifacts) — `schema.graphql`
 - [ ] T025 [P] Validate the migration with `.scripts/migrations/run_validate_migration.sh`; verify snapshot/restore cycle succeeds and CSV comparison passes — `src/migrations/<timestamp>-AddOfficeDocumentEntity.ts`
 - [ ] T027 [P] Verify SC-005 (performance regression): exercise a representative write-mutation on a local instance for both `OfficeDocument` (`getCollaborationLicenseFromOfficeDocumentOrFail`) and `Memo` (`getCollaborationLicenseFromMemoOrFail`) entitlement traversals; compare response times and confirm no measurable regression; record the outcome (or declare "no regression observed") in the PR description. No dedicated benchmark file is required.
 - [ ] T026 Run `pnpm lint` (tsc + Biome) and `pnpm test:ci`; resolve all type errors, lint violations, and test failures before marking the branch ready for review
