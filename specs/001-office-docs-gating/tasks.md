@@ -19,7 +19,7 @@
 **Purpose**: Add the enum value and config key that every subsequent task depends on. No user story work begins until this phase is complete.
 
 - [ ] T001 Add `SPACE_FLAG_OFFICE_DOCUMENTS = 'space-flag-office-documents'` to `LicenseEntitlementType` enum after `SPACE_FLAG_MEMO_MULTI_USER` — `src/common/enums/license.entitlement.type.ts`
-- [ ] T002 [P] Add `office_documents.max_collaborators_in_room` (default: 20) config key to `alkemio.yml` and extend the corresponding TypeScript config interface/type so `ConfigService` can read it — `alkemio.yml` + `src/config/`
+- [ ] T002 [P] Add `collaboration.office_documents.max_collaborators_in_room` (default: 20) config key to `alkemio.yml`, map `OFFICE_DOCUMENT_MAX_COLLABORATORS_IN_ROOM`, and extend the corresponding TypeScript config interface/type so `ConfigService` can read it — `alkemio.yml` + `src/config/`
 
 **Checkpoint**: `SPACE_FLAG_OFFICE_DOCUMENTS` enum value compiles; config key is accessible via `ConfigService`.
 
