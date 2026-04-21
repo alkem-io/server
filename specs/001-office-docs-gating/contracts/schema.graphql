@@ -12,7 +12,7 @@ OfficeDocument gating implementation.
 # ============================================================
 
 """Represents a collaborative office document within a Callout contribution."""
-type OfficeDocument {
+type OfficeDocument implements Nameable & Authorizable {
   """The unique identifier for this OfficeDocument."""
   id: UUID!
 
