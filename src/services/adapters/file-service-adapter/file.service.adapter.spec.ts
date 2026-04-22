@@ -3,7 +3,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { AxiosError, AxiosHeaders, AxiosResponse } from 'axios';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { of, throwError } from 'rxjs';
+import { defer, of, throwError } from 'rxjs';
 import { beforeEach, describe, expect, it, type Mock, vi } from 'vitest';
 import { FileServiceAdapter } from './file.service.adapter';
 import {
@@ -135,8 +135,15 @@ describe('FileServiceAdapter', () => {
         }
       );
 
+      // Count re-subscriptions: RxJS retry resubscribes to the source observable
+      // on each retry, not to httpService.request itself (which is called once).
+      // Using defer lets us observe each subscribe as a fresh "attempt."
+      let subscribeCount = 0;
       (httpService.request as Mock).mockReturnValue(
-        throwError(() => axiosError)
+        defer(() => {
+          subscribeCount += 1;
+          return throwError(() => axiosError);
+        })
       );
 
       await expect(
@@ -147,8 +154,8 @@ describe('FileServiceAdapter', () => {
         })
       ).rejects.toThrow();
 
-      // httpService.request is called once per attempt (RxJS retry resubscribes)
-      expect(httpService.request).toHaveBeenCalled();
+      // retries: 2 → 1 initial + 2 retries = 3 subscription attempts
+      expect(subscribeCount).toBe(3);
     });
   });
 
@@ -241,7 +248,9 @@ describe('FileServiceAdapter', () => {
         throwError(() => axiosError)
       );
 
-      // Exhaust circuit breaker (5 failures × 3 attempts each due to retries)
+      // Circuit breaker counts one failure per completed request (after its
+      // retries are exhausted), not per HTTP attempt. 5 failed requests →
+      // 5 failures → breaker opens at threshold.
       for (let i = 0; i < 5; i++) {
         try {
           await adapter.deleteDocument(`doc-${i}`);
