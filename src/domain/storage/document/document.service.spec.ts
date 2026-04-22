@@ -205,13 +205,11 @@ describe('DocumentService', () => {
       const updatedTagset = { id: 'tagset-1', tags: ['new'] };
       const updateData = {
         ID: 'doc-1',
-        displayName: 'updated.pdf',
         tagset: { ID: 'tagset-1', tags: ['new'] },
       };
 
       (documentRepository.findOne as Mock).mockResolvedValue(existingDoc);
       (tagsetService.updateTagset as Mock).mockResolvedValue(updatedTagset);
-      (documentRepository.save as Mock).mockResolvedValue(existingDoc);
 
       const result = await service.updateDocument(updateData);
 
@@ -228,7 +226,6 @@ describe('DocumentService', () => {
       };
       const updateData = {
         ID: 'doc-1',
-        displayName: 'updated.pdf',
         tagset: { ID: 'tagset-1', tags: ['new'] },
       };
 
@@ -246,14 +243,25 @@ describe('DocumentService', () => {
       };
       const updateData = {
         ID: 'doc-1',
-        displayName: 'updated.pdf',
       };
 
       (documentRepository.findOne as Mock).mockResolvedValue(existingDoc);
-      (documentRepository.save as Mock).mockResolvedValue(existingDoc);
 
       await service.updateDocument(updateData);
 
+      expect(tagsetService.updateTagset).not.toHaveBeenCalled();
+    });
+
+    it('should throw ValidationException when displayName is provided (unsupported field)', async () => {
+      const updateData = {
+        ID: 'doc-1',
+        displayName: 'new-name.pdf',
+      };
+
+      await expect(service.updateDocument(updateData)).rejects.toThrow(
+        'Document display name cannot be updated'
+      );
+      expect(documentRepository.findOne).not.toHaveBeenCalled();
       expect(tagsetService.updateTagset).not.toHaveBeenCalled();
     });
   });

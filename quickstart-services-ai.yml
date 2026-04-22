@@ -480,7 +480,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service-go:v0.0.5
+    image: alkemio/file-service-go:v0.0.7
     depends_on:
       postgres:
         condition: service_healthy
@@ -498,7 +498,7 @@ services:
       - LOG_LEVEL=info
     restart: always
     volumes:
-      - ../server/.storage:/storage:rw
+      - ${PWD}/.storage:/storage:rw
     networks:
       - alkemio_dev_net
     ports:
@@ -882,7 +882,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_wopi_service
     hostname: wopi-service
-    image: alkemio/wopi-service:v0.0.2
+    image: alkemio/wopi-service:v0.0.6
     depends_on:
       postgres:
         condition: service_healthy

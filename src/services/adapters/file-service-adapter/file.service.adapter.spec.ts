@@ -67,7 +67,7 @@ describe('FileServiceAdapter', () => {
   });
 
   describe('createDocument', () => {
-    it('should POST multipart form data to /internal/document', async () => {
+    it('should POST multipart form data to /internal/file', async () => {
       const responseData = {
         id: 'doc-1',
         externalID: 'hash-123',
@@ -95,7 +95,7 @@ describe('FileServiceAdapter', () => {
 
       const callArgs = (httpService.request as Mock).mock.calls[0][0];
       expect(callArgs.method).toBe('post');
-      expect(callArgs.url).toBe('http://file-service:4003/internal/document');
+      expect(callArgs.url).toBe('http://file-service:4003/internal/file');
     });
 
     it('should throw FileServiceAdapterException on 4xx error', async () => {
@@ -168,9 +168,7 @@ describe('FileServiceAdapter', () => {
       expect(result).toEqual(responseData);
       const callArgs = (httpService.request as Mock).mock.calls[0][0];
       expect(callArgs.method).toBe('delete');
-      expect(callArgs.url).toBe(
-        'http://file-service:4003/internal/document/doc-1'
-      );
+      expect(callArgs.url).toBe('http://file-service:4003/internal/file/doc-1');
     });
   });
 
@@ -194,9 +192,7 @@ describe('FileServiceAdapter', () => {
       expect(result).toEqual(responseData);
       const callArgs = (httpService.request as Mock).mock.calls[0][0];
       expect(callArgs.method).toBe('patch');
-      expect(callArgs.url).toBe(
-        'http://file-service:4003/internal/document/doc-1'
-      );
+      expect(callArgs.url).toBe('http://file-service:4003/internal/file/doc-1');
       expect(callArgs.data).toEqual({
         storageBucketId: 'bucket-2',
         temporaryLocation: false,
@@ -214,7 +210,7 @@ describe('FileServiceAdapter', () => {
 
       expect(Buffer.isBuffer(result)).toBe(true);
       expect(httpService.get).toHaveBeenCalledWith(
-        'http://file-service:4003/internal/document/doc-1/content',
+        'http://file-service:4003/internal/file/doc-1/content',
         { responseType: 'arraybuffer' }
       );
     });

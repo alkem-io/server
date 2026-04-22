@@ -11,6 +11,7 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
@@ -85,6 +86,7 @@ describe('StorageBucketService', () => {
   let avatarCreatorService: AvatarCreatorService;
   let urlGeneratorService: UrlGeneratorService;
   let fileServiceAdapter: FileServiceAdapter;
+  let tagsetService: TagsetService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -133,6 +135,7 @@ describe('StorageBucketService', () => {
       module.get<AvatarCreatorService>(AvatarCreatorService);
     urlGeneratorService = module.get<UrlGeneratorService>(UrlGeneratorService);
     fileServiceAdapter = module.get<FileServiceAdapter>(FileServiceAdapter);
+    tagsetService = module.get<TagsetService>(TagsetService);
   });
 
   // ── createStorageBucket ─────────────────────────────────────────
@@ -405,6 +408,78 @@ describe('StorageBucketService', () => {
           temporaryLocation: true,
         })
       );
+    });
+
+    it('should roll back auth policy + tagset when the adapter create call throws', async () => {
+      const bucket = mockStorageBucket({ id: 'bucket-rb-adapter' });
+      const buffer = Buffer.alloc(100);
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.createDocument as Mock).mockRejectedValue(
+        new Error('adapter failure')
+      );
+
+      await expect(
+        service.uploadFileAsDocumentFromBuffer(
+          'bucket-rb-adapter',
+          buffer,
+          'file.png',
+          MimeTypeVisual.PNG,
+          'user-1'
+        )
+      ).rejects.toThrow('adapter failure');
+
+      // Go service was never called successfully — no Go-side rollback
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      // Pre-created server-owned resources must be cleaned up
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
+        id: 'auth-saved',
+      });
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-saved');
+    });
+
+    it('should roll back Go-side document + auth policy + tagset when the post-upload reload fails', async () => {
+      const bucket = mockStorageBucket({ id: 'bucket-rb-reload' });
+      const buffer = Buffer.alloc(100);
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-created',
+        externalID: 'ext-new',
+        mimeType: MimeTypeVisual.PNG,
+        size: 100,
+      });
+      // Reload after Go created the document fails — compensation must clean up
+      // the Go-side document as well as the server-owned resources.
+      (documentService.getDocumentOrFail as Mock).mockRejectedValue(
+        new Error('reload failed')
+      );
+
+      await expect(
+        service.uploadFileAsDocumentFromBuffer(
+          'bucket-rb-reload',
+          buffer,
+          'file.png',
+          MimeTypeVisual.PNG,
+          'user-1'
+        )
+      ).rejects.toThrow('reload failed');
+
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+        'doc-created'
+      );
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
+        id: 'auth-saved',
+      });
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-saved');
     });
   });
 

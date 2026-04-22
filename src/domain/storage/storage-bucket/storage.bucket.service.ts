@@ -202,10 +202,13 @@ export class StorageBucketService {
     this.validateSize(storage, buffer.length);
 
     // Pre-create auth policy and tagset, call Go service, load result.
-    // Full compensation: any failure rolls back all previously created resources.
+    // Full compensation: any failure anywhere in the sequence rolls back all
+    // previously created resources (auth policy, tagset, Go-side document),
+    // each cleaned up independently so one rollback failure doesn't skip others.
     let savedAuth;
     let savedTagset;
     let result;
+    let document;
     try {
       const authorization = new AuthorizationPolicy(
         AuthorizationPolicyType.DOCUMENT
@@ -229,8 +232,28 @@ export class StorageBucketService {
         allowedMimeTypes: storage.allowedMimeTypes.join(','),
         maxFileSize: storage.maxFileSize,
       });
+
+      // Load the document created by the Go service with relations needed for auth
+      document = await this.documentService.getDocumentOrFail(result.id, {
+        relations: {
+          authorization: true,
+          tagset: { authorization: true },
+          storageBucket: true,
+        },
+      });
     } catch (error) {
-      // Rollback: delete each pre-created resource independently
+      // Rollback: delete each pre-created resource independently so one
+      // failure doesn't short-circuit the others.
+      if (result) {
+        try {
+          await this.fileServiceAdapter.deleteDocument(result.id);
+        } catch (_e) {
+          this.logger.warn?.(
+            `Failed to rollback Go-side document ${result.id}`,
+            LogContext.STORAGE_BUCKET
+          );
+        }
+      }
       if (savedAuth) {
         try {
           await this.authorizationPolicyService.delete(savedAuth);
@@ -253,15 +276,6 @@ export class StorageBucketService {
       }
       throw error;
     }
-
-    // Load the document created by the Go service with relations needed for auth
-    const document = await this.documentService.getDocumentOrFail(result.id, {
-      relations: {
-        authorization: true,
-        tagset: { authorization: true },
-        storageBucket: true,
-      },
-    });
 
     this.logger.verbose?.(
       `Uploaded document '${result.externalID}' via file-service on storage bucket: ${storage.id}`,

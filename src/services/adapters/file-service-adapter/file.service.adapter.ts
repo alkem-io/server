@@ -1,4 +1,8 @@
 import { LogContext } from '@common/enums';
+import {
+  HttpClientBase,
+  type HttpClientBaseConfig,
+} from '@common/http/http.client.base';
 import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -6,77 +10,49 @@ import { AlkemioConfig } from '@src/types/alkemio.config';
 import { isAxiosError } from 'axios';
 import FormData from 'form-data';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { catchError, firstValueFrom, map, retry, timeout, timer } from 'rxjs';
+import { catchError, firstValueFrom, map, timeout } from 'rxjs';
+import type {
+  CreateDocumentMetadata,
+  CreateDocumentResult,
+  DeleteDocumentResult,
+  UpdateDocumentInput,
+  UpdateDocumentResult,
+} from './dto';
 import {
   FileServiceAdapterException,
   StorageServiceUnavailableException,
 } from './file.service.adapter.exception';
 
-export interface CreateDocumentMetadata {
-  displayName: string;
-  storageBucketId: string;
-  authorizationId: string;
-  tagsetId?: string;
-  createdBy?: string;
-  temporaryLocation?: boolean;
-  allowedMimeTypes?: string;
-  maxFileSize?: number;
-}
-
-export interface CreateDocumentResult {
-  id: string;
-  externalID: string;
-  mimeType: string;
-  size: number;
-}
-
-export interface DeleteDocumentResult {
-  authorizationId: string;
-  tagsetId: string | null;
-}
-
-export interface UpdateDocumentInput {
-  storageBucketId?: string;
-  temporaryLocation?: boolean;
-}
-
-export interface UpdateDocumentResult {
-  id: string;
-  storageBucketId: string;
-  temporaryLocation: boolean;
-}
+const LOG_PREFIX = '[FileService]';
 
 @Injectable()
-export class FileServiceAdapter {
-  private readonly baseUrl: string;
-  private readonly requestTimeout: number;
-  private readonly retries: number;
+export class FileServiceAdapter extends HttpClientBase {
   private readonly enabled: boolean;
 
-  // Simple circuit breaker state
-  private failureCount = 0;
-  private circuitOpen = false;
-  private circuitOpenedAt = 0;
-  private readonly failureThreshold = 5;
-  private readonly circuitResetTimeMs = 30000;
-
   constructor(
-    private readonly httpService: HttpService,
-    private readonly configService: ConfigService<AlkemioConfig, true>,
+    httpService: HttpService,
+    configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    logger: LoggerService
   ) {
-    this.baseUrl = this.configService.get('storage.file_service.url', {
-      infer: true,
-    });
-    this.requestTimeout = this.configService.get(
-      'storage.file_service.timeout',
-      { infer: true }
-    );
-    this.retries = this.configService.get('storage.file_service.retries', {
-      infer: true,
-    });
-    this.enabled = this.configService.get('storage.file_service.enabled', {
+    const config: HttpClientBaseConfig = {
+      baseUrl: configService.get('storage.file_service.url', { infer: true }),
+      timeout: configService.get('storage.file_service.timeout', {
+        infer: true,
+      }),
+      retries: configService.get('storage.file_service.retries', {
+        infer: true,
+      }),
+      circuitBreaker: {
+        failureThreshold: 5,
+        resetTimeMs: 30_000,
+      },
+      logContext: LogContext.STORAGE_BUCKET,
+      logPrefix: LOG_PREFIX,
+    };
+    super(httpService, logger, config);
+
+    this.enabled = configService.get('storage.file_service.enabled', {
       infer: true,
     });
   }
@@ -122,23 +98,26 @@ export class FileServiceAdapter {
     return this.sendRequest<CreateDocumentResult>(
       'createDocument',
       'post',
-      '/internal/document',
+      '/internal/file',
       form,
       form.getHeaders()
     );
   }
 
   /**
-   * Get document file content from the Go file-service-go.
+   * Stream file content from the Go file-service-go.
+   * Uses `arraybuffer` response type so we return a `Buffer` directly.
+   * Separate from `sendRequest` because the generic pipeline assumes JSON
+   * response parsing; binary downloads need their own transport path.
    */
   async getDocumentContent(documentId: string): Promise<Buffer> {
     this.checkEnabled();
     this.checkCircuit('getDocumentContent');
 
-    const url = `${this.baseUrl}/internal/document/${documentId}/content`;
+    const url = `${this.baseUrl}/internal/file/${documentId}/content`;
 
     this.logger.verbose?.(
-      `[FileService] getDocumentContent: ${documentId}`,
+      `${LOG_PREFIX} getDocumentContent: ${documentId}`,
       LogContext.STORAGE_BUCKET
     );
 
@@ -147,11 +126,17 @@ export class FileServiceAdapter {
       .pipe(
         timeout({ first: this.requestTimeout }),
         map(response => {
-          this.onSuccess();
+          this.circuitBreaker.onSuccess();
           return Buffer.from(response.data);
         }),
         catchError(error => {
-          this.onFailure();
+          const result = this.circuitBreaker.onFailure();
+          if (result.opened) {
+            this.logger.warn?.(
+              `${LOG_PREFIX} circuit breaker opened after ${result.failureCount} failures`,
+              LogContext.STORAGE_BUCKET
+            );
+          }
           throw this.handleError('getDocumentContent', error, { documentId });
         })
       );
@@ -160,7 +145,8 @@ export class FileServiceAdapter {
   }
 
   /**
-   * Update document metadata in the Go file-service-go (PATCH).
+   * Update mutable document metadata in the Go file-service-go.
+   * Only `storageBucketId` and `temporaryLocation` are supported server-side.
    */
   async updateDocument(
     documentId: string,
@@ -172,14 +158,15 @@ export class FileServiceAdapter {
     return this.sendRequest<UpdateDocumentResult>(
       'updateDocument',
       'patch',
-      `/internal/document/${documentId}`,
+      `/internal/file/${documentId}`,
       patch
     );
   }
 
   /**
    * Delete a document from the Go file-service-go.
-   * Returns authorizationId and tagsetId for server-side cleanup.
+   * Returns `authorizationId` and `tagsetId` so the server can clean up the
+   * corresponding auth policy and tagset rows (both server-owned).
    */
   async deleteDocument(documentId: string): Promise<DeleteDocumentResult> {
     this.checkEnabled();
@@ -188,7 +175,7 @@ export class FileServiceAdapter {
     return this.sendRequest<DeleteDocumentResult>(
       'deleteDocument',
       'delete',
-      `/internal/document/${documentId}`
+      `/internal/file/${documentId}`
     );
   }
 
@@ -200,98 +187,14 @@ export class FileServiceAdapter {
     }
   }
 
-  private checkCircuit(operation: string): void {
-    if (this.circuitOpen) {
-      const elapsed = Date.now() - this.circuitOpenedAt;
-      if (elapsed < this.circuitResetTimeMs) {
-        throw new StorageServiceUnavailableException(
-          `File service circuit breaker is open (${operation})`,
-          { operation, resetInMs: this.circuitResetTimeMs - elapsed }
-        );
-      }
-      // Half-open: allow one request through
-      this.circuitOpen = false;
-      this.failureCount = 0;
-    }
-  }
-
-  private onSuccess(): void {
-    this.failureCount = 0;
-    this.circuitOpen = false;
-  }
-
-  private onFailure(): void {
-    this.failureCount++;
-    if (this.failureCount >= this.failureThreshold) {
-      this.circuitOpen = true;
-      this.circuitOpenedAt = Date.now();
-      this.logger.warn?.(
-        `File service circuit breaker opened after ${this.failureCount} failures`,
-        LogContext.STORAGE_BUCKET
-      );
-    }
-  }
-
-  private sendRequest<TResult>(
-    operation: string,
-    method: 'get' | 'post' | 'patch' | 'delete',
-    path: string,
-    data?: unknown,
-    headers?: Record<string, string>
-  ): Promise<TResult> {
-    const url = `${this.baseUrl}${path}`;
-
-    this.logger.verbose?.(
-      `[FileService] ${operation}: ${method.toUpperCase()} ${path}`,
-      LogContext.STORAGE_BUCKET
+  protected openCircuitException(operation: string, resetInMs: number): Error {
+    return new StorageServiceUnavailableException(
+      `File service circuit breaker is open (${operation})`,
+      { operation, resetInMs }
     );
-
-    const request$ = this.httpService
-      .request<TResult>({
-        method,
-        url,
-        data,
-        headers,
-      })
-      .pipe(
-        timeout({ first: this.requestTimeout }),
-        retry({
-          count: this.retries,
-          delay: (error, retryCount) => {
-            // Don't retry 4xx errors (client errors)
-            if (
-              isAxiosError(error) &&
-              error.response?.status &&
-              error.response.status >= 400 &&
-              error.response.status < 500
-            ) {
-              throw error;
-            }
-            this.logger.warn?.(
-              `[FileService] Retrying ${operation} [${retryCount}/${this.retries}]`,
-              LogContext.STORAGE_BUCKET
-            );
-            return timer(500 * retryCount);
-          },
-        }),
-        map(response => {
-          this.onSuccess();
-          this.logger.verbose?.(
-            `[FileService] ${operation}: success`,
-            LogContext.STORAGE_BUCKET
-          );
-          return response.data;
-        }),
-        catchError(error => {
-          this.onFailure();
-          throw this.handleError(operation, error);
-        })
-      );
-
-    return firstValueFrom(request$);
   }
 
-  private handleError(
+  protected handleError(
     operation: string,
     error: unknown,
     context?: Record<string, unknown>

@@ -1,5 +1,8 @@
 import { LogContext } from '@common/enums';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -62,7 +65,6 @@ export class DocumentService {
       }
     }
 
-    document.id = documentID;
     return document;
   }
 
@@ -79,8 +81,9 @@ export class DocumentService {
     });
     if (!document)
       throw new EntityNotFoundException(
-        `Not able to locate document with the specified ID: ${documentID}`,
-        LogContext.STORAGE_BUCKET
+        'Not able to locate document with the specified ID',
+        LogContext.STORAGE_BUCKET,
+        { documentID }
       );
     return document;
   }
@@ -98,8 +101,9 @@ export class DocumentService {
     });
     if (!document)
       throw new EntityNotFoundException(
-        `Not able to locate document with the specified external id: ${externalID}`,
-        LogContext.STORAGE_BUCKET
+        'Not able to locate document with the specified external id',
+        LogContext.STORAGE_BUCKET,
+        { externalID }
       );
     return document;
   }
@@ -110,8 +114,9 @@ export class DocumentService {
     });
     if (!document)
       throw new EntityNotFoundException(
-        `Not able to locate document with the specified ID: ${documentID}`,
-        LogContext.STORAGE_BUCKET
+        'Not able to locate document with the specified ID',
+        LogContext.STORAGE_BUCKET,
+        { documentID }
       );
     return document.createdDate;
   }
@@ -119,6 +124,18 @@ export class DocumentService {
   public async updateDocument(
     documentData: UpdateDocumentInput
   ): Promise<IDocument> {
+    // The file-service-go does not support updating display name or other
+    // document metadata via PATCH — it only supports storageBucketId and
+    // temporaryLocation (used internally by the temporary-storage flow).
+    // Fail loudly here rather than silently dropping the input so clients
+    // don't assume success when no update happened.
+    if (documentData.displayName !== undefined) {
+      throw new ValidationException(
+        'Document display name cannot be updated via this mutation',
+        LogContext.STORAGE_BUCKET
+      );
+    }
+
     const document = await this.getDocumentOrFail(documentData.ID, {
       relations: { tagset: true },
     });
@@ -127,8 +144,9 @@ export class DocumentService {
     if (documentData.tagset) {
       if (!document.tagset) {
         throw new EntityNotFoundException(
-          `Document not initialised: ${document.id}`,
-          LogContext.CALENDAR
+          'Document not initialised',
+          LogContext.STORAGE_BUCKET,
+          { documentID: document.id }
         );
       }
       document.tagset = await this.tagsetService.updateTagset(

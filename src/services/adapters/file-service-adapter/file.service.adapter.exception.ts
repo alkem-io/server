@@ -57,10 +57,11 @@ export class FileServiceAdapterException extends BaseException {
     error: Error,
     contextDetails?: Record<string, unknown>
   ): FileServiceAdapterException {
-    const message = `File service ${operation} failed: ${error.message}`;
+    const message = `File service ${operation} failed`;
     return new FileServiceAdapterException(message, operation, undefined, {
       ...contextDetails,
       errorName: error.name,
+      errorMessage: error.message,
     });
   }
 }

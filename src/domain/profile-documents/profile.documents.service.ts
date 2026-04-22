@@ -84,7 +84,9 @@ export class ProfileDocumentsService {
       }
       return this.documentService.getPubliclyAccessibleURL(docInContent);
     } else {
-      // Different bucket: fetch content from Go service, re-upload to new bucket
+      // Different bucket: fetch content from Go service, re-upload to new bucket.
+      // After the new document is successfully uploaded, delete the old one so
+      // it doesn't leak in its original bucket as an orphan.
       const content = await this.fileServiceAdapter.getDocumentContent(
         docInContent.id
       );
@@ -96,6 +98,7 @@ export class ProfileDocumentsService {
           docInContent.mimeType,
           docInContent.createdBy
         );
+      await this.documentService.deleteDocument({ ID: docInContent.id });
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
   }

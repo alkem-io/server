@@ -120,7 +120,7 @@ src/
 
 | Dependency | Type | Status |
 |-----------|------|--------|
-| Go file-service-go v0.0.5 | External service | Ready -- deployed in Docker stack |
+| Go file-service-go v0.0.7 | External service | Ready -- deployed in Docker stack |
 | authorization-evaluation-service v0.0.2 | External service | Ready -- used by Go service for auth |
 | `@nestjs/axios` | Existing package | Already in server (axios ^1.12.2) |
 | Go service internal API | Integration contract | Documented in contracts/file-service-api.md |
