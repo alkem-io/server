@@ -102,7 +102,7 @@
     preserve_host: true
     url: 'http://whiteboard-collaboration:4002'
   match:
-    url: 'http://localhost:3000/socket.io/<**>'
+    url: 'http://localhost:3000/socket.io<**>'
     methods:
       - GET
   authenticators:

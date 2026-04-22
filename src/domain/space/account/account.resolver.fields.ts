@@ -1,4 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums';
+import { SearchVisibility } from '@common/enums/search.visibility';
 import { GraphqlGuard } from '@core/authorization';
 import {
   AccountInnovationHubsLoaderCreator,
@@ -23,7 +24,7 @@ import { AccountService } from '@domain/space/account/account.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { UseGuards } from '@nestjs/common';
-import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
 import { AccountLookupService } from '../account.lookup/account.lookup.service';
 import { ISpace } from '../space/space.interface';
@@ -123,9 +124,20 @@ export class AccountResolverFields {
     @Loader(AccountInnovationHubsLoaderCreator, {
       parentClassRef: Account,
     })
-    loader: ILoader<IInnovationHub[]>
+    loader: ILoader<IInnovationHub[]>,
+    @Args('searchVisibility', {
+      type: () => [SearchVisibility],
+      nullable: true,
+      description:
+        'Filter InnovationHubs by SearchVisibility. If not specified, all InnovationHubs are returned.',
+    })
+    searchVisibility?: SearchVisibility[]
   ): Promise<IInnovationHub[]> {
-    return loader.load(account.id);
+    const hubs = await loader.load(account.id);
+    if (searchVisibility?.length) {
+      return hubs.filter(h => searchVisibility.includes(h.searchVisibility));
+    }
+    return hubs;
   }
 
   @ResolveField('innovationPacks', () => [IInnovationPack], {
@@ -137,9 +149,20 @@ export class AccountResolverFields {
     @Loader(AccountInnovationPacksLoaderCreator, {
       parentClassRef: Account,
     })
-    loader: ILoader<IInnovationPack[]>
+    loader: ILoader<IInnovationPack[]>,
+    @Args('searchVisibility', {
+      type: () => [SearchVisibility],
+      nullable: true,
+      description:
+        'Filter InnovationPacks by SearchVisibility. If not specified, all InnovationPacks are returned.',
+    })
+    searchVisibility?: SearchVisibility[]
   ): Promise<IInnovationPack[]> {
-    return loader.load(account.id);
+    const packs = await loader.load(account.id);
+    if (searchVisibility?.length) {
+      return packs.filter(p => searchVisibility.includes(p.searchVisibility));
+    }
+    return packs;
   }
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
