@@ -3,7 +3,6 @@ import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IDocument } from '@domain/storage/document';
 import { DocumentService } from '@domain/storage/document/document.service';
-import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -102,12 +101,6 @@ describe('ProfileDocumentsService', () => {
           useValue: {
             addDocumentToStorageBucketOrFail: vi.fn(),
             uploadFileAsDocumentFromBuffer: vi.fn(),
-          },
-        },
-        {
-          provide: DocumentAuthorizationService,
-          useValue: {
-            applyAuthorizationPolicy: vi.fn(),
           },
         },
         {

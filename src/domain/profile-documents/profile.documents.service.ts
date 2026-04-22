@@ -4,7 +4,6 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { DocumentService } from '@domain/storage/document/document.service';
-import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Injectable } from '@nestjs/common';
@@ -15,7 +14,6 @@ export class ProfileDocumentsService {
   constructor(
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
-    private documentAuthorizationService: DocumentAuthorizationService,
     private fileServiceAdapter: FileServiceAdapter
   ) {}
 
@@ -58,8 +56,9 @@ export class ProfileDocumentsService {
 
     if (!docInContent) {
       throw new EntityNotFoundException(
-        `File with URL '${fileUrl}' not found`,
-        LogContext.COLLABORATION
+        'File with URL not found',
+        LogContext.COLLABORATION,
+        { fileUrl }
       );
     }
 

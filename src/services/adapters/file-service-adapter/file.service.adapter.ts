@@ -10,7 +10,6 @@ import { AlkemioConfig } from '@src/types/alkemio.config';
 import { isAxiosError } from 'axios';
 import FormData from 'form-data';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { catchError, firstValueFrom, map, timeout } from 'rxjs';
 import type {
   CreateDocumentMetadata,
   CreateDocumentResult,
@@ -108,43 +107,19 @@ export class FileServiceAdapter extends HttpClientBase {
   }
 
   /**
-   * Stream file content from the Go file-service-go.
-   * Uses `arraybuffer` response type so we return a `Buffer` directly.
-   * Separate from `sendRequest` because the generic pipeline assumes JSON
-   * response parsing; binary downloads need their own transport path.
+   * Stream file content from the Go file-service-go. Returns the raw bytes
+   * as a `Buffer`.
    */
   async getDocumentContent(documentId: string): Promise<Buffer> {
     this.checkEnabled();
     this.checkCircuit('getDocumentContent');
 
-    const url = `${this.baseUrl}/internal/file/${documentId}/content`;
-
-    this.logger.verbose?.(
-      `${LOG_PREFIX} getDocumentContent: ${documentId}`,
-      LogContext.STORAGE_BUCKET
+    return this.sendBinaryRequest(
+      'getDocumentContent',
+      'get',
+      `/internal/file/${documentId}/content`,
+      { documentId }
     );
-
-    const request$ = this.httpService
-      .get(url, { responseType: 'arraybuffer' })
-      .pipe(
-        timeout({ first: this.requestTimeout }),
-        map(response => {
-          this.circuitBreaker.onSuccess();
-          return Buffer.from(response.data);
-        }),
-        catchError(error => {
-          const result = this.circuitBreaker.onFailure();
-          if (result.opened) {
-            this.logger.warn?.(
-              `${LOG_PREFIX} circuit breaker opened after ${result.failureCount} failures`,
-              LogContext.STORAGE_BUCKET
-            );
-          }
-          throw this.handleError('getDocumentContent', error, { documentId });
-        })
-      );
-
-    return firstValueFrom(request$);
   }
 
   /**
@@ -192,7 +167,7 @@ export class FileServiceAdapter extends HttpClientBase {
 
   protected openCircuitException(operation: string, resetInMs: number): Error {
     return new StorageServiceUnavailableException(
-      `File service circuit breaker is open (${operation})`,
+      'File service circuit breaker is open',
       { operation, resetInMs }
     );
   }
@@ -206,8 +181,8 @@ export class FileServiceAdapter extends HttpClientBase {
       const status = error.response.status;
       if (status === 503) {
         return new StorageServiceUnavailableException(
-          `File service unavailable during ${operation}`,
-          context
+          'File service unavailable',
+          { ...context, operation }
         );
       }
       return FileServiceAdapterException.fromHttpError(

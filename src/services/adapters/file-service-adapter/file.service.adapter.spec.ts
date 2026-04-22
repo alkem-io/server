@@ -204,14 +204,19 @@ describe('FileServiceAdapter', () => {
     it('should GET binary content and return Buffer', async () => {
       const fileContent = Buffer.from('file-binary-data');
 
-      (httpService.get as Mock).mockReturnValue(of(axiosResponse(fileContent)));
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(fileContent))
+      );
 
       const result = await adapter.getDocumentContent('doc-1');
 
       expect(Buffer.isBuffer(result)).toBe(true);
-      expect(httpService.get).toHaveBeenCalledWith(
-        'http://file-service:4003/internal/file/doc-1/content',
-        { responseType: 'arraybuffer' }
+      expect(httpService.request).toHaveBeenCalledWith(
+        expect.objectContaining({
+          method: 'get',
+          url: 'http://file-service:4003/internal/file/doc-1/content',
+          responseType: 'arraybuffer',
+        })
       );
     });
   });
