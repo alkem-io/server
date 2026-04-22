@@ -642,7 +642,11 @@ services:
     cap_add:
       - MKNOD
     tmpfs:
-      - /opt/cool/child-roots:exec,size=512m
+      # World-writable (mode=1777) so the non-root 'cool' user can create
+      # per-session jails here without CAP_SYS_ADMIN (we run with
+      # --o:security.capabilities=false for K8s compatibility, which disables
+      # coolmount's bind-mount path).
+      - /opt/cool/child-roots:exec,mode=1777,size=512m
     restart: unless-stopped
     networks:
       - alkemio_dev_net
