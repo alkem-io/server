@@ -5,13 +5,13 @@
 
 ## Summary
 
-Replace direct document table writes and local file storage in the Alkemio server with HTTP calls to the Go file-service-go internal API. The server becomes read-only on the `document` table. A new `FileServiceAdapter` (HTTP client) delegates all document CRUD to the Go service. Image processing, file deduplication, and public file serving are handled entirely by the Go service. Server still manages authorization policies, tagsets, storage buckets, and database migrations.
+Replace direct document table writes and local file storage in the Alkemio server with HTTP calls to the Go file-service-go internal API. The server becomes read-only on the table (which is renamed from `document` to `file` as part of this migration to match Go service terminology). A new `FileServiceAdapter` (HTTP client) delegates all document CRUD to the Go service. The HTTP pipeline and circuit breaker are extracted into a reusable `HttpClientBase` + `CircuitBreaker` in `src/common/http/` so future outbound adapters can compose them. Image processing, file deduplication, and public file serving are handled entirely by the Go service. Server still manages authorization policies, tagsets, storage buckets, and database migrations.
 
 ## Technical Context
 
 **Language/Version**: TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1)
 **Primary Dependencies**: NestJS 10, TypeORM 0.3, `@nestjs/axios` (axios ^1.12.2), `rxjs`
-**Storage**: PostgreSQL 17.5 (document table becomes read-only for server)
+**Storage**: PostgreSQL 17.5 (table renamed from `document` to `file`, becomes read-only for server)
 **Testing**: Vitest 4.x
 **Target Platform**: Linux server (Docker)
 **Project Type**: Single NestJS server
@@ -86,8 +86,9 @@ src/
 
 ## Implementation Approach
 
-### Phase 1: Create FileServiceAdapter
-1. New `FileServiceAdapterModule` in `src/services/adapters/file-service-adapter/`
+### Phase 1: Create FileServiceAdapter + reusable HTTP plumbing
+0. New `HttpClientBase` in `src/common/http/http.client.base.ts` (abstract base for outbound HTTP adapters: `sendRequest` pipeline with timeout/retry/hooks + pluggable error translation) plus `CircuitBreaker` in `src/common/http/circuit.breaker.ts` (framework-agnostic state machine composed by the base)
+1. New `FileServiceAdapterModule` in `src/services/adapters/file-service-adapter/` (`FileServiceAdapter` extends `HttpClientBase`). Request/response DTOs split one-per-file under `dto/` with a barrel `index.ts` (`CreateDocumentMetadata`, `CreateDocumentResult`, `DeleteDocumentResult`, `UpdateDocumentInput`, `UpdateDocumentResult`)
 2. HTTP client using `@nestjs/axios` with RxJS timeout/retry pattern
 3. Methods: `createDocument`, `getDocumentContent`, `updateDocument`, `deleteDocument`
 4. Structured exception handling via `FileServiceAdapterException`
@@ -120,8 +121,9 @@ src/
 
 | Dependency | Type | Status |
 |-----------|------|--------|
-| Go file-service-go v0.0.5 | External service | Ready -- deployed in Docker stack |
+| Go file-service-go v0.0.7 | External service | Ready -- deployed in Docker stack. Exposes `/internal/file/*` (public `/rest/storage/document/{id}` kept as a backward-compat alias) |
 | authorization-evaluation-service v0.0.2 | External service | Ready -- used by Go service for auth |
+| wopi-service v0.0.6 | External service | Ready -- deployed in Docker stack; uses `FileServiceAdapter` contract to look up document metadata / content |
 | `@nestjs/axios` | Existing package | Already in server (axios ^1.12.2) |
 | Go service internal API | Integration contract | Documented in contracts/file-service-api.md |
 
@@ -130,6 +132,7 @@ src/
 | Risk | Impact | Mitigation |
 |------|--------|------------|
 | Go service unavailable during upload | Upload fails | FR-010: fail with error, no fallback. Health check in adapter |
-| Rollback on partial failure (auth created, Go service fails) | Orphaned auth policy | Server deletes pre-created auth + tagset on adapter failure |
+| Rollback on partial failure (auth created, Go service fails) | Orphaned auth policy / tagset / Go-side document | FR-007: single compensation block covers auth-policy + tagset + Go-side create + post-create reload; each resource is rolled back independently (auth policy delete, tagset delete, `DELETE /internal/file/{id}`) so one cleanup failure doesn't short-circuit the others |
+| Accidental direct DB writes to the `file` table from server code | Bypasses Go service, skips file storage / audit | `DocumentWriteGuard` (TypeORM `@EventSubscriber`) throws at runtime on any server-side INSERT/UPDATE/DELETE, pointing to the `FileServiceAdapter` method to use instead |
 | Image dimension validation after removing compression | Oversized images accepted | Keep `getImageDimensions()` in VisualService for dimension validation only |
 | Performance regression on large file uploads | Slower uploads | Go service processes in-memory like server; HTTP overhead minimal on same network |

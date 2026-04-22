@@ -12,7 +12,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
-import { streamToBuffer } from '@common/utils';
+import { streamToBuffer, tryRollback } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -202,10 +202,13 @@ export class StorageBucketService {
     this.validateSize(storage, buffer.length);
 
     // Pre-create auth policy and tagset, call Go service, load result.
-    // Full compensation: any failure rolls back all previously created resources.
+    // Full compensation: any failure anywhere in the sequence rolls back all
+    // previously created resources (auth policy, tagset, Go-side document),
+    // each cleaned up independently so one rollback failure doesn't skip others.
     let savedAuth;
     let savedTagset;
     let result;
+    let document;
     try {
       const authorization = new AuthorizationPolicy(
         AuthorizationPolicyType.DOCUMENT
@@ -230,39 +233,48 @@ export class StorageBucketService {
         allowedMimeTypes: storage.allowedMimeTypes.join(','),
         maxFileSize: storage.maxFileSize,
       });
+
+      // Load the document created by the Go service with relations needed for auth
+      document = await this.documentService.getDocumentOrFail(result.id, {
+        relations: {
+          authorization: true,
+          tagset: { authorization: true },
+          storageBucket: true,
+        },
+      });
     } catch (error) {
-      // Rollback: delete each pre-created resource independently
-      if (savedAuth) {
-        try {
-          await this.authorizationPolicyService.delete(savedAuth);
-        } catch (_e) {
-          this.logger.warn?.(
-            `Failed to rollback auth policy ${savedAuth.id}`,
-            LogContext.STORAGE_BUCKET
-          );
-        }
+      // Rollback: delete each pre-created resource independently so one
+      // failure doesn't short-circuit the others. Bind narrowed values into
+      // const locals so the closures don't re-widen them.
+      const createdDoc = result;
+      if (createdDoc) {
+        await tryRollback(
+          () => this.fileServiceAdapter.deleteDocument(createdDoc.id),
+          `Failed to rollback Go-side document ${createdDoc.id}`,
+          this.logger,
+          LogContext.STORAGE_BUCKET
+        );
       }
-      if (savedTagset) {
-        try {
-          await this.tagsetService.removeTagset(savedTagset.id);
-        } catch (_e) {
-          this.logger.warn?.(
-            `Failed to rollback tagset ${savedTagset.id}`,
-            LogContext.STORAGE_BUCKET
-          );
-        }
+      const createdAuth = savedAuth;
+      if (createdAuth) {
+        await tryRollback(
+          () => this.authorizationPolicyService.delete(createdAuth),
+          `Failed to rollback auth policy ${createdAuth.id}`,
+          this.logger,
+          LogContext.STORAGE_BUCKET
+        );
+      }
+      const createdTagset = savedTagset;
+      if (createdTagset) {
+        await tryRollback(
+          () => this.tagsetService.removeTagset(createdTagset.id),
+          `Failed to rollback tagset ${createdTagset.id}`,
+          this.logger,
+          LogContext.STORAGE_BUCKET
+        );
       }
       throw error;
     }
-
-    // Load the document created by the Go service with relations needed for auth
-    const document = await this.documentService.getDocumentOrFail(result.id, {
-      relations: {
-        authorization: true,
-        tagset: { authorization: true },
-        storageBucket: true,
-      },
-    });
 
     this.logger.verbose?.(
       `Uploaded document '${result.externalID}' via file-service on storage bucket: ${storage.id}`,

@@ -94,6 +94,7 @@ describe('ProfileDocumentsService', () => {
             getDocumentFromURL: vi.fn(),
             getPubliclyAccessibleURL: vi.fn(),
             createDocument: vi.fn(),
+            deleteDocument: vi.fn(),
           },
         },
         {
@@ -116,14 +117,6 @@ describe('ProfileDocumentsService', () => {
             getDocumentContent: vi.fn(),
             updateDocument: vi.fn(),
             deleteDocument: vi.fn(),
-          },
-        },
-        {
-          provide: 'NestWinston',
-          useValue: {
-            verbose: vi.fn(),
-            warn: vi.fn(),
-            error: vi.fn(),
           },
         },
       ],
@@ -310,6 +303,11 @@ describe('ProfileDocumentsService', () => {
         doc.mimeType,
         doc.createdBy
       );
+      // After copying to the new bucket, the original document in the old bucket
+      // must be deleted to avoid orphaned storage.
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: doc.id,
+      });
     });
 
     describe('reuploadDocumentsInMarkdownProfile', () => {

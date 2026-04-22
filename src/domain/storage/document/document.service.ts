@@ -1,5 +1,9 @@
 import { LogContext } from '@common/enums';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
+import { tryRollback } from '@common/utils';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -38,31 +42,27 @@ export class DocumentService {
     const deleteResult =
       await this.fileServiceAdapter.deleteDocument(documentID);
 
-    // Clean up server-owned entities using IDs from Go service response
-    if (deleteResult.authorizationId) {
-      try {
-        await this.authorizationPolicyService.delete({
-          id: deleteResult.authorizationId,
-        } as any);
-      } catch (_error) {
-        this.logger.warn?.(
-          `Failed to delete auth policy ${deleteResult.authorizationId} after document deletion`,
-          LogContext.STORAGE_BUCKET
-        );
-      }
+    // Clean up server-owned entities using IDs from Go service response.
+    // Bind narrowed IDs into const locals so the closures don't re-widen them.
+    const authorizationId = deleteResult.authorizationId;
+    if (authorizationId) {
+      await tryRollback(
+        () => this.authorizationPolicyService.deleteById(authorizationId),
+        `Failed to delete auth policy ${authorizationId} after document deletion`,
+        this.logger,
+        LogContext.STORAGE_BUCKET
+      );
     }
-    if (deleteResult.tagsetId) {
-      try {
-        await this.tagsetService.removeTagset(deleteResult.tagsetId);
-      } catch (_error) {
-        this.logger.warn?.(
-          `Failed to delete tagset ${deleteResult.tagsetId} after document deletion`,
-          LogContext.STORAGE_BUCKET
-        );
-      }
+    const tagsetId = deleteResult.tagsetId;
+    if (tagsetId) {
+      await tryRollback(
+        () => this.tagsetService.removeTagset(tagsetId),
+        `Failed to delete tagset ${tagsetId} after document deletion`,
+        this.logger,
+        LogContext.STORAGE_BUCKET
+      );
     }
 
-    document.id = documentID;
     return document;
   }
 
@@ -79,8 +79,9 @@ export class DocumentService {
     });
     if (!document)
       throw new EntityNotFoundException(
-        `Not able to locate document with the specified ID: ${documentID}`,
-        LogContext.STORAGE_BUCKET
+        'Not able to locate document with the specified ID',
+        LogContext.STORAGE_BUCKET,
+        { documentID }
       );
     return document;
   }
@@ -98,8 +99,9 @@ export class DocumentService {
     });
     if (!document)
       throw new EntityNotFoundException(
-        `Not able to locate document with the specified external id: ${externalID}`,
-        LogContext.STORAGE_BUCKET
+        'Not able to locate document with the specified external id',
+        LogContext.STORAGE_BUCKET,
+        { externalID }
       );
     return document;
   }
@@ -110,8 +112,9 @@ export class DocumentService {
     });
     if (!document)
       throw new EntityNotFoundException(
-        `Not able to locate document with the specified ID: ${documentID}`,
-        LogContext.STORAGE_BUCKET
+        'Not able to locate document with the specified ID',
+        LogContext.STORAGE_BUCKET,
+        { documentID }
       );
     return document.createdDate;
   }
@@ -119,6 +122,18 @@ export class DocumentService {
   public async updateDocument(
     documentData: UpdateDocumentInput
   ): Promise<IDocument> {
+    // The file-service-go does not support updating display name or other
+    // document metadata via PATCH — it only supports storageBucketId and
+    // temporaryLocation (used internally by the temporary-storage flow).
+    // Fail loudly here rather than silently dropping the input so clients
+    // don't assume success when no update happened.
+    if (documentData.displayName !== undefined) {
+      throw new ValidationException(
+        'Document display name cannot be updated via this mutation',
+        LogContext.STORAGE_BUCKET
+      );
+    }
+
     const document = await this.getDocumentOrFail(documentData.ID, {
       relations: { tagset: true },
     });
@@ -127,8 +142,9 @@ export class DocumentService {
     if (documentData.tagset) {
       if (!document.tagset) {
         throw new EntityNotFoundException(
-          `Document not initialised: ${document.id}`,
-          LogContext.CALENDAR
+          'Document not initialised',
+          LogContext.STORAGE_BUCKET,
+          { documentID: document.id }
         );
       }
       document.tagset = await this.tagsetService.updateTagset(

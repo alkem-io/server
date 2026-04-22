@@ -1,3 +1,5 @@
+import { ActorType } from '@common/enums/actor.type';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getEntityManagerToken } from '@nestjs/typeorm';
@@ -196,6 +198,21 @@ describe('Naming Service', () => {
       const result = await service.getReservedNameIDsInUsers();
 
       expect(result).toEqual(['user-a', 'user-b']);
+    });
+
+    it('queries the actor table filtered by type=user so orphan actor rows are included', async () => {
+      entityManager.find.mockResolvedValue([
+        { id: '1', nameID: 'user-a' },
+        { id: '2', nameID: 'orphan-x' },
+      ]);
+
+      const result = await service.getReservedNameIDsInUsers();
+
+      expect(entityManager.find).toHaveBeenCalledWith(Actor, {
+        select: { id: true, nameID: true },
+        where: { type: ActorType.USER },
+      });
+      expect(result).toEqual(['user-a', 'orphan-x']);
     });
   });
 

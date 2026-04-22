@@ -72,6 +72,7 @@ export class CollaborationLicenseService {
         case LicenseEntitlementType.SPACE_FLAG_SAVE_AS_TEMPLATE:
         case LicenseEntitlementType.SPACE_FLAG_WHITEBOARD_MULTI_USER:
         case LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER:
+        case LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS:
           this.licenseService.findAndCopyParentEntitlement(
             entitlement,
             parentEntitlements

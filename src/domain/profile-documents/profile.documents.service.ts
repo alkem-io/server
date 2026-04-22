@@ -7,9 +7,8 @@ import { DocumentService } from '@domain/storage/document/document.service';
 import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { Injectable } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class ProfileDocumentsService {
@@ -17,9 +16,7 @@ export class ProfileDocumentsService {
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
     private documentAuthorizationService: DocumentAuthorizationService,
-    private fileServiceAdapter: FileServiceAdapter,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER)
-    private readonly logger: LoggerService
+    private fileServiceAdapter: FileServiceAdapter
   ) {}
 
   /***
@@ -61,8 +58,9 @@ export class ProfileDocumentsService {
 
     if (!docInContent) {
       throw new EntityNotFoundException(
-        `File with URL '${fileUrl}' not found`,
-        LogContext.COLLABORATION
+        'File with URL not found',
+        LogContext.COLLABORATION,
+        { fileUrl }
       );
     }
 
@@ -87,7 +85,9 @@ export class ProfileDocumentsService {
       }
       return this.documentService.getPubliclyAccessibleURL(docInContent);
     } else {
-      // Different bucket: fetch content from Go service, re-upload to new bucket
+      // Different bucket: fetch content from Go service, re-upload to new bucket,
+      // apply auth policy on the copy, then delete the source. Compensation at
+      // every step so a retry can't leave orphaned documents.
       const content = await this.fileServiceAdapter.getDocumentContent(
         docInContent.id
       );
@@ -105,15 +105,23 @@ export class ProfileDocumentsService {
           storageBucket.authorization
         );
       } catch (error) {
-        // Compensate: delete the uploaded document to avoid orphan without auth
-        try {
-          await this.documentService.deleteDocument({ ID: newDoc.id });
-        } catch (_cleanupError) {
-          this.logger.warn?.(
-            `Failed to clean up document ${newDoc.id} after auth policy failure`,
-            LogContext.STORAGE_BUCKET
-          );
-        }
+        // Auth application failed — remove the orphan copy so readers can't
+        // reach an unauthorised doc via its URL.
+        await this.documentService
+          .deleteDocument({ ID: newDoc.id })
+          .catch(() => undefined);
+        throw error;
+      }
+      try {
+        await this.documentService.deleteDocument({ ID: docInContent.id });
+      } catch (error) {
+        // Source delete failed after destination upload succeeded — compensate
+        // by removing the new copy so a caller retry doesn't accumulate
+        // duplicates in the destination bucket. Swallow cleanup errors: the
+        // original delete failure is what the caller needs to see.
+        await this.documentService
+          .deleteDocument({ ID: newDoc.id })
+          .catch(() => undefined);
         throw error;
       }
       return this.documentService.getPubliclyAccessibleURL(newDoc);

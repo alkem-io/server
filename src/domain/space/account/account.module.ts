@@ -28,7 +28,7 @@ import { AccountLicensePlanModule } from '../account.license.plan/account.licens
 import { AccountLookupModule } from '../account.lookup/account.lookup.module';
 import { SpaceModule } from '../space/space.module';
 import { AccountResolverMutations } from './account.resolver.mutations';
-import { AccountResolverQueries } from './account.resolver.queries';
+
 import { AccountLicenseService } from './account.service.license';
 
 @Module({
@@ -63,7 +63,7 @@ import { AccountLicenseService } from './account.service.license';
     AccountAuthorizationService,
     AccountResolverFields,
     AccountResolverMutations,
-    AccountResolverQueries,
+
     AccountLicenseService,
   ],
   exports: [AccountService, AccountAuthorizationService, AccountLicenseService],

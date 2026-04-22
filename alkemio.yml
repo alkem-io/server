@@ -356,6 +356,7 @@ storage:
     # URL of the WOPI service (token issuance endpoint)
     wopi_service_url: ${WOPI_SERVICE_URL}:http://localhost:3000
 
+
   # Redis configuration
   redis:
     # Redis host
@@ -459,13 +460,13 @@ collaboration:
 ## Configuration of the legal / usability aspects of the platform
 platform:
   # Terms of usage that all users comply with
-  terms: ${PLATFORM_TERMS}:https://welcome.alkem.io/legal/#tc
+  terms: ${PLATFORM_TERMS}:https://welcome.alkem.io/legal/terms/
 
   # Privacy policy for the platform
-  privacy: ${PLATFORM_PRIVACY}:https://welcome.alkem.io/privacy/
+  privacy: ${PLATFORM_PRIVACY}:https://welcome.alkem.io/legal/privacy
 
   # Security policy for the platform
-  security: ${PLATFORM_SECURITY}:https://welcome.alkem.io/security/
+  security: ${PLATFORM_SECURITY}:https://welcome.alkem.io/legal/security
 
   # Link for support requests
   support: ${PLATFORM_SUPPORT}:https://welcome.alkem.io/contact/
@@ -483,16 +484,16 @@ platform:
   landing: ${PLATFORM_LANDING}:https://welcome.alkem.io/
 
   # Blog
-  blog: ${PLATFORM_BLOG}:https://welcome.alkem.io/blog/
+  blog: ${PLATFORM_BLOG}:https://blog.alkem.io/
 
   # Home page - Impact
   impact: ${PLATFORM_IMPACT}:https://alkemio.org
 
   # Collaboration tools
-  inspiration: ${PLATFORM_INSPIRATION}:https://welcome.alkem.io/resources/#blogs/
+  inspiration: ${PLATFORM_INSPIRATION}:https://welcome.alkem.io/resources/
 
   # Innovation library
-  innovationLibrary: ${PLATFORM_INNOVATIONLIBRARY}:https://alkem.io/docs/features/templates/
+  innovationLibrary: ${PLATFORM_INNOVATIONLIBRARY}:https://alkem.io/innovation-library
 
   # Home page - Foundation
   foundation: ${PLATFORM_FOUNDATION}:https://alkemio.org/
@@ -501,16 +502,16 @@ platform:
   contactsupport: ${PLATFORM_CONTACTSUPPORT}:https://welcome.alkem.io/contact/
 
   # Home page - Switch Plan
-  switchplan: ${PLATFORM_SWITCHPLAN}:https://welcome.alkem.io/pricing-own-space/
+  switchplan: ${PLATFORM_SWITCHPLAN}:https://welcome.alkem.io/pricing/
 
   # Home page - Opensource
-  opensource: ${PLATFORM_OPENSOURCE}:https://github.com/alkem-io
+  opensource: ${PLATFORM_OPENSOURCE}:https://github.com/alkem-io/
 
   # Home page - Opensource
-  releases: ${PLATFORM_RELEASES}:https://alkemio.org/releases
+  releases: ${PLATFORM_RELEASES}:https://alkem.io/forum/releases/
 
   # Help Dialog - Help
-  help: ${PLATFORM_HELP}:https://welcome.alkem.io/docs/
+  help: ${PLATFORM_HELP}:https://alkem.io/docs/
 
   # Help Dialog - Community Forum
   community: ${PLATFORM_COMMUNITY}:https://alkem.io/forum/
@@ -523,7 +524,7 @@ platform:
 
   # Acceptable Usage Policy
   aup:
-    ${PLATFORM_AUP}:https://welcome.alkem.io/legal/#aup
+    ${PLATFORM_AUP}:https://welcome.alkem.io/legal/terms
 
     # Documentation site path, endpoint is endpoint_cluster + documentation_path
   documentation_path: ${PLATFORM_DOCUMENTATION_PATH}:/documentation

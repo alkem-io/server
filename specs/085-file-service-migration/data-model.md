@@ -4,31 +4,42 @@
 
 ## Entity Changes
 
-### No New Database Entities Required
+### Rename `document` → `file`
 
-The migration changes the *ownership* of the `document` table, not its schema. The Go file-service-go becomes the writer; the server becomes read-only.
+The migration changes the *ownership* of the table and *renames* it from `document` to `file` (matching the terminology used by the Go file-service-go). Schema is otherwise unchanged. The Go file-service-go becomes the writer; the server becomes read-only.
+
+The rename is performed by a non-destructive `ALTER TABLE "document" RENAME TO "file"` migration (`RenameDocumentTableToFile1776778800000`); all existing rows and foreign key constraints (which use hashed names, not the table name) are preserved automatically.
+
+The server's TypeORM entity class remains `Document` for API continuity; only its `@Entity('file')` decorator changes, together with the `IDX_file_storageBucketId` index name.
 
 ### Ownership Transfer
 
 | Entity | Before | After |
 |--------|--------|-------|
-| `document` | Server: full CRUD | Server: read-only (SELECT). Go service: full CRUD (INSERT/UPDATE/DELETE) |
+| `file` (renamed from `document`) | Server: full CRUD | Server: read-only (SELECT). Go service: full CRUD (INSERT/UPDATE/DELETE) |
 | `storage_bucket` | Server: full CRUD | Server: full CRUD (unchanged) |
 | `authorization_policy` (for documents) | Server: full CRUD | Server: full CRUD (unchanged -- created before upload, cleaned up after delete) |
 | `tagset` (for documents) | Server: full CRUD | Server: full CRUD (unchanged -- created before upload, cleaned up after delete) |
 
 ### New Server-Side Component
 
-**FileServiceAdapter** -- HTTP client adapter (not a database entity). Lives in `src/services/adapters/file-service-adapter/`.
+**FileServiceAdapter** -- HTTP client adapter (not a database entity). Lives in `src/services/adapters/file-service-adapter/`. Extends the reusable `HttpClientBase` (`src/common/http/http.client.base.ts`), which provides the `sendRequest` pipeline (timeout + retry + circuit breaker + pluggable error translation). The circuit breaker is a separate framework-agnostic state machine in `src/common/http/circuit.breaker.ts` so future outbound adapters can reuse it.
 
 | Field | Type | Source |
 |-------|------|--------|
-| `baseUrl` | string | Config: `storage.file_service.url` |
-| `timeout` | number | Config: `storage.file_service.timeout` |
-| `retries` | number | Config: `storage.file_service.retries` |
-| `enabled` | boolean | Config: `storage.file_service.enabled` |
+| `baseUrl` | string | Config: `storage.file_service.url` (consumed by `HttpClientBase`) |
+| `timeout` | number | Config: `storage.file_service.timeout` (consumed by `HttpClientBase`) |
+| `retries` | number | Config: `storage.file_service.retries` (consumed by `HttpClientBase`) |
+| `enabled` | boolean | Config: `storage.file_service.enabled` (adapter-local) |
+| circuit breaker config | `{ failureThreshold, resetTimeMs }` | Hard-coded: `{ 5, 30_000 }` in `FileServiceAdapter` constructor |
 
-## Document Table (Reference -- No Schema Changes)
+Request/response DTOs live in `src/services/adapters/file-service-adapter/dto/`, one interface per file (`CreateDocumentMetadata`, `CreateDocumentResult`, `DeleteDocumentResult`, `UpdateDocumentInput`, `UpdateDocumentResult`), re-exported via `dto/index.ts`.
+
+### Server-Side Write Guard
+
+`DocumentWriteGuard` (`src/domain/storage/document/document.write.guard.ts`) — a TypeORM `@EventSubscriber` that listens on the `Document` entity and throws on any `beforeInsert` / `beforeUpdate` / `beforeRemove` event. This provides defense-in-depth: any accidental write path from server code fails loudly at runtime with a message pointing to the correct `FileServiceAdapter` method.
+
+## File Table (Reference -- Renamed from `document`, Schema Unchanged)
 
 | Column | Type | Owner (Write) | Server Access |
 |--------|------|---------------|---------------|
@@ -58,7 +69,7 @@ Before:
 After:
   GraphQL mutation → stream → buffer
   → Server creates AuthorizationPolicy + Tagset
-  → POST /internal/document (multipart: file + metadata + authorizationId + tagsetId)
+  → POST /internal/file (multipart: file + metadata + authorizationId + tagsetId)
   → Go service: stores file, processes images, inserts document
   → Server receives {id, externalID, mimeType, size}
   → Server constructs URL from document ID
@@ -74,7 +85,7 @@ Before:
 
 After:
   GraphQL mutation
-  → DELETE /internal/document/{id}
+  → DELETE /internal/file/{id}
   → Go service: deletes document record + file (if not shared)
   → Go service returns {authorizationId, tagsetId}
   → Server: AuthorizationPolicy DELETE → Tagset DELETE
@@ -87,7 +98,7 @@ Before:
   Server: Document UPDATE (storageBucketId, temporaryLocation = false)
 
 After:
-  PATCH /internal/document/{id} with {storageBucketId, temporaryLocation: false}
+  PATCH /internal/file/{id} with {storageBucketId, temporaryLocation: false}
   → Go service: updates document record (optimistic locking)
 ```
 

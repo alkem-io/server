@@ -348,6 +348,7 @@ enum CredentialType {
   ORGANIZATION_OWNER
   SPACE_ADMIN
   SPACE_FEATURE_MEMO_MULTI_USER
+  SPACE_FEATURE_OFFICE_DOCUMENTS
   SPACE_FEATURE_SAVE_AS_TEMPLATE
   SPACE_FEATURE_VIRTUAL_CONTRIBUTORS
   SPACE_FEATURE_WHITEBOARD_MULTI_USER
@@ -415,6 +416,7 @@ enum LicenseEntitlementType {
   ACCOUNT_SPACE_PREMIUM
   ACCOUNT_VIRTUAL_CONTRIBUTOR
   SPACE_FLAG_MEMO_MULTI_USER
+  SPACE_FLAG_OFFICE_DOCUMENTS
   SPACE_FLAG_SAVE_AS_TEMPLATE
   SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
   SPACE_FLAG_WHITEBOARD_MULTI_USER
@@ -435,6 +437,7 @@ enum LicenseType {
 enum LicensingCredentialBasedCredentialType {
   ACCOUNT_LICENSE_PLUS
   SPACE_FEATURE_MEMO_MULTI_USER
+  SPACE_FEATURE_OFFICE_DOCUMENTS
   SPACE_FEATURE_SAVE_AS_TEMPLATE
   SPACE_FEATURE_VIRTUAL_CONTRIBUTORS
   SPACE_FEATURE_WHITEBOARD_MULTI_USER
@@ -1017,9 +1020,19 @@ type Account implements ActorFull {
   """The ID of the Actor"""
   id: UUID!
   """The InnovationHubs for this Account."""
-  innovationHubs: [InnovationHub!]!
+  innovationHubs(
+    """
+    Filter InnovationHubs by SearchVisibility. If not specified, all InnovationHubs are returned.
+    """
+    searchVisibility: [SearchVisibility!]
+  ): [InnovationHub!]!
   """The InnovationPacks for this Account."""
-  innovationPacks: [InnovationPack!]!
+  innovationPacks(
+    """
+    Filter InnovationPacks by SearchVisibility. If not specified, all InnovationPacks are returned.
+    """
+    searchVisibility: [SearchVisibility!]
+  ): [InnovationPack!]!
   """The License operating on this Account."""
   license: License!
   """A name identifier of the Account, unique within the platform."""

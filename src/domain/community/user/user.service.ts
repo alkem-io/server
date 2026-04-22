@@ -48,7 +48,7 @@ import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { InstrumentService } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { FindOneOptions, QueryFailedError, Repository } from 'typeorm';
 import { RoleSetRoleSelectionCredentials } from '../../access/role-set/dto/role.set.dto.role.selection.credentials';
 import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role.set.dto.role.with.parent.credentials';
 import { UserLookupService } from '../user-lookup/user.lookup.service';
@@ -93,8 +93,11 @@ export class UserService {
     userData: CreateUserInput,
     kratosData?: KratosSessionData
   ): Promise<IUser> {
+    // Track whether the caller supplied an explicit nameID. When they did, a
+    // unique-constraint collision must surface — we must not silently substitute
+    // a different nameID. Auto-retry only applies to server-generated nameIDs.
+    const nameIDWasGenerated = !userData.nameID;
     if (userData.nameID) {
-      // Convert nameID to lower case
       userData.nameID = userData.nameID.toLowerCase();
       await this.isUserNameIdAvailableOrFail(userData.nameID);
     } else {
@@ -102,21 +105,6 @@ export class UserService {
     }
 
     await this.validateUserProfileCreationRequest(userData);
-
-    let user: IUser = User.create({
-      ...userData,
-    });
-    // nameID is inherited from Actor (CTI), not a @Column on User,
-    // so TypeORM's create() won't copy it from the input — set it explicitly.
-    user.nameID = userData.nameID!;
-    user.authorization = new AuthorizationPolicy(AuthorizationPolicyType.USER);
-    user.settings = this.userSettingsService.createUserSettings(
-      this.getDefaultUserSettings()
-    );
-
-    if (!user.serviceProfile) {
-      user.serviceProfile = false;
-    }
 
     const profileData = await this.extendProfileDataWithReferences(
       userData.profileData
@@ -126,7 +114,6 @@ export class UserService {
 
     const authenticationID = kratosData?.authenticationID;
     if (authenticationID) {
-      // Check that authentication ID is not already in use
       const existingUser =
         await this.userLookupService.getUserByAuthenticationID(
           authenticationID
@@ -136,57 +123,101 @@ export class UserService {
           'Kratos identity already linked to another user'
         );
       }
-      user.authenticationID = authenticationID;
     }
 
     this.logger.verbose?.(
-      `Created a new user with email: ${user.email}`,
+      `Creating a new user with email: ${userData.email}`,
       LogContext.COMMUNITY
     );
 
     // Single transaction: all DB writes (StorageAggregator, Account, Actor,
-    // Settings, User) are atomic — no orphans if any step fails.
-    user = await this.userRepository.manager.transaction(async mgr => {
-      user.storageAggregator =
-        await this.storageAggregatorService.createStorageAggregator(
-          StorageAggregatorType.USER,
-          undefined,
-          mgr
-        );
-      // Do not create the guidance room here, it will be created on demand
+    // Settings, User) are atomic — no orphans if any step fails. A duplicate
+    // nameID hitting UQ_actor_nameID_user (rare race past the reservation read)
+    // rolls back cleanly and we retry with a freshly generated nameID.
+    let user: IUser | undefined;
+    const maxNameIDAttempts = 3;
+    for (let attempt = 1; attempt <= maxNameIDAttempts; attempt++) {
+      try {
+        user = await this.userRepository.manager.transaction(async mgr => {
+          // nameID is inherited from Actor (CTI), not a @Column on User,
+          // so TypeORM's create() won't copy it from the input — set it explicitly.
+          const created: IUser = User.create({ ...userData });
+          created.nameID = userData.nameID!;
+          created.authorization = new AuthorizationPolicy(
+            AuthorizationPolicyType.USER
+          );
+          created.settings = this.userSettingsService.createUserSettings(
+            this.getDefaultUserSettings()
+          );
+          if (!created.serviceProfile) {
+            created.serviceProfile = false;
+          }
+          if (authenticationID) {
+            created.authenticationID = authenticationID;
+          }
 
-      user.profile = await this.profileService.createProfile(
-        profileData,
-        ProfileType.USER,
-        user.storageAggregator
+          created.storageAggregator =
+            await this.storageAggregatorService.createStorageAggregator(
+              StorageAggregatorType.USER,
+              undefined,
+              mgr
+            );
+
+          created.profile = await this.profileService.createProfile(
+            profileData,
+            ProfileType.USER,
+            created.storageAggregator
+          );
+
+          await this.profileService.addOrUpdateTagsetOnProfile(
+            created.profile,
+            { name: TagsetReservedName.SKILLS, tags: [] }
+          );
+          await this.profileService.addOrUpdateTagsetOnProfile(
+            created.profile,
+            { name: TagsetReservedName.KEYWORDS, tags: [] }
+          );
+          await this.profileAvatarService.addAvatarVisualToProfile(
+            created.profile,
+            userData.profileData,
+            kratosData,
+            userData.firstName,
+            userData.lastName
+          );
+
+          const account = await this.accountHostService.createAccount(
+            AccountType.USER,
+            mgr
+          );
+          created.accountID = account.id;
+
+          // CTI handles multi-table saves automatically — no need to save actor separately.
+          created.settings = await mgr.save(created.settings);
+          return await mgr.save(created as User);
+        });
+        break;
+      } catch (err) {
+        if (
+          nameIDWasGenerated &&
+          attempt < maxNameIDAttempts &&
+          isUserNameIdUniqueViolation(err)
+        ) {
+          const previous = userData.nameID;
+          userData.nameID = await this.createUserNameID(userData);
+          this.logger.warn?.(
+            `createUser: nameID '${previous}' collided with UQ_actor_nameID_user; retrying with '${userData.nameID}' (attempt ${attempt + 1}/${maxNameIDAttempts})`,
+            LogContext.COMMUNITY
+          );
+          continue;
+        }
+        throw err;
+      }
+    }
+    if (!user) {
+      throw new Error(
+        'createUser: user creation completed without a result (unreachable)'
       );
-
-      await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
-        name: TagsetReservedName.SKILLS,
-        tags: [],
-      });
-      await this.profileService.addOrUpdateTagsetOnProfile(user.profile, {
-        name: TagsetReservedName.KEYWORDS,
-        tags: [],
-      });
-      await this.profileAvatarService.addAvatarVisualToProfile(
-        user.profile,
-        userData.profileData,
-        kratosData,
-        userData.firstName,
-        userData.lastName
-      );
-
-      const account = await this.accountHostService.createAccount(
-        AccountType.USER,
-        mgr
-      );
-      user.accountID = account.id;
-
-      // CTI handles multi-table saves automatically — no need to save actor separately.
-      user.settings = await mgr.save(user.settings);
-      return await mgr.save(user as User);
-    });
+    }
 
     await this.profileAvatarService.ensureAvatarIsStoredInLocalStorageBucket(
       user.profile.id,
@@ -852,10 +883,23 @@ export class UserService {
       base = userData.email.split('@')[0];
     }
     const reservedNameIDs =
-      await this.namingService.getReservedNameIDsInUsers(); // This will need to be smarter later
+      await this.namingService.getReservedNameIDsInUsers();
     return this.namingService.createNameIdAvoidingReservedNameIDs(
       base,
       reservedNameIDs
     );
   }
+}
+
+// Postgres raises unique_violation (SQLSTATE 23505) on the partial index
+// UQ_actor_nameID_user. TypeORM wraps it as QueryFailedError with the pg error
+// exposed as driverError. Match on both code and constraint to avoid reacting
+// to any other 23505 coming from the user-creation transaction.
+function isUserNameIdUniqueViolation(err: unknown): boolean {
+  if (!(err instanceof QueryFailedError)) return false;
+  const driver = (err as QueryFailedError & { driverError?: unknown })
+    .driverError as { code?: string; constraint?: string } | undefined;
+  return (
+    driver?.code === '23505' && driver?.constraint === 'UQ_actor_nameID_user'
+  );
 }

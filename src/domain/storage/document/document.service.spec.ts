@@ -90,14 +90,16 @@ describe('DocumentService', () => {
         authorizationId: 'auth-1',
         tagsetId: 'tagset-1',
       });
-      (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
+      (authorizationPolicyService.deleteById as Mock).mockResolvedValue(
+        undefined
+      );
       (tagsetService.removeTagset as Mock).mockResolvedValue(undefined);
 
       const result = await service.deleteDocument({ ID: 'doc-1' });
 
       expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith('doc-1');
-      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'auth-1' })
+      expect(authorizationPolicyService.deleteById).toHaveBeenCalledWith(
+        'auth-1'
       );
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-1');
       expect(result.id).toBe('doc-1');
@@ -119,7 +121,7 @@ describe('DocumentService', () => {
 
       await service.deleteDocument({ ID: 'doc-2' });
 
-      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.deleteById).not.toHaveBeenCalled();
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-2');
     });
 
@@ -135,11 +137,13 @@ describe('DocumentService', () => {
         authorizationId: 'auth-3',
         tagsetId: null,
       });
-      (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
+      (authorizationPolicyService.deleteById as Mock).mockResolvedValue(
+        undefined
+      );
 
       await service.deleteDocument({ ID: 'doc-3' });
 
-      expect(authorizationPolicyService.delete).toHaveBeenCalled();
+      expect(authorizationPolicyService.deleteById).toHaveBeenCalled();
       expect(tagsetService.removeTagset).not.toHaveBeenCalled();
     });
 
@@ -205,13 +209,11 @@ describe('DocumentService', () => {
       const updatedTagset = { id: 'tagset-1', tags: ['new'] };
       const updateData = {
         ID: 'doc-1',
-        displayName: 'updated.pdf',
         tagset: { ID: 'tagset-1', tags: ['new'] },
       };
 
       (documentRepository.findOne as Mock).mockResolvedValue(existingDoc);
       (tagsetService.updateTagset as Mock).mockResolvedValue(updatedTagset);
-      (documentRepository.save as Mock).mockResolvedValue(existingDoc);
 
       const result = await service.updateDocument(updateData);
 
@@ -228,7 +230,6 @@ describe('DocumentService', () => {
       };
       const updateData = {
         ID: 'doc-1',
-        displayName: 'updated.pdf',
         tagset: { ID: 'tagset-1', tags: ['new'] },
       };
 
@@ -246,14 +247,25 @@ describe('DocumentService', () => {
       };
       const updateData = {
         ID: 'doc-1',
-        displayName: 'updated.pdf',
       };
 
       (documentRepository.findOne as Mock).mockResolvedValue(existingDoc);
-      (documentRepository.save as Mock).mockResolvedValue(existingDoc);
 
       await service.updateDocument(updateData);
 
+      expect(tagsetService.updateTagset).not.toHaveBeenCalled();
+    });
+
+    it('should throw ValidationException when displayName is provided (unsupported field)', async () => {
+      const updateData = {
+        ID: 'doc-1',
+        displayName: 'new-name.pdf',
+      };
+
+      await expect(service.updateDocument(updateData)).rejects.toThrow(
+        'Document display name cannot be updated'
+      );
+      expect(documentRepository.findOne).not.toHaveBeenCalled();
       expect(tagsetService.updateTagset).not.toHaveBeenCalled();
     });
   });

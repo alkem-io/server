@@ -19,10 +19,14 @@ export class UpdateDocumentInput extends UpdateBaseAlkemioInput {
   tagset?: UpdateTagsetInput;
 
   @Field({
-    nullable: false,
-    description: 'The display name for the Document.',
+    nullable: true,
+    description:
+      'The display name for the Document. Not supported — rejected with a ValidationException if provided.',
+    deprecationReason:
+      'Display name updates are not supported by the file service.',
   })
+  @IsOptional()
   @MinLength(3)
   @MaxLength(SMALL_TEXT_LENGTH)
-  displayName!: string;
+  displayName?: string;
 }

@@ -33,5 +33,5 @@
 
 - All items pass validation. Spec is ready for `/speckit.clarify` or `/speckit.plan`.
 - The spec references Go file-service-go API endpoints as domain concepts since they define the integration contract visible to operators and developers.
-- FR-006 (read-only document table) is the key architectural constraint that drives the migration design.
+- FR-006 (server read-only on the `file` table — renamed from `document`) is the key architectural constraint that drives the migration design.
 - Image processing removal (FR-005) is a significant simplification -- the Go service handles it entirely.

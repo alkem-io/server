@@ -6,7 +6,7 @@
 
 These are the Go file-service-go endpoints that the server's FileServiceAdapter calls.
 
-### POST /internal/document -- Create Document
+### POST /internal/file -- Create Document
 
 **Content-Type**: `multipart/form-data`
 
@@ -38,7 +38,7 @@ These are the Go file-service-go endpoints that the server's FileServiceAdapter 
 
 ---
 
-### GET /internal/document/{id}/meta -- Document Metadata
+### GET /internal/file/{id}/meta -- Document Metadata
 
 **Response (200)**:
 ```json
@@ -62,7 +62,7 @@ These are the Go file-service-go endpoints that the server's FileServiceAdapter 
 
 ---
 
-### GET /internal/document/{id}/content -- File Content
+### GET /internal/file/{id}/content -- File Content
 
 **Response (200)**: Binary file content with `Content-Type` header
 
@@ -70,7 +70,7 @@ These are the Go file-service-go endpoints that the server's FileServiceAdapter 
 
 ---
 
-### PATCH /internal/document/{id} -- Update Document
+### PATCH /internal/file/{id} -- Update Document
 
 **Content-Type**: `application/json`
 
@@ -93,9 +93,11 @@ These are the Go file-service-go endpoints that the server's FileServiceAdapter 
 
 **Error Responses**: 400 (bad request), 404 (not found), 409 (version conflict), 500 (internal)
 
+> **Note**: The Go service's PATCH endpoint is limited to `storageBucketId` and `temporaryLocation`. Other document metadata (`displayName`, `mimeType`, `size`, etc.) is immutable once the document is created. The server's `updateDocument` GraphQL mutation rejects `displayName` in its input with a `ValidationException` (see FR-014); the DTO field is retained as optional + deprecated for wire compatibility.
+
 ---
 
-### DELETE /internal/document/{id} -- Delete Document
+### DELETE /internal/file/{id} -- Delete Document
 
 **Response (200)**:
 ```json

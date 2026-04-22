@@ -160,6 +160,12 @@ http:
           - /hydra/admin
         forceSlash: false
 
+    oathkeeper-auth-socket-io:
+      forwardAuth:
+        address: 'http://oathkeeper:4456/decisions'
+        authResponseHeaders:
+          - Authorization
+
   routers:
     oidc-public:
       rule: 'PathPrefix(`/oidc`)'
@@ -246,9 +252,10 @@ http:
 
     whiteboard-collaboration:
       rule: 'PathPrefix(`/api/private/ws`)'
-      service: 'oathkeeper-proxy'
+      service: 'whiteboard-collaboration'
       middlewares:
         - strip-api-private-prefix-socket-io
+        - oathkeeper-auth-socket-io
       entryPoints:
         - 'web'
 
@@ -269,9 +276,15 @@ http:
       entryPoints:
         - 'web'
 
-    # file-service-go internal endpoints (no auth, routed on web entrypoint)
+    # file-service-go internal endpoints.
+    # Placed on the public `web` entrypoint in the dev compose stack so the
+    # server (running on the host) can reach file-service via Traefik on
+    # localhost:3000. Production K8s deployments expose these endpoints only
+    # inside the cluster — the file-service Service is cluster-internal there
+    # and is never reachable from outside. This router's exposure is a dev
+    # convenience; do not replicate it in production manifests.
     file-service-internal:
-      rule: 'PathPrefix(`/internal/document`)'
+      rule: 'PathPrefix(`/internal/file`)'
       service: 'file-service'
       entryPoints:
         - 'web'

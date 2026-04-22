@@ -75,6 +75,7 @@ selfservice:
 
     recovery:
       enabled: true
+      use: link
       ui_url: http://localhost:3000/recovery
       after:
         default_browser_return_url: http://localhost:3000

@@ -20,12 +20,12 @@ When a user uploads a file (avatar, attachment, link file, whiteboard asset) thr
 
 **Why this priority**: This is the core behavioral change. Every file upload in the platform flows through this path. Without it, the server still owns file storage and the Go service has no data.
 
-**Independent Test**: Upload an avatar image through the GraphQL API. Verify the file is stored by the Go service (check its `/internal/document/{id}/meta` endpoint), the document record is created by the Go service (UUIDv7 ID), and the server's GraphQL response contains the correct document URL.
+**Independent Test**: Upload an avatar image through the GraphQL API. Verify the file is stored by the Go service (check its `/internal/file/{id}/meta` endpoint), the document record is created by the Go service (UUIDv7 ID), and the server's GraphQL response contains the correct document URL.
 
 **Acceptance Scenarios**:
 
-1. **Given** a user uploading an image via `uploadImageOnVisual` mutation, **When** the upload completes, **Then** the server calls `POST /internal/document` on the Go service with the file content, metadata (displayName, storageBucketId, authorizationId), and allowed MIME types. The Go service creates the document record and stores the file. The server receives the new document ID and constructs the public URL.
-2. **Given** a user uploading a file via `uploadFileOnStorageBucket` mutation, **When** the upload completes, **Then** the same delegation occurs. The server does not write to local disk or insert into the document table.
+1. **Given** a user uploading an image via `uploadImageOnVisual` mutation, **When** the upload completes, **Then** the server calls `POST /internal/file` on the Go service with the file content, metadata (displayName, storageBucketId, authorizationId), and allowed MIME types. The Go service creates the document record and stores the file. The server receives the new document ID and constructs the public URL.
+2. **Given** a user uploading a file via `uploadFileOnStorageBucket` mutation, **When** the upload completes, **Then** the same delegation occurs. The server does not write to local disk or insert into the `file` table.
 3. **Given** a user uploading a HEIC image, **When** the Go service processes it, **Then** the image is automatically converted to JPEG by the Go service (not the server). The server does not perform image conversion or compression.
 4. **Given** the Go file-service-go is unavailable, **When** a user attempts to upload, **Then** the upload fails with an appropriate error. The server does not fall back to local storage.
 
@@ -37,11 +37,11 @@ When a document is deleted (directly or via cascade from parent entity deletion)
 
 **Why this priority**: Deletion must be coordinated between the server (which manages authorization policies and tagsets) and the Go service (which manages document records and file storage). Incorrect coordination leads to orphaned files or dangling authorization records.
 
-**Independent Test**: Delete a document via GraphQL mutation. Verify the Go service's `/internal/document/{id}/meta` returns 404 afterward, the file is removed from storage, and the server cleans up the associated authorization policy and tagset using the IDs returned by the Go service.
+**Independent Test**: Delete a document via GraphQL mutation. Verify the Go service's `/internal/file/{id}/meta` returns 404 afterward, the file is removed from storage, and the server cleans up the associated authorization policy and tagset using the IDs returned by the Go service.
 
 **Acceptance Scenarios**:
 
-1. **Given** a document that exists in the Go service, **When** a user deletes it via `deleteDocument` mutation, **Then** the server calls `DELETE /internal/document/{id}` on the Go service. The Go service returns the `authorizationId` and `tagsetId`. The server deletes those entities locally.
+1. **Given** a document that exists in the Go service, **When** a user deletes it via `deleteDocument` mutation, **Then** the server calls `DELETE /internal/file/{id}` on the Go service. The Go service returns the `authorizationId` and `tagsetId`. The server deletes those entities locally.
 2. **Given** a storage bucket being deleted (cascade), **When** all documents in the bucket are deleted, **Then** the server calls the Go service for each document deletion.
 3. **Given** a document whose file is shared with another document (content-addressed dedup), **When** one document is deleted, **Then** the Go service only removes the document record but keeps the file (because another document references it).
 
@@ -57,8 +57,8 @@ When a user creates content with embedded files (e.g., markdown with images), th
 
 **Acceptance Scenarios**:
 
-1. **Given** a temporary document created during entity drafting, **When** the parent entity is saved, **Then** the server calls `PATCH /internal/document/{id}` with `{storageBucketId: finalBucketId, temporaryLocation: false}`. The Go service updates the record.
-2. **Given** a temporary document that is not finalized within the retention period, **When** the cleanup runs, **Then** the server calls `DELETE /internal/document/{id}` on the Go service.
+1. **Given** a temporary document created during entity drafting, **When** the parent entity is saved, **Then** the server calls `PATCH /internal/file/{id}` with `{storageBucketId: finalBucketId, temporaryLocation: false}`. The Go service updates the record.
+2. **Given** a temporary document that is not finalized within the retention period, **When** the cleanup runs, **Then** the server calls `DELETE /internal/file/{id}` on the Go service.
 
 ---
 
@@ -72,7 +72,7 @@ When documents need to be moved between storage buckets (e.g., markdown re-uploa
 
 **Acceptance Scenarios**:
 
-1. **Given** a document in bucket A that needs to move to bucket B, **When** the re-upload occurs, **Then** the server calls `GET /internal/document/{id}/content` to retrieve the file, then `POST /internal/document` with the new bucket ID, then `DELETE /internal/document/{id}` for the old document.
+1. **Given** a document in bucket A that needs to move to bucket B, **When** the re-upload occurs, **Then** the server calls `GET /internal/file/{id}/content` to retrieve the file, then `POST /internal/file` with the new bucket ID, then `DELETE /internal/file/{id}` for the old document.
 2. **Given** markdown content with embedded document URLs, **When** the markdown is processed for a new bucket, **Then** each embedded document is re-uploaded to the new bucket and URLs are rewritten.
 
 ---
@@ -120,19 +120,21 @@ End users accessing files via the public URL (`/api/private/rest/storage/documen
 
 ### Functional Requirements
 
-- **FR-001**: All file upload operations MUST delegate to the Go file-service-go via `POST /internal/document` instead of writing to local storage and the database directly.
-- **FR-002**: All document deletion operations MUST delegate to the Go file-service-go via `DELETE /internal/document/{id}`. The server MUST use the returned `authorizationId` and `tagsetId` to clean up those entities locally.
-- **FR-003**: Temporary document moves MUST delegate to the Go file-service-go via `PATCH /internal/document/{id}` with updated `storageBucketId` and `temporaryLocation` fields.
-- **FR-004**: Document content retrieval (for re-upload scenarios) MUST use `GET /internal/document/{id}/content` from the Go service instead of reading from local storage.
+- **FR-001**: All file upload operations MUST delegate to the Go file-service-go via `POST /internal/file` instead of writing to local storage and the database directly.
+- **FR-002**: All document deletion operations MUST delegate to the Go file-service-go via `DELETE /internal/file/{id}`. The server MUST use the returned `authorizationId` and `tagsetId` to clean up those entities locally.
+- **FR-003**: Temporary document moves MUST delegate to the Go file-service-go via `PATCH /internal/file/{id}` with updated `storageBucketId` and `temporaryLocation` fields.
+- **FR-004**: Document content retrieval (for re-upload scenarios) MUST use `GET /internal/file/{id}/content` from the Go service instead of reading from local storage.
 - **FR-005**: The server MUST NOT perform image conversion (HEIC to JPEG) or image compression. The Go service handles all image processing.
-- **FR-006**: The server MUST NOT write to the `document` table. All document record creation, updates, and deletes go through the Go service API. The server retains read access for resolving URLs, checking existence, and authorization.
-- **FR-007**: The server MUST create `authorization_policy` and `tagset` entities BEFORE calling the Go service to create a document. Their IDs are passed in the `POST /internal/document` request. If the Go service call fails, the server rolls back by deleting the pre-created auth policy and tagset.
-- **FR-008**: The server MUST continue to own database migrations, including migrations for the `document` table schema.
-- **FR-009**: File serving via the public URL (`/rest/storage/document/{id}`) MUST be handled entirely by the Go file-service-go with JWT authentication. The server is not involved in serving files.
-- **FR-010**: When the Go file-service-go is unavailable, file operations MUST fail with a `StorageServiceUnavailableException` (mapped to HTTP 503 context in GraphQL error response). The server MUST NOT fall back to local storage. The FileServiceAdapter MUST use a circuit breaker to fail fast when the Go service is unresponsive.
+- **FR-006**: The server MUST NOT write to the `file` table (renamed from `document` as part of this migration). All document record creation, updates, and deletes go through the Go service API. The server retains read access for resolving URLs, checking existence, and authorization. A `DocumentWriteGuard` TypeORM subscriber MUST throw on any direct INSERT/UPDATE/DELETE attempt from server code as defense-in-depth.
+- **FR-007**: The server MUST create `authorization_policy` and `tagset` entities BEFORE calling the Go service to create a document. Their IDs are passed in the `POST /internal/file` request. The server MUST wrap the full `auth-policy + tagset + Go-create + document reload` sequence in a single compensation block; on any failure it MUST independently roll back each pre-created resource (server-owned auth policy, server-owned tagset, and the Go-side document via `DELETE /internal/file/{id}` if it was already created) — one rollback failure MUST NOT short-circuit the others.
+- **FR-008**: The server MUST continue to own database migrations, including the migration that renames the table from `document` to `file`.
+- **FR-009**: File serving via the public URL (`/rest/storage/document/{id}` — kept for backward compatibility with URLs persisted in user content; the Go service also exposes the canonical `/rest/storage/file/{id}`) MUST be handled entirely by the Go file-service-go with JWT authentication. The server is not involved in serving files.
+- **FR-010**: When the Go file-service-go is unavailable, file operations MUST fail with a `StorageServiceUnavailableException` (mapped to HTTP 503 context in GraphQL error response). The server MUST NOT fall back to local storage. The FileServiceAdapter MUST use a circuit breaker to fail fast when the Go service is unresponsive. The circuit breaker is provided by a reusable `CircuitBreaker` class (`src/common/http/circuit.breaker.ts`) composed by `HttpClientBase`.
 - **FR-011**: The `LocalStorageAdapter`, `ImageConversionService`, `ImageCompressionService`, and `FileIntegrationService` MUST be removed from the server after migration.
 - **FR-012**: All existing GraphQL upload mutations (`uploadImageOnVisual`, `uploadFileOnStorageBucket`, `uploadFileOnLink`, `uploadFileOnReference`) MUST continue to work with unchanged GraphQL signatures.
 - **FR-013**: The server MUST pass `allowedMimeTypes` and `maxFileSize` constraints from the storage bucket to the Go service during upload, enabling server-side validation at the Go service level.
+- **FR-014**: The `updateDocument` GraphQL mutation MUST reject attempts to update `displayName` with a `ValidationException` (the Go service PATCH endpoint does not support patching display name). The `displayName` field on `UpdateDocumentInput` is retained for backwards compatibility but is marked optional and deprecated.
+- **FR-015**: When `ProfileDocumentsService.reuploadFileOnStorageBucket` copies a non-temporary document to a different storage bucket, it MUST delete the original document via `DELETE /internal/file/{id}` after the new document has been successfully created, to prevent orphaned storage in the source bucket.
 
 ### Key Entities
 
@@ -146,7 +148,7 @@ End users accessing files via the public URL (`/api/private/rest/storage/documen
 
 ### Measurable Outcomes
 
-- **SC-001**: All file upload operations complete successfully through the Go service with no direct database writes to the document table from the server.
+- **SC-001**: All file upload operations complete successfully through the Go service with no direct database writes to the `file` table from the server.
 - **SC-002**: File serving via public URLs continues to work with correct MIME types, caching headers (ETag, Cache-Control), and authentication -- no user-visible changes.
 - **SC-003**: Document deletion correctly removes both the Go service record and the server-side authorization policy and tagset, with zero orphaned records after any delete operation.
 - **SC-004**: The server codebase no longer contains local file I/O logic, image conversion logic, or image compression logic after cleanup.
@@ -157,11 +159,11 @@ End users accessing files via the public URL (`/api/private/rest/storage/documen
 ## Assumptions
 
 - The Go file-service-go is deployed alongside the server in the same cluster/network and accessible via internal HTTP at `http://file-service:4003`.
-- The Go service and the server share the same PostgreSQL database. The Go service has read-write access to the `document` table; the server has read-only access.
+- The Go service and the server share the same PostgreSQL database. The Go service has read-write access to the `file` table (renamed from `document` in this migration); the server has read-only access.
 - The Go service handles all image processing (HEIC to JPEG conversion, JPEG/WebP compression, EXIF stripping) automatically during upload via govips.
 - The Go service uses content-addressed storage (SHA3-256 hashing) for deduplication. The server does not need to be aware of the hashing mechanism.
-- The Go service's `DELETE /internal/document/{id}` response includes `authorizationId` and `tagsetId` fields, enabling the server to clean up those entities.
-- The Go service validates MIME types and file sizes based on parameters passed in the `POST /internal/document` request (`allowedMimeTypes`, `maxFileSize` form fields).
+- The Go service's `DELETE /internal/file/{id}` response includes `authorizationId` and `tagsetId` fields, enabling the server to clean up those entities.
+- The Go service validates MIME types and file sizes based on parameters passed in the `POST /internal/file` request (`allowedMimeTypes`, `maxFileSize` form fields).
 - Authorization policies and tagsets are created by the server before calling the Go service. The Go service stores their IDs as foreign keys but does not manage their lifecycle.
 - The public file serving endpoint (`/rest/storage/document/{id}`) is handled by the Go service through Oathkeeper (JWT validation) without server involvement.
 - The existing `FileIntegrationService` (RMQ handler for the old TypeScript file-service) is no longer needed and can be removed.
