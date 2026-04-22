@@ -3,6 +3,7 @@ import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { tryRollback } from '@common/utils';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -41,28 +42,25 @@ export class DocumentService {
     const deleteResult =
       await this.fileServiceAdapter.deleteDocument(documentID);
 
-    // Clean up server-owned entities using IDs from Go service response
-    if (deleteResult.authorizationId) {
-      try {
-        await this.authorizationPolicyService.deleteById(
-          deleteResult.authorizationId
-        );
-      } catch (_error) {
-        this.logger.warn?.(
-          `Failed to delete auth policy ${deleteResult.authorizationId} after document deletion`,
-          LogContext.STORAGE_BUCKET
-        );
-      }
+    // Clean up server-owned entities using IDs from Go service response.
+    // Bind narrowed IDs into const locals so the closures don't re-widen them.
+    const authorizationId = deleteResult.authorizationId;
+    if (authorizationId) {
+      await tryRollback(
+        () => this.authorizationPolicyService.deleteById(authorizationId),
+        `Failed to delete auth policy ${authorizationId} after document deletion`,
+        this.logger,
+        LogContext.STORAGE_BUCKET
+      );
     }
-    if (deleteResult.tagsetId) {
-      try {
-        await this.tagsetService.removeTagset(deleteResult.tagsetId);
-      } catch (_error) {
-        this.logger.warn?.(
-          `Failed to delete tagset ${deleteResult.tagsetId} after document deletion`,
-          LogContext.STORAGE_BUCKET
-        );
-      }
+    const tagsetId = deleteResult.tagsetId;
+    if (tagsetId) {
+      await tryRollback(
+        () => this.tagsetService.removeTagset(tagsetId),
+        `Failed to delete tagset ${tagsetId} after document deletion`,
+        this.logger,
+        LogContext.STORAGE_BUCKET
+      );
     }
 
     return document;

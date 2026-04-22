@@ -12,7 +12,7 @@ import { VisualType } from '@common/enums/visual.type';
 import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
-import { streamToBuffer } from '@common/utils';
+import { streamToBuffer, tryRollback } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -244,36 +244,34 @@ export class StorageBucketService {
       });
     } catch (error) {
       // Rollback: delete each pre-created resource independently so one
-      // failure doesn't short-circuit the others.
-      if (result) {
-        try {
-          await this.fileServiceAdapter.deleteDocument(result.id);
-        } catch (_e) {
-          this.logger.warn?.(
-            `Failed to rollback Go-side document ${result.id}`,
-            LogContext.STORAGE_BUCKET
-          );
-        }
+      // failure doesn't short-circuit the others. Bind narrowed values into
+      // const locals so the closures don't re-widen them.
+      const createdDoc = result;
+      if (createdDoc) {
+        await tryRollback(
+          () => this.fileServiceAdapter.deleteDocument(createdDoc.id),
+          `Failed to rollback Go-side document ${createdDoc.id}`,
+          this.logger,
+          LogContext.STORAGE_BUCKET
+        );
       }
-      if (savedAuth) {
-        try {
-          await this.authorizationPolicyService.delete(savedAuth);
-        } catch (_e) {
-          this.logger.warn?.(
-            `Failed to rollback auth policy ${savedAuth.id}`,
-            LogContext.STORAGE_BUCKET
-          );
-        }
+      const createdAuth = savedAuth;
+      if (createdAuth) {
+        await tryRollback(
+          () => this.authorizationPolicyService.delete(createdAuth),
+          `Failed to rollback auth policy ${createdAuth.id}`,
+          this.logger,
+          LogContext.STORAGE_BUCKET
+        );
       }
-      if (savedTagset) {
-        try {
-          await this.tagsetService.removeTagset(savedTagset.id);
-        } catch (_e) {
-          this.logger.warn?.(
-            `Failed to rollback tagset ${savedTagset.id}`,
-            LogContext.STORAGE_BUCKET
-          );
-        }
+      const createdTagset = savedTagset;
+      if (createdTagset) {
+        await tryRollback(
+          () => this.tagsetService.removeTagset(createdTagset.id),
+          `Failed to rollback tagset ${createdTagset.id}`,
+          this.logger,
+          LogContext.STORAGE_BUCKET
+        );
       }
       throw error;
     }

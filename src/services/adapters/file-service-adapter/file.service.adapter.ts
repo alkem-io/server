@@ -23,6 +23,7 @@ import {
 } from './file.service.adapter.exception';
 
 const LOG_PREFIX = '[FileService]';
+const FILE_PATH_PREFIX = '/internal/file';
 
 @Injectable()
 export class FileServiceAdapter extends HttpClientBase {
@@ -64,8 +65,7 @@ export class FileServiceAdapter extends HttpClientBase {
     file: Buffer,
     metadata: CreateDocumentMetadata
   ): Promise<CreateDocumentResult> {
-    this.checkEnabled();
-    this.checkCircuit('createDocument');
+    this.checkEnabledAndCircuit('createDocument');
 
     const form = new FormData();
     form.append('file', file, {
@@ -100,7 +100,7 @@ export class FileServiceAdapter extends HttpClientBase {
     return this.sendRequest<CreateDocumentResult>(
       'createDocument',
       'post',
-      '/internal/file',
+      FILE_PATH_PREFIX,
       form,
       form.getHeaders()
     );
@@ -111,13 +111,12 @@ export class FileServiceAdapter extends HttpClientBase {
    * as a `Buffer`.
    */
   async getDocumentContent(documentId: string): Promise<Buffer> {
-    this.checkEnabled();
-    this.checkCircuit('getDocumentContent');
+    this.checkEnabledAndCircuit('getDocumentContent');
 
     return this.sendBinaryRequest(
       'getDocumentContent',
       'get',
-      `/internal/file/${documentId}/content`,
+      this.fileContentPath(documentId),
       { documentId }
     );
   }
@@ -130,13 +129,12 @@ export class FileServiceAdapter extends HttpClientBase {
     documentId: string,
     patch: UpdateDocumentInput
   ): Promise<UpdateDocumentResult> {
-    this.checkEnabled();
-    this.checkCircuit('updateDocument');
+    this.checkEnabledAndCircuit('updateDocument');
 
     return this.sendRequest<UpdateDocumentResult>(
       'updateDocument',
       'patch',
-      `/internal/file/${documentId}`,
+      this.filePath(documentId),
       patch
     );
   }
@@ -147,22 +145,30 @@ export class FileServiceAdapter extends HttpClientBase {
    * corresponding auth policy and tagset rows (both server-owned).
    */
   async deleteDocument(documentId: string): Promise<DeleteDocumentResult> {
-    this.checkEnabled();
-    this.checkCircuit('deleteDocument');
+    this.checkEnabledAndCircuit('deleteDocument');
 
     return this.sendRequest<DeleteDocumentResult>(
       'deleteDocument',
       'delete',
-      `/internal/file/${documentId}`
+      this.filePath(documentId)
     );
   }
 
-  private checkEnabled(): void {
+  private filePath(documentId: string): string {
+    return `${FILE_PATH_PREFIX}/${documentId}`;
+  }
+
+  private fileContentPath(documentId: string): string {
+    return `${this.filePath(documentId)}/content`;
+  }
+
+  private checkEnabledAndCircuit(operation: string): void {
     if (!this.enabled) {
       throw new StorageServiceUnavailableException(
         'File service adapter is disabled'
       );
     }
+    this.checkCircuit(operation);
   }
 
   protected openCircuitException(operation: string, resetInMs: number): Error {
@@ -193,17 +199,10 @@ export class FileServiceAdapter extends HttpClientBase {
       );
     }
 
-    if (error instanceof Error) {
-      return FileServiceAdapterException.fromTransportError(
-        operation,
-        error,
-        context
-      );
-    }
-
+    const cause = error instanceof Error ? error : new Error(String(error));
     return FileServiceAdapterException.fromTransportError(
       operation,
-      new Error(String(error)),
+      cause,
       context
     );
   }
