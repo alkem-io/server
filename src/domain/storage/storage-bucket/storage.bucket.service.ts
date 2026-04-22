@@ -224,6 +224,7 @@ export class StorageBucketService {
       // Delegate to Go file-service-go
       result = await this.fileServiceAdapter.createDocument(buffer, {
         displayName: filename,
+        mimeType,
         storageBucketId,
         authorizationId: savedAuth.id,
         tagsetId: savedTagset.id,

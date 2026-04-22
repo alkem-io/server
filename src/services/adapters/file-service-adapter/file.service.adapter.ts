@@ -71,7 +71,10 @@ export class FileServiceAdapter extends HttpClientBase {
     const form = new FormData();
     form.append('file', file, {
       filename: metadata.displayName,
-      contentType: 'application/octet-stream',
+      // Pass the caller-declared MIME type so the Go service can trust it
+      // when content-based detection is inconclusive (e.g. zero-byte files or
+      // ambiguous magic bytes). Defaults to generic octet-stream otherwise.
+      contentType: metadata.mimeType ?? 'application/octet-stream',
     });
     form.append('displayName', metadata.displayName);
     form.append('storageBucketId', metadata.storageBucketId);
