@@ -1,8 +1,9 @@
+import { ActorType } from '@common/enums/actor.type';
 import { RestrictedSpaceNames } from '@common/enums/restricted.space.names';
 import { SpaceLevel } from '@common/enums/space.level';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Organization } from '@domain/community/organization';
-import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { Space } from '@domain/space/space/space.entity';
@@ -130,10 +131,16 @@ export class NamingService {
   }
 
   public async getReservedNameIDsInUsers(): Promise<string[]> {
-    const users = await this.entityManager.find(User, {
+    // Query the actor table with type='user' (same filter as the partial unique
+    // index UQ_actor_nameID_user) so orphan actor rows — e.g. from past users
+    // where the User row was removed but the Actor parent remained — are also
+    // treated as reserved. Reading the User entity alone misses them and leads
+    // to a deterministic duplicate-key failure on every registration retry.
+    const actors = await this.entityManager.find(Actor, {
       select: { id: true, nameID: true },
+      where: { type: ActorType.USER },
     });
-    return users.map(user => user.nameID);
+    return actors.map(actor => actor.nameID);
   }
 
   public async getReservedNameIDsInVirtualContributors(): Promise<string[]> {

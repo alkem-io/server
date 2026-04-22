@@ -225,6 +225,10 @@ Key rules:
 - N/A (no data model changes — test-only feature) (034-unit-tests)
 - PostgreSQL 17.5
 - GitHub Actions YAML workflows (no application code changes) + `actions/checkout@v4`, `pnpm/action-setup@v4`, `actions/setup-node@v6.2.0`, `actions/cache@v4`, `actions/upload-artifact@v4`, `actions/download-artifact@v4`, SonarScanner CLI (installed via shell, not Docker action) (042-optimize-ci-builds)
+- TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + `@ory/kratos-client ^26.2.0` (upgrade from ^1.2.0), NestJS 10, TypeORM 0.3, Apollo Server 4 (082-ory-stack-upgrade)
+- PostgreSQL 17.5 (Kratos manages its own schema via `migrate sql`) (082-ory-stack-upgrade)
+- TypeScript 5.3, Node.js 22 LTS (Volta pinned 22.21.1) + NestJS 10, TypeORM 0.3 (custom fork `pkg.pr.new/antst/typeorm`), Apollo Server 4, GraphQL 16 (083-collab-entitlement)
+- PostgreSQL 17.5 — existing `license_plan` table (row insert) and existing `license_policy` table (jsonb column update); no schema DDL (083-collab-entitlement)
 
 ## Recent Changes
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting

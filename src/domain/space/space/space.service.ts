@@ -382,6 +382,12 @@ export class SpaceService {
           limit: 0,
           enabled: true,
         },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: true,
+        },
       ],
     });
   }
