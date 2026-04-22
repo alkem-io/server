@@ -29,6 +29,9 @@ services:
       - 5672:5672
       - 15672:15672
       - 6379:6379
+      - 6060:6060
+      - 8880:8880
+      - 9980:9980
       - 8188:8188
     networks:
       - alkemio_dev_net
@@ -376,7 +379,6 @@ services:
     container_name: alkemio_dev_notifications
     hostname: notifications
     image: alkemio/notifications:v0.32.0
-    platform: linux/amd64
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -492,23 +494,29 @@ services:
       - 4002
 
   file-service:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.2.1
+    image: alkemio/file-service-go:v0.0.7
     depends_on:
-      rabbitmq:
+      postgres:
         condition: service_healthy
+      authorization-evaluation:
+        condition: service_started
     environment:
-      - RABBITMQ_HOST
-      - RABBITMQ_USER
-      - RABBITMQ_PASSWORD
-      - LOGGING_CONSOLE_ENABLED
-      - LOGGING_LEVEL_CONSOLE
-      - ENVIRONMENT=dev
-      - LOCAL_STORAGE_PATH
+      - ALKEMIO_DATABASE_HOST=postgres
+      - ALKEMIO_DATABASE_PORT=5432
+      - ALKEMIO_DATABASE_USERNAME=${POSTGRES_USER}
+      - ALKEMIO_DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - ALKEMIO_DATABASE_NAME=${DATABASE_NAME}
+      - AUTH_SERVICE_URL=http://authorization-evaluation:6060
+      - LOCAL_STORAGE_PATH=/storage
+      - STORAGE_TYPE=local
+      - LOG_LEVEL=info
     restart: always
     volumes:
-      - ${PWD}/.storage:${LOCAL_STORAGE_PATH}:ro
+      - ${PWD}/.storage:/storage:rw
     networks:
       - alkemio_dev_net
     ports:
@@ -564,3 +572,77 @@ services:
       - alkemio_dev_net
     ports:
       - 4004
+
+  authorization-evaluation:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_authorization_evaluation
+    hostname: authorization-evaluation
+    image: alkemio/authorization-evaluation-service:v0.0.2
+    depends_on:
+      postgres:
+        condition: service_healthy
+    environment:
+      - DATABASE_URL=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/${DATABASE_NAME}?sslmode=disable
+      - LOG_LEVEL=info
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 6060
+
+  wopi-service:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_wopi_service
+    hostname: wopi-service
+    image: alkemio/wopi-service:v0.0.6
+    depends_on:
+      postgres:
+        condition: service_healthy
+      authorization-evaluation:
+        condition: service_started
+      file-service:
+        condition: service_started
+    environment:
+      - WOPI_DATABASE_HOST=postgres
+      - WOPI_DATABASE_PORT=5432
+      - WOPI_DATABASE_USERNAME=${POSTGRES_USER}
+      - WOPI_DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - WOPI_DATABASE_NAME=wopi
+      - WOPI_DATABASE_TIMEOUT=5s
+      - ALKEMIO_DATABASE_HOST=postgres
+      - ALKEMIO_DATABASE_PORT=5432
+      - ALKEMIO_DATABASE_USERNAME=${POSTGRES_USER}
+      - ALKEMIO_DATABASE_PASSWORD=${POSTGRES_PASSWORD}
+      - ALKEMIO_DATABASE_NAME=${DATABASE_NAME}
+      - AUTH_SERVICE_URL=http://authorization-evaluation:6060
+      - FILE_SERVICE_URL=http://file-service:4003
+      - WOPI_COLLABORA_URL=http://collabora:9980
+      - WOPI_BASE_URL=http://localhost:8880
+      - WOPI_TOKEN_SECRET=dev-wopi-token-secret-change-in-production
+      - WOPI_SERVER_PORT=8080
+      - LOG_LEVEL=info
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 8080
+
+  collabora:
+    container_name: alkemio_dev_collabora
+    hostname: collabora
+    image: collabora/code:24.04.12.2.1
+    environment:
+      - aliasgroup1=http://wopi-service:8080
+      - username=admin
+      - password=admin
+      - extra_params=--o:ssl.enable=false --o:net.proto=IPv4
+      - DONT_GEN_SSL_CERT=1
+    cap_add:
+      - MKNOD
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 9980

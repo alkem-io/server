@@ -1,15 +1,10 @@
-import { STORAGE_SERVICE } from '@common/constants';
-import { MimeFileType } from '@common/enums/mime.file.type';
-import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { EntityNotFoundException } from '@common/exceptions';
-import { DocumentSaveFailedException } from '@common/exceptions/document/document.save.failed.exception';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { StorageService } from '@services/adapters/storage';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -30,7 +25,7 @@ describe('DocumentService', () => {
   let documentRepository: Repository<Document>;
   let tagsetService: TagsetService;
   let authorizationPolicyService: AuthorizationPolicyService;
-  let storageService: StorageService;
+  let fileServiceAdapter: FileServiceAdapter;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -49,13 +44,12 @@ describe('DocumentService', () => {
         MockCacheManager,
         MockWinstonProvider,
         {
-          provide: STORAGE_SERVICE,
+          provide: FileServiceAdapter,
           useValue: {
-            save: vi.fn(),
-            read: vi.fn(),
-            delete: vi.fn(),
-            exists: vi.fn(),
-            getType: vi.fn(),
+            createDocument: vi.fn(),
+            getDocumentContent: vi.fn(),
+            updateDocument: vi.fn(),
+            deleteDocument: vi.fn(),
           },
         },
       ],
@@ -78,71 +72,40 @@ describe('DocumentService', () => {
     authorizationPolicyService = module.get<AuthorizationPolicyService>(
       AuthorizationPolicyService
     );
-    storageService = module.get<StorageService>(STORAGE_SERVICE);
-  });
-
-  // ── createDocument ──────────────────────────────────────────────
-
-  describe('createDocument', () => {
-    it('should create a document with tagset, authorization policy, and persist it when valid input provided', async () => {
-      const input = {
-        displayName: 'test.png',
-        mimeType: MimeTypeVisual.PNG as MimeFileType,
-        size: 1024,
-        externalID: 'ext-123',
-        temporaryLocation: false,
-      };
-      const mockTagset = {
-        id: 'tagset-1',
-        name: TagsetReservedName.DEFAULT,
-        tags: [],
-      };
-      (tagsetService.createTagset as Mock).mockReturnValue(mockTagset);
-      (documentRepository.save as Mock).mockImplementation(
-        async (doc: any) => ({ ...doc, id: 'doc-1' })
-      );
-
-      const result = await service.createDocument(input);
-
-      expect(tagsetService.createTagset).toHaveBeenCalledWith({
-        name: TagsetReservedName.DEFAULT,
-        tags: [],
-      });
-      expect(result.tagset).toBe(mockTagset);
-      expect(result.authorization).toBeDefined();
-      expect(documentRepository.save).toHaveBeenCalledTimes(1);
-    });
+    fileServiceAdapter = module.get<FileServiceAdapter>(FileServiceAdapter);
   });
 
   // ── deleteDocument ──────────────────────────────────────────────
 
   describe('deleteDocument', () => {
-    it('should delete authorization policy, tagset, and remove document when document exists', async () => {
-      const mockAuth = { id: 'auth-1' };
-      const mockTagset = { id: 'tagset-1' };
+    it('should delegate deletion to file-service adapter and clean up auth policy and tagset', async () => {
       const document = {
         id: 'doc-1',
         externalID: 'ext-1',
-        authorization: mockAuth,
-        tagset: mockTagset,
+        authorization: { id: 'auth-1' },
+        tagset: { id: 'tagset-1' },
       };
       (documentRepository.findOne as Mock).mockResolvedValue(document);
-      (documentRepository.remove as Mock).mockResolvedValue({
-        ...document,
-        id: '',
+      (fileServiceAdapter.deleteDocument as Mock).mockResolvedValue({
+        authorizationId: 'auth-1',
+        tagsetId: 'tagset-1',
       });
-      (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
+      (authorizationPolicyService.deleteById as Mock).mockResolvedValue(
+        undefined
+      );
       (tagsetService.removeTagset as Mock).mockResolvedValue(undefined);
 
       const result = await service.deleteDocument({ ID: 'doc-1' });
 
-      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(mockAuth);
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith('doc-1');
+      expect(authorizationPolicyService.deleteById).toHaveBeenCalledWith(
+        'auth-1'
+      );
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-1');
-      expect(documentRepository.remove).toHaveBeenCalled();
       expect(result.id).toBe('doc-1');
     });
 
-    it('should skip authorization deletion when document has no authorization policy', async () => {
+    it('should skip authorization deletion when file-service returns no authorizationId', async () => {
       const document = {
         id: 'doc-2',
         externalID: 'ext-2',
@@ -150,19 +113,19 @@ describe('DocumentService', () => {
         tagset: { id: 'tagset-2' },
       };
       (documentRepository.findOne as Mock).mockResolvedValue(document);
-      (documentRepository.remove as Mock).mockResolvedValue({
-        ...document,
-        id: '',
+      (fileServiceAdapter.deleteDocument as Mock).mockResolvedValue({
+        authorizationId: '',
+        tagsetId: 'tagset-2',
       });
       (tagsetService.removeTagset as Mock).mockResolvedValue(undefined);
 
       await service.deleteDocument({ ID: 'doc-2' });
 
-      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.deleteById).not.toHaveBeenCalled();
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-2');
     });
 
-    it('should skip tagset deletion when document has no tagset', async () => {
+    it('should skip tagset deletion when file-service returns no tagsetId', async () => {
       const document = {
         id: 'doc-3',
         externalID: 'ext-3',
@@ -170,15 +133,17 @@ describe('DocumentService', () => {
         tagset: undefined,
       };
       (documentRepository.findOne as Mock).mockResolvedValue(document);
-      (documentRepository.remove as Mock).mockResolvedValue({
-        ...document,
-        id: '',
+      (fileServiceAdapter.deleteDocument as Mock).mockResolvedValue({
+        authorizationId: 'auth-3',
+        tagsetId: null,
       });
-      (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
+      (authorizationPolicyService.deleteById as Mock).mockResolvedValue(
+        undefined
+      );
 
       await service.deleteDocument({ ID: 'doc-3' });
 
-      expect(authorizationPolicyService.delete).toHaveBeenCalled();
+      expect(authorizationPolicyService.deleteById).toHaveBeenCalled();
       expect(tagsetService.removeTagset).not.toHaveBeenCalled();
     });
 
@@ -244,13 +209,11 @@ describe('DocumentService', () => {
       const updatedTagset = { id: 'tagset-1', tags: ['new'] };
       const updateData = {
         ID: 'doc-1',
-        displayName: 'updated.pdf',
         tagset: { ID: 'tagset-1', tags: ['new'] },
       };
 
       (documentRepository.findOne as Mock).mockResolvedValue(existingDoc);
       (tagsetService.updateTagset as Mock).mockResolvedValue(updatedTagset);
-      (documentRepository.save as Mock).mockResolvedValue(existingDoc);
 
       const result = await service.updateDocument(updateData);
 
@@ -267,7 +230,6 @@ describe('DocumentService', () => {
       };
       const updateData = {
         ID: 'doc-1',
-        displayName: 'updated.pdf',
         tagset: { ID: 'tagset-1', tags: ['new'] },
       };
 
@@ -285,14 +247,25 @@ describe('DocumentService', () => {
       };
       const updateData = {
         ID: 'doc-1',
-        displayName: 'updated.pdf',
       };
 
       (documentRepository.findOne as Mock).mockResolvedValue(existingDoc);
-      (documentRepository.save as Mock).mockResolvedValue(existingDoc);
 
       await service.updateDocument(updateData);
 
+      expect(tagsetService.updateTagset).not.toHaveBeenCalled();
+    });
+
+    it('should throw ValidationException when displayName is provided (unsupported field)', async () => {
+      const updateData = {
+        ID: 'doc-1',
+        displayName: 'new-name.pdf',
+      };
+
+      await expect(service.updateDocument(updateData)).rejects.toThrow(
+        'Document display name cannot be updated'
+      );
+      expect(documentRepository.findOne).not.toHaveBeenCalled();
       expect(tagsetService.updateTagset).not.toHaveBeenCalled();
     });
   });
@@ -363,31 +336,6 @@ describe('DocumentService', () => {
     });
   });
 
-  // ── uploadFile ──────────────────────────────────────────────────
-
-  describe('uploadFile', () => {
-    it('should delegate to storage service and return the external ID when upload succeeds', async () => {
-      const buffer = Buffer.from('file-content');
-      (storageService.save as Mock).mockResolvedValue('external-id-abc');
-
-      const result = await service.uploadFile(buffer, 'test.png');
-
-      expect(storageService.save).toHaveBeenCalledWith(buffer);
-      expect(result).toBe('external-id-abc');
-    });
-
-    it('should throw DocumentSaveFailedException when storage service fails', async () => {
-      const buffer = Buffer.from('file-content');
-      (storageService.save as Mock).mockRejectedValue(
-        new Error('Storage write error')
-      );
-
-      await expect(service.uploadFile(buffer, 'test.png')).rejects.toThrow(
-        DocumentSaveFailedException
-      );
-    });
-  });
-
   // ── getUploadedDate ─────────────────────────────────────────────
 
   describe('getUploadedDate', () => {
@@ -409,25 +357,6 @@ describe('DocumentService', () => {
       await expect(service.getUploadedDate('missing')).rejects.toThrow(
         EntityNotFoundException
       );
-    });
-  });
-
-  // ── getDocumentContents ─────────────────────────────────────────
-
-  describe('getDocumentContents', () => {
-    it('should return a Readable stream from storage service content', async () => {
-      const content = Buffer.from('document-bytes');
-      (storageService.read as Mock).mockResolvedValue(content);
-      const document = { externalID: 'ext-id-1' } as any;
-
-      const result = await service.getDocumentContents(document);
-
-      expect(storageService.read).toHaveBeenCalledWith('ext-id-1');
-      const chunks: Buffer[] = [];
-      for await (const chunk of result) {
-        chunks.push(chunk);
-      }
-      expect(Buffer.concat(chunks).toString()).toBe('document-bytes');
     });
   });
 });

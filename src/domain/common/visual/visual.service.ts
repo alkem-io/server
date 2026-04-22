@@ -22,8 +22,6 @@ import { Readable } from 'stream';
 import { FindOneOptions, Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { DeleteVisualInput } from './dto/visual.dto.delete';
-import { ImageCompressionService } from './image.compression.service';
-import { ImageConversionService } from './image.conversion.service';
 import {
   DEFAULT_VISUAL_CONSTRAINTS,
   VISUAL_ALLOWED_TYPES,
@@ -37,8 +35,6 @@ export class VisualService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
-    private imageConversionService: ImageConversionService,
-    private imageCompressionService: ImageCompressionService,
     @InjectRepository(Visual)
     private visualRepository: Repository<Visual>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -130,28 +126,9 @@ export class VisualService {
         LogContext.STORAGE_BUCKET
       );
 
-      // Stage 1: HEIC/HEIF → JPEG conversion
-      const conversionResult =
-        await this.imageConversionService.convertIfNeeded(
-          buffer,
-          mimetype,
-          fileName
-        );
-
-      // Stage 2: Optimize compressible images (JPEG, WebP)
-      const compressionResult =
-        await this.imageCompressionService.compressIfNeeded(
-          conversionResult.buffer,
-          conversionResult.mimeType,
-          conversionResult.fileName
-        );
-
-      const processedBuffer = compressionResult.buffer;
-      const processedMimeType = compressionResult.mimeType;
-      const processedFileName = compressionResult.fileName;
-
-      const { imageHeight, imageWidth } =
-        await this.getImageDimensions(processedBuffer);
+      // Go file-service-go handles image processing (HEIC→JPEG, compression, EXIF strip)
+      // Dimension validation stays on server side (visual type constraints)
+      const { imageHeight, imageWidth } = await this.getImageDimensions(buffer);
       this.validateImageWidth(visual, imageWidth);
       this.validateImageHeight(visual, imageHeight);
       const documentForVisual = await this.documentService.getDocumentFromURL(
@@ -161,9 +138,9 @@ export class VisualService {
       const newDocument =
         await this.storageBucketService.uploadFileAsDocumentFromBuffer(
           storageBucket.id,
-          processedBuffer,
-          processedFileName,
-          processedMimeType,
+          buffer,
+          fileName,
+          mimetype,
           userID
         );
       // Delete the old document

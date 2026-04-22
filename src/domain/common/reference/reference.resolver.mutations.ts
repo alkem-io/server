@@ -117,7 +117,7 @@ export class ReferenceResolverMutations {
 
     const readStream = createReadStream();
 
-    let document = await this.storageBucketService.uploadFileFromURI(
+    const document = await this.storageBucketService.uploadFileFromURI(
       reference.uri,
       reference.id,
       storageBucket,
@@ -126,7 +126,6 @@ export class ReferenceResolverMutations {
       mimetype,
       actorContext.actorID
     );
-    document = await this.documentService.saveDocument(document);
 
     const documentAuthorizations =
       await this.documentAuthorizationService.applyAuthorizationPolicy(

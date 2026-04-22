@@ -7,22 +7,23 @@ import {
   MimeFileType,
 } from '@common/enums/mime.file.type';
 import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
 import { ValidationException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
-import { streamToBuffer } from '@common/utils';
+import { streamToBuffer, tryRollback } from '@common/utils';
 import { limitAndShuffle } from '@common/utils/limitAndShuffle';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
-import { ImageCompressionService } from '@domain/common/visual/image.compression.service';
-import { ImageConversionService } from '@domain/common/visual/image.conversion.service';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -31,7 +32,6 @@ import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { Document } from '../document/document.entity';
 import { IDocument } from '../document/document.interface';
 import { DocumentService } from '../document/document.service';
-import { CreateDocumentInput } from '../document/dto/document.dto.create';
 import { StorageBucketArgsDocuments } from './dto/storage.bucket.args.documents';
 import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
@@ -47,8 +47,6 @@ export class StorageBucketService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private authorizationService: AuthorizationService,
     private urlGeneratorService: UrlGeneratorService,
-    private imageConversionService: ImageConversionService,
-    private imageCompressionService: ImageCompressionService,
     @InjectRepository(StorageBucket)
     private storageBucketRepository: Repository<StorageBucket>,
     @InjectRepository(Document)
@@ -57,7 +55,9 @@ export class StorageBucketService {
     private readonly logger: LoggerService,
     @InjectRepository(Profile)
     private profileRepository: Repository<Profile>,
-    private configService: ConfigService
+    private configService: ConfigService,
+    private fileServiceAdapter: FileServiceAdapter,
+    private tagsetService: TagsetService
   ) {}
 
   public createStorageBucket(
@@ -160,25 +160,12 @@ export class StorageBucketService {
       )!;
       const buffer = await streamToBuffer(readStream, streamTimeoutMs);
 
-      // Process image: HEIC conversion + optimization
-      const conversionResult =
-        await this.imageConversionService.convertIfNeeded(
-          buffer,
-          mimeType,
-          filename
-        );
-      const compressionResult =
-        await this.imageCompressionService.compressIfNeeded(
-          conversionResult.buffer,
-          conversionResult.mimeType,
-          conversionResult.fileName
-        );
-
+      // Go file-service-go handles image processing (HEIC→JPEG, compression)
       return await this.uploadFileAsDocumentFromBuffer(
         storageBucketId,
-        compressionResult.buffer,
-        compressionResult.fileName,
-        compressionResult.mimeType,
+        buffer,
+        filename,
+        mimeType,
         userID,
         temporaryDocument
       );
@@ -212,46 +199,88 @@ export class StorageBucketService {
     });
 
     this.validateMimeTypes(storage, mimeType);
+    this.validateSize(storage, buffer.length);
 
-    // Upload the document
-    const size = buffer.length;
-    this.validateSize(storage, size);
-    const externalID = await this.documentService.uploadFile(buffer, filename);
-
-    const createDocumentInput: CreateDocumentInput = {
-      mimeType: mimeType as MimeFileType,
-      externalID: externalID,
-      displayName: filename,
-      size: size,
-      createdBy: userID || undefined,
-      temporaryLocation: temporaryLocation,
-    };
-
+    // Pre-create auth policy and tagset, call Go service, load result.
+    // Full compensation: any failure anywhere in the sequence rolls back all
+    // previously created resources (auth policy, tagset, Go-side document),
+    // each cleaned up independently so one rollback failure doesn't skip others.
+    let savedAuth;
+    let savedTagset;
+    let result;
+    let document;
     try {
-      const docByExternalId =
-        await this.documentService.getDocumentByExternalIdOrFail(externalID, {
-          where: {
-            storageBucket: {
-              id: storageBucketId,
-            },
-          },
-        });
-      if (docByExternalId) {
-        return docByExternalId;
+      const authorization = new AuthorizationPolicy(
+        AuthorizationPolicyType.DOCUMENT
+      );
+      savedAuth = await this.authorizationPolicyService.save(authorization);
+
+      const tagset = this.tagsetService.createTagset({
+        name: TagsetReservedName.DEFAULT,
+        tags: [],
+      });
+      savedTagset = await this.tagsetService.save(tagset);
+
+      // Delegate to Go file-service-go
+      result = await this.fileServiceAdapter.createDocument(buffer, {
+        displayName: filename,
+        mimeType,
+        storageBucketId,
+        authorizationId: savedAuth.id,
+        tagsetId: savedTagset.id,
+        createdBy: userID || undefined,
+        temporaryLocation,
+        allowedMimeTypes: storage.allowedMimeTypes.join(','),
+        maxFileSize: storage.maxFileSize,
+      });
+
+      // Load the document created by the Go service with relations needed for auth
+      document = await this.documentService.getDocumentOrFail(result.id, {
+        relations: {
+          authorization: true,
+          tagset: { authorization: true },
+          storageBucket: true,
+        },
+      });
+    } catch (error) {
+      // Rollback: delete each pre-created resource independently so one
+      // failure doesn't short-circuit the others. Bind narrowed values into
+      // const locals so the closures don't re-widen them.
+      const createdDoc = result;
+      if (createdDoc) {
+        await tryRollback(
+          () => this.fileServiceAdapter.deleteDocument(createdDoc.id),
+          `Failed to rollback Go-side document ${createdDoc.id}`,
+          this.logger,
+          LogContext.STORAGE_BUCKET
+        );
       }
-    } catch (_e) {
-      /* just consume */
+      const createdAuth = savedAuth;
+      if (createdAuth) {
+        await tryRollback(
+          () => this.authorizationPolicyService.delete(createdAuth),
+          `Failed to rollback auth policy ${createdAuth.id}`,
+          this.logger,
+          LogContext.STORAGE_BUCKET
+        );
+      }
+      const createdTagset = savedTagset;
+      if (createdTagset) {
+        await tryRollback(
+          () => this.tagsetService.removeTagset(createdTagset.id),
+          `Failed to rollback tagset ${createdTagset.id}`,
+          this.logger,
+          LogContext.STORAGE_BUCKET
+        );
+      }
+      throw error;
     }
 
-    const document =
-      await this.documentService.createDocument(createDocumentInput);
-    document.storageBucket = storage;
-
     this.logger.verbose?.(
-      `Uploaded document '${document.externalID}' on storage bucket: ${storage.id}`,
+      `Uploaded document '${result.externalID}' via file-service on storage bucket: ${storage.id}`,
       LogContext.STORAGE_BUCKET
     );
-    return await this.documentService.save(document);
+    return document;
   }
 
   async uploadFileFromURI(
@@ -488,9 +517,6 @@ export class StorageBucketService {
       userId
     );
 
-    const storageBucket = await this.getStorageBucketOrFail(storageBucketId);
-    document.storageBucket = storageBucket;
-
-    return await this.documentService.saveDocument(document);
+    return document;
   }
 }

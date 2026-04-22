@@ -128,7 +128,6 @@ describe('LinkResolver', () => {
       vi.mocked(storageBucketService.uploadFileFromURI).mockResolvedValue(
         document
       );
-      vi.mocked(documentService.saveDocument).mockResolvedValue(document);
       vi.mocked(
         documentAuthorizationService.applyAuthorizationPolicy
       ).mockResolvedValue([{ id: 'auth-doc' }] as any);
@@ -158,7 +157,6 @@ describe('LinkResolver', () => {
         'image/png',
         'user-1'
       );
-      expect(documentService.saveDocument).toHaveBeenCalledWith(document);
       expect(
         documentAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalled();

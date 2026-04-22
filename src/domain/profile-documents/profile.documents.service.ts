@@ -4,17 +4,17 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { DocumentService } from '@domain/storage/document/document.service';
-import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Injectable } from '@nestjs/common';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 
 @Injectable()
 export class ProfileDocumentsService {
   constructor(
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
-    private documentAuthorizationService: DocumentAuthorizationService
+    private fileServiceAdapter: FileServiceAdapter
   ) {}
 
   /***
@@ -56,8 +56,9 @@ export class ProfileDocumentsService {
 
     if (!docInContent) {
       throw new EntityNotFoundException(
-        `File with URL '${fileUrl}' not found`,
-        LogContext.COLLABORATION
+        'File with URL not found',
+        LogContext.COLLABORATION,
+        { fileUrl }
       );
     }
 
@@ -69,29 +70,45 @@ export class ProfileDocumentsService {
       // It should be just `fileUrl` but rewrite it just in case
       return this.documentService.getPubliclyAccessibleURL(docInThisBucket);
     } else if (docInContent.temporaryLocation) {
-      // If it was temporary just move the document to the new bucket
-      docInContent.storageBucket = storageBucket;
-      docInContent.temporaryLocation = false;
-      storageBucket.documents.push(docInContent);
-      return this.documentService.getPubliclyAccessibleURL(docInContent);
-    } else {
-      // if not in this bucket - create it inside it
-      const newDoc = await this.documentService.createDocument({
-        createdBy: docInContent.createdBy, // TODO: This should be the current user
-        displayName: docInContent.displayName,
-        externalID: docInContent.externalID, // Point to the same content
-        mimeType: docInContent.mimeType,
-        size: docInContent.size,
+      // Move temporary document to the new bucket via Go file-service-go
+      await this.fileServiceAdapter.updateDocument(docInContent.id, {
+        storageBucketId: storageBucket.id,
         temporaryLocation: false,
       });
-      await this.storageBucketService.addDocumentToStorageBucketOrFail(
-        storageBucket,
-        newDoc
+      // Keep in-memory state in sync so subsequent hits in the same pass
+      // find the document in the destination bucket
+      docInContent.temporaryLocation = false;
+      if (!storageBucket.documents.some(doc => doc.id === docInContent.id)) {
+        storageBucket.documents.push(docInContent);
+      }
+      return this.documentService.getPubliclyAccessibleURL(docInContent);
+    } else {
+      // Different bucket: fetch content from Go service, re-upload to new bucket.
+      // After the new document is successfully uploaded, delete the old one so
+      // it doesn't leak in its original bucket as an orphan.
+      const content = await this.fileServiceAdapter.getDocumentContent(
+        docInContent.id
       );
-      await this.documentAuthorizationService.applyAuthorizationPolicy(
-        newDoc,
-        storageBucket.authorization
-      );
+      const newDoc =
+        await this.storageBucketService.uploadFileAsDocumentFromBuffer(
+          storageBucket.id,
+          content,
+          docInContent.displayName,
+          docInContent.mimeType,
+          docInContent.createdBy
+        );
+      try {
+        await this.documentService.deleteDocument({ ID: docInContent.id });
+      } catch (error) {
+        // Source delete failed after destination upload succeeded — compensate
+        // by removing the new copy so a caller retry doesn't accumulate
+        // duplicates in the destination bucket. Swallow cleanup errors: the
+        // original delete failure is what the caller needs to see.
+        await this.documentService
+          .deleteDocument({ ID: newDoc.id })
+          .catch(() => undefined);
+        throw error;
+      }
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
   }

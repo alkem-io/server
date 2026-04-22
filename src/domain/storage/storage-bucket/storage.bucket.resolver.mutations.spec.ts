@@ -114,7 +114,6 @@ describe('StorageBucketResolverMutations', () => {
         externalID: 'ext-1',
         authorization: { id: 'doc-auth' },
       };
-      const savedDoc = { ...uploadedDoc };
 
       (storageBucketService.getStorageBucketOrFail as Mock).mockResolvedValue(
         bucket
@@ -125,7 +124,6 @@ describe('StorageBucketResolverMutations', () => {
       (storageBucketService.uploadFileAsDocument as Mock).mockResolvedValue(
         uploadedDoc
       );
-      (documentService.saveDocument as Mock).mockResolvedValue(savedDoc);
       (
         documentAuthorizationService.applyAuthorizationPolicy as Mock
       ).mockResolvedValue([]);
@@ -154,10 +152,9 @@ describe('StorageBucketResolverMutations', () => {
         'user-1',
         false
       );
-      expect(documentService.saveDocument).toHaveBeenCalledWith(uploadedDoc);
       expect(
         documentAuthorizationService.applyAuthorizationPolicy
-      ).toHaveBeenCalledWith(savedDoc, bucketAuth);
+      ).toHaveBeenCalledWith(uploadedDoc, bucketAuth);
       expect(result).toEqual({
         id: 'doc-1',
         url: 'https://alkem.io/api/private/rest/storage/document/doc-1',

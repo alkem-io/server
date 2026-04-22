@@ -108,7 +108,7 @@ export class LinkResolverMutations {
 
     const readStream = createReadStream();
 
-    let document = await this.storageBucketService.uploadFileFromURI(
+    const document = await this.storageBucketService.uploadFileFromURI(
       link.uri,
       link.id,
       storageBucket,
@@ -117,7 +117,6 @@ export class LinkResolverMutations {
       mimetype,
       actorContext.actorID
     );
-    document = await this.documentService.saveDocument(document);
 
     const documentAuthorizations =
       await this.documentAuthorizationService.applyAuthorizationPolicy(

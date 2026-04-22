@@ -68,7 +68,6 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { GeoLocationModule } from '@services/external/geo-location';
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
-import { FileIntegrationModule } from '@services/file-integration';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { AppController } from '@src/app.controller';
@@ -157,6 +156,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
           synchronize: false,
           cache: true,
           entities: [join(__dirname, '**', '*.entity.{ts,js}')],
+          subscribers: [join(__dirname, '**', '*.write.guard.{ts,js}')],
           host: dbOptions.host,
           port: dbOptions.port,
           username: dbOptions.username,
@@ -332,7 +332,6 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     ActivityFeedModule,
     EventBusModule,
     WhiteboardIntegrationModule,
-    FileIntegrationModule,
     CollaborativeDocumentIntegrationModule,
     DomainPlatformSettingsModule,
     PlatformRoleModule,

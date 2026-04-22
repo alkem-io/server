@@ -142,7 +142,6 @@ export class VisualResolverMutations {
       actorContext.actorID
     );
 
-    await this.documentService.saveDocument(visualDocument);
     // Ensure authorization is updated
     const documentAuthorizations =
       await this.documentAuthorizationService.applyAuthorizationPolicy(

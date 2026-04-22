@@ -138,6 +138,12 @@ export type AlkemioConfig = {
     local_storage: {
       path: string;
     };
+    file_service: {
+      url: string;
+      timeout: number;
+      retries: number;
+      enabled: boolean;
+    };
     redis: {
       host: string;
       port: string;

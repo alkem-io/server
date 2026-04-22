@@ -127,7 +127,7 @@ export class AdminCommunicationResolverMutations {
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_ADMIN,
-      `communications admin sync space hierarchy: ${actorContext.actorID}`
+      'communications admin sync space hierarchy'
     );
     return await this.adminCommunicationSpaceSyncService.syncSpaceHierarchy();
   }
