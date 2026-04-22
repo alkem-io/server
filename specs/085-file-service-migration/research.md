@@ -17,7 +17,7 @@
 
 ### 2. Upload Delegation Strategy
 
-**Decision**: Replace the `uploadFileAsDocumentFromBuffer()` flow. After the server converts the GraphQL upload stream to a Buffer, it sends the buffer as multipart/form-data to `POST /internal/document` on the Go service. The Go service handles file storage, MIME detection, image processing, and document record creation.
+**Decision**: Replace the `uploadFileAsDocumentFromBuffer()` flow. After the server converts the GraphQL upload stream to a Buffer, it sends the buffer as multipart/form-data to `POST /internal/file` on the Go service. The Go service handles file storage, MIME detection, image processing, and document record creation.
 
 **Rationale**: The current flow is: stream -> buffer -> image conversion -> image compression -> storage save -> DB insert. The Go service handles steps 3-6 internally (govips for image processing, content-addressed storage, atomic DB insert). The server only needs to do: stream -> buffer -> HTTP POST to Go service.
 
@@ -37,7 +37,7 @@
 **New flow**:
 1. Create tagset via TagsetService
 2. Create AuthorizationPolicy with type DOCUMENT
-3. Call Go service POST /internal/document with tagsetId + authorizationId
+3. Call Go service POST /internal/file with tagsetId + authorizationId
 4. On success: use returned document ID for URL construction
 5. On failure: delete tagset and auth policy (rollback)
 
@@ -45,7 +45,7 @@
 
 **Decision**: Server calls Go service DELETE first, then cleans up auth policy and tagset using IDs returned in the response.
 
-**Rationale**: The Go service's `DELETE /internal/document/{id}` response includes `{authorizationId, tagsetId}`. The server needs these to clean up. Order: Go service delete (removes document record + file) -> server delete auth policy -> server delete tagset.
+**Rationale**: The Go service's `DELETE /internal/file/{id}` response includes `{authorizationId, tagsetId}`. The server needs these to clean up. Order: Go service delete (removes document record + file) -> server delete auth policy -> server delete tagset.
 
 **Current flow** (document.service.ts:54-85):
 1. Fetch document with tagset relation
@@ -55,14 +55,14 @@
 5. Remove document from DB
 
 **New flow**:
-1. Call Go service DELETE /internal/document/{id}
+1. Call Go service DELETE /internal/file/{id}
 2. From response, get authorizationId and tagsetId
 3. Delete authorization policy locally
 4. Delete tagset locally
 
 ### 5. Temporary Document Move
 
-**Decision**: Use Go service's `PATCH /internal/document/{id}` with `{storageBucketId, temporaryLocation: false}`.
+**Decision**: Use Go service's `PATCH /internal/file/{id}` with `{storageBucketId, temporaryLocation: false}`.
 
 **Rationale**: The current `TemporaryStorageService.moveTemporaryDocuments()` directly updates the document entity in DB (sets storageBucket and temporaryLocation). The Go service's PATCH endpoint supports exactly these fields with optimistic locking.
 
@@ -70,7 +70,7 @@
 
 **Decision**: Remove `ImageConversionService` (heic-convert) and `ImageCompressionService` (sharp) from the server. The Go service handles all image processing via govips.
 
-**Rationale**: The Go service automatically converts HEIC->JPEG, compresses images, strips EXIF, and resizes during `POST /internal/document`. The server passes `allowedMimeTypes` to let the Go service validate. No server-side image processing needed.
+**Rationale**: The Go service automatically converts HEIC->JPEG, compresses images, strips EXIF, and resizes during `POST /internal/file`. The server passes `allowedMimeTypes` to let the Go service validate. No server-side image processing needed.
 
 **Dependencies to remove**:
 - `heic-convert` package (HEIC conversion)
@@ -87,7 +87,7 @@
 
 ### 8. Document Re-upload Between Buckets
 
-**Decision**: For cross-bucket document moves, the server fetches content from Go service (`GET /internal/document/{id}/content`), then uploads to new bucket (`POST /internal/document` with new bucket ID), then deletes old document (`DELETE /internal/document/{id}`).
+**Decision**: For cross-bucket document moves, the server fetches content from Go service (`GET /internal/file/{id}/content`), then uploads to new bucket (`POST /internal/file` with new bucket ID), then deletes old document (`DELETE /internal/file/{id}`).
 
 **Rationale**: The Go service doesn't have a "move document between buckets" endpoint. The three-step approach (get content -> create new -> delete old) is explicit and handles all cases including cross-storage scenarios.
 

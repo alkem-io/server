@@ -4,18 +4,23 @@
 
 ## Overview
 
-Replace direct document DB writes and local file storage with HTTP calls to the Go file-service-go. The server becomes a read-only consumer of the `document` table. All file operations delegate to `http://file-service:4003/internal/document/*`.
+Replace direct document DB writes and local file storage with HTTP calls to the Go file-service-go. The table is renamed from `document` to `file` during the migration; the server becomes a read-only consumer of the `file` table. All file operations delegate to `http://file-service:4003/internal/file/*`.
 
 ## Key Integration Points
 
 ### 1. FileServiceAdapter (New)
 **Where**: `src/services/adapters/file-service-adapter/`
-**What**: HTTP client calling Go service internal API. Uses `@nestjs/axios` with RxJS timeout/retry pattern (matching WingbackManager).
+**What**: HTTP client calling Go service internal API. `extends HttpClientBase` (`src/common/http/http.client.base.ts`) which provides the shared `sendRequest<T>` pipeline (timeout + retry + circuit breaker + error-translation hooks). The circuit breaker is a reusable state machine at `src/common/http/circuit.breaker.ts` — framework-agnostic, composable by future outbound adapters.
+**DTOs**: One interface per file under `dto/` (`create.document.metadata.ts`, `create.document.result.ts`, `delete.document.result.ts`, `update.document.input.ts`, `update.document.result.ts`) + `dto/index.ts` barrel.
 **Methods**:
-- `createDocument(file, metadata)` -> `POST /internal/document` (multipart)
-- `getDocumentContent(id)` -> `GET /internal/document/{id}/content`
-- `updateDocument(id, patch)` -> `PATCH /internal/document/{id}`
-- `deleteDocument(id)` -> `DELETE /internal/document/{id}`
+- `createDocument(file, metadata)` -> `POST /internal/file` (multipart)
+- `getDocumentContent(id)` -> `GET /internal/file/{id}/content` (uses `responseType: 'arraybuffer'`, not the generic pipeline)
+- `updateDocument(id, patch)` -> `PATCH /internal/file/{id}`
+- `deleteDocument(id)` -> `DELETE /internal/file/{id}`
+
+### 1a. DocumentWriteGuard (New)
+**Where**: `src/domain/storage/document/document.write.guard.ts`
+**What**: TypeORM `@EventSubscriber` on the `Document` entity that throws on any server-side `beforeInsert` / `beforeUpdate` / `beforeRemove`. Defense-in-depth against accidental direct DB writes — forces all mutations through `FileServiceAdapter`.
 
 ### 2. StorageBucketService Upload Rewire
 **Where**: `src/domain/storage/storage-bucket/storage.bucket.service.ts`
