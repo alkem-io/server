@@ -379,7 +379,6 @@ services:
     container_name: alkemio_dev_notifications
     hostname: notifications
     image: alkemio/notifications:v0.32.0
-    platform: linux/amd64
     depends_on:
       rabbitmq:
         condition: service_healthy
