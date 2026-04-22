@@ -764,6 +764,7 @@ describe('StorageBucketService', () => {
         imageBuffer,
         expect.objectContaining({
           displayName: expect.any(String),
+          mimeType: MimeTypeVisual.PNG,
         })
       );
     });

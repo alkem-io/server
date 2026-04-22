@@ -44,9 +44,9 @@ export class DocumentService {
     // Clean up server-owned entities using IDs from Go service response
     if (deleteResult.authorizationId) {
       try {
-        await this.authorizationPolicyService.delete({
-          id: deleteResult.authorizationId,
-        } as any);
+        await this.authorizationPolicyService.deleteById(
+          deleteResult.authorizationId
+        );
       } catch (_error) {
         this.logger.warn?.(
           `Failed to delete auth policy ${deleteResult.authorizationId} after document deletion`,

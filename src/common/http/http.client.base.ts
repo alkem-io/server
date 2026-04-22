@@ -27,7 +27,7 @@ export interface HttpClientBaseConfig {
  * Provides:
  *  - Generic typed `sendRequest<T>()` over NestJS `HttpService`
  *  - Per-request timeout
- *  - Retry with exponential backoff for transport / 5xx failures
+ *  - Retry with linear backoff (500ms × retry count) for transport / 5xx failures
  *  - Pluggable circuit breaker (via `CircuitBreaker`)
  *  - Uniform verbose/warn logging
  *
@@ -87,6 +87,11 @@ export abstract class HttpClientBase {
    * Issue an HTTP request through the shared pipeline (timeout → retry →
    * success/failure hooks → error translation). Returns the parsed response
    * body (typed as `TResult`).
+   *
+   * NOTE: Circuit-breaker enforcement is opt-in — callers must invoke
+   * `checkCircuit(operation)` explicitly before `sendRequest(...)` to short-
+   * circuit requests while the breaker is OPEN. The pipeline still updates
+   * breaker state (`onSuccess` / `onFailure`) on every request.
    */
   protected sendRequest<TResult>(
     operation: string,

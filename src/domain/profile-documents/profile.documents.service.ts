@@ -98,7 +98,18 @@ export class ProfileDocumentsService {
           docInContent.mimeType,
           docInContent.createdBy
         );
-      await this.documentService.deleteDocument({ ID: docInContent.id });
+      try {
+        await this.documentService.deleteDocument({ ID: docInContent.id });
+      } catch (error) {
+        // Source delete failed after destination upload succeeded — compensate
+        // by removing the new copy so a caller retry doesn't accumulate
+        // duplicates in the destination bucket. Swallow cleanup errors: the
+        // original delete failure is what the caller needs to see.
+        await this.documentService
+          .deleteDocument({ ID: newDoc.id })
+          .catch(() => undefined);
+        throw error;
+      }
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
   }

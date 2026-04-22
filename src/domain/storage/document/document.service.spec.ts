@@ -90,14 +90,16 @@ describe('DocumentService', () => {
         authorizationId: 'auth-1',
         tagsetId: 'tagset-1',
       });
-      (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
+      (authorizationPolicyService.deleteById as Mock).mockResolvedValue(
+        undefined
+      );
       (tagsetService.removeTagset as Mock).mockResolvedValue(undefined);
 
       const result = await service.deleteDocument({ ID: 'doc-1' });
 
       expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith('doc-1');
-      expect(authorizationPolicyService.delete).toHaveBeenCalledWith(
-        expect.objectContaining({ id: 'auth-1' })
+      expect(authorizationPolicyService.deleteById).toHaveBeenCalledWith(
+        'auth-1'
       );
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-1');
       expect(result.id).toBe('doc-1');
@@ -119,7 +121,7 @@ describe('DocumentService', () => {
 
       await service.deleteDocument({ ID: 'doc-2' });
 
-      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.deleteById).not.toHaveBeenCalled();
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-2');
     });
 
@@ -135,11 +137,13 @@ describe('DocumentService', () => {
         authorizationId: 'auth-3',
         tagsetId: null,
       });
-      (authorizationPolicyService.delete as Mock).mockResolvedValue(undefined);
+      (authorizationPolicyService.deleteById as Mock).mockResolvedValue(
+        undefined
+      );
 
       await service.deleteDocument({ ID: 'doc-3' });
 
-      expect(authorizationPolicyService.delete).toHaveBeenCalled();
+      expect(authorizationPolicyService.deleteById).toHaveBeenCalled();
       expect(tagsetService.removeTagset).not.toHaveBeenCalled();
     });
 

@@ -45,11 +45,15 @@ export class FileServiceAdapterException extends BaseException {
     responseBody?: unknown,
     contextDetails?: Record<string, unknown>
   ): FileServiceAdapterException {
-    const message = `File service ${operation} failed with HTTP ${httpStatus}`;
-    return new FileServiceAdapterException(message, operation, httpStatus, {
-      ...contextDetails,
-      responseBody,
-    });
+    return new FileServiceAdapterException(
+      'File service HTTP error',
+      operation,
+      httpStatus,
+      {
+        ...contextDetails,
+        responseBody,
+      }
+    );
   }
 
   static fromTransportError(
@@ -57,12 +61,16 @@ export class FileServiceAdapterException extends BaseException {
     error: Error,
     contextDetails?: Record<string, unknown>
   ): FileServiceAdapterException {
-    const message = `File service ${operation} failed`;
-    return new FileServiceAdapterException(message, operation, undefined, {
-      ...contextDetails,
-      errorName: error.name,
-      errorMessage: error.message,
-    });
+    return new FileServiceAdapterException(
+      'File service transport error',
+      operation,
+      undefined,
+      {
+        ...contextDetails,
+        errorName: error.name,
+        errorMessage: error.message,
+      }
+    );
   }
 }
 
@@ -70,6 +78,10 @@ function mapHttpStatusToAlkemioStatus(httpStatus?: number): AlkemioErrorStatus {
   switch (httpStatus) {
     case 400:
       return AlkemioErrorStatus.BAD_USER_INPUT;
+    case 401:
+      return AlkemioErrorStatus.UNAUTHENTICATED;
+    case 403:
+      return AlkemioErrorStatus.FORBIDDEN;
     case 404:
       return AlkemioErrorStatus.NOT_FOUND;
     case 409:
