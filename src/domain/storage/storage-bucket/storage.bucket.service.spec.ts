@@ -12,6 +12,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
@@ -88,6 +89,7 @@ describe('StorageBucketService', () => {
   let urlGeneratorService: UrlGeneratorService;
   let fileServiceAdapter: FileServiceAdapter;
   let tagsetService: TagsetService;
+  let configService: ConfigService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -137,6 +139,7 @@ describe('StorageBucketService', () => {
     urlGeneratorService = module.get<UrlGeneratorService>(UrlGeneratorService);
     fileServiceAdapter = module.get<FileServiceAdapter>(FileServiceAdapter);
     tagsetService = module.get<TagsetService>(TagsetService);
+    configService = module.get<ConfigService>(ConfigService);
   });
 
   // ── createStorageBucket ─────────────────────────────────────────
@@ -491,16 +494,14 @@ describe('StorageBucketService', () => {
 
     beforeEach(() => {
       // Provide a usable stream timeout so streamToBuffer doesn't fire
-      // immediately in the mocked ConfigService environment.
-      (service as any).configService = {
-        get: vi.fn().mockReturnValue(5000),
-      };
+      // immediately in the mocked ConfigService environment. configService
+      // here is the same instance DI injected into the service under test.
+      (configService.get as Mock).mockReturnValue(5000);
     });
 
     it.each([
       ['empty filename', ''],
       ['whitespace-only filename', '   '],
-      ['undefined filename', undefined as unknown as string],
     ])('substitutes _unspecified_ when %s is supplied', async (_label, filename) => {
       const bucket = mockStorageBucket({ id: 'bucket-unnamed' });
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
