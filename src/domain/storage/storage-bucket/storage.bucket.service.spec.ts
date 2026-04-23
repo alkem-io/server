@@ -12,6 +12,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
@@ -21,6 +22,7 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Readable } from 'stream';
 import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { Document } from '../document/document.entity';
@@ -87,6 +89,7 @@ describe('StorageBucketService', () => {
   let urlGeneratorService: UrlGeneratorService;
   let fileServiceAdapter: FileServiceAdapter;
   let tagsetService: TagsetService;
+  let configService: ConfigService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -136,6 +139,7 @@ describe('StorageBucketService', () => {
     urlGeneratorService = module.get<UrlGeneratorService>(UrlGeneratorService);
     fileServiceAdapter = module.get<FileServiceAdapter>(FileServiceAdapter);
     tagsetService = module.get<TagsetService>(TagsetService);
+    configService = module.get<ConfigService>(ConfigService);
   });
 
   // ── createStorageBucket ─────────────────────────────────────────
@@ -480,6 +484,85 @@ describe('StorageBucketService', () => {
         id: 'auth-saved',
       });
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-saved');
+    });
+  });
+
+  // ── uploadFileAsDocument (stream) ──────────────────────────────
+
+  describe('uploadFileAsDocument', () => {
+    const makeReadable = (data: Buffer): Readable => Readable.from(data);
+
+    beforeEach(() => {
+      // Provide a usable stream timeout so streamToBuffer doesn't fire
+      // immediately in the mocked ConfigService environment. configService
+      // here is the same instance DI injected into the service under test.
+      (configService.get as Mock).mockReturnValue(5000);
+    });
+
+    it.each([
+      ['empty filename', ''],
+      ['whitespace-only filename', '   '],
+    ])('substitutes _unspecified_ when %s is supplied', async (_label, filename) => {
+      const bucket = mockStorageBucket({ id: 'bucket-unnamed' });
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-unnamed',
+        externalID: 'ext-unnamed',
+        mimeType: MimeTypeVisual.PNG,
+        size: 3,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+        mockDocument()
+      );
+
+      await service.uploadFileAsDocument(
+        'bucket-unnamed',
+        makeReadable(Buffer.from('png')),
+        filename,
+        MimeTypeVisual.PNG,
+        'user-1'
+      );
+
+      expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        expect.objectContaining({
+          displayName: '_unspecified_',
+          storageBucketId: 'bucket-unnamed',
+        })
+      );
+    });
+
+    it('passes the real filename through when supplied', async () => {
+      const bucket = mockStorageBucket({ id: 'bucket-named' });
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-named',
+        externalID: 'ext-named',
+        mimeType: MimeTypeVisual.PNG,
+        size: 3,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+        mockDocument()
+      );
+
+      await service.uploadFileAsDocument(
+        'bucket-named',
+        makeReadable(Buffer.from('png')),
+        'diagram.png',
+        MimeTypeVisual.PNG,
+        'user-1'
+      );
+
+      expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        expect.objectContaining({ displayName: 'diagram.png' })
+      );
     });
   });
 
