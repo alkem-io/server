@@ -37,6 +37,13 @@ import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { StorageBucket } from './storage.bucket.entity';
 import { IStorageBucket } from './storage.bucket.interface';
+
+// Used when an upload arrives with no filename — e.g. a clipboard paste or
+// drag-drop that produces File { name: '' }. An empty multipart filename
+// attribute is dropped by form-data, which in turn causes file-service-go
+// to reject the part as "missing file".
+const UNSPECIFIED_FILENAME = '_unspecified_';
+
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 15728640;
@@ -153,6 +160,12 @@ export class StorageBucketService {
     userID: string,
     temporaryDocument = false
   ): Promise<IDocument> {
+    // Clipboard paste and some drag-drop paths yield File { name: '' };
+    // an empty filename causes form-data to drop the `filename=` attribute,
+    // which file-service-go then rejects as a missing file part. Normalise
+    // at the boundary so downstream sees a non-empty displayName and the
+    // multipart body always carries a filename attribute.
+    const effectiveFilename = filename?.trim() || UNSPECIFIED_FILENAME;
     try {
       const streamTimeoutMs = this.configService.get<number>(
         'storage.file.stream_timeout_ms',
@@ -164,7 +177,7 @@ export class StorageBucketService {
       return await this.uploadFileAsDocumentFromBuffer(
         storageBucketId,
         buffer,
-        filename,
+        effectiveFilename,
         mimeType,
         userID,
         temporaryDocument
@@ -178,7 +191,7 @@ export class StorageBucketService {
         LogContext.STORAGE_BUCKET,
         {
           message: error.message,
-          fileName: filename,
+          fileName: effectiveFilename,
           storageBucketId,
           originalException: error,
         }
