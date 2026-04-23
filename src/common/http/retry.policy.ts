@@ -22,7 +22,10 @@ export type ErrorClass =
   | 'pre-send-transport' // ECONNREFUSED, ENOTFOUND, EAI_AGAIN, EHOSTUNREACH, ENETUNREACH — request never reached server
   | 'post-send-transport' // ECONNRESET / ECONNABORTED / ETIMEDOUT — ambiguous
   | 'rxjs-timeout' // our own client-side timeout — request may have been received
-  | 'other'; // anything we can't classify — treat like post-send
+  | 'other'; // anything we can't recognise as HTTP/transport — treat as a local
+// error (e.g. transform/parse failure) that must never be retried and must
+// not count toward the circuit breaker (it says nothing about downstream
+// health)
 
 const PRE_SEND_TRANSPORT_CODES = new Set([
   'ECONNREFUSED',
@@ -71,6 +74,11 @@ export function classifyError(error: unknown): ErrorClass {
 export function isRetriable(cls: ErrorClass, method: HttpMethod): boolean {
   switch (cls) {
     case 'http-4xx':
+    case 'other':
+      // 4xx: client's fault, retry can't help. 'other': not a recognised
+      // HTTP or transport error — most likely a local bug (transform /
+      // parse failure). Same treatment: don't retry, and (since the
+      // circuit breaker uses the same predicate) don't count either.
       return false;
     case 'http-503':
     case 'http-504':
@@ -79,7 +87,6 @@ export function isRetriable(cls: ErrorClass, method: HttpMethod): boolean {
     case 'http-5xx-other':
     case 'post-send-transport':
     case 'rxjs-timeout':
-    case 'other':
       return IDEMPOTENT_METHODS.has(method);
   }
 }

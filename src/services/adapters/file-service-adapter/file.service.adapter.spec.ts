@@ -149,7 +149,7 @@ describe('FileServiceAdapter', () => {
           storageBucketId: 'bucket-1',
           authorizationId: 'auth-1',
         })
-      ).rejects.toThrow();
+      ).rejects.toThrow(FileServiceAdapterException);
 
       // No retries — exactly one attempt.
       expect(subscribeCount).toBe(1);
@@ -184,7 +184,7 @@ describe('FileServiceAdapter', () => {
           storageBucketId: 'bucket-1',
           authorizationId: 'auth-1',
         })
-      ).rejects.toThrow();
+      ).rejects.toThrow(StorageServiceUnavailableException);
 
       // retries: 2 → 1 initial + 2 retries = 3 subscription attempts
       expect(subscribeCount).toBe(3);
@@ -208,7 +208,7 @@ describe('FileServiceAdapter', () => {
           storageBucketId: 'bucket-1',
           authorizationId: 'auth-1',
         })
-      ).rejects.toThrow();
+      ).rejects.toThrow(FileServiceAdapterException);
 
       expect(subscribeCount).toBe(3);
     });

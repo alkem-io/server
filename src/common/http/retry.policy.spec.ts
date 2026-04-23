@@ -138,13 +138,15 @@ describe('isRetriable', () => {
       },
     },
     {
+      // Not a recognised HTTP / transport error — treated as a local
+      // bug (e.g. transform/parse failure) across all methods.
       cls: 'other',
       retriable: {
-        get: true,
+        get: false,
         post: false,
-        put: true,
-        patch: true,
-        delete: true,
+        put: false,
+        patch: false,
+        delete: false,
       },
     },
   ];
