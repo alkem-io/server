@@ -193,6 +193,10 @@ describe('FileServiceAdapter', () => {
     it('DOES retry POST on pre-send transport error (request never reached server)', async () => {
       const transportError = new AxiosError('refused', 'ECONNREFUSED');
       transportError.code = 'ECONNREFUSED';
+      // Real connection-refused failures happen after Axios has tried to
+      // issue the request, so `.request` is set; classifyError needs
+      // that signal to distinguish from pre-request config errors.
+      (transportError as AxiosError & { request: unknown }).request = {};
 
       let subscribeCount = 0;
       (httpService.request as Mock).mockReturnValue(

@@ -16,7 +16,19 @@ const axiosWithStatus = (status: number): AxiosError =>
 const axiosTransport = (code: string): AxiosError => {
   const err = new AxiosError('transport', code);
   err.code = code;
-  // no `.response` — simulates a real transport failure
+  // Set `.request` to a truthy placeholder so the error looks like it
+  // happened after Axios issued the request (which is what a real
+  // transport failure looks like). No `.response` — server didn't
+  // respond, or didn't respond yet.
+  (err as AxiosError & { request: unknown }).request = {};
+  return err;
+};
+
+const axiosPreRequest = (code: string): AxiosError => {
+  // Axios error produced before a request was issued (bad URL parse,
+  // ERR_BAD_OPTION, etc.) — no `.request` and no `.response`.
+  const err = new AxiosError('pre-request', code);
+  err.code = code;
   return err;
 };
 
@@ -52,6 +64,20 @@ describe('classifyError', () => {
 
   it('classifies RxJS TimeoutError as rxjs-timeout', () => {
     expect(classifyError(new TimeoutError())).toBe('rxjs-timeout');
+  });
+
+  it.each([
+    'ERR_BAD_OPTION',
+    'ERR_BAD_OPTION_VALUE',
+    'ERR_INVALID_URL',
+    // No code set at all — still no .request, still pre-request
+    undefined,
+  ] as const)('classifies Axios errors without a request (code=%s) as other', code => {
+    const err = axiosPreRequest(code ?? 'UNKNOWN');
+    if (code === undefined) {
+      err.code = undefined;
+    }
+    expect(classifyError(err)).toBe('other');
   });
 
   it('classifies a plain Error as other', () => {

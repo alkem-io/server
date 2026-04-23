@@ -56,7 +56,15 @@ export function classifyError(error: unknown): ErrorClass {
     return 'other'; // 1xx/2xx/3xx reached catchError — shouldn't happen
   }
 
-  // No response — transport layer failure
+  // No response. Distinguish three sub-cases:
+  //  1. No `request` either → Axios failed before issuing the request
+  //     (bad URL, invalid config, ERR_BAD_OPTION). Retrying with the
+  //     same config won't help — treat as a local bug.
+  //  2. Known pre-connection transport codes → request never reached
+  //     the server; retry is safe even for POST.
+  //  3. Anything else → request was in flight; we can't tell whether
+  //     the server processed it.
+  if (!axiosErr.request) return 'other';
   if (axiosErr.code && PRE_SEND_TRANSPORT_CODES.has(axiosErr.code)) {
     return 'pre-send-transport';
   }
