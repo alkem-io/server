@@ -1,8 +1,8 @@
+import type { HttpMethod } from '@common/http/http.client.base';
+import { classifyError, isRetriable } from '@common/http/retry.policy';
 import { AxiosError, AxiosHeaders } from 'axios';
 import { TimeoutError } from 'rxjs';
 import { describe, expect, it } from 'vitest';
-import type { HttpMethod } from './http.client.base';
-import { classifyError, isRetriable } from './retry.policy';
 
 const axiosWithStatus = (status: number): AxiosError =>
   new AxiosError(`status ${status}`, String(status), undefined, null, {
@@ -64,6 +64,16 @@ describe('classifyError', () => {
 
   it('classifies RxJS TimeoutError as rxjs-timeout', () => {
     expect(classifyError(new TimeoutError())).toBe('rxjs-timeout');
+  });
+
+  it('classifies deliberately cancelled Axios requests (ERR_CANCELED) as other', () => {
+    // Caller cancelled via CancelToken / AbortSignal. Retrying would
+    // defeat the cancel; doesn't indicate anything about downstream
+    // health either.
+    const err = new AxiosError('canceled', 'ERR_CANCELED');
+    err.code = 'ERR_CANCELED';
+    (err as AxiosError & { request: unknown }).request = {};
+    expect(classifyError(err)).toBe('other');
   });
 
   it.each([

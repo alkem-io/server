@@ -1,6 +1,6 @@
+import type { HttpMethod } from '@common/http/http.client.base';
 import { AxiosError, isAxiosError } from 'axios';
 import { TimeoutError } from 'rxjs';
-import type { HttpMethod } from './http.client.base';
 
 /**
  * Classification of outbound-HTTP errors for retry decisions.
@@ -47,6 +47,11 @@ export function classifyError(error: unknown): ErrorClass {
   if (!isAxiosError(error)) return 'other';
 
   const axiosErr = error as AxiosError;
+
+  // Deliberate caller-side cancellation (CancelToken / AbortSignal) is
+  // not a downstream signal — retrying it would defeat the cancel.
+  if (axiosErr.code === 'ERR_CANCELED') return 'other';
+
   if (axiosErr.response) {
     const status = axiosErr.response.status;
     if (status >= 400 && status < 500) return 'http-4xx';
