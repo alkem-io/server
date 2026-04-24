@@ -533,6 +533,42 @@ describe('StorageBucketService', () => {
       expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
 
+    it('treats omitted reused as false (backward-compat with pre-v0.0.10 Go)', async () => {
+      // Older file-service-go versions don't emit the `reused` field. Missing
+      // must behave the same as `reused: false` — don't release pre-created
+      // auth/tagset. Pins the forward-compat contract documented on the DTO.
+      const bucket = mockStorageBucket({ id: 'bucket-legacy' });
+      const buffer = Buffer.alloc(10);
+      const freshDoc = mockDocument({ id: 'doc-legacy' });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved-legacy',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved-legacy',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-legacy',
+        externalID: 'ext-legacy',
+        mimeType: MimeTypeVisual.PNG,
+        size: 10,
+        // no `reused` field — simulates pre-v0.0.10 Go response
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(freshDoc);
+
+      await service.uploadFileAsDocumentFromBuffer(
+        'bucket-legacy',
+        buffer,
+        'file.png',
+        MimeTypeVisual.PNG,
+        'user-1'
+      );
+
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
+    });
+
     it('keeps pre-created auth + tagset when reused is false (new document)', async () => {
       const bucket = mockStorageBucket({ id: 'bucket-fresh' });
       const buffer = Buffer.alloc(10);
