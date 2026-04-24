@@ -568,8 +568,8 @@ describe('StorageBucketService', () => {
 
     it('does NOT delete the Go-side document on post-upload failure if reused:true', async () => {
       // getDocumentOrFail throws AFTER a reuse response. The catch branch
-      // must leak the pre-created auth/tagset rather than delete someone
-      // else's live document.
+      // must still clean up the pre-created auth/tagset, but must NOT
+      // delete the Go-side document — it belongs to another caller.
       const bucket = mockStorageBucket({ id: 'bucket-reuse-reload-fail' });
       const buffer = Buffer.alloc(10);
 
