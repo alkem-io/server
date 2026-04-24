@@ -8,6 +8,7 @@ import {
   platformMetadataQuery,
   spacesQuery,
 } from '@config/graphql';
+import { OidcModule } from '@core/auth/oidc/oidc.module';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
@@ -288,6 +289,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     LoaderCreatorModule,
     ScalarsModule,
     AuthenticationModule,
+    OidcModule,
     AuthorizationModule,
     GraphqlGuardModule,
     SpaceModule,
