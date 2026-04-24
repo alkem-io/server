@@ -247,7 +247,8 @@ export class StorageBucketService {
         maxFileSize: storage.maxFileSize,
       });
 
-      // Load the document created by the Go service with relations needed for auth
+      // Load the document with relations needed for auth. On a dedup reuse
+      // this is an existing row; otherwise it's the freshly-inserted one.
       document = await this.documentService.getDocumentOrFail(result.id, {
         relations: {
           authorization: true,
@@ -259,8 +260,12 @@ export class StorageBucketService {
       // Rollback: delete each pre-created resource independently so one
       // failure doesn't short-circuit the others. Bind narrowed values into
       // const locals so the closures don't re-widen them.
+      //
+      // Important: only delete the Go-side document if this request created
+      // it (reused=false). On a dedup reuse, `result.id` refers to someone
+      // else's existing document — deleting it would corrupt their data.
       const createdDoc = result;
-      if (createdDoc) {
+      if (createdDoc && !createdDoc.reused) {
         await tryRollback(
           () => this.fileServiceAdapter.deleteDocument(createdDoc.id),
           `Failed to rollback Go-side document ${createdDoc.id}`,
@@ -287,6 +292,31 @@ export class StorageBucketService {
         );
       }
       throw error;
+    }
+
+    // file-service-go returned an existing row: the caller-supplied
+    // authorizationId/tagsetId were ignored (the existing row keeps its
+    // own). Release our pre-created rows here rather than leaving them
+    // as DB orphans. Same const-rebind trick as above to keep narrowing.
+    if (result.reused) {
+      const reusedAuth = savedAuth;
+      if (reusedAuth) {
+        await tryRollback(
+          () => this.authorizationPolicyService.delete(reusedAuth),
+          `Failed to release pre-created auth policy ${reusedAuth.id} on dedup reuse`,
+          this.logger,
+          LogContext.STORAGE_BUCKET
+        );
+      }
+      const reusedTagset = savedTagset;
+      if (reusedTagset) {
+        await tryRollback(
+          () => this.tagsetService.removeTagset(reusedTagset.id),
+          `Failed to release pre-created tagset ${reusedTagset.id} on dedup reuse`,
+          this.logger,
+          LogContext.STORAGE_BUCKET
+        );
+      }
     }
 
     this.logger.verbose?.(

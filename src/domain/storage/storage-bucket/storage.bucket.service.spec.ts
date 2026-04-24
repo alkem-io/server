@@ -485,6 +485,130 @@ describe('StorageBucketService', () => {
       });
       expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-saved');
     });
+
+    it('releases pre-created auth + tagset when file-service-go returns reused:true', async () => {
+      // Go-side dedup hit the existing file row; the auth/tagset we saved
+      // before calling Go are not referenced by anyone and must be freed.
+      const bucket = mockStorageBucket({ id: 'bucket-reuse' });
+      const buffer = Buffer.alloc(10);
+      const existingDoc = mockDocument({
+        id: 'doc-existing',
+        externalID: 'ext-shared',
+      });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved-reuse',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved-reuse',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-existing',
+        externalID: 'ext-shared',
+        mimeType: MimeTypeVisual.PNG,
+        size: 10,
+        reused: true,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+        existingDoc
+      );
+
+      const result = await service.uploadFileAsDocumentFromBuffer(
+        'bucket-reuse',
+        buffer,
+        'file.png',
+        MimeTypeVisual.PNG,
+        'user-1'
+      );
+
+      expect(result).toBe(existingDoc);
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
+        id: 'auth-saved-reuse',
+      });
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith(
+        'tagset-saved-reuse'
+      );
+      // Go-side delete must NOT be called: the reused doc is someone else's.
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('keeps pre-created auth + tagset when reused is false (new document)', async () => {
+      const bucket = mockStorageBucket({ id: 'bucket-fresh' });
+      const buffer = Buffer.alloc(10);
+      const freshDoc = mockDocument({ id: 'doc-fresh' });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved-fresh',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved-fresh',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-fresh',
+        externalID: 'ext-fresh',
+        mimeType: MimeTypeVisual.PNG,
+        size: 10,
+        reused: false,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(freshDoc);
+
+      await service.uploadFileAsDocumentFromBuffer(
+        'bucket-fresh',
+        buffer,
+        'file.png',
+        MimeTypeVisual.PNG,
+        'user-1'
+      );
+
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
+    });
+
+    it('does NOT delete the Go-side document on post-upload failure if reused:true', async () => {
+      // getDocumentOrFail throws AFTER a reuse response. The catch branch
+      // must still clean up the pre-created auth/tagset, but must NOT
+      // delete the Go-side document — it belongs to another caller.
+      const bucket = mockStorageBucket({ id: 'bucket-reuse-reload-fail' });
+      const buffer = Buffer.alloc(10);
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved-rrf',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved-rrf',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-existing-rrf',
+        externalID: 'ext-shared-rrf',
+        mimeType: MimeTypeVisual.PNG,
+        size: 10,
+        reused: true,
+      });
+      (documentService.getDocumentOrFail as Mock).mockRejectedValue(
+        new Error('reload failed')
+      );
+
+      await expect(
+        service.uploadFileAsDocumentFromBuffer(
+          'bucket-reuse-reload-fail',
+          buffer,
+          'file.png',
+          MimeTypeVisual.PNG,
+          'user-1'
+        )
+      ).rejects.toThrow('reload failed');
+
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
+        id: 'auth-saved-rrf',
+      });
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith(
+        'tagset-saved-rrf'
+      );
+    });
   });
 
   // ── uploadFileAsDocument (stream) ──────────────────────────────
