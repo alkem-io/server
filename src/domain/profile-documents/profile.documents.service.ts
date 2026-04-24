@@ -4,6 +4,7 @@ import {
   EntityNotInitializedException,
 } from '@common/exceptions';
 import { DocumentService } from '@domain/storage/document/document.service';
+import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Injectable } from '@nestjs/common';
@@ -14,6 +15,7 @@ export class ProfileDocumentsService {
   constructor(
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
+    private documentAuthorizationService: DocumentAuthorizationService,
     private fileServiceAdapter: FileServiceAdapter
   ) {}
 
@@ -83,9 +85,9 @@ export class ProfileDocumentsService {
       }
       return this.documentService.getPubliclyAccessibleURL(docInContent);
     } else {
-      // Different bucket: fetch content from Go service, re-upload to new bucket.
-      // After the new document is successfully uploaded, delete the old one so
-      // it doesn't leak in its original bucket as an orphan.
+      // Different bucket: fetch content from Go service, re-upload to new bucket,
+      // apply auth policy on the copy, then delete the source. Compensation at
+      // every step so a retry can't leave orphaned documents.
       const content = await this.fileServiceAdapter.getDocumentContent(
         docInContent.id
       );
@@ -97,6 +99,19 @@ export class ProfileDocumentsService {
           docInContent.mimeType,
           docInContent.createdBy
         );
+      try {
+        await this.documentAuthorizationService.applyAuthorizationPolicy(
+          newDoc,
+          storageBucket.authorization
+        );
+      } catch (error) {
+        // Auth application failed — remove the orphan copy so readers can't
+        // reach an unauthorised doc via its URL.
+        await this.documentService
+          .deleteDocument({ ID: newDoc.id })
+          .catch(() => undefined);
+        throw error;
+      }
       try {
         await this.documentService.deleteDocument({ ID: docInContent.id });
       } catch (error) {

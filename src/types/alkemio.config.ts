@@ -144,6 +144,9 @@ export type AlkemioConfig = {
       retries: number;
       enabled: boolean;
     };
+    collabora: {
+      wopi_service_url: string;
+    };
     redis: {
       host: string;
       port: string;

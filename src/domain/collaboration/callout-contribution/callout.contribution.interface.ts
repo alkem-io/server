@@ -19,6 +19,8 @@ export abstract class ICalloutContribution extends IAuthorizable {
 
   memo?: IMemo;
 
+  collaboraDocument?: any; // Resolved by field resolver; type-imported in resolver
+
   createdBy?: string;
 
   callout?: ICallout;
