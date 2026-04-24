@@ -1,6 +1,7 @@
 volumes:
   alkemio_dev_postgres:
   alkemio_dev_synapse:
+  alkemio_dev_storage:
   tmpvolume:
   chroma-data:
   rabbitmq_data:
@@ -498,7 +499,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service-go:v0.0.8
+    image: alkemio/file-service-go:v0.0.9
     depends_on:
       postgres:
         condition: service_healthy
@@ -516,7 +517,7 @@ services:
       - LOG_LEVEL=info
     restart: always
     volumes:
-      - ${PWD}/.storage:/storage:rw
+      - alkemio_dev_storage:/storage
     networks:
       - alkemio_dev_net
     ports:
