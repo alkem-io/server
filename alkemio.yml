@@ -207,6 +207,34 @@ identity:
         session_cookie_name: ${KRATOS_SESSION_COOKIE_NAME}:ory_kratos_session
         session_extend_enabled: ${KRATOS_SESSION_EXTEND_ENABLED}:true
 
+      # Hydra / OIDC Relying Party configuration (alkemio-server acts as BFF).
+      # Spec: specs/003-alkemio-oidc-idp/plan.md. Module: src/core/auth/oidc/.
+      oidc:
+        # Hydra OIDC issuer URL (used for discovery).
+        issuer_url: ${HYDRA_ISSUER_URL}:http://localhost:3000/
+        # Hydra JWKS endpoint used for Bearer JWT signature validation (jose).
+        jwks_url: ${HYDRA_JWKS_URL}:http://localhost:3000/.well-known/jwks.json
+        # Hydra client_id registered for alkemio-client-web (public client, PKCE-S256).
+        web_client_id: ${ALKEMIO_WEB_CLIENT_ID}:alkemio-web
+        # Comma-separated allow-list of aud values accepted on Bearer JWTs (FR-024).
+        bearer_aud_allow_list: ${BEARER_AUD_ALLOW_LIST}:alkemio-web,synapse-client,element-client,ecosystem-analytics
+        # Refresh-token rotation leeway in seconds (FR-008 grace window overlap).
+        refresh_leeway_s: ${OIDC_REFRESH_LEEWAY_S}:30
+        # HS256 signing key for the alkemio_oidc_pre_auth cookie JWS (FR-017b).
+        # Base64url of 32 random bytes. Generate fresh per workstation in .env.local.
+        pre_auth_cookie_signing_key: ${PRE_AUTH_COOKIE_SIGNING_KEY}
+        # HS256 key for the authorization-request state parameter HMAC.
+        state_hmac_key: ${STATE_HMAC_KEY}
+        # express-session secret for signing alkemio_session cookie.
+        session_signing_key: ${SESSION_SIGNING_KEY}
+        # alkemio_session cookie attributes. Per-env overlays set Secure + domain +
+        # per-env name suffix; the local-dev defaults below run over HTTP loopback.
+        cookie:
+          name: ${OIDC_SESSION_COOKIE_NAME}:alkemio_session
+          domain: ${OIDC_SESSION_COOKIE_DOMAIN}
+          secure: ${OIDC_SESSION_COOKIE_SECURE}:false
+          idle_ttl_s: ${OIDC_SESSION_COOKIE_IDLE_TTL_S}:1800
+
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
 monitoring:

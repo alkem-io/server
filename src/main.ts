@@ -1,6 +1,9 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import RedisStore from 'connect-redis';
+import session from 'express-session';
 import helmet from 'helmet';
+import Redis from 'ioredis';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AppModule } from './app.module';
 import './config/aliases';
@@ -55,6 +58,45 @@ const bootstrap = async () => {
   app.use(
     helmet({
       contentSecurityPolicy: false,
+    })
+  );
+
+  // T016 — express-session + connect-redis bootstrap. MUST run before any
+  // OIDC controller so the callback can regenerate() against a live store.
+  // Key layout: `alkemio:sid:<sid>`. TTL is set once at create via `disableTouch:true`
+  // (FR-018 / FR-020a). The cookie carries the sid only — no tokens.
+  const oidcConfig = configService.get(
+    'identity.authentication.providers.oidc',
+    {
+      infer: true,
+    }
+  );
+  const redisConfig = configService.get('storage.redis', { infer: true });
+  const sessionRedis = new Redis({
+    host: redisConfig.host,
+    port: Number(redisConfig.port),
+  });
+  const sessionStore = new RedisStore({
+    client: sessionRedis,
+    prefix: 'alkemio:sid:',
+    disableTouch: true,
+  });
+  app.use(
+    session({
+      store: sessionStore,
+      secret: oidcConfig.session_signing_key,
+      name: oidcConfig.cookie.name,
+      resave: false,
+      saveUninitialized: false,
+      rolling: true,
+      cookie: {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: oidcConfig.cookie.secure,
+        domain: oidcConfig.cookie.domain || undefined,
+        maxAge: oidcConfig.cookie.idle_ttl_s * 1000,
+      },
     })
   );
 
