@@ -65,6 +65,22 @@ export type AlkemioConfig = {
           session_cookie_name: string;
           session_extend_enabled: boolean;
         };
+        oidc: {
+          issuer_url: string;
+          jwks_url: string;
+          web_client_id: string;
+          bearer_aud_allow_list: string;
+          refresh_leeway_s: number;
+          pre_auth_cookie_signing_key: string;
+          state_hmac_key: string;
+          session_signing_key: string;
+          cookie: {
+            name: string;
+            domain: string;
+            secure: boolean;
+            idle_ttl_s: number;
+          };
+        };
       };
     };
   };
