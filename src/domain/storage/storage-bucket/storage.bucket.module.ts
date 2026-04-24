@@ -1,10 +1,10 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { Profile } from '@domain/common/profile/profile.entity';
-import { ImageCompressionService } from '@domain/common/visual/image.compression.service';
-import { ImageConversionService } from '@domain/common/visual/image.conversion.service';
+import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
 import { AvatarCreatorModule } from '@services/external/avatar-creator/avatar.creator.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { Document } from '../document/document.entity';
@@ -19,8 +19,10 @@ import { StorageBucketAuthorizationService } from './storage.bucket.service.auth
   imports: [
     AvatarCreatorModule,
     DocumentModule,
+    FileServiceAdapterModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
+    TagsetModule,
     UrlGeneratorModule,
     TypeOrmModule.forFeature([StorageBucket]),
     TypeOrmModule.forFeature([Document]),
@@ -31,8 +33,6 @@ import { StorageBucketAuthorizationService } from './storage.bucket.service.auth
     StorageBucketService,
     StorageBucketResolverMutations,
     StorageBucketAuthorizationService,
-    ImageConversionService,
-    ImageCompressionService,
   ],
   exports: [StorageBucketService, StorageBucketAuthorizationService],
 })

@@ -4,7 +4,7 @@ import { TagsetModule } from '@domain/common/tagset/tagset.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { StorageServiceModule } from '@services/adapters/storage';
+import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
 import { Document } from './document.entity';
 import { DocumentResolverFields } from './document.resolver.fields';
 import { DocumentResolverMutations } from './document.resolver.mutations';
@@ -17,7 +17,7 @@ import { DocumentAuthorizationService } from './document.service.authorization';
     AuthorizationModule,
     TagsetModule,
     UserLookupModule,
-    StorageServiceModule,
+    FileServiceAdapterModule,
     TypeOrmModule.forFeature([Document]),
   ],
   providers: [

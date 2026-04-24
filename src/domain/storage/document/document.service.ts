@@ -1,24 +1,20 @@
-import { STORAGE_SERVICE } from '@common/constants';
 import { LogContext } from '@common/enums';
-import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
-import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { EntityNotFoundException } from '@common/exceptions';
-import { DocumentDeleteFailedException } from '@common/exceptions/document/document.delete.failed.exception';
-import { DocumentSaveFailedException } from '@common/exceptions/document/document.save.failed.exception';
-import { AuthorizationPolicy } from '@domain/common/authorization-policy';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
+import { tryRollback } from '@common/utils';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
-import { StorageService } from '@services/adapters/storage';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { Readable } from 'stream';
 import { FindOneOptions, Repository } from 'typeorm';
 import { Document } from './document.entity';
 import { IDocument } from './document.interface';
-import { CreateDocumentInput } from './dto/document.dto.create';
 import { DeleteDocumentInput } from './dto/document.dto.delete';
 import { UpdateDocumentInput } from './dto/document.dto.update';
 
@@ -28,60 +24,46 @@ export class DocumentService {
     private configService: ConfigService<AlkemioConfig, true>,
     private authorizationPolicyService: AuthorizationPolicyService,
     private tagsetService: TagsetService,
-    @Inject(STORAGE_SERVICE)
-    private storageService: StorageService,
     @InjectRepository(Document)
     private documentRepository: Repository<Document>,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService,
+    private fileServiceAdapter: FileServiceAdapter
   ) {}
-
-  public async createDocument(
-    documentInput: CreateDocumentInput
-  ): Promise<IDocument> {
-    const document: IDocument = Document.create({ ...documentInput });
-    document.tagset = this.tagsetService.createTagset({
-      name: TagsetReservedName.DEFAULT,
-      tags: [],
-    });
-
-    document.authorization = new AuthorizationPolicy(
-      AuthorizationPolicyType.DOCUMENT
-    );
-
-    return await this.documentRepository.save(document);
-  }
 
   public async deleteDocument(
     deleteData: DeleteDocumentInput
   ): Promise<IDocument> {
     const documentID = deleteData.ID;
-    const document = await this.getDocumentOrFail(documentID, {
-      relations: { tagset: true },
-    });
-    const DELETE_FILE = false;
-    if (DELETE_FILE) {
-      // Delete the underlying document
-      try {
-        await this.removeFile(document.externalID);
-      } catch (error: any) {
-        this.logger.error(
-          `Unable to delete underlying file for document '${documentID}': ${error}`,
-          error?.stack,
-          LogContext.STORAGE_BUCKET
-        );
-      }
+    // Read document before deletion (for return value)
+    const document = await this.getDocumentOrFail(documentID);
+
+    // Delegate deletion to Go file-service-go
+    const deleteResult =
+      await this.fileServiceAdapter.deleteDocument(documentID);
+
+    // Clean up server-owned entities using IDs from Go service response.
+    // Bind narrowed IDs into const locals so the closures don't re-widen them.
+    const authorizationId = deleteResult.authorizationId;
+    if (authorizationId) {
+      await tryRollback(
+        () => this.authorizationPolicyService.deleteById(authorizationId),
+        `Failed to delete auth policy ${authorizationId} after document deletion`,
+        this.logger,
+        LogContext.STORAGE_BUCKET
+      );
+    }
+    const tagsetId = deleteResult.tagsetId;
+    if (tagsetId) {
+      await tryRollback(
+        () => this.tagsetService.removeTagset(tagsetId),
+        `Failed to delete tagset ${tagsetId} after document deletion`,
+        this.logger,
+        LogContext.STORAGE_BUCKET
+      );
     }
 
-    if (document.authorization) {
-      await this.authorizationPolicyService.delete(document.authorization);
-    }
-    if (document.tagset) {
-      await this.tagsetService.removeTagset(document.tagset.id);
-    }
-
-    const result = await this.documentRepository.remove(document as Document);
-    result.id = documentID;
-    return result;
+    return document;
   }
 
   public async getDocumentOrFail(
@@ -97,8 +79,9 @@ export class DocumentService {
     });
     if (!document)
       throw new EntityNotFoundException(
-        `Not able to locate document with the specified ID: ${documentID}`,
-        LogContext.STORAGE_BUCKET
+        'Not able to locate document with the specified ID',
+        LogContext.STORAGE_BUCKET,
+        { documentID }
       );
     return document;
   }
@@ -116,14 +99,11 @@ export class DocumentService {
     });
     if (!document)
       throw new EntityNotFoundException(
-        `Not able to locate document with the specified external id: ${externalID}`,
-        LogContext.STORAGE_BUCKET
+        'Not able to locate document with the specified external id',
+        LogContext.STORAGE_BUCKET,
+        { externalID }
       );
     return document;
-  }
-
-  public async save(document: IDocument): Promise<IDocument> {
-    return await this.documentRepository.save(document);
   }
 
   public async getUploadedDate(documentID: string): Promise<Date> {
@@ -132,34 +112,39 @@ export class DocumentService {
     });
     if (!document)
       throw new EntityNotFoundException(
-        `Not able to locate document with the specified ID: ${documentID}`,
-        LogContext.STORAGE_BUCKET
+        'Not able to locate document with the specified ID',
+        LogContext.STORAGE_BUCKET,
+        { documentID }
       );
     return document.createdDate;
-  }
-
-  /**
-   * Retrieves the contents of a document as a Readable stream.
-   * @throws {Error} if the storage service fails to read the document.
-   */
-  public async getDocumentContents(document: IDocument): Promise<Readable> {
-    const content = await this.storageService.read(document.externalID);
-    return Readable.from(content);
   }
 
   public async updateDocument(
     documentData: UpdateDocumentInput
   ): Promise<IDocument> {
+    // The file-service-go does not support updating display name or other
+    // document metadata via PATCH — it only supports storageBucketId and
+    // temporaryLocation (used internally by the temporary-storage flow).
+    // Fail loudly here rather than silently dropping the input so clients
+    // don't assume success when no update happened.
+    if (documentData.displayName !== undefined) {
+      throw new ValidationException(
+        'Document display name cannot be updated via this mutation',
+        LogContext.STORAGE_BUCKET
+      );
+    }
+
     const document = await this.getDocumentOrFail(documentData.ID, {
       relations: { tagset: true },
     });
 
-    // Copy over the received data
+    // Tagset is server-managed — update via tagset service (not Go file-service)
     if (documentData.tagset) {
       if (!document.tagset) {
         throw new EntityNotFoundException(
-          `Document not initialised: ${document.id}`,
-          LogContext.CALENDAR
+          'Document not initialised',
+          LogContext.STORAGE_BUCKET,
+          { documentID: document.id }
         );
       }
       document.tagset = await this.tagsetService.updateTagset(
@@ -167,13 +152,7 @@ export class DocumentService {
       );
     }
 
-    await this.documentRepository.save(document);
-
     return document;
-  }
-
-  public async saveDocument(document: IDocument): Promise<IDocument> {
-    return await this.documentRepository.save(document);
   }
 
   public getPubliclyAccessibleURL(document: IDocument): string {
@@ -215,36 +194,5 @@ export class DocumentService {
       { infer: true }
     );
     return `${endpoint_cluster}${path_api_private_rest}/storage/document`;
-  }
-
-  private async removeFile(CID: string): Promise<boolean> {
-    try {
-      await this.storageService.delete(CID);
-    } catch (error: any) {
-      throw new DocumentDeleteFailedException(
-        `Removing file ${CID} failed!`,
-        LogContext.LOCAL_STORAGE,
-        {
-          message: error?.message,
-          originalException: error,
-        }
-      );
-    }
-    return true;
-  }
-
-  public async uploadFile(buffer: Buffer, fileName: string): Promise<string> {
-    try {
-      return await this.storageService.save(buffer);
-    } catch (error: any) {
-      throw new DocumentSaveFailedException(
-        `Uploading ${fileName} failed!`,
-        LogContext.LOCAL_STORAGE,
-        {
-          message: error?.message,
-          originalException: error,
-        }
-      );
-    }
   }
 }

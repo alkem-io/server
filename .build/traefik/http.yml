@@ -91,10 +91,25 @@ http:
         servers:
           - url: 'http://collaborative-document:4004/'
 
+    authorization-evaluation:
+      loadBalancer:
+        servers:
+          - url: 'h2c://authorization-evaluation:6060/'
+
+    wopi-service:
+      loadBalancer:
+        servers:
+          - url: 'http://wopi-service:8080/'
+
+    collabora:
+      loadBalancer:
+        servers:
+          - url: 'http://collabora:9980/'
+
     file-service:
       loadBalancer:
         servers:
-          - url: 'http://file-service:4003/'
+          - url: 'h2c://file-service:4003/'
 
   middlewares:
     strip-api-private-non-interactive-prefix:
@@ -261,6 +276,28 @@ http:
       entryPoints:
         - 'web'
 
+    # file-service-go internal endpoints.
+    # Placed on the public `web` entrypoint in the dev compose stack so the
+    # server (running on the host) can reach file-service via Traefik on
+    # localhost:3000. Production K8s deployments expose these endpoints only
+    # inside the cluster — the file-service Service is cluster-internal there
+    # and is never reachable from outside. This router's exposure is a dev
+    # convenience; do not replicate it in production manifests.
+    file-service-internal:
+      rule: 'PathPrefix(`/internal/file`)'
+      service: 'file-service'
+      entryPoints:
+        - 'web'
+      priority: 160
+
+    # file-service-go health endpoint
+    file-service-health:
+      rule: 'Path(`/file-service/health`)'
+      service: 'file-service'
+      entryPoints:
+        - 'web'
+      priority: 160
+
     # Login backoff proxy: intercepts login submissions for brute-force protection
     kratos-login-backoff:
       rule: 'PathPrefix(`/ory/kratos/public/self-service/login`)'
@@ -347,6 +384,36 @@ http:
       entryPoints:
         - 'mailslurper-client'
 
+    authorization-evaluation:
+      rule: 'PathPrefix(`/`)'
+      service: 'authorization-evaluation'
+      entryPoints:
+        - 'auth-evaluation'
+
+    # WOPI token issuance (through Oathkeeper for JWT auth)
+    wopi-token:
+      rule: 'PathPrefix(`/api/private/wopi/token`)'
+      service: 'oathkeeper-proxy'
+      middlewares:
+        - strip-api-private-prefix
+      entryPoints:
+        - 'web'
+      priority: 155
+
+    # WOPI protocol endpoints (direct, opaque token auth)
+    wopi-protocol:
+      rule: 'PathPrefix(`/`)'
+      service: 'wopi-service'
+      entryPoints:
+        - 'wopi'
+
+    # Collabora Online editor
+    collabora:
+      rule: 'PathPrefix(`/`)'
+      service: 'collabora'
+      entryPoints:
+        - 'collabora'
+
     rabbitmq-management:
       rule: 'PathPrefix(`/`)'
       service: 'rabbitmq-management'
@@ -416,3 +483,4 @@ tcp:
       service: 'matrix-adapter'
       entryPoints:
         - 'matrix-adapter'
+

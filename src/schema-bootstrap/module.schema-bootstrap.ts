@@ -54,7 +54,6 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { GeoLocationModule } from '@services/external/geo-location';
 import { WingbackManagerModule } from '@services/external/wingback';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
-import { FileIntegrationModule } from '@services/file-integration';
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
@@ -231,7 +230,6 @@ class SchemaBootstrapStubModule {}
     TaskGraphqlModule,
     ActivityFeedModule,
     WhiteboardIntegrationModule,
-    FileIntegrationModule,
     CollaborativeDocumentIntegrationModule,
     DomainPlatformSettingsModule,
     PlatformRoleModule,

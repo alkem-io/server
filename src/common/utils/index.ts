@@ -17,4 +17,5 @@ export * from './random.id.generator.util';
 export * from './random.util';
 export * from './string.util';
 export * from './stringify.util';
+export * from './try.rollback';
 export * from './untildify';

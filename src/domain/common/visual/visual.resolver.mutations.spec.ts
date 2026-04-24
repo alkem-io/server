@@ -175,7 +175,6 @@ describe('VisualResolverMutations', () => {
 
       const doc = { id: 'doc-1' } as any;
       visualService.uploadImageOnVisual.mockResolvedValueOnce(doc);
-      documentService.saveDocument.mockResolvedValueOnce(doc);
       documentAuthorizationService.applyAuthorizationPolicy.mockResolvedValueOnce(
         []
       );
@@ -242,7 +241,6 @@ describe('VisualResolverMutations', () => {
 
       const doc = { id: 'doc-1' } as any;
       visualService.uploadImageOnVisual.mockResolvedValueOnce(doc);
-      documentService.saveDocument.mockResolvedValueOnce(doc);
       documentAuthorizationService.applyAuthorizationPolicy.mockResolvedValueOnce(
         []
       );

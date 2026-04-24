@@ -32,6 +32,12 @@ entryPoints:
     address: ':15672'
   redis:
     address: ':6379'
+  auth-evaluation:
+    address: ':6060'
+  wopi:
+    address: ':8880'
+  collabora:
+    address: ':9980'
   hydra-public:
     address: ':4444'
   hydra-admin:

@@ -185,6 +185,12 @@ export class AuthorizationPolicyService {
     );
   }
 
+  async deleteById(authorizationPolicyId: string): Promise<void> {
+    await this.authorizationPolicyRepository.delete({
+      id: authorizationPolicyId,
+    });
+  }
+
   async save(
     authorizationPolicy: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy> {

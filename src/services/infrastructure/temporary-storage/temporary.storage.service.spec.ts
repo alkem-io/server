@@ -1,5 +1,6 @@
 import { DocumentService } from '@domain/storage/document/document.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -13,6 +14,9 @@ describe('TemporaryStorageService', () => {
     getDocumentOrFail: Mock;
     save: Mock;
   };
+  let fileServiceAdapter: {
+    updateDocument: Mock;
+  };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -22,6 +26,15 @@ describe('TemporaryStorageService', () => {
         TemporaryStorageService,
         MockCacheManager,
         MockWinstonProvider,
+        {
+          provide: FileServiceAdapter,
+          useValue: {
+            createDocument: vi.fn(),
+            getDocumentContent: vi.fn(),
+            updateDocument: vi.fn(),
+            deleteDocument: vi.fn(),
+          },
+        },
       ],
     })
       .useMocker(defaultMockerFactory)
@@ -29,6 +42,7 @@ describe('TemporaryStorageService', () => {
 
     service = module.get(TemporaryStorageService);
     documentService = module.get(DocumentService) as any;
+    fileServiceAdapter = module.get(FileServiceAdapter) as any;
   });
 
   describe('moveTemporaryDocuments', () => {
@@ -45,7 +59,11 @@ describe('TemporaryStorageService', () => {
         'https://alkem.io/api/private/rest/storage/document'
       );
       documentService.getDocumentOrFail.mockResolvedValue(mockDocument);
-      documentService.save.mockResolvedValue(mockDocument);
+      fileServiceAdapter.updateDocument.mockResolvedValue({
+        id: docId,
+        storageBucketId: storageBucket.id,
+        temporaryLocation: false,
+      });
 
       const inputDTO = {
         description: `Check out https://alkem.io/api/private/rest/storage/document/${docId}`,
@@ -53,9 +71,10 @@ describe('TemporaryStorageService', () => {
 
       await service.moveTemporaryDocuments(inputDTO, storageBucket);
 
-      expect(documentService.save).toHaveBeenCalledWith(mockDocument);
-      expect(mockDocument.storageBucket).toBe(storageBucket);
-      expect(mockDocument.temporaryLocation).toBe(false);
+      expect(fileServiceAdapter.updateDocument).toHaveBeenCalledWith(docId, {
+        storageBucketId: storageBucket.id,
+        temporaryLocation: false,
+      });
     });
 
     it('should not save documents that are not in temporary location', async () => {
@@ -76,7 +95,7 @@ describe('TemporaryStorageService', () => {
 
       await service.moveTemporaryDocuments(inputDTO, storageBucket);
 
-      expect(documentService.save).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.updateDocument).not.toHaveBeenCalled();
     });
 
     it('should handle input with no document URLs gracefully', async () => {
@@ -89,7 +108,7 @@ describe('TemporaryStorageService', () => {
       await service.moveTemporaryDocuments(inputDTO, storageBucket);
 
       expect(documentService.getDocumentOrFail).not.toHaveBeenCalled();
-      expect(documentService.save).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.updateDocument).not.toHaveBeenCalled();
     });
 
     it('should handle multiple document URLs in the same input', async () => {
@@ -104,7 +123,7 @@ describe('TemporaryStorageService', () => {
       documentService.getDocumentOrFail
         .mockResolvedValueOnce(doc1)
         .mockResolvedValueOnce(doc2);
-      documentService.save.mockResolvedValue(undefined);
+      fileServiceAdapter.updateDocument.mockResolvedValue(undefined);
 
       const inputDTO = {
         description: `Doc1: https://alkem.io/api/private/rest/storage/document/${docId1} and Doc2: https://alkem.io/api/private/rest/storage/document/${docId2}`,
@@ -112,7 +131,7 @@ describe('TemporaryStorageService', () => {
 
       await service.moveTemporaryDocuments(inputDTO, storageBucket);
 
-      expect(documentService.save).toHaveBeenCalledTimes(2);
+      expect(fileServiceAdapter.updateDocument).toHaveBeenCalledTimes(2);
     });
 
     it('should gracefully handle when getDocumentOrFail throws an error for a document URL', async () => {
@@ -131,7 +150,7 @@ describe('TemporaryStorageService', () => {
       // Should not throw - the service catches errors internally
       await service.moveTemporaryDocuments(inputDTO, storageBucket);
 
-      expect(documentService.save).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.updateDocument).not.toHaveBeenCalled();
     });
   });
 });
