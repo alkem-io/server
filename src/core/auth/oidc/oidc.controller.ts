@@ -1,5 +1,5 @@
 import { Controller, Get, Query, Req, Res } from '@nestjs/common';
-import { randomUUID } from 'crypto';
+import { randomUUID, timingSafeEqual } from 'crypto';
 import type { Request, Response } from 'express';
 import { generators, type TokenSet } from 'openid-client';
 import {
@@ -29,6 +29,7 @@ declare module 'express-session' {
 const OIDC_SCOPE = 'openid profile email offline_access alkemio';
 const ERROR_HTML =
   '<!doctype html><meta charset="utf-8"><title>Authentication failed</title><p>Authentication failed.</p>';
+const SESSION_COOKIE_NAME = 'alkemio_session';
 
 @Controller('api/auth/oidc')
 export class OidcController {
@@ -225,17 +226,106 @@ export class OidcController {
     res.redirect(302, targetReturnTo);
   }
 
-  @Get('logout')
-  logout() {
-    // T039 — implement local cleanup + Hydra end_session redirect
-    throw new Error('not implemented');
+  @Get('id-token-hint')
+  async idTokenHint(@Req() req: Request, @Res() res: Response): Promise<void> {
+    ensureCorrelationId(req, res);
+    const s = req.session;
+    const now = Math.floor(Date.now() / 1000);
+    const idToken = typeof s?.id_token === 'string' ? s.id_token : '';
+    const breached =
+      typeof s?.absolute_expires_at === 'number' && now > s.absolute_expires_at;
+    if (!idToken || breached) {
+      res.status(401).json({ error: 'unauthenticated' });
+      return;
+    }
+    res.setHeader('Cache-Control', 'no-store');
+    res.status(200).json({ id_token: idToken });
   }
 
-  @Get('id-token-hint')
-  idTokenHint() {
-    // T039 — return id_token from current session
-    throw new Error('not implemented');
+  @Get('logout')
+  async logout(
+    @Query('id_token_hint') hint: string | undefined,
+    @Query('post_logout_redirect_uri') postLogoutRedirectUri:
+      | string
+      | undefined,
+    @Req() req: Request,
+    @Res() res: Response
+  ): Promise<void> {
+    const correlationId = ensureCorrelationId(req, res);
+    const client = this.oidcService.getClient();
+    const rpId = client.metadata.client_id ?? null;
+    const s = req.session;
+    const storedIdToken = typeof s?.id_token === 'string' ? s.id_token : '';
+    const hasSessionCookie = !!req.cookies?.[SESSION_COOKIE_NAME];
+
+    if (!storedIdToken) {
+      res
+        .status(400)
+        .json({ error: hasSessionCookie ? 'session_not_found' : 'no_session' });
+      return;
+    }
+    if (typeof hint !== 'string' || hint.length === 0) {
+      res.status(400).json({ error: 'missing_id_token_hint' });
+      return;
+    }
+    if (!constantTimeStringEqual(hint, storedIdToken)) {
+      res.status(400).json({ error: 'invalid_id_token_hint' });
+      return;
+    }
+
+    const sub = typeof s.sub === 'string' ? s.sub : null;
+    const clientId = typeof s.client_id === 'string' ? s.client_id : null;
+
+    // FR-017d — local cleanup is unconditional and precedes Hydra redirect.
+    // Redis errors mid-destroy MUST NOT abort cookie clearance.
+    await new Promise<void>(resolve => {
+      try {
+        req.session.destroy(() => resolve());
+      } catch {
+        resolve();
+      }
+    });
+
+    res.cookie(SESSION_COOKIE_NAME, '', {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      secure: this.oidcService.getCookieSecure(),
+      maxAge: 0,
+    });
+
+    emitAudit({
+      event_type: 'session.ended',
+      outcome: 'success',
+      sub,
+      client_id: clientId,
+      correlation_id: correlationId,
+      request_id: correlationId,
+      rp_id: rpId,
+    });
+
+    const issuerMeta = this.oidcService.getIssuer().metadata as {
+      end_session_endpoint?: string;
+    };
+    const endSessionEndpoint = issuerMeta.end_session_endpoint;
+    if (!endSessionEndpoint) {
+      res.status(500).json({ error: 'end_session_endpoint_not_configured' });
+      return;
+    }
+    const url = new URL(endSessionEndpoint);
+    url.searchParams.set('id_token_hint', hint);
+    if (typeof postLogoutRedirectUri === 'string' && postLogoutRedirectUri) {
+      url.searchParams.set('post_logout_redirect_uri', postLogoutRedirectUri);
+    }
+    res.redirect(302, url.toString());
   }
+}
+
+function constantTimeStringEqual(a: string, b: string): boolean {
+  const ab = Buffer.from(a, 'utf8');
+  const bb = Buffer.from(b, 'utf8');
+  if (ab.length !== bb.length) return false;
+  return timingSafeEqual(ab, bb);
 }
 
 function rejectCallback(
