@@ -25,14 +25,15 @@ export class OidcService implements OnModuleInit {
   ) {}
 
   async onModuleInit(): Promise<void> {
-    const { issuer_url, web_client_id } = this.configService.get(
-      'identity.authentication.providers.oidc',
-      { infer: true }
-    );
+    const { issuer_url, web_client_id, web_redirect_uri } =
+      this.configService.get('identity.authentication.providers.oidc', {
+        infer: true,
+      });
 
     this.issuer = await Issuer.discover(issuer_url);
     this.client = new this.issuer.Client({
       client_id: web_client_id,
+      redirect_uris: [web_redirect_uri],
       token_endpoint_auth_method: 'none',
       response_types: ['code'],
     });

@@ -174,6 +174,13 @@ http:
         - 'web'
       priority: 130
 
+    api-auth-oidc:
+      rule: 'PathPrefix(`/api/auth`)'
+      service: 'alkemio-server'
+      entryPoints:
+        - 'web'
+      priority: 145
+
     hydra-public:
       rule: 'PathPrefix(`/.well-known/`) || PathPrefix(`/oauth2/`)'
       service: 'hydra'

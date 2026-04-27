@@ -216,6 +216,10 @@ identity:
         jwks_url: ${HYDRA_JWKS_URL}:http://localhost:3000/.well-known/jwks.json
         # Hydra client_id registered for alkemio-client-web (public client, PKCE-S256).
         web_client_id: ${ALKEMIO_WEB_CLIENT_ID}:alkemio-web
+        # Redirect URI registered with Hydra for the alkemio-web client. MUST match the
+        # entry in the Hydra OAuth2Client CRD / local-dev seed exactly. Per-env overlays
+        # set the public hostname; local-dev defaults to the loopback callback path.
+        web_redirect_uri: ${OIDC_WEB_REDIRECT_URI}:http://localhost:3000/api/auth/oidc/callback
         # Comma-separated allow-list of aud values accepted on Bearer JWTs (FR-024).
         bearer_aud_allow_list: ${BEARER_AUD_ALLOW_LIST}:alkemio-web,synapse-client,element-client,ecosystem-analytics
         # Refresh-token rotation leeway in seconds (FR-008 grace window overlap).

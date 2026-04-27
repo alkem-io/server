@@ -69,6 +69,7 @@ export type AlkemioConfig = {
           issuer_url: string;
           jwks_url: string;
           web_client_id: string;
+          web_redirect_uri: string;
           bearer_aud_allow_list: string;
           refresh_leeway_s: number;
           pre_auth_cookie_signing_key: string;

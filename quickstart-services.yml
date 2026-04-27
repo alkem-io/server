@@ -243,6 +243,7 @@ services:
       - OIDC_WEB_BASE_URL=http://localhost:3000
       - OIDC_ALKEMIO_SERVER_URL
       - OIDC_ALKEMIO_IDENTITY_RESOLVE_PATH
+      - OIDC_PRE_CONSENT_CLIENT_IDS=alkemio-web,synapse-client,element-client,ecosystem-analytics
       - DATABASE_HOST
       - DATABASE_PORT
       - DATABASE_USERNAME
