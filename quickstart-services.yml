@@ -166,8 +166,11 @@ services:
               \"grant_types\": [\"authorization_code\", \"refresh_token\"],
               \"response_types\": [\"code\"],
               \"redirect_uris\": [\"$$SYNAPSE_PUBLIC_URL/_synapse/client/oidc/callback\"],
-              \"scope\": \"openid profile email\",
-              \"token_endpoint_auth_method\": \"client_secret_basic\"
+              \"scope\": \"openid profile email alkemio\",
+              \"token_endpoint_auth_method\": \"client_secret_basic\",
+              \"access_token_lifespan\": \"10m\",
+              \"refresh_token_lifespan\": \"336h\",
+              \"id_token_lifespan\": \"10m\"
             }"
           echo "Client updated successfully"
           exit 0
@@ -183,8 +186,11 @@ services:
             \"grant_types\": [\"authorization_code\", \"refresh_token\"],
             \"response_types\": [\"code\"],
             \"redirect_uris\": [\"$$SYNAPSE_PUBLIC_URL/_synapse/client/oidc/callback\"],
-            \"scope\": \"openid profile email\",
-            \"token_endpoint_auth_method\": \"client_secret_basic\"
+            \"scope\": \"openid profile email alkemio\",
+            \"token_endpoint_auth_method\": \"client_secret_basic\",
+            \"access_token_lifespan\": \"10m\",
+            \"refresh_token_lifespan\": \"336h\",
+            \"id_token_lifespan\": \"10m\"
           }"
 
         if [ $$? -eq 0 ]; then

@@ -16,6 +16,8 @@ import { Client, Issuer } from 'openid-client';
 export class OidcService implements OnModuleInit {
   private issuer?: Issuer<Client>;
   private client?: Client;
+  private preAuthKeyCached?: Uint8Array;
+  private cookieSecureCached?: boolean;
 
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
@@ -54,5 +56,29 @@ export class OidcService implements OnModuleInit {
       );
     }
     return this.client;
+  }
+
+  getPreAuthSigningKey(): Uint8Array {
+    if (!this.preAuthKeyCached) {
+      const { pre_auth_cookie_signing_key } = this.configService.get(
+        'identity.authentication.providers.oidc',
+        { infer: true }
+      );
+      this.preAuthKeyCached = new TextEncoder().encode(
+        pre_auth_cookie_signing_key
+      );
+    }
+    return this.preAuthKeyCached;
+  }
+
+  getCookieSecure(): boolean {
+    if (this.cookieSecureCached === undefined) {
+      const { cookie } = this.configService.get(
+        'identity.authentication.providers.oidc',
+        { infer: true }
+      );
+      this.cookieSecureCached = !!cookie?.secure;
+    }
+    return this.cookieSecureCached;
   }
 }
