@@ -31,6 +31,42 @@ const ERROR_HTML =
   '<!doctype html><meta charset="utf-8"><title>Authentication failed</title><p>Authentication failed.</p>';
 const SESSION_COOKIE_NAME = 'alkemio_session';
 
+// FR-022c — teardown thresholds for persistent refresh failures.
+const REFRESH_FAILURE_COUNT_THRESHOLD = 3;
+const REFRESH_FAILURE_STREAK_SECONDS = 5 * 60;
+
+// FR-022a — back-to-back dedupe window. If two requests arrive in quick
+// succession on the same session, the second sees `last_refreshed_at` set
+// by the first and short-circuits without calling Hydra. Refcount handles
+// true overlap; this handles fast sequential cases (mocks, healthy network).
+const REFRESH_DEDUP_WINDOW_SECONDS = 30;
+
+type RefreshOutcome =
+  | { kind: 'success'; tokenSet: TokenSet }
+  | { kind: 'temporary'; error_code: string }
+  | { kind: 'terminal'; error_code: string };
+
+type RefreshInFlightEntry = {
+  promise: Promise<RefreshOutcome>;
+  refs: number;
+};
+
+// FR-022a — process-local single-flight map keyed by session id. The entry
+// is reference-counted so concurrent handlers share a single Hydra call;
+// the entry is removed only after the last awaiting handler completes its
+// post-outcome work (rotation + session.save + response). When OidcModule
+// grows a Redis dependency, swap for `acquireRefreshLock` from
+// `refresh-lock.ts` (T010) with identical single-flight semantics.
+const refreshInFlight = new Map<string, RefreshInFlightEntry>();
+
+const TERMINAL_REFRESH_ERRORS = new Set([
+  'invalid_grant',
+  'invalid_client',
+  'invalid_request',
+  'unauthorized_client',
+  'unsupported_grant_type',
+]);
+
 @Controller('api/auth/oidc')
 export class OidcController {
   constructor(private readonly oidcService: OidcService) {}
@@ -226,6 +262,172 @@ export class OidcController {
     res.redirect(302, targetReturnTo);
   }
 
+  @Get('refresh')
+  async refresh(@Req() req: Request, @Res() res: Response): Promise<void> {
+    const correlationId = ensureCorrelationId(req, res);
+    const client = this.oidcService.getClient();
+    const rpId = client.metadata.client_id ?? null;
+    const s = req.session;
+    const refreshToken = typeof s?.refresh_token === 'string' ? s.refresh_token : '';
+    if (!refreshToken) {
+      res.status(401).json({ error: 'no_session' });
+      return;
+    }
+
+    const sid = req.sessionID;
+    const sub = typeof s.sub === 'string' ? s.sub : null;
+    const clientId = typeof s.client_id === 'string' ? s.client_id : null;
+
+    // FR-022a — skip if a successful rotation just happened on this session
+    // (back-to-back dedupe). Refcount handles overlapping awaits; this handles
+    // fast sequential bursts where the first handler fully completes before
+    // the second enters.
+    const nowEpoch = Math.floor(Date.now() / 1000);
+    const lastRefreshed = typeof s.last_refreshed_at === 'number' ? s.last_refreshed_at : null;
+    if (
+      lastRefreshed !== null &&
+      nowEpoch - lastRefreshed < REFRESH_DEDUP_WINDOW_SECONDS
+    ) {
+      res.status(204).end();
+      return;
+    }
+
+    let entry = refreshInFlight.get(sid);
+    if (!entry) {
+      const promise = (async (): Promise<RefreshOutcome> => {
+        try {
+          const ts = await client.refresh(refreshToken);
+          return { kind: 'success', tokenSet: ts };
+        } catch (err: unknown) {
+          const code = extractErrorCode(err);
+          if (code === 'temporarily_unavailable') {
+            return { kind: 'temporary', error_code: code };
+          }
+          if (TERMINAL_REFRESH_ERRORS.has(code)) {
+            return { kind: 'terminal', error_code: code };
+          }
+          // Unknown shape → treat as terminal (FR-022 default-deny).
+          return { kind: 'terminal', error_code: code };
+        }
+      })();
+      entry = { promise, refs: 0 };
+      refreshInFlight.set(sid, entry);
+    }
+    entry.refs += 1;
+    try {
+      const outcome = await entry.promise;
+
+      const now = Math.floor(Date.now() / 1000);
+
+      if (outcome.kind === 'success') {
+      const ts = outcome.tokenSet;
+      // FR-008 — rotate RP-local tokens; absolute_expires_at preserved (14-day ceiling).
+      s.access_token = ts.access_token ?? s.access_token;
+      s.id_token = ts.id_token ?? s.id_token;
+      s.refresh_token = ts.refresh_token ?? s.refresh_token;
+      s.expires_at = ts.expires_at ?? now;
+      s.refresh_failure_count = 0;
+      s.refresh_failure_streak_started_at = null;
+      s.last_refreshed_at = now;
+      await new Promise<void>((resolve, reject) => {
+        req.session.save(err => (err ? reject(err) : resolve()));
+      });
+      emitAudit({
+        event_type: 'session.refresh.rotated',
+        outcome: 'success',
+        sub,
+        client_id: clientId,
+        correlation_id: correlationId,
+        request_id: correlationId,
+        rp_id: rpId,
+      });
+      res.status(204).end();
+      return;
+    }
+
+    if (outcome.kind === 'temporary') {
+      // FR-022 — do NOT rotate, do NOT tear down on a single transient blip.
+      // FR-022c — count toward thresholds: 3 failures OR 5-min streak.
+      const nextCount = (s.refresh_failure_count ?? 0) + 1;
+      const streakStart = s.refresh_failure_streak_started_at ?? now;
+      s.refresh_failure_count = nextCount;
+      s.refresh_failure_streak_started_at = streakStart;
+
+      const teardown =
+        nextCount >= REFRESH_FAILURE_COUNT_THRESHOLD ||
+        now - streakStart >= REFRESH_FAILURE_STREAK_SECONDS;
+
+      if (teardown) {
+        await this.tearDownSession(req, res);
+        emitAudit({
+          event_type: 'session.refresh_persistent_failure',
+          outcome: 'failure',
+          sub,
+          client_id: clientId,
+          correlation_id: correlationId,
+          request_id: correlationId,
+          rp_id: rpId,
+          error_code: outcome.error_code,
+        });
+        res.status(401).json({ error: 'session_terminated' });
+        return;
+      }
+
+      await new Promise<void>((resolve, reject) => {
+        req.session.save(err => (err ? reject(err) : resolve()));
+      });
+      emitAudit({
+        event_type: 'session.refresh.temporarily_unavailable',
+        outcome: 'warn',
+        sub,
+        client_id: clientId,
+        correlation_id: correlationId,
+        request_id: correlationId,
+        rp_id: rpId,
+        error_code: outcome.error_code,
+      });
+      res.status(503).json({ error: 'temporarily_unavailable' });
+      return;
+    }
+
+      // outcome.kind === 'terminal' — invalid_grant / invalid_client / etc.
+      await this.tearDownSession(req, res);
+      emitAudit({
+        event_type: 'session.refresh_persistent_failure',
+        outcome: 'failure',
+        sub,
+        client_id: clientId,
+        correlation_id: correlationId,
+        request_id: correlationId,
+        rp_id: rpId,
+        error_code: outcome.error_code,
+      });
+      res.status(401).json({ error: 'session_terminated' });
+    } finally {
+      entry.refs -= 1;
+      if (entry.refs === 0 && refreshInFlight.get(sid) === entry) {
+        refreshInFlight.delete(sid);
+      }
+    }
+  }
+
+  private async tearDownSession(req: Request, res: Response): Promise<void> {
+    await new Promise<void>(resolve => {
+      try {
+        req.session.destroy(() => resolve());
+      } catch {
+        resolve();
+      }
+    });
+    res.cookie(SESSION_COOKIE_NAME, '', {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      secure: this.oidcService.getCookieSecure(),
+      maxAge: 0,
+    });
+  }
+
   @Get('id-token-hint')
   async idTokenHint(@Req() req: Request, @Res() res: Response): Promise<void> {
     ensureCorrelationId(req, res);
@@ -343,6 +545,15 @@ function rejectCallback(
     rp_id: rpId,
   });
   res.status(400).type('html').send(ERROR_HTML);
+}
+
+function extractErrorCode(err: unknown): string {
+  if (err && typeof err === 'object') {
+    const e = err as { error?: unknown; message?: unknown };
+    if (typeof e.error === 'string' && e.error.length > 0) return e.error;
+    if (typeof e.message === 'string' && e.message.length > 0) return e.message;
+  }
+  return 'unknown';
 }
 
 function ensureCorrelationId(req: Request, res: Response): string {

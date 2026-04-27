@@ -13,6 +13,7 @@ export type AlkemioSessionPayload = {
   alkemio_actor_id?: string | null;
   refresh_failure_count: number;
   refresh_failure_streak_started_at: number | null;
+  last_refreshed_at?: number | null;
   created_at: number;
   client_id: string;
   request_context_cache?: { display_name?: string; email?: string } | null;
