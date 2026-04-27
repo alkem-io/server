@@ -1,10 +1,7 @@
 import { LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
-import {
-  AUTH_STRATEGY_OATHKEEPER_API_TOKEN,
-  AUTH_STRATEGY_OATHKEEPER_JWT,
-} from '@core/authentication';
+import { AUTH_STRATEGY_OIDC_COOKIE_SESSION } from '@core/auth/oidc/strategies/strategy.names';
 import {
   CallHandler,
   ContextType,
@@ -69,10 +66,12 @@ const getRequest = (context: ExecutionContext) => {
 // Promisified passport.authenticate
 const passportAuthenticate = async (req: IncomingMessage) => {
   return new Promise<ActorContext>((resolve, reject) => {
-    // Use the same passport strategy ('jwt') and options
+    // T042a — cookie-session only. T042b appends 'hydra-bearer' to this
+    // chain once the Bearer strategy lands (atomic with T043/T044 cutover).
     passport.authenticate(
-      [AUTH_STRATEGY_OATHKEEPER_JWT, AUTH_STRATEGY_OATHKEEPER_API_TOKEN],
-      // session: false option is crucial for stateless JWT authentication
+      [AUTH_STRATEGY_OIDC_COOKIE_SESSION],
+      // session: false — passport never writes to express-session here.
+      // The cookie-session strategy reads `alkemio_session` itself.
       { session: false },
       (
         err: Error | string | null,

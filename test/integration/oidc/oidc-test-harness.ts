@@ -5,11 +5,25 @@ import {
   PRE_AUTH_COOKIE_PATH,
   signPreAuthCookie,
 } from '@core/auth/oidc/pre-auth-cookie';
+import type {
+  AlkemioSessionPayload,
+  SessionStoreHandle,
+} from '@core/auth/oidc/session-store.redis';
+import { cookieSessionStoreUnavailableMiddleware } from '@core/auth/oidc/strategies/cookie-session.exception-filter';
+import { CookieSessionStrategy } from '@core/auth/oidc/strategies/cookie-session.strategy';
+import { SESSION_STORE_HANDLE } from '@core/auth/oidc/strategies/cookie-session.errors';
+import { AUTH_STRATEGY_OIDC_COOKIE_SESSION } from '@core/auth/oidc/strategies/strategy.names';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
-import express, { type Request, type RequestHandler } from 'express';
+import express, {
+  type NextFunction,
+  type Request,
+  type RequestHandler,
+  type Response,
+} from 'express';
 import session from 'express-session';
+import passport from 'passport';
 import { vi } from 'vitest';
 
 export const PRE_AUTH_KEY_BYTES = new Uint8Array(32).fill(3);
@@ -109,17 +123,73 @@ export type OidcHarness = {
   preAuthCookie(
     payload?: Partial<Parameters<typeof signPreAuthCookie>[0]>
   ): Promise<string>;
+  sessionStore: ToggleableSessionStore;
+  simulateRedisFailure(): void;
+  simulateRedisRecovery(): void;
 };
+
+export type ToggleableSessionStore = SessionStoreHandle & {
+  setFailing(failing: boolean): void;
+  put(sid: string, payload: AlkemioSessionPayload): void;
+};
+
+function buildToggleableSessionStore(): ToggleableSessionStore {
+  const data = new Map<string, AlkemioSessionPayload>();
+  let failing = false;
+  const failOrPass = <T>(): Promise<T> => {
+    if (failing) {
+      // Surface the actual ioredis-style symptom: a connection-level error.
+      // The strategy maps any thrown value into SessionStoreUnavailableError.
+      return Promise.reject(new Error('ECONNREFUSED'));
+    }
+    return undefined as unknown as Promise<T>;
+  };
+  return {
+    setFailing(value) {
+      failing = value;
+    },
+    put(sid, payload) {
+      data.set(sid, payload);
+    },
+    async get(sid) {
+      if (failing) {
+        await failOrPass<never>();
+      }
+      return data.get(sid) ?? null;
+    },
+    async create(sid, payload) {
+      if (failing) await failOrPass<never>();
+      data.set(sid, payload);
+    },
+    async update(sid, payload) {
+      if (failing) await failOrPass<never>();
+      data.set(sid, payload);
+    },
+    async destroy(sid) {
+      if (failing) await failOrPass<never>();
+      data.delete(sid);
+    },
+  };
+}
 
 export async function createOidcHarness(
   opts: { middleware?: RequestHandler[] } = {}
 ): Promise<OidcHarness> {
   const oidcService = buildOidcServiceMock();
+  const sessionStore = buildToggleableSessionStore();
 
   const moduleRef = await Test.createTestingModule({
     controllers: [OidcController],
-    providers: [{ provide: OidcService, useValue: oidcService }],
+    providers: [
+      { provide: OidcService, useValue: oidcService },
+      { provide: SESSION_STORE_HANDLE, useValue: sessionStore },
+      CookieSessionStrategy,
+    ],
   }).compile();
+
+  // Instantiate so the @nestjs/passport mixin registers the strategy globally
+  // via passport.use('cookie-session', this).
+  moduleRef.get(CookieSessionStrategy);
 
   const app = moduleRef.createNestApplication();
   app.use(cookieParser());
@@ -139,6 +209,42 @@ export async function createOidcHarness(
       },
     })
   );
+  app.use(passport.initialize());
+  // Stand-in /api/private/graphql to exercise the cookie-session strategy
+  // end-to-end. T042a will replace this with the real GraphQL pipeline; the
+  // contract validated here (FR-022b) is identical. Custom-callback form is
+  // used so the no-session (401) path can re-issue the alkemio_session cookie
+  // and never emit max-age=0 — FR-022b "MUST NOT clear cookie".
+  app.use(
+    '/api/private/graphql',
+    (req: Request, res: Response, next: NextFunction) => {
+      passport.authenticate(
+        AUTH_STRATEGY_OIDC_COOKIE_SESSION,
+        { session: false },
+        (err: unknown, user: unknown) => {
+          if (err) return next(err);
+          const sid = req.cookies?.alkemio_session;
+          if (typeof sid === 'string' && sid.length > 0) {
+            res.cookie('alkemio_session', sid, {
+              httpOnly: true,
+              sameSite: 'lax',
+              path: '/',
+            });
+          }
+          if (!user) {
+            res.status(401).json({ error: 'unauthenticated' });
+            return;
+          }
+          (req as Request & { user?: unknown }).user = user;
+          next();
+        }
+      )(req, res, next);
+    },
+    (_req: Request, res: Response) => {
+      res.status(200).json({ data: { me: { id: 'placeholder' } } });
+    }
+  );
+  app.use(cookieSessionStoreUnavailableMiddleware);
   for (const mw of opts.middleware ?? []) app.use(mw);
   await app.init();
 
@@ -146,6 +252,13 @@ export async function createOidcHarness(
     app,
     oidcService,
     sessionCookieName: 'alkemio_session',
+    sessionStore,
+    simulateRedisFailure() {
+      sessionStore.setFailing(true);
+    },
+    simulateRedisRecovery() {
+      sessionStore.setFailing(false);
+    },
     async preAuthCookie(payload = {}) {
       const full = {
         state: FIXED_STATE,
