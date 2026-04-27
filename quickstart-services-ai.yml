@@ -528,7 +528,7 @@ services:
   virtual_contributor_engine_guidance:
     container_name: alkemio_dev_virtual_contributor_engine_guidance
     hostname: virtual-contributor-engine-guidance
-    image: alkemio/virtual-contributor:local
+    image: alkemio/virtual-contributor:v0.1.2
     restart: always
     networks:
       - alkemio_dev_net
@@ -547,15 +547,21 @@ services:
       - MISTRAL_API_KEY
       - MISTRAL_BASE_URL
       - MISTRAL_SMALL_MODEL_NAME
+      - LLM_BASE_URL
+      - EMBEDDINGS_API_KEY
+      - EMBEDDINGS_ENDPOINT
+      - EMBEDDINGS_MODEL_NAME
+      - GUIDANCE_MIN_SCORE
       - LOG_LEVEL=DEBUG
       - VECTOR_DB_PORT
       - VECTOR_DB_HOST
       - VECTOR_DB_CREDENTIALS
+      - VECTOR_DB_DISTANCE_FN
 
   virtual-contributor-engine-expert:
     container_name: alkemio_dev_virtual_contributor_engine_expert
     hostname: virtual-contributor-engine-expert
-    image: alkemio/virtual-contributor:local
+    image: alkemio/virtual-contributor:v0.1.2
     restart: always
     networks:
       - alkemio_dev_net
@@ -574,17 +580,23 @@ services:
       - MISTRAL_API_KEY
       - MISTRAL_BASE_URL
       - MISTRAL_SMALL_MODEL_NAME
+      - LLM_BASE_URL
+      - EMBEDDINGS_API_KEY
+      - EMBEDDINGS_ENDPOINT
+      - EMBEDDINGS_MODEL_NAME
+      - EXPERT_MIN_SCORE
       - LOG_LEVEL=DEBUG
       - VECTOR_DB_PORT
       - VECTOR_DB_HOST
       - VECTOR_DB_CREDENTIALS
+      - VECTOR_DB_DISTANCE_FN
 
   virtual_contributor_ingest_website:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_ingest_website
     hostname: virtual-contributor-ingest-website
-    image: alkemio/virtual-contributor:local
+    image: alkemio/virtual-contributor:v0.1.2
     restart: always
     networks:
       - alkemio_dev_net
@@ -603,6 +615,17 @@ services:
       - MISTRAL_API_KEY
       - MISTRAL_BASE_URL
       - MISTRAL_SMALL_MODEL_NAME
+      - LLM_BASE_URL
+      - SUMMARIZE_LLM_PROVIDER
+      - SUMMARIZE_LLM_MODEL
+      - SUMMARIZE_LLM_API_KEY
+      - SUMMARIZE_LLM_BASE_URL
+      - SUMMARIZE_LLM_TIMEOUT
+      - BOK_LLM_PROVIDER
+      - BOK_LLM_MODEL
+      - BOK_LLM_API_KEY
+      - BOK_LLM_BASE_URL
+      - BOK_LLM_TIMEOUT
       - EMBEDDINGS_API_KEY
       - EMBEDDINGS_ENDPOINT
       - EMBEDDINGS_MODEL_NAME
@@ -610,6 +633,9 @@ services:
       - VECTOR_DB_PORT
       - VECTOR_DB_HOST
       - VECTOR_DB_CREDENTIALS
+      - VECTOR_DB_DISTANCE_FN
+      - INGEST_BATCH_SIZE=3
+      - PIPELINE_TIMEOUT=10800
 
   virtual_contributor_engine_libra_flow:
     extra_hosts:
@@ -663,7 +689,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_ingest_space
     hostname: virtual-contributor-ingest-space
-    image: alkemio/virtual-contributor:local
+    image: alkemio/virtual-contributor:v0.1.2
     restart: always
     depends_on:
       rabbitmq:
@@ -678,17 +704,29 @@ services:
       - RABBITMQ_EVENT_BUS_EXCHANGE
       - RABBITMQ_RESULT_ROUTING_KEY=IngestSpaceResult
       - MISTRAL_API_KEY
-      - MISTRAL_BASE_URL=http://localhost:8088
+      - MISTRAL_BASE_URL
       - MISTRAL_SMALL_MODEL_NAME
+      - LLM_BASE_URL
+      - SUMMARIZE_LLM_PROVIDER
+      - SUMMARIZE_LLM_MODEL
+      - SUMMARIZE_LLM_API_KEY
+      - SUMMARIZE_LLM_BASE_URL
+      - SUMMARIZE_LLM_TIMEOUT
+      - BOK_LLM_PROVIDER
+      - BOK_LLM_MODEL
+      - BOK_LLM_API_KEY
+      - BOK_LLM_BASE_URL
+      - BOK_LLM_TIMEOUT
       - EMBEDDINGS_API_KEY
-      - EMBEDDINGS_ENDPOINT=http://localhost:8088/v1
+      - EMBEDDINGS_ENDPOINT
       - EMBEDDINGS_MODEL_NAME
       - LOG_LEVEL=DEBUG
       - VECTOR_DB_HOST=localhost
       - VECTOR_DB_PORT=8765
       - VECTOR_DB_CREDENTIALS
-      - AUTH_ADMIN_EMAIL
-      - AUTH_ADMIN_PASSWORD
+      - VECTOR_DB_DISTANCE_FN
+      - AUTH_ADMIN_EMAIL=valentin_admin@alkem.io
+      - AUTH_ADMIN_PASSWORD=@lk3m10!
       - API_ENDPOINT_PRIVATE_GRAPHQL=http://localhost:3000/api/private/non-interactive/graphql
       - AUTH_ORY_KRATOS_PUBLIC_BASE_URL=http://localhost:3000/ory/kratos/public
       - CHUNK_SIZE=1000
@@ -697,7 +735,7 @@ services:
   virtual_contributor_engine_generic:
     container_name: alkemio_dev_virtual_contributor_engine_generic
     hostname: virtual-contributor-engine-generic
-    image: alkemio/virtual-contributor:local
+    image: alkemio/virtual-contributor:v0.1.2
     restart: always
     networks:
       - alkemio_dev_net
@@ -721,7 +759,7 @@ services:
   virtual_contributor_engine_openai_assistant:
     container_name: alkemio_dev_virtual_contributor_engine_openai_assistant
     hostname: virtual-contributor-engine-openai-assistant
-    image: alkemio/virtual-contributor:local
+    image: alkemio/virtual-contributor:v0.1.2
     restart: always
     networks:
       - alkemio_dev_net
