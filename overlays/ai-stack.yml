@@ -21,7 +21,7 @@ services:
     container_name: alkemio_dev_chromadb
     hostname: chromadb
     volumes:
-      - chroma-data:/chroma/chroma
+      - chroma-data:/data
     networks:
       - alkemio_dev_net
     ports:
