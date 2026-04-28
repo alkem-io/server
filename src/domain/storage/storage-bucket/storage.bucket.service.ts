@@ -205,7 +205,8 @@ export class StorageBucketService {
     filename: string,
     mimeType: string,
     userID?: string,
-    temporaryLocation = false
+    temporaryLocation = false,
+    skipDedup = false
   ): Promise<IDocument> {
     const storage = await this.getStorageBucketOrFail(storageBucketId, {
       relations: {},
@@ -245,6 +246,7 @@ export class StorageBucketService {
         temporaryLocation,
         allowedMimeTypes: storage.allowedMimeTypes.join(','),
         maxFileSize: storage.maxFileSize,
+        skipDedup: skipDedup || undefined,
       });
 
       // Load the document with relations needed for auth. On a dedup reuse

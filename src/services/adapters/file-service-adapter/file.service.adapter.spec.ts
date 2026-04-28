@@ -98,6 +98,59 @@ describe('FileServiceAdapter', () => {
       expect(callArgs.url).toBe('http://file-service:4003/internal/file');
     });
 
+    it('sends skipDedup=true as a multipart form field when set', async () => {
+      const responseData = {
+        id: 'doc-skip',
+        externalID: 'ext-skip',
+        mimeType: 'image/png',
+        size: 0,
+        reused: false,
+      };
+
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(responseData, 201))
+      );
+
+      await adapter.createDocument(Buffer.alloc(0), {
+        displayName: 'placeholder.docx',
+        storageBucketId: 'bucket-1',
+        authorizationId: 'auth-1',
+        tagsetId: 'tagset-1',
+        skipDedup: true,
+      });
+
+      // FormData carries the field as a serialized stream; assert via the
+      // serialized buffer rather than introspection.
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      const serialized = callArgs.data.getBuffer().toString('utf8');
+      expect(serialized).toContain('name="skipDedup"');
+      expect(serialized).toMatch(/name="skipDedup"\r\n\r\ntrue/);
+    });
+
+    it('omits skipDedup when not set (preserves dedup default)', async () => {
+      const responseData = {
+        id: 'doc-default',
+        externalID: 'ext-default',
+        mimeType: 'image/png',
+        size: 4,
+        reused: false,
+      };
+
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(responseData, 201))
+      );
+
+      await adapter.createDocument(Buffer.from('data'), {
+        displayName: 'avatar.png',
+        storageBucketId: 'bucket-1',
+        authorizationId: 'auth-1',
+      });
+
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      const serialized = callArgs.data.getBuffer().toString('utf8');
+      expect(serialized).not.toContain('name="skipDedup"');
+    });
+
     it('should throw FileServiceAdapterException on 4xx error', async () => {
       const axiosError = new AxiosError('Bad Request', '400', undefined, null, {
         status: 400,
