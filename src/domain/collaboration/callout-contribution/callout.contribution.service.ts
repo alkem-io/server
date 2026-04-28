@@ -132,6 +132,22 @@ export class CalloutContributionService {
     contribution: ICalloutContribution,
     contributionData: CreateCalloutContributionInput
   ): Promise<ICalloutContribution> {
+    // Fail fast on shape divergence: a persisted post/whiteboard without
+    // matching input means the caller wired up the contribution but lost
+    // the original input data. Silent skip would leave the post/whiteboard
+    // un-materialized (description URLs unre-homed, visuals unattached).
+    if (contribution.post && !contributionData.post) {
+      throw new ValidationException(
+        'Post materialization input missing for post contribution',
+        LogContext.COLLABORATION
+      );
+    }
+    if (contribution.whiteboard && !contributionData.whiteboard) {
+      throw new ValidationException(
+        'Whiteboard materialization input missing for whiteboard contribution',
+        LogContext.COLLABORATION
+      );
+    }
     if (contribution.post && contributionData.post) {
       await this.postService.materializePostContent(
         contribution.post,

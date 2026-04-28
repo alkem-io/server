@@ -617,10 +617,18 @@ export class CalloutService {
     const saved = await this.contributionService.save(contribution);
     // Phase 2: now that the contribution + nested entity profile + bucket
     // are persisted, re-home any internal Alkemio URLs and attach visuals.
-    await this.contributionService.materializeCalloutContributionContent(
-      saved,
-      contributionData
-    );
+    // If materialization fails after persistence, compensate by deleting
+    // the saved contribution so the mutation appears atomic to the caller —
+    // otherwise the half-materialized contribution would linger in the DB.
+    try {
+      await this.contributionService.materializeCalloutContributionContent(
+        saved,
+        contributionData
+      );
+    } catch (error) {
+      await this.contributionService.delete(saved.id).catch(() => undefined);
+      throw error;
+    }
     return saved;
   }
 
