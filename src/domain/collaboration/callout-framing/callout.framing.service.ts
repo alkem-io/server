@@ -199,15 +199,14 @@ export class CalloutFramingService {
       `${memoData.profile?.displayName ?? 'memo'}`,
       reservedNameIDs
     );
+    // Memo's framing context wants both CARD (its own default) and BANNER
+    // (framing-specific). Pass the union so createMemo materializes both
+    // post-save in one shot.
     calloutFraming.memo = await this.memoService.createMemo(
       memoData,
       storageAggregator,
-      userID
-    );
-    await this.profileService.addVisualsOnProfile(
-      calloutFraming.memo.profile,
-      memoData.profile?.visuals,
-      [VisualType.BANNER]
+      userID,
+      [VisualType.CARD, VisualType.BANNER]
     );
   }
 

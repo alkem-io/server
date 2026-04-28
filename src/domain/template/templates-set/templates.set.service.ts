@@ -135,6 +135,9 @@ export class TemplatesSetService {
 
     const storageAggregator = await this.getStorageAggregator(templatesSet);
 
+    // createTemplate is self-contained: it persists the template AND runs
+    // phase-2 materialization (with rollback on failure). All we need to do
+    // here is attach the templatesSet relation and re-save to record it.
     const template = await this.templateService.createTemplate(
       templateInput,
       storageAggregator

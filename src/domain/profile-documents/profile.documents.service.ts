@@ -40,6 +40,29 @@ export class ProfileDocumentsService {
       }
     }
 
+    // Precondition: every path past here either calls file-service-go with
+    // the bucket id as an FK, or scans `bucket.documents` for an existing
+    // entry. Both fail incoherently on an unsaved bucket. Catch misuse here
+    // with a clear error rather than letting it surface from deep inside
+    // the storage-bucket service as "StorageBucket not found: undefined".
+    if (!storageBucket.id) {
+      throw new EntityNotInitializedException(
+        'Storage bucket must be persisted before document re-upload: caller must save the parent entity first (typically via parent.save() with cascade)',
+        LogContext.PROFILE
+      );
+    }
+
+    // Precondition: every path past here invokes file-service-go with the
+    // bucket id as an FK. Catch unsaved-bucket misuse here rather than
+    // letting it surface as a confusing "StorageBucket not found: undefined"
+    // from deep inside StorageBucketService.uploadFileAsDocumentFromBuffer.
+    if (!storageBucket.id) {
+      throw new EntityNotInitializedException(
+        'Storage bucket must be persisted before document re-upload: caller must save the parent entity first (typically via parent.save() with cascade)',
+        LogContext.PROFILE
+      );
+    }
+
     if (!storageBucket.documents) {
       throw new EntityNotInitializedException(
         `Documents not initialized on storage bucket: '${storageBucket.id}'`,
@@ -83,24 +106,26 @@ export class ProfileDocumentsService {
       }
       return this.documentService.getPubliclyAccessibleURL(docInContent);
     } else {
-      // Different bucket: fetch content from Go service, re-upload to new bucket.
-      // After the new document is successfully uploaded, delete the old one so
-      // it doesn't leak in its original bucket as an orphan.
-      const content = await this.fileServiceAdapter.getDocumentContent(
-        docInContent.id
+      // Different bucket: ask file-service-go to materialize a new row in
+      // the destination bucket pointing at the same content. Single RPC,
+      // no bytes on the wire (content is content-addressed). After the
+      // new row is in place, delete the source so it doesn't leak as an
+      // orphan in its original bucket.
+      //
+      // skipDedup=true is critical for safety: without it, dedup-reuse could
+      // return another caller's existing row, and the rollback below would
+      // delete THEIR document on source-delete failure. Forcing a fresh row
+      // guarantees `newDoc` is exclusively ours.
+      const newDoc = await this.storageBucketService.copyDocumentToBucket(
+        storageBucket.id,
+        docInContent,
+        undefined,
+        true
       );
-      const newDoc =
-        await this.storageBucketService.uploadFileAsDocumentFromBuffer(
-          storageBucket.id,
-          content,
-          docInContent.displayName,
-          docInContent.mimeType,
-          docInContent.createdBy
-        );
       try {
         await this.documentService.deleteDocument({ ID: docInContent.id });
       } catch (error) {
-        // Source delete failed after destination upload succeeded — compensate
+        // Source delete failed after destination copy succeeded — compensate
         // by removing the new copy so a caller retry doesn't accumulate
         // duplicates in the destination bucket. Swallow cleanup errors: the
         // original delete failure is what the caller needs to see.
@@ -108,6 +133,18 @@ export class ProfileDocumentsService {
           .deleteDocument({ ID: newDoc.id })
           .catch(() => undefined);
         throw error;
+      }
+      // Keep in-memory bucket state in sync so subsequent re-uploads in the
+      // same request (e.g. multiple internal URLs in the same markdown) see
+      // the moved doc and don't trigger redundant copy/delete churn.
+      const sourceIndex = storageBucket.documents.findIndex(
+        doc => doc.id === docInContent.id
+      );
+      if (sourceIndex !== -1) {
+        storageBucket.documents.splice(sourceIndex, 1);
+      }
+      if (!storageBucket.documents.some(doc => doc.id === newDoc.id)) {
+        storageBucket.documents.push(newDoc);
       }
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }

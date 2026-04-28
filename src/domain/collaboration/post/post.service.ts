@@ -36,16 +36,12 @@ export class PostService {
     userID: string,
     parentSpaceId?: string
   ): Promise<IPost> {
+    // Phase 1: build entity tree in memory (no file-service-go calls).
     const post: IPost = Post.create(postInput);
     post.profile = await this.profileService.createProfile(
       postInput.profileData,
       ProfileType.POST,
       storageAggregator
-    );
-    await this.profileService.addVisualsOnProfile(
-      post.profile,
-      postInput.profileData.visuals,
-      [VisualType.BANNER, VisualType.CARD]
     );
     await this.profileService.addOrUpdateTagsetOnProfile(post.profile, {
       name: TagsetReservedName.DEFAULT,
@@ -60,7 +56,18 @@ export class PostService {
       parentContextId: parentSpaceId,
     });
 
-    return post;
+    // Phase 2: persist + materialize via the shared helper. Rolls back on
+    // failure so callers see either a fully-materialized post or a thrown
+    // error, never a half-state.
+    const saved = await this.postRepository.save(post);
+    // Helper mutates the profile in place; no explicit reassignment needed.
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      saved.profile,
+      postInput.profileData.visuals,
+      [VisualType.BANNER, VisualType.CARD],
+      () => this.deletePost(saved.id)
+    );
+    return saved;
   }
 
   public async deletePost(postId: string): Promise<IPost> {

@@ -64,10 +64,22 @@ export class TemplateService {
     private readonly logger: LoggerService
   ) {}
 
+  /**
+   * Self-contained: builds the template (with any nested entity for the
+   * declared TemplateType), persists, then runs phase-2 materialization
+   * (markdown re-upload, references, visuals, and any nested
+   * COMMUNITY_GUIDELINES profile materialization). On materialization
+   * failure the template is deleted before rethrowing — callers receive
+   * a fully-materialized template or an error, never half-state.
+   *
+   * Caller (e.g. TemplatesSetService) only needs to attach the
+   * `templatesSet` relation and re-save; no phase-2 coordination required.
+   */
   async createTemplate(
     templateData: CreateTemplateInput,
     storageAggregator: IStorageAggregator
   ): Promise<ITemplate> {
+    // Phase 1: build entity tree in memory (no file-service-go calls).
     const template: ITemplate = Template.create(templateData);
     template.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.TEMPLATE
@@ -82,11 +94,6 @@ export class TemplateService {
       name: TagsetReservedName.DEFAULT,
       tags: templateData.tags,
     });
-    await this.profileService.addVisualsOnProfile(
-      template.profile,
-      templateData.profileData.visuals,
-      [VisualType.CARD]
-    );
     switch (template.type) {
       case TemplateType.POST: {
         if (!templateData.postDefaultDescription) {
@@ -206,7 +213,49 @@ export class TemplateService {
         );
     }
 
-    return await this.templateRepository.save(template);
+    // Phase 2: persist + materialize own profile + cascade-materialize
+    // nested entities. The materializeProfileContentAndVisualsOrRollback
+    // helper handles own-profile rollback. Nested guidelines materialization
+    // is wrapped in a follow-up try/catch so any failure there also rolls
+    // back the parent template (otherwise we'd leave a partially-
+    // materialized template behind).
+    //
+    // Other template types (POST, CALLOUT, SPACE, WHITEBOARD): their nested
+    // content lives in deeper trees that don't yet have explicit
+    // materialize hooks. Those types' profiles are still re-homed via the
+    // own-profile call above; nested-content materialization is a follow-up.
+    const saved = await this.templateRepository.save(template);
+
+    // Helper mutates the profile in place; no explicit reassignment needed.
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      saved.profile,
+      templateData.profileData.visuals,
+      [VisualType.CARD],
+      () => this.delete(saved)
+    );
+
+    if (
+      saved.type === TemplateType.COMMUNITY_GUIDELINES &&
+      saved.communityGuidelines &&
+      templateData.communityGuidelinesData
+    ) {
+      try {
+        await this.communityGuidelinesService.materializeCommunityGuidelinesContent(
+          saved.communityGuidelines,
+          templateData.communityGuidelinesData
+        );
+      } catch (error) {
+        await this.delete(saved).catch(rollbackError =>
+          this.logger.warn?.(
+            `Rollback after nested-guidelines materialization failure also failed for template ${saved.id}: ${rollbackError}`,
+            LogContext.TEMPLATES
+          )
+        );
+        throw error;
+      }
+    }
+
+    return saved;
   }
 
   private overrideCalloutSettingsForTemplate(calloutData: CreateCalloutInput) {
