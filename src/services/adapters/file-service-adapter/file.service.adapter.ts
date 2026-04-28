@@ -96,6 +96,9 @@ export class FileServiceAdapter extends HttpClientBase {
     if (metadata.maxFileSize !== undefined) {
       form.append('maxFileSize', String(metadata.maxFileSize));
     }
+    if (metadata.skipDedup) {
+      form.append('skipDedup', 'true');
+    }
 
     return this.sendRequest<CreateDocumentResult>(
       'createDocument',
