@@ -73,10 +73,17 @@ export class CalloutContributionService {
     contributionData: CreateCalloutContributionInput | undefined,
     rollback: () => Promise<unknown>
   ): Promise<void> {
-    if (
-      contribution.type === CalloutContributionType.LINK &&
-      contribution.link
-    ) {
+    if (contribution.type === CalloutContributionType.LINK) {
+      if (!contribution.link) {
+        throw new RelationshipNotFoundException(
+          'Missing required relation for phase-2 materialization',
+          LogContext.COLLABORATION,
+          {
+            contributionId: contribution.id,
+            missing: ['link'],
+          }
+        );
+      }
       await this.linkService.materializeLinkContent(
         contribution.link,
         contributionData?.link,

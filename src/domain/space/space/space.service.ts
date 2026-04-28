@@ -238,36 +238,6 @@ export class SpaceService {
       await mgr.save(space as Space);
     });
 
-    // Phase 2: post-save content materialization. The transaction above
-    // committed the entity tree (including profile.storageBucket ids), so
-    // file-service-go calls now have real FKs to reference. This is the
-    // place where template-derived markdown URLs and visuals get re-homed
-    // into the new space's own bucket — fixes #6004 / #6005.
-    //
-    // SpaceAbout is composed inside the transaction (can't save itself
-    // mid-transaction without breaking atomicity), so materialization runs
-    // here at the orchestrator level. On failure, delete the just-committed
-    // space so a partially-materialized space doesn't linger.
-    try {
-      await this.spaceAboutService.materializeSpaceAboutContent(
-        space.about,
-        modifiedAbout
-      );
-    } catch (error) {
-      await this.deleteSpaceOrFail({ ID: space.id }).catch(rollbackError =>
-        this.logger.warn?.(
-          {
-            message:
-              'Rollback after SpaceAbout materialization failure also failed',
-            spaceId: space.id,
-            rollbackError: String(rollbackError),
-          },
-          LogContext.SPACES
-        )
-      );
-      throw error;
-    }
-
     if (spaceData.level === SpaceLevel.L0) {
       space.levelZeroSpaceID = space.id;
 
@@ -340,34 +310,31 @@ export class SpaceService {
 
     const spaceUpdated = await this.save(space);
 
-    // Phase-2 materialize the collaboration tree now that the cascade save
-    // has persisted callouts/framings/contributions. Cross-bucket markdown
-    // URLs from the source template (and any temp-location uploads in the
-    // user input) get re-homed into the space's bucket. On failure we
-    // delete the just-committed space so a partially-materialized space
-    // doesn't linger — same contract as the spaceAbout materialize above.
+    // Phase 2: post-save content materialization. The full tree is now
+    // persisted (storage buckets have real FKs, collaboration is loadable
+    // for rollback), so file-service-go calls and a subsequent
+    // deleteSpaceOrFail-based rollback both work. We materialize the about
+    // and the collaboration tree together so any failure can be cleaned up
+    // by a single rollback path. Cross-bucket markdown URLs from the
+    // source template (and any temp-location uploads in the user input)
+    // get re-homed into the space's bucket here — fixes #6004 / #6005.
+    //
+    // The OrRollback helper inside each materialize step calls the rollback
+    // callback (delete space) on its own failure and rethrows the original
+    // error, so we don't need a redundant catch around the call.
+    const rollbackSpace = (): Promise<unknown> =>
+      this.deleteSpaceOrFail({ ID: spaceUpdated.id });
+    await this.spaceAboutService.materializeSpaceAboutContent(
+      spaceUpdated.about,
+      modifiedAbout,
+      rollbackSpace
+    );
     if (spaceUpdated.collaboration) {
-      try {
-        await this.collaborationService.materializeCollaborationContent(
-          spaceUpdated.collaboration,
-          updatedCollaborationData,
-          () => this.deleteSpaceOrFail({ ID: spaceUpdated.id })
-        );
-      } catch (error) {
-        await this.deleteSpaceOrFail({ ID: spaceUpdated.id }).catch(
-          rollbackError =>
-            this.logger.warn?.(
-              {
-                message:
-                  'Rollback after Collaboration materialization failure also failed',
-                spaceId: spaceUpdated.id,
-                rollbackError: String(rollbackError),
-              },
-              LogContext.SPACES
-            )
-        );
-        throw error;
-      }
+      await this.collaborationService.materializeCollaborationContent(
+        spaceUpdated.collaboration,
+        updatedCollaborationData,
+        rollbackSpace
+      );
     }
 
     // If template has child spaces, then create child spaces here

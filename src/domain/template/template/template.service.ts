@@ -235,19 +235,31 @@ export class TemplateService {
       () => this.delete(saved)
     );
 
-    const rollbackTemplate = (): Promise<unknown> =>
-      this.delete(saved).catch(rollbackError => {
-        this.logger.warn?.(
+    // rollbackTemplate logs at ERROR (not WARN) when delete itself fails,
+    // and rethrows so callers awaiting it are not silently lied to about
+    // a successful rollback. The OrRollback helper already wraps its
+    // rollback() call in its own try/catch, so any rethrow here is
+    // observed via that path; the COMMUNITY_GUIDELINES branch below
+    // wraps explicitly so the original materialization error wins.
+    const rollbackTemplate = async (): Promise<void> => {
+      try {
+        await this.delete(saved);
+      } catch (rollbackError) {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
           {
             message:
               'Rollback after nested template-content materialization failure also failed',
             templateId: saved.id,
             templateType: saved.type,
-            rollbackError: String(rollbackError),
           },
+          stack,
           LogContext.TEMPLATES
         );
-      });
+        throw rollbackError;
+      }
+    };
 
     if (
       saved.type === TemplateType.COMMUNITY_GUIDELINES &&
@@ -260,7 +272,13 @@ export class TemplateService {
           templateData.communityGuidelinesData
         );
       } catch (error) {
-        await rollbackTemplate();
+        // Awaited inside its own try/catch so the rethrown rollback error
+        // doesn't replace the original materialization error.
+        try {
+          await rollbackTemplate();
+        } catch {
+          // already logged by rollbackTemplate
+        }
         throw error;
       }
     }

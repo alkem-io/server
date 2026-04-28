@@ -92,42 +92,95 @@ export class TemplateContentSpaceService {
     templateContentSpaceData: CreateTemplateContentSpaceInput | undefined,
     rollback: () => Promise<unknown>
   ): Promise<void> {
-    if (templateContentSpace.about && templateContentSpaceData?.about) {
-      try {
-        await this.spaceAboutService.materializeSpaceAboutContent(
-          templateContentSpace.about,
-          templateContentSpaceData.about
-        );
-      } catch (error) {
-        await rollback().catch(rollbackError =>
-          this.logger.warn?.(
-            {
-              message:
-                'Rollback after TemplateContentSpace.about materialization failure also failed',
-              templateContentSpaceId: templateContentSpace.id,
-              rollbackError: String(rollbackError),
-            },
-            LogContext.TEMPLATES
-          )
-        );
-        throw error;
-      }
-    }
-    if (templateContentSpace.collaboration) {
-      await this.collaborationService.materializeCollaborationContent(
-        templateContentSpace.collaboration,
-        templateContentSpaceData?.collaborationData,
-        rollback
+    // Fail-fast on partial loads or DTO mismatches — silently skipping
+    // would leave content unmaterialized while the call still succeeds.
+    if (!templateContentSpaceData) {
+      await this.rollbackAndThrow(
+        rollback,
+        new EntityNotInitializedException(
+          'TemplateContentSpace materialization data not provided',
+          LogContext.TEMPLATES,
+          { templateContentSpaceId: templateContentSpace.id }
+        ),
+        templateContentSpace.id
       );
     }
-    const subspaces = templateContentSpace.subspaces ?? [];
-    for (let i = 0; i < subspaces.length; i++) {
+    if (!templateContentSpace.about) {
+      await this.rollbackAndThrow(
+        rollback,
+        new RelationshipNotFoundException(
+          'TemplateContentSpace about not initialized',
+          LogContext.TEMPLATES,
+          { templateContentSpaceId: templateContentSpace.id }
+        ),
+        templateContentSpace.id
+      );
+    }
+    if (!templateContentSpace.collaboration) {
+      await this.rollbackAndThrow(
+        rollback,
+        new RelationshipNotFoundException(
+          'TemplateContentSpace collaboration not initialized',
+          LogContext.TEMPLATES,
+          { templateContentSpaceId: templateContentSpace.id }
+        ),
+        templateContentSpace.id
+      );
+    }
+    const persistedSubspaces = templateContentSpace.subspaces ?? [];
+    const inputSubspaces = templateContentSpaceData!.subspaces ?? [];
+    if (persistedSubspaces.length !== inputSubspaces.length) {
+      await this.rollbackAndThrow(
+        rollback,
+        new EntityNotInitializedException(
+          'TemplateContentSpace subspaces are out of sync with materialization data',
+          LogContext.TEMPLATES,
+          {
+            templateContentSpaceId: templateContentSpace.id,
+            persistedSubspaces: persistedSubspaces.length,
+            inputSubspaces: inputSubspaces.length,
+          }
+        ),
+        templateContentSpace.id
+      );
+    }
+
+    await this.spaceAboutService.materializeSpaceAboutContent(
+      templateContentSpace.about!,
+      templateContentSpaceData!.about,
+      rollback
+    );
+    await this.collaborationService.materializeCollaborationContent(
+      templateContentSpace.collaboration!,
+      templateContentSpaceData!.collaborationData,
+      rollback
+    );
+    for (let i = 0; i < persistedSubspaces.length; i++) {
       await this.materializeTemplateContentSpaceContent(
-        subspaces[i],
-        templateContentSpaceData?.subspaces?.[i],
+        persistedSubspaces[i],
+        inputSubspaces[i],
         rollback
       );
     }
+  }
+
+  private async rollbackAndThrow(
+    rollback: () => Promise<unknown>,
+    error: Error,
+    templateContentSpaceId: string
+  ): Promise<never> {
+    await rollback().catch(rollbackError =>
+      this.logger.warn?.(
+        {
+          message:
+            'Rollback after TemplateContentSpace materialization failure also failed',
+          templateContentSpaceId,
+          rollbackError: String(rollbackError),
+        },
+        LogContext.TEMPLATES
+      )
+    );
+    throw error;
   }
 
   async save(

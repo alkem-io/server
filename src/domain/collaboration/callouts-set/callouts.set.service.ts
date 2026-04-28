@@ -81,17 +81,36 @@ export class CalloutsSetService {
    * Phase-2 materialization for a CalloutsSet. Walks each callout in the
    * set and delegates to CalloutService.materializeCalloutContent.
    * Failures bubble up via the supplied rollback callback.
+   *
+   * Callouts are paired with their input by `nameID` (a stable identifier
+   * set during creation). Index-based pairing would silently misalign if
+   * the persisted order ever differs from the input order — e.g., when
+   * `addCallouts` reuses existing entries from the calloutsSet.
    */
   public async materializeCalloutsSetContent(
     calloutsSet: ICalloutsSet,
     calloutsData: CreateCalloutInput[] | undefined,
     rollback: () => Promise<unknown>
   ): Promise<void> {
-    const callouts = calloutsSet.callouts ?? [];
-    for (let i = 0; i < callouts.length; i++) {
+    if (!calloutsSet.callouts) {
+      throw new EntityNotInitializedException(
+        'Callouts relation not loaded on CalloutsSet for materialization',
+        LogContext.COLLABORATION,
+        {
+          phase: 'materializeCalloutsSetContent',
+          calloutsSetId: calloutsSet.id,
+          missing: 'callouts',
+        }
+      );
+    }
+    const inputByNameID = new Map<string, CreateCalloutInput>();
+    for (const data of calloutsData ?? []) {
+      if (data.nameID) inputByNameID.set(data.nameID, data);
+    }
+    for (const callout of calloutsSet.callouts) {
       await this.calloutService.materializeCalloutContent(
-        callouts[i],
-        calloutsData?.[i],
+        callout,
+        callout.nameID ? inputByNameID.get(callout.nameID) : undefined,
         rollback
       );
     }

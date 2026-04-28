@@ -175,13 +175,22 @@ export class CollaborationService {
     collaborationData: CreateCollaborationInput | undefined,
     rollback: () => Promise<unknown>
   ): Promise<void> {
-    if (collaboration.calloutsSet) {
-      await this.calloutsSetService.materializeCalloutsSetContent(
-        collaboration.calloutsSet,
-        collaborationData?.calloutsSetData?.calloutsData,
-        rollback
+    if (!collaboration.calloutsSet) {
+      throw new EntityNotInitializedException(
+        'CalloutsSet not initialized on Collaboration',
+        LogContext.COLLABORATION,
+        {
+          phase: 'materializeCollaborationContent',
+          collaborationId: collaboration.id,
+          missing: 'calloutsSet',
+        }
       );
     }
+    await this.calloutsSetService.materializeCalloutsSetContent(
+      collaboration.calloutsSet,
+      collaborationData?.calloutsSetData?.calloutsData,
+      rollback
+    );
   }
 
   private createInnovationFlowStatesTagsetTemplateInput(

@@ -22,9 +22,10 @@ import { CreateCommunityGuidelinesInput } from '@domain/community/community-guid
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { CreateSpaceAboutInput } from './dto/space.about.dto.create';
@@ -42,7 +43,9 @@ export class SpaceAboutService {
     private roleSetService: RoleSetService,
     private inputCreatorService: InputCreatorService,
     @InjectRepository(SpaceAbout)
-    private spaceAboutRepository: Repository<SpaceAbout>
+    private spaceAboutRepository: Repository<SpaceAbout>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   /**
@@ -100,10 +103,16 @@ export class SpaceAboutService {
    * bucket, attaches visuals, and cascades to the nested guidelines.
    * Caller must invoke this AFTER the parent's cascade save persists
    * `spaceAbout.profile.storageBucket` (and the guidelines' bucket).
+   *
+   * `rollback` is invoked by the OrRollback helper if the profile-level
+   * materialization fails, so callers receive a fully-materialized about
+   * or a rolled-back parent — never half-state. Nested guidelines failures
+   * also trigger `rollback`.
    */
   public async materializeSpaceAboutContent(
     spaceAbout: ISpaceAbout,
-    spaceAboutData: CreateSpaceAboutInput
+    spaceAboutData: CreateSpaceAboutInput,
+    rollback: () => Promise<unknown>
   ): Promise<ISpaceAbout> {
     if (!spaceAbout.profile) {
       throw new RelationshipNotFoundException(
@@ -113,10 +122,11 @@ export class SpaceAboutService {
       );
     }
     spaceAbout.profile =
-      await this.profileService.materializeProfileContentAndVisuals(
+      await this.profileService.materializeProfileContentAndVisualsOrRollback(
         spaceAbout.profile,
         spaceAboutData.profileData.visuals,
-        [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD]
+        [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD],
+        rollback
       );
     // createSpaceAbout always populates `spaceAbout.guidelines` (auto-creating
     // an empty one if `spaceAboutData.guidelines` wasn't supplied). Materialize
@@ -124,10 +134,25 @@ export class SpaceAboutService {
     // materializeCommunityGuidelinesContent treats undefined input as "no
     // visuals to attach".
     if (spaceAbout.guidelines) {
-      await this.communityGuidelinesService.materializeCommunityGuidelinesContent(
-        spaceAbout.guidelines,
-        spaceAboutData.guidelines
-      );
+      try {
+        await this.communityGuidelinesService.materializeCommunityGuidelinesContent(
+          spaceAbout.guidelines,
+          spaceAboutData.guidelines
+        );
+      } catch (error) {
+        await rollback().catch(rollbackError =>
+          this.logger.warn?.(
+            {
+              message:
+                'Rollback after CommunityGuidelines materialization failure also failed',
+              spaceAboutId: spaceAbout.id,
+              rollbackError: String(rollbackError),
+            },
+            LogContext.SPACES
+          )
+        );
+        throw error;
+      }
     }
     return spaceAbout;
   }

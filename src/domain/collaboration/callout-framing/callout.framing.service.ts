@@ -5,7 +5,10 @@ import { LogContext } from '@common/enums/logging.context';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
-import { ValidationException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { LinkService } from '@domain/collaboration/link/link.service';
@@ -185,6 +188,29 @@ export class CalloutFramingService {
     calloutFramingData: CreateCalloutFramingInput | undefined,
     rollback: () => Promise<unknown>
   ): Promise<void> {
+    if (!calloutFraming.profile) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        {
+          calloutFramingId: calloutFraming.id,
+          missing: ['profile'],
+        }
+      );
+    }
+    if (
+      calloutFraming.type === CalloutFramingType.LINK &&
+      !calloutFraming.link
+    ) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        {
+          calloutFramingId: calloutFraming.id,
+          missing: ['link'],
+        }
+      );
+    }
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       calloutFraming.profile,
       calloutFramingData?.profile?.visuals,
