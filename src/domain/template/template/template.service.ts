@@ -64,6 +64,14 @@ export class TemplateService {
     private readonly logger: LoggerService
   ) {}
 
+  /**
+   * Phase 1: in-memory entity construction. The returned template is unsaved;
+   * the caller must save it (see {@link save}) and then invoke
+   * {@link materializeTemplateContent} to perform post-save materialization
+   * (markdown re-upload, visuals, nested entities). Splitting these phases
+   * avoids the bug from #6004 / #6005 where file-service-go calls happened
+   * with an unsaved `storageBucket.id`.
+   */
   async createTemplate(
     templateData: CreateTemplateInput,
     storageAggregator: IStorageAggregator
@@ -82,11 +90,6 @@ export class TemplateService {
       name: TagsetReservedName.DEFAULT,
       tags: templateData.tags,
     });
-    await this.profileService.addVisualsOnProfile(
-      template.profile,
-      templateData.profileData.visuals,
-      [VisualType.CARD]
-    );
     switch (template.type) {
       case TemplateType.POST: {
         if (!templateData.postDefaultDescription) {
@@ -207,6 +210,40 @@ export class TemplateService {
     }
 
     return await this.templateRepository.save(template);
+  }
+
+  /**
+   * Phase 2: post-save content materialization. Re-homes any internal
+   * Alkemio URLs in the template profile's description/references into
+   * the template's own bucket and attaches its visuals. Caller must invoke
+   * AFTER {@link save} (or any equivalent persist) so the storageBucket id
+   * is real.
+   *
+   * Nested entities (community guidelines, content space, callout,
+   * whiteboard) own their own materialization where it matters; those are
+   * delegated as separate calls so each composing service stays
+   * responsible for its own slice of post-save work.
+   */
+  async materializeTemplateContent(
+    template: ITemplate,
+    templateData: CreateTemplateInput
+  ): Promise<ITemplate> {
+    await this.profileService.materializeProfileContentAndVisuals(
+      template.profile,
+      templateData.profileData.visuals,
+      [VisualType.CARD]
+    );
+    if (
+      template.type === TemplateType.COMMUNITY_GUIDELINES &&
+      template.communityGuidelines &&
+      templateData.communityGuidelinesData
+    ) {
+      await this.communityGuidelinesService.materializeCommunityGuidelinesContent(
+        template.communityGuidelines,
+        templateData.communityGuidelinesData
+      );
+    }
+    return template;
   }
 
   private overrideCalloutSettingsForTemplate(calloutData: CreateCalloutInput) {

@@ -27,6 +27,11 @@ export class CommunityGuidelinesService {
     private communityGuidelinesRepository: Repository<CommunityGuidelines>
   ) {}
 
+  /**
+   * Phase 1: in-memory entity construction. The returned guidelines must be
+   * persisted by the caller (typically via cascade from a parent entity)
+   * before {@link materializeCommunityGuidelinesContent} is invoked.
+   */
   async createCommunityGuidelines(
     communityGuidelinesData: CreateCommunityGuidelinesInput,
     storageAggregator: IStorageAggregator
@@ -53,12 +58,24 @@ export class CommunityGuidelinesService {
       storageAggregator
     );
 
-    await this.profileService.addVisualsOnProfile(
+    return communityGuidelines;
+  }
+
+  /**
+   * Phase 2: post-save content materialization. Re-homes any internal
+   * Alkemio URLs in the profile description/references into the guidelines'
+   * own bucket, then attaches visuals. Requires the parent entity to have
+   * been saved already (so `profile.storageBucket.id` is real).
+   */
+  async materializeCommunityGuidelinesContent(
+    communityGuidelines: ICommunityGuidelines,
+    communityGuidelinesData: CreateCommunityGuidelinesInput
+  ): Promise<ICommunityGuidelines> {
+    await this.profileService.materializeProfileContentAndVisuals(
       communityGuidelines.profile,
       communityGuidelinesData.profile.visuals,
       [VisualType.CARD]
     );
-
     return communityGuidelines;
   }
 

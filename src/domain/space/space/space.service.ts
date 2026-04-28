@@ -238,6 +238,16 @@ export class SpaceService {
       await mgr.save(space as Space);
     });
 
+    // Phase 2: post-save content materialization. The transaction above
+    // committed the entity tree (including profile.storageBucket ids), so
+    // file-service-go calls now have real FKs to reference. This is the
+    // place where template-derived markdown URLs and visuals get re-homed
+    // into the new space's own bucket — fixes #6004 / #6005.
+    await this.spaceAboutService.materializeSpaceAboutContent(
+      space.about,
+      modifiedAbout
+    );
+
     if (spaceData.level === SpaceLevel.L0) {
       space.levelZeroSpaceID = space.id;
 

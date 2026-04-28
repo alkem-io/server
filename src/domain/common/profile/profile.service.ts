@@ -26,7 +26,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { DEFAULT_AVATAR_SERVICE_URL } from '@services/external/avatar-creator/avatar.creator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
-import { CreateReferenceInput } from '../reference';
 import { CreateTagsetInput } from '../tagset';
 import { ITagsetTemplate } from '../tagset-template/tagset.template.interface';
 import { CreateProfileInput, UpdateProfileInput } from './dto';
@@ -48,8 +47,25 @@ export class ProfileService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
-  // Create an empty profile, that the creating entity then has to
-  // add tagets / visuals to.
+  /**
+   * Phase 1 of profile materialization: build the in-memory entity graph.
+   *
+   * No file-service-go calls happen here. The storageBucket is created
+   * unsaved and assigned to the profile; the caller is expected to assign
+   * the profile to a parent entity that cascades save (or to save it
+   * directly), then call {@link materializeProfileContent} to perform the
+   * post-save content re-uploads (markdown documents, references, etc).
+   *
+   * This split exists because the file-service-go migration (PR #5969)
+   * moved Document ownership outside the server's TypeORM transaction;
+   * any cross-service call needs a real persisted `storageBucket.id` to
+   * FK onto. Doing both phases in one method led to
+   * `StorageBucket not found: undefined` (issues #6004 / #6005).
+   *
+   * Tagsets and references are constructed with their input URIs as-is.
+   * `materializeProfileContent` is the place where any internal Alkemio
+   * URLs in the description/references are re-homed into the new bucket.
+   */
   public async createProfile(
     profileData: CreateProfileInput,
     profileType: ProfileType,
@@ -64,54 +80,83 @@ export class ProfileService {
     profile.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.PROFILE
     );
-    // the next statement fails if it's not saved
     profile.storageBucket = this.storageBucketService.createStorageBucket({
       storageAggregator: storageAggregator,
     });
-    profile.description =
-      await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
-        profile.description ?? '',
-        profile.storageBucket
-      );
     profile.visuals = [];
     profile.location = await this.locationService.createLocation(
       profileData?.location
     );
-    await this.createReferencesOnProfile(profileData?.referencesData, profile);
-
-    const tagsetsFromInput = profileData?.tagsets?.map(tagsetData =>
+    profile.references = (profileData?.referencesData ?? []).map(reference =>
+      this.referenceService.createReference(reference)
+    );
+    profile.tagsets = (profileData?.tagsets ?? []).map(tagsetData =>
       this.tagsetService.createTagsetWithName([], tagsetData)
     );
-    profile.tagsets = tagsetsFromInput ?? [];
 
     return profile;
   }
 
-  private async createReferencesOnProfile(
-    references: CreateReferenceInput[] | undefined,
-    profile: IProfile
-  ) {
-    if (!profile.storageBucket) {
+  /**
+   * Phase 2: post-save content re-upload. Must be called AFTER the profile
+   * (and its storageBucket) has been persisted — typically via the parent
+   * entity's cascade save. Re-homes any internal Alkemio document URLs
+   * found in the description and references into the profile's bucket.
+   *
+   * Idempotent for content already in the destination bucket and a no-op
+   * if there's no internal URL to re-home, so it's safe to call from any
+   * caller whether or not the input data references existing documents.
+   *
+   * Throws `EntityNotInitializedException` if the bucket isn't persisted
+   * yet — that's a programmer error, not a runtime condition.
+   */
+  public async materializeProfileContent(profile: IProfile): Promise<IProfile> {
+    if (!profile.storageBucket?.id) {
       throw new EntityNotInitializedException(
-        `Storage bucket not initialized on profile: ${profile.id}`,
+        `Profile storage bucket must be persisted before materializing content: profile ${profile.id}`,
         LogContext.PROFILE
       );
     }
-    const newReferences = [];
-    for (const reference of references ?? []) {
-      const newReference = this.referenceService.createReference(reference);
+    if (profile.description) {
+      profile.description =
+        await this.profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket(
+          profile.description,
+          profile.storageBucket
+        );
+    }
+    for (const reference of profile.references ?? []) {
       const newUrl =
         await this.profileDocumentsService.reuploadFileOnStorageBucket(
-          newReference.uri,
+          reference.uri,
           profile.storageBucket,
           false
         );
       if (newUrl) {
-        newReference.uri = newUrl;
+        reference.uri = newUrl;
       }
-      newReferences.push(newReference);
     }
-    profile.references = newReferences;
+    return profile;
+  }
+
+  /**
+   * Convenience for the standard post-save materialization: re-home internal
+   * Alkemio URLs in description/references AND attach visuals. Idempotent and
+   * safe to call when there's nothing to materialize. Persists the result so
+   * callers don't need a follow-up `save`.
+   *
+   * Precondition: `profile.storageBucket` must be persisted (typically via
+   * the parent entity's cascade save). See {@link materializeProfileContent}.
+   */
+  public async materializeProfileContentAndVisuals(
+    profile: IProfile,
+    visualsData: CreateVisualOnProfileInput[] | undefined,
+    visualTypes: VisualType[]
+  ): Promise<IProfile> {
+    await this.materializeProfileContent(profile);
+    if (visualTypes.length > 0) {
+      await this.addVisualsOnProfile(profile, visualsData, visualTypes);
+    }
+    return await this.profileRepository.save(profile);
   }
 
   async updateProfile(

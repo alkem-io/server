@@ -140,7 +140,12 @@ export class TemplatesSetService {
       storageAggregator
     );
     template.templatesSet = templatesSet;
-    return await this.templateService.save(template);
+    const saved = await this.templateService.save(template);
+    // Post-save: now that the template + its profile bucket are persisted,
+    // re-home any internal Alkemio URLs (markdown, references) and attach
+    // visuals. Fixes the unsaved-bucket failure reported as #6004.
+    await this.templateService.materializeTemplateContent(saved, templateInput);
+    return saved;
   }
 
   async createTemplateFromSpace(
