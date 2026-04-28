@@ -30,6 +30,12 @@ export class PostService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
+  /**
+   * Phase 1: in-memory entity construction. The returned post is unsaved;
+   * persistence happens via cascade from the parent (CalloutContribution).
+   * Phase 2 lives in {@link materializePostContent} and must be invoked
+   * after the parent aggregate has been persisted.
+   */
   public async createPost(
     postInput: CreatePostInput,
     storageAggregator: IStorageAggregator,
@@ -55,15 +61,25 @@ export class PostService {
       parentContextId: parentSpaceId,
     });
 
-    // Save so the profile's storageBucket gets a real id, then materialize
-    // markdown/refs/visuals. Parent cascade save will no-op on this post.
-    const saved = await this.postRepository.save(post);
+    return post;
+  }
+
+  /**
+   * Phase 2: post-save content materialization. Re-homes any internal
+   * Alkemio URLs in the post profile's description/references and attaches
+   * BANNER + CARD visuals. Caller must invoke AFTER the parent aggregate
+   * has been persisted (cascade-saving this post's profile + storageBucket).
+   */
+  public async materializePostContent(
+    post: IPost,
+    postInput: CreatePostInput
+  ): Promise<IPost> {
     await this.profileService.materializeProfileContentAndVisuals(
-      saved.profile,
+      post.profile,
       postInput.profileData.visuals,
       [VisualType.BANNER, VisualType.CARD]
     );
-    return saved;
+    return post;
   }
 
   public async deletePost(postId: string): Promise<IPost> {

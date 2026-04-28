@@ -1,7 +1,6 @@
 import { ProfileType } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
-import { VisualType } from '@common/enums/visual.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -73,7 +72,6 @@ describe('PostService', () => {
       vi.mocked(
         profileService.materializeProfileContentAndVisuals
       ).mockImplementation(async profile => profile);
-      vi.mocked(repository.save).mockImplementation(async (post: any) => post);
       vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
         undefined as any
       );
@@ -90,12 +88,10 @@ describe('PostService', () => {
         ProfileType.POST,
         storageAggregator
       );
+      // Phase 1 returns unsaved; materialize is the parent's post-save call.
       expect(
         profileService.materializeProfileContentAndVisuals
-      ).toHaveBeenCalledWith(createdProfile, postInput.profileData.visuals, [
-        VisualType.BANNER,
-        VisualType.CARD,
-      ]);
+      ).not.toHaveBeenCalled();
       expect(profileService.addOrUpdateTagsetOnProfile).toHaveBeenCalledWith(
         createdProfile,
         { name: TagsetReservedName.DEFAULT, tags: ['tag1', 'tag2'] }
@@ -113,7 +109,6 @@ describe('PostService', () => {
       vi.mocked(
         profileService.materializeProfileContentAndVisuals
       ).mockImplementation(async profile => profile);
-      vi.mocked(repository.save).mockImplementation(async (post: any) => post);
       vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
         undefined as any
       );
@@ -138,7 +133,6 @@ describe('PostService', () => {
       vi.mocked(
         profileService.materializeProfileContentAndVisuals
       ).mockImplementation(async profile => profile);
-      vi.mocked(repository.save).mockImplementation(async (post: any) => post);
       vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
         undefined as any
       );

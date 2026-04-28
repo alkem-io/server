@@ -246,6 +246,23 @@ export class TemplateService {
         templateData.communityGuidelinesData
       );
     }
+    if (
+      template.type === TemplateType.WHITEBOARD &&
+      template.whiteboard &&
+      templateData.whiteboard
+    ) {
+      // Whiteboard templates ship a placeholder profile with internal-URL
+      // visuals that need re-homing into the template's own bucket.
+      await this.whiteboardService.materializeWhiteboardContent(
+        template.whiteboard,
+        {
+          profile: { displayName: 'Whiteboard Template' },
+          nameID: template.whiteboard.nameID,
+          content: templateData.whiteboard.content,
+          previewSettings: templateData.whiteboard.previewSettings,
+        }
+      );
+    }
     return template;
   }
 

@@ -42,11 +42,18 @@ export class WhiteboardService {
     private licenseService: LicenseService
   ) {}
 
+  /**
+   * Phase 1: in-memory entity construction. The returned whiteboard is
+   * unsaved; persistence happens via cascade from the parent (Template,
+   * CalloutFraming, CalloutContribution) so the whole aggregate commits
+   * atomically. Phase 2 (markdown re-upload + visuals attachment) lives in
+   * {@link materializeWhiteboardContent} and must be invoked after the
+   * parent's save commits.
+   */
   async createWhiteboard(
     whiteboardData: CreateWhiteboardInput,
     storageAggregator: IStorageAggregator,
-    userID?: string,
-    visualTypes: VisualType[] = [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW]
+    userID?: string
   ): Promise<IWhiteboard> {
     const whiteboard: IWhiteboard = Whiteboard.create({
       ...whiteboardData,
@@ -74,17 +81,26 @@ export class WhiteboardService {
       coordinates: whiteboardData.previewSettings?.coordinates ?? null,
     };
 
-    // Save whiteboard so its profile.storageBucket gets a real id (cascade),
-    // then materialize markdown/refs/visuals against the persisted bucket.
-    // Caller's parent cascade save will be a no-op for this whiteboard since
-    // it's already persisted with its FKs intact.
-    const saved = await this.whiteboardRepository.save(whiteboard);
+    return whiteboard;
+  }
+
+  /**
+   * Phase 2: post-save content materialization. Re-homes any internal
+   * Alkemio URLs in the profile description/references and attaches the
+   * whiteboard's visuals. Caller must invoke AFTER the parent aggregate
+   * has been persisted (cascade-saving this whiteboard's profile +
+   * storageBucket).
+   */
+  async materializeWhiteboardContent(
+    whiteboard: IWhiteboard,
+    whiteboardData: CreateWhiteboardInput
+  ): Promise<IWhiteboard> {
     await this.profileService.materializeProfileContentAndVisuals(
-      saved.profile,
+      whiteboard.profile,
       whiteboardData.profile?.visuals,
-      visualTypes
+      [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW]
     );
-    return saved;
+    return whiteboard;
   }
 
   async getWhiteboardOrFail(
