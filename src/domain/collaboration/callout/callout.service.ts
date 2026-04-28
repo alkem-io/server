@@ -139,6 +139,37 @@ export class CalloutService {
     return callout;
   }
 
+  /**
+   * Phase-2 materialization for a Callout. Composed under a parent
+   * (collaboration, template, knowledge-base); the parent's save persists
+   * the callout's framing/contribution buckets before this is called.
+   *
+   * Walks framing + each contribution. Failures bubble up via the supplied
+   * rollback callback (cleans up the top-level parent — cascade clears the
+   * rest).
+   */
+  public async materializeCalloutContent(
+    callout: ICallout,
+    calloutData: CreateCalloutInput | undefined,
+    rollback: () => Promise<unknown>
+  ): Promise<void> {
+    if (callout.framing) {
+      await this.calloutFramingService.materializeCalloutFramingContent(
+        callout.framing,
+        calloutData?.framing,
+        rollback
+      );
+    }
+    const contributions = callout.contributions ?? [];
+    for (let i = 0; i < contributions.length; i++) {
+      await this.contributionService.materializeCalloutContributionContent(
+        contributions[i],
+        calloutData?.contributions?.[i],
+        rollback
+      );
+    }
+  }
+
   private createCalloutSettings(
     settingsData?: CreateCalloutInput['settings']
   ): ICalloutSettings {

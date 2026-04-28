@@ -78,6 +78,58 @@ export class TemplateContentSpaceService {
     return await this.save(templateContentSpace);
   }
 
+  /**
+   * Phase-2 materialization for a TemplateContentSpace. Composed under a
+   * Template (SPACE type); the Template's save persists the entire tree
+   * before this is called.
+   *
+   * Walks the about + collaboration + recursive subspaces. Failures bubble
+   * up via the supplied rollback callback (typically deletes the top-level
+   * Template — cascade clears the rest).
+   */
+  public async materializeTemplateContentSpaceContent(
+    templateContentSpace: ITemplateContentSpace,
+    templateContentSpaceData: CreateTemplateContentSpaceInput | undefined,
+    rollback: () => Promise<unknown>
+  ): Promise<void> {
+    if (templateContentSpace.about && templateContentSpaceData?.about) {
+      try {
+        await this.spaceAboutService.materializeSpaceAboutContent(
+          templateContentSpace.about,
+          templateContentSpaceData.about
+        );
+      } catch (error) {
+        await rollback().catch(rollbackError =>
+          this.logger.warn?.(
+            {
+              message:
+                'Rollback after TemplateContentSpace.about materialization failure also failed',
+              templateContentSpaceId: templateContentSpace.id,
+              rollbackError: String(rollbackError),
+            },
+            LogContext.TEMPLATES
+          )
+        );
+        throw error;
+      }
+    }
+    if (templateContentSpace.collaboration) {
+      await this.collaborationService.materializeCollaborationContent(
+        templateContentSpace.collaboration,
+        templateContentSpaceData?.collaborationData,
+        rollback
+      );
+    }
+    const subspaces = templateContentSpace.subspaces ?? [];
+    for (let i = 0; i < subspaces.length; i++) {
+      await this.materializeTemplateContentSpaceContent(
+        subspaces[i],
+        templateContentSpaceData?.subspaces?.[i],
+        rollback
+      );
+    }
+  }
+
   async save(
     templateContentSpace: ITemplateContentSpace
   ): Promise<ITemplateContentSpace> {

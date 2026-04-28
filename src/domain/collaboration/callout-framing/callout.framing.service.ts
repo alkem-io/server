@@ -169,6 +169,40 @@ export class CalloutFramingService {
     return calloutFraming;
   }
 
+  /**
+   * Phase-2 materialization for a CalloutFraming. Composed under a parent
+   * (callout, template-callout, etc.); the parent's save persists the
+   * framing's bucket before this is called.
+   *
+   * Walks the framing's own profile and the LINK child if present.
+   * Whiteboard and Memo children are self-materializing inside their own
+   * createX flows (already saved + materialized). MediaGallery handles
+   * its own visuals inline via createMediaGallery (saves the bucket
+   * eagerly). Poll has no profile.
+   */
+  public async materializeCalloutFramingContent(
+    calloutFraming: ICalloutFraming,
+    calloutFramingData: CreateCalloutFramingInput | undefined,
+    rollback: () => Promise<unknown>
+  ): Promise<void> {
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      calloutFraming.profile,
+      calloutFramingData?.profile?.visuals,
+      [VisualType.CARD, VisualType.BANNER],
+      rollback
+    );
+    if (
+      calloutFraming.type === CalloutFramingType.LINK &&
+      calloutFraming.link
+    ) {
+      await this.linkService.materializeLinkContent(
+        calloutFraming.link,
+        calloutFramingData?.link,
+        rollback
+      );
+    }
+  }
+
   private async createNewWhiteboardInCalloutFraming(
     calloutFraming: ICalloutFraming,
     whiteboardData: CreateWhiteboardInput,

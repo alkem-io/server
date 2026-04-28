@@ -218,7 +218,6 @@ export class StorageBucketService {
 
     return this.persistDocumentWithPreparedAuth(
       storageBucketId,
-      mimeType,
       (authId, tagsetId) =>
         this.fileServiceAdapter.createDocument(buffer, {
           displayName: filename,
@@ -260,7 +259,6 @@ export class StorageBucketService {
 
     return this.persistDocumentWithPreparedAuth(
       destinationBucketId,
-      sourceDocument.mimeType,
       (authId, tagsetId) =>
         this.fileServiceAdapter.copyDocument({
           sourceId: sourceDocument.id,
@@ -291,7 +289,6 @@ export class StorageBucketService {
    */
   private async persistDocumentWithPreparedAuth(
     bucketId: string,
-    _mimeTypeForLog: string,
     goCall: (authId: string, tagsetId: string) => Promise<CreateDocumentResult>
   ): Promise<IDocument> {
     let savedAuth;

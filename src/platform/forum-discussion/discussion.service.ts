@@ -37,6 +37,7 @@ export class DiscussionService {
     roomType: RoomType,
     storageAggregator: IStorageAggregator
   ): Promise<IDiscussion> {
+    // Phase 1: build entity tree in memory (no file-service-go calls).
     const discussion: IDiscussion = Discussion.create(discussionData);
     discussion.profile = await this.profileService.createProfile(
       discussionData.profile,
@@ -63,7 +64,17 @@ export class DiscussionService {
 
     discussion.createdBy = userID;
 
-    return await this.save(discussion);
+    // Phase 2: persist + materialize. Helper rolls back the saved
+    // discussion on failure so callers receive a fully-materialized
+    // discussion or an error, never half-state.
+    const saved = await this.save(discussion);
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      saved.profile,
+      discussionData.profile?.visuals,
+      [],
+      () => this.removeDiscussion({ ID: saved.id })
+    );
+    return saved;
   }
 
   async removeDiscussion(

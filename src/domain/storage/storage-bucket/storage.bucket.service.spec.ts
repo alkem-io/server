@@ -748,6 +748,35 @@ describe('StorageBucketService', () => {
         expect.objectContaining({ createdBy: 'orig-user' })
       );
     });
+
+    it('forwards skipDedup=true to fileServiceAdapter.copyDocument', async () => {
+      // Pin the contract relied upon by profile-documents.service.ts: when the
+      // caller asks for a guaranteed-fresh row (skipDedup=true), the flag is
+      // propagated through to the adapter rather than dropped.
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc();
+      const newDoc = mockDocument({ id: 'doc-new' });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'doc-new',
+        externalID: 'ext-shared',
+        mimeType: MimeTypeVisual.PNG,
+        size: 1234,
+        reused: false,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(newDoc);
+
+      await service.copyDocumentToBucket('bucket-dst', source, 'user-1', true);
+
+      expect(fileServiceAdapter.copyDocument).toHaveBeenCalledWith(
+        expect.objectContaining({ skipDedup: true })
+      );
+    });
   });
 
   // ── uploadFileAsDocument (stream) ──────────────────────────────

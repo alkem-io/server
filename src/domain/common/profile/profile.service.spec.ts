@@ -203,9 +203,9 @@ describe('ProfileService', () => {
         references: [],
       } as any;
 
-      await expect(service.materializeProfileContent(profile)).rejects.toThrow(
-        /must be persisted/
-      );
+      await expect(
+        (service as any).materializeProfileContent(profile)
+      ).rejects.toThrow(/must be persisted/);
     });
 
     it('re-uploads markdown documents and reference URIs', async () => {
@@ -226,7 +226,7 @@ describe('ProfileService', () => {
         .mockResolvedValueOnce('https://alkemio/files/xyz-rehomed')
         .mockResolvedValueOnce('https://external.example.com/img.png');
 
-      const result = await service.materializeProfileContent(profile);
+      const result = await (service as any).materializeProfileContent(profile);
 
       expect(result.description).toBe('![](https://alkemio/files/abc-rehomed)');
       expect(result.references![0].uri).toBe(

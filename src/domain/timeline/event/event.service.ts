@@ -42,6 +42,7 @@ export class CalendarEventService {
     storageAggregator: IStorageAggregator,
     userID: string
   ): Promise<ICalendarEvent> {
+    // Phase 1: build entity tree in memory (no file-service-go calls).
     const calendarEvent: ICalendarEvent =
       CalendarEvent.create(calendarEventInput);
     calendarEvent.profile = await this.profileService.createProfile(
@@ -66,7 +67,17 @@ export class CalendarEventService {
       type: RoomType.CALENDAR_EVENT,
     });
 
-    return await this.save(calendarEvent);
+    // Phase 2: persist + materialize. Helper rolls back the saved
+    // event on failure so callers receive a fully-materialized event
+    // or an error, never half-state.
+    const saved = await this.save(calendarEvent);
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      saved.profile,
+      calendarEventInput.profileData?.visuals,
+      [],
+      () => this.deleteCalendarEvent({ ID: saved.id })
+    );
+    return saved;
   }
 
   public async save(calendarEvent: ICalendarEvent): Promise<CalendarEvent> {

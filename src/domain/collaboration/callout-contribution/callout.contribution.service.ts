@@ -62,6 +62,29 @@ export class CalloutContributionService {
     return contributions;
   }
 
+  /**
+   * Phase-2 materialization for a CalloutContribution. Post/Whiteboard/Memo
+   * leaves are self-materializing inside their respective createX methods
+   * (already saved + materialized when this is called). Only LINK
+   * contributions need explicit materialize here.
+   */
+  public async materializeCalloutContributionContent(
+    contribution: ICalloutContribution,
+    contributionData: CreateCalloutContributionInput | undefined,
+    rollback: () => Promise<unknown>
+  ): Promise<void> {
+    if (
+      contribution.type === CalloutContributionType.LINK &&
+      contribution.link
+    ) {
+      await this.linkService.materializeLinkContent(
+        contribution.link,
+        contributionData?.link,
+        rollback
+      );
+    }
+  }
+
   public async createCalloutContribution(
     calloutContributionData: CreateCalloutContributionInput,
     storageAggregator: IStorageAggregator,

@@ -214,16 +214,17 @@ export class TemplateService {
     }
 
     // Phase 2: persist + materialize own profile + cascade-materialize
-    // nested entities. The materializeProfileContentAndVisualsOrRollback
-    // helper handles own-profile rollback. Nested guidelines materialization
-    // is wrapped in a follow-up try/catch so any failure there also rolls
-    // back the parent template (otherwise we'd leave a partially-
-    // materialized template behind).
+    // any nested entity tree that the type carries. The
+    // materializeProfileContentAndVisualsOrRollback helper handles
+    // own-profile rollback; nested materialization is wrapped in a
+    // follow-up try/catch that rolls back the entire template on failure
+    // (otherwise we'd leave a partially-materialized template behind).
     //
-    // Other template types (POST, CALLOUT, SPACE, WHITEBOARD): their nested
-    // content lives in deeper trees that don't yet have explicit
-    // materialize hooks. Those types' profiles are still re-homed via the
-    // own-profile call above; nested-content materialization is a follow-up.
+    // Self-materializing leaves (WHITEBOARD via WhiteboardService.create*,
+    // POST as part of POST template type — but that template type stores
+    // only postDefaultDescription, not a Post entity) need no extra walk.
+    // CALLOUT, SPACE, COMMUNITY_GUIDELINES carry deeper trees and walk
+    // through their dedicated materialize chain.
     const saved = await this.templateRepository.save(template);
 
     // Helper mutates the profile in place; no explicit reassignment needed.
@@ -233,6 +234,20 @@ export class TemplateService {
       [VisualType.CARD],
       () => this.delete(saved)
     );
+
+    const rollbackTemplate = (): Promise<unknown> =>
+      this.delete(saved).catch(rollbackError => {
+        this.logger.warn?.(
+          {
+            message:
+              'Rollback after nested template-content materialization failure also failed',
+            templateId: saved.id,
+            templateType: saved.type,
+            rollbackError: String(rollbackError),
+          },
+          LogContext.TEMPLATES
+        );
+      });
 
     if (
       saved.type === TemplateType.COMMUNITY_GUIDELINES &&
@@ -245,14 +260,33 @@ export class TemplateService {
           templateData.communityGuidelinesData
         );
       } catch (error) {
-        await this.delete(saved).catch(rollbackError =>
-          this.logger.warn?.(
-            `Rollback after nested-guidelines materialization failure also failed for template ${saved.id}: ${rollbackError}`,
-            LogContext.TEMPLATES
-          )
-        );
+        await rollbackTemplate();
         throw error;
       }
+    }
+
+    if (
+      saved.type === TemplateType.CALLOUT &&
+      saved.callout &&
+      templateData.calloutData
+    ) {
+      await this.calloutService.materializeCalloutContent(
+        saved.callout,
+        templateData.calloutData,
+        rollbackTemplate
+      );
+    }
+
+    if (
+      saved.type === TemplateType.SPACE &&
+      saved.contentSpace &&
+      templateData.contentSpaceData
+    ) {
+      await this.templateContentSpaceService.materializeTemplateContentSpaceContent(
+        saved.contentSpace,
+        templateData.contentSpaceData,
+        rollbackTemplate
+      );
     }
 
     return saved;

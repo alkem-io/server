@@ -256,7 +256,12 @@ export class SpaceService {
     } catch (error) {
       await this.deleteSpaceOrFail({ ID: space.id }).catch(rollbackError =>
         this.logger.warn?.(
-          `Rollback after SpaceAbout materialization failure also failed for space ${space.id}: ${rollbackError}`,
+          {
+            message:
+              'Rollback after SpaceAbout materialization failure also failed',
+            spaceId: space.id,
+            rollbackError: String(rollbackError),
+          },
           LogContext.SPACES
         )
       );
@@ -334,6 +339,37 @@ export class SpaceService {
     );
 
     const spaceUpdated = await this.save(space);
+
+    // Phase-2 materialize the collaboration tree now that the cascade save
+    // has persisted callouts/framings/contributions. Cross-bucket markdown
+    // URLs from the source template (and any temp-location uploads in the
+    // user input) get re-homed into the space's bucket. On failure we
+    // delete the just-committed space so a partially-materialized space
+    // doesn't linger — same contract as the spaceAbout materialize above.
+    if (spaceUpdated.collaboration) {
+      try {
+        await this.collaborationService.materializeCollaborationContent(
+          spaceUpdated.collaboration,
+          updatedCollaborationData,
+          () => this.deleteSpaceOrFail({ ID: spaceUpdated.id })
+        );
+      } catch (error) {
+        await this.deleteSpaceOrFail({ ID: spaceUpdated.id }).catch(
+          rollbackError =>
+            this.logger.warn?.(
+              {
+                message:
+                  'Rollback after Collaboration materialization failure also failed',
+                spaceId: spaceUpdated.id,
+                rollbackError: String(rollbackError),
+              },
+              LogContext.SPACES
+            )
+        );
+        throw error;
+      }
+    }
+
     // If template has child spaces, then create child spaces here
     if (
       templateContentSpace.subspaces &&

@@ -164,6 +164,26 @@ export class CollaborationService {
     return collaboration;
   }
 
+  /**
+   * Phase-2 materialization for a Collaboration. Walks the callouts set and
+   * delegates to CalloutsSetService. Caller supplies a rollback that cleans
+   * up the top-level parent (Space, TemplateContentSpace, etc.) so a
+   * failed walk doesn't leave a partially-materialized tree behind.
+   */
+  public async materializeCollaborationContent(
+    collaboration: ICollaboration,
+    collaborationData: CreateCollaborationInput | undefined,
+    rollback: () => Promise<unknown>
+  ): Promise<void> {
+    if (collaboration.calloutsSet) {
+      await this.calloutsSetService.materializeCalloutsSetContent(
+        collaboration.calloutsSet,
+        collaborationData?.calloutsSetData?.calloutsData,
+        rollback
+      );
+    }
+  }
+
   private createInnovationFlowStatesTagsetTemplateInput(
     innovationFlowData: CreateInnovationFlowInput
   ): CreateTagsetTemplateInput {

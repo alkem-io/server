@@ -110,7 +110,9 @@ export class ProfileService {
    * Throws `EntityNotInitializedException` if the bucket isn't persisted
    * yet — that's a programmer error, not a runtime condition.
    */
-  public async materializeProfileContent(profile: IProfile): Promise<IProfile> {
+  private async materializeProfileContent(
+    profile: IProfile
+  ): Promise<IProfile> {
     if (!profile.storageBucket?.id) {
       throw new EntityNotInitializedException(
         'Profile storage bucket must be persisted before materializing content',
@@ -202,7 +204,11 @@ export class ProfileService {
         await rollback();
       } catch (rollbackError) {
         this.logger.warn?.(
-          `Rollback after materialization failure also failed for profile ${profile.id}: ${rollbackError}`,
+          {
+            message: 'Rollback after materialization failure also failed',
+            profileId: profile.id,
+            rollbackError: String(rollbackError),
+          },
           LogContext.PROFILE
         );
       }

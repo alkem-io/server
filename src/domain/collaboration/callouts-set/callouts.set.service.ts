@@ -77,6 +77,26 @@ export class CalloutsSetService {
     return calloutsSet;
   }
 
+  /**
+   * Phase-2 materialization for a CalloutsSet. Walks each callout in the
+   * set and delegates to CalloutService.materializeCalloutContent.
+   * Failures bubble up via the supplied rollback callback.
+   */
+  public async materializeCalloutsSetContent(
+    calloutsSet: ICalloutsSet,
+    calloutsData: CreateCalloutInput[] | undefined,
+    rollback: () => Promise<unknown>
+  ): Promise<void> {
+    const callouts = calloutsSet.callouts ?? [];
+    for (let i = 0; i < callouts.length; i++) {
+      await this.calloutService.materializeCalloutContent(
+        callouts[i],
+        calloutsData?.[i],
+        rollback
+      );
+    }
+  }
+
   async getCalloutsSetOrFail(
     calloutsSetID: string,
     options?: FindOneOptions<CalloutsSet>
