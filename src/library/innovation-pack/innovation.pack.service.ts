@@ -76,11 +76,6 @@ export class InnovationPackService {
       ProfileType.INNOVATION_PACK,
       storageAggregator
     );
-    await this.profileService.addVisualsOnProfile(
-      innovationPack.profile,
-      innovationPackData.profileData.visuals,
-      [VisualType.AVATAR, VisualType.CARD]
-    );
 
     innovationPack.listedInStore = true;
     innovationPack.searchVisibility = SearchVisibility.ACCOUNT;
@@ -96,7 +91,15 @@ export class InnovationPackService {
     innovationPack.templatesSet =
       await this.templatesSetService.createTemplatesSet();
 
-    return await this.save(innovationPack);
+    const saved = await this.save(innovationPack);
+    // Post-save: profile.storageBucket has its id; re-home internal URLs
+    // and attach AVATAR + CARD visuals.
+    await this.profileService.materializeProfileContentAndVisuals(
+      saved.profile,
+      innovationPackData.profileData.visuals,
+      [VisualType.AVATAR, VisualType.CARD]
+    );
+    return saved;
   }
 
   async save(innovationPack: IInnovationPack): Promise<IInnovationPack> {

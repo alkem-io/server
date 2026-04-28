@@ -69,11 +69,16 @@ export class CommunityGuidelinesService {
    */
   async materializeCommunityGuidelinesContent(
     communityGuidelines: ICommunityGuidelines,
-    communityGuidelinesData: CreateCommunityGuidelinesInput
+    communityGuidelinesData?: CreateCommunityGuidelinesInput
   ): Promise<ICommunityGuidelines> {
+    // `communityGuidelinesData` is optional because composing services
+    // (e.g. SpaceAboutService) auto-create empty guidelines when the caller
+    // doesn't supply any. Auto-created profiles still need post-save
+    // materialization (re-home description URLs, etc.) — visuals just
+    // happen to be absent in that case.
     await this.profileService.materializeProfileContentAndVisuals(
       communityGuidelines.profile,
-      communityGuidelinesData.profile.visuals,
+      communityGuidelinesData?.profile.visuals,
       [VisualType.CARD]
     );
     return communityGuidelines;

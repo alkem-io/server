@@ -113,8 +113,9 @@ export class ProfileService {
   public async materializeProfileContent(profile: IProfile): Promise<IProfile> {
     if (!profile.storageBucket?.id) {
       throw new EntityNotInitializedException(
-        `Profile storage bucket must be persisted before materializing content: profile ${profile.id}`,
-        LogContext.PROFILE
+        'Profile storage bucket must be persisted before materializing content',
+        LogContext.PROFILE,
+        { profileId: profile.id }
       );
     }
     if (profile.description) {

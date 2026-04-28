@@ -78,12 +78,17 @@ describe('WhiteboardService', () => {
 
     beforeEach(() => {
       vi.mocked(profileService.createProfile).mockResolvedValue(mockProfile);
-      vi.mocked(profileService.addVisualsOnProfile).mockResolvedValue(
-        mockProfile
-      );
+      vi.mocked(
+        profileService.materializeProfileContentAndVisuals
+      ).mockResolvedValue(mockProfile);
       vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
         {} as any
       );
+      // createWhiteboard now persists the entity inline so its bucket id is
+      // populated before phase-2 materialization. The repository mock must
+      // round-trip the entity; otherwise we lose the in-memory state we just
+      // set up (authorization, profile, etc.).
+      whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
     });
 
     it('should create whiteboard with profile, visuals, tagset, and authorization', async () => {
@@ -107,7 +112,7 @@ describe('WhiteboardService', () => {
         mockStorageAggregator
       );
       expect(
-        vi.mocked(profileService.addVisualsOnProfile)
+        vi.mocked(profileService.materializeProfileContentAndVisuals)
       ).toHaveBeenCalledWith(mockProfile, undefined, [
         VisualType.CARD,
         VisualType.WHITEBOARD_PREVIEW,

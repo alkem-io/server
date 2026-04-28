@@ -45,7 +45,8 @@ export class WhiteboardService {
   async createWhiteboard(
     whiteboardData: CreateWhiteboardInput,
     storageAggregator: IStorageAggregator,
-    userID?: string
+    userID?: string,
+    visualTypes: VisualType[] = [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW]
   ): Promise<IWhiteboard> {
     const whiteboard: IWhiteboard = Whiteboard.create({
       ...whiteboardData,
@@ -63,11 +64,6 @@ export class WhiteboardService {
       ProfileType.WHITEBOARD,
       storageAggregator
     );
-    await this.profileService.addVisualsOnProfile(
-      whiteboard.profile,
-      whiteboardData.profile?.visuals,
-      [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW]
-    );
     await this.profileService.addOrUpdateTagsetOnProfile(whiteboard.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: [],
@@ -78,7 +74,17 @@ export class WhiteboardService {
       coordinates: whiteboardData.previewSettings?.coordinates ?? null,
     };
 
-    return whiteboard;
+    // Save whiteboard so its profile.storageBucket gets a real id (cascade),
+    // then materialize markdown/refs/visuals against the persisted bucket.
+    // Caller's parent cascade save will be a no-op for this whiteboard since
+    // it's already persisted with its FKs intact.
+    const saved = await this.whiteboardRepository.save(whiteboard);
+    await this.profileService.materializeProfileContentAndVisuals(
+      saved.profile,
+      whiteboardData.profile?.visuals,
+      visualTypes
+    );
+    return saved;
   }
 
   async getWhiteboardOrFail(

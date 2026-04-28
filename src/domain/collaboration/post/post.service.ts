@@ -42,11 +42,6 @@ export class PostService {
       ProfileType.POST,
       storageAggregator
     );
-    await this.profileService.addVisualsOnProfile(
-      post.profile,
-      postInput.profileData.visuals,
-      [VisualType.BANNER, VisualType.CARD]
-    );
     await this.profileService.addOrUpdateTagsetOnProfile(post.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: postInput.tags || [],
@@ -60,7 +55,15 @@ export class PostService {
       parentContextId: parentSpaceId,
     });
 
-    return post;
+    // Save so the profile's storageBucket gets a real id, then materialize
+    // markdown/refs/visuals. Parent cascade save will no-op on this post.
+    const saved = await this.postRepository.save(post);
+    await this.profileService.materializeProfileContentAndVisuals(
+      saved.profile,
+      postInput.profileData.visuals,
+      [VisualType.BANNER, VisualType.CARD]
+    );
+    return saved;
   }
 
   public async deletePost(postId: string): Promise<IPost> {

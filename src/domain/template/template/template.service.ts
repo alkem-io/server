@@ -209,7 +209,10 @@ export class TemplateService {
         );
     }
 
-    return await this.templateRepository.save(template);
+    // Phase 1 returns unsaved. The caller (TemplatesSetService) saves the
+    // template after wiring up the templatesSet relation, then calls
+    // materializeTemplateContent for post-save re-uploads.
+    return template;
   }
 
   /**

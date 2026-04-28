@@ -110,7 +110,12 @@ export class SpaceAboutService {
       spaceAboutData.profileData.visuals,
       [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD]
     );
-    if (spaceAbout.guidelines && spaceAboutData.guidelines) {
+    // createSpaceAbout always populates `spaceAbout.guidelines` (auto-creating
+    // an empty one if `spaceAboutData.guidelines` wasn't supplied). Materialize
+    // unconditionally so the auto-created profile gets its post-save work too;
+    // materializeCommunityGuidelinesContent treats undefined input as "no
+    // visuals to attach".
+    if (spaceAbout.guidelines) {
       await this.communityGuidelinesService.materializeCommunityGuidelinesContent(
         spaceAbout.guidelines,
         spaceAboutData.guidelines

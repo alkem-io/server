@@ -81,12 +81,6 @@ export class InnovationFlowService {
       storageAggregator
     );
 
-    await this.profileService.addVisualsOnProfile(
-      innovationFlow.profile,
-      innovationFlowData.profile.visuals,
-      [VisualType.CARD]
-    );
-
     innovationFlow.states = [];
     let sortOrder = 0;
     for (const stateData of innovationFlowData.states) {
@@ -100,20 +94,26 @@ export class InnovationFlowService {
       innovationFlow.states.push(state);
       sortOrder = state.sortOrder;
     }
-    await this.save(innovationFlow);
+    const saved = await this.save(innovationFlow);
+    // First save populated profile.storageBucket.id; now materialize.
+    await this.profileService.materializeProfileContentAndVisuals(
+      saved.profile,
+      innovationFlowData.profile.visuals,
+      [VisualType.CARD]
+    );
 
-    innovationFlow.currentStateID = innovationFlow.states[0].id;
+    saved.currentStateID = saved.states[0].id;
     if (innovationFlowData.currentStateDisplayName) {
-      const currentState = innovationFlow.states.find(
+      const currentState = saved.states.find(
         state =>
           state.displayName === innovationFlowData.currentStateDisplayName
       );
       if (currentState) {
-        innovationFlow.currentStateID = currentState.id;
+        saved.currentStateID = currentState.id;
       }
     }
 
-    return await this.save(innovationFlow);
+    return await this.save(saved);
   }
 
   async save(innovationFlow: IInnovationFlow): Promise<IInnovationFlow> {

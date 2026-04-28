@@ -44,7 +44,8 @@ export class MemoService {
   async createMemo(
     { markdown, ...restOfMemoData }: CreateMemoInput,
     storageAggregator: IStorageAggregator,
-    userID?: string
+    userID?: string,
+    visualTypes: VisualType[] = [VisualType.CARD]
   ): Promise<IMemo> {
     const binaryUpdateV2 = this.markdownToStateUpdate(markdown);
     const content = binaryUpdateV2 ? Buffer.from(binaryUpdateV2) : undefined;
@@ -63,17 +64,22 @@ export class MemoService {
       ProfileType.MEMO,
       storageAggregator
     );
-    await this.profileService.addVisualsOnProfile(
-      memo.profile,
-      restOfMemoData.profile?.visuals,
-      [VisualType.CARD]
-    );
     await this.profileService.addOrUpdateTagsetOnProfile(memo.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: [],
     });
 
-    return this.save(memo);
+    // Phase 1 + persist + phase 2: cascade save populates the bucket id, then
+    // post-save materialization re-homes any internal markdown URLs and
+    // attaches visuals. Single internal save means callers continue to get a
+    // fully-materialized memo.
+    const saved = await this.save(memo);
+    await this.profileService.materializeProfileContentAndVisuals(
+      saved.profile,
+      restOfMemoData.profile?.visuals,
+      visualTypes
+    );
+    return saved;
   }
 
   async getMemoOrFail(

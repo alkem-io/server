@@ -70,9 +70,10 @@ describe('PostService', () => {
       const createdRoom = { id: 'room-1' } as any;
 
       vi.mocked(profileService.createProfile).mockResolvedValue(createdProfile);
-      vi.mocked(profileService.addVisualsOnProfile).mockResolvedValue(
-        undefined as any
-      );
+      vi.mocked(
+        profileService.materializeProfileContentAndVisuals
+      ).mockImplementation(async profile => profile);
+      vi.mocked(repository.save).mockImplementation(async (post: any) => post);
       vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
         undefined as any
       );
@@ -89,11 +90,12 @@ describe('PostService', () => {
         ProfileType.POST,
         storageAggregator
       );
-      expect(profileService.addVisualsOnProfile).toHaveBeenCalledWith(
-        createdProfile,
-        postInput.profileData.visuals,
-        [VisualType.BANNER, VisualType.CARD]
-      );
+      expect(
+        profileService.materializeProfileContentAndVisuals
+      ).toHaveBeenCalledWith(createdProfile, postInput.profileData.visuals, [
+        VisualType.BANNER,
+        VisualType.CARD,
+      ]);
       expect(profileService.addOrUpdateTagsetOnProfile).toHaveBeenCalledWith(
         createdProfile,
         { name: TagsetReservedName.DEFAULT, tags: ['tag1', 'tag2'] }
@@ -108,9 +110,10 @@ describe('PostService', () => {
 
     it('should set createdBy to the provided userID', async () => {
       vi.mocked(profileService.createProfile).mockResolvedValue({} as any);
-      vi.mocked(profileService.addVisualsOnProfile).mockResolvedValue(
-        undefined as any
-      );
+      vi.mocked(
+        profileService.materializeProfileContentAndVisuals
+      ).mockImplementation(async profile => profile);
+      vi.mocked(repository.save).mockImplementation(async (post: any) => post);
       vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
         undefined as any
       );
@@ -132,9 +135,10 @@ describe('PostService', () => {
       } as any;
 
       vi.mocked(profileService.createProfile).mockResolvedValue({} as any);
-      vi.mocked(profileService.addVisualsOnProfile).mockResolvedValue(
-        undefined as any
-      );
+      vi.mocked(
+        profileService.materializeProfileContentAndVisuals
+      ).mockImplementation(async profile => profile);
+      vi.mocked(repository.save).mockImplementation(async (post: any) => post);
       vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
         undefined as any
       );
