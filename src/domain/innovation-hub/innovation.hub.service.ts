@@ -103,11 +103,12 @@ export class InnovationHubService {
     const saved = await this.save(hub);
     // Post-save: bucket has its id, materialize re-homes any internal URLs
     // and attaches the BANNER_WIDE visual.
-    await this.profileService.materializeProfileContentAndVisuals(
-      saved.profile,
-      createData.profileData.visuals,
-      [VisualType.BANNER_WIDE]
-    );
+    saved.profile =
+      await this.profileService.materializeProfileContentAndVisuals(
+        saved.profile,
+        createData.profileData.visuals,
+        [VisualType.BANNER_WIDE]
+      );
     return saved;
   }
 

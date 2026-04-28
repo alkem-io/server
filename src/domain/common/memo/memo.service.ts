@@ -74,11 +74,12 @@ export class MemoService {
     // attaches visuals. Single internal save means callers continue to get a
     // fully-materialized memo.
     const saved = await this.save(memo);
-    await this.profileService.materializeProfileContentAndVisuals(
-      saved.profile,
-      restOfMemoData.profile?.visuals,
-      visualTypes
-    );
+    saved.profile =
+      await this.profileService.materializeProfileContentAndVisuals(
+        saved.profile,
+        restOfMemoData.profile?.visuals,
+        visualTypes
+      );
     return saved;
   }
 

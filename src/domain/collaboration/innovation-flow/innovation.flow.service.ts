@@ -96,11 +96,12 @@ export class InnovationFlowService {
     }
     const saved = await this.save(innovationFlow);
     // First save populated profile.storageBucket.id; now materialize.
-    await this.profileService.materializeProfileContentAndVisuals(
-      saved.profile,
-      innovationFlowData.profile.visuals,
-      [VisualType.CARD]
-    );
+    saved.profile =
+      await this.profileService.materializeProfileContentAndVisuals(
+        saved.profile,
+        innovationFlowData.profile.visuals,
+        [VisualType.CARD]
+      );
 
     saved.currentStateID = saved.states[0].id;
     if (innovationFlowData.currentStateDisplayName) {

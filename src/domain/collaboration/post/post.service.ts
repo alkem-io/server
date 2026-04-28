@@ -84,11 +84,12 @@ export class PostService {
         { postId: post.id }
       );
     }
-    await this.profileService.materializeProfileContentAndVisuals(
-      post.profile,
-      postInput.profileData.visuals,
-      [VisualType.BANNER, VisualType.CARD]
-    );
+    post.profile =
+      await this.profileService.materializeProfileContentAndVisuals(
+        post.profile,
+        postInput.profileData.visuals,
+        [VisualType.BANNER, VisualType.CARD]
+      );
     return post;
   }
 

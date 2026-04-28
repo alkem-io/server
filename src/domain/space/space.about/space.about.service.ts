@@ -105,11 +105,12 @@ export class SpaceAboutService {
     spaceAbout: ISpaceAbout,
     spaceAboutData: CreateSpaceAboutInput
   ): Promise<ISpaceAbout> {
-    await this.profileService.materializeProfileContentAndVisuals(
-      spaceAbout.profile,
-      spaceAboutData.profileData.visuals,
-      [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD]
-    );
+    spaceAbout.profile =
+      await this.profileService.materializeProfileContentAndVisuals(
+        spaceAbout.profile,
+        spaceAboutData.profileData.visuals,
+        [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD]
+      );
     // createSpaceAbout always populates `spaceAbout.guidelines` (auto-creating
     // an empty one if `spaceAboutData.guidelines` wasn't supplied). Materialize
     // unconditionally so the auto-created profile gets its post-save work too;

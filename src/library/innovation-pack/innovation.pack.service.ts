@@ -94,11 +94,12 @@ export class InnovationPackService {
     const saved = await this.save(innovationPack);
     // Post-save: profile.storageBucket has its id; re-home internal URLs
     // and attach AVATAR + CARD visuals.
-    await this.profileService.materializeProfileContentAndVisuals(
-      saved.profile,
-      innovationPackData.profileData.visuals,
-      [VisualType.AVATAR, VisualType.CARD]
-    );
+    saved.profile =
+      await this.profileService.materializeProfileContentAndVisuals(
+        saved.profile,
+        innovationPackData.profileData.visuals,
+        [VisualType.AVATAR, VisualType.CARD]
+      );
     return saved;
   }
 

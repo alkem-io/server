@@ -84,6 +84,12 @@ describe('InnovationHubService', () => {
     ps.createProfile = vi.fn().mockResolvedValue(profile);
     ps.addOrUpdateTagsetOnProfile = vi.fn().mockResolvedValue({});
     ps.addVisualsOnProfile = vi.fn().mockResolvedValue({});
+    // Phase-2 materialize is invoked post-save by createInnovationHub and
+    // its return value is reassigned back onto saved.profile, so the mock
+    // must echo the input profile through.
+    ps.materializeProfileContentAndVisuals = vi
+      .fn()
+      .mockImplementation(async (p: any) => p);
   };
 
   /**

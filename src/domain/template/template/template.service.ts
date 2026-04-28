@@ -244,11 +244,12 @@ export class TemplateService {
         }
       );
     }
-    await this.profileService.materializeProfileContentAndVisuals(
-      template.profile,
-      templateData.profileData.visuals,
-      [VisualType.CARD]
-    );
+    template.profile =
+      await this.profileService.materializeProfileContentAndVisuals(
+        template.profile,
+        templateData.profileData.visuals,
+        [VisualType.CARD]
+      );
     if (
       template.type === TemplateType.COMMUNITY_GUIDELINES &&
       template.communityGuidelines &&
@@ -269,7 +270,12 @@ export class TemplateService {
       await this.whiteboardService.materializeWhiteboardContent(
         template.whiteboard,
         {
-          profile: { displayName: 'Whiteboard Template' },
+          profile: {
+            displayName:
+              templateData.whiteboard.profile?.displayName ??
+              'Whiteboard Template',
+            visuals: templateData.whiteboard.profile?.visuals,
+          },
           nameID: template.whiteboard.nameID,
           content: templateData.whiteboard.content,
           previewSettings: templateData.whiteboard.previewSettings,

@@ -95,11 +95,12 @@ export class WhiteboardService {
     whiteboard: IWhiteboard,
     whiteboardData: CreateWhiteboardInput
   ): Promise<IWhiteboard> {
-    await this.profileService.materializeProfileContentAndVisuals(
-      whiteboard.profile,
-      whiteboardData.profile?.visuals,
-      [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW]
-    );
+    whiteboard.profile =
+      await this.profileService.materializeProfileContentAndVisuals(
+        whiteboard.profile,
+        whiteboardData.profile?.visuals,
+        [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW]
+      );
     return whiteboard;
   }
 

@@ -76,11 +76,12 @@ export class CommunityGuidelinesService {
     // doesn't supply any. Auto-created profiles still need post-save
     // materialization (re-home description URLs, etc.) — visuals just
     // happen to be absent in that case.
-    await this.profileService.materializeProfileContentAndVisuals(
-      communityGuidelines.profile,
-      communityGuidelinesData?.profile.visuals,
-      [VisualType.CARD]
-    );
+    communityGuidelines.profile =
+      await this.profileService.materializeProfileContentAndVisuals(
+        communityGuidelines.profile,
+        communityGuidelinesData?.profile.visuals,
+        [VisualType.CARD]
+      );
     return communityGuidelines;
   }
 
