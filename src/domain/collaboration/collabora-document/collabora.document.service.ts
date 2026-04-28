@@ -79,12 +79,19 @@ export class CollaboraDocumentService {
 
     let document;
     try {
+      // Skip file-service-go's content-hash dedup: the empty placeholder
+      // here only establishes identity for WOPI; Collabora writes the real
+      // content via PutFile later. Two collabora docs created in the same
+      // bucket with `Buffer.alloc(0)` would otherwise share a backing row
+      // and corrupt each other's edits.
       document = await this.storageBucketService.uploadFileAsDocumentFromBuffer(
         storageBucketId,
         emptyBuffer,
         fileName,
         mimeType,
-        userID
+        userID,
+        false,
+        true
       );
     } catch (error) {
       // Compensate: remove the profile created above
