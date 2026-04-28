@@ -3,7 +3,10 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -71,6 +74,13 @@ export class CommunityGuidelinesService {
     communityGuidelines: ICommunityGuidelines,
     communityGuidelinesData?: CreateCommunityGuidelinesInput
   ): Promise<ICommunityGuidelines> {
+    if (!communityGuidelines.profile) {
+      throw new RelationshipNotFoundException(
+        'Community guidelines profile not initialized',
+        LogContext.COMMUNITY,
+        { communityGuidelinesId: communityGuidelines.id }
+      );
+    }
     // `communityGuidelinesData` is optional because composing services
     // (e.g. SpaceAboutService) auto-create empty guidelines when the caller
     // doesn't supply any. Auto-created profiles still need post-save

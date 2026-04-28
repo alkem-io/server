@@ -105,6 +105,13 @@ export class SpaceAboutService {
     spaceAbout: ISpaceAbout,
     spaceAboutData: CreateSpaceAboutInput
   ): Promise<ISpaceAbout> {
+    if (!spaceAbout.profile) {
+      throw new RelationshipNotFoundException(
+        'SpaceAbout profile not initialized',
+        LogContext.SPACES,
+        { spaceAboutId: spaceAbout.id }
+      );
+    }
     spaceAbout.profile =
       await this.profileService.materializeProfileContentAndVisuals(
         spaceAbout.profile,

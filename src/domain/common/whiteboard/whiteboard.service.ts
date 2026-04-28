@@ -95,6 +95,13 @@ export class WhiteboardService {
     whiteboard: IWhiteboard,
     whiteboardData: CreateWhiteboardInput
   ): Promise<IWhiteboard> {
+    if (!whiteboard.profile) {
+      throw new RelationshipNotFoundException(
+        'Whiteboard profile not initialized',
+        LogContext.SPACES,
+        { whiteboardId: whiteboard.id }
+      );
+    }
     whiteboard.profile =
       await this.profileService.materializeProfileContentAndVisuals(
         whiteboard.profile,
