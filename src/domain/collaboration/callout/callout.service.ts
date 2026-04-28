@@ -614,7 +614,14 @@ export class CalloutService {
       );
     contribution.callout = callout;
 
-    return await this.contributionService.save(contribution);
+    const saved = await this.contributionService.save(contribution);
+    // Phase 2: now that the contribution + nested entity profile + bucket
+    // are persisted, re-home any internal Alkemio URLs and attach visuals.
+    await this.contributionService.materializeCalloutContributionContent(
+      saved,
+      contributionData
+    );
+    return saved;
   }
 
   public async getStorageBucket(calloutID: string): Promise<IStorageBucket> {

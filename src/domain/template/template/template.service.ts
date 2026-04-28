@@ -222,15 +222,28 @@ export class TemplateService {
    * AFTER {@link save} (or any equivalent persist) so the storageBucket id
    * is real.
    *
-   * Nested entities (community guidelines, content space, callout,
-   * whiteboard) own their own materialization where it matters; those are
-   * delegated as separate calls so each composing service stays
-   * responsible for its own slice of post-save work.
+   * Currently delegates only to community-guidelines and whiteboard
+   * templates — those are the bug-path types from #6004 / #6005 whose
+   * inputs commonly carry internal URLs. Other template types
+   * (POST, CALLOUT, SPACE) don't have a materialize hook yet; their
+   * profiles still get re-homed at the top of this method, but nested
+   * content within `contentSpace`/`callout` is not walked. Add explicit
+   * delegation here when those types start carrying internal URLs.
    */
   async materializeTemplateContent(
     template: ITemplate,
     templateData: CreateTemplateInput
   ): Promise<ITemplate> {
+    if (!template.profile?.storageBucket?.id) {
+      throw new EntityNotInitializedException(
+        'Template profile storage bucket must be persisted before materialization',
+        LogContext.TEMPLATES,
+        {
+          templateId: template.id,
+          profileId: template.profile?.id,
+        }
+      );
+    }
     await this.profileService.materializeProfileContentAndVisuals(
       template.profile,
       templateData.profileData.visuals,

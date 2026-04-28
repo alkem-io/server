@@ -3,7 +3,10 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { RoomType } from '@common/enums/room.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { IPost } from '@domain/collaboration/post/post.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
@@ -74,6 +77,13 @@ export class PostService {
     post: IPost,
     postInput: CreatePostInput
   ): Promise<IPost> {
+    if (!post.profile) {
+      throw new RelationshipNotFoundException(
+        'Post profile not initialized',
+        LogContext.COLLABORATION,
+        { postId: post.id }
+      );
+    }
     await this.profileService.materializeProfileContentAndVisuals(
       post.profile,
       postInput.profileData.visuals,

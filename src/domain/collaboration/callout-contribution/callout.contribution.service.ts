@@ -121,6 +121,32 @@ export class CalloutContributionService {
     return contribution;
   }
 
+  /**
+   * Phase 2: post-save content materialization for the contribution's
+   * inner content entity (post / whiteboard). Memo materializes itself
+   * inside `createMemo`; Link has no profile content. Caller must invoke
+   * AFTER the contribution has been persisted (cascade-saving the inner
+   * entity's profile + storageBucket).
+   */
+  public async materializeCalloutContributionContent(
+    contribution: ICalloutContribution,
+    contributionData: CreateCalloutContributionInput
+  ): Promise<ICalloutContribution> {
+    if (contribution.post && contributionData.post) {
+      await this.postService.materializePostContent(
+        contribution.post,
+        contributionData.post
+      );
+    }
+    if (contribution.whiteboard && contributionData.whiteboard) {
+      await this.whiteboardService.materializeWhiteboardContent(
+        contribution.whiteboard,
+        contributionData.whiteboard
+      );
+    }
+    return contribution;
+  }
+
   private validateContributionType(
     calloutContributionData: CreateCalloutContributionInput,
     contributionSettings: ICalloutSettingsContribution
