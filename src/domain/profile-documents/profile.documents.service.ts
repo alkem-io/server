@@ -6,15 +6,18 @@ import {
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 @Injectable()
 export class ProfileDocumentsService {
   constructor(
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
-    private fileServiceAdapter: FileServiceAdapter
+    private fileServiceAdapter: FileServiceAdapter,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   /***
@@ -116,11 +119,27 @@ export class ProfileDocumentsService {
       } catch (error) {
         // Source delete failed after destination copy succeeded — compensate
         // by removing the new copy so a caller retry doesn't accumulate
-        // duplicates in the destination bucket. Swallow cleanup errors: the
-        // original delete failure is what the caller needs to see.
+        // duplicates in the destination bucket. Cleanup-failure is
+        // alert-worthy (logger.error) but does not replace the original
+        // source-delete error — same convention as the OrRollback helper
+        // and other rollback sites in the codebase.
         await this.documentService
           .deleteDocument({ ID: newDoc.id })
-          .catch(() => undefined);
+          .catch(cleanupError => {
+            const stack =
+              cleanupError instanceof Error ? (cleanupError.stack ?? '') : '';
+            this.logger.error?.(
+              {
+                message:
+                  'Cleanup of destination copy after source-delete failure also failed',
+                sourceDocumentId: docInContent.id,
+                destinationDocumentId: newDoc.id,
+                cleanupError: String(cleanupError),
+              },
+              stack,
+              LogContext.PROFILE
+            );
+          });
         throw error;
       }
       // Keep in-memory bucket state in sync so subsequent re-uploads in the

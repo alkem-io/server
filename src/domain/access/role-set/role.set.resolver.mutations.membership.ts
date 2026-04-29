@@ -227,8 +227,11 @@ export class RoleSetResolverMutationsMembership {
       community,
       application,
     };
-    void this.notificationAdapterSpace.spaceCommunityApplicationCreated(
-      notificationInput
+    this.dispatchNotification(
+      this.notificationAdapterSpace.spaceCommunityApplicationCreated(
+        notificationInput
+      ),
+      'spaceCommunityApplicationCreated'
     );
 
     return await this.applicationService.getApplicationOrFail(application.id);
@@ -653,9 +656,12 @@ export class RoleSetResolverMutationsMembership {
               spaceID: space.id,
             };
 
-          void this.notificationAdapterSpace.spaceAdminVirtualContributorInvitationDeclined(
-            notificationInput,
-            space
+          this.dispatchNotification(
+            this.notificationAdapterSpace.spaceAdminVirtualContributorInvitationDeclined(
+              notificationInput,
+              space
+            ),
+            'spaceAdminVirtualContributorInvitationDeclined'
           );
         }
       }

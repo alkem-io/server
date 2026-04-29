@@ -139,12 +139,13 @@ export class NotificationInAppAdapter {
 
   private isForeignKeyViolation(error: unknown): boolean {
     if (!(error instanceof QueryFailedError)) return false;
-    const driverError = (error as QueryFailedError & { code?: string }).code;
-    if (driverError === '23503') return true;
-    // Newer driver instances surface the code on a nested driverError.
-    const nested = (
-      error as QueryFailedError & { driverError?: { code?: string } }
-    ).driverError;
-    return nested?.code === '23503';
+    // Different TypeORM/driver versions surface the SQLSTATE either on the
+    // top-level error or nested under `driverError`; check both.
+    const typedError = error as QueryFailedError & {
+      code?: string;
+      driverError?: { code?: string };
+    };
+    const code = typedError.code ?? typedError.driverError?.code;
+    return code === '23503';
   }
 }

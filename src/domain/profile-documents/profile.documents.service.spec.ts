@@ -7,6 +7,7 @@ import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.in
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { uniqueId } from 'lodash';
 import { vi } from 'vitest';
 import { IAuthorizationPolicy } from '../common/authorization-policy';
@@ -114,6 +115,7 @@ describe('ProfileDocumentsService', () => {
             deleteDocument: vi.fn(),
           },
         },
+        MockWinstonProvider,
       ],
     }).compile();
 
