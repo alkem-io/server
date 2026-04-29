@@ -54,6 +54,7 @@ export class VirtualContributorMessageService {
           roomID: room.id,
           threadID,
           actorID: virtualContributorActorID,
+          vcInteractionID: '',
         },
       },
     };
