@@ -230,7 +230,23 @@ export class TemplateService {
     // only postDefaultDescription, not a Post entity) need no extra walk.
     // CALLOUT, SPACE, COMMUNITY_GUIDELINES carry deeper trees and walk
     // through their dedicated materialize chain.
-    const saved = await this.templateRepository.save(template);
+    //
+    // For WHITEBOARD type the whiteboard was already saved+materialized by
+    // WhiteboardService.createWhiteboard above; if the templateRepository
+    // save fails the whiteboard is orphaned (no parent template references
+    // it any more), so we delete it explicitly before propagating.
+    let saved: ITemplate;
+    try {
+      saved = await this.templateRepository.save(template);
+    } catch (error) {
+      if (template.type === TemplateType.WHITEBOARD && template.whiteboard) {
+        await this.cleanupOrphanWhiteboard(
+          template.whiteboard.id,
+          'Template save failed after whiteboard create'
+        );
+      }
+      throw error;
+    }
 
     // Helper mutates the profile in place; no explicit reassignment needed.
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
@@ -313,6 +329,28 @@ export class TemplateService {
     }
 
     return saved;
+  }
+
+  private async cleanupOrphanWhiteboard(
+    whiteboardID: string,
+    context: string
+  ): Promise<void> {
+    try {
+      await this.whiteboardService.deleteWhiteboard(whiteboardID);
+    } catch (cleanupError) {
+      const stack =
+        cleanupError instanceof Error ? (cleanupError.stack ?? '') : '';
+      this.logger.error?.(
+        {
+          message: 'Cleanup of orphan whiteboard also failed',
+          context,
+          whiteboardID,
+          cleanupError: String(cleanupError),
+        },
+        stack,
+        LogContext.TEMPLATES
+      );
+    }
   }
 
   private overrideCalloutSettingsForTemplate(calloutData: CreateCalloutInput) {

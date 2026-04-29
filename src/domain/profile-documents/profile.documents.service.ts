@@ -52,17 +52,6 @@ export class ProfileDocumentsService {
       );
     }
 
-    // Precondition: every path past here invokes file-service-go with the
-    // bucket id as an FK. Catch unsaved-bucket misuse here rather than
-    // letting it surface as a confusing "StorageBucket not found: undefined"
-    // from deep inside StorageBucketService.uploadFileAsDocumentFromBuffer.
-    if (!storageBucket.id) {
-      throw new EntityNotInitializedException(
-        'Storage bucket must be persisted before document re-upload: caller must save the parent entity first (typically via parent.save() with cascade)',
-        LogContext.PROFILE
-      );
-    }
-
     if (!storageBucket.documents) {
       throw new EntityNotInitializedException(
         `Documents not initialized on storage bucket: '${storageBucket.id}'`,

@@ -67,10 +67,21 @@ export class CalendarEventService {
       type: RoomType.CALENDAR_EVENT,
     });
 
-    // Phase 2: persist + materialize. Helper rolls back the saved
-    // event on failure so callers receive a fully-materialized event
-    // or an error, never half-state.
-    const saved = await this.save(calendarEvent);
+    // Phase 2: persist + materialize. The Matrix room created above isn't
+    // part of the DB transaction; if the save fails it's already orphaned
+    // in Matrix, so we delete it explicitly before propagating the error.
+    // After save, the OrRollback helper handles the post-save phase
+    // (cascade-deleting the room via deleteCalendarEvent on failure).
+    let saved: ICalendarEvent;
+    try {
+      saved = await this.save(calendarEvent);
+    } catch (error) {
+      await this.cleanupOrphanRoom(
+        calendarEvent.comments.id,
+        'CalendarEvent save failed before materialize'
+      );
+      throw error;
+    }
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       saved.profile,
       calendarEventInput.profileData?.visuals,
@@ -78,6 +89,28 @@ export class CalendarEventService {
       () => this.deleteCalendarEvent({ ID: saved.id })
     );
     return saved;
+  }
+
+  private async cleanupOrphanRoom(
+    roomID: string,
+    context: string
+  ): Promise<void> {
+    try {
+      await this.roomService.deleteRoom({ roomID });
+    } catch (cleanupError) {
+      const stack =
+        cleanupError instanceof Error ? (cleanupError.stack ?? '') : '';
+      this.logger.error?.(
+        {
+          message: 'Cleanup of orphan Matrix room also failed',
+          context,
+          roomID,
+          cleanupError: String(cleanupError),
+        },
+        stack,
+        LogContext.CALENDAR
+      );
+    }
   }
 
   public async save(calendarEvent: ICalendarEvent): Promise<CalendarEvent> {

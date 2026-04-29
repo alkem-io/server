@@ -17,6 +17,7 @@ import { limitAndShuffle } from '@common/utils';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/index';
+import { CreateCalloutContributionInput } from '@domain/collaboration/callout-contribution/dto/callout.contribution.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IClassification } from '@domain/common/classification/classification.interface';
@@ -42,7 +43,6 @@ import {
 } from 'typeorm';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
-import { CreateCalloutContributionInput } from '../callout-contribution/dto/callout.contribution.dto.create';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';

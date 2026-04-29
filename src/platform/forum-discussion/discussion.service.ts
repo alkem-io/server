@@ -64,10 +64,21 @@ export class DiscussionService {
 
     discussion.createdBy = userID;
 
-    // Phase 2: persist + materialize. Helper rolls back the saved
-    // discussion on failure so callers receive a fully-materialized
-    // discussion or an error, never half-state.
-    const saved = await this.save(discussion);
+    // Phase 2: persist + materialize. The Matrix room created above isn't
+    // part of the DB transaction; if the save fails it's already orphaned
+    // in Matrix, so we delete it explicitly before propagating the error.
+    // After save, the OrRollback helper handles the post-save phase
+    // (cascade-deleting the room via removeDiscussion on failure).
+    let saved: IDiscussion;
+    try {
+      saved = await this.save(discussion);
+    } catch (error) {
+      await this.cleanupOrphanRoom(
+        discussion.comments.id,
+        'Discussion save failed before materialize'
+      );
+      throw error;
+    }
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       saved.profile,
       discussionData.profile?.visuals,
@@ -75,6 +86,28 @@ export class DiscussionService {
       () => this.removeDiscussion({ ID: saved.id })
     );
     return saved;
+  }
+
+  private async cleanupOrphanRoom(
+    roomID: string,
+    context: string
+  ): Promise<void> {
+    try {
+      await this.roomService.deleteRoom({ roomID });
+    } catch (cleanupError) {
+      const stack =
+        cleanupError instanceof Error ? (cleanupError.stack ?? '') : '';
+      this.logger.error?.(
+        {
+          message: 'Cleanup of orphan Matrix room also failed',
+          context,
+          roomID,
+          cleanupError: String(cleanupError),
+        },
+        stack,
+        LogContext.COMMUNICATION
+      );
+    }
   }
 
   async removeDiscussion(

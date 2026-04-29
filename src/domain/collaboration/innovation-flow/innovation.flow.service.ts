@@ -114,7 +114,7 @@ export class InnovationFlowService {
     saved.profile =
       await this.profileService.materializeProfileContentAndVisualsOrRollback(
         saved.profile,
-        innovationFlowData.profile.visuals,
+        innovationFlowData.profile?.visuals,
         [VisualType.CARD],
         () => this.deleteInnovationFlow(saved.id)
       );

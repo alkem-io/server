@@ -82,8 +82,9 @@ export class KnowledgeBaseService {
 
     if (!knowledgeBase.calloutsSet) {
       throw new EntityNotFoundException(
-        `CalloutsSet not found for KnowledgeBase: ${knowledgeBase.id}`,
-        LogContext.COLLABORATION
+        'CalloutsSet not found for KnowledgeBase',
+        LogContext.COLLABORATION,
+        { knowledgeBaseId: knowledgeBase.id }
       );
     }
 

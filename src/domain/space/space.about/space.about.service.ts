@@ -129,36 +129,40 @@ export class SpaceAboutService {
         rollback
       );
     // createSpaceAbout always populates `spaceAbout.guidelines` (auto-creating
-    // an empty one if `spaceAboutData.guidelines` wasn't supplied). Materialize
-    // unconditionally so the auto-created profile gets its post-save work too;
-    // materializeCommunityGuidelinesContent treats undefined input as "no
-    // visuals to attach".
-    if (spaceAbout.guidelines) {
-      try {
-        await this.communityGuidelinesService.materializeCommunityGuidelinesContent(
-          spaceAbout.guidelines,
-          spaceAboutData.guidelines
+    // an empty one if `spaceAboutData.guidelines` wasn't supplied), so a
+    // missing relation here is a programmer error or a bad caller load —
+    // fail fast rather than silently skipping nested materialization.
+    if (!spaceAbout.guidelines) {
+      throw new RelationshipNotFoundException(
+        'SpaceAbout guidelines not initialized for materialization',
+        LogContext.SPACES,
+        { spaceAboutId: spaceAbout.id }
+      );
+    }
+    try {
+      await this.communityGuidelinesService.materializeCommunityGuidelinesContent(
+        spaceAbout.guidelines,
+        spaceAboutData.guidelines
+      );
+    } catch (error) {
+      // Same convention as the OrRollback helper: rollback-failure is
+      // alert-worthy (logger.error) but does not replace the original
+      // materialization error.
+      await rollback().catch(rollbackError => {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message:
+              'Rollback after CommunityGuidelines materialization failure also failed',
+            spaceAboutId: spaceAbout.id,
+            rollbackError: String(rollbackError),
+          },
+          stack,
+          LogContext.SPACES
         );
-      } catch (error) {
-        // Same convention as the OrRollback helper: rollback-failure is
-        // alert-worthy (logger.error) but does not replace the original
-        // materialization error.
-        await rollback().catch(rollbackError => {
-          const stack =
-            rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
-          this.logger.error?.(
-            {
-              message:
-                'Rollback after CommunityGuidelines materialization failure also failed',
-              spaceAboutId: spaceAbout.id,
-              rollbackError: String(rollbackError),
-            },
-            stack,
-            LogContext.SPACES
-          );
-        });
-        throw error;
-      }
+      });
+      throw error;
     }
     return spaceAbout;
   }

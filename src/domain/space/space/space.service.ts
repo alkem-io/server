@@ -329,13 +329,37 @@ export class SpaceService {
       modifiedAbout,
       rollbackSpace
     );
-    if (spaceUpdated.collaboration) {
-      await this.collaborationService.materializeCollaborationContent(
-        spaceUpdated.collaboration,
-        updatedCollaborationData,
-        rollbackSpace
+    // Collaboration is always created earlier in this method (line 321);
+    // missing here would indicate a bad load or a programmer error.
+    // Fail fast rather than silently leaving the collaboration tree
+    // unmaterialized — that would persist a Space whose callouts still
+    // reference the source template's bucket.
+    if (!spaceUpdated.collaboration) {
+      await rollbackSpace().catch(rollbackError => {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message:
+              'Rollback after missing-collaboration detection also failed',
+            spaceId: spaceUpdated.id,
+            rollbackError: String(rollbackError),
+          },
+          stack,
+          LogContext.SPACES
+        );
+      });
+      throw new RelationshipNotFoundException(
+        'Collaboration not initialized on Space for materialization',
+        LogContext.SPACES,
+        { spaceId: spaceUpdated.id }
       );
     }
+    await this.collaborationService.materializeCollaborationContent(
+      spaceUpdated.collaboration,
+      updatedCollaborationData,
+      rollbackSpace
+    );
 
     // If template has child spaces, then create child spaces here
     if (
