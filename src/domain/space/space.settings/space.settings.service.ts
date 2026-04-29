@@ -48,7 +48,10 @@ export class SpaceSettingsService {
         ([, value]) => value !== undefined
       );
       const definedFields = Object.fromEntries(definedEntries);
-      Object.assign(settings.collaboration, definedFields);
+      settings.collaboration = {
+        ...(settings.collaboration ?? {}),
+        ...definedFields,
+      };
     }
     if (updateData.sortMode) {
       settings.sortMode = updateData.sortMode;
