@@ -158,6 +158,40 @@ describe('CalloutContributionDefaultsService', () => {
       ).rejects.toThrow('reupload failed');
       expect(rollback).toHaveBeenCalled();
     });
+
+    it('logs and preserves the original error when rollback itself fails', async () => {
+      const defaults = {
+        id: 'defaults-id',
+        postDescription: 'markdown with ![image](http://old-url)',
+      } as CalloutContributionDefaults;
+      const originalFailure = new Error('reupload failed');
+      const rollbackFailure = new Error('rollback also failed');
+      const failingRollback = vi.fn().mockRejectedValue(rollbackFailure);
+
+      vi.mocked(
+        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
+      ).mockRejectedValue(originalFailure);
+      const errorLog = vi.spyOn(
+        service['logger'] as unknown as { error: (...args: unknown[]) => void },
+        'error'
+      );
+
+      // Original reupload error must propagate; the rollback failure is
+      // logged at ERROR but never replaces the materialization error.
+      await expect(
+        service.materializeCalloutContributionDefaultsContent(
+          defaults,
+          storageBucket,
+          failingRollback
+        )
+      ).rejects.toBe(originalFailure);
+      expect(failingRollback).toHaveBeenCalled();
+      expect(errorLog).toHaveBeenCalled();
+      const logPayload = errorLog.mock.calls[0]?.[0] as
+        | { rollbackError?: string }
+        | undefined;
+      expect(logPayload?.rollbackError).toContain('rollback also failed');
+    });
   });
 
   describe('updateCalloutContributionDefaults', () => {
