@@ -113,9 +113,8 @@ export class CalloutService {
     );
 
     callout.contributionDefaults =
-      await this.contributionDefaultsService.createCalloutContributionDefaults(
-        calloutData.contributionDefaults,
-        callout.framing.profile.storageBucket
+      this.contributionDefaultsService.createCalloutContributionDefaults(
+        calloutData.contributionDefaults
       );
 
     if (userID && calloutData.contributions && callout.settings.contribution) {
@@ -179,6 +178,20 @@ export class CalloutService {
       calloutData?.framing,
       rollback
     );
+    // contributionDefaults.postDescription may carry markdown URLs that
+    // reference documents in another bucket (template clone) or in a
+    // temporary location (just-uploaded image). Re-home them now that
+    // the framing's storageBucket has a real id from the cascade save.
+    if (
+      callout.contributionDefaults &&
+      callout.framing.profile?.storageBucket
+    ) {
+      await this.contributionDefaultsService.materializeCalloutContributionDefaultsContent(
+        callout.contributionDefaults,
+        callout.framing.profile.storageBucket,
+        rollback
+      );
+    }
     // Pair persisted contributions to their input data by `type` + the
     // nested entity's stable identifier (Link.uri for LINK, nameID for
     // POST/WHITEBOARD/MEMO). Index-based pairing would silently misalign

@@ -35,50 +35,76 @@ describe('CalloutContributionDefaultsService', () => {
   });
 
   describe('createCalloutContributionDefaults', () => {
-    it('should return empty defaults when no input data is provided', async () => {
-      const result = await service.createCalloutContributionDefaults(
-        undefined,
-        undefined
-      );
+    it('should return empty defaults when no input data is provided', () => {
+      const result = service.createCalloutContributionDefaults(undefined);
 
       expect(result).toBeInstanceOf(CalloutContributionDefaults);
       expect(result.defaultDisplayName).toBeUndefined();
+      // entity default for `postDescription` is '' (see entity column)
       expect(result.postDescription).toBe('');
       expect(result.whiteboardContent).toBeUndefined();
     });
 
-    it('should set defaultDisplayName and whiteboardContent from input data', async () => {
+    it('should copy fields from input data without invoking file-service', () => {
       const inputData = {
         defaultDisplayName: 'Test Display Name',
-        postDescription: 'Test Description',
+        postDescription: 'markdown with ![image](http://old-url)',
         whiteboardContent: '{"elements":[]}',
       };
 
-      const result = await service.createCalloutContributionDefaults(
-        inputData,
-        undefined
-      );
+      const result = service.createCalloutContributionDefaults(inputData);
 
       expect(result.defaultDisplayName).toBe('Test Display Name');
+      expect(result.postDescription).toBe(
+        'markdown with ![image](http://old-url)'
+      );
       expect(result.whiteboardContent).toBe('{"elements":[]}');
+      expect(
+        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('materializeCalloutContributionDefaultsContent', () => {
+    const rollback = vi.fn().mockResolvedValue(undefined);
+    const storageBucket = { id: 'bucket-id' } as IStorageBucket;
+
+    beforeEach(() => {
+      rollback.mockClear();
     });
 
-    it('should reupload documents in markdown when storage bucket is provided', async () => {
-      const inputData = {
-        defaultDisplayName: 'Test',
+    it('is a no-op when postDescription is missing', async () => {
+      const defaults = {
+        id: 'defaults-id',
+      } as CalloutContributionDefaults;
+
+      await service.materializeCalloutContributionDefaultsContent(
+        defaults,
+        storageBucket,
+        rollback
+      );
+
+      expect(
+        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
+      ).not.toHaveBeenCalled();
+      expect(repository.save).not.toHaveBeenCalled();
+    });
+
+    it('re-homes markdown URLs and saves when content changed', async () => {
+      const defaults = {
+        id: 'defaults-id',
         postDescription: 'markdown with ![image](http://old-url)',
-        whiteboardContent: undefined,
-      };
-      const storageBucket = { id: 'bucket-id' } as IStorageBucket;
-      const reuploadedMarkdown = 'markdown with ![image](http://new-url)';
+      } as CalloutContributionDefaults;
+      const reuploaded = 'markdown with ![image](http://new-url)';
 
       vi.mocked(
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
-      ).mockResolvedValue(reuploadedMarkdown);
+      ).mockResolvedValue(reuploaded);
 
-      const result = await service.createCalloutContributionDefaults(
-        inputData,
-        storageBucket
+      await service.materializeCalloutContributionDefaultsContent(
+        defaults,
+        storageBucket,
+        rollback
       );
 
       expect(
@@ -87,44 +113,50 @@ describe('CalloutContributionDefaultsService', () => {
         'markdown with ![image](http://old-url)',
         storageBucket
       );
-      expect(result.postDescription).toBe(reuploadedMarkdown);
+      expect(defaults.postDescription).toBe(reuploaded);
+      expect(repository.save).toHaveBeenCalledWith(defaults);
     });
 
-    it('should use empty string for postDescription when it is undefined and storage bucket is provided', async () => {
-      const inputData = {
-        defaultDisplayName: 'Test',
-        postDescription: undefined,
-        whiteboardContent: undefined,
-      };
-      const storageBucket = { id: 'bucket-id' } as IStorageBucket;
+    it('skips the save when re-upload returned identical markdown', async () => {
+      const original = 'markdown with no internal urls';
+      const defaults = {
+        id: 'defaults-id',
+        postDescription: original,
+      } as CalloutContributionDefaults;
 
       vi.mocked(
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
-      ).mockResolvedValue('');
+      ).mockResolvedValue(original);
 
-      await service.createCalloutContributionDefaults(inputData, storageBucket);
-
-      expect(
-        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
-      ).toHaveBeenCalledWith('', storageBucket);
-    });
-
-    it('should assign postDescription directly when no storage bucket is provided', async () => {
-      const inputData = {
-        defaultDisplayName: 'Test',
-        postDescription: 'Direct description',
-        whiteboardContent: undefined,
-      };
-
-      const result = await service.createCalloutContributionDefaults(
-        inputData,
-        undefined
+      await service.materializeCalloutContributionDefaultsContent(
+        defaults,
+        storageBucket,
+        rollback
       );
 
-      expect(result.postDescription).toBe('Direct description');
-      expect(
+      expect(defaults.postDescription).toBe(original);
+      expect(repository.save).not.toHaveBeenCalled();
+    });
+
+    it('invokes rollback and rethrows on materialization failure', async () => {
+      const defaults = {
+        id: 'defaults-id',
+        postDescription: 'markdown with ![image](http://old-url)',
+      } as CalloutContributionDefaults;
+      const failure = new Error('reupload failed');
+
+      vi.mocked(
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
-      ).not.toHaveBeenCalled();
+      ).mockRejectedValue(failure);
+
+      await expect(
+        service.materializeCalloutContributionDefaultsContent(
+          defaults,
+          storageBucket,
+          rollback
+        )
+      ).rejects.toThrow('reupload failed');
+      expect(rollback).toHaveBeenCalled();
     });
   });
 
