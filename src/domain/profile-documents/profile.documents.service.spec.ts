@@ -139,7 +139,12 @@ describe('ProfileDocumentsService', () => {
       ).rejects.toThrow('Documents not initialized on storage bucket');
     });
 
-    it('should throw EntityNotFoundException when document is not found by URL', async () => {
+    it('returns undefined (with WARN log) when the Alkemio document URL is stale', async () => {
+      // Stale/orphan URL handling: the helper used to throw, which crashed
+      // entire clone flows on a single dead reference. Now it logs a
+      // warning and returns undefined; callers (markdown walker,
+      // references, visuals, mediaGallery, whiteboard) all handle
+      // undefined gracefully.
       const fileUrl = EXAMPLE_ALKEMIO_DOCUMENT_URL;
       const storageBucket = mockStorageBucket();
 
@@ -148,9 +153,12 @@ describe('ProfileDocumentsService', () => {
         undefined as any
       );
 
-      await expect(
-        service.reuploadFileOnStorageBucket(fileUrl, storageBucket, true)
-      ).rejects.toThrow('not found');
+      const result = await service.reuploadFileOnStorageBucket(
+        fileUrl,
+        storageBucket,
+        true
+      );
+      expect(result).toBeUndefined();
     });
 
     it('should return fileUrl if internalUrlRequired is false and URL is not an Alkemio document', async () => {

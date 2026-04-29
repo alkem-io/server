@@ -1,8 +1,5 @@
 import { LogContext } from '@common/enums';
-import {
-  EntityNotFoundException,
-  EntityNotInitializedException,
-} from '@common/exceptions';
+import { EntityNotInitializedException } from '@common/exceptions';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -21,13 +18,37 @@ export class ProfileDocumentsService {
   ) {}
 
   /***
-   * Checks if a url is living under the storage bucket
-   * of a profile and re-uploads it if not there
+   * Checks if a url is living under the storage bucket of a profile
+   * and re-uploads it if not there.
+   *
    * @param fileUrl The url of the file to check
    * @param storageBucket The StorageBucket in which the file should be
-   * @param internalUrlRequired If true, the file must be inside Alkemio: if the url passed is outside Alkemio will return undefined.
-   * If false, the file can be outside Alkemio: if the url passed is outside Alkemio will return the same url (will never download it, just let it pass)
-   * @throws {EntityNotFoundException} If the document is not found
+   * @param internalUrlRequired If true, the file must be inside Alkemio:
+   *   non-Alkemio URLs return undefined.
+   *   If false, non-Alkemio URLs pass through unchanged.
+   *
+   * Return values:
+   * - `string` — the resolved URL (may be the same as input if already
+   *   in the destination bucket; may be a new URL after re-home or
+   *   cross-bucket copy).
+   * - `undefined` — handled gracefully by all callers (markdown walker
+   *   leaves the URL as-is, references leave their uri unchanged,
+   *   visuals get pushed without a uri + a warning). Returned in three
+   *   cases: external URL with `internalUrlRequired`, **stale Alkemio
+   *   URL whose target document no longer exists** (logged at WARN),
+   *   or — historically — an empty string input.
+   *
+   * Stale URL tolerance: cloning flows (template-from-space, etc.)
+   * carry the source's markdown/visuals/references verbatim. If the
+   * source content references a document that has since been deleted,
+   * we log a warning with the offending url + bucket id and let the
+   * caller continue rather than aborting the entire clone on a single
+   * dead reference. Other failure modes (file-service-go errors,
+   * permissions, infrastructure) still propagate.
+   *
+   * @throws {EntityNotInitializedException} if the bucket isn't
+   *   persisted or its documents relation isn't loaded — that's a
+   *   programmer error in the call site, not a runtime data issue.
    */
   public async reuploadFileOnStorageBucket(
     fileUrl: string,
@@ -70,11 +91,20 @@ export class ProfileDocumentsService {
     );
 
     if (!docInContent) {
-      throw new EntityNotFoundException(
-        'File with URL not found',
-        LogContext.COLLABORATION,
-        { fileUrl }
+      // Stale/orphan reference — the URL points to an Alkemio doc UUID
+      // that no longer exists. Don't throw: callers (markdown walker,
+      // references, visuals, etc.) all handle undefined gracefully and
+      // we don't want a single dead link to abort entire clone flows.
+      this.logger.warn?.(
+        {
+          message:
+            'Reupload skipped: Alkemio document URL points to a non-existent file',
+          fileUrl,
+          storageBucketId: storageBucket.id,
+        },
+        LogContext.PROFILE
       );
+      return undefined;
     }
 
     const docInThisBucket = storageBucket.documents.find(
@@ -159,16 +189,13 @@ export class ProfileDocumentsService {
   }
 
   /***
-   * Checks if a markdown text has documents living under the
-   * specified storage bucket and re-uploads them if not there.
+   * Walks every Alkemio document URL in the markdown and re-homes it
+   * into `storageBucket` via {@link reuploadFileOnStorageBucket}.
    *
-   * Per-URL resilience: a dead/orphaned reference (e.g. when cloning
-   * from a source space whose document was deleted, or a cross-tenant
-   * URL) is logged at WARN and the URL is left untouched in the
-   * markdown — the clone ends up with the same dead link the source
-   * had, instead of failing the entire create flow on a single broken
-   * reference. Other errors (e.g. file-service-go failures) still
-   * propagate.
+   * Stale/dead URLs are tolerated by the helper itself (logged at WARN,
+   * returns undefined). When the helper returns undefined or the same
+   * URL, we leave the URL untouched in the markdown so the clone
+   * preserves the source's shape.
    */
   public async reuploadDocumentsInMarkdownToStorageBucket(
     markdown: string,
@@ -184,28 +211,11 @@ export class ProfileDocumentsService {
     const matches = markdown.match(regex);
     if (matches?.length) {
       for (const match of matches) {
-        let newUrl: string | undefined;
-        try {
-          newUrl = await this.reuploadFileOnStorageBucket(
-            match,
-            storageBucket,
-            false
-          );
-        } catch (error) {
-          if (error instanceof EntityNotFoundException) {
-            this.logger.warn?.(
-              {
-                message:
-                  'Markdown document URL points to a non-existent file; leaving URL as-is',
-                fileUrl: match,
-                storageBucketId: storageBucket.id,
-              },
-              LogContext.PROFILE
-            );
-            continue;
-          }
-          throw error;
-        }
+        const newUrl = await this.reuploadFileOnStorageBucket(
+          match,
+          storageBucket,
+          false
+        );
         if (newUrl && newUrl !== match) {
           markdown = this.replaceAll(markdown, match, newUrl);
         }
