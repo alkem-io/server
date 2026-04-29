@@ -220,12 +220,16 @@ describe('ProfileDocumentsService', () => {
       mockDocument(storageBucketOrigin);
       mockDocument(storageBucketDestination);
       mockDocument(storageBucketDestination);
-      // the doc
-      const doc = mockDocument(storageBucketOrigin, {
-        temporaryLocation: true,
-      });
+      // the doc — registered on the source bucket only (not destination)
+      const doc = mockDocument(
+        storageBucketOrigin,
+        { temporaryLocation: true },
+        true /* addToStorageBucket */
+      );
       mockDocument(storageBucketOrigin);
       mockDocument(storageBucketDestination);
+
+      const destDocsBefore = [...storageBucketDestination.documents];
 
       vi.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
       vi.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
@@ -249,6 +253,15 @@ describe('ProfileDocumentsService', () => {
         storageBucketId: storageBucketDestination.id,
         temporaryLocation: false,
       });
+      // The helper must NOT mutate `bucket.documents` in memory — that's
+      // what triggers TypeORM's bidirectional FK-sync write on the next
+      // parent save (DocumentWriteGuard rejects it). file-service-go has
+      // already updated the FK in DB; in-memory state must stay neutral.
+      expect(storageBucketDestination.documents).toEqual(destDocsBefore);
+      // The helper must NOT mutate the loaded Document instance —
+      // TypeORM tracks loaded entities and any property change on a
+      // tracked Document is a candidate for an UPDATE on the next save.
+      expect(doc.temporaryLocation).toBe(true);
     });
 
     it('copies the document via copyDocumentToBucket and leaves the source intact', async () => {
