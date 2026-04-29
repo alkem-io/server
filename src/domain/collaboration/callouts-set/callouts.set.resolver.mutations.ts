@@ -69,7 +69,16 @@ export class CalloutsSetResolverMutations {
     );
 
     // callout needs to be saved to apply the authorization policy
-    await this.calloutService.save(callout);
+    const savedCallout = await this.calloutService.save(callout);
+
+    // Phase-2 materialize: re-home cross-bucket markdown URLs / refs in
+    // the framing + contributions. Idempotent for the in-bucket and
+    // empty-content cases. Failure rolls back the just-saved callout.
+    await this.calloutService.materializeCalloutContent(
+      savedCallout,
+      calloutData,
+      () => this.calloutService.deleteCallout(savedCallout.id)
+    );
 
     // Now the contribution is saved, we can look to move any temporary documents
     // to be stored in the storage bucket of the profile.

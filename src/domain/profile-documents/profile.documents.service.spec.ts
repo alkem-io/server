@@ -7,6 +7,7 @@ import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.in
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { uniqueId } from 'lodash';
 import { vi } from 'vitest';
 import { IAuthorizationPolicy } from '../common/authorization-policy';
@@ -101,17 +102,20 @@ describe('ProfileDocumentsService', () => {
           useValue: {
             addDocumentToStorageBucketOrFail: vi.fn(),
             uploadFileAsDocumentFromBuffer: vi.fn(),
+            copyDocumentToBucket: vi.fn(),
           },
         },
         {
           provide: FileServiceAdapter,
           useValue: {
             createDocument: vi.fn(),
+            copyDocument: vi.fn(),
             getDocumentContent: vi.fn(),
             updateDocument: vi.fn(),
             deleteDocument: vi.fn(),
           },
         },
+        MockWinstonProvider,
       ],
     }).compile();
 
@@ -239,21 +243,16 @@ describe('ProfileDocumentsService', () => {
       });
     });
 
-    it('should return a copy of the document in the new StorageBucket', async () => {
+    it('copies the document via copyDocumentToBucket and deletes the source', async () => {
+      // Different-bucket branch: under v0.0.14 we call file-service-go's
+      // /internal/file/copy via storageBucketService.copyDocumentToBucket;
+      // no bytes traverse the wire, no getDocumentContent round-trip.
       const fileUrl = `${ALKEMIO_URL}/api/private/rest/storage/document/${uniqueId()}`;
       const storageBucketOrigin: IStorageBucket = mockStorageBucket();
       const storageBucketDestination: IStorageBucket = mockStorageBucket();
-      // A few test documents
-      mockDocument(storageBucketOrigin);
-      mockDocument(storageBucketOrigin);
-      mockDocument(storageBucketDestination);
-      mockDocument(storageBucketDestination);
-      // the doc
       const doc = mockDocument(storageBucketOrigin, {
         temporaryLocation: false,
       });
-      mockDocument(storageBucketOrigin);
-      mockDocument(storageBucketDestination);
 
       vi.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
       vi.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
@@ -262,19 +261,13 @@ describe('ProfileDocumentsService', () => {
         resultUrl
       );
 
-      const contentBuffer = Buffer.from('file-content');
-      vi.spyOn(fileServiceAdapter, 'getDocumentContent').mockResolvedValue(
-        contentBuffer
-      );
-
       const newDocMock = mockDocument(storageBucketDestination, {
         ...doc,
         id: uniqueId(),
       });
-      vi.spyOn(
-        storageBucketService,
-        'uploadFileAsDocumentFromBuffer'
-      ).mockResolvedValue(newDocMock);
+      vi.spyOn(storageBucketService, 'copyDocumentToBucket').mockResolvedValue(
+        newDocMock
+      );
 
       const result = await service.reuploadFileOnStorageBucket(
         fileUrl,
@@ -284,17 +277,14 @@ describe('ProfileDocumentsService', () => {
 
       expect(result).toBe(resultUrl);
       expect(result !== fileUrl).toBe(true);
-      expect(fileServiceAdapter.getDocumentContent).toHaveBeenCalledWith(
-        doc.id
-      );
-      expect(
-        storageBucketService.uploadFileAsDocumentFromBuffer
-      ).toHaveBeenCalledWith(
+      expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
+      // skipDedup=true is required so the rollback path can never delete
+      // an unrelated reused destination row (see service comment).
+      expect(storageBucketService.copyDocumentToBucket).toHaveBeenCalledWith(
         storageBucketDestination.id,
-        contentBuffer,
-        doc.displayName,
-        doc.mimeType,
-        doc.createdBy
+        doc,
+        undefined,
+        true
       );
       // After copying to the new bucket, the original document in the old bucket
       // must be deleted to avoid orphaned storage.

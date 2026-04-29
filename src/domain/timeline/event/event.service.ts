@@ -42,6 +42,7 @@ export class CalendarEventService {
     storageAggregator: IStorageAggregator,
     userID: string
   ): Promise<ICalendarEvent> {
+    // Phase 1: build entity tree in memory (no file-service-go calls).
     const calendarEvent: ICalendarEvent =
       CalendarEvent.create(calendarEventInput);
     calendarEvent.profile = await this.profileService.createProfile(
@@ -66,7 +67,50 @@ export class CalendarEventService {
       type: RoomType.CALENDAR_EVENT,
     });
 
-    return await this.save(calendarEvent);
+    // Phase 2: persist + materialize. The Matrix room created above isn't
+    // part of the DB transaction; if the save fails it's already orphaned
+    // in Matrix, so we delete it explicitly before propagating the error.
+    // After save, the OrRollback helper handles the post-save phase
+    // (cascade-deleting the room via deleteCalendarEvent on failure).
+    let saved: ICalendarEvent;
+    try {
+      saved = await this.save(calendarEvent);
+    } catch (error) {
+      await this.cleanupOrphanRoom(
+        calendarEvent.comments.id,
+        'CalendarEvent save failed before materialize'
+      );
+      throw error;
+    }
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      saved.profile,
+      calendarEventInput.profileData?.visuals,
+      [],
+      () => this.deleteCalendarEvent({ ID: saved.id })
+    );
+    return saved;
+  }
+
+  private async cleanupOrphanRoom(
+    roomID: string,
+    context: string
+  ): Promise<void> {
+    try {
+      await this.roomService.deleteRoom({ roomID });
+    } catch (cleanupError) {
+      const stack =
+        cleanupError instanceof Error ? (cleanupError.stack ?? '') : '';
+      this.logger.error?.(
+        {
+          message: 'Cleanup of orphan Matrix room also failed',
+          context,
+          roomID,
+          cleanupError: String(cleanupError),
+        },
+        stack,
+        LogContext.CALENDAR
+      );
+    }
   }
 
   public async save(calendarEvent: ICalendarEvent): Promise<CalendarEvent> {
