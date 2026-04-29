@@ -41,7 +41,14 @@ export class SpaceSettingsService {
       settings.membership = updateData.membership;
     }
     if (updateData.collaboration) {
-      settings.collaboration = updateData.collaboration;
+      // Apply only the fields the caller explicitly set, preserving the rest.
+      const collaborationUpdates = updateData.collaboration;
+      const allEntries = Object.entries(collaborationUpdates);
+      const definedEntries = allEntries.filter(
+        ([, value]) => value !== undefined
+      );
+      const definedFields = Object.fromEntries(definedEntries);
+      Object.assign(settings.collaboration, definedFields);
     }
     if (updateData.sortMode) {
       settings.sortMode = updateData.sortMode;
