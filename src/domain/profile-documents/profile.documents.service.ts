@@ -161,6 +161,14 @@ export class ProfileDocumentsService {
   /***
    * Checks if a markdown text has documents living under the
    * specified storage bucket and re-uploads them if not there.
+   *
+   * Per-URL resilience: a dead/orphaned reference (e.g. when cloning
+   * from a source space whose document was deleted, or a cross-tenant
+   * URL) is logged at WARN and the URL is left untouched in the
+   * markdown — the clone ends up with the same dead link the source
+   * had, instead of failing the entire create flow on a single broken
+   * reference. Other errors (e.g. file-service-go failures) still
+   * propagate.
    */
   public async reuploadDocumentsInMarkdownToStorageBucket(
     markdown: string,
@@ -176,11 +184,28 @@ export class ProfileDocumentsService {
     const matches = markdown.match(regex);
     if (matches?.length) {
       for (const match of matches) {
-        const newUrl = await this.reuploadFileOnStorageBucket(
-          match,
-          storageBucket,
-          false
-        );
+        let newUrl: string | undefined;
+        try {
+          newUrl = await this.reuploadFileOnStorageBucket(
+            match,
+            storageBucket,
+            false
+          );
+        } catch (error) {
+          if (error instanceof EntityNotFoundException) {
+            this.logger.warn?.(
+              {
+                message:
+                  'Markdown document URL points to a non-existent file; leaving URL as-is',
+                fileUrl: match,
+                storageBucketId: storageBucket.id,
+              },
+              LogContext.PROFILE
+            );
+            continue;
+          }
+          throw error;
+        }
         if (newUrl && newUrl !== match) {
           markdown = this.replaceAll(markdown, match, newUrl);
         }
