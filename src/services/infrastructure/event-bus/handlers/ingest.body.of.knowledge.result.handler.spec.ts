@@ -4,13 +4,31 @@ import { AiServerService } from '@services/ai-server/ai-server/ai.server.service
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { vi } from 'vitest';
-import { IngestBodyOfKnowledgeResult } from '../messages/ingest.body.of.knowledge.result.event';
+import {
+  IngestBodyOfKnowledgeResponse,
+  IngestBodyOfKnowledgeResult,
+} from '../messages/ingest.body.of.knowledge.result.event';
 import {
   ErrorCode,
   IngestionPurpose,
   IngestionResult,
 } from '../messages/types';
 import { IngestBodyOfKnowledgeResultHandler } from './ingest.body.of.knowledge.result.handler';
+
+const buildResult = (
+  overrides: Partial<IngestBodyOfKnowledgeResponse> = {}
+): IngestBodyOfKnowledgeResult => {
+  const response = new IngestBodyOfKnowledgeResponse(
+    overrides.bodyOfKnowledgeId ?? 'bok-1',
+    overrides.type ?? VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
+    overrides.purpose ?? IngestionPurpose.KNOWLEDGE,
+    overrides.personaId ?? 'persona-1',
+    overrides.timestamp ?? Date.now(),
+    overrides.result ?? IngestionResult.SUCCESS,
+    overrides.error
+  );
+  return new IngestBodyOfKnowledgeResult(response);
+};
 
 describe('IngestBodyOfKnowledgeResultHandler', () => {
   let handler: IngestBodyOfKnowledgeResultHandler;
@@ -32,15 +50,22 @@ describe('IngestBodyOfKnowledgeResultHandler', () => {
   });
 
   describe('handle', () => {
-    it('should return early when personaId is missing', async () => {
+    it('should return early when response is missing entirely (defensive)', async () => {
+      // Simulates the bug we fixed: pre-fix wire payloads without a `response`
+      // wrapper would silently drop here instead of throwing.
       const event = new IngestBodyOfKnowledgeResult(
-        'bok-1',
-        VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
-        IngestionPurpose.KNOWLEDGE,
-        '', // empty personaId
-        Date.now(),
-        IngestionResult.SUCCESS
+        undefined as unknown as IngestBodyOfKnowledgeResponse
       );
+
+      await handler.handle(event);
+
+      expect(
+        aiServerService.updatePersonaBoKLastUpdated
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should return early when personaId is missing', async () => {
+      const event = buildResult({ personaId: '' });
 
       await handler.handle(event);
 
@@ -50,14 +75,7 @@ describe('IngestBodyOfKnowledgeResultHandler', () => {
     });
 
     it('should return early when timestamp is falsy', async () => {
-      const event = new IngestBodyOfKnowledgeResult(
-        'bok-1',
-        VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
-        IngestionPurpose.KNOWLEDGE,
-        'persona-1',
-        0, // falsy timestamp
-        IngestionResult.SUCCESS
-      );
+      const event = buildResult({ timestamp: 0 });
 
       await handler.handle(event);
 
@@ -67,14 +85,7 @@ describe('IngestBodyOfKnowledgeResultHandler', () => {
     });
 
     it('should return early when purpose is CONTEXT', async () => {
-      const event = new IngestBodyOfKnowledgeResult(
-        'bok-1',
-        VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
-        IngestionPurpose.CONTEXT,
-        'persona-1',
-        Date.now(),
-        IngestionResult.SUCCESS
-      );
+      const event = buildResult({ purpose: IngestionPurpose.CONTEXT });
 
       await handler.handle(event);
 
@@ -85,14 +96,7 @@ describe('IngestBodyOfKnowledgeResultHandler', () => {
 
     it('should call updatePersonaBoKLastUpdated with Date on success', async () => {
       const timestamp = 1700000000000;
-      const event = new IngestBodyOfKnowledgeResult(
-        'bok-1',
-        VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
-        IngestionPurpose.KNOWLEDGE,
-        'persona-1',
-        timestamp,
-        IngestionResult.SUCCESS
-      );
+      const event = buildResult({ timestamp });
 
       await handler.handle(event);
 
@@ -103,15 +107,10 @@ describe('IngestBodyOfKnowledgeResultHandler', () => {
     });
 
     it('should call updatePersonaBoKLastUpdated with null on VECTOR_INSERT error', async () => {
-      const event = new IngestBodyOfKnowledgeResult(
-        'bok-1',
-        VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
-        IngestionPurpose.KNOWLEDGE,
-        'persona-1',
-        Date.now(),
-        IngestionResult.FAILURE,
-        { code: ErrorCode.VECTOR_INSERT, message: 'insert failed' }
-      );
+      const event = buildResult({
+        result: IngestionResult.FAILURE,
+        error: { code: ErrorCode.VECTOR_INSERT, message: 'insert failed' },
+      });
 
       await handler.handle(event);
 
@@ -122,15 +121,10 @@ describe('IngestBodyOfKnowledgeResultHandler', () => {
     });
 
     it('should not call updatePersonaBoKLastUpdated on failure without VECTOR_INSERT error', async () => {
-      const event = new IngestBodyOfKnowledgeResult(
-        'bok-1',
-        VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
-        IngestionPurpose.KNOWLEDGE,
-        'persona-1',
-        Date.now(),
-        IngestionResult.FAILURE,
-        { message: 'some other error' }
-      );
+      const event = buildResult({
+        result: IngestionResult.FAILURE,
+        error: { message: 'some other error' },
+      });
 
       await handler.handle(event);
 

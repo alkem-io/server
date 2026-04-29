@@ -21,34 +21,42 @@ export class IngestBodyOfKnowledgeResultHandler
   ) {}
 
   async handle(event: IngestBodyOfKnowledgeResult) {
+    const response = event.response;
+
     this.logger.verbose?.(
-      `IngestSpaceResultHandler invoked. Event data: PersonaId: ${event.personaId}; Result: ${event.result}`,
+      `IngestBodyOfKnowledgeResultHandler invoked. Event data: PersonaId: ${response?.personaId}; Result: ${response?.result}`,
       LogContext.AI_SERVER_EVENT_BUS
     );
 
     if (
-      !event.personaId ||
-      !event.timestamp ||
-      event.purpose === IngestionPurpose.CONTEXT
+      !response?.personaId ||
+      !response.timestamp ||
+      response.purpose === IngestionPurpose.CONTEXT
     ) {
-      this.logger.verbose?.('Returning?', LogContext.AI_SERVER_EVENT_BUS);
+      this.logger.verbose?.(
+        'Skipping persona BoK timestamp update (missing personaId/timestamp or purpose=CONTEXT)',
+        LogContext.AI_SERVER_EVENT_BUS
+      );
 
       return;
     }
 
     this.logger.verbose?.(
-      `Invoking updatePersonaBoKLastUpdated for Peresona: ${event.personaId}`,
+      `Invoking updatePersonaBoKLastUpdated for Persona: ${response.personaId}`,
       LogContext.AI_SERVER_EVENT_BUS
     );
 
-    if (event.result === IngestionResult.SUCCESS) {
+    if (response.result === IngestionResult.SUCCESS) {
       this.aiServerService.updatePersonaBoKLastUpdated(
-        event.personaId,
-        new Date(event.timestamp)
+        response.personaId,
+        new Date(response.timestamp)
       );
     } else {
-      if (event.error?.code === ErrorCode.VECTOR_INSERT) {
-        this.aiServerService.updatePersonaBoKLastUpdated(event.personaId, null);
+      if (response.error?.code === ErrorCode.VECTOR_INSERT) {
+        this.aiServerService.updatePersonaBoKLastUpdated(
+          response.personaId,
+          null
+        );
       }
     }
   }

@@ -4,7 +4,7 @@ import { EventsHandler, IEventHandler } from '@nestjs/cqrs';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IngestWebsiteResult } from '../messages/ingest.website.result.event';
-import { IngestionResult } from '../messages/types';
+import { IngestionPurpose, IngestionResult } from '../messages/types';
 
 @EventsHandler(IngestWebsiteResult)
 export class IngestWebsiteResultHandler
@@ -17,35 +17,36 @@ export class IngestWebsiteResultHandler
   ) {}
 
   async handle(event: IngestWebsiteResult) {
-    const original = event.original;
     const response = event.response;
 
-    const personaId = original.personaId;
-    if (response.result === IngestionResult.FAILURE) {
+    this.logger.verbose?.(
+      `IngestWebsiteResultHandler invoked. Event data: PersonaId: ${response?.personaId}; Result: ${response?.result}`,
+      LogContext.AI_SERVER_EVENT_BUS
+    );
+
+    if (response?.result === IngestionResult.FAILURE) {
+      return;
+    }
+
+    if (!response?.personaId || response.purpose === IngestionPurpose.CONTEXT) {
       this.logger.verbose?.(
-        `IngestWebsiteResultHandler invoked. Event data: PersonaId: ${personaId}; Result: failure`,
+        'Skipping persona BoK timestamp update (missing personaId or purpose=CONTEXT)',
         LogContext.AI_SERVER_EVENT_BUS
       );
       return;
     }
+
     this.logger.verbose?.(
-      `IngestWebsiteResultHandler invoked. Event data: PersonaId: ${personaId}; Result: success`,
+      `Invoking updatePersonaBoKLastUpdated for Persona: ${response.personaId}`,
       LogContext.AI_SERVER_EVENT_BUS
     );
 
-    if (!personaId) {
-      this.logger.verbose?.('Returning?', LogContext.AI_SERVER_EVENT_BUS);
-      return;
-    }
-    this.logger.verbose?.(
-      `Invoking updatePersonaBoKLastUpdated for Peresona: ${personaId}`,
-      LogContext.AI_SERVER_EVENT_BUS
+    const lastUpdated = response.timestamp
+      ? new Date(response.timestamp)
+      : new Date();
+    this.aiServerService.updatePersonaBoKLastUpdated(
+      response.personaId,
+      lastUpdated
     );
-
-    let now = new Date();
-    if (response.timestamp) {
-      now = new Date(response.timestamp);
-    }
-    this.aiServerService.updatePersonaBoKLastUpdated(original.personaId, now);
   }
 }
