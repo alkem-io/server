@@ -12,16 +12,28 @@ export class StorageBucket
 {
   // Document is owned by file-service-go; the server's TypeORM is
   // read-only for the `file` table (enforced by DocumentWriteGuard).
-  // `cascade: false` prevents repository.save(bucket) from walking into
-  // bucket.documents and emitting UPDATE/INSERT — every Document write
-  // must go through FileServiceAdapter. The in-memory `documents` array
-  // is still read/mutated for state coherence within a request.
+  //
+  // `cascade: false` alone is NOT enough — TypeORM's OneToManySubjectBuilder
+  // walks every OneToMany relation regardless of cascade, diffs the
+  // database state against the in-memory `documents` array, and synthesizes
+  // UPDATE subjects for any binding changes (or even loaded-but-unmodified
+  // entries reached during diff). This bypasses cascade and triggers
+  // DocumentWriteGuard on any save() that walks through StorageBucket
+  // (profile cascade, aggregator cascade, mediaGallery cascade).
+  //
+  // `persistence: false` is the documented TypeORM switch that fully
+  // disables that bidirectional FK management for this relation, leaving
+  // the `documents` collection as a pure read-side projection. The DB FK
+  // is owned by file-service-go and updated via FileServiceAdapter; the
+  // physical-row cascade is preserved by `onDelete: 'CASCADE'` on the
+  // Document side.
   @OneToMany(
     () => Document,
     document => document.storageBucket,
     {
       eager: false,
       cascade: false,
+      persistence: false,
     }
   )
   documents!: Document[];
