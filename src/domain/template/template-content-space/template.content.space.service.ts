@@ -169,17 +169,23 @@ export class TemplateContentSpaceService {
     error: Error,
     templateContentSpaceId: string
   ): Promise<never> {
-    await rollback().catch(rollbackError =>
-      this.logger.warn?.(
+    // Same convention as the OrRollback helper: rollback-failure is
+    // alert-worthy (logger.error) but does not replace the original
+    // materialization error.
+    await rollback().catch(rollbackError => {
+      const stack =
+        rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+      this.logger.error?.(
         {
           message:
             'Rollback after TemplateContentSpace materialization failure also failed',
           templateContentSpaceId,
           rollbackError: String(rollbackError),
         },
+        stack,
         LogContext.TEMPLATES
-      )
-    );
+      );
+    });
     throw error;
   }
 

@@ -203,12 +203,21 @@ export class ProfileService {
       try {
         await rollback();
       } catch (rollbackError) {
-        this.logger.warn?.(
+        // Operational failure: the entity is in an inconsistent state and
+        // operators must intervene. Log at ERROR (alert-worthy) but rethrow
+        // the original materialization error so callers' retry/abort logic
+        // sees the same shape as a "succeeded rollback" failure. The codebase
+        // has no AggregateError convention, and surfacing two competing
+        // errors at this layer would diverge from every other rollback site.
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
           {
             message: 'Rollback after materialization failure also failed',
             profileId: profile.id,
             rollbackError: String(rollbackError),
           },
+          stack,
           LogContext.PROFILE
         );
       }

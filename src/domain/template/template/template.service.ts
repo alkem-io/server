@@ -98,8 +98,9 @@ export class TemplateService {
       case TemplateType.POST: {
         if (!templateData.postDefaultDescription) {
           throw new ValidationException(
-            `Post Template requires default description input: ${JSON.stringify(templateData)}`,
-            LogContext.TEMPLATES
+            'Post Template requires default description input',
+            LogContext.TEMPLATES,
+            { templateType: template.type, missing: 'postDefaultDescription' }
           );
         }
         template.postDefaultDescription = templateData.postDefaultDescription;
@@ -108,8 +109,9 @@ export class TemplateService {
       case TemplateType.COMMUNITY_GUIDELINES: {
         if (!templateData.communityGuidelinesData) {
           throw new ValidationException(
-            `Community Guidelines Template requires the community guidelines input: ${JSON.stringify(templateData)}`,
-            LogContext.TEMPLATES
+            'Community Guidelines Template requires guidelines input',
+            LogContext.TEMPLATES,
+            { templateType: template.type, missing: 'communityGuidelinesData' }
           );
         }
         const guidelinesInput: CreateCommunityGuidelinesInput =
@@ -125,8 +127,9 @@ export class TemplateService {
       case TemplateType.SPACE: {
         if (!templateData.contentSpaceData) {
           throw new ValidationException(
-            `Space Template requires space input: ${JSON.stringify(templateData)}`,
-            LogContext.TEMPLATES
+            'Space Template requires content-space input',
+            LogContext.TEMPLATES,
+            { templateType: template.type, missing: 'contentSpaceData' }
           );
         }
         const spaceData = templateData.contentSpaceData;
@@ -173,8 +176,9 @@ export class TemplateService {
       case TemplateType.WHITEBOARD: {
         if (!templateData.whiteboard) {
           throw new ValidationException(
-            `Whiteboard Template requires whiteboard input: ${JSON.stringify(templateData)}`,
-            LogContext.TEMPLATES
+            'Whiteboard Template requires whiteboard input',
+            LogContext.TEMPLATES,
+            { templateType: template.type, missing: 'whiteboard' }
           );
         }
         template.whiteboard = await this.whiteboardService.createWhiteboard(
@@ -193,8 +197,9 @@ export class TemplateService {
       case TemplateType.CALLOUT: {
         if (!templateData.calloutData) {
           throw new ValidationException(
-            `Callout Template requires callout input: ${JSON.stringify(templateData)}`,
-            LogContext.TEMPLATES
+            'Callout Template requires callout input',
+            LogContext.TEMPLATES,
+            { templateType: template.type, missing: 'calloutData' }
           );
         }
         this.overrideCalloutSettingsForTemplate(templateData.calloutData);

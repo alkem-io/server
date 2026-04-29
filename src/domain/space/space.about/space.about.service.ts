@@ -140,17 +140,23 @@ export class SpaceAboutService {
           spaceAboutData.guidelines
         );
       } catch (error) {
-        await rollback().catch(rollbackError =>
-          this.logger.warn?.(
+        // Same convention as the OrRollback helper: rollback-failure is
+        // alert-worthy (logger.error) but does not replace the original
+        // materialization error.
+        await rollback().catch(rollbackError => {
+          const stack =
+            rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+          this.logger.error?.(
             {
               message:
                 'Rollback after CommunityGuidelines materialization failure also failed',
               spaceAboutId: spaceAbout.id,
               rollbackError: String(rollbackError),
             },
+            stack,
             LogContext.SPACES
-          )
-        );
+          );
+        });
         throw error;
       }
     }
