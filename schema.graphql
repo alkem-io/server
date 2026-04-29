@@ -3827,14 +3827,6 @@ type Mutation {
   markNotificationsAsUnread(filter: NotificationEventsFilterInput): Boolean!
   """Moves the specified Contribution to another Callout."""
   moveContributionToCallout(moveContributionData: MoveCalloutContributionInput!): CalloutContribution!
-  """
-  Move an L1 subspace to a different L0 space. The subspace remains at level 1       but changes parent. All content moves with it. All community memberships are cleared.       Requires platform admin privileges.
-  """
-  moveSpaceL1ToSpaceL0(moveData: MoveSpaceL1ToSpaceL0Input!): Space!
-  """
-  Move an L1 subspace to become an L2 sub-subspace under a target L1 in a different L0 space.       The space is demoted from level 1 to level 2. All community roles are cleared.       Requires platform admin privileges.
-  """
-  moveSpaceL1ToSpaceL2(moveData: MoveSpaceL1ToSpaceL2Input!): Space!
   """Refresh the Bodies of Knowledge on All VCs"""
   refreshAllBodiesOfKnowledge: Boolean!
   """
@@ -4312,10 +4304,6 @@ type PlatformAdminIdentityQueryResults {
 }
 
 type PlatformAdminQueryResults {
-  """
-  Retrieve all Accounts on the Platform. This is only available to Platform Admins.
-  """
-  accounts: [Account!]!
   """Lookup Communication related information."""
   communication: PlatformAdminCommunicationQueryResults!
   """Lookup Identity related information."""
@@ -4789,6 +4777,10 @@ type PushSubscription {
 }
 
 type Query {
+  """
+  The Accounts on this platform; If accessed through an Innovation Hub will return ONLY the Accounts defined in it.
+  """
+  accounts: [Account!]!
   """Activity events related to the current user."""
   activityFeed(
     """A pivot cursor after which items are selected"""
@@ -7626,34 +7618,6 @@ input MoveCalloutContributionInput {
   contributionID: UUID!
 }
 
-input MoveSpaceL1ToSpaceL0Input {
-  """
-  Send invitations to former community members who are also in the target L0 community.
-  """
-  autoInvite: Boolean = false
-  """Custom invitation message. Used only when autoInvite is true."""
-  invitationMessage: String
-  """The L1 subspace to move to a different L0 space."""
-  spaceL1ID: UUID!
-  """The target L0 space (must be different from the current parent L0)."""
-  targetSpaceL0ID: UUID!
-}
-
-input MoveSpaceL1ToSpaceL2Input {
-  """
-  Send invitations to former community members who are also in the target L0 community.
-  """
-  autoInvite: Boolean = false
-  """Custom invitation message. Used only when autoInvite is true."""
-  invitationMessage: String
-  """The L1 subspace to move and demote to L2."""
-  spaceL1ID: UUID!
-  """
-  The target L1 subspace in a different L0 (new parent for the demoted space).
-  """
-  targetSpaceL1ID: UUID!
-}
-
 input NotificationEmailAddressInput {
   """Full email address to add/remove; lowercase enforced by server"""
   email: String!
@@ -8231,10 +8195,8 @@ input UpdateDiscussionInput {
 }
 
 input UpdateDocumentInput {
-  """
-  The display name for the Document. Not supported — rejected with a ValidationException if provided.
-  """
-  displayName: String
+  """The display name for the Document."""
+  displayName: String!
   ID: UUID!
   tagset: UpdateTagsetInput
 }
