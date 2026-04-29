@@ -113,9 +113,8 @@ export class CalloutService {
     );
 
     callout.contributionDefaults =
-      await this.contributionDefaultsService.createCalloutContributionDefaults(
-        calloutData.contributionDefaults,
-        callout.framing.profile.storageBucket
+      this.contributionDefaultsService.createCalloutContributionDefaults(
+        calloutData.contributionDefaults
       );
 
     if (userID && calloutData.contributions && callout.settings.contribution) {
@@ -177,6 +176,40 @@ export class CalloutService {
     await this.calloutFramingService.materializeCalloutFramingContent(
       callout.framing,
       calloutData?.framing,
+      rollback
+    );
+    // contributionDefaults.postDescription may carry markdown URLs that
+    // reference documents in another bucket (template clone) or in a
+    // temporary location (just-uploaded image). Re-home them now that
+    // the framing's storageBucket has a real id from the cascade save.
+    //
+    // contributionDefaults is always populated by createCallout (the
+    // entity is initialized with default `postDescription = ''`) and
+    // framing.profile.storageBucket is always loaded by the time
+    // materializeCalloutContent runs (we just materialized framing two
+    // lines above). A missing relation here means a partial load —
+    // fail fast rather than silently leaving postDescription URLs
+    // unresolved.
+    if (!callout.contributionDefaults) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id, missing: ['contributionDefaults'] }
+      );
+    }
+    if (!callout.framing.profile?.storageBucket) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        {
+          calloutId: callout.id,
+          missing: ['framing.profile.storageBucket'],
+        }
+      );
+    }
+    await this.contributionDefaultsService.materializeCalloutContributionDefaultsContent(
+      callout.contributionDefaults,
+      callout.framing.profile.storageBucket,
       rollback
     );
     // Pair persisted contributions to their input data by `type` + the
