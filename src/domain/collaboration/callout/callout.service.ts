@@ -147,23 +147,40 @@ export class CalloutService {
    * Walks framing + each contribution. Failures bubble up via the supplied
    * rollback callback (cleans up the top-level parent — cascade clears the
    * rest).
+   *
+   * Both `framing` and `contributions` MUST be loaded on the input
+   * Callout. Silent skip would leave the entity persisted with
+   * unmaterialized children — phase-2 looks successful while content
+   * stays in the source bucket. We distinguish "not loaded" (undefined)
+   * from "loaded but empty" ([]) for the contributions relation.
    */
   public async materializeCalloutContent(
     callout: ICallout,
     calloutData: CreateCalloutInput | undefined,
     rollback: () => Promise<unknown>
   ): Promise<void> {
-    if (callout.framing) {
-      await this.calloutFramingService.materializeCalloutFramingContent(
-        callout.framing,
-        calloutData?.framing,
-        rollback
+    if (!callout.framing) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id, missing: ['framing'] }
       );
     }
-    const contributions = callout.contributions ?? [];
-    for (let i = 0; i < contributions.length; i++) {
+    if (callout.contributions === undefined) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id, missing: ['contributions'] }
+      );
+    }
+    await this.calloutFramingService.materializeCalloutFramingContent(
+      callout.framing,
+      calloutData?.framing,
+      rollback
+    );
+    for (let i = 0; i < callout.contributions.length; i++) {
       await this.contributionService.materializeCalloutContributionContent(
-        contributions[i],
+        callout.contributions[i],
         calloutData?.contributions?.[i],
         rollback
       );
