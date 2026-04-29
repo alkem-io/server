@@ -499,7 +499,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service-go:v0.0.14
+    image: alkemio/file-service-go:v0.0.15
     depends_on:
       postgres:
         condition: service_healthy
@@ -579,7 +579,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_authorization_evaluation
     hostname: authorization-evaluation
-    image: alkemio/authorization-evaluation-service:v0.0.2
+    image: alkemio/authorization-evaluation-service:v0.0.4
     depends_on:
       postgres:
         condition: service_healthy
