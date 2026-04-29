@@ -42,6 +42,7 @@ import {
 } from 'typeorm';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
+import { CreateCalloutContributionInput } from '../callout-contribution/dto/callout.contribution.dto.create';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
 import { ICalloutContributionDefaults } from '../callout-contribution-defaults/callout.contribution.defaults.interface';
 import { CalloutContributionDefaultsService } from '../callout-contribution-defaults/callout.contribution.defaults.service';
@@ -178,12 +179,60 @@ export class CalloutService {
       calloutData?.framing,
       rollback
     );
-    for (let i = 0; i < callout.contributions.length; i++) {
+    // Pair persisted contributions to their input data by `type` + the
+    // nested entity's stable identifier (Link.uri for LINK, nameID for
+    // POST/WHITEBOARD/MEMO). Index-based pairing would silently misalign
+    // when the persisted relation order differs from the input order,
+    // attaching the wrong visuals to the wrong contribution. We consume
+    // matched inputs from a working list so duplicate-keyed inputs (same
+    // link.uri twice) pair one-to-one rather than collapsing.
+    const remainingInputs = [...(calloutData?.contributions ?? [])];
+    for (const contribution of callout.contributions) {
+      const matchIdx = remainingInputs.findIndex(input =>
+        this.isSameContribution(input, contribution)
+      );
+      const inputForContrib =
+        matchIdx >= 0 ? remainingInputs.splice(matchIdx, 1)[0] : undefined;
       await this.contributionService.materializeCalloutContributionContent(
-        callout.contributions[i],
-        calloutData?.contributions?.[i],
+        contribution,
+        inputForContrib,
         rollback
       );
+    }
+  }
+
+  private isSameContribution(
+    input: CreateCalloutContributionInput,
+    contribution: ICalloutContribution
+  ): boolean {
+    if (input.type !== contribution.type) return false;
+    switch (contribution.type) {
+      case CalloutContributionType.LINK:
+        return (
+          !!input.link?.uri &&
+          !!contribution.link?.uri &&
+          input.link.uri === contribution.link.uri
+        );
+      case CalloutContributionType.POST:
+        return (
+          !!input.post?.nameID &&
+          !!contribution.post?.nameID &&
+          input.post.nameID === contribution.post.nameID
+        );
+      case CalloutContributionType.WHITEBOARD:
+        return (
+          !!input.whiteboard?.nameID &&
+          !!contribution.whiteboard?.nameID &&
+          input.whiteboard.nameID === contribution.whiteboard.nameID
+        );
+      case CalloutContributionType.MEMO:
+        return (
+          !!input.memo?.nameID &&
+          !!contribution.memo?.nameID &&
+          input.memo.nameID === contribution.memo.nameID
+        );
+      default:
+        return false;
     }
   }
 
