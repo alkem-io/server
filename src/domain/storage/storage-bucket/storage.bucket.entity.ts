@@ -10,12 +10,18 @@ export class StorageBucket
   extends AuthorizableEntity
   implements IStorageBucket
 {
+  // Document is owned by file-service-go; the server's TypeORM is
+  // read-only for the `file` table (enforced by DocumentWriteGuard).
+  // `cascade: false` prevents repository.save(bucket) from walking into
+  // bucket.documents and emitting UPDATE/INSERT — every Document write
+  // must go through FileServiceAdapter. The in-memory `documents` array
+  // is still read/mutated for state coherence within a request.
   @OneToMany(
     () => Document,
     document => document.storageBucket,
     {
       eager: false,
-      cascade: true,
+      cascade: false,
     }
   )
   documents!: Document[];
