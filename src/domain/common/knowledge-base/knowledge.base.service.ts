@@ -73,12 +73,12 @@ export class KnowledgeBaseService {
       storageAggregator
     );
 
-    await this.save(knowledgeBase);
-    knowledgeBase = await this.getKnowledgeBaseOrFail(knowledgeBase.id, {
-      relations: {
-        calloutsSet: { tagsetTemplateSet: true, callouts: true },
-      },
-    });
+    // Cascade save populates IDs on the in-memory tree (knowledgeBase,
+    // profile, profile.storageBucket, calloutsSet, calloutsSet.tagsetTemplateSet).
+    // Capture the return so we keep the same instance — re-fetching here
+    // with a partial relation graph would drop `profile.storageBucket`
+    // and break the phase-2 materialize at the bottom of this method.
+    knowledgeBase = await this.save(knowledgeBase);
 
     if (!knowledgeBase.calloutsSet) {
       throw new EntityNotFoundException(
