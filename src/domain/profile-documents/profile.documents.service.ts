@@ -128,59 +128,38 @@ export class ProfileDocumentsService {
       }
       return this.documentService.getPubliclyAccessibleURL(docInContent);
     } else {
-      // Different bucket: ask file-service-go to materialize a new row in
-      // the destination bucket pointing at the same content. Single RPC,
-      // no bytes on the wire (content is content-addressed). After the
-      // new row is in place, delete the source so it doesn't leak as an
-      // orphan in its original bucket.
+      // Different bucket: COPY the doc into the destination bucket.
+      // Source is left intact — never delete it from the helper. The
+      // previous MOVE semantics (copy + delete-source) destroyed the
+      // source's content during clone flows: when a Space was created
+      // from a Template (or a Template from a source Space), edits on
+      // the cloned WB / profile would silently delete the original
+      // doc, breaking the source's WB visuals and leaving subsequent
+      // clones from the same Template referencing now-gone docs (404
+      // visuals on later space-from-template creations).
       //
-      // skipDedup=true is critical for safety: without it, dedup-reuse could
-      // return another caller's existing row, and the rollback below would
-      // delete THEIR document on source-delete failure. Forcing a fresh row
-      // guarantees `newDoc` is exclusively ours.
+      // Source ownership is the caller's concern — if a flow needs
+      // true MOVE semantics (e.g. an admin migration tool, or the
+      // temp-doc-to-permanent special case above), it can call
+      // FileServiceAdapter.deleteDocument explicitly after this
+      // helper returns. The helper itself stays neutral: copy what
+      // we need into the destination, leave the source for whoever
+      // owns it.
+      //
+      // skipDedup=true: without it, dedup-reuse could return another
+      // caller's existing row, which would silently bind the new
+      // bucket's reference to a doc owned by someone else. Forcing a
+      // fresh row guarantees `newDoc` is exclusively ours.
       const newDoc = await this.storageBucketService.copyDocumentToBucket(
         storageBucket.id,
         docInContent,
         undefined,
         true
       );
-      try {
-        await this.documentService.deleteDocument({ ID: docInContent.id });
-      } catch (error) {
-        // Source delete failed after destination copy succeeded — compensate
-        // by removing the new copy so a caller retry doesn't accumulate
-        // duplicates in the destination bucket. Cleanup-failure is
-        // alert-worthy (logger.error) but does not replace the original
-        // source-delete error — same convention as the OrRollback helper
-        // and other rollback sites in the codebase.
-        await this.documentService
-          .deleteDocument({ ID: newDoc.id })
-          .catch(cleanupError => {
-            const stack =
-              cleanupError instanceof Error ? (cleanupError.stack ?? '') : '';
-            this.logger.error?.(
-              {
-                message:
-                  'Cleanup of destination copy after source-delete failure also failed',
-                sourceDocumentId: docInContent.id,
-                destinationDocumentId: newDoc.id,
-                cleanupError: String(cleanupError),
-              },
-              stack,
-              LogContext.PROFILE
-            );
-          });
-        throw error;
-      }
-      // Keep in-memory bucket state in sync so subsequent re-uploads in the
-      // same request (e.g. multiple internal URLs in the same markdown) see
-      // the moved doc and don't trigger redundant copy/delete churn.
-      const sourceIndex = storageBucket.documents.findIndex(
-        doc => doc.id === docInContent.id
-      );
-      if (sourceIndex !== -1) {
-        storageBucket.documents.splice(sourceIndex, 1);
-      }
+      // Keep destination bucket's in-memory state coherent so
+      // subsequent re-uploads in the same request (e.g. multiple
+      // internal URLs in the same markdown) see the new doc and
+      // don't trigger a redundant copy.
       if (!storageBucket.documents.some(doc => doc.id === newDoc.id)) {
         storageBucket.documents.push(newDoc);
       }

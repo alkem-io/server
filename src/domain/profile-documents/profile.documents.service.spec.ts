@@ -251,10 +251,14 @@ describe('ProfileDocumentsService', () => {
       });
     });
 
-    it('copies the document via copyDocumentToBucket and deletes the source', async () => {
-      // Different-bucket branch: under v0.0.14 we call file-service-go's
-      // /internal/file/copy via storageBucketService.copyDocumentToBucket;
-      // no bytes traverse the wire, no getDocumentContent round-trip.
+    it('copies the document via copyDocumentToBucket and leaves the source intact', async () => {
+      // Different-bucket branch: COPY semantics. The previous MOVE
+      // semantics (copy + delete-source) destroyed the source's content
+      // during clone flows: editing a cloned WB silently deleted the
+      // original doc, breaking the source's WB visuals and leaving
+      // subsequent clones from the same source referencing now-gone
+      // docs (404 visuals on later space-from-template creations).
+      // Source ownership is the caller's concern.
       const fileUrl = `${ALKEMIO_URL}/api/private/rest/storage/document/${uniqueId()}`;
       const storageBucketOrigin: IStorageBucket = mockStorageBucket();
       const storageBucketDestination: IStorageBucket = mockStorageBucket();
@@ -286,19 +290,22 @@ describe('ProfileDocumentsService', () => {
       expect(result).toBe(resultUrl);
       expect(result !== fileUrl).toBe(true);
       expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
-      // skipDedup=true is required so the rollback path can never delete
-      // an unrelated reused destination row (see service comment).
+      // skipDedup=true is required so we never bind the new bucket's
+      // reference to a doc owned by another caller (see service comment).
       expect(storageBucketService.copyDocumentToBucket).toHaveBeenCalledWith(
         storageBucketDestination.id,
         doc,
         undefined,
         true
       );
-      // After copying to the new bucket, the original document in the old bucket
-      // must be deleted to avoid orphaned storage.
-      expect(documentService.deleteDocument).toHaveBeenCalledWith({
-        ID: doc.id,
-      });
+      // Source must NOT be deleted. Cloning flows depend on the source
+      // remaining intact; deletion would corrupt the source's content
+      // and any other clones that reference the same source doc.
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
+      // Destination's in-memory state is updated for coherent re-reads.
+      expect(
+        storageBucketDestination.documents.some(d => d.id === newDocMock.id)
+      ).toBe(true);
     });
 
     describe('reuploadDocumentsInMarkdownProfile', () => {
