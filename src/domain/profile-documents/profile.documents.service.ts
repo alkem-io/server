@@ -115,17 +115,20 @@ export class ProfileDocumentsService {
       // It should be just `fileUrl` but rewrite it just in case
       return this.documentService.getPubliclyAccessibleURL(docInThisBucket);
     } else if (docInContent.temporaryLocation) {
-      // Move temporary document to the new bucket via Go file-service-go
+      // Move temporary document to the new bucket via Go file-service-go.
+      // file-service-go updates the row's `storageBucketId` and clears
+      // `temporaryLocation` in the DB.
       await this.fileServiceAdapter.updateDocument(docInContent.id, {
         storageBucketId: storageBucket.id,
         temporaryLocation: false,
       });
-      // Keep in-memory state in sync so subsequent hits in the same pass
-      // find the document in the destination bucket
-      docInContent.temporaryLocation = false;
-      if (!storageBucket.documents.some(doc => doc.id === docInContent.id)) {
-        storageBucket.documents.push(docInContent);
-      }
+      // Deliberately NOT mutating the loaded `docInContent` entity or
+      // pushing it into `storageBucket.documents`. TypeORM's bidirectional
+      // relation management would react to those in-memory changes by
+      // emitting an UPDATE on the file row when the parent is later
+      // saved (profile cascade), which DocumentWriteGuard correctly
+      // rejects (file table is owned by file-service-go). The DB state
+      // is already correct after the updateDocument call above.
       return this.documentService.getPubliclyAccessibleURL(docInContent);
     } else {
       // Different bucket: COPY the doc into the destination bucket.
@@ -156,13 +159,25 @@ export class ProfileDocumentsService {
         undefined,
         true
       );
-      // Keep destination bucket's in-memory state coherent so
-      // subsequent re-uploads in the same request (e.g. multiple
-      // internal URLs in the same markdown) see the new doc and
-      // don't trigger a redundant copy.
-      if (!storageBucket.documents.some(doc => doc.id === newDoc.id)) {
-        storageBucket.documents.push(newDoc);
-      }
+      // Deliberately NOT mutating `storageBucket.documents` in memory.
+      // file-service-go owns the `file` table (DocumentWriteGuard
+      // enforces this), but TypeORM's bidirectional relation
+      // management on the OneToMany inverse side reacts to in-memory
+      // array mutations by emitting an UPDATE on the child's FK
+      // column to "sync" the relation. With our `cascade: false` on
+      // `StorageBucket.documents` the cascade itself is suppressed,
+      // but the FK-sync write still fires when the parent is later
+      // saved (e.g. profileRepository.save inside materialize), and
+      // the guard correctly rejects it. Skipping the in-memory push
+      // avoids triggering that FK-sync write entirely; the new doc's
+      // `storageBucketId` was already set correctly by file-service-go
+      // at copy time, so there's no real state to sync.
+      //
+      // Trade-off: same-pass repeats of the same source URL won't
+      // short-circuit via the `documents.find` check above and will
+      // re-issue the cross-bucket copy. Acceptable — repeat URLs in
+      // a single markdown/visual pass are rare and idempotent enough
+      // (skipDedup=true makes each copy a unique new row).
       return this.documentService.getPubliclyAccessibleURL(newDoc);
     }
   }

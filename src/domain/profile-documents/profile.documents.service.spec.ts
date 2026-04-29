@@ -302,10 +302,6 @@ describe('ProfileDocumentsService', () => {
       // remaining intact; deletion would corrupt the source's content
       // and any other clones that reference the same source doc.
       expect(documentService.deleteDocument).not.toHaveBeenCalled();
-      // Destination's in-memory state is updated for coherent re-reads.
-      expect(
-        storageBucketDestination.documents.some(d => d.id === newDocMock.id)
-      ).toBe(true);
     });
 
     describe('reuploadDocumentsInMarkdownProfile', () => {
