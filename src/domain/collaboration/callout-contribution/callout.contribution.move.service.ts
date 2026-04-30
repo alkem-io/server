@@ -42,7 +42,13 @@ export class CalloutContributionMoveService {
             whiteboard: {
               profile: true,
             },
+            link: {
+              profile: true,
+            },
             memo: {
+              profile: true,
+            },
+            collaboraDocument: {
               profile: true,
             },
           },
@@ -107,6 +113,17 @@ export class CalloutContributionMoveService {
         LogContext.COLLABORATION
       );
     }
+    if (
+      contribution.collaboraDocument &&
+      !targetCallout.settings.contribution.allowedTypes.includes(
+        CalloutContributionType.COLLABORA_DOCUMENT
+      )
+    ) {
+      throw new NotSupportedException(
+        'The destination callout does not allow contributions of type COLLABORA_DOCUMENT.',
+        LogContext.COLLABORATION
+      );
+    }
 
     if (targetCallout.calloutsSet?.id !== sourceCallout?.calloutsSet?.id) {
       throw new NotSupportedException(
@@ -127,9 +144,19 @@ export class CalloutContributionMoveService {
         contribution?.whiteboard?.profile.id
       );
     }
+    if (contribution?.link?.profile.id) {
+      await this.urlGeneratorCacheService.revokeUrlCache(
+        contribution?.link?.profile.id
+      );
+    }
     if (contribution?.memo?.profile.id) {
       await this.urlGeneratorCacheService.revokeUrlCache(
         contribution?.memo?.profile.id
+      );
+    }
+    if (contribution?.collaboraDocument?.profile?.id) {
+      await this.urlGeneratorCacheService.revokeUrlCache(
+        contribution?.collaboraDocument?.profile.id
       );
     }
 

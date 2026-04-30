@@ -132,6 +132,18 @@ export class InputCreatorService {
       return null;
     }
 
+    if (callout.framing.type === CalloutFramingType.COLLABORA_DOCUMENT) {
+      this.logger.debug?.(
+        {
+          message:
+            'Skipping COLLABORA_DOCUMENT callout during template serialization — document framing is not templatable',
+          calloutId: calloutID,
+        },
+        LogContext.INPUT_CREATOR
+      );
+      return null;
+    }
+
     return {
       nameID: callout.nameID,
       classification: this.buildCreateClassificationInputFromClassification(

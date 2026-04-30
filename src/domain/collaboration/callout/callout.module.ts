@@ -16,6 +16,7 @@ import { TemporaryStorageModule } from '@services/infrastructure/temporary-stora
 import { CalloutContributionModule } from '../callout-contribution/callout.contribution.module';
 import { CalloutContributionDefaultsModule } from '../callout-contribution-defaults/callout.contribution.defaults.module';
 import { CalloutFramingModule } from '../callout-framing/callout.framing.module';
+import { CollaboraDocumentModule } from '../collabora-document/collabora.document.module';
 import { PostModule } from '../post/post.module';
 import { Callout } from './callout.entity';
 import { CalloutResolverFields } from './callout.resolver.fields';
@@ -39,6 +40,7 @@ import { CalloutAuthorizationService } from './callout.service.authorization';
     CalloutFramingModule,
     CalloutContributionModule,
     CalloutContributionDefaultsModule,
+    CollaboraDocumentModule,
     StorageAggregatorResolverModule,
     PostModule,
     ClassificationModule,

@@ -200,6 +200,23 @@ export class StorageBucketService {
     }
   }
 
+  /**
+   * Upload a buffer as a new file row in `storageBucketId`.
+   *
+   * The optional `allowedMimeTypesOverride` lets specific flows widen the
+   * accepted MIME set beyond what the destination bucket normally allows
+   * — used by the Collabora import flow, where the bucket's policy is
+   * tighter than the set of formats the editor can open. When the
+   * override is provided:
+   *   - the bucket-side `validateMimeTypes` check is skipped (the
+   *     caller-claimed mimeType may not be in `bucket.allowedMimeTypes`,
+   *     which is fine — file-service-go sniffs the actual MIME from
+   *     content and validates against the override list instead).
+   *   - the override is forwarded to file-service-go as
+   *     `allowedMimeTypes`, so its content-sniff validation enforces
+   *     exactly the caller's expected set.
+   * `validateSize` against the bucket's `maxFileSize` always applies.
+   */
   public async uploadFileAsDocumentFromBuffer(
     storageBucketId: string,
     buffer: Buffer,
@@ -207,13 +224,18 @@ export class StorageBucketService {
     mimeType: string,
     userID?: string,
     temporaryLocation = false,
-    skipDedup = false
+    skipDedup = false,
+    allowedMimeTypesOverride?: string[]
   ): Promise<IDocument> {
     const storage = await this.getStorageBucketOrFail(storageBucketId, {
       relations: {},
     });
 
-    this.validateMimeTypes(storage, mimeType);
+    const effectiveAllowedMimes =
+      allowedMimeTypesOverride ?? storage.allowedMimeTypes;
+    if (!allowedMimeTypesOverride) {
+      this.validateMimeTypes(storage, mimeType);
+    }
     this.validateSize(storage, buffer.length);
 
     return this.persistDocumentWithPreparedAuth(
@@ -227,7 +249,7 @@ export class StorageBucketService {
           tagsetId,
           createdBy: userID || undefined,
           temporaryLocation,
-          allowedMimeTypes: storage.allowedMimeTypes.join(','),
+          allowedMimeTypes: effectiveAllowedMimes.join(','),
           maxFileSize: storage.maxFileSize,
           skipDedup: skipDedup || undefined,
         })

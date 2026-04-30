@@ -5,6 +5,7 @@ export enum CalloutContributionType {
   WHITEBOARD = 'whiteboard',
   LINK = 'link',
   MEMO = 'memo',
+  COLLABORA_DOCUMENT = 'collabora_document',
 }
 
 registerEnumType(CalloutContributionType, {
@@ -16,4 +17,5 @@ export const AllCalloutContributionTypes = [
   CalloutContributionType.WHITEBOARD,
   CalloutContributionType.LINK,
   CalloutContributionType.MEMO,
+  CalloutContributionType.COLLABORA_DOCUMENT,
 ] as const;

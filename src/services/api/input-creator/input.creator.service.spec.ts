@@ -511,6 +511,31 @@ describe('InputCreatorService', () => {
 
       expect(result).toBeNull();
     });
+
+    it('should return null for a COLLABORA_DOCUMENT framing callout (not templatable)', async () => {
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue({
+        id: 'doc-callout-1',
+        nameID: 'my-doc',
+        sortOrder: 3,
+        framing: {
+          id: 'framing-doc',
+          type: CalloutFramingType.COLLABORA_DOCUMENT,
+          profile: {
+            displayName: 'Document',
+            description: '',
+            tagsets: [],
+          },
+        },
+        contributionDefaults: {},
+        settings: {},
+        classification: { tagsets: [] },
+      });
+
+      const result =
+        await service.buildCreateCalloutInputFromCallout('doc-callout-1');
+
+      expect(result).toBeNull();
+    });
   });
 
   describe('buildCreateCalloutInputsFromCallouts', () => {
@@ -583,6 +608,51 @@ describe('InputCreatorService', () => {
       vi.mocked(calloutService.getCalloutOrFail)
         .mockResolvedValueOnce(regularCallout)
         .mockResolvedValueOnce(pollCallout);
+
+      const result = await service.buildCreateCalloutInputsFromCallouts([
+        { id: 'callout-1' } as any,
+        { id: 'callout-2' } as any,
+      ]);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].nameID).toBe('regular');
+    });
+
+    it('should skip COLLABORA_DOCUMENT callouts and return only non-document callout inputs', async () => {
+      const regularCallout = {
+        id: 'callout-1',
+        nameID: 'regular',
+        sortOrder: 1,
+        framing: {
+          id: 'f-1',
+          type: CalloutFramingType.NONE,
+          profile: { displayName: 'Regular', description: '', tagsets: [] },
+        },
+        contributionDefaults: {
+          defaultDisplayName: '',
+          postDescription: '',
+          whiteboardContent: '',
+        },
+        settings: {},
+        classification: { tagsets: [] },
+      };
+      const documentCallout = {
+        id: 'callout-2',
+        nameID: 'doc-callout',
+        sortOrder: 2,
+        framing: {
+          id: 'f-2',
+          type: CalloutFramingType.COLLABORA_DOCUMENT,
+          profile: { displayName: 'Document', description: '', tagsets: [] },
+        },
+        contributionDefaults: {},
+        settings: {},
+        classification: { tagsets: [] },
+      };
+
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce(regularCallout)
+        .mockResolvedValueOnce(documentCallout);
 
       const result = await service.buildCreateCalloutInputsFromCallouts([
         { id: 'callout-1' } as any,
