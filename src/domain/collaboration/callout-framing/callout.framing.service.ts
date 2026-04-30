@@ -5,7 +5,10 @@ import { LogContext } from '@common/enums/logging.context';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
-import { ValidationException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { LinkService } from '@domain/collaboration/link/link.service';
@@ -169,6 +172,63 @@ export class CalloutFramingService {
     return calloutFraming;
   }
 
+  /**
+   * Phase-2 materialization for a CalloutFraming. Composed under a parent
+   * (callout, template-callout, etc.); the parent's save persists the
+   * framing's bucket before this is called.
+   *
+   * Walks the framing's own profile and the LINK child if present.
+   * Whiteboard and Memo children are self-materializing inside their own
+   * createX flows (already saved + materialized). MediaGallery handles
+   * its own visuals inline via createMediaGallery (saves the bucket
+   * eagerly). Poll has no profile.
+   */
+  public async materializeCalloutFramingContent(
+    calloutFraming: ICalloutFraming,
+    calloutFramingData: CreateCalloutFramingInput | undefined,
+    rollback: () => Promise<unknown>
+  ): Promise<void> {
+    if (!calloutFraming.profile) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        {
+          calloutFramingId: calloutFraming.id,
+          missing: ['profile'],
+        }
+      );
+    }
+    if (
+      calloutFraming.type === CalloutFramingType.LINK &&
+      !calloutFraming.link
+    ) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        {
+          calloutFramingId: calloutFraming.id,
+          missing: ['link'],
+        }
+      );
+    }
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      calloutFraming.profile,
+      calloutFramingData?.profile?.visuals,
+      [VisualType.CARD, VisualType.BANNER],
+      rollback
+    );
+    if (
+      calloutFraming.type === CalloutFramingType.LINK &&
+      calloutFraming.link
+    ) {
+      await this.linkService.materializeLinkContent(
+        calloutFraming.link,
+        calloutFramingData?.link,
+        rollback
+      );
+    }
+  }
+
   private async createNewWhiteboardInCalloutFraming(
     calloutFraming: ICalloutFraming,
     whiteboardData: CreateWhiteboardInput,
@@ -199,15 +259,14 @@ export class CalloutFramingService {
       `${memoData.profile?.displayName ?? 'memo'}`,
       reservedNameIDs
     );
+    // Memo's framing context wants both CARD (its own default) and BANNER
+    // (framing-specific). Pass the union so createMemo materializes both
+    // post-save in one shot.
     calloutFraming.memo = await this.memoService.createMemo(
       memoData,
       storageAggregator,
-      userID
-    );
-    await this.profileService.addVisualsOnProfile(
-      calloutFraming.memo.profile,
-      memoData.profile?.visuals,
-      [VisualType.BANNER]
+      userID,
+      [VisualType.CARD, VisualType.BANNER]
     );
   }
 

@@ -1,0 +1,32 @@
+# Kratos local-source debug overlay.
+#
+# Swaps the stock Kratos image for a local build (../kratos) with ptrace
+# enabled for delve, exposes port 9999→40000 for the debugger, and
+# bind-mounts the local source into both kratos-migrate and kratos.
+#
+# Included by quickstart-services-kratos-debug.yml and
+# quickstart-services-ai-debug.yml.
+
+services:
+  kratos-migrate:
+    volumes:
+      - type: bind
+        source: ../kratos
+        target: /dockerdev
+        read_only: false
+
+  kratos:
+    build:
+      context: ../kratos
+      dockerfile: ../kratos/.docker/Dockerfile-debug
+    security_opt:
+      - apparmor=unconfined
+    cap_add:
+      - SYS_PTRACE
+    ports:
+      - 9999:40000
+    volumes:
+      - type: bind
+        source: ../kratos
+        target: /dockerdev
+        read_only: false

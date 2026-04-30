@@ -113,6 +113,12 @@ export class CollaborationService {
           limit: 0,
           enabled: false,
         },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: false,
+        },
       ],
     });
 
@@ -156,6 +162,35 @@ export class CollaborationService {
     );
 
     return collaboration;
+  }
+
+  /**
+   * Phase-2 materialization for a Collaboration. Walks the callouts set and
+   * delegates to CalloutsSetService. Caller supplies a rollback that cleans
+   * up the top-level parent (Space, TemplateContentSpace, etc.) so a
+   * failed walk doesn't leave a partially-materialized tree behind.
+   */
+  public async materializeCollaborationContent(
+    collaboration: ICollaboration,
+    collaborationData: CreateCollaborationInput | undefined,
+    rollback: () => Promise<unknown>
+  ): Promise<void> {
+    if (!collaboration.calloutsSet) {
+      throw new EntityNotInitializedException(
+        'CalloutsSet not initialized on Collaboration',
+        LogContext.COLLABORATION,
+        {
+          phase: 'materializeCollaborationContent',
+          collaborationId: collaboration.id,
+          missing: 'calloutsSet',
+        }
+      );
+    }
+    await this.calloutsSetService.materializeCalloutsSetContent(
+      collaboration.calloutsSet,
+      collaborationData?.calloutsSetData?.calloutsData,
+      rollback
+    );
   }
 
   private createInnovationFlowStatesTagsetTemplateInput(

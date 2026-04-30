@@ -3,10 +3,12 @@ import { NotificationEvent } from '@common/enums/notification.event';
 import { NotificationEventCategory } from '@common/enums/notification.event.category';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { CreateInAppNotificationInput } from '@platform/in-app-notification/dto/in.app.notification.create';
+import { IInAppNotification } from '@platform/in-app-notification/in.app.notification.interface';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { IInAppNotificationPayload } from '@platform/in-app-notification-payload/in.app.notification.payload.interface';
 import { SubscriptionPublishService } from '@services/subscriptions/subscription-service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { QueryFailedError } from 'typeorm';
 
 @Injectable()
 export class NotificationInAppAdapter {
@@ -63,8 +65,32 @@ export class NotificationInAppAdapter {
     });
 
     // filtering out notifications that are not for beta users now done by platform privilege
-    const savedNotifications =
-      await this.inAppNotificationService.saveInAppNotifications(inApps);
+    let savedNotifications: IInAppNotification[];
+    try {
+      savedNotifications =
+        await this.inAppNotificationService.saveInAppNotifications(inApps);
+    } catch (error) {
+      // Postgres FK violation (23503): the referenced entity (e.g.
+      // invitation) was deleted between dispatch and insert. The
+      // notification target is gone, so the notification itself is moot
+      // — log a warn and skip rather than letting the rejection escape
+      // to the fire-and-forget call site.
+      if (this.isForeignKeyViolation(error)) {
+        this.logger.warn?.(
+          {
+            message:
+              'In-app notification target was deleted before insert; skipping',
+            event: type,
+            triggeredByID,
+            receiverIDs,
+            error: String(error),
+          },
+          LogContext.IN_APP_NOTIFICATION
+        );
+        return;
+      }
+      throw error;
+    }
 
     // notify
     this.logger.verbose?.(
@@ -109,5 +135,17 @@ export class NotificationInAppAdapter {
         );
       }
     });
+  }
+
+  private isForeignKeyViolation(error: unknown): boolean {
+    if (!(error instanceof QueryFailedError)) return false;
+    // Different TypeORM/driver versions surface the SQLSTATE either on the
+    // top-level error or nested under `driverError`; check both.
+    const typedError = error as QueryFailedError & {
+      code?: string;
+      driverError?: { code?: string };
+    };
+    const code = typedError.code ?? typedError.driverError?.code;
+    return code === '23503';
   }
 }

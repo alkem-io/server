@@ -11,14 +11,18 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Profile } from '@domain/common/profile/profile.entity';
+import { TagsetService } from '@domain/common/tagset/tagset.service';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
+import { Readable } from 'stream';
 import { Repository } from 'typeorm';
 import { type Mock } from 'vitest';
 import { Document } from '../document/document.entity';
@@ -83,6 +87,9 @@ describe('StorageBucketService', () => {
   let authorizationService: AuthorizationService;
   let avatarCreatorService: AvatarCreatorService;
   let urlGeneratorService: UrlGeneratorService;
+  let fileServiceAdapter: FileServiceAdapter;
+  let tagsetService: TagsetService;
+  let configService: ConfigService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -97,6 +104,16 @@ describe('StorageBucketService', () => {
         repositoryProviderMockFactory(Profile),
         MockCacheManager,
         MockWinstonProvider,
+        {
+          provide: FileServiceAdapter,
+          useValue: {
+            createDocument: vi.fn(),
+            copyDocument: vi.fn(),
+            getDocumentContent: vi.fn(),
+            updateDocument: vi.fn(),
+            deleteDocument: vi.fn(),
+          },
+        },
       ],
     })
       .useMocker(defaultMockerFactory)
@@ -121,6 +138,9 @@ describe('StorageBucketService', () => {
     avatarCreatorService =
       module.get<AvatarCreatorService>(AvatarCreatorService);
     urlGeneratorService = module.get<UrlGeneratorService>(UrlGeneratorService);
+    fileServiceAdapter = module.get<FileServiceAdapter>(FileServiceAdapter);
+    tagsetService = module.get<TagsetService>(TagsetService);
+    configService = module.get<ConfigService>(ConfigService);
   });
 
   // ── createStorageBucket ─────────────────────────────────────────
@@ -270,21 +290,26 @@ describe('StorageBucketService', () => {
   // ── uploadFileAsDocumentFromBuffer ──────────────────────────────
 
   describe('uploadFileAsDocumentFromBuffer', () => {
-    it('should upload file, create document, and save when MIME type and size are valid', async () => {
+    it('should upload file via file-service adapter and return the created document when MIME type and size are valid', async () => {
       const bucket = mockStorageBucket({ id: 'bucket-upload' });
       const buffer = Buffer.alloc(1024);
       const createdDoc = mockDocument({
+        id: 'doc-created',
         displayName: 'file.png',
         externalID: 'ext-new',
       });
 
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
-      (documentService.uploadFile as Mock).mockResolvedValue('ext-new');
-      (documentService.getDocumentByExternalIdOrFail as Mock).mockRejectedValue(
-        new Error('not found')
-      );
-      (documentService.createDocument as Mock).mockResolvedValue(createdDoc);
-      (documentService.save as Mock).mockResolvedValue(createdDoc);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-created',
+        externalID: 'ext-new',
+        mimeType: MimeTypeVisual.PNG,
+        size: 1024,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(createdDoc);
 
       const result = await service.uploadFileAsDocumentFromBuffer(
         'bucket-upload',
@@ -294,46 +319,26 @@ describe('StorageBucketService', () => {
         'user-1'
       );
 
-      expect(documentService.uploadFile).toHaveBeenCalledWith(
+      expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
         buffer,
-        'file.png'
-      );
-      expect(documentService.createDocument).toHaveBeenCalledWith(
         expect.objectContaining({
-          mimeType: MimeTypeVisual.PNG,
-          externalID: 'ext-new',
           displayName: 'file.png',
-          size: 1024,
+          storageBucketId: 'bucket-upload',
+          authorizationId: 'auth-saved',
           createdBy: 'user-1',
-          temporaryLocation: false,
         })
       );
-      expect(documentService.save).toHaveBeenCalled();
+      expect(documentService.getDocumentOrFail).toHaveBeenCalledWith(
+        'doc-created',
+        {
+          relations: {
+            authorization: true,
+            tagset: { authorization: true },
+            storageBucket: true,
+          },
+        }
+      );
       expect(result).toBe(createdDoc);
-    });
-
-    it('should return existing document when duplicate external ID found in same bucket', async () => {
-      const bucket = mockStorageBucket({ id: 'bucket-dup' });
-      const buffer = Buffer.alloc(512);
-      const existingDoc = mockDocument({
-        externalID: 'ext-existing',
-      });
-
-      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
-      (documentService.uploadFile as Mock).mockResolvedValue('ext-existing');
-      (documentService.getDocumentByExternalIdOrFail as Mock).mockResolvedValue(
-        existingDoc
-      );
-
-      const result = await service.uploadFileAsDocumentFromBuffer(
-        'bucket-dup',
-        buffer,
-        'file.png',
-        MimeTypeVisual.PNG
-      );
-
-      expect(result).toBe(existingDoc);
-      expect(documentService.createDocument).not.toHaveBeenCalled();
     });
 
     it('should throw ValidationException when MIME type is not allowed', async () => {
@@ -382,12 +387,16 @@ describe('StorageBucketService', () => {
       const createdDoc = mockDocument();
 
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
-      (documentService.uploadFile as Mock).mockResolvedValue('ext-temp');
-      (documentService.getDocumentByExternalIdOrFail as Mock).mockRejectedValue(
-        new Error('not found')
-      );
-      (documentService.createDocument as Mock).mockResolvedValue(createdDoc);
-      (documentService.save as Mock).mockResolvedValue(createdDoc);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-temp',
+        externalID: 'ext-temp',
+        mimeType: MimeTypeVisual.PNG,
+        size: 50,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(createdDoc);
 
       await service.uploadFileAsDocumentFromBuffer(
         'bucket-temp',
@@ -398,10 +407,453 @@ describe('StorageBucketService', () => {
         true
       );
 
-      expect(documentService.createDocument).toHaveBeenCalledWith(
+      expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+        buffer,
         expect.objectContaining({
           temporaryLocation: true,
         })
+      );
+    });
+
+    it('should roll back auth policy + tagset when the adapter create call throws', async () => {
+      const bucket = mockStorageBucket({ id: 'bucket-rb-adapter' });
+      const buffer = Buffer.alloc(100);
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.createDocument as Mock).mockRejectedValue(
+        new Error('adapter failure')
+      );
+
+      await expect(
+        service.uploadFileAsDocumentFromBuffer(
+          'bucket-rb-adapter',
+          buffer,
+          'file.png',
+          MimeTypeVisual.PNG,
+          'user-1'
+        )
+      ).rejects.toThrow('adapter failure');
+
+      // Go service was never called successfully — no Go-side rollback
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      // Pre-created server-owned resources must be cleaned up
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
+        id: 'auth-saved',
+      });
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-saved');
+    });
+
+    it('should roll back Go-side document + auth policy + tagset when the post-upload reload fails', async () => {
+      const bucket = mockStorageBucket({ id: 'bucket-rb-reload' });
+      const buffer = Buffer.alloc(100);
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-created',
+        externalID: 'ext-new',
+        mimeType: MimeTypeVisual.PNG,
+        size: 100,
+      });
+      // Reload after Go created the document fails — compensation must clean up
+      // the Go-side document as well as the server-owned resources.
+      (documentService.getDocumentOrFail as Mock).mockRejectedValue(
+        new Error('reload failed')
+      );
+
+      await expect(
+        service.uploadFileAsDocumentFromBuffer(
+          'bucket-rb-reload',
+          buffer,
+          'file.png',
+          MimeTypeVisual.PNG,
+          'user-1'
+        )
+      ).rejects.toThrow('reload failed');
+
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+        'doc-created'
+      );
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
+        id: 'auth-saved',
+      });
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-saved');
+    });
+
+    it('releases pre-created auth + tagset when file-service-go returns reused:true', async () => {
+      // Go-side dedup hit the existing file row; the auth/tagset we saved
+      // before calling Go are not referenced by anyone and must be freed.
+      const bucket = mockStorageBucket({ id: 'bucket-reuse' });
+      const buffer = Buffer.alloc(10);
+      const existingDoc = mockDocument({
+        id: 'doc-existing',
+        externalID: 'ext-shared',
+      });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved-reuse',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved-reuse',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-existing',
+        externalID: 'ext-shared',
+        mimeType: MimeTypeVisual.PNG,
+        size: 10,
+        reused: true,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+        existingDoc
+      );
+
+      const result = await service.uploadFileAsDocumentFromBuffer(
+        'bucket-reuse',
+        buffer,
+        'file.png',
+        MimeTypeVisual.PNG,
+        'user-1'
+      );
+
+      expect(result).toBe(existingDoc);
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
+        id: 'auth-saved-reuse',
+      });
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith(
+        'tagset-saved-reuse'
+      );
+      // Go-side delete must NOT be called: the reused doc is someone else's.
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('keeps pre-created auth + tagset when reused is false (new document)', async () => {
+      const bucket = mockStorageBucket({ id: 'bucket-fresh' });
+      const buffer = Buffer.alloc(10);
+      const freshDoc = mockDocument({ id: 'doc-fresh' });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved-fresh',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved-fresh',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-fresh',
+        externalID: 'ext-fresh',
+        mimeType: MimeTypeVisual.PNG,
+        size: 10,
+        reused: false,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(freshDoc);
+
+      await service.uploadFileAsDocumentFromBuffer(
+        'bucket-fresh',
+        buffer,
+        'file.png',
+        MimeTypeVisual.PNG,
+        'user-1'
+      );
+
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
+    });
+
+    it('does NOT delete the Go-side document on post-upload failure if reused:true', async () => {
+      // getDocumentOrFail throws AFTER a reuse response. The catch branch
+      // must still clean up the pre-created auth/tagset, but must NOT
+      // delete the Go-side document — it belongs to another caller.
+      const bucket = mockStorageBucket({ id: 'bucket-reuse-reload-fail' });
+      const buffer = Buffer.alloc(10);
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved-rrf',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({
+        id: 'tagset-saved-rrf',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-existing-rrf',
+        externalID: 'ext-shared-rrf',
+        mimeType: MimeTypeVisual.PNG,
+        size: 10,
+        reused: true,
+      });
+      (documentService.getDocumentOrFail as Mock).mockRejectedValue(
+        new Error('reload failed')
+      );
+
+      await expect(
+        service.uploadFileAsDocumentFromBuffer(
+          'bucket-reuse-reload-fail',
+          buffer,
+          'file.png',
+          MimeTypeVisual.PNG,
+          'user-1'
+        )
+      ).rejects.toThrow('reload failed');
+
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
+        id: 'auth-saved-rrf',
+      });
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith(
+        'tagset-saved-rrf'
+      );
+    });
+  });
+
+  // ── copyDocumentToBucket ───────────────────────────────────────
+
+  describe('copyDocumentToBucket', () => {
+    const makeSourceDoc = (overrides?: Partial<IDocument>): IDocument =>
+      mockDocument({
+        id: 'src-doc',
+        displayName: 'orig.png',
+        mimeType: MimeTypeVisual.PNG,
+        size: 1234,
+        externalID: 'ext-shared',
+        createdBy: 'user-orig',
+        ...overrides,
+      });
+
+    it('delegates to fileServiceAdapter.copyDocument with caller-supplied auth/tagset', async () => {
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc();
+      const newDoc = mockDocument({ id: 'doc-new' });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'doc-new',
+        externalID: 'ext-shared',
+        mimeType: MimeTypeVisual.PNG,
+        size: 1234,
+        reused: false,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(newDoc);
+
+      const result = await service.copyDocumentToBucket(
+        'bucket-dst',
+        source,
+        'user-caller'
+      );
+
+      expect(result).toBe(newDoc);
+      expect(fileServiceAdapter.copyDocument).toHaveBeenCalledWith({
+        sourceId: 'src-doc',
+        destinationBucketId: 'bucket-dst',
+        authorizationId: 'auth-saved',
+        tagsetId: 'tagset-saved',
+        createdBy: 'user-caller',
+      });
+      // Auth + tagset stay attached (fresh row, not reused)
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
+    });
+
+    it('releases pre-created auth + tagset when Go responds reused:true', async () => {
+      // Same dedup-reuse contract as createDocument: when Go returns an
+      // existing row, our pre-created auth/tagset are orphans and must be
+      // released so they don't accumulate in the DB.
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc();
+      const reusedDoc = mockDocument({ id: 'doc-existing' });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'doc-existing',
+        externalID: 'ext-shared',
+        mimeType: MimeTypeVisual.PNG,
+        size: 1234,
+        reused: true,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(reusedDoc);
+
+      await service.copyDocumentToBucket('bucket-dst', source);
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
+        id: 'auth-saved',
+      });
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-saved');
+      // Existing doc must NOT be deleted on reuse — it belongs to another caller.
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('rolls back pre-created resources on copy failure', async () => {
+      // Full compensation when Go's copy call throws: delete the auth and
+      // tagset rows we pre-created. No Go-side document was created here so
+      // there's nothing to delete on that side.
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc();
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.copyDocument as Mock).mockRejectedValue(
+        new Error('copy failed')
+      );
+
+      await expect(
+        service.copyDocumentToBucket('bucket-dst', source)
+      ).rejects.toThrow('copy failed');
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
+        id: 'auth-saved',
+      });
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-saved');
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('falls back to source.createdBy when no userID is supplied', async () => {
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc({ createdBy: 'orig-user' });
+      const newDoc = mockDocument({ id: 'doc-new' });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'doc-new',
+        externalID: 'ext-shared',
+        mimeType: MimeTypeVisual.PNG,
+        size: 1234,
+        reused: false,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(newDoc);
+
+      await service.copyDocumentToBucket('bucket-dst', source);
+
+      expect(fileServiceAdapter.copyDocument).toHaveBeenCalledWith(
+        expect.objectContaining({ createdBy: 'orig-user' })
+      );
+    });
+
+    it('forwards skipDedup=true to fileServiceAdapter.copyDocument', async () => {
+      // Pin the contract relied upon by profile-documents.service.ts: when the
+      // caller asks for a guaranteed-fresh row (skipDedup=true), the flag is
+      // propagated through to the adapter rather than dropped.
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc();
+      const newDoc = mockDocument({ id: 'doc-new' });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'doc-new',
+        externalID: 'ext-shared',
+        mimeType: MimeTypeVisual.PNG,
+        size: 1234,
+        reused: false,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(newDoc);
+
+      await service.copyDocumentToBucket('bucket-dst', source, 'user-1', true);
+
+      expect(fileServiceAdapter.copyDocument).toHaveBeenCalledWith(
+        expect.objectContaining({ skipDedup: true })
+      );
+    });
+  });
+
+  // ── uploadFileAsDocument (stream) ──────────────────────────────
+
+  describe('uploadFileAsDocument', () => {
+    const makeReadable = (data: Buffer): Readable => Readable.from(data);
+
+    beforeEach(() => {
+      // Provide a usable stream timeout so streamToBuffer doesn't fire
+      // immediately in the mocked ConfigService environment. configService
+      // here is the same instance DI injected into the service under test.
+      (configService.get as Mock).mockReturnValue(5000);
+    });
+
+    it.each([
+      ['empty filename', ''],
+      ['whitespace-only filename', '   '],
+    ])('substitutes _unspecified_ when %s is supplied', async (_label, filename) => {
+      const bucket = mockStorageBucket({ id: 'bucket-unnamed' });
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-unnamed',
+        externalID: 'ext-unnamed',
+        mimeType: MimeTypeVisual.PNG,
+        size: 3,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+        mockDocument()
+      );
+
+      await service.uploadFileAsDocument(
+        'bucket-unnamed',
+        makeReadable(Buffer.from('png')),
+        filename,
+        MimeTypeVisual.PNG,
+        'user-1'
+      );
+
+      expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        expect.objectContaining({
+          displayName: '_unspecified_',
+          storageBucketId: 'bucket-unnamed',
+        })
+      );
+    });
+
+    it('passes the real filename through when supplied', async () => {
+      const bucket = mockStorageBucket({ id: 'bucket-named' });
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-named',
+        externalID: 'ext-named',
+        mimeType: MimeTypeVisual.PNG,
+        size: 3,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+        mockDocument()
+      );
+
+      await service.uploadFileAsDocument(
+        'bucket-named',
+        makeReadable(Buffer.from('png')),
+        'diagram.png',
+        MimeTypeVisual.PNG,
+        'user-1'
+      );
+
+      expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        expect.objectContaining({ displayName: 'diagram.png' })
       );
     });
   });
@@ -615,7 +1067,6 @@ describe('StorageBucketService', () => {
     it('should download external avatar, detect file type, upload, and return document when URL is external', async () => {
       const imageBuffer = Buffer.from('image-data');
       const uploadedDoc = mockDocument({ externalID: 'ext-avatar' });
-      const savedDoc = { ...uploadedDoc };
       const bucket = mockStorageBucket({ id: 'bucket-avatar' });
 
       (documentService.isAlkemioDocumentURL as Mock).mockReturnValue(false);
@@ -624,15 +1075,20 @@ describe('StorageBucketService', () => {
         MimeTypeVisual.JPEG
       );
 
-      // uploadFileAsDocumentFromBuffer internals
+      // uploadFileAsDocumentFromBuffer internals (now via fileServiceAdapter)
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
-      (documentService.uploadFile as Mock).mockResolvedValue('ext-avatar');
-      (documentService.getDocumentByExternalIdOrFail as Mock).mockRejectedValue(
-        new Error('not found')
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-avatar',
+        externalID: 'ext-avatar',
+        mimeType: MimeTypeVisual.JPEG,
+        size: imageBuffer.length,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+        uploadedDoc
       );
-      (documentService.createDocument as Mock).mockResolvedValue(uploadedDoc);
-      (documentService.save as Mock).mockResolvedValue(uploadedDoc);
-      (documentService.saveDocument as Mock).mockResolvedValue(savedDoc);
 
       const result = await service.ensureAvatarUrlIsDocument(
         'https://external.com/avatar.jpg',
@@ -646,8 +1102,7 @@ describe('StorageBucketService', () => {
       expect(avatarCreatorService.getFileType).toHaveBeenCalledWith(
         imageBuffer
       );
-      expect(documentService.saveDocument).toHaveBeenCalled();
-      expect(result).toBe(savedDoc);
+      expect(result).toBe(uploadedDoc);
     });
 
     it('should default to PNG MIME type when file type detection returns falsy', async () => {
@@ -659,23 +1114,31 @@ describe('StorageBucketService', () => {
       (avatarCreatorService.urlToBuffer as Mock).mockResolvedValue(imageBuffer);
       (avatarCreatorService.getFileType as Mock).mockResolvedValue(null);
 
+      // uploadFileAsDocumentFromBuffer internals (now via fileServiceAdapter)
       (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
-      (documentService.uploadFile as Mock).mockResolvedValue('ext-fallback');
-      (documentService.getDocumentByExternalIdOrFail as Mock).mockRejectedValue(
-        new Error('not found')
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (fileServiceAdapter.createDocument as Mock).mockResolvedValue({
+        id: 'doc-fallback',
+        externalID: 'ext-fallback',
+        mimeType: MimeTypeVisual.PNG,
+        size: imageBuffer.length,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(
+        uploadedDoc
       );
-      (documentService.createDocument as Mock).mockResolvedValue(uploadedDoc);
-      (documentService.save as Mock).mockResolvedValue(uploadedDoc);
-      (documentService.saveDocument as Mock).mockResolvedValue(uploadedDoc);
 
       await service.ensureAvatarUrlIsDocument(
         'https://external.com/unknown',
         'bucket-fallback'
       );
 
-      // The upload should use PNG as the fallback mime type
-      expect(documentService.createDocument).toHaveBeenCalledWith(
+      // The upload should use PNG as the fallback mime type (passed to fileServiceAdapter)
+      expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+        imageBuffer,
         expect.objectContaining({
+          displayName: expect.any(String),
           mimeType: MimeTypeVisual.PNG,
         })
       );

@@ -309,6 +309,58 @@ export class SpaceService {
     );
 
     const spaceUpdated = await this.save(space);
+
+    // Phase 2: post-save content materialization. The full tree is now
+    // persisted (storage buckets have real FKs, collaboration is loadable
+    // for rollback), so file-service-go calls and a subsequent
+    // deleteSpaceOrFail-based rollback both work. We materialize the about
+    // and the collaboration tree together so any failure can be cleaned up
+    // by a single rollback path. Cross-bucket markdown URLs from the
+    // source template (and any temp-location uploads in the user input)
+    // get re-homed into the space's bucket here — fixes #6004 / #6005.
+    //
+    // The OrRollback helper inside each materialize step calls the rollback
+    // callback (delete space) on its own failure and rethrows the original
+    // error, so we don't need a redundant catch around the call.
+    const rollbackSpace = (): Promise<unknown> =>
+      this.deleteSpaceOrFail({ ID: spaceUpdated.id });
+    await this.spaceAboutService.materializeSpaceAboutContent(
+      spaceUpdated.about,
+      modifiedAbout,
+      rollbackSpace
+    );
+    // Collaboration is always created earlier in this method (line 321);
+    // missing here would indicate a bad load or a programmer error.
+    // Fail fast rather than silently leaving the collaboration tree
+    // unmaterialized — that would persist a Space whose callouts still
+    // reference the source template's bucket.
+    if (!spaceUpdated.collaboration) {
+      await rollbackSpace().catch(rollbackError => {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message:
+              'Rollback after missing-collaboration detection also failed',
+            spaceId: spaceUpdated.id,
+            rollbackError: String(rollbackError),
+          },
+          stack,
+          LogContext.SPACES
+        );
+      });
+      throw new RelationshipNotFoundException(
+        'Collaboration not initialized on Space for materialization',
+        LogContext.SPACES,
+        { spaceId: spaceUpdated.id }
+      );
+    }
+    await this.collaborationService.materializeCollaborationContent(
+      spaceUpdated.collaboration,
+      updatedCollaborationData,
+      rollbackSpace
+    );
+
     // If template has child spaces, then create child spaces here
     if (
       templateContentSpace.subspaces &&
@@ -384,6 +436,12 @@ export class SpaceService {
         },
         {
           type: LicenseEntitlementType.SPACE_FLAG_MEMO_MULTI_USER,
+          dataType: LicenseEntitlementDataType.FLAG,
+          limit: 0,
+          enabled: true,
+        },
+        {
+          type: LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS,
           dataType: LicenseEntitlementDataType.FLAG,
           limit: 0,
           enabled: true,

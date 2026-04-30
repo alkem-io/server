@@ -24,5 +24,4 @@ export const SUBSCRIPTION_POLL_OPTIONS_CHANGED =
   'alkemio-subscriptions-poll-options-changed';
 export const ELASTICSEARCH_CLIENT_PROVIDER = 'elasticsearch-client-provider';
 export const APP_ID = 'app-id';
-export const STORAGE_SERVICE = 'storage-service';
 export const IS_SCHEMA_BOOTSTRAP = 'is-schema-bootstrap';

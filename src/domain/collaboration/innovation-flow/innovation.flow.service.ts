@@ -75,16 +75,11 @@ export class InnovationFlowService {
       innovationFlowData.settings
     );
 
+    // Phase 1: build entity tree in memory (no file-service-go calls).
     innovationFlow.profile = await this.profileService.createProfile(
       innovationFlowData.profile,
       ProfileType.INNOVATION_FLOW,
       storageAggregator
-    );
-
-    await this.profileService.addVisualsOnProfile(
-      innovationFlow.profile,
-      innovationFlowData.profile.visuals,
-      [VisualType.CARD]
     );
 
     innovationFlow.states = [];
@@ -100,20 +95,30 @@ export class InnovationFlowService {
       innovationFlow.states.push(state);
       sortOrder = state.sortOrder;
     }
-    await this.save(innovationFlow);
 
-    innovationFlow.currentStateID = innovationFlow.states[0].id;
+    // First save populates state ids; pick currentStateID from saved states.
+    let saved = await this.save(innovationFlow);
+    saved.currentStateID = saved.states[0].id;
     if (innovationFlowData.currentStateDisplayName) {
-      const currentState = innovationFlow.states.find(
+      const currentState = saved.states.find(
         state =>
           state.displayName === innovationFlowData.currentStateDisplayName
       );
       if (currentState) {
-        innovationFlow.currentStateID = currentState.id;
+        saved.currentStateID = currentState.id;
       }
     }
+    saved = await this.save(saved);
 
-    return await this.save(innovationFlow);
+    // Phase 2: materialize via the shared helper. Rolls back on failure.
+    saved.profile =
+      await this.profileService.materializeProfileContentAndVisualsOrRollback(
+        saved.profile,
+        innovationFlowData.profile?.visuals,
+        [VisualType.CARD],
+        () => this.deleteInnovationFlow(saved.id)
+      );
+    return saved;
   }
 
   async save(innovationFlow: IInnovationFlow): Promise<IInnovationFlow> {

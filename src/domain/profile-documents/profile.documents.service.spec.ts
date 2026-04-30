@@ -3,10 +3,11 @@ import { MimeTypeVisual } from '@common/enums/mime.file.type.visual';
 import { TagsetType } from '@common/enums/tagset.type';
 import { IDocument } from '@domain/storage/document';
 import { DocumentService } from '@domain/storage/document/document.service';
-import { DocumentAuthorizationService } from '@domain/storage/document/document.service.authorization';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { uniqueId } from 'lodash';
 import { vi } from 'vitest';
 import { IAuthorizationPolicy } from '../common/authorization-policy';
@@ -79,6 +80,7 @@ describe('ProfileDocumentsService', () => {
   let service: ProfileDocumentsService;
   let documentService: DocumentService;
   let storageBucketService: StorageBucketService;
+  let fileServiceAdapter: FileServiceAdapter;
 
   beforeEach(async () => {
     const module: TestingModule = await Test.createTestingModule({
@@ -92,20 +94,28 @@ describe('ProfileDocumentsService', () => {
             getDocumentFromURL: vi.fn(),
             getPubliclyAccessibleURL: vi.fn(),
             createDocument: vi.fn(),
+            deleteDocument: vi.fn(),
           },
         },
         {
           provide: StorageBucketService,
           useValue: {
             addDocumentToStorageBucketOrFail: vi.fn(),
+            uploadFileAsDocumentFromBuffer: vi.fn(),
+            copyDocumentToBucket: vi.fn(),
           },
         },
         {
-          provide: DocumentAuthorizationService,
+          provide: FileServiceAdapter,
           useValue: {
-            applyAuthorizationPolicy: vi.fn(),
+            createDocument: vi.fn(),
+            copyDocument: vi.fn(),
+            getDocumentContent: vi.fn(),
+            updateDocument: vi.fn(),
+            deleteDocument: vi.fn(),
           },
         },
+        MockWinstonProvider,
       ],
     }).compile();
 
@@ -113,6 +123,7 @@ describe('ProfileDocumentsService', () => {
     documentService = module.get<DocumentService>(DocumentService);
     storageBucketService =
       module.get<StorageBucketService>(StorageBucketService);
+    fileServiceAdapter = module.get<FileServiceAdapter>(FileServiceAdapter);
   });
   describe('reuploadFileOnStorageBucket', () => {
     it('should throw EntityNotInitializedException when storageBucket.documents is not initialized', async () => {
@@ -128,7 +139,12 @@ describe('ProfileDocumentsService', () => {
       ).rejects.toThrow('Documents not initialized on storage bucket');
     });
 
-    it('should throw EntityNotFoundException when document is not found by URL', async () => {
+    it('returns undefined (with WARN log) when the Alkemio document URL is stale', async () => {
+      // Stale/orphan URL handling: the helper used to throw, which crashed
+      // entire clone flows on a single dead reference. Now it logs a
+      // warning and returns undefined; callers (markdown walker,
+      // references, visuals, mediaGallery, whiteboard) all handle
+      // undefined gracefully.
       const fileUrl = EXAMPLE_ALKEMIO_DOCUMENT_URL;
       const storageBucket = mockStorageBucket();
 
@@ -137,9 +153,12 @@ describe('ProfileDocumentsService', () => {
         undefined as any
       );
 
-      await expect(
-        service.reuploadFileOnStorageBucket(fileUrl, storageBucket, true)
-      ).rejects.toThrow('not found');
+      const result = await service.reuploadFileOnStorageBucket(
+        fileUrl,
+        storageBucket,
+        true
+      );
+      expect(result).toBeUndefined();
     });
 
     it('should return fileUrl if internalUrlRequired is false and URL is not an Alkemio document', async () => {
@@ -201,18 +220,27 @@ describe('ProfileDocumentsService', () => {
       mockDocument(storageBucketOrigin);
       mockDocument(storageBucketDestination);
       mockDocument(storageBucketDestination);
-      // the doc
-      const doc = mockDocument(storageBucketOrigin, {
-        temporaryLocation: true,
-      });
+      // the doc — registered on the source bucket only (not destination)
+      const doc = mockDocument(
+        storageBucketOrigin,
+        { temporaryLocation: true },
+        true /* addToStorageBucket */
+      );
       mockDocument(storageBucketOrigin);
       mockDocument(storageBucketDestination);
+
+      const destDocsBefore = [...storageBucketDestination.documents];
 
       vi.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
       vi.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
       vi.spyOn(documentService, 'getPubliclyAccessibleURL').mockReturnValue(
         EXAMPLE_ALKEMIO_DOCUMENT_URL
       );
+      vi.spyOn(fileServiceAdapter, 'updateDocument').mockResolvedValue({
+        id: doc.id,
+        storageBucketId: storageBucketDestination.id,
+        temporaryLocation: false,
+      });
 
       const result = await service.reuploadFileOnStorageBucket(
         fileUrl,
@@ -221,25 +249,35 @@ describe('ProfileDocumentsService', () => {
       );
 
       expect(result).toBe(fileUrl);
-      expect(doc.temporaryLocation).toBe(false);
-      expect(doc.storageBucket).toBe(storageBucketDestination);
+      expect(fileServiceAdapter.updateDocument).toHaveBeenCalledWith(doc.id, {
+        storageBucketId: storageBucketDestination.id,
+        temporaryLocation: false,
+      });
+      // The helper must NOT mutate `bucket.documents` in memory — that's
+      // what triggers TypeORM's bidirectional FK-sync write on the next
+      // parent save (DocumentWriteGuard rejects it). file-service-go has
+      // already updated the FK in DB; in-memory state must stay neutral.
+      expect(storageBucketDestination.documents).toEqual(destDocsBefore);
+      // The helper must NOT mutate the loaded Document instance —
+      // TypeORM tracks loaded entities and any property change on a
+      // tracked Document is a candidate for an UPDATE on the next save.
+      expect(doc.temporaryLocation).toBe(true);
     });
 
-    it('should return a copy of the document in the new StorageBucket', async () => {
+    it('copies the document via copyDocumentToBucket and leaves the source intact', async () => {
+      // Different-bucket branch: COPY semantics. The previous MOVE
+      // semantics (copy + delete-source) destroyed the source's content
+      // during clone flows: editing a cloned WB silently deleted the
+      // original doc, breaking the source's WB visuals and leaving
+      // subsequent clones from the same source referencing now-gone
+      // docs (404 visuals on later space-from-template creations).
+      // Source ownership is the caller's concern.
       const fileUrl = `${ALKEMIO_URL}/api/private/rest/storage/document/${uniqueId()}`;
       const storageBucketOrigin: IStorageBucket = mockStorageBucket();
       const storageBucketDestination: IStorageBucket = mockStorageBucket();
-      // A few test documents
-      mockDocument(storageBucketOrigin);
-      mockDocument(storageBucketOrigin);
-      mockDocument(storageBucketDestination);
-      mockDocument(storageBucketDestination);
-      // the doc
       const doc = mockDocument(storageBucketOrigin, {
         temporaryLocation: false,
       });
-      mockDocument(storageBucketOrigin);
-      mockDocument(storageBucketDestination);
 
       vi.spyOn(documentService, 'isAlkemioDocumentURL').mockReturnValue(true);
       vi.spyOn(documentService, 'getDocumentFromURL').mockResolvedValue(doc);
@@ -252,11 +290,9 @@ describe('ProfileDocumentsService', () => {
         ...doc,
         id: uniqueId(),
       });
-      vi.spyOn(documentService, 'createDocument').mockResolvedValue(newDocMock);
-      vi.spyOn(
-        storageBucketService,
-        'addDocumentToStorageBucketOrFail'
-      ).mockResolvedValue(newDocMock);
+      vi.spyOn(storageBucketService, 'copyDocumentToBucket').mockResolvedValue(
+        newDocMock
+      );
 
       const result = await service.reuploadFileOnStorageBucket(
         fileUrl,
@@ -266,13 +302,19 @@ describe('ProfileDocumentsService', () => {
 
       expect(result).toBe(resultUrl);
       expect(result !== fileUrl).toBe(true);
-      expect(storageBucketDestination.documents).toHaveLength(4);
-      const newDoc = storageBucketDestination.documents[3];
-      expect(newDoc.storageBucket).toBe(storageBucketDestination);
-      expect(newDoc.id === doc.id).toBe(false);
-      expect(newDoc.externalID).toBe(doc.externalID);
-      expect(newDoc.temporaryLocation).toBe(false);
-      expect(newDoc.displayName).toBe(doc.displayName);
+      expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
+      // skipDedup=true is required so we never bind the new bucket's
+      // reference to a doc owned by another caller (see service comment).
+      expect(storageBucketService.copyDocumentToBucket).toHaveBeenCalledWith(
+        storageBucketDestination.id,
+        doc,
+        undefined,
+        true
+      );
+      // Source must NOT be deleted. Cloning flows depend on the source
+      // remaining intact; deletion would corrupt the source's content
+      // and any other clones that reference the same source doc.
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
 
     describe('reuploadDocumentsInMarkdownProfile', () => {
@@ -312,11 +354,7 @@ describe('ProfileDocumentsService', () => {
           resultUrl
         );
 
-        vi.spyOn(documentService, 'createDocument').mockResolvedValue(doc);
-        vi.spyOn(
-          storageBucketService,
-          'addDocumentToStorageBucketOrFail'
-        ).mockResolvedValue(doc);
+        // Doc is already in storageBucketDestination.documents so the early-return path is taken
 
         const result = await service.reuploadDocumentsInMarkdownToStorageBucket(
           markdown,

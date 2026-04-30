@@ -110,7 +110,7 @@ export class AdminWhiteboardService {
           }
 
           try {
-            let document =
+            const document =
               await this.storageBucketService.uploadFileAsDocumentFromBuffer(
                 storageBucketId,
                 imageBuffer,
@@ -118,7 +118,6 @@ export class AdminWhiteboardService {
                 file.mimeType,
                 uploaderId
               );
-            document = await this.documentService.saveDocument(document);
             const documentAuthorizations =
               await this.documentAuthorizationService.applyAuthorizationPolicy(
                 document,

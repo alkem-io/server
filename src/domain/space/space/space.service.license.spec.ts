@@ -85,6 +85,11 @@ describe('SpaceLicenseService', () => {
             limit: 0,
             enabled: false,
           },
+          {
+            type: LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS,
+            limit: 0,
+            enabled: false,
+          },
         ],
       },
       community: {
@@ -253,6 +258,85 @@ describe('SpaceLicenseService', () => {
       await expect(service.applyLicensePolicy('space-1')).rejects.toThrow(
         RelationshipNotFoundException
       );
+    });
+
+    describe('SPACE_FLAG_OFFICE_DOCUMENTS', () => {
+      it('reports limit = 0 before license-policy application when credential is not held', () => {
+        const mockSpace = createMockSpace();
+        const entitlement = mockSpace.license.entitlements.find(
+          (e: any) =>
+            e.type === LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS
+        );
+        expect(entitlement).toBeDefined();
+        expect(entitlement!.limit).toBe(0);
+      });
+
+      it('reports enabled = true, limit = 1 when L0 agent holds the credential', async () => {
+        const mockSpace = createMockSpace();
+        (spaceService.getSpaceOrFail as any).mockResolvedValue(
+          mockSpace as any
+        );
+        (licenseService.reset as any).mockReturnValue(mockSpace.license as any);
+        (licenseEngineService.isEntitlementGranted as any).mockImplementation(
+          async (type: LicenseEntitlementType) =>
+            type === LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS
+        );
+        (roleSetLicenseService.applyLicensePolicy as any).mockResolvedValue([]);
+        (
+          collaborationLicenseService.applyLicensePolicy as any
+        ).mockResolvedValue([]);
+
+        await service.applyLicensePolicy('space-1');
+
+        const officeEntitlement = mockSpace.license.entitlements.find(
+          (e: any) =>
+            e.type === LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS
+        );
+        expect(officeEntitlement).toBeDefined();
+        expect(officeEntitlement!.enabled).toBe(true);
+        expect(officeEntitlement!.limit).toBe(1);
+      });
+
+      it('remains disabled on a sub-space when only an intermediate (non-L0) agent holds the credential', async () => {
+        const subspace = { id: 'subspace-1' };
+        const parentSpace = createMockSpace({ subspaces: [subspace] });
+        const subspaceMock = createMockSpace({
+          id: 'subspace-1',
+          subspaces: [],
+        });
+
+        (spaceService.getSpaceOrFail as any).mockImplementation(
+          async (id: string) => {
+            if (id === 'space-1') return parentSpace as any;
+            return subspaceMock as any;
+          }
+        );
+        (licenseService.reset as any).mockImplementation(
+          (license: any) => license as any
+        );
+        // Simulate only the intermediate sub-space holding the credential.
+        // Correct behavior must still evaluate the L0 parent and therefore return false.
+        (licenseEngineService.isEntitlementGranted as any).mockImplementation(
+          async (type: LicenseEntitlementType, agent: { id?: string }) =>
+            type === LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS &&
+            agent?.id === 'subspace-1'
+        );
+        (roleSetLicenseService.applyLicensePolicy as any).mockResolvedValue([]);
+        (
+          collaborationLicenseService.applyLicensePolicy as any
+        ).mockResolvedValue([]);
+
+        await service.applyLicensePolicy('space-1');
+
+        const subspaceOfficeEntitlement =
+          subspaceMock.license.entitlements.find(
+            (e: any) =>
+              e.type === LicenseEntitlementType.SPACE_FLAG_OFFICE_DOCUMENTS
+          );
+        expect(subspaceOfficeEntitlement).toBeDefined();
+        expect(subspaceOfficeEntitlement!.enabled).toBe(false);
+        expect(subspaceOfficeEntitlement!.limit).toBe(0);
+      });
     });
   });
 });

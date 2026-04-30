@@ -10,6 +10,7 @@ export enum LicensingCredentialBasedCredentialType {
   SPACE_FEATURE_VIRTUAL_CONTRIBUTORS = 'space-feature-virtual-contributors',
   SPACE_FEATURE_WHITEBOARD_MULTI_USER = 'space-feature-whiteboard-multi-user',
   SPACE_FEATURE_MEMO_MULTI_USER = 'space-feature-memo-multi-user',
+  SPACE_FEATURE_OFFICE_DOCUMENTS = 'space-feature-office-documents',
   ACCOUNT_LICENSE_PLUS = 'account-license-plus',
 }
 
