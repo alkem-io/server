@@ -89,6 +89,7 @@ export class InnovationHubService {
     hub.searchVisibility = SearchVisibility.ACCOUNT;
     hub.account = account;
 
+    // Phase 1: build entity in memory.
     hub.profile = await this.profileService.createProfile(
       createData.profileData,
       ProfileType.INNOVATION_HUB,
@@ -100,13 +101,17 @@ export class InnovationHubService {
       tags: [],
     });
 
-    await this.profileService.addVisualsOnProfile(
-      hub.profile,
-      createData.profileData.visuals,
-      [VisualType.BANNER_WIDE]
-    );
-
-    return await this.save(hub);
+    // Phase 2: persist + materialize via the shared helper. Rolls back the
+    // saved hub on materialization failure.
+    const saved = await this.save(hub);
+    saved.profile =
+      await this.profileService.materializeProfileContentAndVisualsOrRollback(
+        saved.profile,
+        createData.profileData.visuals,
+        [VisualType.BANNER_WIDE],
+        () => this.delete(saved.id)
+      );
+    return saved;
   }
 
   public save(hub: IInnovationHub): Promise<IInnovationHub> {

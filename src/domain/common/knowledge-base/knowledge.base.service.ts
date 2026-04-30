@@ -43,6 +43,7 @@ export class KnowledgeBaseService {
     storageAggregator: IStorageAggregator,
     userID: string | undefined
   ): Promise<IKnowledgeBase> {
+    // Phase 1: build entity tree in memory (no file-service-go calls).
     let knowledgeBase: IKnowledgeBase = KnowledgeBase.create(knowledgeBaseData);
 
     knowledgeBase.authorization = new AuthorizationPolicy(
@@ -72,17 +73,18 @@ export class KnowledgeBaseService {
       storageAggregator
     );
 
-    await this.save(knowledgeBase);
-    knowledgeBase = await this.getKnowledgeBaseOrFail(knowledgeBase.id, {
-      relations: {
-        calloutsSet: { tagsetTemplateSet: true, callouts: true },
-      },
-    });
+    // Cascade save populates IDs on the in-memory tree (knowledgeBase,
+    // profile, profile.storageBucket, calloutsSet, calloutsSet.tagsetTemplateSet).
+    // Capture the return so we keep the same instance — re-fetching here
+    // with a partial relation graph would drop `profile.storageBucket`
+    // and break the phase-2 materialize at the bottom of this method.
+    knowledgeBase = await this.save(knowledgeBase);
 
     if (!knowledgeBase.calloutsSet) {
       throw new EntityNotFoundException(
-        `CalloutsSet not found for KnowledgeBase: ${knowledgeBase.id}`,
-        LogContext.COLLABORATION
+        'CalloutsSet not found for KnowledgeBase',
+        LogContext.COLLABORATION,
+        { knowledgeBaseId: knowledgeBase.id }
       );
     }
 
@@ -94,6 +96,29 @@ export class KnowledgeBaseService {
           storageAggregator,
           userID
         );
+      // Persist the newly-added callouts so their bucket ids are real
+      // before phase-2 materialization tries to FK onto them.
+      knowledgeBase = await this.save(knowledgeBase);
+    }
+
+    // Phase 2: materialize own profile + walk calloutsSet. On failure,
+    // delete the KB; cascade clears nested entities (callouts/profiles/
+    // buckets) and the parent caller (VirtualContributorService) will
+    // see the thrown error and abort its own creation flow.
+    const rollbackKnowledgeBase = (): Promise<unknown> =>
+      this.delete(knowledgeBase);
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      knowledgeBase.profile,
+      knowledgeBaseData.profile?.visuals,
+      [],
+      rollbackKnowledgeBase
+    );
+    if (knowledgeBase.calloutsSet) {
+      await this.calloutsSetService.materializeCalloutsSetContent(
+        knowledgeBase.calloutsSet,
+        knowledgeBaseData.calloutsSetData?.calloutsData,
+        rollbackKnowledgeBase
+      );
     }
 
     return knowledgeBase;

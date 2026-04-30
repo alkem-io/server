@@ -135,12 +135,38 @@ export class TemplatesSetService {
 
     const storageAggregator = await this.getStorageAggregator(templatesSet);
 
+    // createTemplate is self-contained: it persists the template AND runs
+    // phase-2 materialization (with rollback on failure). The attach-save
+    // here is a separate operation; if it fails after createTemplate has
+    // already committed, the template is left orphaned (no templatesSet
+    // attached). Wrap the attach in a compensating delete so failures
+    // don't leak partially-attached templates.
     const template = await this.templateService.createTemplate(
       templateInput,
       storageAggregator
     );
     template.templatesSet = templatesSet;
-    return await this.templateService.save(template);
+    try {
+      return await this.templateService.save(template);
+    } catch (error) {
+      try {
+        await this.templateService.delete(template);
+      } catch (cleanupError) {
+        const stack =
+          cleanupError instanceof Error ? (cleanupError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message:
+              'Cleanup of template after templatesSet attach failure also failed',
+            templateId: template.id,
+            cleanupError: String(cleanupError),
+          },
+          stack,
+          LogContext.TEMPLATES
+        );
+      }
+      throw error;
+    }
   }
 
   async createTemplateFromSpace(
