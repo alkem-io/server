@@ -462,7 +462,7 @@ services:
       - 6379
 
   redis-commander:
-    image: rediscommander/redis-commander:latest
+    image: ghcr.io/joeferner/redis-commander:latest
     environment:
       - REDIS_HOSTS=local:redis:6379
     ports:
