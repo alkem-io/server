@@ -17,6 +17,7 @@ import { limitAndShuffle } from '@common/utils';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/index';
+import { CreateCalloutContributionInput } from '@domain/collaboration/callout-contribution/dto/callout.contribution.dto.create';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IClassification } from '@domain/common/classification/classification.interface';
@@ -112,9 +113,8 @@ export class CalloutService {
     );
 
     callout.contributionDefaults =
-      await this.contributionDefaultsService.createCalloutContributionDefaults(
-        calloutData.contributionDefaults,
-        callout.framing.profile.storageBucket
+      this.contributionDefaultsService.createCalloutContributionDefaults(
+        calloutData.contributionDefaults
       );
 
     if (userID && calloutData.contributions && callout.settings.contribution) {
@@ -137,6 +137,136 @@ export class CalloutService {
     }
 
     return callout;
+  }
+
+  /**
+   * Phase-2 materialization for a Callout. Composed under a parent
+   * (collaboration, template, knowledge-base); the parent's save persists
+   * the callout's framing/contribution buckets before this is called.
+   *
+   * Walks framing + each contribution. Failures bubble up via the supplied
+   * rollback callback (cleans up the top-level parent — cascade clears the
+   * rest).
+   *
+   * Both `framing` and `contributions` MUST be loaded on the input
+   * Callout. Silent skip would leave the entity persisted with
+   * unmaterialized children — phase-2 looks successful while content
+   * stays in the source bucket. We distinguish "not loaded" (undefined)
+   * from "loaded but empty" ([]) for the contributions relation.
+   */
+  public async materializeCalloutContent(
+    callout: ICallout,
+    calloutData: CreateCalloutInput | undefined,
+    rollback: () => Promise<unknown>
+  ): Promise<void> {
+    if (!callout.framing) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id, missing: ['framing'] }
+      );
+    }
+    if (callout.contributions === undefined) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id, missing: ['contributions'] }
+      );
+    }
+    await this.calloutFramingService.materializeCalloutFramingContent(
+      callout.framing,
+      calloutData?.framing,
+      rollback
+    );
+    // contributionDefaults.postDescription may carry markdown URLs that
+    // reference documents in another bucket (template clone) or in a
+    // temporary location (just-uploaded image). Re-home them now that
+    // the framing's storageBucket has a real id from the cascade save.
+    //
+    // contributionDefaults is always populated by createCallout (the
+    // entity is initialized with default `postDescription = ''`) and
+    // framing.profile.storageBucket is always loaded by the time
+    // materializeCalloutContent runs (we just materialized framing two
+    // lines above). A missing relation here means a partial load —
+    // fail fast rather than silently leaving postDescription URLs
+    // unresolved.
+    if (!callout.contributionDefaults) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id, missing: ['contributionDefaults'] }
+      );
+    }
+    if (!callout.framing.profile?.storageBucket) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        {
+          calloutId: callout.id,
+          missing: ['framing.profile.storageBucket'],
+        }
+      );
+    }
+    await this.contributionDefaultsService.materializeCalloutContributionDefaultsContent(
+      callout.contributionDefaults,
+      callout.framing.profile.storageBucket,
+      rollback
+    );
+    // Pair persisted contributions to their input data by `type` + the
+    // nested entity's stable identifier (Link.uri for LINK, nameID for
+    // POST/WHITEBOARD/MEMO). Index-based pairing would silently misalign
+    // when the persisted relation order differs from the input order,
+    // attaching the wrong visuals to the wrong contribution. We consume
+    // matched inputs from a working list so duplicate-keyed inputs (same
+    // link.uri twice) pair one-to-one rather than collapsing.
+    const remainingInputs = [...(calloutData?.contributions ?? [])];
+    for (const contribution of callout.contributions) {
+      const matchIdx = remainingInputs.findIndex(input =>
+        this.isSameContribution(input, contribution)
+      );
+      const inputForContrib =
+        matchIdx >= 0 ? remainingInputs.splice(matchIdx, 1)[0] : undefined;
+      await this.contributionService.materializeCalloutContributionContent(
+        contribution,
+        inputForContrib,
+        rollback
+      );
+    }
+  }
+
+  private isSameContribution(
+    input: CreateCalloutContributionInput,
+    contribution: ICalloutContribution
+  ): boolean {
+    if (input.type !== contribution.type) return false;
+    switch (contribution.type) {
+      case CalloutContributionType.LINK:
+        return (
+          !!input.link?.uri &&
+          !!contribution.link?.uri &&
+          input.link.uri === contribution.link.uri
+        );
+      case CalloutContributionType.POST:
+        return (
+          !!input.post?.nameID &&
+          !!contribution.post?.nameID &&
+          input.post.nameID === contribution.post.nameID
+        );
+      case CalloutContributionType.WHITEBOARD:
+        return (
+          !!input.whiteboard?.nameID &&
+          !!contribution.whiteboard?.nameID &&
+          input.whiteboard.nameID === contribution.whiteboard.nameID
+        );
+      case CalloutContributionType.MEMO:
+        return (
+          !!input.memo?.nameID &&
+          !!contribution.memo?.nameID &&
+          input.memo.nameID === contribution.memo.nameID
+        );
+      default:
+        return false;
+    }
   }
 
   private createCalloutSettings(

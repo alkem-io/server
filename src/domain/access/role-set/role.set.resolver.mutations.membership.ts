@@ -97,6 +97,35 @@ export class RoleSetResolverMutationsMembership {
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
+  /**
+   * Wraps a fire-and-forget notification dispatch with a `.catch` so an
+   * unhandled rejection from a downstream notification adapter (e.g. the
+   * in-app insert losing a race against an invitation deletion → FK
+   * violation) does not crash the Node process.
+   *
+   * The notification is still side-effectful: failures are logged at ERROR
+   * with structured details so monitoring can pick them up. Notifications
+   * are intentionally not awaited at the resolver level; we don't want a
+   * downstream notification problem to fail the user-facing mutation.
+   */
+  private dispatchNotification(
+    promise: Promise<unknown>,
+    eventLabel: string
+  ): void {
+    void promise.catch(error => {
+      const stack = error instanceof Error ? (error.stack ?? '') : '';
+      this.logger.error?.(
+        {
+          message: 'Notification dispatch failed',
+          event: eventLabel,
+          error: String(error),
+        },
+        stack,
+        LogContext.NOTIFICATIONS
+      );
+    });
+  }
+
   @Mutation(() => IRoleSet, {
     description:
       'Join the specified RoleSet using the entry Role, without going through an approval process.',
@@ -198,8 +227,11 @@ export class RoleSetResolverMutationsMembership {
       community,
       application,
     };
-    void this.notificationAdapterSpace.spaceCommunityApplicationCreated(
-      notificationInput
+    this.dispatchNotification(
+      this.notificationAdapterSpace.spaceCommunityApplicationCreated(
+        notificationInput
+      ),
+      'spaceCommunityApplicationCreated'
     );
 
     return await this.applicationService.getApplicationOrFail(application.id);
@@ -487,9 +519,12 @@ export class RoleSetResolverMutationsMembership {
             spaceID: space.id,
           };
 
-        void this.notificationUserAdapter.userSpaceCommunityApplicationDeclined(
-          notificationInput,
-          space
+        this.dispatchNotification(
+          this.notificationUserAdapter.userSpaceCommunityApplicationDeclined(
+            notificationInput,
+            space
+          ),
+          'userSpaceCommunityApplicationDeclined'
         );
       }
 
@@ -621,9 +656,12 @@ export class RoleSetResolverMutationsMembership {
               spaceID: space.id,
             };
 
-          void this.notificationAdapterSpace.spaceAdminVirtualContributorInvitationDeclined(
-            notificationInput,
-            space
+          this.dispatchNotification(
+            this.notificationAdapterSpace.spaceAdminVirtualContributorInvitationDeclined(
+              notificationInput,
+              space
+            ),
+            'spaceAdminVirtualContributorInvitationDeclined'
           );
         }
       }
@@ -797,8 +835,11 @@ export class RoleSetResolverMutationsMembership {
             invitedUserEmail: platformInvitation.email,
             welcomeMessage: platformInvitation.welcomeMessage,
           };
-          void this.notificationPlatformAdapter.platformInvitationCreated(
-            notificationInput
+          this.dispatchNotification(
+            this.notificationPlatformAdapter.platformInvitationCreated(
+              notificationInput
+            ),
+            'platformInvitationCreated'
           );
           break;
         }
@@ -835,8 +876,11 @@ export class RoleSetResolverMutationsMembership {
                   welcomeMessage: invitation.welcomeMessage,
                 };
 
-              void this.notificationVirtualContributorAdapter.spaceCommunityInvitationVirtualContributorCreated(
-                notificationInput
+              this.dispatchNotification(
+                this.notificationVirtualContributorAdapter.spaceCommunityInvitationVirtualContributorCreated(
+                  notificationInput
+                ),
+                'spaceCommunityInvitationVirtualContributorCreated'
               );
               break;
             }
@@ -850,8 +894,11 @@ export class RoleSetResolverMutationsMembership {
                 welcomeMessage: invitation.welcomeMessage,
               };
 
-              void this.notificationUserAdapter.userSpaceCommunityInvitationCreated(
-                notificationInput
+              this.dispatchNotification(
+                this.notificationUserAdapter.userSpaceCommunityInvitationCreated(
+                  notificationInput
+                ),
+                'userSpaceCommunityInvitationCreated'
               );
               break;
             }
