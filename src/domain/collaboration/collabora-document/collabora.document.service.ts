@@ -243,14 +243,4 @@ export class CollaboraDocumentService {
     };
     return extMap[documentType];
   }
-
-  private getStorageBucketId(storageAggregator: IStorageAggregator): string {
-    if (!storageAggregator.directStorage) {
-      throw new RelationshipNotFoundException(
-        'Direct storage not found on storage aggregator',
-        LogContext.COLLABORATION
-      );
-    }
-    return storageAggregator.directStorage.id;
-  }
 }
