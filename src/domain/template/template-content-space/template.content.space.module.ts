@@ -3,6 +3,7 @@ import { CollaborationModule } from '@domain/collaboration/collaboration/collabo
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { SpaceAboutModule } from '@domain/space/space.about/space.about.module';
+import { SpaceSettingsModule } from '@domain/space/space.settings/space.settings.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { TemplateContentSpace } from './template.content.space.entity';
@@ -17,6 +18,7 @@ import { TemplateContentSpaceLicenseService } from './template.content.space.ser
     AuthorizationModule,
     AuthorizationPolicyModule,
     SpaceAboutModule,
+    SpaceSettingsModule,
     CollaborationModule,
     LicenseModule,
     TypeOrmModule.forFeature([TemplateContentSpace]),
