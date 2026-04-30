@@ -32,6 +32,58 @@ export class CreateCollaboraDocument1777000000000 implements MigrationInterface 
     }
 
     public async down(queryRunner: QueryRunner): Promise<void> {
+        // Rollback notes (per project standard for src/migrations/*.ts):
+        //
+        // This migration was TypeORM-generated and bundles unrelated drift
+        // alongside the Collabora additions: push_subscription FK/index
+        // reshuffle, conversation.roomId nullability flip, invitation.
+        // createdBy nullability flip, profile_type_enum widening. The down()
+        // path mirrors all of those in reverse order.
+        //
+        // Three rollback hazards if live data exists:
+        //   1. profile rows with type='collabora-document' — when we cast
+        //      profile.type back to the old enum (which lacks that value),
+        //      the cast on line "ALTER COLUMN type TYPE ... USING type::text"
+        //      throws on the offending rows. Operator must delete them
+        //      first (or, if intentional, abort the rollback).
+        //   2. conversation.roomId IS NULL — `SET NOT NULL` fails. Operator
+        //      must delete or fix those rows first.
+        //   3. invitation.createdBy IS NULL — same as #2.
+        //
+        // The preflight queries below abort the rollback with a clear,
+        // operator-readable error rather than letting the failure surface
+        // mid-transaction from deep inside the ALTERs.
+
+        const offendingProfiles = await queryRunner.query(
+            `SELECT COUNT(*)::int AS n FROM "profile" WHERE "type" = 'collabora-document'`
+        );
+        if (offendingProfiles[0]?.n > 0) {
+            throw new Error(
+                `Cannot rollback CreateCollaboraDocument: ${offendingProfiles[0].n} profile row(s) with type='collabora-document' exist. ` +
+                `Delete these rows (and their parent CollaboraDocuments) before re-running the rollback.`
+            );
+        }
+
+        const nullRoomIds = await queryRunner.query(
+            `SELECT COUNT(*)::int AS n FROM "conversation" WHERE "roomId" IS NULL`
+        );
+        if (nullRoomIds[0]?.n > 0) {
+            throw new Error(
+                `Cannot rollback CreateCollaboraDocument: ${nullRoomIds[0].n} conversation row(s) with NULL roomId. ` +
+                `Restore or delete these rows before re-running the rollback.`
+            );
+        }
+
+        const nullCreatedBy = await queryRunner.query(
+            `SELECT COUNT(*)::int AS n FROM "invitation" WHERE "createdBy" IS NULL`
+        );
+        if (nullCreatedBy[0]?.n > 0) {
+            throw new Error(
+                `Cannot rollback CreateCollaboraDocument: ${nullCreatedBy[0].n} invitation row(s) with NULL createdBy. ` +
+                `Restore or delete these rows before re-running the rollback.`
+            );
+        }
+
         await queryRunner.query(`ALTER TABLE "conversation" DROP CONSTRAINT "FK_c3eb45de493217a6d0e225028fa"`);
         await queryRunner.query(`ALTER TABLE "callout_contribution" DROP CONSTRAINT "FK_2d3269074b75ecd278858d8b6c9"`);
         await queryRunner.query(`ALTER TABLE "collabora_document" DROP CONSTRAINT "FK_8197b90a8fb52b11224cf82afd8"`);

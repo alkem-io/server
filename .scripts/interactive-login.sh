@@ -35,7 +35,14 @@ mkdir -p "$PIPELINE_DIR"
 
 echo "Authenticating with Kratos (browser flow)..." >&2
 
+# Set restrictive umask while curl creates the cookie jar — otherwise
+# the file lands at the process umask (often 0644) for the brief window
+# before the chmod below, exposing the session cookie to other users on
+# the box. The chmod stays as a defense-in-depth.
+saved_umask=$(umask)
+umask 077
 kratos_login_browser "$PIPELINE_USER" "$PIPELINE_PASSWORD" "$COOKIE_JAR"
+umask "$saved_umask"
 
 echo "Authenticated as identity: $IDENTITY_ID" >&2
 

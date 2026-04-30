@@ -46,7 +46,8 @@ If missing or expired:
 Ensure `.claude/pipeline/.env` has the required variables:
 - `PIPELINE_USER` — email of the service account
 - `PIPELINE_PASSWORD` — password for the service account
-- `GRAPHQL_NON_INTERACTIVE_ENDPOINT` — API endpoint (defaults to `http://localhost:3000/api/private/non-interactive/graphql`)
+- `GRAPHQL_NON_INTERACTIVE_ENDPOINT` — non-interactive API endpoint (defaults to `http://localhost:3000/api/private/non-interactive/graphql`)
+- `GRAPHQL_INTERACTIVE_ENDPOINT` — interactive (cookie) API endpoint (defaults to `http://localhost:3000/api/private/graphql`)
 
 ### 3. Running Services
 

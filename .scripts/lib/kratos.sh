@@ -76,12 +76,23 @@ kratos_login_browser() {
 
   rm -f "$cookie_jar"
 
+  # Curl flags applied to both browser-flow steps:
+  #   -sS               : silent except for errors (won't print progress, will print errors)
+  #   --connect-timeout : 5s — fail fast if Kratos isn't listening
+  #   --max-time        : 10s — bound the whole request including redirects
+  # Notably we don't pass --fail/-f or --fail-with-body: 200/400 from
+  # Kratos's self-service flow both carry a JSON body we want to read
+  # (the 400 path includes ui.messages, which is how we surface auth
+  # failures). We check for empty/expected fields below instead.
+  local curl_args=(-sS --connect-timeout 5 --max-time 10)
+
   # Step 1: initialize the browser flow. Kratos sets a CSRF cookie and
   # returns the flow descriptor when we Accept JSON.
   local flow_response flow_id action_url csrf_token
-  flow_response=$(curl -s -L -b "$cookie_jar" -c "$cookie_jar" \
+  flow_response=$(curl "${curl_args[@]}" -L -b "$cookie_jar" -c "$cookie_jar" \
     -H "Accept: application/json" \
-    "$KRATOS_PUBLIC_URL/self-service/login/browser")
+    "$KRATOS_PUBLIC_URL/self-service/login/browser") \
+    || fail "Could not reach Kratos at $KRATOS_PUBLIC_URL"
 
   flow_id=$(echo "$flow_response" | jq -r '.id // empty')
   action_url=$(echo "$flow_response" | jq -r '.ui.action // empty')
@@ -95,7 +106,7 @@ kratos_login_browser() {
   # Step 2: submit credentials + CSRF token. Kratos sets the
   # `ory_kratos_session` cookie on the response.
   local login_response
-  login_response=$(curl -s -L -b "$cookie_jar" -c "$cookie_jar" \
+  login_response=$(curl "${curl_args[@]}" -L -b "$cookie_jar" -c "$cookie_jar" \
     -H "Accept: application/json" \
     -H "Content-Type: application/json" \
     -X POST \
@@ -104,7 +115,8 @@ kratos_login_browser() {
       --arg pw "$password" \
       --arg csrf "$csrf_token" \
       '{method:"password", identifier:$id, password:$pw, csrf_token:$csrf}')" \
-    "$action_url")
+    "$action_url") \
+    || fail "Login request to Kratos failed"
 
   IDENTITY_ID=$(echo "$login_response" | jq -r '.session.identity.id // empty')
   [ -n "$IDENTITY_ID" ] \

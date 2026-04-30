@@ -35,11 +35,15 @@ gql_request() {
     payload=$(jq -nc --arg q "$query" '{query:$q}')
   fi
 
+  # -sS: silent except for transport errors. No --fail/-f: GraphQL surfaces
+  # validation failures as 400 + JSON body we want to read. Timeouts bound
+  # the call so a hung server can't block the pipeline.
   local response
-  response=$(curl -s -X POST "$GQL_ENDPOINT" \
+  response=$(curl -sS --connect-timeout 5 --max-time 30 -X POST "$GQL_ENDPOINT" \
     -H 'Content-Type: application/json' \
     -H "Authorization: Bearer $SESSION_TOKEN" \
-    -d "$payload")
+    -d "$payload") \
+    || { echo "ERROR: curl to $GQL_ENDPOINT failed (exit $?)" >&2; return 1; }
 
   # Print the response (caller extracts what they need)
   echo "$response"
@@ -80,11 +84,13 @@ gql_request_interactive() {
     payload=$(jq -nc --arg q "$query" '{query:$q}')
   fi
 
+  # See gql_request above for the rationale on -sS + timeouts (no --fail).
   local response
-  response=$(curl -s -X POST "$GQL_INTERACTIVE_ENDPOINT" \
+  response=$(curl -sS --connect-timeout 5 --max-time 30 -X POST "$GQL_INTERACTIVE_ENDPOINT" \
     -b "$COOKIE_JAR" \
     -H 'Content-Type: application/json' \
-    -d "$payload")
+    -d "$payload") \
+    || { echo "ERROR: curl to $GQL_INTERACTIVE_ENDPOINT failed (exit $?)" >&2; return 1; }
 
   echo "$response"
 
