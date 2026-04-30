@@ -362,9 +362,17 @@ describe('ConversionService', () => {
       vi.mocked(spaceService.getSpaceOrFail)
         .mockResolvedValueOnce(spaceL1)
         .mockResolvedValueOnce(spaceL0);
-      vi.mocked(spaceService.getAllSpaces).mockResolvedValue([
-        descendantL2,
-      ] as never);
+      vi.mocked(spaceService.getAllSpaces).mockImplementation(((
+        options: any
+      ) => {
+        expect(options).toMatchObject({
+          relations: { community: { roleSet: true } },
+        });
+        expect(options?.where?.id?._value ?? options?.where?.id?.value).toEqual(
+          ['space-l2-a']
+        );
+        return Promise.resolve([descendantL2]);
+      }) as never);
       vi.mocked(spaceLookupService.getAllDescendantSpaceIDs).mockResolvedValue([
         'space-l2-a',
       ]);
