@@ -229,7 +229,7 @@ export class CollaboraDocumentService {
         'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
       [CollaboraDocumentType.PRESENTATION]:
         'application/vnd.openxmlformats-officedocument.presentationml.presentation',
-      [CollaboraDocumentType.TEXT_DOCUMENT]:
+      [CollaboraDocumentType.WORDPROCESSING]:
         'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
     };
     return mimeMap[documentType];
@@ -239,7 +239,7 @@ export class CollaboraDocumentService {
     const extMap: Record<CollaboraDocumentType, string> = {
       [CollaboraDocumentType.SPREADSHEET]: '.xlsx',
       [CollaboraDocumentType.PRESENTATION]: '.pptx',
-      [CollaboraDocumentType.TEXT_DOCUMENT]: '.docx',
+      [CollaboraDocumentType.WORDPROCESSING]: '.docx',
     };
     return extMap[documentType];
   }

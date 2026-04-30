@@ -7,7 +7,7 @@
 | Column | Type | Constraints | Description |
 |--------|------|-------------|-------------|
 | id | UUID (PK) | NOT NULL | Primary key |
-| documentType | enum | NOT NULL | SPREADSHEET, PRESENTATION, TEXT_DOCUMENT |
+| documentType | enum | NOT NULL | SPREADSHEET, PRESENTATION, WORDPROCESSING |
 | createdDate | timestamp | NOT NULL | Creation timestamp |
 | updatedDate | timestamp | NOT NULL | Last update timestamp |
 
@@ -48,7 +48,7 @@ Space
 |-------|-----------|---------------|
 | SPREADSHEET | application/vnd.openxmlformats-officedocument.spreadsheetml.sheet | empty.xlsx |
 | PRESENTATION | application/vnd.openxmlformats-officedocument.presentationml.presentation | empty.pptx |
-| TEXT_DOCUMENT | application/vnd.openxmlformats-officedocument.wordprocessingml.document | empty.docx |
+| WORDPROCESSING | application/vnd.openxmlformats-officedocument.wordprocessingml.document | empty.docx |
 
 ## Migration Required
 

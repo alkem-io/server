@@ -19,7 +19,7 @@
 
 **Purpose**: Enums, config, adapter infrastructure
 
-- [x] T001 Add `CollaboraDocumentType` enum (`SPREADSHEET`, `PRESENTATION`, `TEXT_DOCUMENT`) in `src/common/enums/collabora.document.type.ts` and register with GraphQL
+- [x] T001 Add `CollaboraDocumentType` enum (`SPREADSHEET`, `PRESENTATION`, `WORDPROCESSING`) in `src/common/enums/collabora.document.type.ts` and register with GraphQL
 - [x] T002 Add `COLLABORA_DOCUMENT` value to `CalloutContributionType` enum in `src/common/enums/callout.contribution.type.ts` and update `AllCalloutContributionTypes` array
 - [x] T003 Add `collabora.wopi_service_url` config block to `alkemio.yml` (default: `http://localhost:3000`) and add typing in `src/types/alkemio.config.ts`
 - [x] T004 Create `WopiServiceAdapter` in `src/services/adapters/wopi-service-adapter/wopi.service.adapter.ts` -- HTTP client using `@nestjs/axios` with timeout/retry. Single method: `issueToken(documentId: string, actorJWT: string): Promise<{ accessToken, accessTokenTTL, wopiSrc, editorUrl }>`. Calls `POST /wopi/token` on WOPI service with `{ documentId }` in request body and forwards the actor's Bearer token in the `Authorization` header (Oathkeeper on the WOPI service side extracts `alkemio_actor_id` from this JWT).
@@ -136,7 +136,7 @@
 - [x] T029 Run `pnpm lint` and fix any linting errors
 - [x] T030 Run `pnpm test:ci:no:coverage` and fix any broken tests
 - [x] T031 Verify `pnpm build` succeeds with no errors
-- [x] T032 Manual test: create one document of each type (SPREADSHEET, PRESENTATION, TEXT_DOCUMENT), verify each opens in the correct Collabora editor (Calc, Impress, Writer)
+- [x] T032 Manual test: create one document of each type (SPREADSHEET, PRESENTATION, WORDPROCESSING), verify each opens in the correct Collabora editor (Calc, Impress, Writer)
 
 ---
 

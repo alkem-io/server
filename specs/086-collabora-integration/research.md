@@ -24,7 +24,7 @@
 
 **Decision**: New entity `CollaboraDocument` with fields:
 - `id` (UUID PK)
-- `documentType` (enum: SPREADSHEET, PRESENTATION, TEXT_DOCUMENT)
+- `documentType` (enum: SPREADSHEET, PRESENTATION, WORDPROCESSING)
 - `document` (relation to existing Document entity managed by file-service-go)
 - `profile` (relation to Profile for title/description)
 - Standard authorization + timestamps

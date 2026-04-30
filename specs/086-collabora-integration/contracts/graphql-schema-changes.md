@@ -21,7 +21,7 @@ enum CalloutContributionType {
 enum CollaboraDocumentType {
   SPREADSHEET
   PRESENTATION
-  TEXT_DOCUMENT
+  WORDPROCESSING
 }
 ```
 
