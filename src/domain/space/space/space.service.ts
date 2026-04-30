@@ -1024,9 +1024,23 @@ export class SpaceService {
     });
 
     for (const space of spaces) {
-      if (space.about?.profile?.id) {
-        await this.urlGeneratorCacheService.revokeUrlCache(
-          space.about.profile.id
+      const profileId = space.about?.profile?.id;
+      if (!profileId) {
+        continue;
+      }
+
+      try {
+        await this.urlGeneratorCacheService.revokeUrlCache(profileId);
+      } catch (error) {
+        const stack = error instanceof Error ? (error.stack ?? '') : '';
+        this.logger.error(
+          {
+            message: 'Failed to invalidate URL cache for space subtree',
+            spaceId,
+            profileId,
+          },
+          stack,
+          LogContext.SPACES
         );
       }
     }
