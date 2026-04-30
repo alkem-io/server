@@ -17,6 +17,20 @@ export class CollaboraDocument
   })
   documentType!: CollaboraDocumentType;
 
+  /**
+   * Sniffed MIME of the actual file backing this CollaboraDocument.
+   * Set at create-time from the OOXML default for blank-create flow,
+   * or from file-service-go's content-sniff result for import flow.
+   * Drives the rename helper's extension preservation — `documentType`
+   * alone is too coarse for imports (e.g., a `.doc` and `.docx` are
+   * both `WORDPROCESSING` but rename must keep them distinct).
+   */
+  @Column('varchar', {
+    length: ENUM_LENGTH,
+    nullable: false,
+  })
+  originalMimeType!: string;
+
   @Column('uuid', { nullable: true })
   createdBy?: string;
 

@@ -35,10 +35,12 @@ import { TemporaryStorageService } from '@services/infrastructure/temporary-stor
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
 import { PubSubEngine } from 'graphql-subscriptions';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
+import { ImportCollaboraDocumentInput } from '../collabora-document/dto/collabora.document.dto.import';
 import { ILink } from '../link/link.interface';
 import { ICallout } from './callout.interface';
 import { CalloutService } from './callout.service';
@@ -412,6 +414,94 @@ export class CalloutResolverMutations {
     return await this.calloutContributionService.getCalloutContributionOrFail(
       contribution.id
     );
+  }
+
+  @Mutation(() => ICalloutContribution, {
+    description:
+      'Import an existing file as a CollaboraDocument contribution on the callout. file-service-go sniffs the MIME from content and rejects formats Collabora cannot edit.',
+  })
+  async importCollaboraDocument(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('uploadData') uploadData: ImportCollaboraDocumentInput,
+    @Args({ name: 'file', type: () => GraphQLUpload })
+    { createReadStream, filename, mimetype }: FileUpload
+  ): Promise<ICalloutContribution> {
+    const callout = await this.calloutService.getCalloutOrFail(
+      uploadData.calloutID
+    );
+
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      callout.authorization,
+      AuthorizationPrivilege.CONTRIBUTE,
+      `import collabora document on callout: ${callout.id}`
+    );
+
+    if (
+      !callout.settings.contribution.enabled ||
+      callout.settings.contribution.canAddContributions ===
+        CalloutAllowedActors.NONE
+    ) {
+      throw new CalloutClosedException(
+        `New contributions to a closed Callout with id: '${callout.id}' are not allowed!`
+      );
+    }
+    if (
+      callout.settings.contribution.canAddContributions ===
+        CalloutAllowedActors.ADMINS &&
+      !this.authorizationService.isAccessGranted(
+        actorContext,
+        callout.authorization,
+        AuthorizationPrivilege.UPDATE
+      )
+    ) {
+      throw new CalloutClosedException(
+        `Only admins are allowed to contribute to Callout with id: '${callout.id}'`
+      );
+    }
+
+    // Read the upload to a buffer. graphql-upload streams the file
+    // through the resolver — buffering it means the rest of the import
+    // path (file-service-go upload, MIME sniff, validation) runs against
+    // a stable byte sequence. Once direct-upload-with-ticket lands this
+    // gets replaced with a fileId + fetch-metadata call.
+    const buffer = await this.streamToBuffer(createReadStream());
+
+    let contribution =
+      await this.calloutService.importCollaboraDocumentToCallout(
+        uploadData,
+        { buffer, filename, mimetype },
+        actorContext.actorID
+      );
+
+    const { roleSet, platformRolesAccess, spaceSettings } =
+      await this.roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout(
+        callout.id
+      );
+
+    contribution = await this.calloutContributionService.save(contribution);
+
+    const updatedAuthorizations =
+      await this.contributionAuthorizationService.applyAuthorizationPolicy(
+        contribution.id,
+        callout.authorization,
+        platformRolesAccess,
+        roleSet,
+        spaceSettings
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    return await this.calloutContributionService.getCalloutContributionOrFail(
+      contribution.id
+    );
+  }
+
+  private async streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
+    const chunks: Buffer[] = [];
+    for await (const chunk of stream) {
+      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
+    }
+    return Buffer.concat(chunks);
   }
 
   private async processActivityLinkCreated(

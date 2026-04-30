@@ -12,6 +12,8 @@ export abstract class ICollaboraDocument extends IAuthorizable {
   })
   documentType!: CollaboraDocumentType;
 
+  originalMimeType!: string;
+
   createdBy?: string;
 
   // Exposed through field resolver

@@ -6,6 +6,7 @@ import { StorageAggregatorModule } from '@domain/storage/storage-aggregator/stor
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
 import { WopiServiceAdapterModule } from '@services/adapters/wopi-service-adapter/wopi.service.adapter.module';
 import { CollaboraDocument } from './collabora.document.entity';
 import { CollaboraDocumentResolverFields } from './collabora.document.resolver.fields';
@@ -23,6 +24,7 @@ import { CollaboraDocumentAuthorizationService } from './collabora.document.serv
     StorageAggregatorModule,
     StorageBucketModule,
     WopiServiceAdapterModule,
+    FileServiceAdapterModule,
     TypeOrmModule.forFeature([CollaboraDocument]),
   ],
   providers: [

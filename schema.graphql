@@ -285,6 +285,7 @@ enum CalloutVisibility {
 }
 
 enum CollaboraDocumentType {
+  DRAWING
   PRESENTATION
   SPREADSHEET
   WORDPROCESSING
@@ -3855,6 +3856,10 @@ type Mutation {
   grantCredentialToOrganization(grantCredentialData: GrantOrganizationAuthorizationCredentialInput!): Organization!
   """Grants an authorization credential to a User."""
   grantCredentialToUser(grantCredentialData: GrantAuthorizationCredentialInput!): User!
+  """
+  Import an existing file as a CollaboraDocument contribution on the callout. file-service-go sniffs the MIME from content and rejects formats Collabora cannot edit.
+  """
+  importCollaboraDocument(file: Upload!, uploadData: ImportCollaboraDocumentInput!): CalloutContribution!
   """
   Invite new Contributors or users by email to join the specified RoleSet in the Entry Role.
   """
@@ -7642,6 +7647,21 @@ input GrantOrganizationAuthorizationCredentialInput {
   """The resource to which this credential is tied."""
   resourceID: UUID
   type: AuthorizationCredential!
+}
+
+input ImportCollaboraDocumentInput {
+  """
+  The ID of the Callout to attach the imported document to as a new contribution.
+  """
+  calloutID: UUID!
+  """
+  Optional title override. If absent, derived from the uploaded filename (extension stripped).
+  """
+  displayName: String
+  """
+  Optional sortOrder for the new contribution. Defaults to one less than the current minimum (new contribution appears first).
+  """
+  sortOrder: Float
 }
 
 input InnovationPacksInput {
