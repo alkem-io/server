@@ -340,6 +340,57 @@ describe('SpaceService', () => {
     });
   });
 
+  describe('invalidateUrlCacheForSpaceSubtree', () => {
+    it('revokes URL cache for the space and all descendants in a single fetch', async () => {
+      const rootId = 'space-root';
+      const childId = 'space-child';
+      const grandchildId = 'space-grandchild';
+
+      const lookup = (service as any).spaceLookupService as any;
+      lookup.getAllDescendantSpaceIDs = vi
+        .fn()
+        .mockResolvedValue([childId, grandchildId]);
+
+      const findSpy = vi
+        .spyOn(spaceRepository, 'find')
+        .mockResolvedValue([
+          { about: { profile: { id: `profile-${rootId}` } } },
+          { about: { profile: { id: `profile-${childId}` } } },
+          { about: { profile: { id: `profile-${grandchildId}` } } },
+        ] as any);
+
+      const revokeSpy = vi
+        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
+        .mockResolvedValue(undefined);
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      expect(findSpy).toHaveBeenCalledTimes(1);
+      expect(revokeSpy).toHaveBeenCalledTimes(3);
+      expect(revokeSpy).toHaveBeenCalledWith(`profile-${rootId}`);
+      expect(revokeSpy).toHaveBeenCalledWith(`profile-${childId}`);
+      expect(revokeSpy).toHaveBeenCalledWith(`profile-${grandchildId}`);
+    });
+
+    it('skips spaces that have no profile id', async () => {
+      const rootId = 'space-root';
+      const lookup = (service as any).spaceLookupService as any;
+      lookup.getAllDescendantSpaceIDs = vi.fn().mockResolvedValue([]);
+
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        { about: undefined } as any,
+      ]);
+
+      const revokeSpy = vi
+        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
+        .mockResolvedValue(undefined);
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      expect(revokeSpy).not.toHaveBeenCalled();
+    });
+  });
+
   describe('shouldUpdateAuthorizationPolicy', () => {
     it('returns false if there is no difference in settings', async () => {
       const spaceId = '1';
