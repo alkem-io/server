@@ -26,7 +26,7 @@ export class CreateCollaboraDocument1776142609192 implements MigrationInterface 
         await queryRunner.query(`ALTER TABLE "push_subscription" ADD CONSTRAINT "FK_8a227cbc3dc43c0d56117ea1563" FOREIGN KEY ("userId") REFERENCES "user"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "collabora_document" ADD CONSTRAINT "FK_3f8c429460dfb60946fb2ea6973" FOREIGN KEY ("authorizationId") REFERENCES "authorization_policy"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "collabora_document" ADD CONSTRAINT "FK_180cd4e73943f2eb8016fd7c71e" FOREIGN KEY ("profileId") REFERENCES "profile"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
-        await queryRunner.query(`ALTER TABLE "collabora_document" ADD CONSTRAINT "FK_8197b90a8fb52b11224cf82afd8" FOREIGN KEY ("documentId") REFERENCES "document"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
+        await queryRunner.query(`ALTER TABLE "collabora_document" ADD CONSTRAINT "FK_8197b90a8fb52b11224cf82afd8" FOREIGN KEY ("documentId") REFERENCES "file"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "callout_contribution" ADD CONSTRAINT "FK_2d3269074b75ecd278858d8b6c9" FOREIGN KEY ("collaboraDocumentId") REFERENCES "collabora_document"("id") ON DELETE SET NULL ON UPDATE NO ACTION`);
         await queryRunner.query(`ALTER TABLE "conversation" ADD CONSTRAINT "FK_c3eb45de493217a6d0e225028fa" FOREIGN KEY ("roomId") REFERENCES "room"("id") ON DELETE CASCADE ON UPDATE NO ACTION`);
     }

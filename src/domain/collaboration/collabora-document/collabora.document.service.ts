@@ -15,6 +15,7 @@ import { StorageAggregatorService } from '@domain/storage/storage-aggregator/sto
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { WopiServiceAdapter } from '@services/adapters/wopi-service-adapter/wopi.service.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
@@ -34,7 +35,8 @@ export class CollaboraDocumentService {
     private documentService: DocumentService,
     private storageBucketService: StorageBucketService,
     private storageAggregatorService: StorageAggregatorService,
-    private wopiServiceAdapter: WopiServiceAdapter
+    private wopiServiceAdapter: WopiServiceAdapter,
+    private fileServiceAdapter: FileServiceAdapter
   ) {}
 
   public async createCollaboraDocument(
@@ -202,7 +204,7 @@ export class CollaboraDocumentService {
     const collaboraDocument = await this.getCollaboraDocumentOrFail(
       collaboraDocumentID,
       {
-        relations: { profile: true },
+        relations: { profile: true, document: true },
       }
     );
 
@@ -213,10 +215,51 @@ export class CollaboraDocumentService {
         { collaboraDocumentId: collaboraDocumentID }
       );
     }
+    if (!collaboraDocument.document) {
+      throw new RelationshipNotFoundException(
+        'Document not found on CollaboraDocument',
+        LogContext.COLLABORATION,
+        { collaboraDocumentId: collaboraDocumentID }
+      );
+    }
+
+    // Propagate rename to both stores so the editor's title bar (via WOPI's
+    // BaseFileName) and the download dialog track the Alkemio-side rename.
+    // Profile first (well-tested + cheap), then file-service-go. If the
+    // file-service call fails, roll the profile back so the user doesn't
+    // see a half-applied rename.
+    const previousDisplayName = collaboraDocument.profile.displayName;
+    const ext = this.getFileExtension(collaboraDocument.documentType);
 
     await this.profileService.updateProfile(collaboraDocument.profile, {
       displayName,
     });
+
+    try {
+      await this.fileServiceAdapter.updateDocument(
+        collaboraDocument.document.id,
+        { displayName: `${displayName}${ext}` }
+      );
+    } catch (error) {
+      await this.profileService
+        .updateProfile(collaboraDocument.profile, {
+          displayName: previousDisplayName,
+        })
+        .catch(rollbackError => {
+          this.logger.error?.(
+            {
+              message:
+                'Failed to roll back profile rename after file-service rename failure',
+              collaboraDocumentId: collaboraDocumentID,
+              originalError: String(error),
+              rollbackError: String(rollbackError),
+            },
+            rollbackError instanceof Error ? (rollbackError.stack ?? '') : '',
+            LogContext.COLLABORATION
+          );
+        });
+      throw error;
+    }
 
     return this.getCollaboraDocumentOrFail(collaboraDocumentID, {
       relations: { profile: true },

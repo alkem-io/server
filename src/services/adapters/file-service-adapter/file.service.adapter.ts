@@ -148,7 +148,8 @@ export class FileServiceAdapter extends HttpClientBase {
 
   /**
    * Update mutable document metadata in the Go file-service-go.
-   * Only `storageBucketId` and `temporaryLocation` are supported server-side.
+   * `storageBucketId`, `temporaryLocation`, and `displayName` are all
+   * supported (v0.0.16+). At least one must be present.
    */
   async updateDocument(
     documentId: string,
