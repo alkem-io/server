@@ -84,6 +84,11 @@ describe('InnovationHubService', () => {
     ps.createProfile = vi.fn().mockResolvedValue(profile);
     ps.addOrUpdateTagsetOnProfile = vi.fn().mockResolvedValue({});
     ps.addVisualsOnProfile = vi.fn().mockResolvedValue({});
+    // createInnovationHub now uses the rollback helper for phase-2; mock it
+    // to echo the input profile so saved.profile stays defined.
+    ps.materializeProfileContentAndVisualsOrRollback = vi
+      .fn()
+      .mockImplementation(async (p: any) => p);
   };
 
   /**

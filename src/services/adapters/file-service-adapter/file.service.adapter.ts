@@ -11,6 +11,7 @@ import { isAxiosError } from 'axios';
 import FormData from 'form-data';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import type {
+  CopyDocumentInput,
   CreateDocumentMetadata,
   CreateDocumentResult,
   DeleteDocumentResult,
@@ -106,6 +107,27 @@ export class FileServiceAdapter extends HttpClientBase {
       FILE_PATH_PREFIX,
       form,
       form.getHeaders()
+    );
+  }
+
+  /**
+   * Copy an existing document into another bucket on file-service-go (v0.0.14+).
+   * No bytes traverse the wire — content is content-addressed, the new row
+   * just points at the existing blob. Replaces the legacy
+   * `getDocumentContent` + `createDocument` round-trip.
+   *
+   * Per-bucket dedup applies by default; on dedup hit the response carries
+   * `reused: true` and the caller-supplied `authorizationId` / `tagsetId`
+   * are ignored, matching `createDocument`'s contract.
+   */
+  async copyDocument(input: CopyDocumentInput): Promise<CreateDocumentResult> {
+    this.checkEnabledAndCircuit('copyDocument');
+
+    return this.sendRequest<CreateDocumentResult>(
+      'copyDocument',
+      'post',
+      `${FILE_PATH_PREFIX}/copy`,
+      input
     );
   }
 

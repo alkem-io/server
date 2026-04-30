@@ -298,6 +298,16 @@ export class CalloutResolverMutations {
 
     contribution = await this.calloutContributionService.save(contribution);
 
+    // Phase-2 materialize: re-home cross-bucket markdown URLs / refs in
+    // the contribution's leaf (LINK only — Post/Whiteboard/Memo are
+    // self-materializing inside their createX). Failure rolls back the
+    // just-saved contribution.
+    await this.calloutContributionService.materializeCalloutContributionContent(
+      contribution,
+      contributionData,
+      () => this.calloutContributionService.delete(contribution.id)
+    );
+
     const destinationStorageBucket =
       await this.calloutContributionService.getStorageBucketForContribution(
         contribution.id
