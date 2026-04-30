@@ -2075,4 +2075,123 @@ describe('RoleSetService', () => {
       ).toHaveBeenCalledWith([{ type: 'space-member', resourceID: 'res-V' }]);
     });
   });
+
+  describe('removePendingInvitationsAndApplications', () => {
+    const stubRoleSet = (overrides: Record<string, unknown> = {}) => {
+      const roleSet = {
+        id: 'roleset-1',
+        applications: [],
+        invitations: [],
+        platformInvitations: [],
+        ...overrides,
+      };
+      vi.spyOn(service, 'getRoleSetOrFail').mockResolvedValue(roleSet as never);
+      return roleSet;
+    };
+
+    it('deletes pending applications and skips finalized ones', async () => {
+      stubRoleSet({
+        applications: [
+          { id: 'app-pending' },
+          { id: 'app-accepted' },
+          { id: 'app-rejected' },
+        ],
+      });
+      vi.mocked(applicationService.isApplicationFinalized).mockImplementation(
+        (a: { id: string }) => a.id !== 'app-pending'
+      );
+
+      await service.removePendingInvitationsAndApplications('roleset-1');
+
+      expect(applicationService.deleteApplication).toHaveBeenCalledTimes(1);
+      expect(applicationService.deleteApplication).toHaveBeenCalledWith({
+        ID: 'app-pending',
+      });
+    });
+
+    it('deletes pending invitations and skips finalized ones', async () => {
+      stubRoleSet({
+        invitations: [{ id: 'inv-pending' }, { id: 'inv-accepted' }],
+      });
+      vi.mocked(invitationService.isInvitationFinalized).mockImplementation(
+        (i: { id: string }) => i.id !== 'inv-pending'
+      );
+
+      await service.removePendingInvitationsAndApplications('roleset-1');
+
+      expect(invitationService.deleteInvitation).toHaveBeenCalledTimes(1);
+      expect(invitationService.deleteInvitation).toHaveBeenCalledWith({
+        ID: 'inv-pending',
+      });
+    });
+
+    it('deletes every platform invitation unconditionally', async () => {
+      stubRoleSet({
+        platformInvitations: [{ id: 'plat-1' }, { id: 'plat-2' }],
+      });
+
+      await service.removePendingInvitationsAndApplications('roleset-1');
+
+      expect(
+        platformInvitationService.deletePlatformInvitation
+      ).toHaveBeenCalledTimes(2);
+      expect(
+        platformInvitationService.deletePlatformInvitation
+      ).toHaveBeenCalledWith({ ID: 'plat-1' });
+      expect(
+        platformInvitationService.deletePlatformInvitation
+      ).toHaveBeenCalledWith({ ID: 'plat-2' });
+    });
+
+    it('is a no-op when role set has no pending records', async () => {
+      stubRoleSet();
+
+      await service.removePendingInvitationsAndApplications('roleset-1');
+
+      expect(applicationService.deleteApplication).not.toHaveBeenCalled();
+      expect(invitationService.deleteInvitation).not.toHaveBeenCalled();
+      expect(
+        platformInvitationService.deletePlatformInvitation
+      ).not.toHaveBeenCalled();
+    });
+
+    it('loads applications, invitations and platformInvitations', async () => {
+      stubRoleSet();
+      const spy = vi.spyOn(service, 'getRoleSetOrFail');
+
+      await service.removePendingInvitationsAndApplications('roleset-1');
+
+      expect(spy).toHaveBeenCalledWith('roleset-1', {
+        relations: {
+          applications: true,
+          invitations: true,
+          platformInvitations: true,
+        },
+      });
+    });
+
+    it('clears every category in a single call', async () => {
+      stubRoleSet({
+        applications: [{ id: 'app-1' }],
+        invitations: [{ id: 'inv-1' }],
+        platformInvitations: [{ id: 'plat-1' }],
+      });
+      vi.mocked(applicationService.isApplicationFinalized).mockReturnValue(
+        false
+      );
+      vi.mocked(invitationService.isInvitationFinalized).mockReturnValue(false);
+
+      await service.removePendingInvitationsAndApplications('roleset-1');
+
+      expect(applicationService.deleteApplication).toHaveBeenCalledWith({
+        ID: 'app-1',
+      });
+      expect(invitationService.deleteInvitation).toHaveBeenCalledWith({
+        ID: 'inv-1',
+      });
+      expect(
+        platformInvitationService.deletePlatformInvitation
+      ).toHaveBeenCalledWith({ ID: 'plat-1' });
+    });
+  });
 });

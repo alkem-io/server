@@ -211,6 +211,52 @@ export class RoleSetService {
     return await this.roleSetRepository.save(roleSet);
   }
 
+  /**
+   * Removes pending (non-finalized) invitations and applications on the given
+   * roleSet, plus all platform invitations. Used by space conversion / move
+   * flows so that recipients do not try to accept invites that point to a
+   * target whose hierarchy has changed (see alkem-io/server#5069).
+   */
+  async removePendingInvitationsAndApplications(
+    roleSetID: string
+  ): Promise<void> {
+    const roleSet = await this.getRoleSetOrFail(roleSetID, {
+      relations: {
+        applications: true,
+        invitations: true,
+        platformInvitations: true,
+      },
+    });
+
+    if (roleSet.applications) {
+      for (const application of roleSet.applications) {
+        if (this.applicationService.isApplicationFinalized(application)) {
+          continue;
+        }
+        await this.applicationService.deleteApplication({
+          ID: application.id,
+        });
+      }
+    }
+
+    if (roleSet.invitations) {
+      for (const invitation of roleSet.invitations) {
+        if (this.invitationService.isInvitationFinalized(invitation)) {
+          continue;
+        }
+        await this.invitationService.deleteInvitation({ ID: invitation.id });
+      }
+    }
+
+    if (roleSet.platformInvitations) {
+      for (const platformInvitation of roleSet.platformInvitations) {
+        await this.platformInvitationService.deletePlatformInvitation({
+          ID: platformInvitation.id,
+        });
+      }
+    }
+  }
+
   async getParentRoleSet(roleSet: IRoleSet): Promise<IRoleSet | undefined> {
     const roleSetWithParent = await this.getRoleSetOrFail(roleSet.id, {
       relations: { parentRoleSet: true },

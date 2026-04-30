@@ -148,6 +148,25 @@ export class ConversionService {
       );
     }
 
+    // Pending invitations / applications target the current space hierarchy;
+    // after conversion they would resolve into a broken parent lookup
+    // (alkem-io/server#5069), so drop them on this and every descendant.
+    await this.roleSetService.removePendingInvitationsAndApplications(
+      roleSetL1.id
+    );
+    const descendantSpaceIDsForL0Promotion =
+      await this.spaceLookupService.getAllDescendantSpaceIDs(spaceL1.id);
+    for (const descendantId of descendantSpaceIDsForL0Promotion) {
+      const descendant = await this.spaceService.getSpaceOrFail(descendantId, {
+        relations: { community: { roleSet: true } },
+      });
+      if (descendant.community?.roleSet) {
+        await this.roleSetService.removePendingInvitationsAndApplications(
+          descendant.community.roleSet.id
+        );
+      }
+    }
+
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsLevelZeroSpaces();
     const spaceL0NewNameID =
@@ -351,6 +370,12 @@ export class ConversionService {
       );
     }
 
+    // Drop pending invitations/applications: targets the L2's current parent
+    // chain, which is being rewritten (alkem-io/server#5069).
+    await this.roleSetService.removePendingInvitationsAndApplications(
+      roleSetL2.id
+    );
+
     spaceL2 = await this.updateChildSpaceL2ToL1(
       spaceL2.id,
       spaceL0,
@@ -427,6 +452,12 @@ export class ConversionService {
 
     const spaceCommunityRoles = await this.getSpaceCommunityRoles(roleSetL1);
     await this.removeContributors(roleSetL1, spaceCommunityRoles);
+
+    // Drop pending invitations/applications: targets the L1's existing
+    // hierarchy, invalid once it becomes an L2 (alkem-io/server#5069).
+    await this.roleSetService.removePendingInvitationsAndApplications(
+      roleSetL1.id
+    );
 
     spaceL1.level = SpaceLevel.L2;
     spaceL1.parentSpace = parentSpaceL1;
@@ -607,6 +638,23 @@ export class ConversionService {
       );
     }
 
+    // 7b. Drop pending invitations/applications across the moved subtree —
+    // current invites resolve against the source L0's hierarchy
+    // (alkem-io/server#5069).
+    await this.roleSetService.removePendingInvitationsAndApplications(
+      roleSetL1.id
+    );
+    for (const descId of descendantSpaceIds) {
+      const descSpace = await this.spaceService.getSpaceOrFail(descId, {
+        relations: { community: { roleSet: true } },
+      });
+      if (descSpace.community?.roleSet) {
+        await this.roleSetService.removePendingInvitationsAndApplications(
+          descSpace.community.roleSet.id
+        );
+      }
+    }
+
     // 8. Update structural fields
     sourceL1.parentSpace = targetL0;
     sourceL1.levelZeroSpaceID = targetL0.id;
@@ -766,6 +814,12 @@ export class ConversionService {
         false
       );
     }
+
+    // 8b. Drop pending invitations/applications — current invites point at
+    // the source L0's hierarchy (alkem-io/server#5069).
+    await this.roleSetService.removePendingInvitationsAndApplications(
+      roleSetL1.id
+    );
 
     // 9. Update structural fields — demote to L2
     sourceL1.level = SpaceLevel.L2;

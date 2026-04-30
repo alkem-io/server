@@ -299,6 +299,63 @@ describe('ConversionService — Cross-L0 Moves', () => {
         targetL0.community.roleSet
       );
     });
+
+    // Issue alkem-io/server#6019 — pending invites/apps must be cleared
+    // because old targets break (alkem-io/server#5069).
+    it('should clear pending invitations and applications on the source L1 roleSet', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL1())
+        .mockResolvedValueOnce(makeTargetL0());
+      setupHappyPathMocks();
+
+      await service.moveSpaceL1ToSpaceL0OrFail({
+        spaceL1ID: 'source-l1',
+        targetSpaceL0ID: 'target-l0',
+      });
+
+      expect(
+        roleSetService.removePendingInvitationsAndApplications
+      ).toHaveBeenCalledWith('roleset-l1');
+    });
+
+    it('should clear pending invitations and applications on every descendant roleSet', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL1())
+        .mockResolvedValueOnce(makeTargetL0());
+      setupHappyPathMocks();
+      // Three lookups happen for descendants:
+      //  - clearing community roles (existing)
+      //  - clearing pending invites (new)
+      //  - bulk levelZeroSpaceID update (existing, no fetch)
+      // Plus syncInnovationFlowTagsetsForSubtree iterates as well.
+      vi.mocked(spaceLookupService.getAllDescendantSpaceIDs).mockResolvedValue([
+        'child-l2-a',
+      ]);
+      vi.mocked(spaceService.getSpaceOrFail).mockImplementation(
+        async (id: string) => {
+          if (id === 'child-l2-a') {
+            return {
+              id: 'child-l2-a',
+              community: { roleSet: { id: 'roleset-child-l2-a' } },
+              collaboration: { calloutsSet: { callouts: [] } },
+            } as never;
+          }
+          return makeSourceL1();
+        }
+      );
+
+      await service.moveSpaceL1ToSpaceL0OrFail({
+        spaceL1ID: 'source-l1',
+        targetSpaceL0ID: 'target-l0',
+      });
+
+      expect(
+        roleSetService.removePendingInvitationsAndApplications
+      ).toHaveBeenCalledWith('roleset-l1');
+      expect(
+        roleSetService.removePendingInvitationsAndApplications
+      ).toHaveBeenCalledWith('roleset-child-l2-a');
+    });
   });
 
   // ── moveSpaceL1ToSpaceL2OrFail ──────────────────────────────────
@@ -450,6 +507,25 @@ describe('ConversionService — Cross-L0 Moves', () => {
         sourceL1.community.roleSet,
         targetL1.community.roleSet
       );
+    });
+
+    // Issue alkem-io/server#6019 — pending invites/apps must be cleared
+    // (alkem-io/server#5069).
+    it('should clear pending invitations and applications on the source L1 roleSet', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL1())
+        .mockResolvedValueOnce(makeTargetL1())
+        .mockResolvedValueOnce(makeTargetL0());
+      setupHappyPathMocks();
+
+      await service.moveSpaceL1ToSpaceL2OrFail({
+        spaceL1ID: 'source-l1',
+        targetSpaceL1ID: 'target-l1',
+      });
+
+      expect(
+        roleSetService.removePendingInvitationsAndApplications
+      ).toHaveBeenCalledWith('roleset-l1');
     });
   });
 
