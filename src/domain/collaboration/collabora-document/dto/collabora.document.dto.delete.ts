@@ -7,6 +7,6 @@ export class DeleteCollaboraDocumentInput {
   @Field(() => UUID, {
     description: 'The ID of the CollaboraDocument to delete.',
   })
-  @IsUUID('4')
+  @IsUUID('all')
   ID!: string;
 }
