@@ -81,6 +81,8 @@ export class ConversionResolverMutations {
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
+    await this.spaceService.invalidateUrlCacheForSpaceSubtree(space.id);
+
     return this.spaceService.getSpaceOrFail(space.id);
   }
 
@@ -113,6 +115,9 @@ export class ConversionResolverMutations {
         parentAuthorization
       );
     await this.authorizationPolicyService.saveAll(spaceL1Authorizations);
+
+    await this.spaceService.invalidateUrlCacheForSpaceSubtree(spaceL1.id);
+
     return await this.spaceService.getSpaceOrFail(spaceL1.id);
   }
 
@@ -149,6 +154,9 @@ export class ConversionResolverMutations {
         parentAuthorization
       );
     await this.authorizationPolicyService.saveAll(spaceL1Authorizations);
+
+    await this.spaceService.invalidateUrlCacheForSpaceSubtree(spaceL2.id);
+
     return await this.spaceService.getSpaceOrFail(spaceL2.id);
   }
 
@@ -184,7 +192,7 @@ export class ConversionResolverMutations {
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     // Post-commit: fire-and-forget
-    void this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
+    await this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
     void this.conversionService.moveRoomsService.handleRoomsDuringMove(
       savedSpace.id,
       removedActorIds
@@ -234,7 +242,7 @@ export class ConversionResolverMutations {
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     // Post-commit: fire-and-forget
-    void this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
+    await this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
     void this.conversionService.moveRoomsService.handleRoomsDuringMove(
       savedSpace.id,
       removedActorIds

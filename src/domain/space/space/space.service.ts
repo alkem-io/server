@@ -1007,6 +1007,31 @@ export class SpaceService {
     );
   }
 
+  /**
+   * Invalidates URL cache entries for a space and all of its descendant spaces.
+   * Used after operations that change a space's URL path (transfer, L1↔L0/L2 conversion).
+   */
+  public async invalidateUrlCacheForSpaceSubtree(
+    spaceId: string
+  ): Promise<void> {
+    const descendantIds =
+      await this.spaceLookupService.getAllDescendantSpaceIDs(spaceId);
+    const allSpaceIds = [spaceId, ...descendantIds];
+
+    const spaces = await this.spaceRepository.find({
+      where: { id: In(allSpaceIds) },
+      relations: { about: { profile: true } },
+    });
+
+    for (const space of spaces) {
+      if (space.about?.profile?.id) {
+        await this.urlGeneratorCacheService.revokeUrlCache(
+          space.about.profile.id
+        );
+      }
+    }
+  }
+
   private async getParentSpacePlatformRolesAccess(
     space: ISpace
   ): Promise<IPlatformRolesAccess | undefined> {
