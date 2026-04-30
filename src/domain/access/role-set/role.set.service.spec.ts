@@ -2085,7 +2085,7 @@ describe('RoleSetService', () => {
         platformInvitations: [],
         ...overrides,
       };
-      vi.spyOn(service, 'getRoleSetOrFail').mockResolvedValue(roleSet as never);
+      vi.spyOn(roleSetRepository, 'find').mockResolvedValue([roleSet as never]);
       return roleSet;
     };
 
@@ -2157,17 +2157,114 @@ describe('RoleSetService', () => {
 
     it('loads applications, invitations and platformInvitations', async () => {
       stubRoleSet();
-      const spy = vi.spyOn(service, 'getRoleSetOrFail');
+      const spy = vi.spyOn(roleSetRepository, 'find');
 
       await service.removePendingInvitationsAndApplications('roleset-1');
 
-      expect(spy).toHaveBeenCalledWith('roleset-1', {
-        relations: {
-          applications: true,
-          invitations: true,
-          platformInvitations: true,
-        },
+      expect(spy).toHaveBeenCalledTimes(1);
+      const call = spy.mock.calls[0][0] as unknown as {
+        where: { id: { _value: string[] } };
+        relations: Record<string, boolean>;
+      };
+      expect(call.where.id._value).toEqual(['roleset-1']);
+      expect(call.relations).toEqual({
+        applications: true,
+        invitations: true,
+        platformInvitations: true,
       });
+    });
+
+    it('accepts an array of roleSet IDs and processes them in one query', async () => {
+      const roleSets = [
+        {
+          id: 'roleset-1',
+          applications: [{ id: 'app-1' }],
+          invitations: [],
+          platformInvitations: [{ id: 'plat-1' }],
+        },
+        {
+          id: 'roleset-2',
+          applications: [],
+          invitations: [{ id: 'inv-2' }],
+          platformInvitations: [],
+        },
+      ];
+      vi.spyOn(roleSetRepository, 'find').mockResolvedValue(
+        roleSets as never[]
+      );
+      vi.mocked(applicationService.isApplicationFinalized).mockReturnValue(
+        false
+      );
+      vi.mocked(invitationService.isInvitationFinalized).mockReturnValue(false);
+
+      await service.removePendingInvitationsAndApplications([
+        'roleset-1',
+        'roleset-2',
+      ]);
+
+      expect(roleSetRepository.find).toHaveBeenCalledTimes(1);
+      expect(applicationService.deleteApplication).toHaveBeenCalledWith({
+        ID: 'app-1',
+      });
+      expect(invitationService.deleteInvitation).toHaveBeenCalledWith({
+        ID: 'inv-2',
+      });
+      expect(
+        platformInvitationService.deletePlatformInvitation
+      ).toHaveBeenCalledWith({ ID: 'plat-1' });
+    });
+
+    it('filters finalized entities across multiple roleSets after flattening', async () => {
+      const roleSets = [
+        {
+          id: 'roleset-1',
+          applications: [{ id: 'app-1-pending' }, { id: 'app-1-final' }],
+          invitations: [],
+          platformInvitations: [],
+        },
+        {
+          id: 'roleset-2',
+          applications: [],
+          invitations: [{ id: 'inv-2-pending' }, { id: 'inv-2-final' }],
+          platformInvitations: [],
+        },
+      ];
+      vi.spyOn(roleSetRepository, 'find').mockResolvedValue(
+        roleSets as never[]
+      );
+      vi.mocked(applicationService.isApplicationFinalized).mockImplementation(
+        (a: { id: string }) => a.id.endsWith('final')
+      );
+      vi.mocked(invitationService.isInvitationFinalized).mockImplementation(
+        (i: { id: string }) => i.id.endsWith('final')
+      );
+
+      await service.removePendingInvitationsAndApplications([
+        'roleset-1',
+        'roleset-2',
+      ]);
+
+      expect(applicationService.deleteApplication).toHaveBeenCalledTimes(1);
+      expect(applicationService.deleteApplication).toHaveBeenCalledWith({
+        ID: 'app-1-pending',
+      });
+      expect(invitationService.deleteInvitation).toHaveBeenCalledTimes(1);
+      expect(invitationService.deleteInvitation).toHaveBeenCalledWith({
+        ID: 'inv-2-pending',
+      });
+    });
+
+    it('is a no-op when given an empty roleSet ID array', async () => {
+      const findSpy = vi.spyOn(roleSetRepository, 'find');
+
+      await service.removePendingInvitationsAndApplications([]);
+
+      expect(findSpy).not.toHaveBeenCalled();
+      expect(applicationService.deleteApplication).not.toHaveBeenCalled();
+      expect(invitationService.deleteInvitation).not.toHaveBeenCalled();
+      expect(
+        platformInvitationService.deletePlatformInvitation
+      ).not.toHaveBeenCalled();
     });
 
     it('clears every category in a single call', async () => {

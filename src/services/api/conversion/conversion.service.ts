@@ -36,7 +36,7 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
+import { EntityManager, In } from 'typeorm';
 import { InputCreatorService } from '../input-creator/input.creator.service';
 import { ConvertSpaceL1ToSpaceL0Input } from './dto/convert.dto.space.l1.to.space.l0.input';
 import { ConvertSpaceL1ToSpaceL2Input } from './dto/convert.dto.space.l1.to.space.l2.input';
@@ -151,21 +151,24 @@ export class ConversionService {
     // Pending invitations / applications target the current space hierarchy;
     // after conversion they would resolve into a broken parent lookup
     // (alkem-io/server#5069), so drop them on this and every descendant.
-    await this.roleSetService.removePendingInvitationsAndApplications(
-      roleSetL1.id
-    );
     const descendantSpaceIDsForL0Promotion =
       await this.spaceLookupService.getAllDescendantSpaceIDs(spaceL1.id);
-    for (const descendantId of descendantSpaceIDsForL0Promotion) {
-      const descendant = await this.spaceService.getSpaceOrFail(descendantId, {
-        relations: { community: { roleSet: true } },
-      });
-      if (descendant.community?.roleSet) {
-        await this.roleSetService.removePendingInvitationsAndApplications(
-          descendant.community.roleSet.id
-        );
-      }
-    }
+    const descendantSpacesForL0Promotion =
+      descendantSpaceIDsForL0Promotion.length > 0
+        ? await this.spaceService.getAllSpaces({
+            where: { id: In(descendantSpaceIDsForL0Promotion) },
+            relations: { community: { roleSet: true } },
+          })
+        : [];
+    const roleSetIDsForL0Promotion = [
+      roleSetL1.id,
+      ...descendantSpacesForL0Promotion
+        .map(s => s.community?.roleSet?.id)
+        .filter((id): id is string => !!id),
+    ];
+    await this.roleSetService.removePendingInvitationsAndApplications(
+      roleSetIDsForL0Promotion
+    );
 
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsLevelZeroSpaces();
@@ -641,19 +644,22 @@ export class ConversionService {
     // 7b. Drop pending invitations/applications across the moved subtree —
     // current invites resolve against the source L0's hierarchy
     // (alkem-io/server#5069).
+    const descendantSpacesForMove =
+      descendantSpaceIds.length > 0
+        ? await this.spaceService.getAllSpaces({
+            where: { id: In(descendantSpaceIds) },
+            relations: { community: { roleSet: true } },
+          })
+        : [];
+    const roleSetIDsForMove = [
+      roleSetL1.id,
+      ...descendantSpacesForMove
+        .map(s => s.community?.roleSet?.id)
+        .filter((id): id is string => !!id),
+    ];
     await this.roleSetService.removePendingInvitationsAndApplications(
-      roleSetL1.id
+      roleSetIDsForMove
     );
-    for (const descId of descendantSpaceIds) {
-      const descSpace = await this.spaceService.getSpaceOrFail(descId, {
-        relations: { community: { roleSet: true } },
-      });
-      if (descSpace.community?.roleSet) {
-        await this.roleSetService.removePendingInvitationsAndApplications(
-          descSpace.community.roleSet.id
-        );
-      }
-    }
 
     // 8. Update structural fields
     sourceL1.parentSpace = targetL0;

@@ -361,8 +361,10 @@ describe('ConversionService', () => {
       };
       vi.mocked(spaceService.getSpaceOrFail)
         .mockResolvedValueOnce(spaceL1)
-        .mockResolvedValueOnce(spaceL0)
-        .mockResolvedValueOnce(descendantL2);
+        .mockResolvedValueOnce(spaceL0);
+      vi.mocked(spaceService.getAllSpaces).mockResolvedValue([
+        descendantL2,
+      ] as never);
       vi.mocked(spaceLookupService.getAllDescendantSpaceIDs).mockResolvedValue([
         'space-l2-a',
       ]);
@@ -403,10 +405,7 @@ describe('ConversionService', () => {
 
       expect(
         roleSetService.removePendingInvitationsAndApplications
-      ).toHaveBeenCalledWith('roleset-l1');
-      expect(
-        roleSetService.removePendingInvitationsAndApplications
-      ).toHaveBeenCalledWith('roleset-l2-a');
+      ).toHaveBeenCalledWith(['roleset-l1', 'roleset-l2-a']);
     });
   });
 });

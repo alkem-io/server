@@ -53,7 +53,7 @@ import { InAppNotificationService } from '@platform/in-app-notification/in.app.n
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Not, Repository } from 'typeorm';
+import { FindOneOptions, In, Not, Repository } from 'typeorm';
 import { IActorRolePolicy } from '../role/actor.role.policy.interface';
 import { IRole } from '../role/role.interface';
 import { RoleService } from '../role/role.service';
@@ -212,15 +212,19 @@ export class RoleSetService {
   }
 
   /**
-   * Removes pending (non-finalized) invitations and applications on the given
-   * roleSet, plus all platform invitations. Used by space conversion / move
-   * flows so that recipients do not try to accept invites that point to a
-   * target whose hierarchy has changed (see alkem-io/server#5069).
+   * Removes pending (non-finalized) invitations and applications across the
+   * given roleSet(s), plus all platform invitations. Used by space conversion
+   * / move flows so that recipients do not try to accept invites that point
+   * to a target whose hierarchy has changed (see alkem-io/server#5069).
    */
   async removePendingInvitationsAndApplications(
-    roleSetID: string
+    roleSetID: string | string[]
   ): Promise<void> {
-    const roleSet = await this.getRoleSetOrFail(roleSetID, {
+    const ids = Array.isArray(roleSetID) ? roleSetID : [roleSetID];
+    if (ids.length === 0) return;
+
+    const roleSets = await this.roleSetRepository.find({
+      where: { id: In(ids) },
       relations: {
         applications: true,
         invitations: true,
@@ -228,33 +232,33 @@ export class RoleSetService {
       },
     });
 
-    if (roleSet.applications) {
-      for (const application of roleSet.applications) {
-        if (this.applicationService.isApplicationFinalized(application)) {
-          continue;
-        }
-        await this.applicationService.deleteApplication({
-          ID: application.id,
-        });
-      }
-    }
+    const pendingApplications = roleSets
+      .flatMap(rs => rs.applications ?? [])
+      .filter(app => !this.applicationService.isApplicationFinalized(app));
+    const pendingInvitations = roleSets
+      .flatMap(rs => rs.invitations ?? [])
+      .filter(inv => !this.invitationService.isInvitationFinalized(inv));
+    const platformInvitations = roleSets.flatMap(
+      rs => rs.platformInvitations ?? []
+    );
 
-    if (roleSet.invitations) {
-      for (const invitation of roleSet.invitations) {
-        if (this.invitationService.isInvitationFinalized(invitation)) {
-          continue;
-        }
-        await this.invitationService.deleteInvitation({ ID: invitation.id });
-      }
-    }
-
-    if (roleSet.platformInvitations) {
-      for (const platformInvitation of roleSet.platformInvitations) {
-        await this.platformInvitationService.deletePlatformInvitation({
-          ID: platformInvitation.id,
-        });
-      }
-    }
+    await Promise.all([
+      Promise.all(
+        pendingApplications.map(a =>
+          this.applicationService.deleteApplication({ ID: a.id })
+        )
+      ),
+      Promise.all(
+        pendingInvitations.map(i =>
+          this.invitationService.deleteInvitation({ ID: i.id })
+        )
+      ),
+      Promise.all(
+        platformInvitations.map(p =>
+          this.platformInvitationService.deletePlatformInvitation({ ID: p.id })
+        )
+      ),
+    ]);
   }
 
   async getParentRoleSet(roleSet: IRoleSet): Promise<IRoleSet | undefined> {

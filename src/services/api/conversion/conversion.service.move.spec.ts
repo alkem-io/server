@@ -315,7 +315,7 @@ describe('ConversionService — Cross-L0 Moves', () => {
 
       expect(
         roleSetService.removePendingInvitationsAndApplications
-      ).toHaveBeenCalledWith('roleset-l1');
+      ).toHaveBeenCalledWith(['roleset-l1']);
     });
 
     it('should clear pending invitations and applications on every descendant roleSet', async () => {
@@ -323,26 +323,15 @@ describe('ConversionService — Cross-L0 Moves', () => {
         .mockResolvedValueOnce(makeSourceL1())
         .mockResolvedValueOnce(makeTargetL0());
       setupHappyPathMocks();
-      // Three lookups happen for descendants:
-      //  - clearing community roles (existing)
-      //  - clearing pending invites (new)
-      //  - bulk levelZeroSpaceID update (existing, no fetch)
-      // Plus syncInnovationFlowTagsetsForSubtree iterates as well.
       vi.mocked(spaceLookupService.getAllDescendantSpaceIDs).mockResolvedValue([
         'child-l2-a',
       ]);
-      vi.mocked(spaceService.getSpaceOrFail).mockImplementation(
-        async (id: string) => {
-          if (id === 'child-l2-a') {
-            return {
-              id: 'child-l2-a',
-              community: { roleSet: { id: 'roleset-child-l2-a' } },
-              collaboration: { calloutsSet: { callouts: [] } },
-            } as never;
-          }
-          return makeSourceL1();
-        }
-      );
+      vi.mocked(spaceService.getAllSpaces).mockResolvedValue([
+        {
+          id: 'child-l2-a',
+          community: { roleSet: { id: 'roleset-child-l2-a' } },
+        },
+      ] as never);
 
       await service.moveSpaceL1ToSpaceL0OrFail({
         spaceL1ID: 'source-l1',
@@ -351,10 +340,7 @@ describe('ConversionService — Cross-L0 Moves', () => {
 
       expect(
         roleSetService.removePendingInvitationsAndApplications
-      ).toHaveBeenCalledWith('roleset-l1');
-      expect(
-        roleSetService.removePendingInvitationsAndApplications
-      ).toHaveBeenCalledWith('roleset-child-l2-a');
+      ).toHaveBeenCalledWith(['roleset-l1', 'roleset-child-l2-a']);
     });
   });
 
