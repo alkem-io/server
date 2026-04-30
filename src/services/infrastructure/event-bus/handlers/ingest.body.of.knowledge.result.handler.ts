@@ -47,17 +47,15 @@ export class IngestBodyOfKnowledgeResultHandler
     );
 
     if (response.result === IngestionResult.SUCCESS) {
-      this.aiServerService.updatePersonaBoKLastUpdated(
+      await this.aiServerService.updatePersonaBoKLastUpdated(
         response.personaId,
         new Date(response.timestamp)
       );
-    } else {
-      if (response.error?.code === ErrorCode.VECTOR_INSERT) {
-        this.aiServerService.updatePersonaBoKLastUpdated(
-          response.personaId,
-          null
-        );
-      }
+    } else if (response.error?.code === ErrorCode.VECTOR_INSERT) {
+      await this.aiServerService.updatePersonaBoKLastUpdated(
+        response.personaId,
+        null
+      );
     }
   }
 }

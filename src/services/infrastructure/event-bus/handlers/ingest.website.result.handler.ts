@@ -44,7 +44,7 @@ export class IngestWebsiteResultHandler
     const lastUpdated = response.timestamp
       ? new Date(response.timestamp)
       : new Date();
-    this.aiServerService.updatePersonaBoKLastUpdated(
+    await this.aiServerService.updatePersonaBoKLastUpdated(
       response.personaId,
       lastUpdated
     );
