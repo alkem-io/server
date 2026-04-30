@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class AddCollaboraDocumentToCalloutFraming1776162615269 implements MigrationInterface {
-    name = 'AddCollaboraDocumentToCalloutFraming1776162615269'
+export class AddCollaboraDocumentToCalloutFraming1777000000001 implements MigrationInterface {
+    name = 'AddCollaboraDocumentToCalloutFraming1777000000001'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         // Rollback: down() drops FK first, then UNIQUE constraint, then the column.

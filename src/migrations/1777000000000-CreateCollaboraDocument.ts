@@ -1,7 +1,7 @@
 import { MigrationInterface, QueryRunner } from "typeorm";
 
-export class CreateCollaboraDocument1776142609192 implements MigrationInterface {
-    name = 'CreateCollaboraDocument1776142609192'
+export class CreateCollaboraDocument1777000000000 implements MigrationInterface {
+    name = 'CreateCollaboraDocument1777000000000'
 
     public async up(queryRunner: QueryRunner): Promise<void> {
         await queryRunner.query(`ALTER TABLE "push_subscription" DROP CONSTRAINT "FK_push_subscription_userId"`);
