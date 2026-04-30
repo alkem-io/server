@@ -7,6 +7,7 @@ import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
+import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
@@ -19,6 +20,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { IMemo } from '@domain/common/memo/types';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { Inject } from '@nestjs/common/decorators';
+import { ConfigService } from '@nestjs/config';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalloutLinkCreated } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.link.created';
@@ -34,6 +36,7 @@ import { RoomResolverService } from '@services/infrastructure/entity-resolver/ro
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { AlkemioConfig } from '@src/types/alkemio.config';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
@@ -65,6 +68,7 @@ export class CalloutResolverMutations {
     private readonly contributionAuthorizationService: CalloutContributionAuthorizationService,
     private readonly calloutContributionService: CalloutContributionService,
     private readonly temporaryStorageService: TemporaryStorageService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private readonly postCreatedSubscription: PubSubEngine
   ) {}
@@ -267,7 +271,9 @@ export class CalloutResolverMutations {
         CalloutAllowedActors.NONE
     ) {
       throw new CalloutClosedException(
-        `New contributions to a closed Callout with id: '${callout.id}' are not allowed!`
+        'New contributions to this Callout are not allowed',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id }
       );
     }
 
@@ -283,7 +289,9 @@ export class CalloutResolverMutations {
         )
       ) {
         throw new CalloutClosedException(
-          `Only admins are allowed to contribute to Callout with id: '${callout.id}'`
+          'Only admins are allowed to contribute to this Callout',
+          LogContext.COLLABORATION,
+          { calloutId: callout.id }
         );
       }
     }
@@ -443,7 +451,9 @@ export class CalloutResolverMutations {
         CalloutAllowedActors.NONE
     ) {
       throw new CalloutClosedException(
-        `New contributions to a closed Callout with id: '${callout.id}' are not allowed!`
+        'New contributions to this Callout are not allowed',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id }
       );
     }
     if (
@@ -456,16 +466,21 @@ export class CalloutResolverMutations {
       )
     ) {
       throw new CalloutClosedException(
-        `Only admins are allowed to contribute to Callout with id: '${callout.id}'`
+        'Only admins are allowed to contribute to this Callout',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id }
       );
     }
 
-    // Read the upload to a buffer. graphql-upload streams the file
-    // through the resolver — buffering it means the rest of the import
-    // path (file-service-go upload, MIME sniff, validation) runs against
-    // a stable byte sequence. Once direct-upload-with-ticket lands this
-    // gets replaced with a fileId + fetch-metadata call.
-    const buffer = await this.streamToBuffer(createReadStream());
+    // Read the upload to a buffer with a configured timeout so a slow
+    // or hung client can't pin Node's heap. Once direct-upload-with-
+    // ticket lands this gets replaced with a fileId + fetch-metadata
+    // call (no buffering on this side).
+    const streamTimeoutMs = this.configService.get<number>(
+      'storage.file.stream_timeout_ms',
+      { infer: true }
+    )!;
+    const buffer = await streamToBuffer(createReadStream(), streamTimeoutMs);
 
     let contribution =
       await this.calloutService.importCollaboraDocumentToCallout(
@@ -494,14 +509,6 @@ export class CalloutResolverMutations {
     return await this.calloutContributionService.getCalloutContributionOrFail(
       contribution.id
     );
-  }
-
-  private async streamToBuffer(stream: NodeJS.ReadableStream): Promise<Buffer> {
-    const chunks: Buffer[] = [];
-    for await (const chunk of stream) {
-      chunks.push(typeof chunk === 'string' ? Buffer.from(chunk) : chunk);
-    }
-    return Buffer.concat(chunks);
   }
 
   private async processActivityLinkCreated(

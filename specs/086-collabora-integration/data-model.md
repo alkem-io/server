@@ -31,7 +31,7 @@ Add `COLLABORA_DOCUMENT = 'collabora_document'` to existing enum.
 
 ## Entity Hierarchy
 
-```
+```text
 Space
   └── Collaboration
         └── CalloutsSet
@@ -49,6 +49,7 @@ Space
 | SPREADSHEET | application/vnd.openxmlformats-officedocument.spreadsheetml.sheet | empty.xlsx |
 | PRESENTATION | application/vnd.openxmlformats-officedocument.presentationml.presentation | empty.pptx |
 | WORDPROCESSING | application/vnd.openxmlformats-officedocument.wordprocessingml.document | empty.docx |
+| DRAWING | application/vnd.oasis.opendocument.graphics | empty.odg |
 
 ## Migration Required
 

@@ -268,6 +268,10 @@ export class CalloutService {
           !!contribution.memo?.nameID &&
           input.memo.nameID === contribution.memo.nameID
         );
+      // COLLABORA_DOCUMENT contributions are created via the dedicated
+      // importCollaboraDocument mutation — they never appear in a bulk
+      // CreateCalloutContributionInput payload, so phase-2 pairing has
+      // nothing to match against. Falling through to default is correct.
       default:
         return false;
     }
