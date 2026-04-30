@@ -53,3 +53,46 @@ gql_request() {
     return 1
   fi
 }
+
+# Cookie-authenticated variant. Hits the interactive endpoint (which is
+# routed through Oathkeeper) so the session is exchanged for a JWT
+# carrying actor identity downstream — required for WOPI, @CurrentActor
+# privilege checks, and anything that depends on a resolved user.
+#
+# Usage:
+#   gql_request_interactive '<query>' [variables_json]
+#
+# Requires COOKIE_JAR to be set and the file to contain a valid
+# `ory_kratos_session` cookie (run interactive-login.sh first).
+GQL_INTERACTIVE_ENDPOINT="${GRAPHQL_INTERACTIVE_ENDPOINT:-http://localhost:3000/api/private/graphql}"
+
+gql_request_interactive() {
+  local query="$1"
+  local variables="${2:-}"
+
+  [ -n "${COOKIE_JAR:-}" ] || { echo "ERROR: COOKIE_JAR is not set" >&2; return 1; }
+  [ -f "$COOKIE_JAR" ] || { echo "ERROR: cookie jar not found at $COOKIE_JAR" >&2; return 1; }
+
+  local payload
+  if [ -n "$variables" ]; then
+    payload=$(jq -nc --arg q "$query" --argjson v "$variables" '{query:$q, variables:$v}')
+  else
+    payload=$(jq -nc --arg q "$query" '{query:$q}')
+  fi
+
+  local response
+  response=$(curl -s -X POST "$GQL_INTERACTIVE_ENDPOINT" \
+    -b "$COOKIE_JAR" \
+    -H 'Content-Type: application/json' \
+    -d "$payload")
+
+  echo "$response"
+
+  local has_data has_errors
+  has_data=$(echo "$response" | jq -r '.data // empty')
+  has_errors=$(echo "$response" | jq -r '.errors // empty')
+  if [ -z "$has_data" ] && [ -n "$has_errors" ]; then
+    echo "GraphQL error: $(echo "$response" | jq -c '.errors')" >&2
+    return 1
+  fi
+}
