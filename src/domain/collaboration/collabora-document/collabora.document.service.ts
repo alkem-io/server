@@ -97,6 +97,12 @@ export class CollaboraDocumentService {
       // content via PutFile later. Two collabora docs created in the same
       // bucket with `Buffer.alloc(0)` would otherwise share a backing row
       // and corrupt each other's edits.
+      //
+      // Override the bucket's allowedMimeTypes with COLLABORA_SUPPORTED_MIMES
+      // — the destination bucket's default policy doesn't include every
+      // Collabora-supported MIME (notably `.odg` for DRAWING), but we know
+      // the editor can edit/save these. Same widening rationale as the
+      // import flow.
       document = await this.storageBucketService.uploadFileAsDocumentFromBuffer(
         storageBucketId,
         emptyBuffer,
@@ -104,7 +110,8 @@ export class CollaboraDocumentService {
         mimeType,
         userID,
         false,
-        true
+        true,
+        COLLABORA_SUPPORTED_MIMES
       );
     } catch (error) {
       // Compensate: remove the profile created above
