@@ -8337,7 +8337,7 @@ input UpdateDiscussionInput {
 
 input UpdateDocumentInput {
   """
-  The display name for the Document. Not supported — rejected with a ValidationException if provided.
+  Display name renames flow through parent-entity mutations (e.g., updateCollaboraDocument), which carry the context — file extension, MIME, profile coupling — needed to keep editor titles, download names, and the file-service row in sync. The generic updateDocument deliberately does not expose rename and rejects this field with a ValidationException if provided.
   """
   displayName: String
   ID: UUID!
