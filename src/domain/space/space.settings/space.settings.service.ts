@@ -45,7 +45,7 @@ export class SpaceSettingsService {
       const collaborationUpdates = updateData.collaboration;
       const allEntries = Object.entries(collaborationUpdates);
       const definedEntries = allEntries.filter(
-        ([, value]) => value !== undefined
+        ([, value]) => value !== undefined && value !== null
       );
       const definedFields = Object.fromEntries(definedEntries);
       settings.collaboration = {
