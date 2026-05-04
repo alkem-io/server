@@ -806,9 +806,8 @@ export class CalloutService {
     // sniffs the MIME and rejects anything outside our supported list
     // before this returns.
     const collaboraDocument =
-      await this.collaboraDocumentService.importCollaboraDocument(
-        file,
-        input.displayName,
+      await this.collaboraDocumentService.createCollaboraDocument(
+        { displayName: input.displayName, uploadedFile: file },
         storageAggregator,
         userID
       );

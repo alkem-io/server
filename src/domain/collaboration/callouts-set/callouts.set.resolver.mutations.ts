@@ -3,12 +3,16 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
+import { LogContext } from '@common/enums/logging.context';
+import { ValidationException } from '@common/exceptions';
+import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.adapter';
 import { ActivityInputCalloutPublished } from '@services/adapters/activity-adapter/dto/activity.dto.input.callout.published';
@@ -19,6 +23,8 @@ import { CommunityResolverService } from '@services/infrastructure/entity-resolv
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { TemporaryStorageService } from '@services/infrastructure/temporary-storage/temporary.storage.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { AlkemioConfig } from '@src/types/alkemio.config';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
@@ -42,15 +48,19 @@ export class CalloutsSetResolverMutations {
     private notificationAdapterSpace: NotificationSpaceAdapter,
     private roomResolverService: RoomResolverService,
     private temporaryStorageService: TemporaryStorageService,
+    private configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
   @Mutation(() => ICallout, {
-    description: 'Create a new Callout on the CalloutsSet.',
+    description:
+      'Create a new Callout on the CalloutsSet. When `file` is supplied alongside a COLLABORA_DOCUMENT framing, the new callout is framed with a Collabora document populated from the uploaded bytes (file-service-go sniffs MIME, validates format and size, and derives the document type; any documentType in the input is ignored on the upload path; displayName defaults from the filename when absent). When `file` is omitted, the existing blank-create behaviour applies and framing.collaboraDocument must specify both displayName and documentType.',
   })
   async createCalloutOnCalloutsSet(
     @CurrentActor() actorContext: ActorContext,
-    @Args('calloutData') calloutData: CreateCalloutOnCalloutsSetInput
+    @Args('calloutData') calloutData: CreateCalloutOnCalloutsSetInput,
+    @Args({ name: 'file', type: () => GraphQLUpload, nullable: true })
+    fileUpload?: FileUpload
   ): Promise<ICallout> {
     const calloutsSet = await this.calloutsSetService.getCalloutsSetOrFail(
       calloutData.calloutsSetID
@@ -62,6 +72,47 @@ export class CalloutsSetResolverMutations {
       AuthorizationPrivilege.CREATE_CALLOUT,
       `create callout on callouts Set: ${calloutsSet.id}`
     );
+
+    if (fileUpload) {
+      // Reject before buffering if the file isn't being routed to a
+      // COLLABORA_DOCUMENT framing — the file would otherwise be silently
+      // discarded and the caller would think the upload took effect.
+      if (
+        calloutData.framing?.type !== CalloutFramingType.COLLABORA_DOCUMENT ||
+        !calloutData.framing.collaboraDocument
+      ) {
+        throw new ValidationException(
+          'file argument is only valid with framing.type = COLLABORA_DOCUMENT and framing.collaboraDocument supplied',
+          LogContext.COLLABORATION
+        );
+      }
+      const streamTimeoutMs = this.configService.get<number>(
+        'storage.file.stream_timeout_ms',
+        { infer: true }
+      )!;
+      this.logger.verbose?.(
+        {
+          message:
+            'createCalloutOnCalloutsSet: buffering uploaded framing file',
+          filename: fileUpload.filename,
+          mimetype: fileUpload.mimetype,
+        },
+        LogContext.COLLABORATION
+      );
+      const buffer = await streamToBuffer(
+        fileUpload.createReadStream(),
+        streamTimeoutMs
+      );
+      // Plumb the buffered file through the CreateCollaboraDocumentInput's
+      // transient uploadedFile field. CollaboraDocumentService.createCollaboraDocument
+      // dispatches on this field's presence — its upload mode runs file-service-go's
+      // MIME sniff, type derivation, and the temp→permanent atomic flow.
+      calloutData.framing.collaboraDocument.uploadedFile = {
+        buffer,
+        filename: fileUpload.filename,
+        mimetype: fileUpload.mimetype,
+      };
+    }
 
     const callout = await this.calloutsSetService.createCalloutOnCalloutsSet(
       calloutData,
