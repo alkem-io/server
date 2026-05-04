@@ -134,12 +134,21 @@ describe('SpaceService', () => {
         }
         return Promise.resolve(null);
       });
-      vi.spyOn(spaceRepository, 'find').mockResolvedValue([mockSubspace]);
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        mockSpace,
+        mockSubspace,
+      ]);
       vi.spyOn(service, 'save').mockResolvedValue(mockSpace);
+
+      const lookup = (service as any).spaceLookupService as any;
+      lookup.getAllDescendantSpaceIDs = vi.fn().mockResolvedValue([subspaceId]);
 
       // Mock the URL cache service - use direct assignment for mock objects
       const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
+      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces = vi
+        .fn()
+        .mockResolvedValue(undefined);
 
       // Act
       await service.updateSpacePlatformSettings(mockSpace, updateData);
@@ -231,12 +240,23 @@ describe('SpaceService', () => {
         }
         return Promise.resolve(null);
       });
-      vi.spyOn(spaceRepository, 'find').mockResolvedValue([mockChildSubspace]);
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        mockSubspace,
+        mockChildSubspace,
+      ]);
       vi.spyOn(service, 'save').mockResolvedValue(mockSubspace);
+
+      const lookup = (service as any).spaceLookupService as any;
+      lookup.getAllDescendantSpaceIDs = vi
+        .fn()
+        .mockResolvedValue([childSubspaceId]);
 
       // Mock the URL cache service - use direct assignment for mock objects
       const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
+      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces = vi
+        .fn()
+        .mockResolvedValue(undefined);
 
       // Act
       await service.updateSpacePlatformSettings(mockSubspace, updateData);

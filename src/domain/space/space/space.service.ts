@@ -933,67 +933,15 @@ export class SpaceService {
         );
       }
 
-      // Store the old nameID for logging purposes
       const oldNameID = space.nameID;
       space.nameID = updateData.nameID;
 
-      // Invalidate URL cache for this space's profile
-      await this.urlGeneratorCacheService.revokeUrlCache(
-        space.about.profile.id
+      await this.invalidateUrlCacheForSpaceSubtree(space.id);
+
+      this.logger.verbose?.(
+        `Invalidated URL cache subtree for space ${space.id} (nameID: ${oldNameID} -> ${updateData.nameID})`,
+        LogContext.SPACES
       );
-
-      // Invalidate URL cache for all subspaces since their URLs include parent nameIDs
-      if (space.level === SpaceLevel.L0) {
-        // For L0 spaces, invalidate all subspaces in the entire space hierarchy
-        const allSubspaces = await this.spaceRepository.find({
-          where: {
-            levelZeroSpaceID: space.id,
-          },
-          relations: {
-            about: {
-              profile: true,
-            },
-          },
-        });
-
-        for (const subspace of allSubspaces) {
-          if (subspace.about?.profile?.id) {
-            await this.urlGeneratorCacheService.revokeUrlCache(
-              subspace.about.profile.id
-            );
-          }
-        }
-
-        this.logger.verbose?.(
-          `Invalidated URL cache for space ${space.id} (nameID: ${oldNameID} -> ${updateData.nameID}) and ${allSubspaces.length} subspaces`,
-          LogContext.SPACES
-        );
-      } else {
-        // For subspaces, also invalidate any child subspaces
-        const childSubspaces = await this.spaceRepository.find({
-          where: {
-            parentSpace: { id: space.id },
-          },
-          relations: {
-            about: {
-              profile: true,
-            },
-          },
-        });
-
-        for (const childSubspace of childSubspaces) {
-          if (childSubspace.about?.profile?.id) {
-            await this.urlGeneratorCacheService.revokeUrlCache(
-              childSubspace.about.profile.id
-            );
-          }
-        }
-
-        this.logger.verbose?.(
-          `Invalidated URL cache for subspace ${space.id} (nameID: ${oldNameID} -> ${updateData.nameID}) and ${childSubspaces.length} child subspaces`,
-          LogContext.SPACES
-        );
-      }
     }
 
     await this.save(space);

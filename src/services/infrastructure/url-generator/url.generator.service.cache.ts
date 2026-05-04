@@ -61,8 +61,9 @@ export class UrlGeneratorCacheService {
       return;
     }
 
-    const rows: { profileId: string | null }[] =
-      await this.entityManager.connection.query(
+    let rows: { profileId: string | null }[];
+    try {
+      rows = await this.entityManager.connection.query(
         `
         SELECT cf."profileId" AS "profileId"
         FROM "space" s
@@ -123,6 +124,18 @@ export class UrlGeneratorCacheService {
         `,
         [spaceIds]
       );
+    } catch (error) {
+      const stack = error instanceof Error ? (error.stack ?? '') : '';
+      this.logger.error(
+        {
+          message: 'Failed to invalidate URL caches for callout content',
+          spaceIds,
+        },
+        stack,
+        LogContext.URL_GENERATOR
+      );
+      return;
+    }
 
     const profileIds = new Set<string>();
     for (const row of rows) {
