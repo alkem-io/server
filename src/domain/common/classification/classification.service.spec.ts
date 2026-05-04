@@ -1,3 +1,4 @@
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import {
   EntityNotFoundException,
@@ -403,7 +404,7 @@ describe('ClassificationService', () => {
   });
 
   describe('updateTagsetTemplateOnSelectTagset', () => {
-    it('should update existing tagset with new template and default tags', async () => {
+    it('should fall back to default tags when template has no allowedValues', async () => {
       const existingTagset = { id: 'ts-1', name: 'category', tags: ['old'] };
       vi.spyOn(Classification, 'findOne').mockResolvedValue({
         id: 'cls-1',
@@ -425,6 +426,58 @@ describe('ClassificationService', () => {
 
       expect(existingTagset.tags).toEqual(['default-val']);
       expect(result).toBe(existingTagset);
+    });
+
+    it('should preserve current tag when present in target template allowedValues', async () => {
+      const existingTagset = {
+        id: 'ts-1',
+        name: TagsetReservedName.FLOW_STATE,
+        tags: ['EXPLORE'],
+      };
+      vi.spyOn(Classification, 'findOne').mockResolvedValue({
+        id: 'cls-1',
+        tagsets: [existingTagset],
+      } as any);
+      (tagsetService.getTagsetByName as Mock).mockReturnValue(existingTagset);
+      (tagsetService.save as Mock).mockResolvedValue(existingTagset as any);
+
+      const template = {
+        name: TagsetReservedName.FLOW_STATE,
+        type: TagsetType.SELECT_ONE,
+        allowedValues: ['EXPLORE', 'DEFINE', 'BRAINSTORM'],
+        defaultSelectedValue: 'DEFINE',
+      } as unknown as ITagsetTemplate;
+
+      await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+      expect(existingTagset.tags).toEqual(['EXPLORE']);
+      expect((existingTagset as any).tagsetTemplate).toBe(template);
+    });
+
+    it('should fall back to default when current tag absent from target template allowedValues', async () => {
+      const existingTagset = {
+        id: 'ts-1',
+        name: TagsetReservedName.FLOW_STATE,
+        tags: ['HOME'],
+      };
+      vi.spyOn(Classification, 'findOne').mockResolvedValue({
+        id: 'cls-1',
+        tagsets: [existingTagset],
+      } as any);
+      (tagsetService.getTagsetByName as Mock).mockReturnValue(existingTagset);
+      (tagsetService.save as Mock).mockResolvedValue(existingTagset as any);
+
+      const template = {
+        name: TagsetReservedName.FLOW_STATE,
+        type: TagsetType.SELECT_ONE,
+        allowedValues: ['EXPLORE', 'DEFINE', 'BRAINSTORM'],
+        defaultSelectedValue: 'EXPLORE',
+      } as unknown as ITagsetTemplate;
+
+      await service.updateTagsetTemplateOnSelectTagset('cls-1', template);
+
+      expect(existingTagset.tags).toEqual(['EXPLORE']);
+      expect((existingTagset as any).tagsetTemplate).toBe(template);
     });
 
     it('should create new tagset when template name not found in classification', async () => {
