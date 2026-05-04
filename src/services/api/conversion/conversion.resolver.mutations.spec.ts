@@ -26,6 +26,7 @@ describe('ConversionResolverMutations', () => {
     save: Mock;
     getSpaceOrFail: Mock;
     getAccountForLevelZeroSpaceOrFail: Mock;
+    invalidateUrlCacheForSpaceSubtree: Mock;
   };
   let spaceAuthorizationService: { applyAuthorizationPolicy: Mock };
   let authorizationPolicyService: {
@@ -91,6 +92,9 @@ describe('ConversionResolverMutations', () => {
       expect(
         conversionService.convertSpaceL1ToSpaceL0OrFail
       ).toHaveBeenCalledWith({ spaceL1ID: 'space-l1' });
+      expect(
+        spaceService.invalidateUrlCacheForSpaceSubtree
+      ).toHaveBeenCalledWith('space-l0');
       expect(result).toBe(convertedSpace);
     });
 
@@ -146,6 +150,9 @@ describe('ConversionResolverMutations', () => {
       expect(
         conversionService.convertSpaceL2ToSpaceL1OrFail
       ).toHaveBeenCalledWith({ spaceL2ID: 'space-l2' });
+      expect(
+        spaceService.invalidateUrlCacheForSpaceSubtree
+      ).toHaveBeenCalledWith('space-l1');
       expect(result).toBe(convertedSpace);
     });
   });
@@ -176,6 +183,9 @@ describe('ConversionResolverMutations', () => {
         spaceL1ID: 'space-l1',
         parentSpaceL1ID: 'parent-l1',
       });
+      expect(
+        spaceService.invalidateUrlCacheForSpaceSubtree
+      ).toHaveBeenCalledWith('space-l2');
       expect(result).toBe(convertedSpace);
     });
   });
