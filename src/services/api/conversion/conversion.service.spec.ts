@@ -1,3 +1,4 @@
+import { AccountType } from '@common/enums/account.type';
 import {
   EntityNotInitializedException,
   ValidationException,
@@ -132,6 +133,82 @@ describe('ConversionService', () => {
       await expect(
         service.convertSpaceL1ToSpaceL0OrFail({ spaceL1ID: 'space-l1' })
       ).rejects.toThrow(EntityNotInitializedException);
+    });
+
+    it('assigns a fresh Free license to the promoted L0 (no inheritance from parent)', async () => {
+      const parentLicenseId = 'parent-license-id';
+      const freshLicense = { id: 'fresh-license-id' };
+      const spaceL1 = {
+        id: 'space-l1',
+        nameID: 'l1-name',
+        levelZeroSpaceID: 'space-l0',
+        community: { roleSet: { id: 'roleset-l1' } },
+        collaboration: { innovationFlow: { id: 'flow-l1', states: [] } },
+        storageAggregator: { id: 'sa-l1', parentStorageAggregator: undefined },
+        subspaces: [],
+        parentSpace: { id: 'space-l0' },
+      };
+      const spaceL0Orig = {
+        id: 'space-l0',
+        license: { id: parentLicenseId },
+        account: {
+          id: 'account-1',
+          accountType: AccountType.USER,
+          storageAggregator: { id: 'sa-account' },
+        },
+        subspaces: [{ id: 'space-l1' }],
+      };
+
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(spaceL1 as never)
+        .mockResolvedValueOnce(spaceL0Orig as never);
+      vi.mocked(spaceService.createLicenseForSpaceL0).mockReturnValue(
+        freshLicense as never
+      );
+      vi.mocked(
+        spaceService.createTemplatesManagerForSpaceL0
+      ).mockResolvedValue({} as never);
+      vi.mocked(spaceService.save).mockImplementation(
+        async (s: unknown) => s as never
+      );
+
+      vi.mocked(roleSetService.getUsersWithRole).mockResolvedValue([]);
+      vi.mocked(
+        _namingService.getReservedNameIDsLevelZeroSpaces
+      ).mockResolvedValue([]);
+      vi.mocked(
+        _namingService.createNameIdAvoidingReservedNameIDs
+      ).mockReturnValue('promoted-name');
+
+      vi.mocked(platformService.getTemplatesManagerOrFail).mockResolvedValue({
+        id: 'platform-tm',
+      } as never);
+      vi.mocked(
+        templatesManagerService.getTemplateFromTemplateDefault
+      ).mockResolvedValue({ id: 'template-l0' } as never);
+      vi.mocked(templateService.getTemplateOrFail).mockResolvedValue({
+        contentSpace: {
+          collaboration: { innovationFlow: { states: [] } },
+        },
+      } as never);
+      vi.mocked(
+        inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState
+      ).mockReturnValue([]);
+      vi.mocked(
+        innovationFlowService.updateInnovationFlowStates
+      ).mockImplementation(async (flow: unknown) => flow as never);
+
+      const result = await service.convertSpaceL1ToSpaceL0OrFail({
+        spaceL1ID: 'space-l1',
+      });
+
+      expect(spaceService.createLicenseForSpaceL0).toHaveBeenCalledTimes(1);
+      expect(result.license).toBe(freshLicense);
+      expect(result.license?.id).not.toBe(parentLicenseId);
+      expect(accountHostService.assignLicensePlansToSpace).toHaveBeenCalledWith(
+        'space-l1',
+        AccountType.USER
+      );
     });
 
     it('should throw EntityNotInitializedException when L0 space is missing account', async () => {
