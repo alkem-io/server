@@ -362,6 +362,9 @@ describe('SpaceService', () => {
       const revokeSpy = vi
         .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
         .mockResolvedValue(undefined);
+      const revokeCalloutsSpy = vi.fn().mockResolvedValue(undefined);
+      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces =
+        revokeCalloutsSpy;
 
       await service.invalidateUrlCacheForSpaceSubtree(rootId);
 
@@ -370,6 +373,11 @@ describe('SpaceService', () => {
       expect(revokeSpy).toHaveBeenCalledWith(`profile-${rootId}`);
       expect(revokeSpy).toHaveBeenCalledWith(`profile-${childId}`);
       expect(revokeSpy).toHaveBeenCalledWith(`profile-${grandchildId}`);
+      expect(revokeCalloutsSpy).toHaveBeenCalledWith([
+        rootId,
+        childId,
+        grandchildId,
+      ]);
     });
 
     it('skips spaces that have no profile id', async () => {
@@ -384,10 +392,14 @@ describe('SpaceService', () => {
       const revokeSpy = vi
         .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
         .mockResolvedValue(undefined);
+      const revokeCalloutsSpy = vi.fn().mockResolvedValue(undefined);
+      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces =
+        revokeCalloutsSpy;
 
       await service.invalidateUrlCacheForSpaceSubtree(rootId);
 
       expect(revokeSpy).not.toHaveBeenCalled();
+      expect(revokeCalloutsSpy).toHaveBeenCalledWith([rootId]);
     });
   });
 

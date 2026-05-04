@@ -34,7 +34,6 @@ import { NotificationInputCommunityInvitation } from '@services/adapters/notific
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { InputCreatorService } from '../input-creator/input.creator.service';
@@ -58,7 +57,6 @@ export class ConversionService {
     private spaceLookupService: SpaceLookupService,
     private classificationService: ClassificationService,
     private calloutsSetService: CalloutsSetService,
-    private urlGeneratorCacheService: UrlGeneratorCacheService,
     private spaceMoveRoomsService: SpaceMoveRoomsService,
     private notificationUserAdapter: NotificationUserAdapter,
     private communityResolverService: CommunityResolverService,
@@ -1017,23 +1015,12 @@ export class ConversionService {
   }
 
   /**
-   * Invalidates URL caches for all space profiles in the moved subtree.
+   * Invalidates URL caches for the moved subtree. Delegates to SpaceService so
+   * convert/move/transfer mutations share the same sweep (space-about plus every
+   * callout/contribution profile inside the subtree).
    */
   async invalidateUrlCachesForSubtree(movedSpaceId: string): Promise<void> {
-    const descendantIds =
-      await this.spaceLookupService.getAllDescendantSpaceIDs(movedSpaceId);
-    const allSpaceIds = [movedSpaceId, ...descendantIds];
-
-    for (const spaceId of allSpaceIds) {
-      const space = await this.spaceService.getSpaceOrFail(spaceId, {
-        relations: { about: { profile: true } },
-      });
-      if (space.about?.profile?.id) {
-        await this.urlGeneratorCacheService.revokeUrlCache(
-          space.about.profile.id
-        );
-      }
-    }
+    await this.spaceService.invalidateUrlCacheForSpaceSubtree(movedSpaceId);
   }
 
   get moveRoomsService(): SpaceMoveRoomsService {

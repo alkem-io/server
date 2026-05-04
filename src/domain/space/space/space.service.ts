@@ -1010,6 +1010,9 @@ export class SpaceService {
   /**
    * Invalidates URL cache entries for a space and all of its descendant spaces.
    * Used after operations that change a space's URL path (transfer, L1↔L0/L2 conversion).
+   * Sweeps space-about profiles AND every callout/contribution profile reachable
+   * from those spaces — activity-log entries surface callout-derived URLs, so the
+   * inner sweep is what keeps them from pointing at the old path.
    */
   public async invalidateUrlCacheForSpaceSubtree(
     spaceId: string
@@ -1044,6 +1047,10 @@ export class SpaceService {
         );
       }
     }
+
+    await this.urlGeneratorCacheService.revokeUrlCachesForCalloutsInSpaces(
+      allSpaceIds
+    );
   }
 
   private async getParentSpacePlatformRolesAccess(
