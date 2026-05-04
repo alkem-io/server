@@ -3878,7 +3878,7 @@ type Mutation {
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
-  resetLicenseOnAccounts: Space!
+  resetLicenseOnAccounts: Boolean!
   """Revoke a credential from an Actor."""
   revokeCredentialFromActor(actorID: UUID!, credentialType: CredentialType!, resourceID: UUID): Boolean!
   """Removes an authorization credential from an Organization."""
