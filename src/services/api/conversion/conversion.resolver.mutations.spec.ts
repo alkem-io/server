@@ -2,9 +2,11 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutTransferService } from '@domain/collaboration/callout-transfer/callout.transfer.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LicenseService } from '@domain/common/license/license.service';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { SpaceService } from '@domain/space/space/space.service';
 import { SpaceAuthorizationService } from '@domain/space/space/space.service.authorization';
+import { SpaceLicenseService } from '@domain/space/space/space.service.license';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -35,6 +37,8 @@ describe('ConversionResolverMutations', () => {
     getVirtualContributorByIdOrFail: Mock;
   };
   let _calloutTransferService: { transferCallout: Mock };
+  let spaceLicenseService: { applyLicensePolicy: Mock };
+  let licenseService: { saveAll: Mock };
 
   const actorContext = { actorID: 'actor-1', credentials: [] } as any;
 
@@ -55,6 +59,8 @@ describe('ConversionResolverMutations', () => {
     authorizationPolicyService = module.get(AuthorizationPolicyService) as any;
     virtualContributorService = module.get(VirtualContributorService) as any;
     _calloutTransferService = module.get(CalloutTransferService) as any;
+    spaceLicenseService = module.get(SpaceLicenseService) as any;
+    licenseService = module.get(LicenseService) as any;
   });
 
   it('should be defined', () => {
@@ -90,6 +96,35 @@ describe('ConversionResolverMutations', () => {
         spaceService.invalidateUrlCacheForSpaceSubtree
       ).toHaveBeenCalledWith('space-l0');
       expect(result).toBe(convertedSpace);
+    });
+
+    it('reconciles the Free license entitlements after promotion', async () => {
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      const convertedSpace = { id: 'space-l0' };
+      conversionService.convertSpaceL1ToSpaceL0OrFail.mockResolvedValue(
+        convertedSpace
+      );
+      spaceService.save.mockResolvedValue(convertedSpace);
+      spaceAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      const updatedLicenses = [{ id: 'license-1' }];
+      spaceLicenseService.applyLicensePolicy.mockResolvedValue(updatedLicenses);
+      licenseService.saveAll.mockResolvedValue(undefined);
+      spaceService.getSpaceOrFail.mockResolvedValue(convertedSpace);
+
+      await resolver.convertSpaceL1ToSpaceL0(actorContext, {
+        spaceL1ID: 'space-l1',
+      });
+
+      expect(spaceLicenseService.applyLicensePolicy).toHaveBeenCalledWith(
+        'space-l0'
+      );
+      expect(licenseService.saveAll).toHaveBeenCalledWith(updatedLicenses);
+      expect(
+        spaceLicenseService.applyLicensePolicy.mock.invocationCallOrder[0]
+      ).toBeGreaterThan(
+        authorizationPolicyService.saveAll.mock.invocationCallOrder[0]
+      );
     });
   });
 
