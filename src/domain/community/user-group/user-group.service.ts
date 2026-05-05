@@ -47,17 +47,28 @@ export class UserGroupService {
     userGroupData: CreateUserGroupInput,
     storageAggregator: IStorageAggregator
   ): Promise<IUserGroup> {
+    // Phase 1: build entity tree in memory (no file-service-go calls).
     const group = UserGroup.create(userGroupData);
     group.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.USER_GROUP
     );
 
-    (group as IUserGroup).profile = await this.profileService.createProfile(
+    const profile = await this.profileService.createProfile(
       userGroupData.profile,
       ProfileType.USER_GROUP,
       storageAggregator
     );
+    (group as IUserGroup).profile = profile;
+    // Phase 2: persist + materialize. Helper rolls back the saved group
+    // on failure so callers receive a fully-materialized group or an
+    // error, never half-state.
     const savedUserGroup = await this.userGroupRepository.save(group);
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      profile,
+      userGroupData.profile?.visuals,
+      [],
+      () => this.removeUserGroup({ ID: savedUserGroup.id })
+    );
     this.logger.verbose?.(
       `Created new group (${group.id}) with name: ${group.profile?.displayName}`,
       LogContext.COMMUNITY

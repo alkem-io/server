@@ -3878,7 +3878,7 @@ type Mutation {
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
-  resetLicenseOnAccounts: Space!
+  resetLicenseOnAccounts: Boolean!
   """Revoke a credential from an Actor."""
   revokeCredentialFromActor(actorID: UUID!, credentialType: CredentialType!, resourceID: UUID): Boolean!
   """Removes an authorization credential from an Organization."""
@@ -8511,19 +8511,19 @@ input UpdateSpaceSettingsCollaborationInput {
   """
   Flag to control if events from Subspaces are visible on this Space calendar as well.
   """
-  allowEventsFromSubspaces: Boolean!
+  allowEventsFromSubspaces: Boolean
   """Flag to control if guest users can contribute to this Space."""
-  allowGuestContributions: Boolean!
+  allowGuestContributions: Boolean
   """Flag to control if members can create callouts."""
-  allowMembersToCreateCallouts: Boolean!
+  allowMembersToCreateCallouts: Boolean
   """Flag to control if members can create subspaces."""
-  allowMembersToCreateSubspaces: Boolean!
+  allowMembersToCreateSubspaces: Boolean
   """Flag to control if members can create video calls in this Space."""
-  allowMembersToVideoCall: Boolean!
+  allowMembersToVideoCall: Boolean
   """
   Flag to control if ability to contribute is inherited from parent Space.
   """
-  inheritMembershipRights: Boolean!
+  inheritMembershipRights: Boolean
 }
 
 input UpdateSpaceSettingsEntityInput {

@@ -61,6 +61,8 @@ subscriptions.log
 .env
 .env.test
 .env.docker
+.env.docker.*
+!.env.docker.*.example
 
 # Synapse signing keys (security sensitive)
 /.build/synapse/signing.key

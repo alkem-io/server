@@ -303,6 +303,58 @@ export class SpaceService {
     );
 
     const spaceUpdated = await this.save(space);
+
+    // Phase 2: post-save content materialization. The full tree is now
+    // persisted (storage buckets have real FKs, collaboration is loadable
+    // for rollback), so file-service-go calls and a subsequent
+    // deleteSpaceOrFail-based rollback both work. We materialize the about
+    // and the collaboration tree together so any failure can be cleaned up
+    // by a single rollback path. Cross-bucket markdown URLs from the
+    // source template (and any temp-location uploads in the user input)
+    // get re-homed into the space's bucket here — fixes #6004 / #6005.
+    //
+    // The OrRollback helper inside each materialize step calls the rollback
+    // callback (delete space) on its own failure and rethrows the original
+    // error, so we don't need a redundant catch around the call.
+    const rollbackSpace = (): Promise<unknown> =>
+      this.deleteSpaceOrFail({ ID: spaceUpdated.id });
+    await this.spaceAboutService.materializeSpaceAboutContent(
+      spaceUpdated.about,
+      modifiedAbout,
+      rollbackSpace
+    );
+    // Collaboration is always created earlier in this method (line 321);
+    // missing here would indicate a bad load or a programmer error.
+    // Fail fast rather than silently leaving the collaboration tree
+    // unmaterialized — that would persist a Space whose callouts still
+    // reference the source template's bucket.
+    if (!spaceUpdated.collaboration) {
+      await rollbackSpace().catch(rollbackError => {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message:
+              'Rollback after missing-collaboration detection also failed',
+            spaceId: spaceUpdated.id,
+            rollbackError: String(rollbackError),
+          },
+          stack,
+          LogContext.SPACES
+        );
+      });
+      throw new RelationshipNotFoundException(
+        'Collaboration not initialized on Space for materialization',
+        LogContext.SPACES,
+        { spaceId: spaceUpdated.id }
+      );
+    }
+    await this.collaborationService.materializeCollaborationContent(
+      spaceUpdated.collaboration,
+      updatedCollaborationData,
+      rollbackSpace
+    );
+
     // If template has child spaces, then create child spaces here
     if (
       templateContentSpace.subspaces &&
@@ -875,67 +927,15 @@ export class SpaceService {
         );
       }
 
-      // Store the old nameID for logging purposes
       const oldNameID = space.nameID;
       space.nameID = updateData.nameID;
 
-      // Invalidate URL cache for this space's profile
-      await this.urlGeneratorCacheService.revokeUrlCache(
-        space.about.profile.id
+      await this.invalidateUrlCacheForSpaceSubtree(space.id);
+
+      this.logger.verbose?.(
+        `Invalidated URL cache subtree for space ${space.id} (nameID: ${oldNameID} -> ${updateData.nameID})`,
+        LogContext.SPACES
       );
-
-      // Invalidate URL cache for all subspaces since their URLs include parent nameIDs
-      if (space.level === SpaceLevel.L0) {
-        // For L0 spaces, invalidate all subspaces in the entire space hierarchy
-        const allSubspaces = await this.spaceRepository.find({
-          where: {
-            levelZeroSpaceID: space.id,
-          },
-          relations: {
-            about: {
-              profile: true,
-            },
-          },
-        });
-
-        for (const subspace of allSubspaces) {
-          if (subspace.about?.profile?.id) {
-            await this.urlGeneratorCacheService.revokeUrlCache(
-              subspace.about.profile.id
-            );
-          }
-        }
-
-        this.logger.verbose?.(
-          `Invalidated URL cache for space ${space.id} (nameID: ${oldNameID} -> ${updateData.nameID}) and ${allSubspaces.length} subspaces`,
-          LogContext.SPACES
-        );
-      } else {
-        // For subspaces, also invalidate any child subspaces
-        const childSubspaces = await this.spaceRepository.find({
-          where: {
-            parentSpace: { id: space.id },
-          },
-          relations: {
-            about: {
-              profile: true,
-            },
-          },
-        });
-
-        for (const childSubspace of childSubspaces) {
-          if (childSubspace.about?.profile?.id) {
-            await this.urlGeneratorCacheService.revokeUrlCache(
-              childSubspace.about.profile.id
-            );
-          }
-        }
-
-        this.logger.verbose?.(
-          `Invalidated URL cache for subspace ${space.id} (nameID: ${oldNameID} -> ${updateData.nameID}) and ${childSubspaces.length} child subspaces`,
-          LogContext.SPACES
-        );
-      }
     }
 
     await this.save(space);
@@ -946,6 +946,52 @@ export class SpaceService {
     return await this.updatePlatformRolesAccessRecursively(
       space,
       parentPlatformRolesAccess
+    );
+  }
+
+  /**
+   * Invalidates URL cache entries for a space and all of its descendant spaces.
+   * Used after operations that change a space's URL path (transfer, L1↔L0/L2 conversion).
+   * Sweeps space-about profiles AND every callout/contribution profile reachable
+   * from those spaces — activity-log entries surface callout-derived URLs, so the
+   * inner sweep is what keeps them from pointing at the old path.
+   */
+  public async invalidateUrlCacheForSpaceSubtree(
+    spaceId: string
+  ): Promise<void> {
+    const descendantIds =
+      await this.spaceLookupService.getAllDescendantSpaceIDs(spaceId);
+    const allSpaceIds = [spaceId, ...descendantIds];
+
+    const spaces = await this.spaceRepository.find({
+      where: { id: In(allSpaceIds) },
+      relations: { about: { profile: true } },
+    });
+
+    for (const space of spaces) {
+      const profileId = space.about?.profile?.id;
+      if (!profileId) {
+        continue;
+      }
+
+      try {
+        await this.urlGeneratorCacheService.revokeUrlCache(profileId);
+      } catch (error) {
+        const stack = error instanceof Error ? (error.stack ?? '') : '';
+        this.logger.error(
+          {
+            message: 'Failed to invalidate URL cache for space subtree',
+            spaceId,
+            profileId,
+          },
+          stack,
+          LogContext.SPACES
+        );
+      }
+    }
+
+    await this.urlGeneratorCacheService.revokeUrlCachesForCalloutsInSpaces(
+      allSpaceIds
     );
   }
 

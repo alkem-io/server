@@ -484,8 +484,13 @@ describe('AccountResolverMutations', () => {
         undefined as any
       );
 
+      const invalidateSpy = vi
+        .mocked(spaceService.invalidateUrlCacheForSpaceSubtree)
+        .mockResolvedValue(undefined as any);
+
       await resolver.transferSpaceToAccount(actorContext, transferData);
       expect(space.account).toBe(targetAccount);
+      expect(invalidateSpy).toHaveBeenCalledWith('space-1');
     });
   });
 

@@ -1,6 +1,7 @@
 import { LicensingCredentialBasedPlanType } from '@common/enums/licensing.credential.based.plan.type';
 import { LogContext } from '@common/enums/logging.context';
 import { ValidationException } from '@common/exceptions';
+import { Account } from '@domain/space/account/account.entity';
 import { IAccount } from '@domain/space/account/account.interface';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
@@ -180,7 +181,7 @@ export class AdminLicensingService {
   }
 
   public async getAllAccounts(): Promise<IAccount[]> {
-    return this.entityManager.find(IAccount, {
+    return this.entityManager.find(Account, {
       relations: {
         license: true,
       },

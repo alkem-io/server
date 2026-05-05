@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.143.0",
+  "version": "0.144.4",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -25,6 +25,7 @@
     "start:services": "docker compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate -d",
     "start:services:kratos:debug": "docker compose -f quickstart-services.yml -f overlays/kratos-debug.yml --env-file .env.docker up --build --force-recreate -d",
     "start:services:ai": "docker compose -f quickstart-services-ai.yml --env-file .env.docker up --build --force-recreate -d",
+    "start:services:ai:scaleway": "docker compose -f quickstart-services-ai.yml --env-file .env.docker.scaleway up --build --force-recreate -d",
     "start:services:ai:debug": "docker compose -f quickstart-services-ai.yml -f overlays/kratos-debug.yml --env-file .env.docker up --build --force-recreate -d",
     "lint": "tsc --noEmit && biome check src/",
     "lint:prod": "tsc --noEmit && biome ci src/",
