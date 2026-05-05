@@ -8,11 +8,13 @@ import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ActivityService } from '@platform/activity/activity.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { EntityManager } from 'typeorm';
 import { CalloutService } from '../callout/callout.service';
 import { CalloutsSetService } from '../callouts-set/callouts.set.service';
 import { CalloutTransferService } from './callout.transfer.service';
@@ -27,6 +29,8 @@ describe('CalloutTransferService', () => {
   let storageAggregatorResolverService: StorageAggregatorResolverService;
   let _classificationService: ClassificationService;
   let _urlGeneratorCacheService: UrlGeneratorCacheService;
+  let activityService: ActivityService;
+  let entityManager: EntityManager;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -52,6 +56,8 @@ describe('CalloutTransferService', () => {
     );
     _classificationService = module.get(ClassificationService);
     _urlGeneratorCacheService = module.get(UrlGeneratorCacheService);
+    activityService = module.get(ActivityService);
+    entityManager = module.get(EntityManager);
   });
 
   describe('transferCallout', () => {
@@ -299,6 +305,108 @@ describe('CalloutTransferService', () => {
       // Should create new tagset from template
       expect(tagsetService.createTagsetWithName).toHaveBeenCalled();
       expect(tagsetService.save).toHaveBeenCalled();
+    });
+
+    it('should re-stamp activity rows from source collaboration to target collaboration', async () => {
+      const callout = {
+        id: 'callout-1',
+        nameID: 'callout',
+        calloutsSet: { id: 'source-cs' },
+      } as any;
+
+      vi.mocked(
+        storageAggregatorResolverService.getStorageAggregatorForCalloutsSet
+      ).mockResolvedValue(storageAggregator);
+      vi.mocked(calloutService.save).mockResolvedValue(callout);
+
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce({
+          id: 'callout-1',
+          framing: { profile: { storageBucket: { id: 'sb-1' } } },
+          contributions: [],
+        } as any) // updateStorageAggregator
+        .mockResolvedValueOnce(calloutForUrlCaches as any) // revokeUrlCaches
+        .mockResolvedValueOnce({
+          id: 'callout-1',
+          framing: {
+            profile: {
+              tagsets: [
+                { id: 'ts-1', name: TagsetReservedName.DEFAULT, tags: [] },
+              ],
+            },
+          },
+        } as any) // updateTagsetsFromTemplates
+        .mockResolvedValueOnce(calloutForClassification as any) // updateClassificationFromTemplates
+        .mockResolvedValueOnce(callout); // final return
+
+      vi.mocked(calloutsSetService.getTagsetTemplatesSet).mockResolvedValue({
+        tagsetTemplates: [],
+      } as any);
+      vi.mocked(
+        profileService.convertTagsetTemplatesToCreateTagsetInput
+      ).mockReturnValue([]);
+
+      // entityManager.findOne returns the source/target collaboration ids in
+      // the order the service awaits them via Promise.all.
+      vi.mocked(entityManager.findOne)
+        .mockResolvedValueOnce({ id: 'collab-source' } as any)
+        .mockResolvedValueOnce({ id: 'collab-target' } as any);
+
+      await service.transferCallout(callout, targetCalloutsSet);
+
+      expect(activityService.moveActivitiesForCallout).toHaveBeenCalledWith(
+        'callout-1',
+        'collab-source',
+        'collab-target'
+      );
+    });
+
+    it('should skip activity move when source calloutsSet has no associated collaboration', async () => {
+      const callout = {
+        id: 'callout-1',
+        nameID: 'callout',
+        calloutsSet: { id: 'template-cs' },
+      } as any;
+
+      vi.mocked(
+        storageAggregatorResolverService.getStorageAggregatorForCalloutsSet
+      ).mockResolvedValue(storageAggregator);
+      vi.mocked(calloutService.save).mockResolvedValue(callout);
+
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce({
+          id: 'callout-1',
+          framing: { profile: { storageBucket: { id: 'sb-1' } } },
+          contributions: [],
+        } as any)
+        .mockResolvedValueOnce(calloutForUrlCaches as any)
+        .mockResolvedValueOnce({
+          id: 'callout-1',
+          framing: {
+            profile: {
+              tagsets: [
+                { id: 'ts-1', name: TagsetReservedName.DEFAULT, tags: [] },
+              ],
+            },
+          },
+        } as any)
+        .mockResolvedValueOnce(calloutForClassification as any)
+        .mockResolvedValueOnce(callout);
+
+      vi.mocked(calloutsSetService.getTagsetTemplatesSet).mockResolvedValue({
+        tagsetTemplates: [],
+      } as any);
+      vi.mocked(
+        profileService.convertTagsetTemplatesToCreateTagsetInput
+      ).mockReturnValue([]);
+
+      vi.mocked(entityManager.findOne)
+        .mockResolvedValueOnce(null) // source collab missing
+        .mockResolvedValueOnce({ id: 'collab-target' } as any);
+
+      await service.transferCallout(callout, targetCalloutsSet);
+
+      expect(activityService.moveActivitiesForCallout).not.toHaveBeenCalled();
     });
 
     it('should throw RelationshipNotFoundException when profile has no tagsets', async () => {
