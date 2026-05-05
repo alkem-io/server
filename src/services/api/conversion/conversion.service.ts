@@ -29,6 +29,7 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { TemplateService } from '@domain/template/template/template.service';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { Inject, LoggerService } from '@nestjs/common';
+import { ActivityService } from '@platform/activity/activity.service';
 import { PlatformService } from '@platform/platform/platform.service';
 import { NotificationInputCommunityInvitation } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.community.invitation';
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
@@ -62,6 +63,7 @@ export class ConversionService {
     private communityResolverService: CommunityResolverService,
     private roleSetAuthorizationService: RoleSetAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private activityService: ActivityService,
     private readonly entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
@@ -234,6 +236,12 @@ export class ConversionService {
         roleSetL1
       );
     }
+
+    // Drop the now-stale SUBSPACE_CREATED entry on the source L0's activity
+    // log — the moved space is no longer a subspace of that L0.
+    await this.activityService.removeSubspaceCreatedActivityForResource(
+      spaceL1.id
+    );
 
     return spaceL1;
   }
@@ -479,6 +487,13 @@ export class ConversionService {
         userAdmin.id
       );
     }
+
+    // Drop the now-stale SUBSPACE_CREATED entry on the source L0's activity
+    // log — the demoted space is no longer a direct subspace of that L0.
+    await this.activityService.removeSubspaceCreatedActivityForResource(
+      spaceL1.id
+    );
+
     return spaceL1;
   }
 
@@ -703,6 +718,12 @@ export class ConversionService {
       targetL0.account.accountType
     );
 
+    // Drop the now-stale SUBSPACE_CREATED entry on the source L0's activity
+    // log — the moved space lives under a different L0 now.
+    await this.activityService.removeSubspaceCreatedActivityForResource(
+      savedSpace.id
+    );
+
     return { space: savedSpace, removedActorIds: uniqueRemovedActorIds };
   }
 
@@ -858,6 +879,12 @@ export class ConversionService {
     await this.accountHostService.assignLicensePlansToSpace(
       savedSpace.id,
       targetL0.account.accountType
+    );
+
+    // Drop the now-stale SUBSPACE_CREATED entry on the source parent's
+    // activity log — the moved space is no longer a subspace under it.
+    await this.activityService.removeSubspaceCreatedActivityForResource(
+      savedSpace.id
     );
 
     return { space: savedSpace, removedActorIds };

@@ -14,6 +14,7 @@ import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.modul
 import { TemplateModule } from '@domain/template/template/template.module';
 import { TemplatesManagerModule } from '@domain/template/templates-manager/templates.manager.module';
 import { Module } from '@nestjs/common';
+import { ActivityModule } from '@platform/activity/activity.module';
 import { PlatformModule } from '@platform/platform/platform.module';
 import { AiServerAdapterModule } from '@services/adapters/ai-server-adapter/ai.server.adapter.module';
 import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
@@ -48,6 +49,7 @@ import { ConversionService } from './conversion.service';
     AiServerAdapterModule,
     NotificationAdapterModule,
     EntityResolverModule,
+    ActivityModule,
   ],
   providers: [ConversionService, ConversionResolverMutations],
   exports: [ConversionService, ConversionResolverMutations],

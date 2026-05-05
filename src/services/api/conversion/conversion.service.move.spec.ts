@@ -8,6 +8,7 @@ import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.
 import { SpaceService } from '@domain/space/space/space.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ActivityService } from '@platform/activity/activity.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -23,6 +24,7 @@ describe('ConversionService — Cross-L0 Moves', () => {
   let entityManager: Record<string, Mock>;
   let spaceLookupService: Record<string, Mock>;
   let calloutsSetService: Record<string, Mock>;
+  let activityService: Record<string, Mock>;
 
   // Reusable mock chain for EntityManager.createQueryBuilder()
   const mockQueryBuilder = () => {
@@ -129,6 +131,10 @@ describe('ConversionService — Cross-L0 Moves', () => {
       Mock
     >;
     calloutsSetService = module.get(CalloutsSetService) as unknown as Record<
+      string,
+      Mock
+    >;
+    activityService = module.get(ActivityService) as unknown as Record<
       string,
       Mock
     >;
@@ -342,6 +348,22 @@ describe('ConversionService — Cross-L0 Moves', () => {
         roleSetService.removePendingInvitationsAndApplications
       ).toHaveBeenCalledWith(['roleset-l1', 'roleset-child-l2-a']);
     });
+
+    it('should drop the stale SUBSPACE_CREATED activity entry on the source parent', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL1())
+        .mockResolvedValueOnce(makeTargetL0());
+      setupHappyPathMocks();
+
+      await service.moveSpaceL1ToSpaceL0OrFail({
+        spaceL1ID: 'source-l1',
+        targetSpaceL0ID: 'target-l0',
+      });
+
+      expect(
+        activityService.removeSubspaceCreatedActivityForResource
+      ).toHaveBeenCalledWith('source-l1');
+    });
   });
 
   // ── moveSpaceL1ToSpaceL2OrFail ──────────────────────────────────
@@ -512,6 +534,23 @@ describe('ConversionService — Cross-L0 Moves', () => {
       expect(
         roleSetService.removePendingInvitationsAndApplications
       ).toHaveBeenCalledWith('roleset-l1');
+    });
+
+    it('should drop the stale SUBSPACE_CREATED activity entry on the source parent', async () => {
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(makeSourceL1())
+        .mockResolvedValueOnce(makeTargetL1())
+        .mockResolvedValueOnce(makeTargetL0());
+      setupHappyPathMocks();
+
+      await service.moveSpaceL1ToSpaceL2OrFail({
+        spaceL1ID: 'source-l1',
+        targetSpaceL1ID: 'target-l1',
+      });
+
+      expect(
+        activityService.removeSubspaceCreatedActivityForResource
+      ).toHaveBeenCalledWith('source-l1');
     });
   });
 

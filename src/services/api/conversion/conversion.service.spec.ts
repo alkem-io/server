@@ -11,6 +11,7 @@ import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.serv
 import { TemplateService } from '@domain/template/template/template.service';
 import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ActivityService } from '@platform/activity/activity.service';
 import { PlatformService } from '@platform/platform/platform.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -31,6 +32,7 @@ describe('ConversionService', () => {
   let templateService: Record<string, Mock>;
   let inputCreatorService: Record<string, Mock>;
   let innovationFlowService: Record<string, Mock>;
+  let activityService: Record<string, Mock>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -77,6 +79,10 @@ describe('ConversionService', () => {
     innovationFlowService = module.get(
       InnovationFlowService
     ) as unknown as Record<string, Mock>;
+    activityService = module.get(ActivityService) as unknown as Record<
+      string,
+      Mock
+    >;
   });
 
   // Stubs every roleSetService accessor used by getSpaceCommunityRoles so
@@ -335,6 +341,39 @@ describe('ConversionService', () => {
       expect(
         roleSetService.removePendingInvitationsAndApplications
       ).toHaveBeenCalledWith('roleset-l1');
+    });
+
+    it('should drop the stale SUBSPACE_CREATED activity entry on the source L0', async () => {
+      const roleSetL1 = { id: 'roleset-l1' };
+      const spaceL1 = {
+        id: 'space-l1',
+        levelZeroSpaceID: 'l0-a',
+        community: { roleSet: roleSetL1 },
+        storageAggregator: { id: 'sa-l1' },
+      };
+      const parentL1 = {
+        id: 'parent-l1',
+        levelZeroSpaceID: 'l0-a',
+        storageAggregator: { id: 'sa-parent-l1' },
+        community: { roleSet: { id: 'roleset-parent-l1' } },
+      };
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(spaceL1)
+        .mockResolvedValueOnce(parentL1);
+      stubEmptyCommunityRoles();
+      vi.mocked(
+        roleSetService.setParentRoleSetAndCredentials
+      ).mockResolvedValue(roleSetL1);
+      vi.mocked(spaceService.save).mockImplementation(async (s: unknown) => s);
+
+      await service.convertSpaceL1ToSpaceL2OrFail({
+        spaceL1ID: 'space-l1',
+        parentSpaceL1ID: 'parent-l1',
+      });
+
+      expect(
+        activityService.removeSubspaceCreatedActivityForResource
+      ).toHaveBeenCalledWith('space-l1');
     });
   });
 
