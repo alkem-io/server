@@ -487,6 +487,13 @@ export class ConversionService {
         userAdmin.id
       );
     }
+
+    // Drop the now-stale SUBSPACE_CREATED entry on the source L0's activity
+    // log — the demoted space is no longer a direct subspace of that L0.
+    await this.activityService.removeSubspaceCreatedActivityForResource(
+      spaceL1.id
+    );
+
     return spaceL1;
   }
 

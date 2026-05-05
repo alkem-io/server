@@ -49,9 +49,9 @@ export class CalloutTransferService {
       callout.nameID
     );
 
-    // Capture source collab id BEFORE swapping the calloutsSet so we can
-    // re-stamp activity rows after the move.
-    const sourceCalloutsSetID = callout.calloutsSet?.id;
+    // Capture source calloutsSet id BEFORE swapping so we can re-stamp
+    // activity rows after the move.
+    const sourceCalloutsSetID = await this.resolveSourceCalloutsSetID(callout);
 
     // Update all the storage aggregators
     const storageAggregator =
@@ -95,14 +95,33 @@ export class CalloutTransferService {
     return await this.calloutService.getCalloutOrFail(updatedCallout.id);
   }
 
+  // Callers may pass a partial entity without calloutsSet hydrated (e.g. when
+  // iterating a CalloutsSet's callouts — TypeORM does not back-populate the
+  // inverse side), so fall back to a DB lookup and fail fast if still missing.
+  private async resolveSourceCalloutsSetID(callout: ICallout): Promise<string> {
+    if (callout.calloutsSet?.id) {
+      return callout.calloutsSet.id;
+    }
+    const persisted = await this.calloutService.getCalloutOrFail(callout.id, {
+      loadEagerRelations: false,
+      relations: { calloutsSet: true },
+      select: { id: true, calloutsSet: { id: true } },
+    });
+    if (!persisted.calloutsSet?.id) {
+      throw new RelationshipNotFoundException(
+        'Cannot resolve source CalloutsSet for callout transfer',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id }
+      );
+    }
+    return persisted.calloutsSet.id;
+  }
+
   private async moveActivityLogForCallout(
     calloutID: string,
-    sourceCalloutsSetID: string | undefined,
+    sourceCalloutsSetID: string,
     targetCalloutsSetID: string
   ): Promise<void> {
-    if (!sourceCalloutsSetID) {
-      return;
-    }
     const [sourceCollab, targetCollab] = await Promise.all([
       this.entityManager.findOne(Collaboration, {
         loadEagerRelations: false,

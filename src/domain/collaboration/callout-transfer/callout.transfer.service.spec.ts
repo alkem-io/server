@@ -222,6 +222,7 @@ describe('CalloutTransferService', () => {
       const callout = {
         id: 'callout-1',
         nameID: 'callout',
+        calloutsSet: { id: 'src-cs' },
       } as any;
 
       vi.mocked(
@@ -245,6 +246,7 @@ describe('CalloutTransferService', () => {
       const callout = {
         id: 'callout-1',
         nameID: 'callout',
+        calloutsSet: { id: 'src-cs' },
       } as any;
 
       vi.mocked(
@@ -413,6 +415,7 @@ describe('CalloutTransferService', () => {
       const callout = {
         id: 'callout-1',
         nameID: 'callout',
+        calloutsSet: { id: 'src-cs' },
       } as any;
 
       vi.mocked(
@@ -439,6 +442,80 @@ describe('CalloutTransferService', () => {
 
       vi.mocked(calloutsSetService.getTagsetTemplatesSet).mockResolvedValue({
         tagsetTemplates: [],
+      } as any);
+
+      await expect(
+        service.transferCallout(callout, targetCalloutsSet)
+      ).rejects.toThrow(RelationshipNotFoundException);
+    });
+
+    it('should resolve sourceCalloutsSetID from persistence when not on the input entity', async () => {
+      // Caller iterates a CalloutsSet's callouts; TypeORM does not back-populate
+      // the inverse calloutsSet on each child, so it arrives undefined.
+      const callout = {
+        id: 'callout-1',
+        nameID: 'callout',
+      } as any;
+
+      vi.mocked(
+        storageAggregatorResolverService.getStorageAggregatorForCalloutsSet
+      ).mockResolvedValue(storageAggregator);
+      vi.mocked(calloutService.save).mockResolvedValue(callout);
+
+      vi.mocked(calloutService.getCalloutOrFail)
+        .mockResolvedValueOnce({
+          id: 'callout-1',
+          calloutsSet: { id: 'resolved-src-cs' },
+        } as any) // fallback resolve
+        .mockResolvedValueOnce({
+          id: 'callout-1',
+          framing: { profile: { storageBucket: { id: 'sb-1' } } },
+          contributions: [],
+        } as any) // updateStorageAggregator
+        .mockResolvedValueOnce(calloutForUrlCaches as any) // revokeUrlCaches
+        .mockResolvedValueOnce({
+          id: 'callout-1',
+          framing: {
+            profile: {
+              tagsets: [
+                { id: 'ts-1', name: TagsetReservedName.DEFAULT, tags: [] },
+              ],
+            },
+          },
+        } as any) // updateTagsetsFromTemplates
+        .mockResolvedValueOnce(calloutForClassification as any) // updateClassificationFromTemplates
+        .mockResolvedValueOnce(callout); // final return
+
+      vi.mocked(calloutsSetService.getTagsetTemplatesSet).mockResolvedValue({
+        tagsetTemplates: [],
+      } as any);
+      vi.mocked(
+        profileService.convertTagsetTemplatesToCreateTagsetInput
+      ).mockReturnValue([]);
+
+      vi.mocked(entityManager.findOne)
+        .mockResolvedValueOnce({ id: 'collab-source' } as any)
+        .mockResolvedValueOnce({ id: 'collab-target' } as any);
+
+      await service.transferCallout(callout, targetCalloutsSet);
+
+      // Activity move should fire using the resolved source calloutsSet id
+      expect(activityService.moveActivitiesForCallout).toHaveBeenCalledWith(
+        'callout-1',
+        'collab-source',
+        'collab-target'
+      );
+    });
+
+    it('should throw RelationshipNotFoundException when source calloutsSet cannot be resolved', async () => {
+      const callout = {
+        id: 'callout-1',
+        nameID: 'callout',
+      } as any;
+
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValueOnce({
+        id: 'callout-1',
+        calloutsSet: undefined,
       } as any);
 
       await expect(
