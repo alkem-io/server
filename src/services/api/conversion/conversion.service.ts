@@ -34,9 +34,8 @@ import { NotificationInputCommunityInvitation } from '@services/adapters/notific
 import { NotificationUserAdapter } from '@services/adapters/notification-adapter/notification.user.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
-import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager } from 'typeorm';
+import { EntityManager, In } from 'typeorm';
 import { InputCreatorService } from '../input-creator/input.creator.service';
 import { ConvertSpaceL1ToSpaceL0Input } from './dto/convert.dto.space.l1.to.space.l0.input';
 import { ConvertSpaceL1ToSpaceL2Input } from './dto/convert.dto.space.l1.to.space.l2.input';
@@ -58,7 +57,6 @@ export class ConversionService {
     private spaceLookupService: SpaceLookupService,
     private classificationService: ClassificationService,
     private calloutsSetService: CalloutsSetService,
-    private urlGeneratorCacheService: UrlGeneratorCacheService,
     private spaceMoveRoomsService: SpaceMoveRoomsService,
     private notificationUserAdapter: NotificationUserAdapter,
     private communityResolverService: CommunityResolverService,
@@ -147,6 +145,28 @@ export class ConversionService {
         false
       );
     }
+
+    // Pending invitations / applications target the current space hierarchy;
+    // after conversion they would resolve into a broken parent lookup
+    // (alkem-io/server#5069), so drop them on this and every descendant.
+    const descendantSpaceIDsForL0Promotion =
+      await this.spaceLookupService.getAllDescendantSpaceIDs(spaceL1.id);
+    const descendantSpacesForL0Promotion =
+      descendantSpaceIDsForL0Promotion.length > 0
+        ? await this.spaceService.getAllSpaces({
+            where: { id: In(descendantSpaceIDsForL0Promotion) },
+            relations: { community: { roleSet: true } },
+          })
+        : [];
+    const roleSetIDsForL0Promotion = [
+      roleSetL1.id,
+      ...descendantSpacesForL0Promotion
+        .map(s => s.community?.roleSet?.id)
+        .filter((id): id is string => !!id),
+    ];
+    await this.roleSetService.removePendingInvitationsAndApplications(
+      roleSetIDsForL0Promotion
+    );
 
     const reservedNameIDs =
       await this.namingService.getReservedNameIDsLevelZeroSpaces();
@@ -351,6 +371,12 @@ export class ConversionService {
       );
     }
 
+    // Drop pending invitations/applications: targets the L2's current parent
+    // chain, which is being rewritten (alkem-io/server#5069).
+    await this.roleSetService.removePendingInvitationsAndApplications(
+      roleSetL2.id
+    );
+
     spaceL2 = await this.updateChildSpaceL2ToL1(
       spaceL2.id,
       spaceL0,
@@ -427,6 +453,12 @@ export class ConversionService {
 
     const spaceCommunityRoles = await this.getSpaceCommunityRoles(roleSetL1);
     await this.removeContributors(roleSetL1, spaceCommunityRoles);
+
+    // Drop pending invitations/applications: targets the L1's existing
+    // hierarchy, invalid once it becomes an L2 (alkem-io/server#5069).
+    await this.roleSetService.removePendingInvitationsAndApplications(
+      roleSetL1.id
+    );
 
     spaceL1.level = SpaceLevel.L2;
     spaceL1.parentSpace = parentSpaceL1;
@@ -607,6 +639,26 @@ export class ConversionService {
       );
     }
 
+    // 7b. Drop pending invitations/applications across the moved subtree —
+    // current invites resolve against the source L0's hierarchy
+    // (alkem-io/server#5069).
+    const descendantSpacesForMove =
+      descendantSpaceIds.length > 0
+        ? await this.spaceService.getAllSpaces({
+            where: { id: In(descendantSpaceIds) },
+            relations: { community: { roleSet: true } },
+          })
+        : [];
+    const roleSetIDsForMove = [
+      roleSetL1.id,
+      ...descendantSpacesForMove
+        .map(s => s.community?.roleSet?.id)
+        .filter((id): id is string => !!id),
+    ];
+    await this.roleSetService.removePendingInvitationsAndApplications(
+      roleSetIDsForMove
+    );
+
     // 8. Update structural fields
     sourceL1.parentSpace = targetL0;
     sourceL1.levelZeroSpaceID = targetL0.id;
@@ -766,6 +818,12 @@ export class ConversionService {
         false
       );
     }
+
+    // 8b. Drop pending invitations/applications — current invites point at
+    // the source L0's hierarchy (alkem-io/server#5069).
+    await this.roleSetService.removePendingInvitationsAndApplications(
+      roleSetL1.id
+    );
 
     // 9. Update structural fields — demote to L2
     sourceL1.level = SpaceLevel.L2;
@@ -1017,23 +1075,12 @@ export class ConversionService {
   }
 
   /**
-   * Invalidates URL caches for all space profiles in the moved subtree.
+   * Invalidates URL caches for the moved subtree. Delegates to SpaceService so
+   * convert/move/transfer mutations share the same sweep (space-about plus every
+   * callout/contribution profile inside the subtree).
    */
   async invalidateUrlCachesForSubtree(movedSpaceId: string): Promise<void> {
-    const descendantIds =
-      await this.spaceLookupService.getAllDescendantSpaceIDs(movedSpaceId);
-    const allSpaceIds = [movedSpaceId, ...descendantIds];
-
-    for (const spaceId of allSpaceIds) {
-      const space = await this.spaceService.getSpaceOrFail(spaceId, {
-        relations: { about: { profile: true } },
-      });
-      if (space.about?.profile?.id) {
-        await this.urlGeneratorCacheService.revokeUrlCache(
-          space.about.profile.id
-        );
-      }
-    }
+    await this.spaceService.invalidateUrlCacheForSpaceSubtree(movedSpaceId);
   }
 
   get moveRoomsService(): SpaceMoveRoomsService {

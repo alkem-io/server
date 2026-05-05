@@ -5,6 +5,7 @@ import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.s
 import { InnovationFlowModule } from '@domain/collaboration/innovation-flow/innovation.flow.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ClassificationModule } from '@domain/common/classification/classification.module';
+import { LicenseModule } from '@domain/common/license/license.module';
 import { SpaceMoveRoomsModule } from '@domain/communication/space-move-rooms/space.move.rooms.module';
 import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { AccountHostModule } from '@domain/space/account.host/account.host.module';
@@ -31,6 +32,7 @@ import { ConversionService } from './conversion.service';
     AccountHostModule,
     RoleSetModule,
     AuthorizationPolicyModule,
+    LicenseModule,
     InputCreatorModule,
     NamingModule,
     PlatformModule,
