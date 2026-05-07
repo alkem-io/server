@@ -10,6 +10,7 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import {
   EntityNotFoundException,
   RelationshipNotFoundException,
+  ValidationException,
 } from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -44,45 +45,41 @@ export class CollaboraDocumentService {
     private fileServiceAdapter: FileServiceAdapter
   ) {}
 
+  /**
+   * Materialize a CollaboraDocument. Two sources of bytes:
+   *
+   *   - **Blank**: `input.documentType` + `input.displayName` required. We
+   *     write a zero-byte placeholder with the canonical MIME for the
+   *     chosen category. Collabora detects Size=0 in CheckFileInfo and
+   *     auto-generates a blank document via PutFile (WOPI "editnew").
+   *
+   *   - **Upload**: `input.uploadedFile` is the user's bytes. file-service-go
+   *     sniffs the MIME from content and rejects anything outside
+   *     COLLABORA_SUPPORTED_MIMES (passed as the allowlist). The sniffed
+   *     value drives `documentType` + `originalMimeType`. `displayName`
+   *     defaults from the uploaded filename (extension stripped) when
+   *     absent or empty.
+   *
+   * The flow is identical for both modes: stage the bytes via file-service-go
+   * (upload uses `temporaryLocation: true` so a downstream entity-build
+   * failure can roll the file row back; blank writes directly to permanent
+   * since the placeholder has no rollback risk), build the entity (profile,
+   * tagset, auth), and on the upload path flip the file out of temp at the
+   * end. Any failure between staging and the final return rolls back the
+   * staged file (and the profile, if it was created).
+   */
   public async createCollaboraDocument(
     input: CreateCollaboraDocumentInput,
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<ICollaboraDocument> {
-    const collaboraDocument: ICollaboraDocument = new CollaboraDocument();
-    collaboraDocument.documentType = input.documentType;
-    // Pick the canonical MIME for this category — the blank-create flow
-    // always materializes one specific format per category. Imports
-    // populate this from the actual sniffed MIME instead.
-    collaboraDocument.originalMimeType = this.getDefaultMimeForCreate(
-      input.documentType
-    );
-    collaboraDocument.createdBy = userID;
-    collaboraDocument.authorization = new AuthorizationPolicy(
-      AuthorizationPolicyType.COLLABORA_DOCUMENT
-    );
-
-    // Create profile for the collabora document
-    collaboraDocument.profile = await this.profileService.createProfile(
-      { displayName: input.displayName },
-      ProfileType.COLLABORA_DOCUMENT,
-      storageAggregator
-    );
-    await this.profileService.addOrUpdateTagsetOnProfile(
-      collaboraDocument.profile,
-      {
-        name: TagsetReservedName.DEFAULT,
-        tags: [],
-      }
-    );
-
-    // Create a zero-byte file with the correct MIME type and extension.
-    // Collabora detects Size=0 in CheckFileInfo and auto-generates a blank
-    // document via PutFile (WOPI "editnew" pattern).
-    // If upload fails, clean up the already-created profile to avoid orphans.
-    const emptyBuffer = Buffer.alloc(0);
-    const mimeType = collaboraDocument.originalMimeType;
-    const fileName = `${input.displayName}${MIME_TO_EXTENSION[mimeType]}`;
+    const isUpload = !!input.uploadedFile;
+    if (!isUpload && (!input.displayName || !input.documentType)) {
+      throw new ValidationException(
+        'createCollaboraDocument requires displayName and documentType when no file is supplied.',
+        LogContext.COLLABORATION
+      );
+    }
 
     const directStorage =
       await this.storageAggregatorService.getDirectStorageBucket(
@@ -90,128 +87,87 @@ export class CollaboraDocumentService {
       );
     const storageBucketId = directStorage.id;
 
-    let document;
-    try {
-      // Skip file-service-go's content-hash dedup: the empty placeholder
-      // here only establishes identity for WOPI; Collabora writes the real
-      // content via PutFile later. Two collabora docs created in the same
-      // bucket with `Buffer.alloc(0)` would otherwise share a backing row
-      // and corrupt each other's edits.
-      document = await this.storageBucketService.uploadFileAsDocumentFromBuffer(
+    // Stage the bytes. skipDedup=true on both modes: each Collabora doc owns
+    // its own backing row, otherwise two blank docs in the same bucket would
+    // alias on Buffer.alloc(0) and corrupt each other's edits.
+    const blankCanonicalMime = isUpload
+      ? undefined
+      : this.getDefaultMimeForCreate(input.documentType!);
+    const stageBuffer = isUpload ? input.uploadedFile!.buffer : Buffer.alloc(0);
+    const stageMimeHint = isUpload
+      ? input.uploadedFile!.mimetype
+      : blankCanonicalMime!;
+    const stageFilename = isUpload
+      ? input.uploadedFile!.filename
+      : `${input.displayName}${MIME_TO_EXTENSION[blankCanonicalMime!]}`;
+
+    const document =
+      await this.storageBucketService.uploadFileAsDocumentFromBuffer(
         storageBucketId,
-        emptyBuffer,
-        fileName,
-        mimeType,
+        stageBuffer,
+        stageFilename,
+        stageMimeHint,
         userID,
-        false,
-        true
+        isUpload, // temporaryLocation — finalize at the end on upload only
+        true, // skipDedup
+        isUpload ? COLLABORA_SUPPORTED_MIMES : undefined
       );
-    } catch (error) {
-      // Compensate: remove the profile created above
-      try {
-        await this.profileService.deleteProfile(collaboraDocument.profile.id);
-      } catch (_cleanupError) {
-        this.logger.warn?.(
-          `Failed to clean up profile ${collaboraDocument.profile.id} after document upload failure`,
-          LogContext.COLLABORATION
-        );
+
+    // From here on, any failure must roll back what was staged: the file
+    // row always, and the profile too if it was created before the failure.
+    let createdProfileId: string | undefined;
+    try {
+      // Resolve documentType + originalMimeType. On upload the sniffed MIME
+      // is authoritative; any documentType in the input is ignored. On blank
+      // the input drives both.
+      let documentType: CollaboraDocumentType;
+      let originalMimeType: string;
+      if (isUpload) {
+        originalMimeType = document.mimeType;
+        const derivedType = MIME_TO_DOCUMENT_TYPE[originalMimeType];
+        if (!derivedType) {
+          // file-service-go's allowlist matched COLLABORA_SUPPORTED_MIMES,
+          // so this would be a bug in our static maps.
+          throw new RelationshipNotFoundException(
+            'Imported file MIME not in CollaboraDocument category map',
+            LogContext.COLLABORATION,
+            { sniffedMime: originalMimeType }
+          );
+        }
+        documentType = derivedType;
+      } else {
+        documentType = input.documentType!;
+        originalMimeType = blankCanonicalMime!;
       }
-      throw error;
-    }
 
-    collaboraDocument.document = document;
+      // Resolve displayName. Explicit input wins; on upload, fall back to
+      // the filename (extension stripped) when input is absent or empty
+      // (per FR-012). The blank path validates input.displayName up front,
+      // so neither fallback below is reachable on that path; the literal
+      // `'Imported document'` is only ever used when an upload arrives with
+      // no input override and a filename whose strip-extension result is
+      // empty (e.g. `.docx`).
+      const displayName =
+        input.displayName ||
+        (isUpload
+          ? this.deriveDisplayNameFromFilename(input.uploadedFile!.filename)
+          : undefined) ||
+        'Imported document';
 
-    return collaboraDocument;
-  }
-
-  /**
-   * Build a CollaboraDocument from an uploaded file. Mirrors
-   * `createCollaboraDocument` for the post-doc bookkeeping (profile,
-   * auth, tagset, error rollback) but starts from real content
-   * instead of `Buffer.alloc(0)`. file-service-go sniffs the actual
-   * MIME from content and rejects anything outside our supported list
-   * with `415 ErrUnsupportedMediaType`. We never inspect file bytes
-   * server-side — the sniffed MIME comes back on the response and
-   * drives `documentType` + `originalMimeType`.
-   *
-   * Two-phase via `temporaryLocation: true`: the upload lands in temp
-   * first, we link it to the entity and persist, then flip
-   * `temporaryLocation: false`. If anything between upload and finalize
-   * fails, the temp row is deleted so we don't leak orphans.
-   */
-  public async importCollaboraDocument(
-    file: { buffer: Buffer; filename: string; mimetype: string },
-    displayNameOverride: string | undefined,
-    storageAggregator: IStorageAggregator,
-    userID?: string
-  ): Promise<ICollaboraDocument> {
-    const directStorage =
-      await this.storageAggregatorService.getDirectStorageBucket(
-        storageAggregator
+      const collaboraDocument: ICollaboraDocument = new CollaboraDocument();
+      collaboraDocument.documentType = documentType;
+      collaboraDocument.originalMimeType = originalMimeType;
+      collaboraDocument.createdBy = userID;
+      collaboraDocument.authorization = new AuthorizationPolicy(
+        AuthorizationPolicyType.COLLABORA_DOCUMENT
       );
-    const storageBucketId = directStorage.id;
 
-    // Phase 1: upload to a temp location. Server doesn't sniff MIME —
-    // file-service-go does, and rejects anything outside our supported
-    // list (passed via the override). The returned `document.mimeType`
-    // is the sniffed value, not the caller-claimed `file.mimetype`.
-    let document;
-    try {
-      document = await this.storageBucketService.uploadFileAsDocumentFromBuffer(
-        storageBucketId,
-        file.buffer,
-        file.filename,
-        file.mimetype,
-        userID,
-        true, // temporaryLocation — finalize after entity wiring
-        true, // skipDedup — each import gets its own row
-        COLLABORA_SUPPORTED_MIMES
-      );
-    } catch (error) {
-      // file-service-go rejected (unsupported MIME, size, etc.) — nothing
-      // to clean up, just propagate.
-      throw error;
-    }
-
-    const sniffedMime = document.mimeType;
-    const documentType = MIME_TO_DOCUMENT_TYPE[sniffedMime];
-    if (!documentType) {
-      // Defensive: file-service-go's allowlist matched our list, so this
-      // would be a bug in our static maps. Clean up the temp row before
-      // throwing so we don't leak a now-unreferenceable file.
-      await this.fileServiceAdapter
-        .deleteDocument(document.id)
-        .catch(() => undefined);
-      throw new RelationshipNotFoundException(
-        'Imported file MIME not in CollaboraDocument category map',
-        LogContext.COLLABORATION,
-        { sniffedMime }
-      );
-    }
-
-    // Derive the user-visible display name. Prefer the explicit override;
-    // else strip the extension from the original filename.
-    const displayName =
-      displayNameOverride ??
-      this.deriveDisplayNameFromFilename(file.filename) ??
-      'Imported document';
-
-    // Phase 2: build the entity. Profile + auth follow the same pattern
-    // as the blank-create flow.
-    const collaboraDocument: ICollaboraDocument = new CollaboraDocument();
-    collaboraDocument.documentType = documentType;
-    collaboraDocument.originalMimeType = sniffedMime;
-    collaboraDocument.createdBy = userID;
-    collaboraDocument.authorization = new AuthorizationPolicy(
-      AuthorizationPolicyType.COLLABORA_DOCUMENT
-    );
-
-    try {
       collaboraDocument.profile = await this.profileService.createProfile(
         { displayName },
         ProfileType.COLLABORA_DOCUMENT,
         storageAggregator
       );
+      createdProfileId = collaboraDocument.profile.id;
       await this.profileService.addOrUpdateTagsetOnProfile(
         collaboraDocument.profile,
         {
@@ -219,44 +175,40 @@ export class CollaboraDocumentService {
           tags: [],
         }
       );
-    } catch (error) {
-      // Clean up the temp file row so we don't leak it.
-      await this.fileServiceAdapter
-        .deleteDocument(document.id)
-        .catch(() => undefined);
-      throw error;
-    }
 
-    collaboraDocument.document = document;
+      collaboraDocument.document = document;
 
-    // Phase 3: finalize — flip the file row out of temp. Doing this after
-    // the entity is constructed (but before save) means a save failure
-    // leaves an orphan permanent file; we accept that trade-off because
-    // the alternative — finalize-after-save — opens a worse window where
-    // a temp file is still permanently linked to a saved entity (the
-    // first edit would create a new row via the usual temp→permanent
-    // dance and silently orphan the original).
-    try {
-      await this.fileServiceAdapter.updateDocument(document.id, {
-        temporaryLocation: false,
-      });
+      // Upload-only finalize. Done after entity wiring (but before any caller
+      // save) so a save failure leaves an orphan permanent file rather than
+      // a still-temp file linked to a saved entity — the latter would race
+      // with the first edit's temp→permanent dance and silently orphan the
+      // original.
+      if (isUpload) {
+        await this.fileServiceAdapter.updateDocument(document.id, {
+          temporaryLocation: false,
+        });
+      }
+
+      return collaboraDocument;
     } catch (error) {
-      // Best-effort cleanup before propagating.
-      try {
-        await this.profileService.deleteProfile(collaboraDocument.profile.id);
-      } catch (_cleanupError) {
-        this.logger.warn?.(
-          `Failed to clean up profile ${collaboraDocument.profile.id} after import finalize failure`,
-          LogContext.COLLABORATION
-        );
+      // Compensate: drop the profile if we got that far, and the staged
+      // file row always. file-service-go's deleteDocument works on both
+      // temporary and permanent rows so a single call cleans up either mode.
+      if (createdProfileId) {
+        try {
+          await this.profileService.deleteProfile(createdProfileId);
+        } catch (_cleanupError) {
+          this.logger.warn?.(
+            `Failed to clean up profile ${createdProfileId} during createCollaboraDocument rollback`,
+            LogContext.COLLABORATION
+          );
+        }
       }
       await this.fileServiceAdapter
         .deleteDocument(document.id)
         .catch(() => undefined);
       throw error;
     }
-
-    return collaboraDocument;
   }
 
   /**

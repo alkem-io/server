@@ -239,6 +239,8 @@ Key rules:
 - PostgreSQL 17.5 (file table — renamed from document — read-only for server) (085-file-service-migration)
 - TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, TypeORM 0.3, `@nestjs/axios` (axios), GraphQL 16 (086-collabora-integration)
 - PostgreSQL 17.5 (new `collabora_document` table + FK on `callout_contribution`) (086-collabora-integration)
+- TypeScript 5.3, Node.js 22 LTS (Volta 22.21.1) + NestJS 10, Apollo Server 4, GraphQL 16, TypeORM 0.3 (custom fork `pkg.pr.new/antst/typeorm`), `graphql-upload` v15 (existing — used by every current `Upload` mutation), `class-validator`, `class-transformer` (095-collabora-import)
+- PostgreSQL 17.5; framing Collabora document persisted via existing `collabora_document` table; bytes via existing storage subsystem and file-service-go (Go service exposing the upload/sniff/validate API used today by `importCollaboraDocument`) (095-collabora-import)
 
 ## Recent Changes
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting

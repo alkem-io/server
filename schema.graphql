@@ -2335,10 +2335,14 @@ type CreateClassificationData {
 }
 
 type CreateCollaboraDocumentData {
-  """Title for the new collaborative document."""
-  displayName: String!
-  """Type of document to create."""
-  documentType: CollaboraDocumentType!
+  """
+  Title for the new collaborative document. Required for blank-create. On the upload path, defaulted from the uploaded filename (extension stripped) when absent or empty.
+  """
+  displayName: String
+  """
+  Type of document to create. Required for blank-create. On the upload path, ignored — the type is derived from the uploaded file's sniffed MIME by file-service-go.
+  """
+  documentType: CollaboraDocumentType
 }
 
 type CreateCollaborationData {
@@ -3737,8 +3741,10 @@ type Mutation {
   Convert a VC of type ALKEMIO_SPACE to be of type KNOWLEDGE_BASE. All Callouts from the Space currently being used are moved to the Knowledge Base. Note: only allowed for VCs using a Space within the same Account.
   """
   convertVirtualContributorToUseKnowledgeBase(conversionData: ConversionVcSpaceToVcKnowledgeBaseInput!): VirtualContributor!
-  """Create a new Callout on the CalloutsSet."""
-  createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!): Callout!
+  """
+  Create a new Callout on the CalloutsSet. When `file` is supplied alongside a COLLABORA_DOCUMENT framing, the new callout is framed with a Collabora document populated from the uploaded bytes (file-service-go sniffs MIME, validates format and size, and derives the document type; any documentType in the input is ignored on the upload path; displayName defaults from the filename when absent). When `file` is omitted, the existing blank-create behaviour applies and framing.collaboraDocument must specify both displayName and documentType.
+  """
+  createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!, file: Upload): Callout!
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
   """
@@ -7021,10 +7027,14 @@ input CreateClassificationInput {
 }
 
 input CreateCollaboraDocumentInput {
-  """Title for the new collaborative document."""
-  displayName: String!
-  """Type of document to create."""
-  documentType: CollaboraDocumentType!
+  """
+  Title for the new collaborative document. Required for blank-create. On the upload path, defaulted from the uploaded filename (extension stripped) when absent or empty.
+  """
+  displayName: String
+  """
+  Type of document to create. Required for blank-create. On the upload path, ignored — the type is derived from the uploaded file's sniffed MIME by file-service-go.
+  """
+  documentType: CollaboraDocumentType
 }
 
 input CreateCollaborationInput {
