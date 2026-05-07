@@ -6,15 +6,14 @@ const ENTITLEMENT_TYPE = 'space-flag-office-documents';
 const ENTITLEMENT_DATA_TYPE = 'flag';
 
 // Per-license-type seed values mirror the create-time defaults in
-// SpaceService.createLicenseForSpaceL0, CollaborationService and
-// TemplateContentSpaceService at the time PR #5967 shipped:
-//   space                  -> enabled=true  (later rewritten by SpaceLicenseService.applyLicensePolicy)
-//   collaboration          -> enabled=false (later copied from parent Space license)
-//   template_content_space -> enabled=true  (templates do not run applyLicensePolicy; value is durable)
+// SpaceService.createLicenseForSpaceL0 and CollaborationService at the time
+// PR #5967 shipped. TEMPLATE_CONTENT_SPACE is intentionally omitted:
+// template_content_space has no persisted license (no licenseId column on the
+// table) — TemplateContentSpaceLicenseService rebuilds a transient license
+// from code on every applyLicensePolicy, so there is nothing to backfill.
 const BACKFILL_TARGETS: Array<{ licenseType: string; enabled: boolean }> = [
-  { licenseType: 'space', enabled: true },
+  { licenseType: 'space', enabled: false },
   { licenseType: 'collaboration', enabled: false },
-  { licenseType: 'template_content_space', enabled: true },
 ];
 
 export class BackfillOfficeDocumentsEntitlement1777700000000
