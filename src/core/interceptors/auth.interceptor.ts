@@ -3,6 +3,10 @@ import { AuthenticationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import {
+  BearerValidationError,
+  CookieSessionInvalidError,
+} from '@core/auth/oidc/strategies/auth.errors';
+import {
   AUTH_STRATEGY_OIDC_COOKIE_SESSION,
   AUTH_STRATEGY_OIDC_HYDRA_BEARER,
 } from '@core/auth/oidc/strategies/strategy.names';
@@ -10,6 +14,8 @@ import {
   CallHandler,
   ContextType,
   ExecutionContext,
+  HttpException,
+  HttpStatus,
   Injectable,
   NestInterceptor,
 } from '@nestjs/common';
@@ -30,10 +36,49 @@ export class AuthInterceptor implements NestInterceptor {
     if (!req) {
       return next.handle();
     }
-    // Always attach a valid ActorContext — anonymous when unauthenticated —
-    // so downstream resolvers, decorators (CurrentActor) and DataLoaders can
-    // safely read `req.user.actorID`/`credentials` without null guards.
-    const resolved = await passportAuthenticate(req);
+    // FR-024b — three states:
+    //   (a) no creds → strategy returns null → interceptor swaps in anonymous
+    //   (b) invalid creds → strategy throws → interceptor maps to 401
+    //   (c) valid creds → strategy returns ActorContext → set on req.user
+    let resolved: ActorContext | undefined;
+    try {
+      resolved = await passportAuthenticate(req);
+    } catch (err) {
+      if (
+        err instanceof BearerValidationError ||
+        err instanceof CookieSessionInvalidError
+      ) {
+        const errorCode =
+          (err as { errorCode?: string }).errorCode ?? 'unauthenticated';
+        const isGraphql =
+          context.getType<ContextType | 'graphql'>() === 'graphql';
+        if (isGraphql) {
+          // GraphQL semantics: throw HttpException so the GraphQL error
+          // formatter surfaces { extensions: { code: 'UNAUTHENTICATED' } }.
+          throw new HttpException(
+            {
+              statusCode: HttpStatus.UNAUTHORIZED,
+              message: 'unauthenticated',
+              error: 'Unauthorized',
+              extensions: {
+                code: 'UNAUTHENTICATED',
+                error_code: errorCode,
+              },
+            },
+            HttpStatus.UNAUTHORIZED
+          );
+        }
+        // HTTP semantics: plain 401.
+        throw new HttpException(
+          { statusCode: HttpStatus.UNAUTHORIZED, error_code: errorCode },
+          HttpStatus.UNAUTHORIZED
+        );
+      }
+      // Other errors (e.g. SessionStoreUnavailableError → handled by its own
+      // exception filter; AuthenticationException — rethrow to keep current
+      // semantics).
+      throw err;
+    }
     req.user = resolved ?? this.actorContextService.createAnonymous();
     return next.handle();
   }
@@ -92,6 +137,15 @@ const passportAuthenticate = async (req: IncomingMessage) => {
         // 'user' is the object returned from the strategy's validate() method, or false if auth failed.
         // 'info' contains details like error messages (e.g., 'No auth token') or expiration info.
         if (err) {
+          // FR-024b — preserve known auth-error types so the interceptor can
+          // discriminate them via `instanceof`. Wrap only unknown errors.
+          if (
+            err instanceof BearerValidationError ||
+            err instanceof CookieSessionInvalidError
+          ) {
+            reject(err);
+            return;
+          }
           reject(
             new AuthenticationException(
               (err as Error)?.message ?? String(err),
@@ -99,6 +153,7 @@ const passportAuthenticate = async (req: IncomingMessage) => {
               { status, info }
             )
           );
+          return;
         }
         // Passport yields `false` when the strategy returns null (e.g. no
         // session cookie). Normalize to undefined; the interceptor swaps it

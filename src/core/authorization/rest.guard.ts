@@ -1,6 +1,13 @@
 import { LogContext } from '@common/enums/logging.context';
-import { ForbiddenHttpException } from '@common/exceptions/http';
+import {
+  ForbiddenHttpException,
+  UnauthenticatedHttpException,
+} from '@common/exceptions/http';
 import { ActorContext } from '@core/actor-context/actor.context';
+import {
+  BearerValidationError,
+  CookieSessionInvalidError,
+} from '@core/auth/oidc/strategies/auth.errors';
 import {
   AUTH_STRATEGY_OIDC_COOKIE_SESSION,
   AUTH_STRATEGY_OIDC_HYDRA_BEARER,
@@ -31,6 +38,18 @@ export class RestGuard extends AuthGuard([
     _status?: any
   ): T {
     if (err) {
+      // FR-024b — credentials-present-but-invalid → 401 UNAUTHENTICATED.
+      // Other errors keep the legacy 403 mapping (covers thrown errors that
+      // are not strategy auth failures).
+      if (
+        err instanceof BearerValidationError ||
+        err instanceof CookieSessionInvalidError
+      ) {
+        throw new UnauthenticatedHttpException(
+          err?.message ?? String(err),
+          LogContext.AUTH
+        );
+      }
       throw new ForbiddenHttpException(
         err?.message ?? String(err),
         LogContext.AUTH

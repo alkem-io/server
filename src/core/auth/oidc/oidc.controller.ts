@@ -1,4 +1,12 @@
-import { Controller, Get, Query, Req, Res } from '@nestjs/common';
+import {
+  Controller,
+  Get,
+  Inject,
+  Optional,
+  Query,
+  Req,
+  Res,
+} from '@nestjs/common';
 import { randomUUID, timingSafeEqual } from 'crypto';
 import type { Request, Response } from 'express';
 import { generators, type TokenSet } from 'openid-client';
@@ -20,7 +28,9 @@ import { validateReturnTo } from './returnto-validator';
 import {
   type AlkemioSessionPayload,
   SESSION_ABSOLUTE_TTL_S,
+  type SessionStoreHandle,
 } from './session-store.redis';
+import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
 
 declare module 'express-session' {
   interface SessionData extends Partial<AlkemioSessionPayload> {}
@@ -69,7 +79,16 @@ const TERMINAL_REFRESH_ERRORS = new Set([
 
 @Controller('api/auth/oidc')
 export class OidcController {
-  constructor(private readonly oidcService: OidcService) {}
+  constructor(
+    private readonly oidcService: OidcService,
+    // FR-022c — sessionStore optional because some test harnesses replace
+    // OidcController via custom providers and don't wire SESSION_STORE_HANDLE.
+    // When absent, tearDownSession falls back to legacy destroy-only behaviour
+    // (no tombstone). Production wiring in OidcModule provides the handle.
+    @Optional()
+    @Inject(SESSION_STORE_HANDLE)
+    private readonly sessionStore?: SessionStoreHandle
+  ) {}
 
   @Get('login')
   async login(
@@ -361,7 +380,14 @@ export class OidcController {
           now - streakStart >= REFRESH_FAILURE_STREAK_SECONDS;
 
         if (teardown) {
-          await this.tearDownSession(req, res);
+          // FR-022c — tombstone tagged with the triggering error_code so the
+          // next request from a stale tab can be audited with the original
+          // teardown reason.
+          await this.tearDownSession(req, res, {
+            tombstoneReason: `refresh_${outcome.error_code}`,
+            sub: sub ?? undefined,
+            clientId: clientId ?? undefined,
+          });
           emitAudit({
             event_type: 'session.refresh_persistent_failure',
             outcome: 'failure',
@@ -394,7 +420,13 @@ export class OidcController {
       }
 
       // outcome.kind === 'terminal' — invalid_grant / invalid_client / etc.
-      await this.tearDownSession(req, res);
+      // FR-022c — tombstone with the terminal error_code so the next request
+      // from a stale tab can be audited with the original teardown reason.
+      await this.tearDownSession(req, res, {
+        tombstoneReason: `refresh_${outcome.error_code}`,
+        sub: sub ?? undefined,
+        clientId: clientId ?? undefined,
+      });
       emitAudit({
         event_type: 'session.refresh_persistent_failure',
         outcome: 'failure',
@@ -414,7 +446,18 @@ export class OidcController {
     }
   }
 
-  private async tearDownSession(req: Request, res: Response): Promise<void> {
+  // tearDownSession destroys the session and clears the cookie. When called
+  // with a `tombstoneReason` (FR-022c system-side teardown) it ALSO writes a
+  // tombstone payload via SESSION_STORE_HANDLE so the next request from a
+  // stale tab cookie distinguishes "had-a-session-now-invalid" (state b →
+  // 401 UNAUTHENTICATED) from "never-existed" (state a → anonymous). Logout
+  // path passes no tombstoneReason → full destroy, no tombstone.
+  private async tearDownSession(
+    req: Request,
+    res: Response,
+    tombstone?: { tombstoneReason: string; sub?: string; clientId?: string }
+  ): Promise<void> {
+    const sid = req.sessionID;
     await new Promise<void>(resolve => {
       try {
         req.session.destroy(() => resolve());
@@ -422,6 +465,19 @@ export class OidcController {
         resolve();
       }
     });
+    if (tombstone && this.sessionStore && sid) {
+      try {
+        await this.sessionStore.markTerminated(sid, tombstone.tombstoneReason, {
+          sub: tombstone.sub,
+          client_id: tombstone.clientId,
+        });
+      } catch {
+        // Tombstone is best-effort — Redis errors mid-tombstone MUST NOT
+        // abort cookie clearance. Stale tab will surface as state-(a)
+        // anonymous on the next request, slight loss of distinguishability
+        // but functionally correct.
+      }
+    }
     res.cookie(SESSION_COOKIE_NAME, '', {
       httpOnly: true,
       sameSite: 'lax',

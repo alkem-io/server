@@ -25,6 +25,11 @@ export type AuditEventType =
   | 'auth.bearer.invalid_audience'
   | 'auth.bearer.missing_alkemio_claim'
   | 'auth.bearer.validation_failed'
+  // FR-024b — cookie-session strategy emits these on invalid-creds
+  // resolution (state b) so audit reflects authn failures distinctly from
+  // anonymous fall-through.
+  | 'auth.cookie.session_terminated'
+  | 'auth.cookie.absolute_ttl_exceeded'
   | 'session.regenerated'
   | 'session.refresh.rotated'
   | 'session.refresh.temporarily_unavailable'

@@ -205,15 +205,20 @@ http:
       entryPoints:
         - 'hydra-admin'
 
+    # Class-A partial pre-cutover (MVP scope L1; user-authorised 2026-05-07
+    # via opt-1, see specs/003-alkemio-oidc-idp/mvp-scope.md). graphql /
+    # graphiql go direct to alkemio-server; the server validates cookie +
+    # Hydra-bearer in-process per Phase 4. Oathkeeper hop on these paths was
+    # dead weight post-T042b. Phase 7 remains parked for B1+B2+B3+B4.
     graphql:
       rule: 'PathPrefix(`/graphql`)'
-      service: 'oathkeeper-proxy'
+      service: 'alkemio-server'
       entryPoints:
         - 'web'
 
     graphiql:
       rule: 'PathPrefix(`/graphiql`)'
-      service: 'oathkeeper-proxy'
+      service: 'alkemio-server'
       entryPoints:
         - 'web'
 
@@ -233,9 +238,10 @@ http:
       entryPoints:
         - 'web'
 
+    # Class-A partial pre-cutover — see comment on `graphql` router above.
     api-private-graphql:
       rule: 'PathPrefix(`/api/private/graphql`)'
-      service: 'oathkeeper-proxy'
+      service: 'alkemio-server'
       middlewares:
         - strip-api-private-prefix
       entryPoints:
@@ -315,9 +321,10 @@ http:
         - 'web'
       priority: 200
 
+    # Class-A partial pre-cutover — see comment on `graphql` router above.
     calendar-event-ics:
       rule: 'PathPrefix(`/api/private/rest/calendar`)'
-      service: 'oathkeeper-proxy'
+      service: 'alkemio-server'
       middlewares:
         - strip-api-private-prefix
       entryPoints:

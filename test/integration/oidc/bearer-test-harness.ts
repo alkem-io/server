@@ -1,4 +1,5 @@
 import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { BearerValidationError } from '@core/auth/oidc/strategies/auth.errors';
 import {
   BEARER_AUD_ALLOW_LIST_HANDLE,
   BEARER_JWKS_HANDLE,
@@ -118,6 +119,23 @@ export async function createBearerHarness(
         AUTH_STRATEGY_OIDC_HYDRA_BEARER,
         { session: false },
         (err: unknown, user: unknown) => {
+          // FR-024b — strategy throws BearerValidationError on invalid creds
+          // (state b). Map directly to 401 + GraphQL UNAUTHENTICATED extension
+          // shape so tests can assert wire-level correctness.
+          if (err instanceof BearerValidationError) {
+            res.status(401).json({
+              errors: [
+                {
+                  message: err.message,
+                  extensions: {
+                    code: 'UNAUTHENTICATED',
+                    error_code: err.errorCode,
+                  },
+                },
+              ],
+            });
+            return;
+          }
           if (err) return next(err);
           if (!user) {
             res.status(401).json({ error: 'unauthenticated' });

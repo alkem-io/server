@@ -12,6 +12,7 @@ import type { Request } from 'express';
 import { type JWTVerifyGetKey, errors as joseErrors, jwtVerify } from 'jose';
 import { Strategy } from 'passport-custom';
 import { emitAudit } from '../audit';
+import { BearerValidationError } from './auth.errors';
 import { AUTH_STRATEGY_OIDC_HYDRA_BEARER } from './strategy.names';
 
 export const BEARER_JWKS_HANDLE = Symbol('OIDC_BEARER_JWKS_HANDLE');
@@ -49,13 +50,23 @@ export class HydraBearerStrategy extends PassportStrategy(
 
   async validate(req: Request): Promise<ActorContext | null> {
     const auth = req.headers['authorization'];
+    // FR-024b state-(a) — no Authorization header at all → anonymous fall-through.
     if (typeof auth !== 'string') return null;
-    const m = BEARER_RE.exec(auth);
-    if (!m) return null;
-    const token = m[1];
-
     const correlationId = getCorrelationId(req) ?? randomUUID();
     const requestId = correlationId;
+    // FR-024b state-(b) — Authorization header present but malformed → invalid.
+    const m = BEARER_RE.exec(auth);
+    if (!m) {
+      emitAudit({
+        event_type: 'auth.bearer.validation_failed',
+        outcome: 'failure',
+        correlation_id: correlationId,
+        request_id: requestId,
+        error_code: 'malformed_bearer_header',
+      });
+      throw new BearerValidationError('malformed_bearer_header', correlationId);
+    }
+    const token = m[1];
 
     let payload: Record<string, unknown>;
     try {
@@ -66,8 +77,8 @@ export class HydraBearerStrategy extends PassportStrategy(
       });
       payload = result.payload as Record<string, unknown>;
     } catch (err) {
-      this.emitFailure(err, correlationId, requestId);
-      return null;
+      const errorCode = this.emitFailure(err, correlationId, requestId);
+      throw new BearerValidationError(errorCode, correlationId, err);
     }
 
     if (
@@ -83,7 +94,10 @@ export class HydraBearerStrategy extends PassportStrategy(
         request_id: requestId,
         error_code: 'missing_alkemio_actor_id',
       });
-      return null;
+      throw new BearerValidationError(
+        'missing_alkemio_actor_id',
+        correlationId
+      );
     }
 
     const sub = typeof payload.sub === 'string' ? payload.sub : '';
@@ -106,11 +120,14 @@ export class HydraBearerStrategy extends PassportStrategy(
     return this.authService.createActorContext(actorId);
   }
 
+  // Emits the failure audit AND returns the resolved error_code so the caller
+  // can attach it to BearerValidationError. Single source of truth for the
+  // string mapping; interceptor mapper does NOT re-emit.
   private emitFailure(
     err: unknown,
     correlationId: string,
     requestId: string
-  ): void {
+  ): string {
     if (err instanceof joseErrors.JWTClaimValidationFailed) {
       // jose distinguishes audience/issuer/exp/etc via `claim` + `code`.
       const claim = (err as joseErrors.JWTClaimValidationFailed).claim;
@@ -122,16 +139,17 @@ export class HydraBearerStrategy extends PassportStrategy(
           request_id: requestId,
           error_code: 'invalid_audience',
         });
-        return;
+        return 'invalid_audience';
       }
+      const code = claim ? `invalid_${claim}` : 'claim_validation_failed';
       emitAudit({
         event_type: 'auth.bearer.validation_failed',
         outcome: 'failure',
         correlation_id: correlationId,
         request_id: requestId,
-        error_code: claim ? `invalid_${claim}` : 'claim_validation_failed',
+        error_code: code,
       });
-      return;
+      return code;
     }
     if (err instanceof joseErrors.JWTExpired) {
       emitAudit({
@@ -141,17 +159,18 @@ export class HydraBearerStrategy extends PassportStrategy(
         request_id: requestId,
         error_code: 'token_expired',
       });
-      return;
+      return 'token_expired';
     }
     if (err instanceof joseErrors.JOSEError) {
+      const code = (err as joseErrors.JOSEError).code ?? 'jose_error';
       emitAudit({
         event_type: 'auth.bearer.validation_failed',
         outcome: 'failure',
         correlation_id: correlationId,
         request_id: requestId,
-        error_code: (err as joseErrors.JOSEError).code ?? 'jose_error',
+        error_code: code,
       });
-      return;
+      return code;
     }
     emitAudit({
       event_type: 'auth.bearer.validation_failed',
@@ -160,6 +179,7 @@ export class HydraBearerStrategy extends PassportStrategy(
       request_id: requestId,
       error_code: 'unknown_error',
     });
+    return 'unknown_error';
   }
 }
 

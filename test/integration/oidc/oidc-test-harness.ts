@@ -171,6 +171,28 @@ function buildToggleableSessionStore(): ToggleableSessionStore {
       if (failing) await failOrPass<never>();
       data.delete(sid);
     },
+    async markTerminated(sid, reason, context) {
+      if (failing) await failOrPass<never>();
+      const existing = data.get(sid);
+      data.set(sid, {
+        access_token: '',
+        id_token: '',
+        refresh_token: '',
+        expires_at: 0,
+        absolute_expires_at: 0,
+        sub: existing?.sub ?? context?.sub ?? '',
+        alkemio_actor_id: null,
+        refresh_failure_count: existing?.refresh_failure_count ?? 0,
+        refresh_failure_streak_started_at:
+          existing?.refresh_failure_streak_started_at ?? null,
+        last_refreshed_at: existing?.last_refreshed_at ?? null,
+        created_at: existing?.created_at ?? Date.now(),
+        client_id: existing?.client_id ?? context?.client_id ?? '',
+        request_context_cache: null,
+        terminated_at: Date.now(),
+        terminated_reason: reason,
+      });
+    },
   };
 }
 
@@ -236,6 +258,34 @@ export async function createOidcHarness(
   // contract validated here (FR-022b) is identical. Custom-callback form is
   // used so the no-session (401) path can re-issue the alkemio_session cookie
   // and never emit max-age=0 — FR-022b "MUST NOT clear cookie".
+  // T074 test-only helper — simulates the stale-cookie branch where the
+  // session exists but no id_token is stored (e.g. after a partial callback
+  // failure or manual cleanup). Mutates `req.session.id_token = ''` and
+  // saves; subsequent logout sees the no-id_token branch. Uses
+  // `app.use('/__test__/wipe-id-token', ...)` to avoid Nest's `app.get(...)`
+  // DI-lookup overload.
+  app.use(
+    '/__test__/wipe-id-token',
+    (req: Request, res: Response, next: NextFunction) => {
+      if (req.method !== 'GET') {
+        next();
+        return;
+      }
+      if (!req.session) {
+        res.status(404).json({ error: 'no session' });
+        return;
+      }
+      (req.session as Request['session'] & { id_token?: string }).id_token = '';
+      req.session.save(err => {
+        if (err) {
+          res.status(500).json({ error: 'save failed' });
+          return;
+        }
+        res.status(204).end();
+      });
+    }
+  );
+
   app.use(
     '/api/private/graphql',
     (req: Request, res: Response, next: NextFunction) => {

@@ -5,7 +5,22 @@ import {
   createOidcHarness,
   extractCookie,
   type OidcHarness,
+  parseCookieValue,
 } from './oidc-test-harness';
+
+// express-session signed cookie format: `s:<sid>.<sig>`. Extract the bare
+// sid (the segment between the `s:` prefix and the signature `.` boundary).
+function extractSidFromCookie(
+  setCookie: string | string[],
+  name: string
+): string {
+  const header = extractCookie(setCookie, name);
+  if (!header) throw new Error(`cookie ${name} not in Set-Cookie`);
+  const raw = parseCookieValue(header);
+  const stripped = raw.startsWith('s:') ? raw.slice(2) : raw;
+  const dot = stripped.lastIndexOf('.');
+  return dot === -1 ? stripped : stripped.slice(0, dot);
+}
 
 // These tests exercise the refresh-loop behaviour that is wired on every
 // authenticated request path (GraphQL + REST). They assume a test-only
@@ -78,6 +93,39 @@ describe('OIDC refresh loop (FR-008 + FR-009 + FR-022 + FR-022a + FR-022c)', () 
       harness.sessionCookieName
     );
     expect(clearing?.toLowerCase()).toMatch(/max-age=0\b/);
+  });
+
+  // FR-024b state-(b) + FR-022c — after teardown, the session payload in the
+  // store is replaced with a tombstone (`terminated_at` set, short TTL). The
+  // next request from a stale tab still holding the cookie surfaces this
+  // tombstone via `cookie-session.strategy.ts`, which throws
+  // `CookieSessionInvalidError` — distinguishing "had-a-session-now-invalid"
+  // (state b → 401) from "never-existed" (state a → anonymous).
+  it('teardown leaves a tombstone in the session store (FR-022c + FR-024b)', async () => {
+    const sessionCookie = await establish(harness);
+    const sid = extractSidFromCookie(sessionCookie!, harness.sessionCookieName);
+    const err = Object.assign(new Error('invalid_grant'), {
+      error: 'invalid_grant',
+    });
+    harness.oidcService.client.refresh.mockRejectedValueOnce(err);
+
+    await request(harness.app.getHttpServer())
+      .get('/api/auth/oidc/refresh')
+      .set('Cookie', sessionCookie!);
+
+    // The session-store now holds a tombstone payload at the same sid (rather
+    // than nothing). Cookie-session strategy reads this on the next request
+    // and throws CookieSessionInvalidError — pinned in unit-level coverage of
+    // the strategy. Here we assert the store-level invariant: the payload is
+    // present AND carries `terminated_at`.
+    const tombstone = await harness.sessionStore.get(sid);
+    expect(tombstone).not.toBeNull();
+    expect(tombstone?.terminated_at).toBeTypeOf('number');
+    expect(tombstone?.terminated_reason).toMatch(/^refresh_/);
+    // Tombstone clears the live token fields.
+    expect(tombstone?.access_token).toBe('');
+    expect(tombstone?.id_token).toBe('');
+    expect(tombstone?.refresh_token).toBe('');
   });
 
   it('FR-008 grace: replaying the rotated-out refresh token within 60 s returns the SAME new pair, no re-rotation', async () => {

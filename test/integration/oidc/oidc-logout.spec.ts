@@ -74,6 +74,75 @@ describe('GET /api/auth/oidc/logout + /api/auth/oidc/id-token-hint (FR-017c + FR
     expect(clearing!.toLowerCase()).toMatch(/max-age=0\b/);
   });
 
+  // FR-017d idempotency pin (T074) — covers T071's idempotent-logout fix
+  // landed during 2026-05-07 local-dev validation. Three branches:
+  //   (a) no cookie + no hint        → 204 (caller already logged out)
+  //   (b) cookie + no id_token (stale) + no hint → cookie-clear + 302 to post_logout
+  //   (c) cookie + no id_token + with hint → identical to (b) (hint discarded)
+  it('idempotent: no cookie + no hint → 204 (T074a, FR-017d)', async () => {
+    const res = await request(harness.app.getHttpServer()).get(
+      '/api/auth/oidc/logout'
+    );
+    expect(res.status).toBe(204);
+    // Body MUST be empty; no Set-Cookie clearing a cookie that wasn't set.
+    expect(res.text).toBe('');
+  });
+
+  it('idempotent: cookie + no id_token + no hint → cookie-clear + 302 (T074b, FR-017d)', async () => {
+    // Establish a real session, then wipe id_token via test helper to
+    // simulate the stale-cookie branch (cookie present, but no live
+    // OIDC tokens in store).
+    const sessionCookie = await establishSession(harness);
+    await request(harness.app.getHttpServer())
+      .get('/__test__/wipe-id-token')
+      .set('Cookie', sessionCookie!)
+      .expect(204);
+
+    const postLogout = encodeURIComponent('http://localhost:3000/logout');
+    const res = await request(harness.app.getHttpServer())
+      .get(`/api/auth/oidc/logout?post_logout_redirect_uri=${postLogout}`)
+      .set('Cookie', sessionCookie!);
+
+    expect(res.status).toBe(302);
+    expect(res.header.location).toBe('http://localhost:3000/logout');
+    const clearing = extractCookie(
+      res.header['set-cookie'],
+      harness.sessionCookieName
+    );
+    expect(clearing).not.toBeNull();
+    expect(clearing!.toLowerCase()).toMatch(/max-age=0\b/);
+    // No Hydra round-trip — no id_token_hint to submit.
+    expect(res.header.location).not.toContain('hydra');
+  });
+
+  it('idempotent: cookie + no id_token + with hint → identical to no-hint branch (T074c, FR-017d)', async () => {
+    // With a stale cookie (no id_token in store), the hint MUST be discarded
+    // — caller has nothing to authoritatively prove was theirs.
+    const sessionCookie = await establishSession(harness);
+    await request(harness.app.getHttpServer())
+      .get('/__test__/wipe-id-token')
+      .set('Cookie', sessionCookie!)
+      .expect(204);
+
+    const postLogout = encodeURIComponent('http://localhost:3000/logout');
+    const res = await request(harness.app.getHttpServer())
+      .get(
+        `/api/auth/oidc/logout?id_token_hint=stale-hint-jwt&post_logout_redirect_uri=${postLogout}`
+      )
+      .set('Cookie', sessionCookie!);
+
+    expect(res.status).toBe(302);
+    expect(res.header.location).toBe('http://localhost:3000/logout');
+    expect(res.header.location).not.toContain('hydra');
+    expect(res.header.location).not.toContain('id_token_hint=stale-hint-jwt');
+    const clearing = extractCookie(
+      res.header['set-cookie'],
+      harness.sessionCookieName
+    );
+    expect(clearing).not.toBeNull();
+    expect(clearing!.toLowerCase()).toMatch(/max-age=0\b/);
+  });
+
   it('transient Redis failure at logout still clears the cookie (FR-017d)', async () => {
     const sessionCookie = await establishSession(harness);
     // Simulate Redis failure by destroying the session store mid-request.
