@@ -35,12 +35,25 @@ describe('GET /api/auth/oidc/logout + /api/auth/oidc/id-token-hint (FR-017c + FR
     expect(res.status).toBe(401);
   });
 
-  it('logout without id_token_hint returns 400 (FR-017c)', async () => {
+  it('logout without id_token_hint self-supplies stored id_token and 302s to Hydra (FR-017c relaxed)', async () => {
+    // Direct browser GET (no hint query param) is treated as "log me out": the
+    // controller self-supplies the stored id_token rather than returning 400.
+    // Mismatch path (next test) still rejects 400 — that's the security pin.
     const sessionCookie = await establishSession(harness);
     const res = await request(harness.app.getHttpServer())
       .get('/api/auth/oidc/logout')
       .set('Cookie', sessionCookie!);
-    expect(res.status).toBe(400);
+    expect(res.status).toBe(302);
+    expect(res.header.location).toContain(
+      'http://hydra.example/oauth2/sessions/logout'
+    );
+    expect(res.header.location).toContain('id_token_hint=id-token-jwt');
+    const clearing = extractCookie(
+      res.header['set-cookie'],
+      harness.sessionCookieName
+    );
+    expect(clearing).not.toBeNull();
+    expect(clearing!.toLowerCase()).toMatch(/max-age=0\b/);
   });
 
   it('logout rejects when supplied id_token_hint does not match stored session id_token (FR-017c)', async () => {

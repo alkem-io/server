@@ -78,6 +78,10 @@ import { WinstonConfigService } from '@src/config/winston.config';
 // session. Idle TTL is now driven by express-session rolling cookie.
 
 import { buildGraphqlWsRequest } from '@core/auth/oidc/graphql-ws-auth';
+import {
+  getCookieMiddleware,
+  getSessionMiddleware,
+} from '@core/auth/oidc/session-middleware.holder';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
@@ -237,11 +241,18 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
            * graphql-ws requires passing the request object through the context method
            * !!! this is graphql-ws ONLY
            */
-          context: (ctx: ConnectionContext) => {
+          context: async (ctx: ConnectionContext) => {
             if (isWebsocketContext(ctx)) {
               // FR-023 — auth credentials must come from the HTTP upgrade only.
               // Do NOT merge connectionParams.headers; that allows a client to
               // smuggle a Bearer token past the upgrade-time Passport check.
+              //
+              // FR-023 (WS addendum) — replay cookie-parser + express-session
+              // against the upgrade IncomingMessage so `req.sessionID` and
+              // `req.cookies` populate the way they do on HTTP requests.
+              // Without this, CookieSessionStrategy returns null on every
+              // subscription and every authenticated user degrades to anonymous.
+              await runUpgradeSessionMiddleware(ctx.extra.request);
               return {
                 req: buildGraphqlWsRequest(ctx),
               };
@@ -385,3 +396,31 @@ export class AppModule {
 
 const isWebsocketContext = (context: unknown): context is WebsocketContext =>
   !!(context as WebsocketContext)?.extra;
+
+const runMiddleware = (
+  mw: ((req: any, res: any, next: (err?: unknown) => void) => void) | null,
+  req: unknown,
+  res: unknown
+): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (!mw) return resolve();
+    mw(req, res, (err?: unknown) => (err ? reject(err) : resolve()));
+  });
+
+// Replays cookie-parser + express-session against the WS-upgrade
+// IncomingMessage. `res` is a stub: express-session only calls `res.end`/
+// `res.on('finish', ...)` on the response path which we never traverse here.
+const runUpgradeSessionMiddleware = async (req: unknown): Promise<void> => {
+  const res = {
+    on: () => undefined,
+    once: () => undefined,
+    emit: () => undefined,
+    setHeader: () => undefined,
+    getHeader: () => undefined,
+    removeHeader: () => undefined,
+    end: () => undefined,
+    writeHead: () => undefined,
+  };
+  await runMiddleware(getCookieMiddleware(), req, res);
+  await runMiddleware(getSessionMiddleware(), req, res);
+};

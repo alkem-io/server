@@ -76,10 +76,11 @@ import {
           'identity.authentication.providers.oidc',
           { infer: true }
         );
-        // jose jwtVerify compares `iss` claim string-for-string. Hydra emits
-        // the discovery `issuer` value which conventionally has no trailing
-        // slash; trim defensively to avoid env-driven drift.
-        return issuer_url.replace(/\/$/, '');
+        // jose jwtVerify compares `iss` claim string-for-string against the
+        // configured issuer. Pass through exactly as configured — Hydra v2
+        // emits the discovery `issuer` and `iss` claim as URLS_SELF_ISSUER
+        // verbatim (trailing slash included if env sets one).
+        return issuer_url;
       },
     },
     HydraBearerStrategy,

@@ -147,6 +147,7 @@ export class OidcController {
       nonce,
       code_challenge: codeChallenge,
       prompt: 'login',
+      audience: 'alkemio-web',
     });
 
     emitAudit({
@@ -564,11 +565,17 @@ export class OidcController {
       res.redirect(302, fallback);
       return;
     }
-    if (typeof hint !== 'string' || hint.length === 0) {
-      res.status(400).json({ error: 'missing_id_token_hint' });
-      return;
-    }
-    if (!constantTimeStringEqual(hint, storedIdToken)) {
+    // If the caller did not supply an `id_token_hint` query param but we have
+    // one in the session, self-supply it. This makes a direct browser GET to
+    // /api/auth/oidc/logout behave as "log me out" instead of returning 400.
+    // The SPA still goes through useLogoutUrl → useIdTokenHint and submits the
+    // hint explicitly (constant-time matched below) — that path is unchanged.
+    // Trade-off: a small slice of logout-CSRF surface (an attacker site could
+    // trigger this via top-level navigation), accepted as low-impact since the
+    // local cleanup is anyway intended to be idempotent and unconditional.
+    const effectiveHint =
+      typeof hint === 'string' && hint.length > 0 ? hint : storedIdToken;
+    if (!constantTimeStringEqual(effectiveHint, storedIdToken)) {
       res.status(400).json({ error: 'invalid_id_token_hint' });
       return;
     }
@@ -613,10 +620,15 @@ export class OidcController {
       return;
     }
     const url = new URL(endSessionEndpoint);
-    url.searchParams.set('id_token_hint', hint);
-    if (typeof postLogoutRedirectUri === 'string' && postLogoutRedirectUri) {
-      url.searchParams.set('post_logout_redirect_uri', postLogoutRedirectUri);
-    }
+    url.searchParams.set('id_token_hint', effectiveHint);
+    // Always supply post_logout_redirect_uri. If the caller (SPA flow) did not
+    // pass one, fall back to the SPA's /logout route — otherwise Hydra renders
+    // its "Default Post Logout URL is not set" fallback page.
+    const effectivePostLogout =
+      typeof postLogoutRedirectUri === 'string' && postLogoutRedirectUri
+        ? postLogoutRedirectUri
+        : this.oidcService.getDefaultPostLogoutRedirectUri();
+    url.searchParams.set('post_logout_redirect_uri', effectivePostLogout);
     res.redirect(302, url.toString());
   }
 }

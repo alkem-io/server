@@ -64,6 +64,7 @@ export type OidcServiceMock = {
   getIssuer: ReturnType<typeof vi.fn>;
   getPreAuthSigningKey: ReturnType<typeof vi.fn>;
   getCookieSecure: ReturnType<typeof vi.fn>;
+  getDefaultPostLogoutRedirectUri: ReturnType<typeof vi.fn>;
   client: MockOidcClient;
   issuerMetadata: FakeIssuerMetadata;
 };
@@ -88,6 +89,9 @@ export function buildOidcServiceMock(): OidcServiceMock {
     getIssuer: vi.fn(() => ({ metadata: issuerMetadata })),
     getPreAuthSigningKey: vi.fn(() => PRE_AUTH_KEY_BYTES),
     getCookieSecure: vi.fn(() => false),
+    getDefaultPostLogoutRedirectUri: vi.fn(
+      () => 'http://localhost:3000/logout'
+    ),
     client,
     issuerMetadata,
   };

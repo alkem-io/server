@@ -82,4 +82,19 @@ export class OidcService implements OnModuleInit {
     }
     return this.cookieSecureCached;
   }
+
+  // Default landing for /api/auth/oidc/logout when the caller (typically a
+  // direct browser visit) didn't supply post_logout_redirect_uri. Derived from
+  // the configured web_redirect_uri so it tracks the SPA origin per env.
+  getDefaultPostLogoutRedirectUri(): string {
+    const { web_redirect_uri } = this.configService.get(
+      'identity.authentication.providers.oidc',
+      { infer: true }
+    );
+    try {
+      return `${new URL(web_redirect_uri).origin}/logout`;
+    } catch {
+      return '/logout';
+    }
+  }
 }

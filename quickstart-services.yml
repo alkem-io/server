@@ -125,7 +125,8 @@ services:
       - URLS_SELF_ADMIN=http://hydra:4445/
       - SERVE_PUBLIC_CORS_ENABLED=true
       - SERVE_ADMIN_CORS_ENABLED=true
-      - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=email,email_verified,given_name,family_name
+      - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=email,email_verified,given_name,family_name,alkemio_actor_id
+      - STRATEGIES_ACCESS_TOKEN=jwt
       # FR-006/006a — Hydra calls oidc-service on every token issuance
       # (auth-code + refresh) to (re)inject `alkemio_actor_id` into the id_token.
       - OAUTH2_TOKEN_HOOK_URL=http://oidc-service:8080/oidc/token-hook
@@ -195,6 +196,7 @@ services:
           \"redirect_uris\": [\"http://localhost:3000/api/auth/oidc/callback\"],
           \"post_logout_redirect_uris\": [\"http://localhost:3000/logout\"],
           \"scope\": \"openid profile email offline_access alkemio\",
+          \"audience\": [\"alkemio-web\"],
           \"token_endpoint_auth_method\": \"none\",
           \"access_token_lifespan\": \"10m\",
           \"refresh_token_lifespan\": \"336h\",
@@ -264,7 +266,7 @@ services:
       - OIDC_WEB_BASE_URL=http://localhost:3000
       - OIDC_ALKEMIO_SERVER_URL
       - OIDC_ALKEMIO_IDENTITY_RESOLVE_PATH
-      - OIDC_PRE_CONSENT_CLIENT_IDS=alkemio-web,synapse-client,element-client,ecosystem-analytics
+      - OIDC_PRE_CONSENT_CLIENT_IDS=
       - DATABASE_HOST
       - DATABASE_PORT
       - DATABASE_USERNAME

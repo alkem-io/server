@@ -19,6 +19,7 @@ import { renderGraphiQL } from 'graphql-helix';
 import { graphqlUploadExpress } from 'graphql-upload';
 // biome-ignore lint/correctness/noUnusedImports: apmAgent import has side effects that initialize APM
 import { apmAgent } from './apm';
+import { setSessionMiddlewares } from './core/auth/oidc/session-middleware.holder';
 import { BootstrapService } from './core/bootstrap/bootstrap.service';
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
 
@@ -62,7 +63,8 @@ const bootstrap = async () => {
   }
 
   app.use(faviconMiddleware);
-  app.use(cookieParser());
+  const cookieParserMiddleware = cookieParser();
+  app.use(cookieParserMiddleware);
   app.use(
     helmet({
       contentSecurityPolicy: false,
@@ -89,24 +91,30 @@ const bootstrap = async () => {
     prefix: 'alkemio:sid:',
     disableTouch: true,
   });
-  app.use(
-    session({
-      store: sessionStore,
-      secret: oidcConfig.session_signing_key,
-      name: oidcConfig.cookie.name,
-      resave: false,
-      saveUninitialized: false,
-      rolling: true,
-      cookie: {
-        httpOnly: true,
-        sameSite: 'lax',
-        path: '/',
-        secure: oidcConfig.cookie.secure,
-        domain: oidcConfig.cookie.domain || undefined,
-        maxAge: oidcConfig.cookie.idle_ttl_s * 1000,
-      },
-    })
-  );
+  const sessionMiddleware = session({
+    store: sessionStore,
+    secret: oidcConfig.session_signing_key,
+    name: oidcConfig.cookie.name,
+    resave: false,
+    saveUninitialized: false,
+    rolling: true,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      secure: oidcConfig.cookie.secure,
+      domain: oidcConfig.cookie.domain || undefined,
+      maxAge: oidcConfig.cookie.idle_ttl_s * 1000,
+    },
+  });
+  app.use(sessionMiddleware);
+
+  // FR-023 (WS addendum) — graphql-ws upgrades bypass the Express pipeline,
+  // so cookie-parser and express-session never run on the upgrade
+  // IncomingMessage and `req.sessionID`/`req.cookies` are undefined.
+  // Publish both instances so the GraphQL context callback can replay them
+  // against the upgrade request before CookieSessionStrategy reads them.
+  setSessionMiddlewares(cookieParserMiddleware, sessionMiddleware);
 
   app.use(
     graphqlUploadExpress({
