@@ -1,0 +1,170 @@
+import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { AuthenticationService } from '@core/authentication/authentication.service';
+import {
+  CORRELATION_ID_REQUEST_KEY,
+  getCorrelationId,
+} from '@core/middleware/correlation-id.middleware';
+import { Inject, Injectable } from '@nestjs/common';
+import { PassportStrategy } from '@nestjs/passport';
+import { randomUUID } from 'crypto';
+import type { Request } from 'express';
+import { type JWTVerifyGetKey, errors as joseErrors, jwtVerify } from 'jose';
+import { Strategy } from 'passport-custom';
+import { emitAudit } from '../audit';
+import { AUTH_STRATEGY_OIDC_HYDRA_BEARER } from './strategy.names';
+
+export const BEARER_JWKS_HANDLE = Symbol('OIDC_BEARER_JWKS_HANDLE');
+export const BEARER_AUD_ALLOW_LIST_HANDLE = Symbol(
+  'OIDC_BEARER_AUD_ALLOW_LIST_HANDLE'
+);
+export const HYDRA_ISSUER_URL_HANDLE = Symbol('OIDC_HYDRA_ISSUER_URL_HANDLE');
+
+export type HydraBearerContext = {
+  sub: string;
+  alkemio_actor_id: string;
+  client_id: string;
+};
+
+const BEARER_RE = /^Bearer\s+(\S+)$/i;
+
+// FR-024 / FR-024a — verify Hydra-issued JWTs against JWKS, allow-listed
+// audiences, AND require alkemio_actor_id presence. clockTolerance is 30s
+// (jose default is 0; keep in sync with bearer-invalid.spec.ts T050 cases).
+@Injectable()
+export class HydraBearerStrategy extends PassportStrategy(
+  Strategy,
+  AUTH_STRATEGY_OIDC_HYDRA_BEARER
+) {
+  constructor(
+    @Inject(BEARER_JWKS_HANDLE) private readonly jwks: JWTVerifyGetKey,
+    @Inject(BEARER_AUD_ALLOW_LIST_HANDLE)
+    private readonly audAllowList: string[],
+    @Inject(HYDRA_ISSUER_URL_HANDLE) private readonly issuer: string,
+    private readonly authService: AuthenticationService,
+    private readonly actorContextService: ActorContextService
+  ) {
+    super();
+  }
+
+  async validate(req: Request): Promise<ActorContext | null> {
+    const auth = req.headers['authorization'];
+    if (typeof auth !== 'string') return null;
+    const m = BEARER_RE.exec(auth);
+    if (!m) return null;
+    const token = m[1];
+
+    const correlationId = getCorrelationId(req) ?? randomUUID();
+    const requestId = correlationId;
+
+    let payload: Record<string, unknown>;
+    try {
+      const result = await jwtVerify(token, this.jwks, {
+        issuer: this.issuer,
+        audience: this.audAllowList,
+        clockTolerance: '30s',
+      });
+      payload = result.payload as Record<string, unknown>;
+    } catch (err) {
+      this.emitFailure(err, correlationId, requestId);
+      return null;
+    }
+
+    if (
+      typeof payload.alkemio_actor_id !== 'string' ||
+      payload.alkemio_actor_id.length === 0
+    ) {
+      emitAudit({
+        event_type: 'auth.bearer.missing_alkemio_claim',
+        outcome: 'failure',
+        sub: typeof payload.sub === 'string' ? payload.sub : null,
+        client_id: extractAud(payload.aud),
+        correlation_id: correlationId,
+        request_id: requestId,
+        error_code: 'missing_alkemio_actor_id',
+      });
+      return null;
+    }
+
+    const sub = typeof payload.sub === 'string' ? payload.sub : '';
+    const clientId = extractAud(payload.aud) ?? 'unknown';
+    const actorId = payload.alkemio_actor_id;
+
+    // Stash on request so resolvers can read uniform { sub, alkemio_actor_id,
+    // client_id } regardless of which strategy validated.
+    (req as Request & { alkemioBearer?: HydraBearerContext }).alkemioBearer = {
+      sub,
+      alkemio_actor_id: actorId,
+      client_id: clientId,
+    };
+    // Fallback correlation id if upstream middleware did not run.
+    if (!getCorrelationId(req)) {
+      (req as Request & Record<string, unknown>)[CORRELATION_ID_REQUEST_KEY] =
+        correlationId;
+    }
+
+    return this.authService.createActorContext(actorId);
+  }
+
+  private emitFailure(
+    err: unknown,
+    correlationId: string,
+    requestId: string
+  ): void {
+    if (err instanceof joseErrors.JWTClaimValidationFailed) {
+      // jose distinguishes audience/issuer/exp/etc via `claim` + `code`.
+      const claim = (err as joseErrors.JWTClaimValidationFailed).claim;
+      if (claim === 'aud') {
+        emitAudit({
+          event_type: 'auth.bearer.invalid_audience',
+          outcome: 'failure',
+          correlation_id: correlationId,
+          request_id: requestId,
+          error_code: 'invalid_audience',
+        });
+        return;
+      }
+      emitAudit({
+        event_type: 'auth.bearer.validation_failed',
+        outcome: 'failure',
+        correlation_id: correlationId,
+        request_id: requestId,
+        error_code: claim ? `invalid_${claim}` : 'claim_validation_failed',
+      });
+      return;
+    }
+    if (err instanceof joseErrors.JWTExpired) {
+      emitAudit({
+        event_type: 'auth.bearer.validation_failed',
+        outcome: 'failure',
+        correlation_id: correlationId,
+        request_id: requestId,
+        error_code: 'token_expired',
+      });
+      return;
+    }
+    if (err instanceof joseErrors.JOSEError) {
+      emitAudit({
+        event_type: 'auth.bearer.validation_failed',
+        outcome: 'failure',
+        correlation_id: correlationId,
+        request_id: requestId,
+        error_code: (err as joseErrors.JOSEError).code ?? 'jose_error',
+      });
+      return;
+    }
+    emitAudit({
+      event_type: 'auth.bearer.validation_failed',
+      outcome: 'failure',
+      correlation_id: correlationId,
+      request_id: requestId,
+      error_code: 'unknown_error',
+    });
+  }
+}
+
+function extractAud(aud: unknown): string | null {
+  if (typeof aud === 'string') return aud;
+  if (Array.isArray(aud) && typeof aud[0] === 'string') return aud[0];
+  return null;
+}

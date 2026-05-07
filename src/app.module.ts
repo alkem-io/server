@@ -73,7 +73,11 @@ import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.mod
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { AppController } from '@src/app.controller';
 import { WinstonConfigService } from '@src/config/winston.config';
-import { SessionExtendMiddleware } from '@src/core/middleware';
+
+// FR-025 — SessionExtendMiddleware retired with the Kratos-whoami rolling
+// session. Idle TTL is now driven by express-session rolling cookie.
+
+import { buildGraphqlWsRequest } from '@core/auth/oidc/graphql-ws-auth';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
@@ -235,15 +239,11 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
            */
           context: (ctx: ConnectionContext) => {
             if (isWebsocketContext(ctx)) {
+              // FR-023 — auth credentials must come from the HTTP upgrade only.
+              // Do NOT merge connectionParams.headers; that allows a client to
+              // smuggle a Bearer token past the upgrade-time Passport check.
               return {
-                req: {
-                  ...ctx.extra.request,
-                  headers: {
-                    ...ctx.extra.request.headers,
-                    ...ctx.connectionParams?.headers,
-                  },
-                  connectionParams: ctx.connectionParams,
-                },
+                req: buildGraphqlWsRequest(ctx),
               };
             }
 
@@ -379,9 +379,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(RequestLoggerMiddleware, SessionExtendMiddleware)
-      .forRoutes('/');
+    consumer.apply(RequestLoggerMiddleware).forRoutes('/');
   }
 }
 
