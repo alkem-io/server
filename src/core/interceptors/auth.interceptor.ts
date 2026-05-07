@@ -1,6 +1,7 @@
 import { LogContext } from '@common/enums';
 import { AuthenticationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AUTH_STRATEGY_OIDC_COOKIE_SESSION } from '@core/auth/oidc/strategies/strategy.names';
 import {
   CallHandler,
@@ -16,6 +17,8 @@ import { Observable } from 'rxjs';
 
 @Injectable()
 export class AuthInterceptor implements NestInterceptor {
+  constructor(private readonly actorContextService: ActorContextService) {}
+
   async intercept(
     context: ExecutionContext,
     next: CallHandler
@@ -24,9 +27,11 @@ export class AuthInterceptor implements NestInterceptor {
     if (!req) {
       return next.handle();
     }
-    // attach the resolved user
-    req.user = await passportAuthenticate(req);
-    // pass control to the next interceptor
+    // Always attach a valid ActorContext — anonymous when unauthenticated —
+    // so downstream resolvers, decorators (CurrentActor) and DataLoaders can
+    // safely read `req.user.actorID`/`credentials` without null guards.
+    const resolved = await passportAuthenticate(req);
+    req.user = resolved ?? this.actorContextService.createAnonymous();
     return next.handle();
   }
 }
@@ -65,7 +70,7 @@ const getRequest = (context: ExecutionContext) => {
 
 // Promisified passport.authenticate
 const passportAuthenticate = async (req: IncomingMessage) => {
-  return new Promise<ActorContext>((resolve, reject) => {
+  return new Promise<ActorContext | undefined>((resolve, reject) => {
     // T042a — cookie-session only. T042b appends 'hydra-bearer' to this
     // chain once the Bearer strategy lands (atomic with T043/T044 cutover).
     passport.authenticate(
@@ -91,7 +96,10 @@ const passportAuthenticate = async (req: IncomingMessage) => {
             )
           );
         }
-        resolve(user);
+        // Passport yields `false` when the strategy returns null (e.g. no
+        // session cookie). Normalize to undefined; the interceptor swaps it
+        // for an anonymous ActorContext.
+        resolve(user || undefined);
       }
       // Important: Pass only 'req'. Passport's callback signature here doesn't need res/next.
       // The invocation `(req)` executes the authentication logic for the given request.

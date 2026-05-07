@@ -1,3 +1,4 @@
+import type { ActorContextService } from '@core/actor-context/actor.context.service';
 import { type CallHandler, type ExecutionContext } from '@nestjs/common';
 import { GqlExecutionContext } from '@nestjs/graphql';
 // We need to mock passport at module level since it's imported statically.
@@ -12,7 +13,12 @@ describe('AuthInterceptor', () => {
   let mockNext: CallHandler;
 
   beforeEach(() => {
-    interceptor = new AuthInterceptor();
+    const actorContextService = {
+      createAnonymous: vi
+        .fn()
+        .mockReturnValue({ isAnonymous: true, credentials: [] }),
+    } as unknown as ActorContextService;
+    interceptor = new AuthInterceptor(actorContextService);
     mockNext = {
       handle: vi.fn().mockReturnValue(of('response')),
     };
@@ -237,7 +243,7 @@ describe('AuthInterceptor', () => {
       await expect(interceptor.intercept(context, mockNext)).rejects.toThrow();
     });
 
-    it('should resolve with user=false when auth fails without error', async () => {
+    it('should resolve with anonymous ActorContext when auth fails without error', async () => {
       const mockReq: any = {
         method: 'GET',
         url: '/graphql',
@@ -261,8 +267,9 @@ describe('AuthInterceptor', () => {
 
       await interceptor.intercept(context, mockNext);
 
-      // user should be set to false (passport convention for failed auth)
-      expect(mockReq.user).toBe(false);
+      // Failed auth normalizes to an anonymous ActorContext so downstream
+      // resolvers can safely read `req.user.credentials` without null guards.
+      expect(mockReq.user).toEqual({ isAnonymous: true, credentials: [] });
     });
   });
 });

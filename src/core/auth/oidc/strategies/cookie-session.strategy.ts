@@ -1,3 +1,6 @@
+import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { AuthenticationService } from '@core/authentication/authentication.service';
 import { Inject, Injectable } from '@nestjs/common';
 import { PassportStrategy } from '@nestjs/passport';
 import type { Request } from 'express';
@@ -27,13 +30,23 @@ export class CookieSessionStrategy extends PassportStrategy(
 ) {
   constructor(
     @Inject(SESSION_STORE_HANDLE)
-    private readonly sessionStore: SessionStoreHandle
+    private readonly sessionStore: SessionStoreHandle,
+    private readonly authService: AuthenticationService,
+    private readonly actorContextService: ActorContextService
   ) {
     super();
   }
 
-  async validate(req: Request): Promise<CookieSessionContext | null> {
-    const sid = req.cookies?.[COOKIE_SESSION_NAME];
+  async validate(req: Request): Promise<ActorContext | null> {
+    // express-session has already parsed and signature-verified the cookie by
+    // the time this strategy runs; `req.sessionID` is the bare sid that
+    // matches the Redis key suffix. Reading `req.cookies[name]` directly
+    // would yield the signed wire value (`s:<sid>.<sig>`) which never
+    // matches a Redis key and silently degrades every request to anonymous.
+    const sid =
+      typeof req.sessionID === 'string' && req.sessionID.length > 0
+        ? req.sessionID
+        : req.cookies?.[COOKIE_SESSION_NAME];
     if (typeof sid !== 'string' || sid.length === 0) return null;
 
     let payload: AlkemioSessionPayload | null;
@@ -58,6 +71,13 @@ export class CookieSessionStrategy extends PassportStrategy(
     const r = req as RequestWithSession;
     r.alkemioSession = payload;
     r.alkemioCookieSession = ctx;
-    return ctx;
+
+    // Build full ActorContext so downstream auth (GraphqlGuard,
+    // AuthorizationService) sees a `.credentials` array. Without
+    // alkemio_actor_id we cannot resolve credentials → anonymous.
+    if (!payload.alkemio_actor_id) {
+      return this.actorContextService.createAnonymous();
+    }
+    return this.authService.createActorContext(payload.alkemio_actor_id);
   }
 }

@@ -121,10 +121,14 @@ services:
       - URLS_SELF_ISSUER=${HYDRA_PUBLIC_URL}/
       - URLS_LOGIN=${HYDRA_PUBLIC_URL}/oidc/login
       - URLS_CONSENT=${HYDRA_PUBLIC_URL}/oidc/consent
+      - URLS_LOGOUT=${HYDRA_PUBLIC_URL}/oidc/logout
       - URLS_SELF_ADMIN=http://hydra:4445/
       - SERVE_PUBLIC_CORS_ENABLED=true
       - SERVE_ADMIN_CORS_ENABLED=true
       - OAUTH2_ALLOWED_TOP_LEVEL_CLAIMS=email,email_verified,given_name,family_name
+      # FR-006/006a — Hydra calls oidc-service on every token issuance
+      # (auth-code + refresh) to (re)inject `alkemio_actor_id` into the id_token.
+      - OAUTH2_TOKEN_HOOK_URL=http://oidc-service:8080/oidc/token-hook
       - LOG_LEVEL=debug
     command: serve all --dev
     networks:
@@ -152,85 +156,102 @@ services:
           echo "Hydra not ready yet, waiting..."
           sleep 2
         done
-        echo "Hydra is ready, checking if client exists..."
+        echo "Hydra is ready."
 
-        # Check if Synapse client already exists
+        # ---- Synapse OAuth2 client (confidential) ----
+        SYNAPSE_BODY="{
+          \"client_id\": \"$$SYNAPSE_OIDC_CLIENT_ID\",
+          \"client_name\": \"Synapse Matrix Server\",
+          \"client_secret\": \"$$SYNAPSE_OIDC_CLIENT_SECRET\",
+          \"grant_types\": [\"authorization_code\", \"refresh_token\"],
+          \"response_types\": [\"code\"],
+          \"redirect_uris\": [\"$$SYNAPSE_PUBLIC_URL/_synapse/client/oidc/callback\"],
+          \"scope\": \"openid profile email alkemio\",
+          \"token_endpoint_auth_method\": \"client_secret_basic\",
+          \"access_token_lifespan\": \"10m\",
+          \"refresh_token_lifespan\": \"336h\",
+          \"id_token_lifespan\": \"10m\"
+        }"
         if curl -sf $$HYDRA_ADMIN_URL/admin/clients/$$SYNAPSE_OIDC_CLIENT_ID > /dev/null 2>&1; then
-          echo "Client $$SYNAPSE_OIDC_CLIENT_ID already exists, updating it..."
-          curl -X PUT $$HYDRA_ADMIN_URL/admin/clients/$$SYNAPSE_OIDC_CLIENT_ID \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"client_id\": \"$$SYNAPSE_OIDC_CLIENT_ID\",
-              \"client_name\": \"Synapse Matrix Server\",
-              \"client_secret\": \"$$SYNAPSE_OIDC_CLIENT_SECRET\",
-              \"grant_types\": [\"authorization_code\", \"refresh_token\"],
-              \"response_types\": [\"code\"],
-              \"redirect_uris\": [\"$$SYNAPSE_PUBLIC_URL/_synapse/client/oidc/callback\"],
-              \"scope\": \"openid profile email alkemio\",
-              \"token_endpoint_auth_method\": \"client_secret_basic\",
-              \"access_token_lifespan\": \"10m\",
-              \"refresh_token_lifespan\": \"336h\",
-              \"id_token_lifespan\": \"10m\"
-            }"
-          echo "Client updated successfully"
-          exit 0
+          echo "Updating Synapse client $$SYNAPSE_OIDC_CLIENT_ID..."
+          curl -fsS -X PUT $$HYDRA_ADMIN_URL/admin/clients/$$SYNAPSE_OIDC_CLIENT_ID \
+            -H "Content-Type: application/json" -d "$$SYNAPSE_BODY" > /dev/null \
+            && echo "Synapse client updated" || { echo "Synapse update FAILED"; exit 1; }
+        else
+          echo "Registering Synapse client $$SYNAPSE_OIDC_CLIENT_ID..."
+          curl -fsS -X POST $$HYDRA_ADMIN_URL/admin/clients \
+            -H "Content-Type: application/json" -d "$$SYNAPSE_BODY" > /dev/null \
+            && echo "Synapse client registered" || { echo "Synapse register FAILED"; exit 1; }
         fi
 
-        echo "Registering Synapse OAuth2 client..."
-        curl -X POST $$HYDRA_ADMIN_URL/admin/clients \
-          -H "Content-Type: application/json" \
-          -d "{
-            \"client_id\": \"$$SYNAPSE_OIDC_CLIENT_ID\",
-            \"client_name\": \"Synapse Matrix Server\",
-            \"client_secret\": \"$$SYNAPSE_OIDC_CLIENT_SECRET\",
+        # ---- alkemio-web OAuth2 client (T058 — public, PKCE-S256, BFF) ----
+        # FR-007 lifespans match the k8s OAuth2Client CRD in dev-orchestration.
+        # Public client (token_endpoint_auth_method=none); BFF holds tokens server-side.
+        ALKEMIO_WEB_BODY="{
+          \"client_id\": \"alkemio-web\",
+          \"client_name\": \"Alkemio Web (BFF)\",
+          \"grant_types\": [\"authorization_code\", \"refresh_token\"],
+          \"response_types\": [\"code\"],
+          \"redirect_uris\": [\"http://localhost:3000/api/auth/oidc/callback\"],
+          \"post_logout_redirect_uris\": [\"http://localhost:3000/logout\"],
+          \"scope\": \"openid profile email offline_access alkemio\",
+          \"token_endpoint_auth_method\": \"none\",
+          \"access_token_lifespan\": \"10m\",
+          \"refresh_token_lifespan\": \"336h\",
+          \"id_token_lifespan\": \"10m\"
+        }"
+        if curl -sf $$HYDRA_ADMIN_URL/admin/clients/alkemio-web > /dev/null 2>&1; then
+          echo "Updating alkemio-web client..."
+          curl -fsS -X PUT $$HYDRA_ADMIN_URL/admin/clients/alkemio-web \
+            -H "Content-Type: application/json" -d "$$ALKEMIO_WEB_BODY" > /dev/null \
+            && echo "alkemio-web client updated" || { echo "alkemio-web update FAILED"; exit 1; }
+        else
+          echo "Registering alkemio-web client..."
+          curl -fsS -X POST $$HYDRA_ADMIN_URL/admin/clients \
+            -H "Content-Type: application/json" -d "$$ALKEMIO_WEB_BODY" > /dev/null \
+            && echo "alkemio-web client registered" || { echo "alkemio-web register FAILED"; exit 1; }
+        fi
+
+        # ---- legacy client-web OAuth2 client (optional, env-gated) ----
+        if [ -n "$$CLIENT_WEB_OIDC_CLIENT_ID" ] && [ -n "$$CLIENT_WEB_OIDC_CLIENT_SECRET" ] && [ -n "$$CLIENT_WEB_PUBLIC_URL" ]; then
+          CLIENT_WEB_BODY="{
+            \"client_id\": \"$$CLIENT_WEB_OIDC_CLIENT_ID\",
+            \"client_name\": \"Alkemio Client Web\",
+            \"client_secret\": \"$$CLIENT_WEB_OIDC_CLIENT_SECRET\",
             \"grant_types\": [\"authorization_code\", \"refresh_token\"],
             \"response_types\": [\"code\"],
-            \"redirect_uris\": [\"$$SYNAPSE_PUBLIC_URL/_synapse/client/oidc/callback\"],
-            \"scope\": \"openid profile email alkemio\",
-            \"token_endpoint_auth_method\": \"client_secret_basic\",
-            \"access_token_lifespan\": \"10m\",
-            \"refresh_token_lifespan\": \"336h\",
-            \"id_token_lifespan\": \"10m\"
+            \"redirect_uris\": [\"$$CLIENT_WEB_PUBLIC_URL/oidc/callback\"],
+            \"scope\": \"openid profile email\",
+            \"token_endpoint_auth_method\": \"client_secret_basic\"
           }"
-
-        if [ $$? -eq 0 ]; then
-          echo "Successfully registered Synapse OAuth2 client"
-        else
-          echo "Failed to register Synapse client"
-          exit 1
-        fi
-
-        # Register client-web OAuth2 client (for OIDC-based frontend flows)
-        if [ -n "$$CLIENT_WEB_OIDC_CLIENT_ID" ] && [ -n "$$CLIENT_WEB_OIDC_CLIENT_SECRET" ] && [ -n "$$CLIENT_WEB_PUBLIC_URL" ]; then
-          echo "Registering client-web OAuth2 client..."
-          curl -X POST $$HYDRA_ADMIN_URL/admin/clients \
-            -H "Content-Type: application/json" \
-            -d "{
-              \"client_id\": \"$$CLIENT_WEB_OIDC_CLIENT_ID\",
-              \"client_name\": \"Alkemio Client Web\",
-              \"client_secret\": \"$$CLIENT_WEB_OIDC_CLIENT_SECRET\",
-              \"grant_types\": [\"authorization_code\", \"refresh_token\"],
-              \"response_types\": [\"code\"],
-              \"redirect_uris\": [\"$$CLIENT_WEB_PUBLIC_URL/oidc/callback\"],
-              \"scope\": \"openid profile email\",
-              \"token_endpoint_auth_method\": \"client_secret_basic\"
-            }"
-
-          if [ $$? -eq 0 ]; then
-            echo "Successfully registered client-web OAuth2 client"
+          if curl -sf $$HYDRA_ADMIN_URL/admin/clients/$$CLIENT_WEB_OIDC_CLIENT_ID > /dev/null 2>&1; then
+            echo "Updating client-web client..."
+            curl -fsS -X PUT $$HYDRA_ADMIN_URL/admin/clients/$$CLIENT_WEB_OIDC_CLIENT_ID \
+              -H "Content-Type: application/json" -d "$$CLIENT_WEB_BODY" > /dev/null \
+              && echo "client-web updated" || { echo "client-web update FAILED"; exit 1; }
           else
-            echo "Failed to register client-web client"
-            exit 1
+            echo "Registering client-web client..."
+            curl -fsS -X POST $$HYDRA_ADMIN_URL/admin/clients \
+              -H "Content-Type: application/json" -d "$$CLIENT_WEB_BODY" > /dev/null \
+              && echo "client-web registered" || { echo "client-web register FAILED"; exit 1; }
           fi
         else
-          echo "Skipping client-web OAuth2 client registration (CLIENT_WEB_OIDC_CLIENT_ID/SECRET or CLIENT_WEB_PUBLIC_URL not set)"
+          echo "Skipping client-web (CLIENT_WEB_OIDC_CLIENT_ID/SECRET or CLIENT_WEB_PUBLIC_URL not set)"
         fi
+
+        echo "All Hydra OAuth2 clients seeded successfully."
 
   oidc-service:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oidc_service
-    image: docker.io/alkemio/oidc-service:v0.7.3
+    # Local build of the sibling oidc-service repo so in-flight fixes
+    # (e.g. pre-consent claim attachment) run instead of the pinned Hub image.
+    # Override OIDC_SERVICE_REPO_PATH if your sibling clone lives elsewhere.
+    build:
+      context: ${OIDC_SERVICE_REPO_PATH:-../oidc-service}
+      dockerfile: Dockerfile
+    image: alkemio/oidc-service:local
     depends_on:
       - hydra
       - kratos

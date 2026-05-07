@@ -1,3 +1,5 @@
+import { ActorContextModule } from '@core/actor-context/actor.context.module';
+import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
@@ -12,7 +14,12 @@ import { CookieSessionStoreUnavailableFilter } from './strategies/cookie-session
 import { CookieSessionStrategy } from './strategies/cookie-session.strategy';
 
 @Module({
-  imports: [ConfigModule, PassportModule],
+  imports: [
+    ConfigModule,
+    PassportModule,
+    AuthenticationModule,
+    ActorContextModule,
+  ],
   controllers: [OidcController],
   providers: [
     OidcService,

@@ -1,3 +1,4 @@
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { OidcController } from '@core/auth/oidc/oidc.controller';
 import { OidcService } from '@core/auth/oidc/oidc.service';
 import {
@@ -9,10 +10,11 @@ import type {
   AlkemioSessionPayload,
   SessionStoreHandle,
 } from '@core/auth/oidc/session-store.redis';
+import { SESSION_STORE_HANDLE } from '@core/auth/oidc/strategies/cookie-session.errors';
 import { cookieSessionStoreUnavailableMiddleware } from '@core/auth/oidc/strategies/cookie-session.exception-filter';
 import { CookieSessionStrategy } from '@core/auth/oidc/strategies/cookie-session.strategy';
-import { SESSION_STORE_HANDLE } from '@core/auth/oidc/strategies/cookie-session.errors';
 import { AUTH_STRATEGY_OIDC_COOKIE_SESSION } from '@core/auth/oidc/strategies/strategy.names';
+import { AuthenticationService } from '@core/authentication/authentication.service';
 import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
@@ -183,6 +185,25 @@ export async function createOidcHarness(
     providers: [
       { provide: OidcService, useValue: oidcService },
       { provide: SESSION_STORE_HANDLE, useValue: sessionStore },
+      {
+        provide: AuthenticationService,
+        useValue: {
+          createActorContext: vi.fn(async (id: string) => ({
+            isAnonymous: false,
+            credentials: [],
+            actorID: id,
+          })),
+        },
+      },
+      {
+        provide: ActorContextService,
+        useValue: {
+          createAnonymous: vi.fn(() => ({
+            isAnonymous: true,
+            credentials: [],
+          })),
+        },
+      },
       CookieSessionStrategy,
     ],
   }).compile();

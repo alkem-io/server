@@ -127,6 +127,7 @@ export class OidcController {
       state,
       nonce,
       code_challenge: codeChallenge,
+      prompt: 'login',
     });
 
     emitAudit({
@@ -184,7 +185,7 @@ export class OidcController {
     let tokenSet: TokenSet;
     try {
       tokenSet = await client.callback(
-        undefined,
+        client.metadata.redirect_uris?.[0],
         { code: queryCode, state: queryState },
         {
           code_verifier: preAuth.code_verifier,
@@ -268,7 +269,8 @@ export class OidcController {
     const client = this.oidcService.getClient();
     const rpId = client.metadata.client_id ?? null;
     const s = req.session;
-    const refreshToken = typeof s?.refresh_token === 'string' ? s.refresh_token : '';
+    const refreshToken =
+      typeof s?.refresh_token === 'string' ? s.refresh_token : '';
     if (!refreshToken) {
       res.status(401).json({ error: 'no_session' });
       return;
@@ -283,7 +285,8 @@ export class OidcController {
     // fast sequential bursts where the first handler fully completes before
     // the second enters.
     const nowEpoch = Math.floor(Date.now() / 1000);
-    const lastRefreshed = typeof s.last_refreshed_at === 'number' ? s.last_refreshed_at : null;
+    const lastRefreshed =
+      typeof s.last_refreshed_at === 'number' ? s.last_refreshed_at : null;
     if (
       lastRefreshed !== null &&
       nowEpoch - lastRefreshed < REFRESH_DEDUP_WINDOW_SECONDS
@@ -320,48 +323,65 @@ export class OidcController {
       const now = Math.floor(Date.now() / 1000);
 
       if (outcome.kind === 'success') {
-      const ts = outcome.tokenSet;
-      // FR-008 — rotate RP-local tokens; absolute_expires_at preserved (14-day ceiling).
-      s.access_token = ts.access_token ?? s.access_token;
-      s.id_token = ts.id_token ?? s.id_token;
-      s.refresh_token = ts.refresh_token ?? s.refresh_token;
-      s.expires_at = ts.expires_at ?? now;
-      s.refresh_failure_count = 0;
-      s.refresh_failure_streak_started_at = null;
-      s.last_refreshed_at = now;
-      await new Promise<void>((resolve, reject) => {
-        req.session.save(err => (err ? reject(err) : resolve()));
-      });
-      emitAudit({
-        event_type: 'session.refresh.rotated',
-        outcome: 'success',
-        sub,
-        client_id: clientId,
-        correlation_id: correlationId,
-        request_id: correlationId,
-        rp_id: rpId,
-      });
-      res.status(204).end();
-      return;
-    }
-
-    if (outcome.kind === 'temporary') {
-      // FR-022 — do NOT rotate, do NOT tear down on a single transient blip.
-      // FR-022c — count toward thresholds: 3 failures OR 5-min streak.
-      const nextCount = (s.refresh_failure_count ?? 0) + 1;
-      const streakStart = s.refresh_failure_streak_started_at ?? now;
-      s.refresh_failure_count = nextCount;
-      s.refresh_failure_streak_started_at = streakStart;
-
-      const teardown =
-        nextCount >= REFRESH_FAILURE_COUNT_THRESHOLD ||
-        now - streakStart >= REFRESH_FAILURE_STREAK_SECONDS;
-
-      if (teardown) {
-        await this.tearDownSession(req, res);
+        const ts = outcome.tokenSet;
+        // FR-008 — rotate RP-local tokens; absolute_expires_at preserved (14-day ceiling).
+        s.access_token = ts.access_token ?? s.access_token;
+        s.id_token = ts.id_token ?? s.id_token;
+        s.refresh_token = ts.refresh_token ?? s.refresh_token;
+        s.expires_at = ts.expires_at ?? now;
+        s.refresh_failure_count = 0;
+        s.refresh_failure_streak_started_at = null;
+        s.last_refreshed_at = now;
+        await new Promise<void>((resolve, reject) => {
+          req.session.save(err => (err ? reject(err) : resolve()));
+        });
         emitAudit({
-          event_type: 'session.refresh_persistent_failure',
-          outcome: 'failure',
+          event_type: 'session.refresh.rotated',
+          outcome: 'success',
+          sub,
+          client_id: clientId,
+          correlation_id: correlationId,
+          request_id: correlationId,
+          rp_id: rpId,
+        });
+        res.status(204).end();
+        return;
+      }
+
+      if (outcome.kind === 'temporary') {
+        // FR-022 — do NOT rotate, do NOT tear down on a single transient blip.
+        // FR-022c — count toward thresholds: 3 failures OR 5-min streak.
+        const nextCount = (s.refresh_failure_count ?? 0) + 1;
+        const streakStart = s.refresh_failure_streak_started_at ?? now;
+        s.refresh_failure_count = nextCount;
+        s.refresh_failure_streak_started_at = streakStart;
+
+        const teardown =
+          nextCount >= REFRESH_FAILURE_COUNT_THRESHOLD ||
+          now - streakStart >= REFRESH_FAILURE_STREAK_SECONDS;
+
+        if (teardown) {
+          await this.tearDownSession(req, res);
+          emitAudit({
+            event_type: 'session.refresh_persistent_failure',
+            outcome: 'failure',
+            sub,
+            client_id: clientId,
+            correlation_id: correlationId,
+            request_id: correlationId,
+            rp_id: rpId,
+            error_code: outcome.error_code,
+          });
+          res.status(401).json({ error: 'session_terminated' });
+          return;
+        }
+
+        await new Promise<void>((resolve, reject) => {
+          req.session.save(err => (err ? reject(err) : resolve()));
+        });
+        emitAudit({
+          event_type: 'session.refresh.temporarily_unavailable',
+          outcome: 'warn',
           sub,
           client_id: clientId,
           correlation_id: correlationId,
@@ -369,26 +389,9 @@ export class OidcController {
           rp_id: rpId,
           error_code: outcome.error_code,
         });
-        res.status(401).json({ error: 'session_terminated' });
+        res.status(503).json({ error: 'temporarily_unavailable' });
         return;
       }
-
-      await new Promise<void>((resolve, reject) => {
-        req.session.save(err => (err ? reject(err) : resolve()));
-      });
-      emitAudit({
-        event_type: 'session.refresh.temporarily_unavailable',
-        outcome: 'warn',
-        sub,
-        client_id: clientId,
-        correlation_id: correlationId,
-        request_id: correlationId,
-        rp_id: rpId,
-        error_code: outcome.error_code,
-      });
-      res.status(503).json({ error: 'temporarily_unavailable' });
-      return;
-    }
 
       // outcome.kind === 'terminal' — invalid_grant / invalid_client / etc.
       await this.tearDownSession(req, res);
@@ -460,10 +463,49 @@ export class OidcController {
     const storedIdToken = typeof s?.id_token === 'string' ? s.id_token : '';
     const hasSessionCookie = !!req.cookies?.[SESSION_COOKIE_NAME];
 
+    // FR-017d — local cleanup is unconditional. Idempotent path: if there is
+    // no live OIDC session (no stored id_token) we still clear any lingering
+    // session cookie. We deliberately do NOT redirect to Hydra in this branch
+    // since we have no id_token_hint to submit and Hydra would fall through
+    // to the logout-consent UI. Behaviour:
+    //   - had a stale cookie: clear it, 302 to post_logout target so the SPA
+    //     can re-render with credentials gone.
+    //   - had no cookie at all: nothing to clear; respond 204 so the SPA can
+    //     break out of any retry loop and render the logged-out state.
     if (!storedIdToken) {
-      res
-        .status(400)
-        .json({ error: hasSessionCookie ? 'session_not_found' : 'no_session' });
+      await new Promise<void>(resolve => {
+        try {
+          req.session.destroy(() => resolve());
+        } catch {
+          resolve();
+        }
+      });
+      emitAudit({
+        event_type: 'session.ended',
+        outcome: 'success',
+        sub: null,
+        client_id: null,
+        correlation_id: correlationId,
+        request_id: correlationId,
+        rp_id: rpId,
+        error_code: hasSessionCookie ? 'stale_cookie' : 'no_session',
+      });
+      if (!hasSessionCookie) {
+        res.status(204).end();
+        return;
+      }
+      res.cookie(SESSION_COOKIE_NAME, '', {
+        httpOnly: true,
+        sameSite: 'lax',
+        path: '/',
+        secure: this.oidcService.getCookieSecure(),
+        maxAge: 0,
+      });
+      const fallback =
+        typeof postLogoutRedirectUri === 'string' && postLogoutRedirectUri
+          ? postLogoutRedirectUri
+          : '/';
+      res.redirect(302, fallback);
       return;
     }
     if (typeof hint !== 'string' || hint.length === 0) {

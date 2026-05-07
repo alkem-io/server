@@ -60,9 +60,14 @@ export class SessionExtendMiddleware implements NestMiddleware {
       return next();
     }
 
+    const [, token] = authorization.split(' ');
+    if (!token) {
+      return next();
+    }
+
     let session: Session;
     try {
-      session = getSessionFromJwt(authorization);
+      session = getSessionFromJwt(token);
     } catch (e: any) {
       this.logger.verbose?.(
         `Error while extracting ory session: ${e?.message}`,

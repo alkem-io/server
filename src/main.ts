@@ -46,10 +46,18 @@ const bootstrap = async () => {
     { infer: true }
   );
   if (enabled) {
+    // `Access-Control-Allow-Origin: *` is incompatible with credentials, so
+    // when origin is the wildcard we reflect the request Origin instead.
+    const corsOrigin =
+      typeof origin === 'string' && origin.trim() === '*' ? true : origin;
     app.enableCors({
-      origin,
+      origin: corsOrigin,
       allowedHeaders: allowed_headers,
       methods,
+      // Required so the browser sends the alkemio_session cookie on
+      // cross-origin GraphQL requests from the SPA (and accepts Set-Cookie
+      // on the OIDC callback). Client must use credentials: 'include'.
+      credentials: true,
     });
   }
 
