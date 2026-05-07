@@ -225,12 +225,16 @@ identity:
         # Refresh-token rotation leeway in seconds (FR-008 grace window overlap).
         refresh_leeway_s: ${OIDC_REFRESH_LEEWAY_S}:30
         # HS256 signing key for the alkemio_oidc_pre_auth cookie JWS (FR-017b).
-        # Base64url of 32 random bytes. Generate fresh per workstation in .env.local.
-        pre_auth_cookie_signing_key: ${PRE_AUTH_COOKIE_SIGNING_KEY}
+        # Base64url/hex of 32 random bytes. The defaults below are LOCAL-DEV ONLY —
+        # they live in this committed file and are NOT secret. Override per-env via
+        # the listed env var (sandbox/dev/test/prod overlays inject real secrets via
+        # the Alkemio-secrets operator); mint via:
+        #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+        pre_auth_cookie_signing_key: ${PRE_AUTH_COOKIE_SIGNING_KEY}:placeholder-pre-auth-cookie-signing-key-change-me
         # HS256 key for the authorization-request state parameter HMAC.
-        state_hmac_key: ${STATE_HMAC_KEY}
+        state_hmac_key: ${STATE_HMAC_KEY}:placeholder-state-hmac-key-change-me
         # express-session secret for signing alkemio_session cookie.
-        session_signing_key: ${SESSION_SIGNING_KEY}
+        session_signing_key: ${SESSION_SIGNING_KEY}:placeholder-session-signing-key-change-me
         # alkemio_session cookie attributes. Per-env overlays set Secure + domain +
         # per-env name suffix; the local-dev defaults below run over HTTP loopback.
         cookie:
