@@ -401,6 +401,19 @@ export class StorageBucketService {
       }
     }
 
+    // Attach post-rotation image dimensions (when present on the file-
+    // service-go response) as transient runtime fields on the returned
+    // entity. Server-side validators (e.g. visual.service.ts) read these
+    // instead of decoding bytes locally — file-service-go already did the
+    // canonicalizing decode and cached the values in `file.content_metadata`.
+    // Non-image uploads have undefined dims; that's expected.
+    if (result.imageWidth !== undefined) {
+      document.imageWidth = result.imageWidth;
+    }
+    if (result.imageHeight !== undefined) {
+      document.imageHeight = result.imageHeight;
+    }
+
     this.logger.verbose?.(
       `Materialized document '${result.externalID}' via file-service on storage bucket: ${bucketId}`,
       LogContext.STORAGE_BUCKET
