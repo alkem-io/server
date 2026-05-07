@@ -53,19 +53,20 @@ export class AuthInterceptor implements NestInterceptor {
         const isGraphql =
           context.getType<ContextType | 'graphql'>() === 'graphql';
         if (isGraphql) {
-          // GraphQL semantics: throw HttpException so the GraphQL error
-          // formatter surfaces { extensions: { code: 'UNAUTHENTICATED' } }.
-          throw new HttpException(
-            {
-              statusCode: HttpStatus.UNAUTHORIZED,
-              message: 'unauthenticated',
-              error: 'Unauthorized',
-              extensions: {
-                code: 'UNAUTHENTICATED',
-                error_code: errorCode,
-              },
-            },
-            HttpStatus.UNAUTHORIZED
+          // GraphQL semantics: throw AuthenticationException (extends BaseException
+          // → GraphQLError) so the GraphQL errors envelope carries
+          // `extensions.code: "UNAUTHENTICATED"` + `extensions.error_code: <code>`
+          // AND the constructor sets `extensions.http.status: 401` so Apollo
+          // Server v4 emits wire-level HTTP 401 alongside the envelope.
+          // Stage-1 exit log finding G — fixed by AuthenticationException
+          // carrying http.status; previously HttpException landed in
+          // HttpExceptionFilter which bails on graphql context, leaving
+          // Apollo's default HTTP 200 in place.
+          throw new AuthenticationException(
+            'unauthenticated',
+            LogContext.AUTH_TOKEN,
+            undefined,
+            errorCode
           );
         }
         // HTTP semantics: plain 401.
