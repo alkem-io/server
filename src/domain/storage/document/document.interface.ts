@@ -39,4 +39,16 @@ export abstract class IDocument extends IAuthorizable {
 
   // Not exposed for security reasons
   externalID!: string;
+
+  /**
+   * Post-rotation pixel dimensions for image content, populated by
+   * file-service-go on the create/copy/patch responses (read from the
+   * `file.content_metadata` JSONB cache). Transient runtime fields —
+   * NOT TypeORM-mapped columns. Undefined for entities loaded from DB
+   * via the standard repo path; populated when the entity comes from
+   * `uploadFileAsDocumentFromBuffer` / `copyDocumentToBucket` / similar
+   * upload-result paths. Absent for non-image content.
+   */
+  imageWidth?: number;
+  imageHeight?: number;
 }
