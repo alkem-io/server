@@ -26,4 +26,11 @@ export class CalloutContributionsCountOutput {
     description: 'The number of contributions of type Memo in this callout',
   })
   memo!: number;
+
+  @Field({
+    nullable: false,
+    description:
+      'The number of contributions of type CollaboraDocument in this callout',
+  })
+  collaboraDocument!: number;
 }

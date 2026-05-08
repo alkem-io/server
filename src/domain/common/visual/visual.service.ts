@@ -6,7 +6,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { StorageUploadFailedException } from '@common/exceptions/storage/storage.upload.failed.exception';
-import { getImageDimensions, streamToBuffer } from '@common/utils';
+import { streamToBuffer } from '@common/utils';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { CreateVisualInput } from '@domain/common/visual/dto/visual.dto.create';
 import { UpdateVisualInput } from '@domain/common/visual/dto/visual.dto.update';
@@ -126,15 +126,19 @@ export class VisualService {
         LogContext.STORAGE_BUCKET
       );
 
-      // Go file-service-go handles image processing (HEIC→JPEG, compression, EXIF strip)
-      // Dimension validation stays on server side (visual type constraints)
-      const { imageHeight, imageWidth } = await this.getImageDimensions(buffer);
-      this.validateImageWidth(visual, imageWidth);
-      this.validateImageHeight(visual, imageHeight);
       const documentForVisual = await this.documentService.getDocumentFromURL(
         visual.uri
       );
 
+      // file-service-go canonicalizes image bytes (physical EXIF
+      // rotation, profile-preserving metadata strip) and reports
+      // post-rotation pixel dimensions on the response — populated
+      // here as transient `imageWidth`/`imageHeight` on the returned
+      // document. Validation against visual-type constraints (CARD,
+      // AVATAR, etc.) happens AFTER upload, using those dims. On
+      // dim-mismatch we delete the just-uploaded doc to avoid
+      // orphaning. Pre-upload local decoding is gone — file-service-go
+      // is the single source of truth for canonical pixel dimensions.
       const newDocument =
         await this.storageBucketService.uploadFileAsDocumentFromBuffer(
           storageBucket.id,
@@ -143,6 +147,28 @@ export class VisualService {
           mimetype,
           userID
         );
+
+      try {
+        this.validateImageDimensionsOnVisual(visual, newDocument);
+      } catch (validationError) {
+        await this.documentService
+          .deleteDocument({ ID: newDocument.id })
+          .catch(cleanupError => {
+            this.logger.error?.(
+              {
+                message:
+                  'Failed to delete just-uploaded document after dimension validation failure',
+                visualId: visual.id,
+                documentId: newDocument.id,
+                cleanupError: String(cleanupError),
+              },
+              cleanupError instanceof Error ? (cleanupError.stack ?? '') : '',
+              LogContext.STORAGE_BUCKET
+            );
+          });
+        throw validationError;
+      }
+
       // Delete the old document
       if (
         documentForVisual &&
@@ -199,8 +225,33 @@ export class VisualService {
     return await this.visualRepository.save(visual);
   }
 
-  public async getImageDimensions(buffer: Buffer) {
-    return getImageDimensions(buffer);
+  /**
+   * Validate post-rotation pixel dimensions on a freshly-uploaded
+   * document against the visual's allowed range. Reads dims from the
+   * document's transient `imageWidth`/`imageHeight` fields populated by
+   * `uploadFileAsDocumentFromBuffer` from file-service-go's response —
+   * no local decode. Throws ValidationException if dims are missing
+   * (non-image content reaching here is a contract bug; validateMimeType
+   * runs upstream) or out of range.
+   */
+  public validateImageDimensionsOnVisual(
+    visual: IVisual,
+    document: IDocument
+  ): void {
+    const { imageWidth, imageHeight } = document;
+    if (imageWidth === undefined || imageHeight === undefined) {
+      throw new ValidationException(
+        'Image dimensions missing from upload response — cannot validate against visual constraints',
+        LogContext.STORAGE_BUCKET,
+        {
+          visualId: visual.id,
+          documentId: document.id,
+          mimeType: document.mimeType,
+        }
+      );
+    }
+    this.validateImageWidth(visual, imageWidth);
+    this.validateImageHeight(visual, imageHeight);
   }
 
   public validateMimeType(visual: IVisual, mimeType: string) {

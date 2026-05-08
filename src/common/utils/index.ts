@@ -9,7 +9,6 @@ export * from './file.util';
 export * from './get.session';
 export * from './get-differences';
 export * from './has-allowed-allowed-fields';
-export * from './image.util';
 export * from './is.defined';
 export * from './limitAndShuffle';
 export * from './path.resolve';

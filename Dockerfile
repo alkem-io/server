@@ -18,7 +18,7 @@ COPY package*.json pnpm-lock.yaml ./
 RUN pnpm install --frozen-lockfile
 
 # Copy sources & build
-COPY tsconfig.json tsconfig.build.json alkemio.yml ./
+COPY tsconfig.json tsconfig.build.json nest-cli.json alkemio.yml ./
 COPY src ./src
 RUN pnpm run build
 
