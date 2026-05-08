@@ -20,6 +20,7 @@ import {
   HttpExceptionFilter,
   UnhandledExceptionFilter,
 } from '@core/error-handling';
+import { HealthModule } from '@core/health/health.module';
 import { AuthInterceptor } from '@core/interceptors';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { ActivityFeedModule } from '@domain/activity-feed';
@@ -301,6 +302,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     ScalarsModule,
     AuthenticationModule,
     OidcModule,
+    HealthModule,
     AuthorizationModule,
     GraphqlGuardModule,
     SpaceModule,

@@ -32,13 +32,17 @@ function genSchema(typeCount = 260, enumCount = 15, scalarCount = 5): string {
   return parts.join('\n\n');
 }
 
-// Introduce minor changes: remove a small random subset of field5 lines
+// Introduce minor changes: deterministically remove every 20th field5 line
+// (deterministic to avoid flakiness when random sampling produces zero removals).
 function mutateSchema(base: string): string {
+  let field5Index = 0;
   return base
     .split('\n')
     .filter(line => {
-      if (line.trim().startsWith('field5:') && Math.random() < 0.02) {
-        return false; // simulate removal
+      if (line.trim().startsWith('field5:')) {
+        const drop = field5Index % 20 === 0;
+        field5Index++;
+        return !drop;
       }
       return true;
     })
