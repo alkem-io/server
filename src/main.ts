@@ -62,6 +62,8 @@ const bootstrap = async () => {
     });
   }
 
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   app.use(faviconMiddleware);
   const cookieParserMiddleware = cookieParser();
   app.use(cookieParserMiddleware);
