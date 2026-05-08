@@ -41,6 +41,7 @@ import {
   FindOneOptions,
   Repository,
 } from 'typeorm';
+import { CalloutContribution } from '../callout-contribution/callout.contribution.entity';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
@@ -50,6 +51,8 @@ import { ICalloutFraming } from '../callout-framing/callout.framing.interface';
 import { CalloutFramingService } from '../callout-framing/callout.framing.service';
 import { DefaultCalloutSettings } from '../callout-settings/callout.settings.default';
 import { ICalloutSettings } from '../callout-settings/callout.settings.interface';
+import { CollaboraDocumentService } from '../collabora-document/collabora.document.service';
+import { ImportCollaboraDocumentInput } from '../collabora-document/dto/collabora.document.dto.import';
 import { CreatePostInput } from '../post/dto/post.dto.create';
 import { CalloutContributionsCountOutput } from './dto/callout.contributions.count.dto';
 import { CreateContributionOnCalloutInput } from './dto/callout.dto.create.contribution';
@@ -66,6 +69,7 @@ export class CalloutService {
     private calloutFramingService: CalloutFramingService,
     private contributionDefaultsService: CalloutContributionDefaultsService,
     private contributionService: CalloutContributionService,
+    private collaboraDocumentService: CollaboraDocumentService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private classificationService: ClassificationService,
     @InjectRepository(Callout)
@@ -264,6 +268,10 @@ export class CalloutService {
           !!contribution.memo?.nameID &&
           input.memo.nameID === contribution.memo.nameID
         );
+      // COLLABORA_DOCUMENT contributions are created via the dedicated
+      // importCollaboraDocument mutation — they never appear in a bulk
+      // CreateCalloutContributionInput payload, so phase-2 pairing has
+      // nothing to match against. Falling through to default is correct.
       default:
         return false;
     }
@@ -747,6 +755,85 @@ export class CalloutService {
     return await this.contributionService.save(contribution);
   }
 
+  /**
+   * Import an existing file as a CollaboraDocument contribution on the
+   * callout. Mirrors `createContributionOnCallout`'s callout-loading,
+   * settings validation, sortOrder defaulting, and final save — but
+   * builds the doc from an uploaded file (file-service-go sniffs MIME
+   * from content and rejects anything outside our supported list)
+   * rather than from a typed creation input.
+   *
+   * The new contribution gets an empty authorization policy here; the
+   * authorization-reset cycle (parent space → callout → contribution)
+   * fills in credential rules on the next pass, same as the blank-
+   * create path.
+   */
+  public async importCollaboraDocumentToCallout(
+    input: ImportCollaboraDocumentInput,
+    file: { buffer: Buffer; filename: string; mimetype: string },
+    userID: string
+  ): Promise<ICalloutContribution> {
+    const callout = await this.getCalloutOrFail(input.calloutID, {
+      relations: { contributions: true },
+    });
+    if (!callout.settings.contribution) {
+      throw new EntityNotInitializedException(
+        `Callout (${input.calloutID}) not initialised: no contribution settings`,
+        LogContext.COLLABORATION
+      );
+    }
+    if (
+      !callout.settings.contribution.allowedTypes?.includes(
+        CalloutContributionType.COLLABORA_DOCUMENT
+      )
+    ) {
+      throw new ValidationException(
+        `Callout does not allow contributions of type COLLABORA_DOCUMENT. Allowed: ${callout.settings.contribution.allowedTypes?.join(', ')}`,
+        LogContext.COLLABORATION
+      );
+    }
+    if (!callout.contributions) {
+      throw new EntityNotInitializedException(
+        'Not able to load Contributions for this callout',
+        LogContext.COLLABORATION,
+        { calloutId: input.calloutID }
+      );
+    }
+
+    const storageAggregator = await this.getStorageAggregator(callout.id);
+
+    // Build the CollaboraDocument from the upload. file-service-go
+    // sniffs the MIME and rejects anything outside our supported list
+    // before this returns.
+    const collaboraDocument =
+      await this.collaboraDocumentService.createCollaboraDocument(
+        { displayName: input.displayName, uploadedFile: file },
+        storageAggregator,
+        userID
+      );
+
+    // Default sort order: min - 1, so the new contribution appears
+    // first (same convention as createContributionOnCallout).
+    let sortOrder = input.sortOrder;
+    if (sortOrder === undefined) {
+      const existing = callout.contributions.map(c => c.sortOrder);
+      sortOrder = existing.length === 0 ? 1 : Math.min(...existing) - 1;
+    }
+
+    const contribution: ICalloutContribution = CalloutContribution.create({
+      type: CalloutContributionType.COLLABORA_DOCUMENT,
+      sortOrder,
+    } as DeepPartial<CalloutContribution>);
+    contribution.authorization = new AuthorizationPolicy(
+      AuthorizationPolicyType.CALLOUT_CONTRIBUTION
+    );
+    contribution.createdBy = userID;
+    contribution.collaboraDocument = collaboraDocument;
+    contribution.callout = callout;
+
+    return await this.contributionService.save(contribution);
+  }
+
   public async getStorageBucket(calloutID: string): Promise<IStorageBucket> {
     const callout = await this.getCalloutOrFail(calloutID, {
       relations: {
@@ -902,6 +989,7 @@ export class CalloutService {
       link: 0,
       whiteboard: 0,
       memo: 0,
+      collaboraDocument: 0,
     };
 
     for (const { type, count } of counts) {
@@ -914,6 +1002,8 @@ export class CalloutService {
         result.whiteboard = numCount;
       } else if (type === CalloutContributionType.MEMO) {
         result.memo = numCount;
+      } else if (type === CalloutContributionType.COLLABORA_DOCUMENT) {
+        result.collaboraDocument = numCount;
       }
     }
 

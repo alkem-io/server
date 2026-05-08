@@ -13,6 +13,7 @@ import { PlatformRolesAccessService } from '@domain/access/platform-roles-access
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
+import { CollaboraDocumentAuthorizationService } from '@domain/collaboration/collabora-document/collabora.document.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { MemoAuthorizationService } from '@domain/common/memo/memo.service.authorization';
@@ -33,6 +34,7 @@ export class CalloutContributionAuthorizationService {
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private linkAuthorizationService: LinkAuthorizationService,
     private memoAuthorizationService: MemoAuthorizationService,
+    private collaboraDocumentAuthorizationService: CollaboraDocumentAuthorizationService,
     private platformRolesAccessService: PlatformRolesAccessService,
     private roleSetService: RoleSetService
   ) {}
@@ -78,6 +80,12 @@ export class CalloutContributionAuthorizationService {
                 authorization: true,
               },
             },
+            collaboraDocument: {
+              authorization: true,
+              profile: {
+                authorization: true,
+              },
+            },
           },
           select: {
             id: true,
@@ -110,6 +118,14 @@ export class CalloutContributionAuthorizationService {
               },
             },
             memo: {
+              id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
+              profile: {
+                id: true,
+              },
+            },
+            collaboraDocument: {
               id: true,
               authorization:
                 this.authorizationPolicyService.authorizationSelectOptions,
@@ -173,6 +189,15 @@ export class CalloutContributionAuthorizationService {
           contribution.authorization
         );
       updatedAuthorizations.push(...memoAuthorizations);
+    }
+
+    if (contribution.collaboraDocument) {
+      const collaboraDocumentAuthorizations =
+        await this.collaboraDocumentAuthorizationService.applyAuthorizationPolicy(
+          contribution.collaboraDocument.id,
+          contribution.authorization
+        );
+      updatedAuthorizations.push(...collaboraDocumentAuthorizations);
     }
 
     return updatedAuthorizations;

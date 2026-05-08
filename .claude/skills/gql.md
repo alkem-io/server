@@ -4,27 +4,41 @@ When asked to execute GraphQL queries or mutations against the Alkemio API, or w
 
 ## Overview
 
-The GQL pipeline uses a stored Kratos session token to authenticate requests against the non-interactive GraphQL endpoint. Queries and variables are passed via temp files to avoid shell escaping issues.
+The GQL pipeline supports two auth flavors. Pick based on what the request actually needs:
+
+| Flavor | Endpoint | Auth | Use when |
+|---|---|---|---|
+| **Non-interactive** (default) | `/api/private/non-interactive/graphql` | `Authorization: Bearer <session_token>` | Service-style ops where the request doesn't depend on resolved actor identity for privilege checks |
+| **Interactive** | `/api/private/graphql` | `Cookie: ory_kratos_session=<cookie>` | Anything user-bound: `collaboraEditorUrl` (WOPI), routes that hit `@CurrentActor` privilege checks, audit-logged actions, anything that needs the Oathkeeper session→JWT exchange |
+
+If a non-interactive call mysteriously returns "user: null" from `me.user`, or an `Authorization: unable to grant 'read' privilege` error with `user: ` (anonymous), switch to the interactive flavor — the actor isn't resolving on the non-interactive path.
 
 **Scripts involved:**
-- `.scripts/gql-request.sh` — standalone GQL executor
-- `.scripts/lib/graphql.sh` — shared `gql_request` function (for use in other scripts)
-- `.scripts/lib/kratos.sh` — shared Kratos auth helpers
+- `.scripts/gql-request.sh` — non-interactive (Bearer) executor
+- `.scripts/gql-request-interactive.sh` — interactive (cookie) executor
+- `.scripts/lib/graphql.sh` — shared `gql_request` and `gql_request_interactive` functions
+- `.scripts/lib/kratos.sh` — shared Kratos auth helpers (API flow + browser flow)
 
 ## Prerequisites
 
-### 1. Session Token
+### 1. Auth credential — one or both depending on the flavor
 
-A valid session token must exist at `.claude/pipeline/.session-token`.
-
+**Non-interactive (Bearer):** session token at `.claude/pipeline/.session-token`.
 ```bash
-# Check if token exists
-test -f .claude/pipeline/.session-token && echo "OK" || echo "Missing - run /non-interactive-login"
+test -f .claude/pipeline/.session-token && echo "OK" || echo "Missing — run /non-interactive-login"
 ```
-
-If missing or expired, acquire one first:
+If missing or expired:
 ```bash
 .scripts/non-interactive-login.sh
+```
+
+**Interactive (cookie):** cookie jar at `.claude/pipeline/.cookie-jar`.
+```bash
+test -f .claude/pipeline/.cookie-jar && echo "OK" || echo "Missing — run /interactive-login"
+```
+If missing or expired:
+```bash
+.scripts/interactive-login.sh
 ```
 
 ### 2. Pipeline Config
@@ -32,7 +46,8 @@ If missing or expired, acquire one first:
 Ensure `.claude/pipeline/.env` has the required variables:
 - `PIPELINE_USER` — email of the service account
 - `PIPELINE_PASSWORD` — password for the service account
-- `GRAPHQL_NON_INTERACTIVE_ENDPOINT` — API endpoint (defaults to `http://localhost:3000/api/private/non-interactive/graphql`)
+- `GRAPHQL_NON_INTERACTIVE_ENDPOINT` — non-interactive API endpoint (defaults to `http://localhost:3000/api/private/non-interactive/graphql`)
+- `GRAPHQL_INTERACTIVE_ENDPOINT` — interactive (cookie) API endpoint (defaults to `http://localhost:3000/api/private/graphql`)
 
 ### 3. Running Services
 
@@ -50,17 +65,19 @@ IMPORTANT: Always write queries and variables via the **Write** tool to avoid sh
 
 1. **Write the query** to `/tmp/.gql-query` using the Write tool
 2. **If variables are needed**, write the JSON to `/tmp/.gql-variables` using the Write tool
-3. **Run the script**:
+3. **Run the script** for the auth flavor your call needs:
 
 ```bash
-# Without variables
-.scripts/gql-request.sh
+# Non-interactive (Bearer token, anonymous-style auth)
+.scripts/gql-request.sh                       # query only
+.scripts/gql-request.sh /tmp/.gql-variables   # with variables
 
-# With variables
-.scripts/gql-request.sh /tmp/.gql-variables
+# Interactive (cookie, full session→JWT exchange)
+.scripts/gql-request-interactive.sh
+.scripts/gql-request-interactive.sh /tmp/.gql-variables
 ```
 
-The script auto-deletes the temp files after reading them.
+The scripts auto-delete the temp files after reading them.
 
 ### Using the lib in other scripts
 
@@ -69,16 +86,19 @@ SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 source "$SCRIPT_DIR/lib/kratos.sh"
 source "$SCRIPT_DIR/lib/graphql.sh"
 
-# SESSION_TOKEN must be set (e.g., via kratos_login or read from token file)
+# Non-interactive
 SESSION_TOKEN=$(cat .claude/pipeline/.session-token)
-
-# Query only
 response=$(gql_request 'query { me { user { id } } }')
-
-# Query with variables
 response=$(gql_request \
-  'query($id: UUID!) { lookup { space(ID: $id) { id nameID } } }' \
-  '{"id": "some-uuid"}')
+  'query($id: UUID!) { lookup { space(ID: $id) { id } } }' \
+  '{"id":"some-uuid"}')
+
+# Interactive
+COOKIE_JAR=".claude/pipeline/.cookie-jar"
+response=$(gql_request_interactive 'query { me { user { id email } } }')
+response=$(gql_request_interactive \
+  'query($id: UUID!) { collaboraEditorUrl(collaboraDocumentID: $id) { editorUrl } }' \
+  '{"id":"some-uuid"}')
 ```
 
 ## Schema Reference
@@ -240,7 +260,11 @@ query { __schema { mutationType { fields { name description } } } }
 | Error | Fix |
 |-------|-----|
 | "No session token found" | Run `/non-interactive-login` first |
-| "401 Unauthorized" or empty response | Token expired — re-run `/non-interactive-login` |
-| "SESSION_TOKEN is not set" | Ensure the script reads the token file or `kratos_login` was called |
+| "No cookie jar found" | Run `/interactive-login` first |
+| "401 Unauthorized" or empty response | Credential expired — re-run `/non-interactive-login` or `/interactive-login` |
+| `me.user` is null even though you're authenticated | You're on the non-interactive path; switch to `gql-request-interactive.sh` |
+| `Authorization: unable to grant '<priv>' privilege ... user: ` (empty) | Same — actor isn't resolving on non-interactive; switch to interactive |
+| WOPI 401 from `collaboraEditorUrl` | Non-interactive Bearer doesn't carry actor identity through Oathkeeper; use `gql-request-interactive.sh` |
+| "SESSION_TOKEN is not set" / "COOKIE_JAR is not set" | Ensure the script reads the credential file or the corresponding `kratos_login*` was called |
 | GraphQL validation errors | Check query syntax; use introspection queries to discover the schema |
 | "Kratos not reachable" | Run `pnpm run start:services` |

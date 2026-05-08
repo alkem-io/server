@@ -17,6 +17,7 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { CreateSpaceAboutInput } from '@domain/space/space.about';
 import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
 import { SpaceAboutService } from '@domain/space/space.about/space.about.service';
+import { SpaceSettingsService } from '@domain/space/space.settings/space.settings.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -32,6 +33,7 @@ export class TemplateContentSpaceService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private spaceAboutService: SpaceAboutService,
+    private spaceSettingsService: SpaceSettingsService,
     private collaborationService: CollaborationService,
     private licenseService: LicenseService,
     @InjectRepository(TemplateContentSpace)
@@ -345,6 +347,13 @@ export class TemplateContentSpaceService {
           templateContentSpace.about,
           templateContentSpaceData.about
         );
+    }
+
+    if (templateContentSpaceData.settings) {
+      templateContentSpace.settings = this.spaceSettingsService.updateSettings(
+        templateContentSpace.settings,
+        templateContentSpaceData.settings
+      );
     }
 
     return await this.save(templateContentSpace);

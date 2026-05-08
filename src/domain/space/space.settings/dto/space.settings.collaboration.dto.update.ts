@@ -3,41 +3,41 @@ import { Field, InputType } from '@nestjs/graphql';
 @InputType()
 export class UpdateSpaceSettingsCollaborationInput {
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Flag to control if members can create subspaces.',
   })
-  allowMembersToCreateSubspaces!: boolean;
+  allowMembersToCreateSubspaces?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Flag to control if members can create callouts.',
   })
-  allowMembersToCreateCallouts!: boolean;
+  allowMembersToCreateCallouts?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description:
       'Flag to control if ability to contribute is inherited from parent Space.',
   })
-  inheritMembershipRights!: boolean;
+  inheritMembershipRights?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description:
       'Flag to control if events from Subspaces are visible on this Space calendar as well.',
   })
-  allowEventsFromSubspaces!: boolean;
+  allowEventsFromSubspaces?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description:
       'Flag to control if members can create video calls in this Space.',
   })
-  allowMembersToVideoCall!: boolean;
+  allowMembersToVideoCall?: boolean;
 
   @Field(() => Boolean, {
-    nullable: false,
+    nullable: true,
     description: 'Flag to control if guest users can contribute to this Space.',
   })
-  allowGuestContributions!: boolean;
+  allowGuestContributions?: boolean;
 }
