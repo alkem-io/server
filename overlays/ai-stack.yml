@@ -282,4 +282,10 @@ services:
       - RABBITMQ_QUEUE=virtual-contributor-engine-openai-assistant
       - RABBITMQ_EVENT_BUS_EXCHANGE
       - RABBITMQ_RESULT_ROUTING_KEY
+      # The openai-assistant plugin talks directly to OpenAI's Assistants API
+      # and doesn't use the main LLM, but BaseConfig still validates that
+      # MISTRAL_API_KEY (or LLM_BASE_URL) is set. Pass them through so
+      # config validation succeeds at startup.
+      - MISTRAL_API_KEY
+      - MISTRAL_BASE_URL
       - LOG_LEVEL=DEBUG
