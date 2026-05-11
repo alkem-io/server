@@ -1,0 +1,78 @@
+# GraphQL schema delta — 095-collabora-import
+#
+# This file describes the additive-only changes to schema.graphql introduced by
+# this feature. The actual schema.graphql is regenerated and committed via the
+# project's `pnpm run schema:print && pnpm run schema:sort && pnpm run schema:diff`
+# workflow. This file is the human-readable diff for review and codeowner sign-off.
+#
+# Per Phase 0 research R1, the upload is exposed as a top-level optional `Upload`
+# argument on `createCalloutOnCalloutsSet` (matching the existing `importCollaboraDocument`,
+# `uploadFileOnReference`, etc. convention) — NOT as a nested `Upload` field inside
+# CreateCollaboraDocumentInput. The spec's clarification Q1 ("extend the input")
+# is interpreted at the contract level (one mutation, no new top-level mutation),
+# not at the literal placement of the Upload scalar.
+#
+# Per spec FR-005 + FR-012, displayName and documentType inside CreateCollaboraDocumentInput
+# become optional. The conditional requirement (required when no file is supplied) is
+# enforced at the service layer; class-validator decorators are relaxed.
+
+# ---------- BEFORE ----------
+# input CreateCollaboraDocumentData {
+#   "Title for the new collaborative document."
+#   displayName: String!
+#   "Type of document to create."
+#   documentType: CollaboraDocumentType!
+# }
+#
+# extend type Mutation {
+#   "Create a new Callout on the CalloutsSet."
+#   createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!): Callout!
+# }
+# ----------------------------
+
+# ---------- AFTER ----------
+input CreateCollaboraDocumentData {
+  "Title for the new collaborative document. Required for blank-create. On the upload path, defaulted from the uploaded filename (extension stripped) when absent or empty."
+  displayName: String
+
+  "Type of document to create. Required for blank-create. On the upload path, ignored — the type is derived from the uploaded file's sniffed MIME by file-service-go."
+  documentType: CollaboraDocumentType
+}
+
+extend type Mutation {
+  """
+  Create a new Callout on the CalloutsSet.
+
+  When `file` is supplied alongside a COLLABORA_DOCUMENT framing, the new callout's
+  framing Collabora document is populated from the file's bytes (file-service-go sniffs
+  MIME; format and size are validated upstream; the type is derived from the sniffed MIME
+  and any documentType supplied in the input is ignored).
+
+  When `file` is omitted, the existing blank-create behavior applies: framing.collaboraDocument
+  must specify both displayName and documentType.
+  """
+  createCalloutOnCalloutsSet(
+    calloutData: CreateCalloutOnCalloutsSetInput!,
+    "Optional file to populate the framing Collabora document from. Only consulted when calloutData.framing.type = COLLABORA_DOCUMENT and calloutData.framing.collaboraDocument is supplied."
+    file: Upload
+  ): Callout!
+}
+# ---------------------------
+
+# Schema-contract diff classification (per CLAUDE.md schema-contract rules):
+#   - CreateCollaboraDocumentData.displayName String! → String      : NON-BREAKING (required → optional on input)
+#   - CreateCollaboraDocumentData.documentType T! → T               : NON-BREAKING (required → optional on input)
+#   - createCalloutOnCalloutsSet new optional `file: Upload` arg     : NON-BREAKING (optional arg added)
+#
+# All three changes are additive on the input/argument side. No CODEOWNER `BREAKING-APPROVED`
+# is required. The schema-contract automation (`pnpm run schema:diff`) will classify these
+# as additive; SC-006 is satisfied.
+#
+# No changes to:
+#   - Callout type
+#   - CalloutFraming type
+#   - CollaboraDocument type
+#   - CollaboraDocumentType enum
+#   - Any other input
+#   - Any other mutation
+#   - Any query

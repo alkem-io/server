@@ -414,19 +414,21 @@ http:
         - 'web'
       priority: 155
 
-    # WOPI protocol endpoints (direct, opaque token auth)
+    # WOPI protocol endpoints (direct, opaque token auth — same domain as Collabora)
     wopi-protocol:
-      rule: 'PathPrefix(`/`)'
+      rule: 'PathPrefix(`/wopi`)'
       service: 'wopi-service'
       entryPoints:
-        - 'wopi'
+        - 'web'
+      priority: 145
 
-    # Collabora Online editor
+    # Collabora Online editor (browser, discovery, cool paths)
     collabora:
-      rule: 'PathPrefix(`/`)'
+      rule: 'PathPrefix(`/browser`) || PathPrefix(`/hosting/discovery`) || PathPrefix(`/hosting/capabilities`) || PathPrefix(`/cool`)'
       service: 'collabora'
       entryPoints:
-        - 'collabora'
+        - 'web'
+      priority: 140
 
     rabbitmq-management:
       rule: 'PathPrefix(`/`)'

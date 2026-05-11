@@ -62,6 +62,7 @@ export enum AuthorizationPolicyType {
   LICENSING = 'licensing',
   LICENSE = 'license',
   LICENSE_POLICY = 'license-policy',
+  COLLABORA_DOCUMENT = 'collabora-document',
   UNKNOWN = 'unknown',
 }
 

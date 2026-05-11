@@ -1,4 +1,5 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
 import { ILink } from '@domain/collaboration/link/link.interface';
 import { IPoll } from '@domain/collaboration/poll/poll.interface';
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity/authorizable.interface';
@@ -27,4 +28,6 @@ export abstract class ICalloutFraming extends IAuthorizable {
   mediaGallery?: IMediaGallery;
 
   poll?: IPoll;
+
+  collaboraDocument?: ICollaboraDocument;
 }

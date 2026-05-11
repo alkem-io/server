@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums/logging.context';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { CollaboraDocumentAuthorizationService } from '@domain/collaboration/collabora-document/collabora.document.service.authorization';
 import { PollAuthorizationService } from '@domain/collaboration/poll/poll.service.authorization';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -21,7 +22,8 @@ export class CalloutFramingAuthorizationService {
     private whiteboardAuthorizationService: WhiteboardAuthorizationService,
     private memoAuthorizationService: MemoAuthorizationService,
     private mediaGalleryAuthorizationService: MediaGalleryAuthorizationService,
-    private pollAuthorizationService: PollAuthorizationService
+    private pollAuthorizationService: PollAuthorizationService,
+    private collaboraDocumentAuthorizationService: CollaboraDocumentAuthorizationService
   ) {}
 
   public async applyAuthorizationPolicy(
@@ -43,6 +45,7 @@ export class CalloutFramingAuthorizationService {
               storageBucket: true,
             },
             poll: true,
+            collaboraDocument: true,
           },
           select: {
             id: true,
@@ -62,6 +65,9 @@ export class CalloutFramingAuthorizationService {
               storageBucket: { id: true },
             },
             poll: {
+              id: true,
+            },
+            collaboraDocument: {
               id: true,
             },
           },
@@ -126,6 +132,15 @@ export class CalloutFramingAuthorizationService {
           calloutFraming.authorization
         );
       updatedAuthorizations.push(...pollAuthorizations);
+    }
+
+    if (calloutFraming.collaboraDocument) {
+      const collaboraDocAuthorizations =
+        await this.collaboraDocumentAuthorizationService.applyAuthorizationPolicy(
+          calloutFraming.collaboraDocument.id,
+          calloutFraming.authorization
+        );
+      updatedAuthorizations.push(...collaboraDocAuthorizations);
     }
 
     return updatedAuthorizations;

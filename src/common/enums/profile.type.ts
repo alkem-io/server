@@ -22,6 +22,7 @@ export enum ProfileType {
   VIRTUAL_PERSONA = 'virtual-persona',
   SPACE = 'space',
   ACCOUNT = 'account',
+  COLLABORA_DOCUMENT = 'collabora-document',
 }
 
 registerEnumType(ProfileType, {

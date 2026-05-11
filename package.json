@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.144.4",
+  "version": "0.145.0",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -118,7 +118,6 @@
     "heic-convert": "^2.1.0",
     "helmet": "^4.6.0",
     "i18n-iso-countries": "^7.14.0",
-    "image-size": "^1.1.1",
     "ioredis": "^5.10.1",
     "jose": "^5.10.0",
     "jsdom": "^27.4.0",

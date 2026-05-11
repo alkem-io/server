@@ -10,6 +10,9 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
+import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
+import { CreateCollaboraDocumentInput } from '@domain/collaboration/collabora-document/dto/collabora.document.dto.create';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { IPoll } from '@domain/collaboration/poll/poll.interface';
@@ -58,6 +61,7 @@ export class CalloutFramingService {
     private tagsetService: TagsetService,
     private mediaGalleryService: MediaGalleryService,
     private pollService: PollService,
+    private collaboraDocumentService: CollaboraDocumentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectRepository(CalloutFraming)
@@ -167,6 +171,22 @@ export class CalloutFramingService {
         calloutFramingData.poll
       );
       calloutFraming.poll = poll;
+    }
+
+    if (calloutFraming.type === CalloutFramingType.COLLABORA_DOCUMENT) {
+      if (calloutFramingData.collaboraDocument) {
+        calloutFraming.collaboraDocument =
+          await this.collaboraDocumentService.createCollaboraDocument(
+            calloutFramingData.collaboraDocument,
+            storageAggregator,
+            userID
+          );
+      } else {
+        throw new ValidationException(
+          'Callout Framing of type COLLABORA_DOCUMENT requires collaboraDocument data.',
+          LogContext.COLLABORATION
+        );
+      }
     }
 
     return calloutFraming;
@@ -383,6 +403,16 @@ export class CalloutFramingService {
       await this.pollService.deletePoll(calloutFraming.poll.id);
       calloutFraming.poll = undefined;
     }
+
+    if (
+      calloutFraming.collaboraDocument &&
+      calloutFraming.type !== CalloutFramingType.COLLABORA_DOCUMENT
+    ) {
+      await this.collaboraDocumentService.deleteCollaboraDocument(
+        calloutFraming.collaboraDocument.id
+      );
+      calloutFraming.collaboraDocument = undefined;
+    }
   }
 
   public async updateCalloutFraming(
@@ -546,6 +576,26 @@ export class CalloutFramingService {
         }
         break;
       }
+      case CalloutFramingType.COLLABORA_DOCUMENT: {
+        // Collabora documents are immutable once created; updates are done
+        // through the Collabora editor via WOPI. If the framing was switched
+        // to COLLABORA_DOCUMENT and no document exists, create one.
+        if (!calloutFraming.collaboraDocument) {
+          if (!calloutFramingData.collaboraDocument) {
+            throw new ValidationException(
+              'Collabora document input is required when switching to COLLABORA_DOCUMENT framing type',
+              LogContext.COLLABORATION
+            );
+          }
+          calloutFraming.collaboraDocument =
+            await this.collaboraDocumentService.createCollaboraDocument(
+              calloutFramingData.collaboraDocument,
+              storageAggregator,
+              userID
+            );
+        }
+        break;
+      }
       case CalloutFramingType.NONE:
       default: {
         // if the type is NONE we have already deleted any existing framing content
@@ -568,6 +618,7 @@ export class CalloutFramingService {
           memo: true,
           mediaGallery: true,
           poll: true,
+          collaboraDocument: true,
         },
       }
     );
@@ -597,6 +648,12 @@ export class CalloutFramingService {
 
     if (calloutFraming.poll) {
       await this.pollService.deletePoll(calloutFraming.poll.id);
+    }
+
+    if (calloutFraming.collaboraDocument) {
+      await this.collaboraDocumentService.deleteCollaboraDocument(
+        calloutFraming.collaboraDocument.id
+      );
     }
 
     if (calloutFraming.authorization) {
@@ -709,6 +766,18 @@ export class CalloutFramingService {
     calloutFramingInput: ICalloutFraming
   ): Promise<IPoll | null> {
     return this.pollService.getPollForFraming(calloutFramingInput.id);
+  }
+
+  public async getCollaboraDocument(
+    calloutFramingInput: ICalloutFraming
+  ): Promise<ICollaboraDocument | null> {
+    const calloutFraming = await this.getCalloutFramingOrFail(
+      calloutFramingInput.id,
+      {
+        relations: { collaboraDocument: true },
+      }
+    );
+    return calloutFraming.collaboraDocument ?? null;
   }
 
   public async getMediaGallery(
