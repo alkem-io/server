@@ -879,6 +879,7 @@ enum AuthorizationPolicyType {
   CALLOUT_FRAMING
   CLASSIFICATION
   COLLABORATION
+  COLLABORA_DOCUMENT
   COMMUNICATION
   COMMUNICATION_CONVERSATION
   COMMUNICATION_MESSAGING
@@ -1119,6 +1120,8 @@ enum CalloutAllowedActors {
 type CalloutContribution {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """The CollaboraDocument that was contributed."""
+  collaboraDocument: CollaboraDocument
   """The user that created this Document"""
   createdBy: User
   """The date at which the entity was created."""
@@ -1155,6 +1158,7 @@ type CalloutContributionDefaults {
 }
 
 enum CalloutContributionType {
+  COLLABORA_DOCUMENT
   LINK
   MEMO
   POST
@@ -1162,6 +1166,8 @@ enum CalloutContributionType {
 }
 
 type CalloutContributionsCountOutput {
+  """The number of contributions of type CollaboraDocument in this callout"""
+  collaboraDocument: Float!
   """The number of contributions of type Link in this callout"""
   link: Float!
   """The number of contributions of type Memo in this callout"""
@@ -1180,6 +1186,10 @@ enum CalloutDescriptionDisplayMode {
 type CalloutFraming {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """
+  The Collabora document attached to this Callout Framing, if any. Present when framing.type = COLLABORA_DOCUMENT.
+  """
+  collaboraDocument: CollaboraDocument
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
@@ -1207,6 +1217,7 @@ type CalloutFraming {
 }
 
 enum CalloutFramingType {
+  COLLABORA_DOCUMENT
   LINK
   MEDIA_GALLERY
   MEMO
@@ -1332,6 +1343,37 @@ type Classification {
   tagsets: [Tagset!]
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type CollaboraDocument {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The user that created this CollaboraDocument."""
+  createdBy: User
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The type of the collaborative document."""
+  documentType: CollaboraDocumentType!
+  """The ID of the entity"""
+  id: UUID!
+  """The Profile for this CollaboraDocument."""
+  profile: Profile!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+enum CollaboraDocumentType {
+  DRAWING
+  PRESENTATION
+  SPREADSHEET
+  WORDPROCESSING
+}
+
+type CollaboraEditorUrlResult {
+  """The time-to-live of the access token in seconds."""
+  accessTokenTTL: Float!
+  """The URL to open the document in the Collabora editor."""
+  editorUrl: String!
 }
 
 type Collaboration {
@@ -1797,6 +1839,7 @@ input CreateCalendarEventOnCalendarInput {
 }
 
 type CreateCalloutContributionData {
+  collaboraDocument: CreateCollaboraDocumentData
   link: CreateLinkData
   memo: CreateMemoData
   post: CreatePostData
@@ -1823,6 +1866,7 @@ input CreateCalloutContributionDefaultsInput {
 }
 
 input CreateCalloutContributionInput {
+  collaboraDocument: CreateCollaboraDocumentInput
   link: CreateLinkInput
   memo: CreateMemoInput
   post: CreatePostInput
@@ -1850,6 +1894,8 @@ type CreateCalloutData {
 }
 
 type CreateCalloutFramingData {
+  """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
+  collaboraDocument: CreateCollaboraDocumentData
   link: CreateLinkData
   memo: CreateMemoData
   """
@@ -1866,6 +1912,8 @@ type CreateCalloutFramingData {
 }
 
 input CreateCalloutFramingInput {
+  """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
+  collaboraDocument: CreateCollaboraDocumentInput
   link: CreateLinkInput
   memo: CreateMemoInput
   """
@@ -1984,6 +2032,28 @@ input CreateClassificationInput {
   tagsets: [CreateTagsetInput!]!
 }
 
+type CreateCollaboraDocumentData {
+  """
+  Title for the new collaborative document. Required for blank-create. On the upload path, defaulted from the uploaded filename (extension stripped) when absent or empty.
+  """
+  displayName: String
+  """
+  Type of document to create. Required for blank-create. On the upload path, ignored — the type is derived from the uploaded file's sniffed MIME by file-service-go.
+  """
+  documentType: CollaboraDocumentType
+}
+
+input CreateCollaboraDocumentInput {
+  """
+  Title for the new collaborative document. Required for blank-create. On the upload path, defaulted from the uploaded filename (extension stripped) when absent or empty.
+  """
+  displayName: String
+  """
+  Type of document to create. Required for blank-create. On the upload path, ignored — the type is derived from the uploaded file's sniffed MIME by file-service-go.
+  """
+  documentType: CollaboraDocumentType
+}
+
 type CreateCollaborationData {
   """The CalloutsSet to use for this Collaboration."""
   calloutsSetData: CreateCalloutsSetData!
@@ -2019,6 +2089,7 @@ input CreateCommunityGuidelinesInput {
 
 input CreateContributionOnCalloutInput {
   calloutID: UUID!
+  collaboraDocument: CreateCollaboraDocumentInput
   link: CreateLinkInput
   memo: CreateMemoInput
   post: CreatePostInput
@@ -2635,6 +2706,11 @@ input DeleteCalloutInput {
   ID: UUID!
 }
 
+input DeleteCollaboraDocumentInput {
+  """The ID of the CollaboraDocument to delete."""
+  ID: UUID!
+}
+
 input DeleteContributionInput {
   ID: UUID!
 }
@@ -2993,6 +3069,21 @@ enum IdentityVerificationStatusFilter {
   ALL
   UNVERIFIED
   VERIFIED
+}
+
+input ImportCollaboraDocumentInput {
+  """
+  The ID of the Callout to attach the imported document to as a new contribution.
+  """
+  calloutID: UUID!
+  """
+  Optional title override. If absent, derived from the uploaded filename (extension stripped).
+  """
+  displayName: String
+  """
+  Optional sortOrder for the new contribution. Defaults to one less than the current minimum (new contribution appears first).
+  """
+  sortOrder: Float
 }
 
 type InAppNotification {
@@ -4050,6 +4141,7 @@ type MigrateEmbeddings {
 enum MimeType {
   AVIF
   BMP
+  CSV
   DOC
   DOCX
   GIF
@@ -4057,6 +4149,7 @@ enum MimeType {
   HEIF
   JPEG
   JPG
+  ODG
   ODP
   ODS
   ODT
@@ -4069,6 +4162,7 @@ enum MimeType {
   PPT
   PPTM
   PPTX
+  RTF
   SVG
   WEBP
   XLS
@@ -4267,8 +4361,10 @@ type Mutation {
   Convert a VC of type ALKEMIO_SPACE to be of type KNOWLEDGE_BASE. All Callouts from the Space currently being used are moved to the Knowledge Base. Note: only allowed for VCs using a Space within the same Account.
   """
   convertVirtualContributorToUseKnowledgeBase(conversionData: ConversionVcSpaceToVcKnowledgeBaseInput!): VirtualContributor!
-  """Create a new Callout on the CalloutsSet."""
-  createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!): Callout!
+  """
+  Create a new Callout on the CalloutsSet. When `file` is supplied alongside a COLLABORA_DOCUMENT framing, the new callout is framed with a Collabora document populated from the uploaded bytes (file-service-go sniffs MIME, validates format and size, and derives the document type; any documentType in the input is ignored on the upload path; displayName defaults from the filename when absent). When `file` is omitted, the existing blank-create behaviour applies and framing.collaboraDocument must specify both displayName and documentType.
+  """
+  createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!, file: Upload): Callout!
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
   """
@@ -4323,6 +4419,8 @@ type Mutation {
   deleteCalendarEvent(deleteData: DeleteCalendarEventInput!): CalendarEvent!
   """Delete a Callout."""
   deleteCallout(deleteData: DeleteCalloutInput!): Callout!
+  """Deletes the specified CollaboraDocument."""
+  deleteCollaboraDocument(deleteData: DeleteCollaboraDocumentInput!): CollaboraDocument!
   """Deletes a contribution."""
   deleteContribution(deleteData: DeleteContributionInput!): CalloutContribution!
   """
@@ -4387,6 +4485,10 @@ type Mutation {
   grantCredentialToOrganization(grantCredentialData: GrantOrganizationAuthorizationCredentialInput!): Organization!
   """Grants an authorization credential to a User."""
   grantCredentialToUser(grantCredentialData: GrantAuthorizationCredentialInput!): User!
+  """
+  Import an existing file as a CollaboraDocument contribution on the callout. file-service-go sniffs the MIME from content and rejects formats Collabora cannot edit.
+  """
+  importCollaboraDocument(file: Upload!, uploadData: ImportCollaboraDocumentInput!): CalloutContribution!
   """
   Invite new Contributors or users by email to join the specified RoleSet in the Entry Role.
   """
@@ -4472,7 +4574,7 @@ type Mutation {
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
-  resetLicenseOnAccounts: Space!
+  resetLicenseOnAccounts: Boolean!
   """Revoke a credential from an Actor."""
   revokeCredentialFromActor(actorID: UUID!, credentialType: CredentialType!, resourceID: UUID): Boolean!
   """Removes an authorization credential from an Organization."""
@@ -4539,6 +4641,8 @@ type Mutation {
   updateCalloutsSortOrder(sortOrderData: UpdateCalloutsSortOrderInput!): [Callout!]!
   """Updates a Tagset on a Classification."""
   updateClassificationTagset(updateData: UpdateClassificationSelectTagsetValueInput!): Tagset!
+  """Updates the specified CollaboraDocument."""
+  updateCollaboraDocument(updateData: UpdateCollaboraDocumentInput!): CollaboraDocument!
   """
   Updates a Collaboration using the Space content from the specified Template. Behavior depends on parameter combinations: (1) Flow Only: deleteExistingCallouts=false, addCallouts=false - updates only InnovationFlow states; (2) Add Posts: deleteExistingCallouts=false, addCallouts=true - keeps existing and adds template callouts; (3) Replace All: deleteExistingCallouts=true, addCallouts=true - deletes existing then adds template callouts; (4) Delete Only: deleteExistingCallouts=true, addCallouts=false - deletes existing callouts and updates InnovationFlow states. Execution order: delete (if requested) → update flow states (always) → add (if requested).
   """
@@ -5521,6 +5625,7 @@ enum ProfileType {
   ACCOUNT
   CALENDAR_EVENT
   CALLOUT_FRAMING
+  COLLABORA_DOCUMENT
   COMMUNITY_GUIDELINES
   CONTRIBUTION_LINK
   DISCUSSION
@@ -5708,6 +5813,8 @@ type Query {
   adminIdentitiesUnverified: [KratosIdentity!]!
   """Alkemio AiServer"""
   aiServer: AiServer!
+  """Retrieves the editor URL for the specified CollaboraDocument."""
+  collaboraEditorUrl(collaboraDocumentID: UUID!): CollaboraEditorUrlResult!
   """Active Spaces only, order by most active in the past X days."""
   exploreSpaces(options: ExploreSpacesInput): [Space!]!
   """
@@ -7468,6 +7575,10 @@ input UpdateCalloutEntityInput {
 }
 
 input UpdateCalloutFramingInput {
+  """
+  Collabora document input. Used when switching framing type to COLLABORA_DOCUMENT.
+  """
+  collaboraDocument: CreateCollaboraDocumentInput
   link: UpdateLinkInput
   """The new markdown content for the Memo."""
   memoContent: Markdown
@@ -7542,6 +7653,13 @@ input UpdateClassificationSelectTagsetValueInput {
   tagsetName: String!
 }
 
+input UpdateCollaboraDocumentInput {
+  """The ID of the CollaboraDocument to update."""
+  ID: UUID!
+  """Updated display name for the document."""
+  displayName: String
+}
+
 input UpdateCollaborationFromSpaceTemplateInput {
   """Add the Callouts from the Collaboration Template"""
   addCallouts: Boolean = false
@@ -7598,7 +7716,7 @@ input UpdateDiscussionInput {
 input UpdateDocumentInput {
   ID: UUID!
   """
-  The display name for the Document. Not supported — rejected with a ValidationException if provided.
+  Display name. Currently rejected with a ValidationException — for documents owned by a parent entity (e.g., CollaboraDocument, Profile), use the parent's update mutation, which carries the context (file extension, MIME, profile coupling) needed to keep editor titles, download names, and the file-service row in sync. Direct rename via updateDocument will be wired when documents become a directly-managed resource (e.g., a per-space documents collection).
   """
   displayName: String
   tagset: UpdateTagsetInput
@@ -7914,19 +8032,19 @@ input UpdateSpaceSettingsCollaborationInput {
   """
   Flag to control if events from Subspaces are visible on this Space calendar as well.
   """
-  allowEventsFromSubspaces: Boolean!
+  allowEventsFromSubspaces: Boolean
   """Flag to control if guest users can contribute to this Space."""
-  allowGuestContributions: Boolean!
+  allowGuestContributions: Boolean
   """Flag to control if members can create callouts."""
-  allowMembersToCreateCallouts: Boolean!
+  allowMembersToCreateCallouts: Boolean
   """Flag to control if members can create subspaces."""
-  allowMembersToCreateSubspaces: Boolean!
+  allowMembersToCreateSubspaces: Boolean
   """Flag to control if members can create video calls in this Space."""
-  allowMembersToVideoCall: Boolean!
+  allowMembersToVideoCall: Boolean
   """
   Flag to control if ability to contribute is inherited from parent Space.
   """
-  inheritMembershipRights: Boolean!
+  inheritMembershipRights: Boolean
 }
 
 input UpdateSpaceSettingsEntityInput {

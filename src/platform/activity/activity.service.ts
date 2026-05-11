@@ -69,6 +69,55 @@ export class ActivityService {
     return await this.save(activity);
   }
 
+  // Re-stamps every Activity row that references the given callout (either as
+  // the resource itself or as the parent of a contribution-level event) onto
+  // the destination collaboration. Top-level callout events store the
+  // collaborationID in `parentID` (CALLOUT_PUBLISHED, DISCUSSION_COMMENT) and
+  // are rewritten too; per-contribution events store the calloutID in
+  // `parentID` and are left intact via the CASE expression.
+  async moveActivitiesForCallout(
+    calloutID: string,
+    oldCollaborationID: string,
+    newCollaborationID: string
+  ): Promise<void> {
+    if (oldCollaborationID === newCollaborationID) {
+      return;
+    }
+    await this.activityRepository
+      .createQueryBuilder()
+      .update(Activity)
+      .set({
+        collaborationID: newCollaborationID,
+        parentID: () =>
+          'CASE WHEN "parentID" = :oldCollaborationID THEN :newCollaborationID ELSE "parentID" END',
+      })
+      .where('"resourceID" = :calloutID OR "parentID" = :calloutID')
+      .setParameters({
+        calloutID,
+        oldCollaborationID,
+        newCollaborationID,
+      })
+      .execute();
+  }
+
+  // Removes the SUBSPACE_CREATED entry that points at a space which has been
+  // promoted/moved out of its source parent. The row is the only stale entry
+  // — the moved space's own collaboration carries its activity history with
+  // it because collaborationID is preserved.
+  async removeSubspaceCreatedActivityForResource(
+    resourceID: string
+  ): Promise<void> {
+    await this.activityRepository
+      .createQueryBuilder()
+      .delete()
+      .from(Activity)
+      .where('"resourceID" = :resourceID AND "type" = :type', {
+        resourceID,
+        type: ActivityEventType.SUBSPACE_CREATED,
+      })
+      .execute();
+  }
+
   async getActivityForCollaborations(
     collaborationIDs: string[],
     options?: {

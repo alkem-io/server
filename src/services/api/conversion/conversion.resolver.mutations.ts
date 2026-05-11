@@ -12,12 +12,14 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { CalloutTransferService } from '@domain/collaboration/callout-transfer/callout.transfer.service';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { LicenseService } from '@domain/common/license/license.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorService } from '@domain/community/virtual-contributor/virtual.contributor.service';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { ISpace } from '@domain/space/space/space.interface';
 import { SpaceService } from '@domain/space/space/space.service';
 import { SpaceAuthorizationService } from '@domain/space/space/space.service.authorization';
+import { SpaceLicenseService } from '@domain/space/space/space.service.license';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
@@ -47,6 +49,8 @@ export class ConversionResolverMutations {
     private virtualContributorAuthorizationService: VirtualContributorAuthorizationService,
     private calloutTransferService: CalloutTransferService,
     private aiServerAdapter: AiServerAdapter,
+    private spaceLicenseService: SpaceLicenseService,
+    private licenseService: LicenseService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
@@ -81,6 +85,13 @@ export class ConversionResolverMutations {
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
+    const updatedLicenses = await this.spaceLicenseService.applyLicensePolicy(
+      space.id
+    );
+    await this.licenseService.saveAll(updatedLicenses);
+
+    await this.spaceService.invalidateUrlCacheForSpaceSubtree(space.id);
+
     return this.spaceService.getSpaceOrFail(space.id);
   }
 
@@ -113,6 +124,9 @@ export class ConversionResolverMutations {
         parentAuthorization
       );
     await this.authorizationPolicyService.saveAll(spaceL1Authorizations);
+
+    await this.spaceService.invalidateUrlCacheForSpaceSubtree(spaceL1.id);
+
     return await this.spaceService.getSpaceOrFail(spaceL1.id);
   }
 
@@ -149,6 +163,9 @@ export class ConversionResolverMutations {
         parentAuthorization
       );
     await this.authorizationPolicyService.saveAll(spaceL1Authorizations);
+
+    await this.spaceService.invalidateUrlCacheForSpaceSubtree(spaceL2.id);
+
     return await this.spaceService.getSpaceOrFail(spaceL2.id);
   }
 
@@ -184,7 +201,7 @@ export class ConversionResolverMutations {
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     // Post-commit: fire-and-forget
-    void this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
+    await this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
     void this.conversionService.moveRoomsService.handleRoomsDuringMove(
       savedSpace.id,
       removedActorIds
@@ -234,7 +251,7 @@ export class ConversionResolverMutations {
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     // Post-commit: fire-and-forget
-    void this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
+    await this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
     void this.conversionService.moveRoomsService.handleRoomsDuringMove(
       savedSpace.id,
       removedActorIds

@@ -204,13 +204,13 @@ export class AdminLicensingResolverMutations {
     return this.spaceService.getSpaceOrFail(space.id);
   }
 
-  @Mutation(() => ISpace, {
+  @Mutation(() => Boolean, {
     description: 'Reset all license plans on Accounts',
   })
   @Profiling.api
   async resetLicenseOnAccounts(
     @CurrentActor() actorContext: ActorContext
-  ): Promise<void> {
+  ): Promise<boolean> {
     const licensing =
       await this.licensingFrameworkService.getDefaultLicensingOrFail();
 
@@ -227,5 +227,6 @@ export class AdminLicensingResolverMutations {
         await this.accountLicenseService.applyLicensePolicy(account.id);
       await this.licenseService.saveAll(updatedLicenses);
     }
+    return true;
   }
 }

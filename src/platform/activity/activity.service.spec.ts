@@ -486,6 +486,89 @@ describe('ActivityService', () => {
     });
   });
 
+  describe('moveActivitiesForCallout', () => {
+    const buildUpdateQb = () => {
+      const qb: any = {
+        update: vi.fn().mockReturnThis(),
+        set: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        setParameters: vi.fn().mockReturnThis(),
+        execute: vi.fn().mockResolvedValue(undefined),
+      };
+      return qb;
+    };
+
+    it('should issue a single bulk UPDATE matching resource and parent ids', async () => {
+      const qb = buildUpdateQb();
+      activityRepository.createQueryBuilder!.mockReturnValue(qb);
+
+      await service.moveActivitiesForCallout(
+        'callout-1',
+        'collab-old',
+        'collab-new'
+      );
+
+      expect(qb.update).toHaveBeenCalledWith(Activity);
+      expect(qb.where).toHaveBeenCalledWith(
+        '"resourceID" = :calloutID OR "parentID" = :calloutID'
+      );
+      expect(qb.setParameters).toHaveBeenCalledWith({
+        calloutID: 'callout-1',
+        oldCollaborationID: 'collab-old',
+        newCollaborationID: 'collab-new',
+      });
+      expect(qb.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('should rewrite parentID via CASE only when it equals the old collaboration id', async () => {
+      const qb = buildUpdateQb();
+      activityRepository.createQueryBuilder!.mockReturnValue(qb);
+
+      await service.moveActivitiesForCallout(
+        'callout-1',
+        'collab-old',
+        'collab-new'
+      );
+
+      const setArg = qb.set.mock.calls[0][0];
+      expect(setArg.collaborationID).toBe('collab-new');
+      expect(typeof setArg.parentID).toBe('function');
+      expect(setArg.parentID()).toContain(
+        'CASE WHEN "parentID" = :oldCollaborationID THEN :newCollaborationID ELSE "parentID" END'
+      );
+    });
+
+    it('should be a no-op when source and destination collaborations match', async () => {
+      await service.moveActivitiesForCallout('callout-1', 'same', 'same');
+
+      expect(activityRepository.createQueryBuilder).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('removeSubspaceCreatedActivityForResource', () => {
+    it('should issue a single bulk DELETE filtered by resourceID and SUBSPACE_CREATED type', async () => {
+      const qb: any = {
+        delete: vi.fn().mockReturnThis(),
+        from: vi.fn().mockReturnThis(),
+        where: vi.fn().mockReturnThis(),
+        execute: vi.fn().mockResolvedValue(undefined),
+      };
+      activityRepository.createQueryBuilder!.mockReturnValue(qb);
+
+      await service.removeSubspaceCreatedActivityForResource('space-l1');
+
+      expect(qb.from).toHaveBeenCalledWith(Activity);
+      expect(qb.where).toHaveBeenCalledWith(
+        '"resourceID" = :resourceID AND "type" = :type',
+        {
+          resourceID: 'space-l1',
+          type: ActivityEventType.SUBSPACE_CREATED,
+        }
+      );
+      expect(qb.execute).toHaveBeenCalledTimes(1);
+    });
+  });
+
   describe('getLatestActivitiesPerSpaceMembership', () => {
     it('should query activities for collaboration IDs from membership info', async () => {
       const qb = {
