@@ -30,11 +30,12 @@ export class IngestBodyOfKnowledgeResultHandler
 
     if (
       !response?.personaId ||
-      !response.timestamp ||
+      response.timestamp == null ||
+      !response.purpose ||
       response.purpose === IngestionPurpose.CONTEXT
     ) {
       this.logger.verbose?.(
-        'Skipping persona BoK timestamp update (missing personaId/timestamp or purpose=CONTEXT)',
+        'Skipping persona BoK timestamp update (missing personaId/timestamp/purpose or purpose=CONTEXT)',
         LogContext.AI_SERVER_EVENT_BUS
       );
 

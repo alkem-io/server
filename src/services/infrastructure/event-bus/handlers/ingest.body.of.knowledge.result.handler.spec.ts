@@ -21,9 +21,11 @@ const buildResult = (
   const response = new IngestBodyOfKnowledgeResponse(
     overrides.bodyOfKnowledgeId ?? 'bok-1',
     overrides.type ?? VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
-    overrides.purpose ?? IngestionPurpose.KNOWLEDGE,
+    'purpose' in overrides
+      ? (overrides.purpose as IngestionPurpose)
+      : IngestionPurpose.KNOWLEDGE,
     overrides.personaId ?? 'persona-1',
-    overrides.timestamp ?? Date.now(),
+    'timestamp' in overrides ? (overrides.timestamp as number) : Date.now(),
     overrides.result ?? IngestionResult.SUCCESS,
     overrides.error
   );
@@ -74,8 +76,31 @@ describe('IngestBodyOfKnowledgeResultHandler', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('should return early when timestamp is falsy', async () => {
+    it('should return early when timestamp is missing', async () => {
+      const event = buildResult({ timestamp: null as unknown as number });
+
+      await handler.handle(event);
+
+      expect(
+        aiServerService.updatePersonaBoKLastUpdated
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should treat timestamp 0 as a valid epoch timestamp', async () => {
       const event = buildResult({ timestamp: 0 });
+
+      await handler.handle(event);
+
+      expect(aiServerService.updatePersonaBoKLastUpdated).toHaveBeenCalledWith(
+        'persona-1',
+        new Date(0)
+      );
+    });
+
+    it('should return early when purpose is missing', async () => {
+      const event = buildResult({
+        purpose: undefined as unknown as IngestionPurpose,
+      });
 
       await handler.handle(event);
 
