@@ -82,12 +82,34 @@ http:
           - url: 'http://synapse-admin:80/'
 
     whiteboard-collaboration:
+      failover:
+        service: whiteboard-collaboration-local
+        fallback: whiteboard-collaboration-compose
+
+    whiteboard-collaboration-compose:
       loadBalancer:
         servers:
-          # ── Default: compose-managed whiteboard container ────────────────
           - url: 'http://whiteboard-collaboration:4002/'
-          # ── Local-dev toggle ─────────────────────────────────────────────
-          # - url: 'http://host.docker.internal:4002/'
+        healthCheck:
+          path: /health
+          port: 4005
+          interval: 10s
+          timeout: 3s
+          scheme: http
+
+    # Fallback: host loopback for `npm run dev` local-whiteboard workflow.
+    # Receives traffic only when the primary is unhealthy. Same /health
+    # contract.
+    whiteboard-collaboration-local:
+      loadBalancer:
+        servers:
+          - url: 'http://host.docker.internal:4002/'
+        healthCheck:
+          path: /health
+          port: 4005
+          interval: 10s
+          timeout: 3s
+          scheme: http
 
     collaborative-document:
       loadBalancer:
