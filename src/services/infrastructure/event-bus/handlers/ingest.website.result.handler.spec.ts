@@ -4,13 +4,27 @@ import { AiServerService } from '@services/ai-server/ai-server/ai.server.service
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { vi } from 'vitest';
-import { IngestionPurpose, IngestWebsite } from '../messages/ingest.website';
 import {
   IngestWebsiteResponse,
   IngestWebsiteResult,
 } from '../messages/ingest.website.result.event';
-import { IngestionResult } from '../messages/types';
+import { IngestionPurpose, IngestionResult } from '../messages/types';
 import { IngestWebsiteResultHandler } from './ingest.website.result.handler';
+
+const buildResult = (
+  overrides: Partial<IngestWebsiteResponse> = {}
+): IngestWebsiteResult => {
+  const response = new IngestWebsiteResponse(
+    overrides.bodyOfKnowledgeId ?? '',
+    overrides.type ?? VirtualContributorBodyOfKnowledgeType.WEBSITE,
+    overrides.purpose ?? IngestionPurpose.KNOWLEDGE,
+    overrides.personaId ?? 'persona-1',
+    overrides.timestamp ?? Date.now(),
+    overrides.result ?? IngestionResult.SUCCESS,
+    overrides.error
+  );
+  return new IngestWebsiteResult(response);
+};
 
 describe('IngestWebsiteResultHandler', () => {
   let handler: IngestWebsiteResultHandler;
@@ -32,18 +46,12 @@ describe('IngestWebsiteResultHandler', () => {
   });
 
   describe('handle', () => {
-    it('should return early when response result is FAILURE', async () => {
-      const original = new IngestWebsite(
-        'https://example.com',
-        VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
-        IngestionPurpose.KNOWLEDGE,
-        'persona-1'
+    it('should return early when response is missing entirely (defensive)', async () => {
+      // Simulates the bug we fixed: pre-fix wire payloads without a `response`
+      // wrapper would throw `Cannot read properties of undefined`.
+      const event = new IngestWebsiteResult(
+        undefined as unknown as IngestWebsiteResponse
       );
-      const response = new IngestWebsiteResponse(
-        Date.now(),
-        IngestionResult.FAILURE
-      );
-      const event = new IngestWebsiteResult(original, response);
 
       await handler.handle(event);
 
@@ -52,18 +60,28 @@ describe('IngestWebsiteResultHandler', () => {
       ).not.toHaveBeenCalled();
     });
 
-    it('should return early when personaId is undefined', async () => {
-      const original = new IngestWebsite(
-        'https://example.com',
-        VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
-        IngestionPurpose.KNOWLEDGE
-        // no personaId
-      );
-      const response = new IngestWebsiteResponse(
-        Date.now(),
-        IngestionResult.SUCCESS
-      );
-      const event = new IngestWebsiteResult(original, response);
+    it('should return early when response result is FAILURE', async () => {
+      const event = buildResult({ result: IngestionResult.FAILURE });
+
+      await handler.handle(event);
+
+      expect(
+        aiServerService.updatePersonaBoKLastUpdated
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should return early when personaId is missing', async () => {
+      const event = buildResult({ personaId: '' });
+
+      await handler.handle(event);
+
+      expect(
+        aiServerService.updatePersonaBoKLastUpdated
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should return early when purpose is CONTEXT', async () => {
+      const event = buildResult({ purpose: IngestionPurpose.CONTEXT });
 
       await handler.handle(event);
 
@@ -74,17 +92,7 @@ describe('IngestWebsiteResultHandler', () => {
 
     it('should call updatePersonaBoKLastUpdated with response timestamp on success', async () => {
       const timestamp = 1700000000000;
-      const original = new IngestWebsite(
-        'https://example.com',
-        VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
-        IngestionPurpose.KNOWLEDGE,
-        'persona-1'
-      );
-      const response = new IngestWebsiteResponse(
-        timestamp,
-        IngestionResult.SUCCESS
-      );
-      const event = new IngestWebsiteResult(original, response);
+      const event = buildResult({ timestamp });
 
       await handler.handle(event);
 
@@ -95,17 +103,7 @@ describe('IngestWebsiteResultHandler', () => {
     });
 
     it('should use current date when response timestamp is falsy', async () => {
-      const original = new IngestWebsite(
-        'https://example.com',
-        VirtualContributorBodyOfKnowledgeType.ALKEMIO_SPACE,
-        IngestionPurpose.KNOWLEDGE,
-        'persona-1'
-      );
-      const response = new IngestWebsiteResponse(
-        0, // falsy timestamp
-        IngestionResult.SUCCESS
-      );
-      const event = new IngestWebsiteResult(original, response);
+      const event = buildResult({ timestamp: 0 });
 
       const beforeCall = Date.now();
       await handler.handle(event);
