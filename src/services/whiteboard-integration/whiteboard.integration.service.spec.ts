@@ -242,47 +242,6 @@ describe('WhiteboardIntegrationService - guest handling', () => {
     });
   });
 
-  describe('who()', () => {
-    it('returns empty string for anonymous users', async () => {
-      const actorCtx = new ActorContext();
-      actorCtx.isAnonymous = true;
-      authenticationService.getActorContext.mockResolvedValue(actorCtx);
-
-      const result = await service.who({
-        auth: { cookie: 'some-cookie' },
-      });
-
-      expect(result).toBe('');
-    });
-
-    it('returns guest-<uuid> for guest users', async () => {
-      const actorCtx = new ActorContext();
-      actorCtx.isAnonymous = false;
-      actorCtx.guestName = 'Taylor';
-      authenticationService.getActorContext.mockResolvedValue(actorCtx);
-
-      const result = await service.who({
-        auth: { guestName: 'Taylor' },
-      });
-
-      expect(result).toMatch(/^guest-[0-9a-f-]{36}$/);
-    });
-
-    it('returns actorID for authenticated users', async () => {
-      const actorCtx = new ActorContext();
-      actorCtx.isAnonymous = false;
-      actorCtx.guestName = undefined as any;
-      actorCtx.actorID = 'user-abc-123';
-      authenticationService.getActorContext.mockResolvedValue(actorCtx);
-
-      const result = await service.who({
-        auth: { authorization: 'Bearer token' },
-      });
-
-      expect(result).toBe('user-abc-123');
-    });
-  });
-
   describe('save()', () => {
     it('returns SaveContentData on successful save', async () => {
       whiteboardService.updateWhiteboardContent = vi

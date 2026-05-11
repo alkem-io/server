@@ -84,7 +84,10 @@ http:
     whiteboard-collaboration:
       loadBalancer:
         servers:
+          # ── Default: compose-managed whiteboard container ────────────────
           - url: 'http://whiteboard-collaboration:4002/'
+          # ── Local-dev toggle ─────────────────────────────────────────────
+          # - url: 'http://host.docker.internal:4002/'
 
     collaborative-document:
       loadBalancer:
@@ -165,6 +168,31 @@ http:
         address: 'http://oathkeeper:4456/decisions'
         authResponseHeaders:
           - Authorization
+
+    # strips any client-supplied X-Alkemio-* identity
+    # headers before the request reaches the upstream. MUST run before
+    # `alkemio-resolve` on any router that uses it.
+    strip-client-alkemio-headers:
+      headers:
+        customRequestHeaders:
+          X-Alkemio-Actor-Id: ""
+          X-Alkemio-Actor-Name: ""
+          X-Alkemio-Session-Id: ""
+
+    # Universal traefik forwardAuth decision endpoint. alkemio-server's
+    # AuthenticationService resolves the alkemio_session cookie (or the
+    # `?guestName=` query param for guest paths) to a canonical ActorContext
+    # and emits its `actorID`:
+    #   - authenticated user → X-Alkemio-Actor-Id: <real actor id>
+    #   - guest with name    → X-Alkemio-Actor-Id: guest-<uuid>
+    #   - anonymous          → header absent
+    # Always returns 200; per-route policy decides what missing-header means.
+    alkemio-resolve:
+      forwardAuth:
+        address: 'http://host.docker.internal:4000/api/auth/resolve'
+        authResponseHeaders:
+          - X-Alkemio-Actor-Id
+        trustForwardHeader: true
 
   routers:
     oidc-public:
@@ -268,7 +296,8 @@ http:
       service: 'whiteboard-collaboration'
       middlewares:
         - strip-api-private-prefix-socket-io
-        - oathkeeper-auth-socket-io
+        - strip-client-alkemio-headers
+        - alkemio-resolve
       entryPoints:
         - 'web'
 
@@ -499,4 +528,3 @@ tcp:
       service: 'matrix-adapter'
       entryPoints:
         - 'matrix-adapter'
-

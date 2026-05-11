@@ -10,6 +10,7 @@ import { createRemoteJWKSet } from 'jose';
 import { parseBearerAudAllowList } from './bearer-aud-allow-list';
 import { OidcController } from './oidc.controller';
 import { OidcService } from './oidc.service';
+import { ResolveController } from './resolve.controller';
 import { buildSessionStore } from './session-store.redis';
 import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
 import { CookieSessionStoreUnavailableFilter } from './strategies/cookie-session.exception-filter';
@@ -28,7 +29,7 @@ import {
     AuthenticationModule,
     ActorContextModule,
   ],
-  controllers: [OidcController],
+  controllers: [OidcController, ResolveController],
   providers: [
     OidcService,
     {

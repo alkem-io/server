@@ -7,6 +7,7 @@ import { ICredential } from '@domain/actor/credential/credential.interface';
 import { User } from '@domain/community/user/user.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { ActorContext } from './actor.context';
@@ -40,6 +41,12 @@ export class ActorContextService {
     };
     ctx.credentials = [guestCredential];
     ctx.guestName = guestName;
+    // Synthetic per-context identifier so consumers can treat `actorID` as the
+    // canonical "who" field across authenticated + guest paths without
+    // special-casing. Format mirrors the legacy `who()` RMQ handler output
+    // (`guest-<uuid>`); downstream credential rules key on guestName + the
+    // GLOBAL_GUEST credential, not on this id.
+    ctx.actorID = `guest-${randomUUID()}`;
     ctx.isAnonymous = false;
     return ctx;
   }

@@ -1,4 +1,3 @@
-import { randomUUID } from 'node:crypto';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
@@ -19,7 +18,6 @@ import {
   ContributionInputData,
   InfoInputData,
   SaveInputData,
-  WhoInputData,
 } from './inputs';
 import {
   FetchContentData,
@@ -131,22 +129,6 @@ export class WhiteboardIntegrationService {
       : 1;
 
     return { read, update, maxCollaborators };
-  }
-
-  public async who(data: WhoInputData): Promise<string> {
-    const actorContext = await this.authenticationService.getActorContext(
-      data.auth
-    );
-
-    if (actorContext.isAnonymous) {
-      return '';
-    }
-
-    if (actorContext.guestName) {
-      return `guest-${randomUUID()}`;
-    }
-
-    return actorContext.actorID;
   }
 
   public async save({

@@ -3,6 +3,8 @@ import ConfigUtils from '@config/config.utils';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { isAbsoluteTtlExceeded } from '@core/auth/oidc/absolute-ttl.guard';
+import type { AlkemioSessionPayload } from '@core/auth/oidc/session-store.redis';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Session } from '@ory/kratos-client';
@@ -32,6 +34,41 @@ export class AuthenticationService {
     this.extendSessionMinRemainingTTL = this.parseEarliestPossibleExtend(
       earliest_possible_extend
     );
+  }
+
+  /**
+   * Resolves an ActorContext from a pre-loaded BFF session payload (from
+   * Redis), or a guest name, or neither. Used by the universal traefik
+   * forwardAuth decision endpoint (`/api/auth/resolve`).
+   *
+   * The caller (resolve controller) does the Redis lookup itself because the
+   * SessionStoreHandle binding lives in OidcModule's DI scope. This method
+   * receives the already-loaded payload and does only the
+   * actor-vs-guest-vs-anonymous decision via the existing primitives:
+   *   - valid payload + alkemio_actor_id → `createActorContext(actor_id)`
+   *   - else guestName                    → `createGuest(guestName)`
+   *   - else                              → `createAnonymous()`
+   *
+   * Tombstone + absolute-TTL gates mirror `CookieSessionStrategy.validate`;
+   * a failing payload falls through to guest/anonymous rather than raising —
+   * the decision endpoint never throws, downstream routes enforce.
+   */
+  public async getActorContextFromBffPayload(
+    payload: AlkemioSessionPayload | null,
+    guestName?: string
+  ): Promise<ActorContext> {
+    if (
+      payload &&
+      !payload.terminated_at &&
+      !isAbsoluteTtlExceeded(payload) &&
+      payload.alkemio_actor_id
+    ) {
+      return this.createActorContext(payload.alkemio_actor_id);
+    }
+    if (guestName?.trim()) {
+      return this.actorContextService.createGuest(guestName.trim());
+    }
+    return this.actorContextService.createAnonymous();
   }
 
   /**

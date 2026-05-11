@@ -14,7 +14,6 @@ import {
   FetchInputData,
   InfoInputData,
   SaveInputData,
-  WhoInputData,
 } from './inputs';
 import {
   FetchOutputData,
@@ -43,15 +42,6 @@ export class WhiteboardIntegrationController {
   ): Promise<InfoOutputData> {
     ack(context);
     return this.integrationService.info(data);
-  }
-
-  @MessagePattern(WhiteboardIntegrationMessagePattern.WHO, Transport.RMQ)
-  public async who(
-    @Payload() data: WhoInputData,
-    @Ctx() context: RmqContext
-  ): Promise<string> {
-    ack(context);
-    return this.integrationService.who(data);
   }
 
   @EventPattern(WhiteboardIntegrationEventPattern.CONTRIBUTION, Transport.RMQ)
