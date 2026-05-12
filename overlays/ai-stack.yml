@@ -116,7 +116,7 @@ services:
       - RABBITMQ_PORT
       - RABBITMQ_QUEUE=virtual-contributor-ingest-website
       - RABBITMQ_EVENT_BUS_EXCHANGE
-      - RABBITMQ_RESULT_ROUTING_KEY=ingest-website-result
+      - RABBITMQ_RESULT_ROUTING_KEY=IngestWebsiteResult
       - MISTRAL_API_KEY
       - MISTRAL_BASE_URL
       - MISTRAL_SMALL_MODEL_NAME
@@ -209,7 +209,7 @@ services:
       - RABBITMQ_PORT
       - RABBITMQ_QUEUE=${RABBITMQ_INGEST_BODY_OF_KNOWLEDGE_QUEUE}
       - RABBITMQ_EVENT_BUS_EXCHANGE
-      - RABBITMQ_RESULT_ROUTING_KEY=IngestSpaceResult
+      - RABBITMQ_RESULT_ROUTING_KEY=IngestBodyOfKnowledgeResult
       - MISTRAL_API_KEY
       - MISTRAL_BASE_URL
       - MISTRAL_SMALL_MODEL_NAME
