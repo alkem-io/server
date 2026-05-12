@@ -253,7 +253,9 @@ export class UserSettingsService {
       }
     }
 
-    if (updateData.designVersion !== undefined) {
+    // Skip on both undefined (field omitted) and null (explicit clear is
+    // unsupported — the column is NOT NULL with a default of 2).
+    if (updateData.designVersion != null) {
       settings.designVersion = updateData.designVersion;
     }
 

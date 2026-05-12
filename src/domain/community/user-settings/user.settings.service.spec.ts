@@ -293,6 +293,19 @@ describe('UserSettingsService', () => {
 
       expect(result.designVersion).toBe(5);
     });
+
+    it('should ignore an explicit null and leave designVersion untouched', () => {
+      // Defensive: the GraphQL input is `Int` (nullable). The DB column is
+      // NOT NULL, so an explicit null must be a no-op rather than reach save().
+      const settings = buildSettings({ designVersion: 5 } as any);
+      const updateData = {
+        designVersion: null,
+      } as unknown as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.designVersion).toBe(5);
+    });
   });
 
   describe('updateSettings - notification.platform', () => {
