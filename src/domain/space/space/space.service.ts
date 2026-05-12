@@ -35,6 +35,7 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { ActorService } from '@domain/actor/actor/actor.service';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
@@ -1784,6 +1785,60 @@ export class SpaceService {
         item => item.plan?.type === LicensingCredentialBasedPlanType.SPACE_PLAN
       )
       .sort((a, b) => b.plan!.sortOrder - a.plan!.sortOrder)?.[0]?.subscription;
+  }
+
+  public async getMentionableUserScope(
+    spaceID: string
+  ): Promise<
+    | { allPlatform: true }
+    | { allPlatform: false; credentials: ICredentialDefinition[] }
+  > {
+    const credentials: ICredentialDefinition[] = [];
+    let current: ISpace | undefined = await this.getSpaceOrFail(spaceID, {
+      relations: {
+        parentSpace: true,
+        community: { roleSet: { roles: true } },
+      },
+    });
+
+    while (current) {
+      if (!current.community?.roleSet) {
+        throw new RelationshipNotFoundException(
+          'Unable to load community.roleSet on Space when resolving mentionable scope',
+          LogContext.SPACES,
+          { spaceId: current.id }
+        );
+      }
+      const memberCredential = await this.roleSetService.getCredentialForRole(
+        current.community.roleSet,
+        RoleName.MEMBER
+      );
+
+      const isPrivate =
+        current.settings?.privacy?.mode === SpacePrivacyMode.PRIVATE;
+      // Strict gate-keeper: a private Space is the only access boundary that matters —
+      // its Members are exactly the set who can SEE the contents, so they are the only
+      // ones mentionable. Any ancestors already-pushed (public descendants further down
+      // the chain) are discarded by returning a single-credential list here.
+      if (isPrivate) {
+        return { allPlatform: false, credentials: [memberCredential] };
+      }
+
+      credentials.push(memberCredential);
+
+      if (!current.parentSpace) {
+        return { allPlatform: true };
+      }
+
+      current = await this.getSpaceOrFail(current.parentSpace.id, {
+        relations: {
+          parentSpace: true,
+          community: { roleSet: { roles: true } },
+        },
+      });
+    }
+
+    return { allPlatform: false, credentials };
   }
 
   public async getStorageAggregatorOrFail(

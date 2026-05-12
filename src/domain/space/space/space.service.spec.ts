@@ -691,6 +691,132 @@ describe('SpaceService', () => {
     });
   });
 
+  describe('getMentionableUserScope', () => {
+    const memberCredOf = (resourceID: string) => ({
+      type: 'space-member',
+      resourceID,
+    });
+
+    const makeSpace = (
+      id: string,
+      privacy: SpacePrivacyMode,
+      parentSpace?: { id: string }
+    ) =>
+      ({
+        id,
+        settings: { privacy: { mode: privacy } },
+        community: { roleSet: { id: `rs-${id}`, roles: [] } },
+        parentSpace,
+      }) as unknown as Space;
+
+    const wireRoleSet = () => {
+      const roleSetService = {
+        getCredentialForRole: vi.fn(async (rs: any) =>
+          memberCredOf(rs.id.replace('rs-', ''))
+        ),
+      };
+      service['roleSetService'] = roleSetService as any;
+      return roleSetService;
+    };
+
+    it('private L0: returns only L0 member credential', async () => {
+      wireRoleSet();
+      const l0 = makeSpace('l0', SpacePrivacyMode.PRIVATE);
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValueOnce(l0);
+
+      const result = await service.getMentionableUserScope('l0');
+
+      expect(result).toEqual({
+        allPlatform: false,
+        credentials: [memberCredOf('l0')],
+      });
+    });
+
+    it('public L0: returns allPlatform', async () => {
+      wireRoleSet();
+      const l0 = makeSpace('l0', SpacePrivacyMode.PUBLIC);
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValueOnce(l0);
+
+      const result = await service.getMentionableUserScope('l0');
+
+      expect(result).toEqual({ allPlatform: true });
+    });
+
+    it('private subspace + public parent: returns only subspace members', async () => {
+      wireRoleSet();
+      const sub = makeSpace('sub', SpacePrivacyMode.PRIVATE, { id: 'l0' });
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValueOnce(sub);
+
+      const result = await service.getMentionableUserScope('sub');
+
+      expect(result).toEqual({
+        allPlatform: false,
+        credentials: [memberCredOf('sub')],
+      });
+    });
+
+    it('public subspace + private parent: strict gate-keeper => only the private parent Members', async () => {
+      wireRoleSet();
+      const sub = makeSpace('sub', SpacePrivacyMode.PUBLIC, { id: 'l0' });
+      const l0 = makeSpace('l0', SpacePrivacyMode.PRIVATE);
+      vi.spyOn(spaceRepository, 'findOne')
+        .mockResolvedValueOnce(sub)
+        .mockResolvedValueOnce(l0);
+
+      const result = await service.getMentionableUserScope('sub');
+
+      expect(result).toEqual({
+        allPlatform: false,
+        credentials: [memberCredOf('l0')],
+      });
+    });
+
+    it('public subspace + public parent L0: chain reaches public root => allPlatform', async () => {
+      wireRoleSet();
+      const sub = makeSpace('sub', SpacePrivacyMode.PUBLIC, { id: 'l0' });
+      const l0 = makeSpace('l0', SpacePrivacyMode.PUBLIC);
+      vi.spyOn(spaceRepository, 'findOne')
+        .mockResolvedValueOnce(sub)
+        .mockResolvedValueOnce(l0);
+
+      const result = await service.getMentionableUserScope('sub');
+
+      expect(result).toEqual({ allPlatform: true });
+    });
+
+    it('L2 public, L1 public, L0 private: strict gate-keeper => only L0 Members', async () => {
+      wireRoleSet();
+      const l2 = makeSpace('l2', SpacePrivacyMode.PUBLIC, { id: 'l1' });
+      const l1 = makeSpace('l1', SpacePrivacyMode.PUBLIC, { id: 'l0' });
+      const l0 = makeSpace('l0', SpacePrivacyMode.PRIVATE);
+      vi.spyOn(spaceRepository, 'findOne')
+        .mockResolvedValueOnce(l2)
+        .mockResolvedValueOnce(l1)
+        .mockResolvedValueOnce(l0);
+
+      const result = await service.getMentionableUserScope('l2');
+
+      expect(result).toEqual({
+        allPlatform: false,
+        credentials: [memberCredOf('l0')],
+      });
+    });
+
+    it('throws when community.roleSet missing', async () => {
+      wireRoleSet();
+      const broken = {
+        id: 'broken',
+        settings: { privacy: { mode: SpacePrivacyMode.PRIVATE } },
+        community: {},
+      } as unknown as Space;
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValueOnce(broken);
+
+      await expect(service.getMentionableUserScope('broken')).rejects.toThrow(
+        RelationshipNotFoundException
+      );
+    });
+  });
+
   describe('createLicenseForSpaceL0', () => {
     it('should create license with all required entitlements', () => {
       const licenseService = {

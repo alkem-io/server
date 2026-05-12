@@ -5096,6 +5096,10 @@ type RelayPaginatedSpace implements ActorFull {
   levelZeroSpaceID: String!
   """The License operating on this Space."""
   license: License!
+  """
+  Capped list of Contributors (Users, Virtual Contributors, …) that may be @mentioned in this Space. Scope adapts to the Space's privacy and the privacy of its ancestors: a private Space yields only its own Members; a public Space includes its Members plus the Members of each ancestor, walking up until the first private ancestor (inclusive) or until the public L0 root is reached, in which case all platform Contributors of the requested types are returned. Use `filter` for typeahead search and `types` to restrict which Contributor kinds are returned.
+  """
+  mentionableContributors(filter: ContributorFilterInput, limit: Int, types: [ActorType!]): [ActorFull!]!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
   """Whether this Space is pinned in its parent Space."""
@@ -5626,6 +5630,10 @@ type Space implements ActorFull {
   levelZeroSpaceID: String!
   """The License operating on this Space."""
   license: License!
+  """
+  Capped list of Contributors (Users, Virtual Contributors, …) that may be @mentioned in this Space. Scope adapts to the Space's privacy and the privacy of its ancestors: a private Space yields only its own Members; a public Space includes its Members plus the Members of each ancestor, walking up until the first private ancestor (inclusive) or until the public L0 root is reached, in which case all platform Contributors of the requested types are returned. Use `filter` for typeahead search and `types` to restrict which Contributor kinds are returned.
+  """
+  mentionableContributors(filter: ContributorFilterInput, limit: Int, types: [ActorType!]): [ActorFull!]!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
   """Whether this Space is pinned in its parent Space."""
@@ -6860,6 +6868,11 @@ input ContributionsFilterInput {
   IDs: [UUID!]
   """The contributions types to return. If omitted return all."""
   types: [CalloutContributionType!]
+}
+
+input ContributorFilterInput {
+  displayName: String
+  nameID: String
 }
 
 input ConversationVcResetInput {

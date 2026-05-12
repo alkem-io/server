@@ -4,6 +4,7 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { ContributorFilterInput } from '@core/filtering/input-types';
 import { Actor } from '@domain/actor/actor/actor.entity';
 import { IActorFull } from '@domain/actor/actor/actor.interface';
 import {
@@ -11,6 +12,7 @@ import {
   CredentialsSearchInput,
   ICredential,
 } from '@domain/actor/credential';
+import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { Organization } from '@domain/community/organization/organization.entity';
 import { User } from '@domain/community/user/user.entity';
@@ -20,7 +22,7 @@ import { Space } from '@domain/space/space/space.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
-import { EntityManager, FindOneOptions, In } from 'typeorm';
+import { Brackets, EntityManager, FindOneOptions, In } from 'typeorm';
 import { ActorTypeCacheService } from './actor.lookup.service.cache';
 
 @Injectable()
@@ -370,6 +372,75 @@ export class ActorLookupService {
     }
 
     return actor.credentials ?? [];
+  }
+
+  /**
+   * Returns Actors that may be @mentioned within the given scope.
+   *
+   * @param scope            { allPlatform: true } => any Actor on the platform of the requested types
+   *                         { allPlatform: false, credentials } => Actors holding at least one of the
+   *                         supplied member credentials (OR-list across the visibility-aware walk).
+   * @param actorTypes       Actor discriminators to include. Defaults to User + VirtualContributor.
+   * @param filter           Optional displayName / nameID substring filter.
+   * @param limit            Hard cap on returned rows (typeahead UX). Defaults to 25.
+   */
+  async findMentionableContributors(
+    scope:
+      | { allPlatform: true }
+      | { allPlatform: false; credentials: ICredentialDefinition[] },
+    actorTypes: ActorType[] = [ActorType.USER, ActorType.VIRTUAL_CONTRIBUTOR],
+    filter?: ContributorFilterInput,
+    limit: number = 25
+  ): Promise<IActorFull[]> {
+    const qb = this.entityManager
+      .createQueryBuilder(Actor, 'actor')
+      .leftJoinAndSelect('actor.profile', 'profile')
+      .where('actor.type IN (:...actorTypes)', { actorTypes });
+
+    if (!scope.allPlatform) {
+      if (scope.credentials.length === 0) {
+        return [];
+      }
+      // EXISTS subquery avoids row duplication that an INNER JOIN on credentials
+      // would produce when an Actor matches multiple ancestor member credentials.
+      qb.andWhere(qb2 => {
+        const sub = qb2
+          .subQuery()
+          .select('1')
+          .from(Credential, 'cred')
+          .where('cred.actorId = actor.id')
+          .andWhere(
+            new Brackets(wqb => {
+              scope.credentials.forEach((credential, index) => {
+                wqb.orWhere(
+                  `(cred.type = :mcType${index} AND cred.resourceID = :mcResource${index})`,
+                  {
+                    [`mcType${index}`]: credential.type,
+                    [`mcResource${index}`]: credential.resourceID,
+                  }
+                );
+              });
+            })
+          )
+          .getQuery();
+        return `EXISTS ${sub}`;
+      });
+    }
+
+    if (filter?.displayName) {
+      qb.andWhere('profile.displayName ILIKE :mcDisplayName', {
+        mcDisplayName: `%${filter.displayName}%`,
+      });
+    }
+    if (filter?.nameID) {
+      qb.andWhere('actor.nameID ILIKE :mcNameID', {
+        mcNameID: `%${filter.nameID}%`,
+      });
+    }
+
+    qb.orderBy('profile.displayName', 'ASC').take(limit);
+
+    return qb.getMany();
   }
 
   /**
