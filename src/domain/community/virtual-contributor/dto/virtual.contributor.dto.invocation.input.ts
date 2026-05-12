@@ -24,6 +24,11 @@ export class RoomDetails {
     description: 'The actor ID (agent.id) for the VC',
   })
   actorID!: string;
+  @Field(() => String, {
+    nullable: true,
+    description: 'The VC interaction ID for tracking.',
+  })
+  vcInteractionID?: string | null;
 }
 
 @InputType()
