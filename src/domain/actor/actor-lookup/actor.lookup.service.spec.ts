@@ -25,6 +25,7 @@ describe('ActorLookupService', () => {
       findOne: vi.fn(),
       find: vi.fn(),
       count: vi.fn(),
+      createQueryBuilder: vi.fn(),
     };
 
     actorTypeCacheService = {
@@ -535,6 +536,138 @@ describe('ActorLookupService', () => {
 
       const result = await service.getActorsManagedByUser(VALID_UUID);
       expect(result).toEqual([user]);
+    });
+  });
+
+  describe('findMentionableContributors', () => {
+    // Chainable QueryBuilder mock — every method returns the QB itself,
+    // calls are recorded via vi.fn for downstream inspection.
+    const makeQbMock = (rows: any[]) => {
+      const qb: any = {};
+      const chain = vi.fn(() => qb);
+      qb.leftJoinAndSelect = chain;
+      qb.where = chain;
+      qb.andWhere = chain;
+      qb.orderBy = chain;
+      qb.take = chain;
+      qb.getMany = vi.fn().mockResolvedValue(rows);
+      return qb;
+    };
+
+    it('allPlatform mode: no credential predicate, returns getMany() result', async () => {
+      const rows = [
+        { id: 'u-1', type: ActorType.USER },
+        { id: 'vc-1', type: ActorType.VIRTUAL_CONTRIBUTOR },
+      ];
+      const qb = makeQbMock(rows);
+      entityManager.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.findMentionableContributors({
+        allPlatform: true,
+      });
+
+      expect(result).toBe(rows);
+      // `where` adds the type filter; `andWhere` should NOT have been called
+      // with a function (no EXISTS subquery in allPlatform mode).
+      expect(qb.where).toHaveBeenCalledWith(
+        'actor.type IN (:...actorTypes)',
+        expect.objectContaining({
+          actorTypes: [ActorType.USER, ActorType.VIRTUAL_CONTRIBUTOR],
+        })
+      );
+      expect(qb.andWhere).not.toHaveBeenCalledWith(expect.any(Function));
+    });
+
+    it('empty credentials: short-circuits and skips the DB call entirely', async () => {
+      const qb = makeQbMock([]);
+      entityManager.createQueryBuilder.mockReturnValue(qb);
+
+      const result = await service.findMentionableContributors({
+        allPlatform: false,
+        credentials: [],
+      });
+
+      expect(result).toEqual([]);
+      expect(qb.getMany).not.toHaveBeenCalled();
+    });
+
+    it('non-empty credentials: adds EXISTS subquery via andWhere(callback)', async () => {
+      const rows = [{ id: 'u-1', type: ActorType.USER }];
+      const qb = makeQbMock(rows);
+      entityManager.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findMentionableContributors({
+        allPlatform: false,
+        credentials: [
+          { type: 'space-member', resourceID: 'space-a' },
+          { type: 'space-member', resourceID: 'space-b' },
+        ],
+      });
+
+      // The EXISTS predicate is installed via andWhere(callback) — the callback
+      // builds the subquery. We assert at least one andWhere call received a fn.
+      const fnCalls = qb.andWhere.mock.calls.filter(
+        ([arg]: [unknown]) => typeof arg === 'function'
+      );
+      expect(fnCalls.length).toBe(1);
+    });
+
+    it('displayName filter: applies ILIKE on profile.displayName', async () => {
+      const qb = makeQbMock([]);
+      entityManager.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findMentionableContributors(
+        { allPlatform: true },
+        undefined,
+        { displayName: 'jo' }
+      );
+
+      expect(qb.andWhere).toHaveBeenCalledWith(
+        'profile.displayName ILIKE :mcDisplayName',
+        { mcDisplayName: '%jo%' }
+      );
+    });
+
+    it('nameID filter: applies ILIKE on actor.nameID', async () => {
+      const qb = makeQbMock([]);
+      entityManager.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findMentionableContributors(
+        { allPlatform: true },
+        undefined,
+        { nameID: 'doe' }
+      );
+
+      expect(qb.andWhere).toHaveBeenCalledWith('actor.nameID ILIKE :mcNameID', {
+        mcNameID: '%doe%',
+      });
+    });
+
+    it('honours custom actorTypes and limit', async () => {
+      const qb = makeQbMock([]);
+      entityManager.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findMentionableContributors(
+        { allPlatform: true },
+        [ActorType.USER],
+        undefined,
+        7
+      );
+
+      expect(qb.where).toHaveBeenCalledWith('actor.type IN (:...actorTypes)', {
+        actorTypes: [ActorType.USER],
+      });
+      expect(qb.take).toHaveBeenCalledWith(7);
+    });
+
+    it('orders by displayName ASC and defaults limit to 25', async () => {
+      const qb = makeQbMock([]);
+      entityManager.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findMentionableContributors({ allPlatform: true });
+
+      expect(qb.orderBy).toHaveBeenCalledWith('profile.displayName', 'ASC');
+      expect(qb.take).toHaveBeenCalledWith(25);
     });
   });
 });

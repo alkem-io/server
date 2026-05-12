@@ -1,5 +1,7 @@
+import { ActorType } from '@common/enums/actor.type';
 import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { EntityNotFoundException } from '@common/exceptions';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -11,6 +13,7 @@ describe('SpaceResolverFields', () => {
   let resolver: SpaceResolverFields;
   let spaceService: SpaceService;
   let spaceLookupService: SpaceLookupService;
+  let actorLookupService: ActorLookupService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -24,6 +27,7 @@ describe('SpaceResolverFields', () => {
     resolver = module.get(SpaceResolverFields);
     spaceService = module.get(SpaceService);
     spaceLookupService = module.get(SpaceLookupService);
+    actorLookupService = module.get(ActorLookupService);
   });
 
   it('should be defined', () => {
@@ -230,6 +234,75 @@ describe('SpaceResolverFields', () => {
 
       const result = await resolver.settings(space);
       expect(result.sortMode).toBe(SpaceSortMode.ALPHABETICAL);
+    });
+  });
+
+  describe('mentionableContributors', () => {
+    it('forwards space.id to spaceService and forwards scope to actorLookupService', async () => {
+      const space = { id: 'space-uuid' } as any;
+      const scope = {
+        allPlatform: false,
+        credentials: [{ type: 'space-member', resourceID: 'space-uuid' }],
+      } as any;
+      const results = [
+        { id: 'a-1', type: ActorType.USER },
+        { id: 'a-2', type: ActorType.VIRTUAL_CONTRIBUTOR },
+      ] as any;
+
+      vi.mocked(spaceService.getMentionableUserScope).mockResolvedValue(scope);
+      vi.mocked(
+        actorLookupService.findMentionableContributors
+      ).mockResolvedValue(results);
+
+      const result = await resolver.mentionableContributors(
+        space,
+        { displayName: 'jo' },
+        50,
+        [ActorType.USER]
+      );
+
+      expect(spaceService.getMentionableUserScope).toHaveBeenCalledWith(
+        'space-uuid'
+      );
+      expect(
+        actorLookupService.findMentionableContributors
+      ).toHaveBeenCalledWith(
+        scope,
+        [ActorType.USER],
+        { displayName: 'jo' },
+        50
+      );
+      expect(result).toBe(results);
+    });
+
+    it('forwards undefined filter / limit / types when omitted by the caller', async () => {
+      const space = { id: 'space-uuid' } as any;
+      const scope = { allPlatform: true } as any;
+      vi.mocked(spaceService.getMentionableUserScope).mockResolvedValue(scope);
+      vi.mocked(
+        actorLookupService.findMentionableContributors
+      ).mockResolvedValue([]);
+
+      await resolver.mentionableContributors(space);
+
+      expect(
+        actorLookupService.findMentionableContributors
+      ).toHaveBeenCalledWith(scope, undefined, undefined, undefined);
+    });
+
+    it('propagates allPlatform scope unchanged to actorLookupService', async () => {
+      const space = { id: 'public-l0-uuid' } as any;
+      const scope = { allPlatform: true } as any;
+      vi.mocked(spaceService.getMentionableUserScope).mockResolvedValue(scope);
+      vi.mocked(
+        actorLookupService.findMentionableContributors
+      ).mockResolvedValue([]);
+
+      await resolver.mentionableContributors(space, undefined, 25);
+
+      const callArgs = vi.mocked(actorLookupService.findMentionableContributors)
+        .mock.calls[0];
+      expect(callArgs[0]).toEqual({ allPlatform: true });
     });
   });
 
