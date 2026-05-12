@@ -32,6 +32,7 @@ export class UserSettingsService {
       privacy: settingsData.privacy,
       notification: settingsData.notification,
       homeSpace: settingsData.homeSpace,
+      designVersion: settingsData.designVersion ?? 2,
     });
     settings.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.USER_SETTINGS
@@ -250,6 +251,10 @@ export class UserSettingsService {
         }
         settings.homeSpace.autoRedirect = updateData.homeSpace.autoRedirect;
       }
+    }
+
+    if (updateData.designVersion !== undefined) {
+      settings.designVersion = updateData.designVersion;
     }
 
     return settings;

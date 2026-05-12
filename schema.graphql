@@ -6284,6 +6284,10 @@ type UserSettings {
   communication: UserSettingsCommunication!
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  The design version this User has selected (1 = previous design, 2 = current default, 3+ reserved for future designs).
+  """
+  designVersion: Int!
   """The home space settings for this User."""
   homeSpace: UserSettingsHomeSpace!
   """The ID of the entity"""
@@ -8819,6 +8823,10 @@ input UpdateUserSettingsCommunicationInput {
 input UpdateUserSettingsEntityInput {
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
+  """
+  Update the user's design version. Any integer accepted (1 = previous design, 2 = current default, 3+ reserved).
+  """
+  designVersion: Int
   """Settings related to Home Space."""
   homeSpace: UpdateUserSettingsHomeSpaceInput
   """Settings related to this users Notifications preferences."""

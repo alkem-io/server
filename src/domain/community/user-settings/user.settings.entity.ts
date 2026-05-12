@@ -22,4 +22,7 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
     default: { spaceID: null, autoRedirect: false },
   })
   homeSpace!: IUserSettingsHomeSpace;
+
+  @Column('int', { nullable: false, default: 2 })
+  designVersion!: number;
 }

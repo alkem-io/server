@@ -120,9 +120,34 @@ describe('UserSettingsService', () => {
         spaceID: null,
         autoRedirect: false,
       },
+      designVersion: 2,
       ...overrides,
     } as IUserSettings;
   };
+
+  describe('createUserSettings - designVersion', () => {
+    // UserSettings.create is TypeORM's static BaseEntity.create which needs a
+    // bound DataSource at runtime — not available in this unit-test harness.
+    // Stub it so the call returns the data verbatim and we can inspect the
+    // designVersion the service computed.
+    beforeEach(() => {
+      vi.spyOn(UserSettings, 'create').mockImplementation(
+        (data: any) => data as UserSettings
+      );
+    });
+
+    it('should default designVersion to 2 when omitted from the input', () => {
+      const result = service.createUserSettings({});
+
+      expect(result.designVersion).toBe(2);
+    });
+
+    it('should propagate an explicit designVersion value verbatim (no clamping)', () => {
+      const result = service.createUserSettings({ designVersion: 7 });
+
+      expect(result.designVersion).toBe(7);
+    });
+  });
 
   describe('updateSettings - privacy', () => {
     it('should update contributionRolesPubliclyVisible when provided', () => {
@@ -236,6 +261,37 @@ describe('UserSettingsService', () => {
       expect(() => service.updateSettings(settings, updateData)).toThrow(
         ValidationException
       );
+    });
+  });
+
+  describe('updateSettings - designVersion', () => {
+    it('should update designVersion when provided', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = { designVersion: 1 };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.designVersion).toBe(1);
+    });
+
+    it('should accept zero and negative integers verbatim (no clamping)', () => {
+      const settings = buildSettings();
+
+      expect(
+        service.updateSettings(settings, { designVersion: 0 }).designVersion
+      ).toBe(0);
+      expect(
+        service.updateSettings(settings, { designVersion: -1 }).designVersion
+      ).toBe(-1);
+    });
+
+    it('should not change designVersion when omitted from the update', () => {
+      const settings = buildSettings({ designVersion: 5 } as any);
+      const updateData: UpdateUserSettingsEntityInput = {};
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.designVersion).toBe(5);
     });
   });
 

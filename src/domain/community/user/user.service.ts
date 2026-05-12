@@ -384,6 +384,7 @@ export class UserService {
         spaceID: null,
         autoRedirect: false,
       },
+      designVersion: 2,
     };
     return settings;
   }
