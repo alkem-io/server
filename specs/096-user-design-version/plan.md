@@ -11,7 +11,7 @@ Add a `designVersion` integer field as a top-level peer on the `UserSettings` ag
 
 **Language/Version**: TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1)
 **Primary Dependencies**: NestJS 10, TypeORM 0.3 (custom fork `pkg.pr.new/antst/typeorm`), Apollo Server 4, GraphQL 16, `class-validator`
-**Storage**: PostgreSQL 17.5 — add one `int NOT NULL DEFAULT 2` column to existing `user_settings` table
+**Storage**: PostgreSQL 17.5 — add one `int NOT NULL DEFAULT 1` column to existing `user_settings` table
 **Testing**: Vitest 4.x — extend `user.settings.service.spec.ts` with focused unit cases for the new field; add a migration validation snapshot per the standard harness
 **Target Platform**: Linux server (containerized NestJS process)
 **Project Type**: single (NestJS monolith — `src/`)

@@ -114,9 +114,9 @@ The block sits at the top level of the function alongside the existing `if (upda
 
 | Surface | Compatibility |
 | ------- | ------------- |
-| `UserSettings` GraphQL output | Strictly additive — new non-null field. Clients that don't query it are unaffected; clients that do query it always get a value (default 2). |
+| `UserSettings` GraphQL output | Strictly additive — new non-null field. Clients that don't query it are unaffected; clients that do query it always get a value (default `1`). |
 | `UpdateUserSettingsEntityInput` | Strictly additive — new optional field. Existing callers continue to work unchanged. |
 | `CreateUserSettingsInput` | Strictly additive — new optional field. The internal `getDefaultUserSettings()` is the only producer, and it is updated in lockstep. |
-| Database | Strictly additive — new `NOT NULL DEFAULT 2` column. No data loss, no existing column touched. Reversible via the down migration. |
+| Database | Strictly additive — new `NOT NULL DEFAULT 1` column. No data loss, no existing column touched. Reversible via the down migration. |
 | Authorization | Unchanged. |
 | Events | Unchanged (no new events). |
