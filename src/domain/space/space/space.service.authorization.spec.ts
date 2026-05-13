@@ -15,6 +15,7 @@ import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { CollaborationAuthorizationService } from '@domain/collaboration/collaboration/collaboration.service.authorization';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
@@ -34,6 +35,7 @@ describe('SpaceAuthorizationService', () => {
   let collaborationAuthorizationService: CollaborationAuthorizationService;
   let storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService;
   let spaceAboutAuthorizationService: SpaceAboutAuthorizationService;
+  let profileAuthorizationService: ProfileAuthorizationService;
   let licenseAuthorizationService: LicenseAuthorizationService;
   let templatesManagerAuthorizationService: TemplatesManagerAuthorizationService;
   let platformRolesAccessService: PlatformRolesAccessService;
@@ -80,6 +82,7 @@ describe('SpaceAuthorizationService', () => {
       id: 'about-1',
       profile: { id: 'profile-1' },
     },
+    profile: { id: 'space-profile-1' },
     storageAggregator: { id: 'storage-1' },
     templatesManager: { id: 'templates-1' },
     subspaces: [],
@@ -117,11 +120,16 @@ describe('SpaceAuthorizationService', () => {
       StorageAggregatorAuthorizationService
     );
     spaceAboutAuthorizationService = module.get(SpaceAboutAuthorizationService);
+    profileAuthorizationService = module.get(ProfileAuthorizationService);
     licenseAuthorizationService = module.get(LicenseAuthorizationService);
     templatesManagerAuthorizationService = module.get(
       TemplatesManagerAuthorizationService
     );
     platformRolesAccessService = module.get(PlatformRolesAccessService);
+
+    (
+      profileAuthorizationService.applyAuthorizationPolicy as any
+    ).mockResolvedValue([]);
   });
 
   it('should be defined', () => {

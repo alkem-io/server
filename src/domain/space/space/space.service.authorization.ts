@@ -29,6 +29,7 @@ import { CollaborationAuthorizationService } from '@domain/collaboration/collabo
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
@@ -50,6 +51,7 @@ export class SpaceAuthorizationService {
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
     private spaceAboutAuthorizationService: SpaceAboutAuthorizationService,
+    private profileAuthorizationService: ProfileAuthorizationService,
     private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private spaceLookupService: SpaceLookupService,
     private licenseAuthorizationService: LicenseAuthorizationService,
@@ -80,6 +82,7 @@ export class SpaceAuthorizationService {
         about: {
           profile: true,
         },
+        profile: true,
         storageAggregator: {
           authorization: true,
           directStorage: { authorization: true },
@@ -94,6 +97,7 @@ export class SpaceAuthorizationService {
       !space.authorization ||
       !space.community ||
       !space.community.roleSet ||
+      !space.profile ||
       !space.subspaces ||
       !space.license
     ) {
@@ -392,6 +396,7 @@ export class SpaceAuthorizationService {
       !space.community.roleSet ||
       !space.about ||
       !space.about.profile ||
+      !space.profile ||
       !space.storageAggregator ||
       !space.license
     ) {
@@ -472,6 +477,13 @@ export class SpaceAuthorizationService {
         [credentialRuleReadOnAbout]
       );
     updatedAuthorizations.push(...aboutAuthorizations);
+
+    const profileAuthorizations =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        space.profile.id,
+        space.authorization
+      );
+    updatedAuthorizations.push(...profileAuthorizations);
 
     return updatedAuthorizations;
   }
