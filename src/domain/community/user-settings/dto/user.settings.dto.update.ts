@@ -43,7 +43,7 @@ export class UpdateUserSettingsEntityInput {
   @Field(() => Int, {
     nullable: true,
     description:
-      "Update the user's design version. Any integer accepted (1 = previous design, 2 = current default, 3+ reserved).",
+      "Update the user's design version. Any integer accepted (1 = current default design generation; 2 = new design, opt-in for now and expected to become the default in a subsequent release; 3+ reserved).",
   })
   @IsOptional()
   @IsInt()

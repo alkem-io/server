@@ -5,7 +5,7 @@
 
 ## Summary
 
-Add a `designVersion` integer field as a top-level peer on the `UserSettings` aggregate. The field defaults to `2` (the "new" design generation), is set to `2` for every newly registered user, and is exposed on every existing user query path that already returns `UserSettings`. The existing `updateUserSettings` mutation is extended to accept a new optional `designVersion: Int` field; no new mutation, no new top-level type, no new authorization privilege. The single DDL `ALTER TABLE user_settings ADD COLUMN "designVersion" int NOT NULL DEFAULT 2` simultaneously seeds new inserts and backfills every pre-existing row (Postgres rewrites existing rows with the default), satisfying FR-009 without a separate `UPDATE` step.
+Add a `designVersion` integer field as a top-level peer on the `UserSettings` aggregate. The field defaults to `1` (the current default design generation), is set to `1` for every newly registered user, and is exposed on every existing user query path that already returns `UserSettings`. The existing `updateUserSettings` mutation is extended to accept a new optional `designVersion: Int` field; no new mutation, no new top-level type, no new authorization privilege. The single DDL `ALTER TABLE user_settings ADD COLUMN "designVersion" int NOT NULL DEFAULT 1` simultaneously seeds new inserts and backfills every pre-existing row (Postgres rewrites existing rows with the default), satisfying FR-009 without a separate `UPDATE` step. A subsequent release is expected to flip the default to `2` (the new design); until then individual users can be moved to `2` (or any other integer) via the standard `updateUserSettings` mutation.
 
 ## Technical Context
 
@@ -64,15 +64,15 @@ This is the existing NestJS monolith. The feature touches only the user-settings
 src/
 ├── domain/community/
 │   ├── user-settings/
-│   │   ├── user.settings.entity.ts          # ADD: `designVersion` column (int NOT NULL DEFAULT 2)
+│   │   ├── user.settings.entity.ts          # ADD: `designVersion` column (int NOT NULL DEFAULT 1)
 │   │   ├── user.settings.interface.ts        # ADD: `@Field(() => Int) designVersion!: number`
 │   │   ├── user.settings.service.ts          # MODIFY: createUserSettings seeds from input; updateSettings handles the new field
 │   │   ├── user.settings.service.spec.ts     # ADD: unit tests for default + update
 │   │   └── dto/
-│   │       ├── user.settings.dto.create.ts   # ADD: optional `designVersion?: number` (`@IsInt()`, default `2`)
+│   │       ├── user.settings.dto.create.ts   # ADD: optional `designVersion?: number` (`@IsInt()`, default `1`)
 │   │       └── user.settings.dto.update.ts   # ADD: optional `designVersion?: number` (`@IsInt()`)
 │   └── user/
-│       └── user.service.ts                   # MODIFY: getDefaultUserSettings() includes `designVersion: 2`
+│       └── user.service.ts                   # MODIFY: getDefaultUserSettings() includes `designVersion: 1`
 └── migrations/
     └── <timestamp>-AddDesignVersionToUserSettings.ts  # NEW migration
 

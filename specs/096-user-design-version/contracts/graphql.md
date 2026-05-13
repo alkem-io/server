@@ -27,7 +27,7 @@ type UserSettings {
 type UserSettings {
   authorization: Authorization
   communication: UserSettingsCommunication!
-  "The design version this User has selected (1 = previous design, 2 = current default, 3+ reserved for future designs)."
+  "The design version this User has selected (1 = current default design generation; 2 = new design, opt-in for now and expected to become the default in a subsequent release; 3+ reserved for future generations)."
   designVersion: Int!
   homeSpace: UserSettingsHomeSpace!
   id: UUID!
@@ -58,7 +58,7 @@ input UpdateUserSettingsEntityInput {
 ```graphql
 input UpdateUserSettingsEntityInput {
   communication: UpdateUserSettingsCommunicationInput
-  "Update the user's design version. Any integer accepted (1 = previous design, 2 = current default, 3+ reserved)."
+  "Update the user's design version. Any integer accepted (1 = current default design generation; 2 = new design, opt-in for now and expected to become the default in a subsequent release; 3+ reserved)."
   designVersion: Int
   homeSpace: UpdateUserSettingsHomeSpaceInput
   notification: UpdateUserSettingsNotificationInput
@@ -88,7 +88,7 @@ input CreateUserSettingsInput {
 ```graphql
 input CreateUserSettingsInput {
   communication: CreateUserSettingsCommunicationInput
-  "Initial design version for this User. Defaults to 2 when omitted."
+  "Initial design version for this User. Defaults to 1 (the current default design generation) when omitted."
   designVersion: Int
   homeSpace: CreateUserSettingsHomeSpaceInput
   notification: CreateUserSettingsNotificationInput

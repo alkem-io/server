@@ -10,6 +10,10 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock } from 'vitest';
 import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
+import {
+  DESIGN_VERSION_CURRENT_DEFAULT,
+  DESIGN_VERSION_NEW,
+} from './user.settings.design.version.constants';
 import { UserSettings } from './user.settings.entity';
 import { IUserSettings } from './user.settings.interface';
 import { UserSettingsService } from './user.settings.service';
@@ -120,7 +124,7 @@ describe('UserSettingsService', () => {
         spaceID: null,
         autoRedirect: false,
       },
-      designVersion: 2,
+      designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
       ...overrides,
     } as IUserSettings;
   };
@@ -136,10 +140,10 @@ describe('UserSettingsService', () => {
       );
     });
 
-    it('should default designVersion to 2 when omitted from the input', () => {
+    it('should default designVersion to DESIGN_VERSION_CURRENT_DEFAULT when omitted from the input', () => {
       const result = service.createUserSettings({});
 
-      expect(result.designVersion).toBe(2);
+      expect(result.designVersion).toBe(DESIGN_VERSION_CURRENT_DEFAULT);
     });
 
     it('should propagate an explicit designVersion value verbatim (no clamping)', () => {
@@ -266,12 +270,16 @@ describe('UserSettingsService', () => {
 
   describe('updateSettings - designVersion', () => {
     it('should update designVersion when provided', () => {
+      // buildSettings() seeds the current default; switching to the opt-in
+      // new design exercises the actual switch path.
       const settings = buildSettings();
-      const updateData: UpdateUserSettingsEntityInput = { designVersion: 1 };
+      const updateData: UpdateUserSettingsEntityInput = {
+        designVersion: DESIGN_VERSION_NEW,
+      };
 
       const result = service.updateSettings(settings, updateData);
 
-      expect(result.designVersion).toBe(1);
+      expect(result.designVersion).toBe(DESIGN_VERSION_NEW);
     });
 
     it('should accept zero and negative integers verbatim (no clamping)', () => {

@@ -8,12 +8,13 @@ No `NEEDS CLARIFICATION` markers were left in the spec after `/speckit.clarify`.
 
 ## Decision 1 — Column type and default
 
-**Decision**: Add `designVersion` as a plain `int NOT NULL DEFAULT 2` column directly on the `user_settings` table.
+**Decision**: Add `designVersion` as a plain `int NOT NULL DEFAULT 1` column directly on the `user_settings` table.
 
 **Rationale**:
 
 - The spec accepts any integer (FR-004), so `int` covers the full required range; no enum.
-- `NOT NULL DEFAULT 2` simultaneously satisfies FR-002 (default = 2), FR-003 (every new user gets 2), and FR-009 (existing rows surface 2 on first read), without needing a separate `UPDATE` backfill step. Postgres rewrites the row default into every existing row as part of the `ALTER TABLE … ADD COLUMN … NOT NULL DEFAULT 2` operation — there is no "lazy default" hazard here.
+- `NOT NULL DEFAULT 1` simultaneously satisfies FR-002 (default = 1), FR-003 (every new user gets 1), and FR-009 (existing rows surface 1 on first read), without needing a separate `UPDATE` backfill step. Postgres rewrites the row default into every existing row as part of the `ALTER TABLE … ADD COLUMN … NOT NULL DEFAULT 1` operation — there is no "lazy default" hazard here.
+- The default value is `1` (the current default design generation) per the Session 2026-05-13 clarification. A subsequent release is expected to flip the column default to `2` (the new design); that flip is out of scope for this feature and will be handled by its own migration.
 - All other `UserSettings` columns are JSONB blobs (`privacy`, `communication`, `notification`, `homeSpace`), which suits nested sub-objects. The design version is a single scalar; nesting it inside a one-field JSONB blob would be overstructure with no flexibility benefit. The clarification answer in `spec.md` (top-level field) is consistent with this.
 
 **Alternatives considered**:
@@ -21,9 +22,10 @@ No `NEEDS CLARIFICATION` markers were left in the spec after `/speckit.clarify`.
 | Alternative | Why rejected |
 | ----------- | ------------ |
 | `smallint` | Trivially smaller, but the spec explicitly leaves future versions open-ended and the table is per-user (low row count); `int` is the conventional default and removes an upper bound. |
-| New JSONB sub-object `interface: { designVersion: 2 }` | Premature structure for one field. If/when more UI preferences arrive, a follow-up migration can group them. |
+| New JSONB sub-object `interface: { designVersion: 1 }` | Premature structure for one field. If/when more UI preferences arrive, a follow-up migration can group them. |
 | Postgres enum (`design_version_enum`) | Spec explicitly says "no restrictions" and "in the future we might move to 3, 4 etc." — an enum would force a migration on every new version. Rejected. |
-| Backfill via separate `UPDATE` after `ADD COLUMN` (nullable) | The single-DDL `NOT NULL DEFAULT 2` form is atomic and idempotent; no reason to split it. |
+| Default to `2` immediately | Product wants a phased rollout: ship the column with default `1` now, flip to `2` in a subsequent release. Defaulting to `2` today would skip the gating opportunity. |
+| Backfill via separate `UPDATE` after `ADD COLUMN` (nullable) | The single-DDL `NOT NULL DEFAULT 1` form is atomic and idempotent; no reason to split it. |
 
 ---
 
@@ -38,7 +40,7 @@ No `NEEDS CLARIFICATION` markers were left in the spec after `/speckit.clarify`.
 **Rationale**:
 
 - Matches the clarification answer from `/speckit.clarify` Session 2026-05-12.
-- Output field is non-null (`Int!`): the column is `NOT NULL DEFAULT 2`, so a value is always present on every read. Making it nullable would be a lie about the schema and would force every client to handle a case that cannot occur.
+- Output field is non-null (`Int!`): the column is `NOT NULL DEFAULT 1`, so a value is always present on every read. Making it nullable would be a lie about the schema and would force every client to handle a case that cannot occur.
 - Input fields are optional so partial updates remain partial (consistent with the rest of `UpdateUserSettingsEntityInput`).
 - No new mutation, no new privilege — the existing `UPDATE` grant on `user.authorization` already gates `updateUserSettings` (see `src/domain/community/user/user.resolver.mutations.ts:62`).
 
@@ -55,25 +57,25 @@ No `NEEDS CLARIFICATION` markers were left in the spec after `/speckit.clarify`.
 
 ## Decision 3 — Default seeding on user creation
 
-**Decision**: Add `designVersion: 2` to `UserService.getDefaultUserSettings()` (in `src/domain/community/user/user.service.ts`), and have `UserSettingsService.createUserSettings()` propagate it from `CreateUserSettingsInput` to the entity.
+**Decision**: Add `designVersion: 1` to `UserService.getDefaultUserSettings()` (in `src/domain/community/user/user.service.ts`), and have `UserSettingsService.createUserSettings()` propagate it from `CreateUserSettingsInput` to the entity.
 
 **Rationale**:
 
-- `UserService.getDefaultUserSettings()` is already the single source of truth for the initial `UserSettings` blob applied to every new user (called from the registration transaction at line 149). Adding the field there guarantees FR-003 (every new user gets 2) regardless of whether the column default fires.
-- Even though the column default would already write 2 on insert when the field is omitted from the insert payload, TypeORM's `Repository.create(...)` passes explicit values for every entity field present in the create input. Setting it explicitly in the default makes the intent visible and survives any future change to TypeORM's insert behavior.
+- `UserService.getDefaultUserSettings()` is already the single source of truth for the initial `UserSettings` blob applied to every new user (called from the registration transaction at line 149). Adding the field there guarantees FR-003 (every new user gets `1`) regardless of whether the column default fires.
+- Even though the column default would already write `1` on insert when the field is omitted from the insert payload, TypeORM's `Repository.create(...)` passes explicit values for every entity field present in the create input. Setting it explicitly in the default makes the intent visible and survives any future change to TypeORM's insert behavior.
 
 **Alternatives considered**:
 
 | Alternative | Why rejected |
 | ----------- | ------------ |
 | Rely on the column default only (omit from `getDefaultUserSettings`) | Works today but couples FR-003 to TypeORM's omit-when-undefined behavior. Explicit is safer and matches how `homeSpace` is seeded (see `getDefaultUserSettings` line 383). |
-| Hardcode `2` inside `UserSettingsService.createUserSettings` | Hides the default in the wrong layer; the user-creation flow should own the policy of "new users start at version 2". |
+| Hardcode `1` inside `UserSettingsService.createUserSettings` | Hides the default in the wrong layer; the user-creation flow should own the policy of "new users start at version 1". |
 
 ---
 
 ## Decision 4 — Existing-row backfill strategy
 
-**Decision**: The `ALTER TABLE … ADD COLUMN "designVersion" int NOT NULL DEFAULT 2` statement is itself the backfill. No separate `UPDATE user_settings SET designVersion = 2` is needed.
+**Decision**: The `ALTER TABLE … ADD COLUMN "designVersion" int NOT NULL DEFAULT 1` statement is itself the backfill. No separate `UPDATE user_settings SET designVersion = 1` is needed.
 
 **Rationale**:
 
@@ -111,7 +113,7 @@ No `NEEDS CLARIFICATION` markers were left in the spec after `/speckit.clarify`.
 
 **Decision**: Three focused unit tests in `user.settings.service.spec.ts`:
 
-1. `createUserSettings` propagates `designVersion: 2` from the default input.
+1. `createUserSettings` propagates `designVersion: 1` from the default input.
 2. `updateSettings` writes the new value when `updateData.designVersion` is provided.
 3. `updateSettings` leaves the existing value untouched when `updateData.designVersion` is omitted.
 

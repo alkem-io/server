@@ -43,7 +43,7 @@ export class CreateUserSettingsInput {
   @Field(() => Int, {
     nullable: true,
     description:
-      'Initial design version for this User. Defaults to 2 when omitted.',
+      'Initial design version for this User. Defaults to 1 (the current default design generation) when omitted.',
   })
   @IsOptional()
   @IsInt()

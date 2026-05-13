@@ -37,11 +37,11 @@ Existing NestJS monolith. All source under `src/`. New migration under `src/migr
 
 **⚠️ CRITICAL**: No user story work can begin until this phase is complete.
 
-- [X] T002 [P] Add `designVersion` column to the entity in `src/domain/community/user-settings/user.settings.entity.ts` — `@Column('int', { nullable: false, default: 2 }) designVersion!: number;` placed after the existing `homeSpace` column
-- [X] T003 [P] Add `designVersion` field to the GraphQL interface in `src/domain/community/user-settings/user.settings.interface.ts` — `@Field(() => Int, { nullable: false, description: 'The design version this User has selected (1 = previous design, 2 = current default, 3+ reserved for future designs).' }) designVersion!: number;` and add `Int` to the `@nestjs/graphql` import
+- [X] T002 [P] Add `designVersion` column to the entity in `src/domain/community/user-settings/user.settings.entity.ts` — `@Column('int', { nullable: false, default: 1 }) designVersion!: number;` placed after the existing `homeSpace` column
+- [X] T003 [P] Add `designVersion` field to the GraphQL interface in `src/domain/community/user-settings/user.settings.interface.ts` — `@Field(() => Int, { nullable: false, description: 'The design version this User has selected (1 = current default …; 2 = new design opt-in …; 3+ reserved).' }) designVersion!: number;` and add `Int` to the `@nestjs/graphql` import
 - [X] T004 Generate the migration file via `pnpm run migration:generate -n AddDesignVersionToUserSettings` (depends on T002 — the generator inspects the entity); confirm it lands at `src/migrations/<timestamp>-AddDesignVersionToUserSettings.ts`
-- [X] T005 Verify the generated migration `up()` is exactly `ALTER TABLE "user_settings" ADD "designVersion" int NOT NULL DEFAULT 2` and `down()` is `ALTER TABLE "user_settings" DROP COLUMN "designVersion"` — edit the generated file to match this form if the generator produced anything different (e.g., split into multiple statements, missing default). _Note: the generator also included unrelated drift on the `file` table (a stale `content_metadata` column and three FK churns); these were stripped out of the migration as out-of-scope, leaving only the `designVersion` ALTER._
-- [X] T006 Apply the migration to the local DB with `pnpm run migration:run` and verify the column exists with `psql` or your DB client: `SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = 'user_settings' AND column_name = 'designVersion';` — expect `int4 / NO / 2`. _Verified: `integer / NO / 2`; all 3 pre-existing rows backfilled to `2`._
+- [X] T005 Verify the generated migration `up()` is exactly `ALTER TABLE "user_settings" ADD "designVersion" int NOT NULL DEFAULT 1` and `down()` is `ALTER TABLE "user_settings" DROP COLUMN "designVersion"` — edit the generated file to match this form if the generator produced anything different (e.g., split into multiple statements, missing default). _Note: the generator also included unrelated drift on the `file` table (a stale `content_metadata` column and three FK churns); these were stripped out of the migration as out-of-scope, leaving only the `designVersion` ALTER._
+- [X] T006 Apply the migration to the local DB with `pnpm run migration:run` and verify the column exists with `psql` or your DB client: `SELECT column_name, data_type, is_nullable, column_default FROM information_schema.columns WHERE table_name = 'user_settings' AND column_name = 'designVersion';` — expect `int4 / NO / 1`. _Verified: `integer / NO / 1`; all 3 pre-existing rows backfilled to `1`._
 
 **Checkpoint**: Column + GraphQL field + migration in place. The field is now readable on every existing query path that already returns `UserSettings`. All pre-existing rows now carry `2`.
 
@@ -49,16 +49,16 @@ Existing NestJS monolith. All source under `src/`. New migration under `src/migr
 
 ## Phase 3: User Story 1 - New users get the new design by default (Priority: P1) 🎯 MVP
 
-**Goal**: Every newly registered user has `designVersion = 2` recorded on their settings at the moment of account creation, and the value is reachable through the existing `me` query path.
+**Goal**: Every newly registered user has `designVersion = 1` recorded on their settings at the moment of account creation, and the value is reachable through the existing `me` query path.
 
-**Independent Test**: Register a brand-new user, then run `query { me { user { settings { designVersion } } } }` — response returns `2`. Also confirm an existing pre-feature user returns `2` after the migration (handled by Foundational T006).
+**Independent Test**: Register a brand-new user, then run `query { me { user { settings { designVersion } } } }` — response returns `1`. Also confirm an existing pre-feature user returns `1` after the migration (handled by Foundational T006).
 
-- [X] T007 [P] [US1] Add optional `designVersion` field to `CreateUserSettingsInput` in `src/domain/community/user-settings/dto/user.settings.dto.create.ts` — `@Field(() => Int, { nullable: true, description: 'Initial design version for this User. Defaults to 2 when omitted.' }) @IsInt() designVersion?: number;`, importing `Int` from `@nestjs/graphql` and `IsInt` from `class-validator`. _Implementation also wraps `@IsInt()` with `@IsOptional()` so the validator does not fail when the field is omitted — same pattern as other optional DTO fields._
-- [X] T008 [US1] Propagate `designVersion` in `UserSettingsService.createUserSettings()` at `src/domain/community/user-settings/user.settings.service.ts` — extend the `UserSettings.create({ ... })` call to include `designVersion: settingsData.designVersion ?? 2` alongside the existing four fields (depends on T007)
-- [X] T009 [P] [US1] Add `designVersion: 2` to the object returned by `UserService.getDefaultUserSettings()` in `src/domain/community/user/user.service.ts` (around line 387, after the `homeSpace` block) (depends on T007 — the input type must already accept the field)
-- [X] T010 [US1] Add a Vitest case `createUserSettings propagates designVersion from input` in `src/domain/community/user-settings/user.settings.service.spec.ts` — instantiate the service with the mocked repo, call `createUserSettings({ ...minimal input, designVersion: 2 })`, assert `result.designVersion === 2`; add a second case asserting `designVersion: 7` round-trips through `createUserSettings` to prove no clamping (depends on T008). _Also added `designVersion: 2` to the `buildSettings` helper so the new US2 tests below have a baseline value._
+- [X] T007 [P] [US1] Add optional `designVersion` field to `CreateUserSettingsInput` in `src/domain/community/user-settings/dto/user.settings.dto.create.ts` — `@Field(() => Int, { nullable: true, description: 'Initial design version for this User. Defaults to 1 …' }) @IsInt() designVersion?: number;`, importing `Int` from `@nestjs/graphql` and `IsInt` from `class-validator`. _Implementation also wraps `@IsInt()` with `@IsOptional()` so the validator does not fail when the field is omitted — same pattern as other optional DTO fields._
+- [X] T008 [US1] Propagate `designVersion` in `UserSettingsService.createUserSettings()` at `src/domain/community/user-settings/user.settings.service.ts` — extend the `UserSettings.create({ ... })` call to include `designVersion: settingsData.designVersion ?? 1` alongside the existing four fields (depends on T007)
+- [X] T009 [P] [US1] Add `designVersion: 1` to the object returned by `UserService.getDefaultUserSettings()` in `src/domain/community/user/user.service.ts` (around line 387, after the `homeSpace` block) (depends on T007 — the input type must already accept the field)
+- [X] T010 [US1] Add a Vitest case `createUserSettings propagates designVersion from input` in `src/domain/community/user-settings/user.settings.service.spec.ts` — instantiate the service with the mocked repo, call `createUserSettings({})`, assert `result.designVersion === 1`; add a second case asserting `designVersion: 7` round-trips through `createUserSettings` to prove no clamping (depends on T008). _Also added `designVersion: 1` to the `buildSettings` helper so the new US2 tests below have a baseline value._
 
-**Checkpoint**: A freshly registered user has `designVersion = 2` and the value is queryable. MVP delivered — the platform now has a working "everyone is on the new design" default.
+**Checkpoint**: A freshly registered user has `designVersion = 1` and the value is queryable. MVP delivered — every user now has a recorded design preference; a subsequent release will flip the default to `2`.
 
 ---
 
@@ -68,9 +68,9 @@ Existing NestJS monolith. All source under `src/`. New migration under `src/migr
 
 **Independent Test**: Authenticated as a user with `UPDATE` privilege on their own account, run the `SetDesignVersion` mutation from `contracts/graphql.md` with `designVersion: 1`. Re-query — value is `1`. Repeat with `designVersion: 3` and `designVersion: -1` — both accepted. Unauthorized caller targeting another user's settings — rejected by the existing authorization check (no change required).
 
-- [X] T011 [P] [US2] Add optional `designVersion` field to `UpdateUserSettingsEntityInput` in `src/domain/community/user-settings/dto/user.settings.dto.update.ts` — `@Field(() => Int, { nullable: true, description: "Update the user's design version. Any integer accepted (1 = previous design, 2 = current default, 3+ reserved)." }) @IsInt() designVersion?: number;`, importing `Int` from `@nestjs/graphql` and `IsInt` from `class-validator`. _Also wrapped `@IsInt()` with `@IsOptional()` to match the project pattern for optional DTO fields._
-- [X] T012 [US2] Handle `designVersion` in `UserSettingsService.updateSettings()` at `src/domain/community/user-settings/user.settings.service.ts` — after the existing `if (updateData.homeSpace) { ... }` block, add `if (updateData.designVersion !== undefined) { settings.designVersion = updateData.designVersion; }` (use `!== undefined`, not truthy, so `0` and negatives are accepted per FR-004) (depends on T011)
-- [X] T013 [US2] Add two Vitest cases under a new `describe('updateSettings - designVersion', ...)` block in `src/domain/community/user-settings/user.settings.service.spec.ts` — (a) `should update designVersion when provided` asserts `result.designVersion === 1` after calling with `{ designVersion: 1 }`; (b) `should not change designVersion when omitted` asserts the existing value is preserved when `updateData = {}`; include `buildSettings` overrides for `designVersion` so the helper supports the new field (depends on T012). _Added a third case asserting `0` and `-1` are accepted verbatim, defending FR-004 ("no clamping")._
+- [X] T011 [P] [US2] Add optional `designVersion` field to `UpdateUserSettingsEntityInput` in `src/domain/community/user-settings/dto/user.settings.dto.update.ts` — `@Field(() => Int, { nullable: true, description: "Update the user's design version. Any integer accepted (1 = current default …; 2 = new design opt-in …; 3+ reserved)." }) @IsInt() designVersion?: number;`, importing `Int` from `@nestjs/graphql` and `IsInt` from `class-validator`. _Also wrapped `@IsInt()` with `@IsOptional()` to match the project pattern for optional DTO fields._
+- [X] T012 [US2] Handle `designVersion` in `UserSettingsService.updateSettings()` at `src/domain/community/user-settings/user.settings.service.ts` — after the existing `if (updateData.homeSpace) { ... }` block, add `if (updateData.designVersion != null) { settings.designVersion = updateData.designVersion; }` (use `!= null`, so both `undefined` and explicit `null` are treated as "no change" — the column is NOT NULL — while `0` and negatives are still accepted per FR-004) (depends on T011)
+- [X] T013 [US2] Add Vitest cases under a new `describe('updateSettings - designVersion', ...)` block in `src/domain/community/user-settings/user.settings.service.spec.ts` — (a) `should update designVersion when provided` asserts the switch path (default `1` → `2`); (b) `should accept zero and negative integers verbatim (no clamping)` defends FR-004; (c) `should not change designVersion when omitted from the update` asserts omit semantics; (d) `should ignore an explicit null and leave designVersion untouched` defends the `!= null` guard (the GraphQL input is nullable; the DB column is not). Include `buildSettings` overrides for `designVersion` so the helper supports the new field (depends on T012).
 
 **Checkpoint**: Both stories work independently. A new user lands on `2` (US1) and any user can switch to any integer (US2).
 
@@ -180,6 +180,32 @@ Total ~20 tasks; with two developers, the post-Foundational work is ~1 working d
 ## Notes
 
 - The feature is intentionally small and additive — no new module, no new privilege, no new event, no new mutation. If a task seems to imply otherwise, re-read `research.md` (decisions 2, 5) before adding scope.
-- The single-DDL `ALTER TABLE ... ADD COLUMN int NOT NULL DEFAULT 2` is the backfill — do not author a separate `UPDATE user_settings SET designVersion = 2` task. See `research.md` decision 4.
+- The single-DDL `ALTER TABLE ... ADD COLUMN int NOT NULL DEFAULT 1` is the backfill — do not author a separate `UPDATE user_settings SET designVersion = 1` task. See `research.md` decision 4.
 - `[P]` only marks tasks in different files. Two tasks editing `user.settings.service.spec.ts` (T010, T013) are sequenced even though they are logically independent test cases.
 - All commits on this branch must be signed (project git convention; see CLAUDE.md "Git Conventions").
+
+---
+
+## Post-review changes
+
+### 2026-05-13 — Default flipped from `2` to `1` (phased rollout)
+
+Product clarification: ship the column with default `1` (the current design generation) now; a subsequent release will flip the default to `2` (the new design). Users can still switch to `2` via `updateUserSettings` today. See [`spec.md` → Clarifications → Session 2026-05-13](./spec.md#session-2026-05-13). All references to the value `2` in the spec docs and code were flipped to `1`; the GraphQL surface, mutation behavior, and authorization model are unchanged. Tasks T002, T005, T006, T007, T008, T009, T010, T015, T016 were re-validated against the new default (no new task IDs added — same files touched, value changed). The switch-test in T013 was repointed from `1 → 1` (degenerate after the buildSettings default flipped) to `1 → 2` so it still proves the actual switch path.
+
+### 2026-05-13 — Null-handling hardening for `updateSettings`
+
+CodeRabbit flagged that the GraphQL input `UpdateUserSettingsEntityInput.designVersion` is nullable (`Int`) but the DB column is `NOT NULL`; the previous `!== undefined` guard would assign an explicit `null` and fail at `save()`. The service guard is now `!= null`, and a unit test (T013-d) defends the behavior. Schema field remains nullable on input (matches partial-update semantics; making it `Int!` would be a breaking change for every existing `updateUserSettings` client).
+
+### 2026-05-13 — Extracted named constants for the design versions
+
+Magic `1` / `2` literals replaced with `DESIGN_VERSION_CURRENT_DEFAULT` (= 1) and `DESIGN_VERSION_NEW` (= 2) in `src/domain/community/user-settings/user.settings.design.version.constants.ts`. The constants file holds the phased-rollout context (why `1` ships now, why `2` is the next flip) so a future reader doesn't have to chase the spec to interpret the numbers. Consumed by the entity, service, user.service seed, mock fixture, and tests. The migration deliberately keeps the literal `1` (TypeORM migration files are point-in-time DDL snapshots and must not import code that may evolve).
+
+### Follow-up — Client coordination (next release)
+
+The legacy `alkemio-crd-enabled` LocalStorage flag (boolean) should be retired on the client side; its replacement is a LocalStorage entry that stores the integer value of `me.user.settings.designVersion`. The server is now the source of truth.
+
+- [ ] **FU-001** (Client repo) Stop writing `alkemio-crd-enabled` on the client; start writing the integer value from `me.user.settings.designVersion` to whichever LocalStorage key the client chooses (suggest: `alkemio-design-version`).
+- [ ] **FU-002** (Client repo) Add a one-time read-and-discard of the legacy `alkemio-crd-enabled` key so users that had it set don't carry stale state across releases.
+- [ ] **FU-003** (Client repo, follow-on release) After telemetry confirms no surface still reads `alkemio-crd-enabled`, delete the cleanup code from FU-002. Marked as TODO in `src/domain/community/user-settings/user.settings.design.version.constants.ts`.
+
+These items live in the client repo; tracked here as the coordination anchor so the cross-repo sequencing isn't lost.

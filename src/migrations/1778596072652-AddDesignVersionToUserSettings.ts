@@ -7,7 +7,7 @@ export class AddDesignVersionToUserSettings1778596072652
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(
-      `ALTER TABLE "user_settings" ADD "designVersion" integer NOT NULL DEFAULT 2`
+      `ALTER TABLE "user_settings" ADD "designVersion" integer NOT NULL DEFAULT 1`
     );
   }
 

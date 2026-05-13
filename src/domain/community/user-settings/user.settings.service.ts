@@ -12,6 +12,7 @@ import { FindOneOptions, Repository } from 'typeorm';
 import { NotificationSettingInput } from './dto/notification.setting.input';
 import { CreateUserSettingsInput } from './dto/user.settings.dto.create';
 import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
+import { DESIGN_VERSION_CURRENT_DEFAULT } from './user.settings.design.version.constants';
 import { UserSettings } from './user.settings.entity';
 import { IUserSettings } from './user.settings.interface';
 
@@ -32,7 +33,8 @@ export class UserSettingsService {
       privacy: settingsData.privacy,
       notification: settingsData.notification,
       homeSpace: settingsData.homeSpace,
-      designVersion: settingsData.designVersion ?? 2,
+      designVersion:
+        settingsData.designVersion ?? DESIGN_VERSION_CURRENT_DEFAULT,
     });
     settings.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.USER_SETTINGS
