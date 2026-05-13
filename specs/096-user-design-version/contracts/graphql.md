@@ -1,0 +1,169 @@
+# GraphQL Contract Changes
+
+**Feature**: `096-user-design-version` | **Date**: 2026-05-12
+
+The change is strictly additive — no field is removed, renamed, or had its type narrowed. The committed `schema.graphql` and `schema-baseline.graphql` must be regenerated (`pnpm run schema:print && pnpm run schema:sort`) and the `change-report.json` from `pnpm run schema:diff` should show **no BREAKING** entries.
+
+---
+
+## Output type: `UserSettings`
+
+**Before**:
+
+```graphql
+type UserSettings {
+  authorization: Authorization
+  communication: UserSettingsCommunication!
+  homeSpace: UserSettingsHomeSpace!
+  id: UUID!
+  notification: UserSettingsNotification!
+  privacy: UserSettingsPrivacy!
+}
+```
+
+**After** (added field underlined here for clarity, not in the real SDL):
+
+```graphql
+type UserSettings {
+  authorization: Authorization
+  communication: UserSettingsCommunication!
+  "The design version this User has selected (1 = current default design generation; 2 = new design, opt-in for now and expected to become the default in a subsequent release; 3+ reserved for future generations)."
+  designVersion: Int!
+  homeSpace: UserSettingsHomeSpace!
+  id: UUID!
+  notification: UserSettingsNotification!
+  privacy: UserSettingsPrivacy!
+}
+```
+
+**Compatibility**: additive new field on an existing object type. Non-breaking.
+
+---
+
+## Input type: `UpdateUserSettingsEntityInput`
+
+**Before**:
+
+```graphql
+input UpdateUserSettingsEntityInput {
+  communication: UpdateUserSettingsCommunicationInput
+  homeSpace: UpdateUserSettingsHomeSpaceInput
+  notification: UpdateUserSettingsNotificationInput
+  privacy: UpdateUserSettingsPrivacyInput
+}
+```
+
+**After**:
+
+```graphql
+input UpdateUserSettingsEntityInput {
+  communication: UpdateUserSettingsCommunicationInput
+  "Update the user's design version. Any integer accepted (1 = current default design generation; 2 = new design, opt-in for now and expected to become the default in a subsequent release; 3+ reserved)."
+  designVersion: Int
+  homeSpace: UpdateUserSettingsHomeSpaceInput
+  notification: UpdateUserSettingsNotificationInput
+  privacy: UpdateUserSettingsPrivacyInput
+}
+```
+
+**Compatibility**: additive new **optional** input field. Non-breaking — existing mutation callers continue to work unchanged.
+
+---
+
+## Input type: `CreateUserSettingsInput`
+
+**Before**:
+
+```graphql
+input CreateUserSettingsInput {
+  communication: CreateUserSettingsCommunicationInput
+  homeSpace: CreateUserSettingsHomeSpaceInput
+  notification: CreateUserSettingsNotificationInput
+  privacy: CreateUserSettingsPrivacyInput
+}
+```
+
+**After**:
+
+```graphql
+input CreateUserSettingsInput {
+  communication: CreateUserSettingsCommunicationInput
+  "Initial design version for this User. Defaults to 1 (the current default design generation) when omitted."
+  designVersion: Int
+  homeSpace: CreateUserSettingsHomeSpaceInput
+  notification: CreateUserSettingsNotificationInput
+  privacy: CreateUserSettingsPrivacyInput
+}
+```
+
+**Compatibility**: additive new **optional** input field. Non-breaking. (Only the internal `getDefaultUserSettings()` producer is called for this input today; no external consumer exists.)
+
+---
+
+## Mutation: `updateUserSettings` (unchanged signature)
+
+The existing mutation does not change shape; it already accepts an `UpdateUserSettingsInput` containing an `UpdateUserSettingsEntityInput`, and the new optional field rides inside that nested input.
+
+```graphql
+type Mutation {
+  "Updates one of the Setting on a User"
+  updateUserSettings(settingsData: UpdateUserSettingsInput!): User!
+}
+```
+
+Example mutation document for client consumers:
+
+```graphql
+mutation SetDesignVersion($userId: UUID!, $version: Int!) {
+  updateUserSettings(
+    settingsData: { userID: $userId, settings: { designVersion: $version } }
+  ) {
+    id
+    settings {
+      designVersion
+    }
+  }
+}
+```
+
+---
+
+## Query paths returning the new field
+
+The field is reachable through every existing query path that already returns `UserSettings`. The most relevant paths for the client (per FR-008) are:
+
+```graphql
+query MyDesignVersion {
+  me {
+    user {
+      id
+      settings {
+        designVersion
+      }
+    }
+  }
+}
+```
+
+```graphql
+query UserDesignVersion($id: UUID!) {
+  user(ID: $id) {
+    id
+    settings {
+      designVersion
+    }
+  }
+}
+```
+
+No new query is introduced. The spec's "user queries" requirement is met by exposing the field on the existing `UserSettings` type.
+
+---
+
+## Schema-contract checklist
+
+- [ ] `pnpm run schema:print` regenerates `schema.graphql` with the additions above.
+- [ ] `pnpm run schema:sort` keeps deterministic ordering.
+- [ ] `pnpm run schema:diff` produces a `change-report.json` containing only `DANGEROUS` or `NON_BREAKING` entries — **no `BREAKING`**.
+- [ ] No `@deprecated` markers required (no field removed or renamed).
+- [ ] `schema-baseline.graphql` will be regenerated by the post-merge `schema-baseline.yml` automation; do not hand-edit unless automation is down.
