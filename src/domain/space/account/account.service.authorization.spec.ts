@@ -153,6 +153,15 @@ describe('AccountAuthorizationService', () => {
         service.applyAuthorizationPolicy(mockAccount)
       ).rejects.toThrow(RelationshipNotFoundException);
     });
+
+    it('should throw when profile is missing', async () => {
+      const mockAccount = createMockAccount({ profile: undefined } as any);
+      (accountService.getAccountOrFail as any).mockResolvedValue(mockAccount);
+
+      await expect(
+        service.applyAuthorizationPolicy(mockAccount)
+      ).rejects.toThrow(RelationshipNotFoundException);
+    });
   });
 
   describe('applyAuthorizationPolicyForChildEntities', () => {
@@ -212,6 +221,14 @@ describe('AccountAuthorizationService', () => {
       ).rejects.toThrow(RelationshipNotFoundException);
     });
 
+    it('should throw when profile is missing', async () => {
+      const mockAccount = createMockAccount({ profile: undefined } as any);
+
+      await expect(
+        service.applyAuthorizationPolicyForChildEntities(mockAccount)
+      ).rejects.toThrow(RelationshipNotFoundException);
+    });
+
     it('should process spaces, VCs, IPs, hubs, license, and storage aggregator', async () => {
       const mockAccount = createMockAccount({
         spaces: [{ id: 'space-1', nameID: 'space-name' }],
@@ -265,6 +282,9 @@ describe('AccountAuthorizationService', () => {
       expect(
         innovationHubAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalled();
+      expect(
+        profileAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalledWith('account-profile-1', mockAccount.authorization);
     });
 
     it('should return empty authorizations when account has no child entities', async () => {

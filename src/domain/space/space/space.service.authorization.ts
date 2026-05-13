@@ -102,8 +102,9 @@ export class SpaceAuthorizationService {
       !space.license
     ) {
       throw new RelationshipNotFoundException(
-        `Unable to load Space with entities at start of auth reset: ${space.id} `,
-        LogContext.SPACES
+        'Unable to load Space with entities at start of auth reset',
+        LogContext.SPACES,
+        { spaceID: space.id }
       );
     }
 
@@ -401,8 +402,9 @@ export class SpaceAuthorizationService {
       !space.license
     ) {
       throw new RelationshipNotFoundException(
-        `Unable to load entities on auth reset for space base ${space.id} `,
-        LogContext.SPACES
+        'Unable to load entities on auth reset for space base',
+        LogContext.SPACES,
+        { spaceID: space.id }
       );
     }
 

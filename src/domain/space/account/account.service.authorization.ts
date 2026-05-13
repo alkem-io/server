@@ -75,8 +75,9 @@ export class AccountAuthorizationService {
     );
     if (!account.storageAggregator || !account.license || !account.profile) {
       throw new RelationshipNotFoundException(
-        `Unable to load Account with entities at start of auth reset: ${account.id} `,
-        LogContext.ACCOUNT
+        'Unable to load Account with entities at start of auth reset',
+        LogContext.ACCOUNT,
+        { accountID: account.id }
       );
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
@@ -149,8 +150,9 @@ export class AccountAuthorizationService {
       !account.profile
     ) {
       throw new RelationshipNotFoundException(
-        `Unable to load Account with entities at start of auth reset: ${account.id} `,
-        LogContext.ACCOUNT
+        'Unable to load Account with entities at start of auth reset',
+        LogContext.ACCOUNT,
+        { accountID: account.id }
       );
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];

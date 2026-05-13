@@ -167,6 +167,17 @@ describe('SpaceAuthorizationService', () => {
       );
     });
 
+    it('should throw when space.profile is missing', async () => {
+      const mockSpace = createMockSpace({ profile: undefined });
+      (spaceLookupService.getSpaceOrFail as any).mockResolvedValue(
+        mockSpace as any
+      );
+
+      await expect(service.applyAuthorizationPolicy('space-1')).rejects.toThrow(
+        RelationshipNotFoundException
+      );
+    });
+
     it('should successfully apply auth policy for L0 ACTIVE public space', async () => {
       const mockSpace = createMockSpace();
       (spaceLookupService.getSpaceOrFail as any).mockResolvedValue(
@@ -245,6 +256,9 @@ describe('SpaceAuthorizationService', () => {
       expect(
         templatesManagerAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalled();
+      expect(
+        profileAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalledWith('space-profile-1', mockSpace.authorization);
     });
 
     it('should apply auth policy for ARCHIVED space without membership', async () => {
