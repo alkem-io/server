@@ -35,6 +35,7 @@ export class BackfillSpaceAccountProfileBuckets1779062400000
         FOR rec IN
           SELECT
             p.id AS profile_id,
+            p."locationId" AS existing_location_id,
             COALESCE(s."storageAggregatorId", acc."storageAggregatorId") AS aggregator_id
           FROM profile p
           INNER JOIN actor a ON a."profileId" = p.id
@@ -55,7 +56,10 @@ export class BackfillSpaceAccountProfileBuckets1779062400000
 
           new_bucket_id := gen_random_uuid();
           new_bucket_auth_id := gen_random_uuid();
-          new_location_id := gen_random_uuid();
+          -- Preserve any existing location row; only synthesise one if the
+          -- profile has none. Avoids orphaning location rows for profiles
+          -- that lost only their storage_bucket.
+          new_location_id := rec.existing_location_id;
 
           INSERT INTO authorization_policy
             (id, "createdDate", "updatedDate", version,
@@ -73,10 +77,13 @@ export class BackfillSpaceAccountProfileBuckets1779062400000
              default_mime_types, default_max_file_size,
              new_bucket_auth_id, rec.aggregator_id);
 
-          INSERT INTO location
-            (id, "createdDate", "updatedDate", version, "geoLocation")
-          VALUES
-            (new_location_id, NOW(), NOW(), 1, default_geo_location);
+          IF new_location_id IS NULL THEN
+            new_location_id := gen_random_uuid();
+            INSERT INTO location
+              (id, "createdDate", "updatedDate", version, "geoLocation")
+            VALUES
+              (new_location_id, NOW(), NOW(), 1, default_geo_location);
+          END IF;
 
           UPDATE profile
           SET "storageBucketId" = new_bucket_id,
@@ -96,8 +103,18 @@ export class BackfillSpaceAccountProfileBuckets1779062400000
   public async down(_queryRunner: QueryRunner): Promise<void> {
     // Data-repair migration with no safe automatic reversal: once the
     // backfilled buckets are in use (documents uploaded, auth rules
-    // populated by reset), deleting them would lose work. If you need to
-    // undo a botched migration run, do so manually with full operator
-    // context.
+    // populated by reset), deleting them would lose work.
+    //
+    // For a manual rollback the operator must, in order:
+    //   1. Identify backfilled storage_bucket rows whose owning profile is
+    //      `type IN ('space','account')` and currently has the empty
+    //      `authorization_policy` shape this migration produced
+    //      (`credentialRules = '[]'` and `privilegeRules = '[]'`);
+    //      confirm no document rows reference them.
+    //   2. NULL out `profile.storageBucketId` (and, where this migration
+    //      also created a fresh location, `profile.locationId`) on those
+    //      profiles.
+    //   3. DELETE the storage_bucket rows, then the associated
+    //      authorization_policy rows, then the orphaned location rows.
   }
 }
