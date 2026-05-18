@@ -54,6 +54,7 @@ import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
 import { UpdateUserSettingsEntityInput } from '../user-settings/dto/user.settings.dto.update';
+import { DESIGN_VERSION_CURRENT_DEFAULT } from '../user-settings/user.settings.design.version.constants';
 import { UserSettingsService } from '../user-settings/user.settings.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
 import { UsersQueryArgs } from './dto/users.query.args';
@@ -384,6 +385,7 @@ export class UserService {
         spaceID: null,
         autoRedirect: false,
       },
+      designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
     };
     return settings;
   }

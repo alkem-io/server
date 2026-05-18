@@ -1,6 +1,7 @@
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity';
 import { Column, Entity } from 'typeorm';
 import { IUserSettingsCommunication } from './user.settings.communications.interface';
+import { DESIGN_VERSION_CURRENT_DEFAULT } from './user.settings.design.version.constants';
 import { IUserSettingsHomeSpace } from './user.settings.home.space.interface';
 import { IUserSettings } from './user.settings.interface';
 import { IUserSettingsNotification } from './user.settings.notification.interface';
@@ -22,4 +23,7 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
     default: { spaceID: null, autoRedirect: false },
   })
   homeSpace!: IUserSettingsHomeSpace;
+
+  @Column('int', { nullable: false, default: DESIGN_VERSION_CURRENT_DEFAULT })
+  designVersion!: number;
 }
