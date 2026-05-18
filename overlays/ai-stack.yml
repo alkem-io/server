@@ -33,7 +33,7 @@ services:
   virtual_contributor_engine_guidance:
     container_name: alkemio_dev_virtual_contributor_engine_guidance
     hostname: virtual-contributor-engine-guidance
-    image: alkemio/virtual-contributor:v0.1.2
+    image: alkemio/virtual-contributor:v0.1.3
     restart: always
     networks:
       - alkemio_dev_net
@@ -66,7 +66,7 @@ services:
   virtual-contributor-engine-expert:
     container_name: alkemio_dev_virtual_contributor_engine_expert
     hostname: virtual-contributor-engine-expert
-    image: alkemio/virtual-contributor:v0.1.2
+    image: alkemio/virtual-contributor:v0.1.3
     restart: always
     networks:
       - alkemio_dev_net
@@ -101,7 +101,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_ingest_website
     hostname: virtual-contributor-ingest-website
-    image: alkemio/virtual-contributor:v0.1.2
+    image: alkemio/virtual-contributor:v0.1.3
     restart: always
     networks:
       - alkemio_dev_net
@@ -116,7 +116,7 @@ services:
       - RABBITMQ_PORT
       - RABBITMQ_QUEUE=virtual-contributor-ingest-website
       - RABBITMQ_EVENT_BUS_EXCHANGE
-      - RABBITMQ_RESULT_ROUTING_KEY=ingest-website-result
+      - RABBITMQ_RESULT_ROUTING_KEY=IngestWebsiteResult
       - MISTRAL_API_KEY
       - MISTRAL_BASE_URL
       - MISTRAL_SMALL_MODEL_NAME
@@ -196,7 +196,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_virtual_contributor_ingest_space
     hostname: virtual-contributor-ingest-space
-    image: alkemio/virtual-contributor:v0.1.2
+    image: alkemio/virtual-contributor:v0.1.3
     restart: always
     depends_on:
       rabbitmq:
@@ -209,7 +209,7 @@ services:
       - RABBITMQ_PORT
       - RABBITMQ_QUEUE=${RABBITMQ_INGEST_BODY_OF_KNOWLEDGE_QUEUE}
       - RABBITMQ_EVENT_BUS_EXCHANGE
-      - RABBITMQ_RESULT_ROUTING_KEY=IngestSpaceResult
+      - RABBITMQ_RESULT_ROUTING_KEY=IngestBodyOfKnowledgeResult
       - MISTRAL_API_KEY
       - MISTRAL_BASE_URL
       - MISTRAL_SMALL_MODEL_NAME
@@ -242,7 +242,7 @@ services:
   virtual_contributor_engine_generic:
     container_name: alkemio_dev_virtual_contributor_engine_generic
     hostname: virtual-contributor-engine-generic
-    image: alkemio/virtual-contributor:v0.1.2
+    image: alkemio/virtual-contributor:v0.1.3
     restart: always
     networks:
       - alkemio_dev_net
@@ -266,7 +266,7 @@ services:
   virtual_contributor_engine_openai_assistant:
     container_name: alkemio_dev_virtual_contributor_engine_openai_assistant
     hostname: virtual-contributor-engine-openai-assistant
-    image: alkemio/virtual-contributor:v0.1.2
+    image: alkemio/virtual-contributor:v0.1.3
     restart: always
     networks:
       - alkemio_dev_net

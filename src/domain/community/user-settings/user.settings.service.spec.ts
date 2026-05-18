@@ -10,6 +10,10 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { type Mock } from 'vitest';
 import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
+import {
+  DESIGN_VERSION_CURRENT_DEFAULT,
+  DESIGN_VERSION_NEW,
+} from './user.settings.design.version.constants';
 import { UserSettings } from './user.settings.entity';
 import { IUserSettings } from './user.settings.interface';
 import { UserSettingsService } from './user.settings.service';
@@ -120,9 +124,34 @@ describe('UserSettingsService', () => {
         spaceID: null,
         autoRedirect: false,
       },
+      designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
       ...overrides,
     } as IUserSettings;
   };
+
+  describe('createUserSettings - designVersion', () => {
+    // UserSettings.create is TypeORM's static BaseEntity.create which needs a
+    // bound DataSource at runtime — not available in this unit-test harness.
+    // Stub it so the call returns the data verbatim and we can inspect the
+    // designVersion the service computed.
+    beforeEach(() => {
+      vi.spyOn(UserSettings, 'create').mockImplementation(
+        (data: any) => data as UserSettings
+      );
+    });
+
+    it('should default designVersion to DESIGN_VERSION_CURRENT_DEFAULT when omitted from the input', () => {
+      const result = service.createUserSettings({});
+
+      expect(result.designVersion).toBe(DESIGN_VERSION_CURRENT_DEFAULT);
+    });
+
+    it('should propagate an explicit designVersion value verbatim (no clamping)', () => {
+      const result = service.createUserSettings({ designVersion: 7 });
+
+      expect(result.designVersion).toBe(7);
+    });
+  });
 
   describe('updateSettings - privacy', () => {
     it('should update contributionRolesPubliclyVisible when provided', () => {
@@ -236,6 +265,54 @@ describe('UserSettingsService', () => {
       expect(() => service.updateSettings(settings, updateData)).toThrow(
         ValidationException
       );
+    });
+  });
+
+  describe('updateSettings - designVersion', () => {
+    it('should update designVersion when provided', () => {
+      // buildSettings() seeds the current default; switching to the opt-in
+      // new design exercises the actual switch path.
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        designVersion: DESIGN_VERSION_NEW,
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.designVersion).toBe(DESIGN_VERSION_NEW);
+    });
+
+    it('should accept zero and negative integers verbatim (no clamping)', () => {
+      const settings = buildSettings();
+
+      expect(
+        service.updateSettings(settings, { designVersion: 0 }).designVersion
+      ).toBe(0);
+      expect(
+        service.updateSettings(settings, { designVersion: -1 }).designVersion
+      ).toBe(-1);
+    });
+
+    it('should not change designVersion when omitted from the update', () => {
+      const settings = buildSettings({ designVersion: 5 } as any);
+      const updateData: UpdateUserSettingsEntityInput = {};
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.designVersion).toBe(5);
+    });
+
+    it('should ignore an explicit null and leave designVersion untouched', () => {
+      // Defensive: the GraphQL input is `Int` (nullable). The DB column is
+      // NOT NULL, so an explicit null must be a no-op rather than reach save().
+      const settings = buildSettings({ designVersion: 5 } as any);
+      const updateData = {
+        designVersion: null,
+      } as unknown as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.designVersion).toBe(5);
     });
   });
 
