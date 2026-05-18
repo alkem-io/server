@@ -1,9 +1,9 @@
 # Phase 1 — GraphQL Contract
 
-**Feature**: 097-change-user-email (Platform Admin)
+**Feature**: 097-change-user-email (Platform Admin, No Verification)
 **Date**: 2026-05-13
-**Last Updated**: 2026-05-18 (split from unified spec; me-shape moved to 098)
-**Companion**: `/specs/098-self-service-email-change/contracts/graphql.md` adds 1 input, 1 mutation, 1 query field, and extends `UserEmailChangePending` with `initiatorAdmin?` + `awaitingAdminReconciliation`.
+**Last Updated**: 2026-05-18 (smaller MVP — verification surface moved to 098)
+**Companion**: `/specs/098-self-service-email-change/contracts/graphql.md` adds the verification surface (the `userEmailChangeConfirm` root mutation, the `meUserEmailChangeBegin` mutation, the `me.pendingEmailChange` query, the `UserEmailChangePending` type, the additive audit-outcome enum values for the verification flow).
 
 This file enumerates the GraphQL surface introduced by this feature. The SDL fragments below are the *contract* that the schema baseline diff (per `pnpm run schema:diff`) will validate. All additions are additive; there are no breaking changes to existing types.
 
@@ -11,7 +11,7 @@ The fragments are organised by GraphQL kind:
 1. New enums
 2. New object types (results / payloads)
 3. New input types
-4. New mutations (3)
+4. New mutations (2)
 5. New query fields (2)
 6. Error code mapping
 
@@ -20,32 +20,16 @@ The fragments are organised by GraphQL kind:
 ## 1. New enums
 
 ```graphql
-"""Lifecycle state of a user-email-change request as exposed to admin callers."""
-enum UserEmailChangeStateValue {
-  INITIATED
-  CONFIRMED
-  COMMITTED
-  ROLLED_BACK
-  EXPIRED
-  SUPERSEDED
-  DRIFT_DETECTED
-}
-
-"""Role of the actor who initiated a user-email-change request."""
+"""Role of the actor who initiated a user-email-change audit event."""
 enum UserEmailChangeInitiatorRole {
   SELF
   PLATFORM_ADMIN
 }
 
-"""Outcome recorded for a single audit entry in the email-change lifecycle."""
+"""Outcome recorded for a single audit entry. Spec 098 extends this enum (additively) with verification-flow outcomes."""
 enum UserEmailChangeAuditOutcome {
-  INITIATED
-  INITIATION_FAILED
-  CONFIRMED
   COMMITTED
   ROLLED_BACK
-  EXPIRED
-  SUPERSEDED
   DRIFT_DETECTED
   DRIFT_RESOLVED
   DRIFT_RESOLUTION_FAILED
@@ -53,82 +37,20 @@ enum UserEmailChangeAuditOutcome {
   SESSION_INVALIDATION_FAILED
   REJECTED_VALIDATION
   REJECTED_CONFLICT
-  REJECTED_USED_TOKEN
-  REJECTED_EXPIRED_TOKEN
 }
 ```
+
+(No `UserEmailChangeStateValue` enum in this spec — there is no multi-step lifecycle and no pending entity. Spec 098 introduces that enum natively.)
 
 ---
 
 ## 2. New object types
-
-### `UserEmailChangePending` — returned by the admin initiate mutation
-
-```graphql
-"""
-A pending email-change request as returned to the admin caller of adminUserEmailChangeBegin.
-Never exposes the confirmation token. Spec 098 extends this type with `initiatorAdmin` and
-`awaitingAdminReconciliation` fields for the subject-user me-query; those additions are
-additive and do not alter this spec's contract.
-"""
-type UserEmailChangePending {
-  """Lifecycle state of the pending change. (Spec 098 narrows the observable subset for the me-query separately.)"""
-  state: UserEmailChangeStateValue!
-
-  """Whether the change was self-initiated (added by spec 098) or initiated by a platform admin (this spec)."""
-  initiatorRole: UserEmailChangeInitiatorRole!
-
-  """The proposed new email address."""
-  newEmail: String!
-
-  """Timestamp at which the confirmation token was issued."""
-  issuedAt: DateTime!
-
-  """Timestamp at which the confirmation token expires (issuedAt + 1 hour per FR-007b)."""
-  expiryAt: DateTime!
-}
-```
-
-### `UserEmailChangeState` — returned by the `platformAdmin` status query
-
-```graphql
-"""
-Admin-facing view of a user's email-change state. Covers the active pending change (if any)
-and any terminal-state pending-change record within the 30-day retention window (FR-021).
-"""
-type UserEmailChangeState {
-  """Lifecycle state of the relevant pending-change record."""
-  state: UserEmailChangeStateValue!
-
-  """Whether the change was self-initiated or initiated by a platform admin."""
-  initiatorRole: UserEmailChangeInitiatorRole!
-
-  """The proposed new email address (or, for terminal states, the email that was proposed)."""
-  newEmail: String!
-
-  """Issue timestamp."""
-  issuedAt: DateTime!
-
-  """Expiry timestamp."""
-  expiryAt: DateTime!
-
-  """Set iff the record transitioned through CONFIRMED."""
-  confirmedAt: DateTime
-
-  """Set iff the record reached COMMITTED."""
-  committedAt: DateTime
-
-  """Short non-leaky failure reason. Set on terminal failure outcomes."""
-  failureReason: String
-}
-```
 
 ### `UserEmailChangeAuditEntry` — page items in the audit query
 
 ```graphql
 """
 A single audit-trail entry. Append-only and retained indefinitely (FR-014a).
-Token values are never exposed.
 """
 type UserEmailChangeAuditEntry {
   id: UUID!
@@ -143,13 +65,17 @@ type UserEmailChangeAuditEntry {
   """
   initiator: UserProfileSummary
 
-  """Whether the change was self-initiated or admin-initiated."""
+  """Whether the change was admin-initiated (this spec) or self-initiated (spec 098 onward)."""
   initiatorRole: UserEmailChangeInitiatorRole!
 
   """Old email at the time of this audit entry. Null only for entries with no old-email context."""
   oldEmail: String
 
-  """Proposed new email. Null only for entries with no new-email context."""
+  """
+  The address recorded for this entry. For commit/rollback entries this is the proposed/applied
+  new address. For drift_detected entries this is the value observed on the Kratos side at the
+  moment of drift. Null only for entries with no new-email context.
+  """
   newEmail: String
 
   """Outcome recorded for this entry."""
@@ -174,19 +100,19 @@ type UserEmailChangeAuditEntries {
 }
 ```
 
-### `UserEmailChangeConfirmResult` — returned by `userEmailChangeConfirm` and the admin drift-resolve mutation
+### `UserEmailChangeResult` — returned by the admin-change and drift-resolve mutations
 
 ```graphql
 """
-Result returned to the caller of the confirm and drift-resolve mutations. Deliberately
-minimal — the caller does not need to know which side(s) were written; only success / failure
-is meaningful for them. Failure surfaces as a typed GraphQL error per the error-code mapping.
+Result returned to the admin caller. Deliberately minimal — failure surfaces as a typed GraphQL
+error per the error-code mapping. Returned by both adminUserEmailChange (the synchronous commit)
+and adminUserEmailChangeDriftResolve (the reconciliation mutation).
 """
-type UserEmailChangeConfirmResult {
+type UserEmailChangeResult {
   """Always true on success. (Failures throw typed GraphQL errors instead of returning false.)"""
   success: Boolean!
 
-  """The committed (new) email. Present on success."""
+  """The committed (canonical) email. Present on success."""
   email: String
 }
 ```
@@ -212,8 +138,8 @@ type UserProfileSummary {
 ## 3. New input types
 
 ```graphql
-"""Input for adminUserEmailChangeBegin. Platform-admin-on-behalf initiation."""
-input AdminUserEmailChangeBeginInput {
+"""Input for adminUserEmailChange. Synchronous admin-on-behalf email change; no platform-mediated verification (FR-002)."""
+input AdminUserEmailChangeInput {
   """The subject user whose email is being changed."""
   userID: UUID!
 
@@ -221,20 +147,14 @@ input AdminUserEmailChangeBeginInput {
   newEmail: String!
 }
 
-"""Input for userEmailChangeConfirm. The opaque token is the sole authority (FR-018a)."""
-input UserEmailChangeConfirmInput {
-  """The opaque token delivered to the proposed new mailbox."""
-  token: String!
-}
-
-"""Input for adminUserEmailChangeDriftResolve. Reconciles a DRIFT_DETECTED record (FR-009b)."""
+"""Input for adminUserEmailChangeDriftResolve. Reconciles an outstanding drift-detected audit entry (FR-009b)."""
 input AdminUserEmailChangeDriftResolveInput {
-  """The subject user whose pending change is in DRIFT_DETECTED."""
+  """The subject user whose latest audit entry is drift_detected."""
   userID: UUID!
 
   """
   The admin-chosen canonical email. MUST be one of the two values observed on the
-  DRIFT_DETECTED record (i.e., either the new email or the old email). Force-aligns
+  drift_detected audit entry (i.e., either the old or the new email). Force-aligns
   both sides to this value within the FR-009 retry budget.
   """
   canonicalEmail: String!
@@ -248,33 +168,27 @@ input AdminUserEmailChangeDriftResolveInput {
 ```graphql
 extend type Mutation {
   """
-  Begin a change of another user's login email, acting as a platform administrator.
-  Sends the confirmation to the proposed new address; the target user must confirm.
-  Authorization: caller must hold AuthorizationPrivilege.PLATFORM_ADMIN. (FR-002, FR-002a, FR-013, FR-018)
+  Change a user's login email synchronously, acting as a platform administrator. The admin
+  is responsible for verifying the subject user's identity out-of-band (the platform does
+  NOT send a confirmation message to the new mailbox and does NOT require the new mailbox
+  to prove ownership). Validates uniqueness, commits Kratos → Alkemio with bounded retry,
+  invalidates the subject's existing sessions, and sends a security-signal notification to
+  the old address. Authorization: caller must hold AuthorizationPrivilege.PLATFORM_ADMIN.
+  (FR-002, FR-002a, FR-013, FR-018)
   """
-  adminUserEmailChangeBegin(
-    adminUserEmailChangeBeginData: AdminUserEmailChangeBeginInput!
-  ): UserEmailChangePending!
+  adminUserEmailChange(
+    adminUserEmailChangeData: AdminUserEmailChangeInput!
+  ): UserEmailChangeResult!
 
   """
-  Confirm a pending email change by presenting the opaque token from the confirmation message.
-  Callable without an Alkemio session — the token is the sole authority for the confirmation
-  step. Re-validates uniqueness, performs the two-side commit (Kratos → Alkemio) with bounded
-  retry, invalidates all existing sessions for the subject user, and sends the post-commit
-  security-signal notification to the old address. (FR-008, FR-018a)
-  """
-  userEmailChangeConfirm(
-    userEmailChangeConfirmData: UserEmailChangeConfirmInput!
-  ): UserEmailChangeConfirmResult!
-
-  """
-  Reconcile a DRIFT_DETECTED pending email change by force-aligning Alkemio and Kratos to a
-  canonical email selected by the admin. Authorization: caller must hold
-  AuthorizationPrivilege.PLATFORM_ADMIN. (FR-009b)
+  Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio
+  and Kratos to a canonical email chosen by the admin. The latest audit entry for the subject
+  must have outcome drift_detected with no subsequent drift_resolved entry. Authorization:
+  caller must hold AuthorizationPrivilege.PLATFORM_ADMIN. (FR-009b)
   """
   adminUserEmailChangeDriftResolve(
     adminUserEmailChangeDriftResolveData: AdminUserEmailChangeDriftResolveInput!
-  ): UserEmailChangeConfirmResult!
+  ): UserEmailChangeResult!
 }
 ```
 
@@ -282,21 +196,18 @@ extend type Mutation {
 
 ## 5. New query fields
 
-The two new queries are added as resolver fields on the existing root-shaped `PlatformAdminQueryResults` type. (Spec 098 adds a `pendingEmailChange` field on `MeQueryResults`.)
-
 ```graphql
 extend type PlatformAdminQueryResults {
   """
-  Lifecycle state of an email change for the named subject user. Covers the active pending
-  change (if any) and any terminal-state pending-change record within the 30-day retention
-  window (FR-021). Returns null if no record exists in that window. (FR-021)
+  The most recent audit entry for the named subject user. Returns null if no audit entry
+  exists. Useful for a quick drift-status check without paging through the full audit history.
+  (FR-021)
   """
-  userEmailChangeState(userID: UUID!): UserEmailChangeState
+  latestUserEmailChangeAuditEntry(userID: UUID!): UserEmailChangeAuditEntry
 
   """
   Paginated audit-entry history for the named subject user, ordered by timestamp descending.
-  Follows cursor pagination per docs/Pagination.md. Returned entries reflect all events in
-  the email-change lifecycle for that subject. (FR-014b)
+  Follows cursor pagination per docs/Pagination.md. (FR-014b)
   """
   userEmailChangeAuditEntries(
     """Subject user to query."""
@@ -317,26 +228,23 @@ extend type PlatformAdminQueryResults {
 
 ## 6. Error-code mapping
 
-All errors below surface via the existing typed-GraphQL-error path (`@common/exceptions/*`). The codes are stable identifiers in the GraphQL error payload's `extensions.code` field — client-web uses these to render localised error messages. Spec reference: FR-015.
+All errors below surface via the existing typed-GraphQL-error path (`@common/exceptions/*`). The codes are stable identifiers in the GraphQL error payload's `extensions.code` field. Spec reference: FR-015.
 
 | Code | When raised | HTTP-equivalent | Source FR |
 | --- | --- | --- | --- |
 | `EMAIL_CHANGE_VALIDATION` | New email malformed | 400 | FR-004, FR-015 |
 | `EMAIL_CHANGE_NO_CHANGE` | New email equals current (case-insensitive) | 400 | FR-005, FR-015 |
-| `EMAIL_CHANGE_CONFLICT` | New email already belongs to another user/identity (at initiate or at confirm) | 409 | FR-004, FR-004a, FR-015 |
-| `EMAIL_CHANGE_TOKEN_EXPIRED` | Token presented after `expiry_at` | 410 | FR-007(a), FR-015 |
-| `EMAIL_CHANGE_TOKEN_USED` | Token presented twice (state ≠ initiated) | 410 | FR-007(b), FR-015 |
-| `EMAIL_CHANGE_TOKEN_INVALID` | Token not found (also covers superseded) | 404 | FR-007(d), FR-015 |
+| `EMAIL_CHANGE_CONFLICT` | New email already belongs to another user/identity | 409 | FR-004, FR-015 |
+| `EMAIL_CHANGE_SUBJECT_NOT_FOUND` | The named subject user does not exist or has no linked identity-provider identity | 404 | FR-002, FR-015 |
 | `EMAIL_CHANGE_KRATOS_UNREACHABLE` | Kratos client raised a network/timeout error after retry budget | 502 | FR-009, FR-015 |
 | `EMAIL_CHANGE_KRATOS_WRITE_FAILED` | Kratos returned a non-2xx after retry budget | 502 | FR-009, FR-015 |
 | `EMAIL_CHANGE_ALKEMIO_WRITE_FAILED` | TypeORM write to `user` failed within the commit txn | 500 | FR-009, FR-015 |
-| `EMAIL_CHANGE_MAIL_DELIVERY_FAILED` | Outbound mail provider hard-failed during initiate (FR-019a) | 502 | FR-019a, FR-015 |
-| `EMAIL_CHANGE_DRIFT_DETECTED` | Commit failed AND rollback failed — admin reconciliation required | 500 | FR-009a, FR-015 |
+| `EMAIL_CHANGE_DRIFT_DETECTED` | Commit failed AND Kratos revert failed — admin reconciliation required | 500 | FR-009a, FR-015 |
 | `EMAIL_CHANGE_DRIFT_RESOLUTION_FAILED` | adminUserEmailChangeDriftResolve could not align both sides within retry budget | 500 | FR-009b, FR-015 |
-| `EMAIL_CHANGE_UNAUTHORIZED` | Caller lacks PLATFORM_ADMIN privilege for an admin-on-behalf mutation, or attempts to initiate for someone other than themselves on the self-service mutation | 403 | FR-013, FR-015 |
-| `EMAIL_CHANGE_NOT_FOUND` | Admin queries a drift-resolve for a user with no DRIFT_DETECTED record | 404 | FR-009b, FR-015 |
+| `EMAIL_CHANGE_DRIFT_NOT_FOUND` | Admin invoked the drift-resolve mutation for a subject whose latest audit entry is NOT drift_detected | 404 | FR-009b, FR-015 |
+| `EMAIL_CHANGE_UNAUTHORIZED` | Caller lacks PLATFORM_ADMIN privilege | 403 | FR-013, FR-015 |
 
-The `extensions.details` payload on these errors carries the structured context (user id, attempted email — for the caller's own benefit on `EMAIL_CHANGE_NO_CHANGE`; NEVER for `EMAIL_CHANGE_CONFLICT` per the anti-enumeration rule in FR-005 / FR-014).
+The `extensions.details` payload on these errors carries the structured context (subject user id, attempted email — for the caller's own benefit on `EMAIL_CHANGE_NO_CHANGE`; NEVER for `EMAIL_CHANGE_CONFLICT` per the anti-enumeration rule in FR-014).
 
 ---
 
@@ -344,23 +252,22 @@ The `extensions.details` payload on these errors carries the structured context 
 
 | Mutation / Query | Authentication required? | Authorization rule |
 | --- | --- | --- |
-| `adminUserEmailChangeBegin` | Yes — Alkemio session | `grantAccessOrFail(actor, platformPolicy, PLATFORM_ADMIN)` |
-| `userEmailChangeConfirm` | **No** — session-less per FR-018a | Token lookup is the sole authority |
+| `adminUserEmailChange` | Yes — Alkemio session | `grantAccessOrFail(actor, platformPolicy, PLATFORM_ADMIN)` |
 | `adminUserEmailChangeDriftResolve` | Yes — Alkemio session | `grantAccessOrFail(actor, platformPolicy, PLATFORM_ADMIN)` |
-| `platformAdmin.userEmailChangeState` | Yes — Alkemio session | `grantAccessOrFail(actor, platformPolicy, PLATFORM_ADMIN)` |
+| `platformAdmin.latestUserEmailChangeAuditEntry` | Yes — Alkemio session | `grantAccessOrFail(actor, platformPolicy, PLATFORM_ADMIN)` |
 | `platformAdmin.userEmailChangeAuditEntries` | Yes — Alkemio session | `grantAccessOrFail(actor, platformPolicy, PLATFORM_ADMIN)` |
 
-(Spec 098 adds: `meUserEmailChangeBegin` and `me.pendingEmailChange`, both requiring an authenticated Alkemio session and gated by current-user equality.)
+(Spec 098 adds: `meUserEmailChangeBegin` and `me.pendingEmailChange` — `me`-shape; `userEmailChangeConfirm` — root, session-less, token = sole authority.)
 
 ---
 
 ## 8. Schema-baseline diff expectations
 
 When `pnpm run schema:diff` runs against this PR, the expected change-report.json content is:
-- **Additions only**: 3 new enums, 5 new object types (`UserEmailChangePending`, `UserEmailChangeState`, `UserEmailChangeAuditEntry`, `UserEmailChangeAuditEntries`, `UserEmailChangeConfirmResult`; `UserProfileSummary` only if no equivalent already exists), 3 new input types, 3 new mutations, 2 new query fields (both `extend` on `PlatformAdminQueryResults`).
+- **Additions only**: 2 new enums (`UserEmailChangeInitiatorRole`, `UserEmailChangeAuditOutcome`), 4 new object types (`UserEmailChangeAuditEntry`, `UserEmailChangeAuditEntries`, `UserEmailChangeResult`; `UserProfileSummary` only if no equivalent already exists), 2 new input types, 2 new mutations, 2 new query fields (both `extend` on `PlatformAdminQueryResults`).
 - **No breaking changes**, no field removals, no field type changes, no nullability changes on existing fields.
 - **No deprecations** introduced.
 
 Schema baseline regeneration is handled by the post-merge `schema-baseline.yml` workflow per CLAUDE.md. The PR opening this feature MUST regenerate `schema.graphql` via `pnpm run schema:print && pnpm run schema:sort` and commit the result.
 
-Spec 098's subsequent PR will add (additive on top of this spec's baseline): 1 input (`MeUserEmailChangeBeginInput`), 1 mutation (`meUserEmailChangeBegin`), 1 query field (`MeQueryResults.pendingEmailChange`), and 2 new optional fields on `UserEmailChangePending` (`initiatorAdmin: UserProfileSummary`, `awaitingAdminReconciliation: Boolean!`). Those additions are additive and will not break this spec's baseline.
+Spec 098's subsequent PR will add the verification surface: 1 new enum (`UserEmailChangeStateValue`), 7 additive values on the `UserEmailChangeAuditOutcome` enum (`INITIATED`, `INITIATION_FAILED`, `CONFIRMED`, `EXPIRED`, `SUPERSEDED`, `REJECTED_USED_TOKEN`, `REJECTED_EXPIRED_TOKEN`), 2 new object types (`UserEmailChangePending`, `UserEmailChangeConfirmResult`), 2 new input types, 2 new mutations (`meUserEmailChangeBegin`, `userEmailChangeConfirm`), 1 new query field (`MeQueryResults.pendingEmailChange`). All additive on top of this spec's baseline.
