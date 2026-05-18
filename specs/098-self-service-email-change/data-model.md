@@ -41,7 +41,7 @@ Seven values, per FR-021-EXT. `initiated` and `confirmed` are non-terminal; the 
 
 ## Additive extension to existing enum
 
-The `email_change_audit_outcome` enum (created by 097 with 9 values) is extended by this spec with 7 additive values:
+The `email_change_audit_outcome` enum (created by 097 with 11 values: `committed`, `rolled_back`, `drift_detected`, `drift_resolved`, `drift_resolution_failed`, `security_signal_failed`, `new_address_notification_failed`, `global_admin_notification_failed`, `session_invalidation_failed`, `rejected_validation`, `rejected_conflict`) is extended by this spec with 7 additive values:
 
 ```sql
 ALTER TYPE email_change_audit_outcome ADD VALUE IF NOT EXISTS 'initiated';
@@ -55,8 +55,8 @@ ALTER TYPE email_change_audit_outcome ADD VALUE IF NOT EXISTS 'rejected_expired_
 
 The `IF NOT EXISTS` clause and individual `ADD VALUE` statements are required by Postgres — enum modification cannot be batched in one statement. The additions are non-breaking; existing audit rows remain valid.
 
-After this migration, the enum's full canonical set (16 values) is:
-`committed`, `rolled_back`, `drift_detected`, `drift_resolved`, `drift_resolution_failed`, `security_signal_failed`, `session_invalidation_failed`, `rejected_validation`, `rejected_conflict`, `initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`.
+After this migration, the enum's full canonical set (18 values) is:
+`committed`, `rolled_back`, `drift_detected`, `drift_resolved`, `drift_resolution_failed`, `security_signal_failed`, `new_address_notification_failed`, `global_admin_notification_failed`, `session_invalidation_failed`, `rejected_validation`, `rejected_conflict`, `initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`.
 
 The `email_change_initiator_role` Postgres enum already has both `self` and `platform_admin` values upfront (shipped by 097); no enum extension is needed for that one.
 

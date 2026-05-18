@@ -149,7 +149,9 @@ The following requirements from 097 govern this spec's runtime behaviour but are
 - FR-012 (login behaviour post-commit)
 - FR-014, FR-014a, FR-014b (audit entries — every self-initiated transition writes the same audit-entry surface as the admin path, with `initiator_role = self`)
 - FR-015 (error code surface — extended additively by this spec with the token-lifecycle error codes; see FR-018a and contracts/graphql.md §6)
-- FR-016, FR-016a, FR-016b (security-signal notification — `self` role tag is now also a valid emitted value)
+- FR-016, FR-016a, FR-016b (security-signal notification to the OLD address — `self` role tag is now also a valid emitted value)
+- FR-016c (acknowledgement notification to the NEW address post-commit — `self` role tag is now also a valid emitted value; a self-initiated commit fires this in addition to the FR-016 OLD-address signal)
+- FR-016d (post-commit fan-out notification to ALL platform admins via the existing Global-Role-Change pattern — `self` role tag is now also a valid emitted value; the self-service `committed` outcome triggers a fan-out so global admins observe self-initiated email changes for platform monitoring; `drift_detected` outcomes on self-initiated changes also trigger the fan-out per 097's contract)
 - FR-017, FR-017a (session invalidation on commit)
 - FR-018 (GraphQL conventions — FR-001's mutation follows them, placed under `me` per FR-018)
 

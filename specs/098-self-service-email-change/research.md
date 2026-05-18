@@ -90,7 +90,7 @@ Confirmation payload fields (sent to the **proposed new** address):
 
 ## R10 — Audit-outcome enum extension
 
-**Decision**: Extend the `email_change_audit_outcome` Postgres enum (created by 097 with 9 values) with 7 additive values: `initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`. Use 7 individual `ALTER TYPE ... ADD VALUE IF NOT EXISTS '...'` statements in the migration. The extension is non-breaking.
+**Decision**: Extend the `email_change_audit_outcome` Postgres enum (created by 097 with 11 values) with 7 additive values: `initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`. Use 7 individual `ALTER TYPE ... ADD VALUE IF NOT EXISTS '...'` statements in the migration. The extension is non-breaking. After this migration the enum carries 18 values total.
 
 **Rationale**:
 - 097's audit-outcome enum captures the outcomes of the admin synchronous flow. The verification flow introduces additional lifecycle markers (`initiated`, `confirmed`, `expired`, `superseded`) and additional failure modes (`initiation_failed`, `rejected_used_token`, `rejected_expired_token`). These are naturally orthogonal additions.
