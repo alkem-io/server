@@ -101,22 +101,47 @@ Spec.md §Clarifications resolves all open questions by direct contract. This do
 
 ---
 
-## R8 — Outbound mail: which adapter, what payload shape?
+## R8 — Outbound notifications: which adapter, what events / payloads?
 
-**Decision**: Add one new entry to `NotificationEvent` — `USER_EMAIL_CHANGE_SECURITY_SIGNAL` — and publish it via the existing `NotificationExternalAdapter.sendExternalNotifications(event, payload)` pattern at `src/services/adapters/notification-external-adapter/notification.external.adapter.ts`. The payload is a new typed class added to `@alkemio/notifications-lib` (extension; backward-compatible).
+**Decision**: Add THREE new entries to `NotificationEvent` and publish each via the existing `NotificationExternalAdapter.sendExternalNotifications(event, payload)` pattern at `src/services/adapters/notification-external-adapter/notification.external.adapter.ts`. Each payload is a new typed class added to `@alkemio/notifications-lib` (extension; backward-compatible).
 
-Security-signal payload fields (sent to the **old** address):
+**Event 1 — `USER_EMAIL_CHANGE_SECURITY_SIGNAL`** (sent to the **OLD** address — FR-016):
 - `recipientEmail` (the old address)
 - `commitTimestampISO8601`
 - `initiatorRole` (`PLATFORM_ADMIN` for this spec; `SELF` is added by spec 098)
-- `newEmailMasked` (e.g., `j***@e***.com` — masked here, not full)
+- `newEmailMasked` (e.g., `j***@e***.com` — masked here, NOT full, because the recipient may be a now-hostile party at an address the user lost control of)
 - (No internal identifiers; no token.)
 
-**Rationale**:
-- The existing `NotificationExternalAdapter` is the canonical entry point — already integrates with `alkemio-notifications` over RabbitMQ, already supports the typed-payload pattern.
-- One event is sufficient for this spec because there is no confirmation message to the new mailbox. Spec 098 adds `USER_EMAIL_CHANGE_CONFIRMATION` for the verification flow.
+**Event 2 — `USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION`** (sent to the **NEW** address — FR-016c):
+- `recipientEmail` (the new address)
+- `commitTimestampISO8601`
+- `initiatorRole`
+- `newEmailFull` (the recipient IS the legitimate new-mailbox holder; masking would just confuse them about their own address)
+- `loginUrl` (implementation chooses the exact path; built from existing client-web host config)
+- (No internal identifiers.)
 
-**Open dependency note**: This requires a coordinated bump of `@alkemio/notifications-lib` and the corresponding template rendering in the `alkemio-notifications` service. Tracked in tasks.md (T015).
+**Event 3 — `USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION`** (fanned out by the notifications-service to **all platform admins** across email / push / in-app, mirroring the existing Global Role Change pattern — FR-016d):
+- `subjectProfileSummary` (`{ id, displayName }`)
+- `oldEmail` (full — admin recipients are trusted)
+- `newEmail` (full — admin recipients are trusted)
+- `initiatorProfileSummary` (`{ id, displayName }`)
+- `initiatorRole`
+- `commitTimestampISO8601`
+- `triggerOutcome` (`COMMITTED` or `DRIFT_DETECTED` — so the template / recipient UI can render appropriate phrasing)
+
+The server publishes ONE event per outcome; the notifications-service is responsible for enumerating admin recipients and selecting per-recipient channels. This matches the existing Global Role Change architecture and avoids duplicating admin-recipient logic in this feature module.
+
+**Rationale**:
+- The existing `NotificationExternalAdapter` is the canonical entry point — already integrates with `alkemio-notifications` over RabbitMQ, already supports the typed-payload pattern, and already implements admin fan-out for Global Role Change.
+- Three distinct events (rather than one parametrized event) keep templates simple — different recipients, different threat models, different content rules. Splitting also lets the audit table record per-channel failure distinctly (`security_signal_failed`, `new_address_notification_failed`, `global_admin_notification_failed`).
+- Masking applied at the OLD address (FR-016) is dropped for the NEW address (FR-016c, legitimate recipient) and dropped for the admin fan-out (FR-016d, trusted recipients).
+
+**Alternatives considered**:
+- A single combined event with a `recipientType` discriminator: rejected — recipient sets / channels / content rules are too divergent.
+- Inline SMTP / direct `nodemailer`: rejected (bypasses the established abstraction).
+- Server-side enumeration of platform admins for FR-016d: rejected (duplicates logic the notifications-service already owns for Global Role Change; would also create a stale-recipient race window).
+
+**Open dependency note**: This requires a coordinated bump of `@alkemio/notifications-lib` and corresponding template additions (3 new templates) in the `alkemio-notifications` service. Tracked in tasks.md (T013, T014, T015).
 
 ---
 
@@ -128,9 +153,9 @@ Security-signal payload fields (sent to the **old** address):
 
 ## R10 — Audit-outcome canonical enumeration
 
-**Decision**: The `email_change_audit_entry.outcome` column accepts the following 9 values (Postgres native enum):
+**Decision**: The `email_change_audit_entry.outcome` column accepts the following 11 values (Postgres native enum):
 
-`committed`, `rolled_back`, `drift_detected`, `drift_resolved`, `drift_resolution_failed`, `security_signal_failed`, `session_invalidation_failed`, `rejected_validation`, `rejected_conflict`
+`committed`, `rolled_back`, `drift_detected`, `drift_resolved`, `drift_resolution_failed`, `security_signal_failed`, `new_address_notification_failed`, `global_admin_notification_failed`, `session_invalidation_failed`, `rejected_validation`, `rejected_conflict`
 
 **Rationale**:
 - Drawn from the outcomes this spec actually writes. Companion spec 098 ADDS (additively) the verification-flow outcomes when it lands (`initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`).
@@ -198,9 +223,9 @@ Security-signal payload fields (sent to the **old** address):
 | R5 | Retry & drift | 3 attempts, exp. backoff with jitter; drift on rollback exhaustion |
 | R6 | Drift state | Lives on the `drift_detected` audit entry (no `pending` entity in this spec) |
 | R7 | Uniqueness check | DB `LOWER()` query + Kratos `listIdentities`, once at commit time |
-| R8 | Outbound mail | Extend `NotificationEvent` with one event + reuse `NotificationExternalAdapter` |
+| R8 | Outbound notifications | Extend `NotificationEvent` with THREE events (OLD-address signal, NEW-address notification, global-admin fan-out) + reuse `NotificationExternalAdapter` (admin fan-out reuses the existing Global Role Change pattern) |
 | R9 | client-web URL | N/A in this spec — owned by 098 |
-| R10 | Audit outcomes | 9-value Postgres native enum; 098 extends additively |
+| R10 | Audit outcomes | 11-value Postgres native enum; 098 extends additively |
 | R11 | Masking | `${firstChar}***@${firstChar}***.${tld}` |
 | R12 | Retention | Audit entries indefinite; no pending entity in this spec |
 | R13 | Test strategy | Unit for service + utils; integration for end-to-end with mocked Kratos |

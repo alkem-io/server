@@ -32,13 +32,15 @@ CREATE TYPE email_change_audit_outcome AS ENUM (
   'drift_resolved',
   'drift_resolution_failed',
   'security_signal_failed',
+  'new_address_notification_failed',
+  'global_admin_notification_failed',
   'session_invalidation_failed',
   'rejected_validation',
   'rejected_conflict'
 );
 ```
 
-Nine values, per FR-014. Companion spec 098 will EXTEND this enum (additively) with the verification-flow outcomes (`initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`).
+Eleven values, per FR-014. Companion spec 098 will EXTEND this enum (additively) with the verification-flow outcomes (`initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`).
 
 ### 2. `email_change_initiator_role`
 
@@ -94,7 +96,9 @@ CREATE INDEX ix_email_change_audit_entry_subject_rowid
 | `drift_detected` | Forward Kratos succeeded, Alkemio failed, Kratos revert exhausted | `old_email` = observed on Alkemio side (= original value); `new_email` = observed on Kratos side (= attempted new value) |
 | `drift_resolved` | Admin drift-resolve succeeded | `old_email` = the old-side value mirrored from the originating `drift_detected` entry (preserves the pre-drift Alkemio observation as forensic context); `new_email` = the canonical email the admin selected. Reading the row alone tells you the direction the admin took: `new_email == originating drift.new_email` ⇒ "keep the change"; `new_email == originating drift.old_email` ⇒ "revert the change". No cross-reference to the drift_detected entry is needed to interpret the resolution. |
 | `drift_resolution_failed` | Admin drift-resolve mutation exhausted its retry budget | Same as drift_detected — observed values |
-| `security_signal_failed` | Post-commit mail to old address exhausted retry budget | Same as committed — old_email is the now-old (pre-change) address; new_email is the now-current address |
+| `security_signal_failed` | Post-commit mail to OLD address (FR-016) exhausted retry budget | Same as committed — old_email is the now-old (pre-change) address; new_email is the now-current address |
+| `new_address_notification_failed` | Post-commit mail to NEW address (FR-016c) exhausted retry budget | Same as committed |
+| `global_admin_notification_failed` | Post-commit global-admin fan-out publish (FR-016d) exhausted retry budget. Captures failure to PUBLISH to the notifications service; per-recipient downstream delivery is out of scope. | Same as committed |
 | `session_invalidation_failed` | Post-commit `disableIdentitySessions` exhausted retry budget | Same as committed |
 | `rejected_validation` | New email malformed (format / RFC) | `new_email` = the malformed attempted value if it's safe to store; otherwise NULL |
 | `rejected_conflict` | New email already taken on Alkemio or Kratos side | `new_email` = the attempted value (which is also the conflict-holder's address — see anti-enumeration note below) |

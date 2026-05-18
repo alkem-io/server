@@ -89,6 +89,25 @@ Open MailSlurper at `http://localhost:4436`. A message MUST appear, addressed to
 
 Exactly one message at the old address; no messages at the old address for any rejected attempt. (FR-016, SC-008)
 
+### Step 1.3a — Confirm acknowledgement notification arrives at NEW address
+
+A second message MUST appear in MailSlurper, this one addressed to `alice+v2@test.alkem.io` (the NEW address). It contains:
+
+- A statement that this address is now the user's login email on Alkemio (FR-016c)
+- The commit timestamp (FR-016c)
+- The initiator role tag (`platform admin`) (FR-016c)
+- A login link / instruction (FR-016c)
+- The full new address (NOT masked — the recipient is the legitimate new-mailbox holder) (FR-016c)
+- A recovery / disclaimer line (FR-016c)
+
+Exactly one message at the new address. No messages at the new address for any rejected attempt. (FR-016c, SC-009)
+
+### Step 1.3b — Confirm global-admin fan-out notification was published
+
+The notifications-service receives one `USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION` event (observable via the RabbitMQ-binding test harness or by inspecting the notifications-service inbox in dev). The event payload contains: subject `{id, displayName}`, full old email, full new email, initiator `{id, displayName}`, initiator role `PLATFORM_ADMIN`, commit timestamp, `triggerOutcome: COMMITTED`. The notifications-service then fans this event out to ALL platform admins via the email + push (PWA) + in-app channels — mirroring the existing Global-Role-Change pattern. (FR-016d, SC-010)
+
+Downstream per-recipient delivery is out of this spec's measurement scope (the notifications-service owns that), but a smoke check: a second platform admin (other than the initiator) receives the fan-out via her configured channels.
+
 ### Step 1.4 — Verify Alice's data survived
 
 Query Alice's profile (as Alice, after logging in with the new email):
@@ -218,6 +237,7 @@ The test:
    - GraphQL error code `EMAIL_CHANGE_DRIFT_DETECTED`
    - Winston error log entry tagged `email_change_drift_detected`
    - APM `captureError` was called with the same marker
+   - One `USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION` event was published with `triggerOutcome: DRIFT_DETECTED` (so other admins can assist with reconciliation — FR-016d)
 
 Then, as a platform admin:
 
@@ -294,6 +314,8 @@ After running all scenarios:
 - [x] **SC-005** — Double-failure produces drift_detected + Winston + APM signals
 - [x] **SC-006** — Zero side-writes for rejected attempts
 - [x] **SC-007** — Old email rejected at login, new email succeeds; existing sessions dead
-- [x] **SC-008** — Exactly one security-signal notification on commit; zero on rejection
+- [x] **SC-008** — Exactly one security-signal notification at the OLD address on commit; zero on rejection
+- [x] **SC-009** — Exactly one acknowledgement notification at the NEW address on commit; zero on rejection
+- [x] **SC-010** — Exactly one global-admin fan-out event published on commit AND on drift_detected; zero on rejection or other failure outcomes
 
 If any checkbox fails, the feature is not yet shippable. The integration tests (`*.it-spec.ts`) under `test/functional/integration/` are the automated equivalent and MUST also be green.
