@@ -1,6 +1,6 @@
-import { Field, InputType } from '@nestjs/graphql';
+import { Field, InputType, Int } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
-import { ValidateNested } from 'class-validator';
+import { IsInt, IsOptional, ValidateNested } from 'class-validator';
 import { CreateUserSettingsCommunicationInput } from './user.settings.communications.dto.create';
 import { CreateUserSettingsHomeSpaceInput } from './user.settings.home.space.dto.create';
 import { CreateUserSettingsNotificationInput } from './user.settings.notification.dto.create';
@@ -39,4 +39,13 @@ export class CreateUserSettingsInput {
   @ValidateNested()
   @Type(() => CreateUserSettingsHomeSpaceInput)
   homeSpace?: CreateUserSettingsHomeSpaceInput;
+
+  @Field(() => Int, {
+    nullable: true,
+    description:
+      'Initial design version for this User. Defaults to 1 (the current default design generation) when omitted.',
+  })
+  @IsOptional()
+  @IsInt()
+  designVersion?: number;
 }
