@@ -1,9 +1,12 @@
 # Phase 1 — Quickstart
 
-**Feature**: 097-change-user-email
+**Feature**: 097-change-user-email (Platform Admin)
 **Date**: 2026-05-13
+**Last Updated**: 2026-05-18 (split from unified spec; self-service walkthrough moved to 098)
 
-End-to-end walkthrough of the email-change flow against a local stack. This is the script a reviewer should follow to convince themselves the feature works before approving. Every step references the FRs / SCs it exercises.
+End-to-end walkthrough of the admin-on-behalf email-change flow against a local stack. This is the script a reviewer should follow to convince themselves the feature works before approving. Every step references the FRs / SCs it exercises.
+
+The self-service flow is walked through separately in `/specs/098-self-service-email-change/quickstart.md`.
 
 ---
 
@@ -34,17 +37,18 @@ Both have valid Alkemio profiles and Kratos identities. Each step below assumes 
 
 ---
 
-## Scenario 1 — Self-service happy path (SC-001, SC-008)
+## Scenario 1 — Admin-on-behalf happy path (SC-001, SC-002, SC-007, SC-008, SC-009)
 
-**Goal**: Alice changes her own email from `alice@test.alkem.io` to `alice+v2@test.alkem.io`. Memberships and content survive; old email no longer logs in.
+**Goal**: Polly (platform admin) changes Alice's email from `alice@test.alkem.io` to `alice+v2@test.alkem.io`. Alice confirms via the link delivered to the new mailbox. Memberships and content survive; old email no longer logs in; old mailbox receives a security-signal notification.
 
-### Step 1.1 — Alice initiates the change
+### Step 1.1 — Polly initiates on Alice's behalf
 
-GraphQL mutation, authenticated as Alice:
+GraphQL mutation, authenticated as Polly (PLATFORM_ADMIN):
 
 ```graphql
 mutation {
-  meUserEmailChangeBegin(meUserEmailChangeBeginData: {
+  adminUserEmailChangeBegin(adminUserEmailChangeBeginData: {
+    userID: "<alice-user-id>"
     newEmail: "alice+v2@test.alkem.io"
   }) {
     state
@@ -52,7 +56,6 @@ mutation {
     newEmail
     issuedAt
     expiryAt
-    awaitingAdminReconciliation
   }
 }
 ```
@@ -61,57 +64,38 @@ Expected response:
 ```json
 {
   "data": {
-    "meUserEmailChangeBegin": {
+    "adminUserEmailChangeBegin": {
       "state": "INITIATED",
-      "initiatorRole": "SELF",
+      "initiatorRole": "PLATFORM_ADMIN",
       "newEmail": "alice+v2@test.alkem.io",
-      "issuedAt": "2026-05-13T10:00:00.000Z",
-      "expiryAt": "2026-05-13T11:00:00.000Z",   // <-- issuedAt + 1h (FR-007b)
-      "awaitingAdminReconciliation": false
+      "issuedAt": "2026-05-18T10:00:00.000Z",
+      "expiryAt": "2026-05-18T11:00:00.000Z"
     }
   }
 }
 ```
 
-**Exercises**: FR-001, FR-018, FR-003 (token issued + mail sent), FR-007b (1h TTL), FR-022.
+**Exercises**: FR-002, FR-013, FR-018, FR-003 (token issued + mail sent), FR-007b (1h TTL).
 
 ### Step 1.2 — Check MailSlurper for the confirmation message
 
 Open `http://localhost:4436`. You should see one new message addressed to `alice+v2@test.alkem.io` containing:
-- A clickable link of the form `https://<client-web>/identity/email-change/confirm?token=<43-char-token>` (FR-003a)
-- "This change was requested by you" (the SELF initiator-role tag — FR-003b)
-- An explicit time-limit statement (FR-003b)
-- Recovery / disclaimer ("if you did not request this, ignore...") (FR-003b)
 
-NO admin name, NO internal identifiers, NO token outside the link. (FR-003b)
+- A clickable confirmation link of the form `${endpoints.client_web}/identity/email-change/confirm?token=…` (FR-003a)
+- The initiator role tag indicating the change was initiated by a `platform admin` (FR-003b)
+- An explicit statement that the link is time-limited consistent with the 1-hour TTL (FR-003b, FR-007b)
+- Recovery / disclaimer instructions for unexpected changes (FR-003b)
 
-### Step 1.3 — Verify Alice can see her own pending change
+The message MUST NOT contain Polly's name, user id, or any other admin PII; only the role tag is permitted. (FR-003b)
 
-```graphql
-query {
-  me {
-    pendingEmailChange {
-      state
-      initiatorRole
-      newEmail
-      issuedAt
-      expiryAt
-      awaitingAdminReconciliation
-    }
-  }
-}
-```
+### Step 1.3 — Confirm with the token (session-less)
 
-Expected: the pending change with `state: INITIATED`, `initiatorRole: SELF`. (FR-022)
-
-### Step 1.4 — Confirm with the token (session-less)
-
-Extract the token from the MailSlurper URL. Call the confirm mutation **without** a session cookie:
+Extract the token from the confirmation link. Invoke the confirm mutation **without** a session cookie (e.g., in an incognito window, or via `curl` without authentication):
 
 ```graphql
 mutation {
   userEmailChangeConfirm(userEmailChangeConfirmData: {
-    token: "<TOKEN-FROM-MAIL>"
+    token: "<TOKEN-FROM-LINK>"
   }) {
     success
     email
@@ -119,106 +103,50 @@ mutation {
 }
 ```
 
-Expected response:
-```json
-{
-  "data": {
-    "userEmailChangeConfirm": {
-      "success": true,
-      "email": "alice+v2@test.alkem.io"
-    }
-  }
-}
-```
+Expected: `success: true`, `email: alice+v2@test.alkem.io`. (FR-008, FR-018a)
 
-**Exercises**: FR-008, FR-009 (two-side commit), FR-010 (same identity id), FR-011 (marked verified), FR-017 (sessions invalidated), FR-018a (session-less confirm).
+### Step 1.4 — Verify old email is rejected at login
 
-### Step 1.5 — Verify old email is rejected at login
+Attempt to log in with `alice@test.alkem.io` via the normal Kratos login flow. It MUST be rejected. (FR-012, SC-007)
 
-Try to log in via the Kratos flow with `alice@test.alkem.io`. The flow MUST fail (the identity no longer has that email trait). Try with `alice+v2@test.alkem.io` — succeeds.
+Attempt to log in with `alice+v2@test.alkem.io`. It MUST succeed. (FR-012, SC-007)
 
-**Exercises**: FR-012, SC-008.
+### Step 1.5 — Confirm security-signal email arrives at OLD address
 
-### Step 1.6 — Confirm security-signal email arrives at OLD address
+Open MailSlurper. A second message MUST appear, addressed to `alice@test.alkem.io` (the OLD address). It contains:
 
-In MailSlurper, you should see one new message to `alice@test.alkem.io` containing:
-- Statement that the login email was changed
-- Commit timestamp
-- "Changed by you" (initiator role SELF) — FR-016
-- Partially-masked new address (e.g., `a***@t***.io`) — FR-016 (NOT the full new email)
-- Recovery instructions
+- A statement that the user's login email was changed (FR-016)
+- The commit timestamp (FR-016)
+- The initiator role tag (`platform admin`) (FR-016)
+- A partially masked rendering of the new address, e.g., `a***@t***.io` — the FULL new address MUST NOT be disclosed (FR-016, R11)
+- Recovery instructions (FR-016)
 
-**Exercises**: FR-016, FR-016a (English), SC-010.
+Exactly one message at the old address; no messages at the old address for any abandoned or rejected attempt. (FR-016, SC-009)
 
-### Step 1.7 — Verify Alice's data survived
+### Step 1.6 — Verify Alice's data survived
+
+Query Alice's profile (as Alice, after logging in with the new email):
 
 ```graphql
 query {
   me {
     user {
-      id            # <-- MUST be the same id as before the change
+      id              # same as before the change
+      email           # alice+v2@test.alkem.io
       profile { id, displayName }
-    }
-    spaceMemberships { id }
-    contributions { id }
-  }
-}
-```
-
-The `id`, profile, memberships, and contributions are unchanged. (FR-010, SC-001)
-
-### Step 1.8 — Verify previously-active sessions are dead
-
-If you had a second browser open as Alice during step 1.1, refresh it now. The session MUST no longer be valid; Alice is required to log in again with `alice+v2@test.alkem.io`. (FR-017, SC-009)
-
----
-
-## Scenario 2 — Admin-on-behalf happy path (SC-002)
-
-**Goal**: Polly (platform admin) changes Alice's email from `alice+v2@test.alkem.io` to `alice+v3@test.alkem.io`. Alice confirms via the link.
-
-### Step 2.1 — Polly initiates on Alice's behalf
-
-```graphql
-mutation {
-  adminUserEmailChangeBegin(adminUserEmailChangeBeginData: {
-    userID: "<alice-user-id>"
-    newEmail: "alice+v3@test.alkem.io"
-  }) {
-    state
-    initiatorRole
-    newEmail
-  }
-}
-```
-
-Expected: `state: INITIATED`, `initiatorRole: PLATFORM_ADMIN`. (FR-002, FR-013)
-
-### Step 2.2 — Alice sees the admin-initiated change in her `me` query
-
-```graphql
-query {
-  me {
-    pendingEmailChange {
-      state
-      initiatorRole         # PLATFORM_ADMIN
-      initiatorAdmin {
-        id
-        displayName         # Polly's display name (FR-022)
-      }
-      newEmail
+      # ... memberships, contributions, etc.
     }
   }
 }
 ```
 
-The admin's `id` + `displayName` are present; the admin's email and other PII are NOT. (FR-022)
+The `user.id`, profile id, memberships, and historical references are unchanged. (FR-010, SC-001)
 
-### Step 2.3 — Alice confirms
+### Step 1.7 — Verify previously-active sessions are dead
 
-Same as step 1.4, using the token from the message to `alice+v3@test.alkem.io`.
+If you had a second browser open as Alice during step 1.1, refresh it now. The session MUST no longer be valid; Alice is required to log in again with `alice+v2@test.alkem.io`. (FR-017, SC-008)
 
-### Step 2.4 — Polly observes the outcome via `platformAdmin` status query
+### Step 1.8 — Polly observes the outcome via `platformAdmin` status query
 
 ```graphql
 query {
@@ -226,26 +154,29 @@ query {
     userEmailChangeState(userID: "<alice-user-id>") {
       state            # COMMITTED
       initiatorRole    # PLATFORM_ADMIN
-      newEmail         # alice+v3@test.alkem.io
+      newEmail         # alice+v2@test.alkem.io
       committedAt
     }
   }
 }
 ```
 
-(FR-021, SC-002)
+(FR-021, SC-001)
 
 ---
 
-## Scenario 3 — Validation rejection (SC-007)
+## Scenario 2 — Validation rejection (SC-006)
 
 **Goal**: Validation errors surface BEFORE any mail is sent.
 
-### Step 3.1 — Malformed email
+### Step 2.1 — Malformed email
+
+Polly attempts an admin-init with a malformed address:
 
 ```graphql
 mutation {
-  meUserEmailChangeBegin(meUserEmailChangeBeginData: {
+  adminUserEmailChangeBegin(adminUserEmailChangeBeginData: {
+    userID: "<alice-user-id>"
     newEmail: "not-an-email"
   }) { state }
 }
@@ -253,39 +184,45 @@ mutation {
 
 Expected: error with `extensions.code: EMAIL_CHANGE_VALIDATION`. MailSlurper: no new message. (FR-004, FR-015)
 
-### Step 3.2 — Same as current
+### Step 2.2 — Same as current
 
 ```graphql
 mutation {
-  meUserEmailChangeBegin(meUserEmailChangeBeginData: {
-    newEmail: "alice+v3@test.alkem.io"   # Alice's current email
+  adminUserEmailChangeBegin(adminUserEmailChangeBeginData: {
+    userID: "<alice-user-id>"
+    newEmail: "alice+v2@test.alkem.io"   # Alice's current email
   }) { state }
 }
 ```
 
 Expected: error with `extensions.code: EMAIL_CHANGE_NO_CHANGE`. MailSlurper: no new message. (FR-005, FR-015)
 
-### Step 3.3 — Conflict (another user already owns the address)
+### Step 2.3 — Conflict (another user already owns the address)
 
-Bob exists with email `bob@test.alkem.io`. Alice tries to take it:
+Bob exists with email `bob@test.alkem.io`. Polly tries to assign that address to Alice:
 
 ```graphql
 mutation {
-  meUserEmailChangeBegin(meUserEmailChangeBeginData: {
+  adminUserEmailChangeBegin(adminUserEmailChangeBeginData: {
+    userID: "<alice-user-id>"
     newEmail: "bob@test.alkem.io"
   }) { state }
 }
 ```
 
-Expected: error with `extensions.code: EMAIL_CHANGE_CONFLICT`. The error MUST NOT reveal that Bob exists — the message is generic. MailSlurper: no new message. (FR-004, FR-014, FR-015, SC-007)
+Expected: error with `extensions.code: EMAIL_CHANGE_CONFLICT`. The error MUST NOT reveal that Bob exists — the message is generic. MailSlurper: no new message. (FR-004, FR-014, FR-015, SC-006)
+
+### Step 2.4 — Mail-delivery failure (FR-019a)
+
+Driven by the integration test harness — see `test/functional/integration/user-email-change-validation.it-spec.ts`. Mocks the outbound mail provider to hard-fail after validation passes. Asserts: pending row was rolled back, no row remains, audit entry with outcome `INITIATION_FAILED`, GraphQL error `EMAIL_CHANGE_MAIL_DELIVERY_FAILED`. (FR-019a)
 
 ---
 
-## Scenario 4 — Token lifecycle adversarial tests (SC-006)
+## Scenario 3 — Token lifecycle adversarial tests (SC-005)
 
-### Step 4.1 — Token reuse
+### Step 3.1 — Token reuse
 
-Run steps 1.1–1.4 to commit a change. Then re-submit the same token:
+Run steps 1.1–1.3 to commit a change. Then re-submit the same token:
 
 ```graphql
 mutation {
@@ -297,46 +234,49 @@ mutation {
 
 Expected: error with `extensions.code: EMAIL_CHANGE_TOKEN_USED`. (FR-007(b), FR-015)
 
-### Step 4.2 — Token expiry
+### Step 3.2 — Token expiry
 
-Initiate. Wait > 1 hour (or fast-forward the DB clock for testing). Confirm.
-Expected: error with `extensions.code: EMAIL_CHANGE_TOKEN_EXPIRED`. (FR-007(a), FR-007b, FR-015)
+Polly initiates. Wait > 1 hour (or fast-forward the DB clock for testing). Target user confirms.
 
-### Step 4.3 — Token supersession
+Expected: error with `extensions.code: EMAIL_CHANGE_TOKEN_EXPIRED` — NOT `EMAIL_CHANGE_TOKEN_USED`, even if the lazy sweep has already transitioned the row to `EXPIRED`. (FR-007(a), FR-007b, FR-015)
 
-Initiate change A to `alice+a@…`. Before confirming A, initiate change B to `alice+b@…`. Now attempt to confirm with A's token.
+### Step 3.3 — Token supersession
+
+Polly initiates change A to `alice+a@…`. Before A is confirmed, Polly initiates change B to `alice+b@…` for the same subject. Now attempt to confirm with A's token.
+
 Expected: error with `extensions.code: EMAIL_CHANGE_TOKEN_INVALID` (A's pending row was transitioned to `SUPERSEDED`). Only B's token works. (FR-007(d), FR-019)
 
-### Step 4.4 — Token wrong-user
+### Step 3.4 — Token wrong-user
 
-Issue a token for Alice. Try to confirm it while logged in as Bob.
-Expected: confirmation **succeeds** (the token, not the session, is the authority — FR-018a). The change applies to Alice, not Bob. (Confirming this is intentional behavior protects the "click the link on a different device" edge case from spec.md.)
+Polly issues a token for Alice. Try to confirm it while logged in as Bob (or in an incognito window with no session).
+
+Expected: confirmation **succeeds** (the token, not the session, is the authority — FR-018a). The change applies to Alice, not Bob. This intentional behavior supports the "click the link on a different device" edge case from spec.md.
 
 ---
 
-## Scenario 5 — Two-side atomicity (SC-003, SC-005)
+## Scenario 4 — Two-side atomicity (SC-002, SC-004)
 
 **Goal**: Fault-inject the second-side write; verify rollback restores both sides.
 
 This scenario requires the integration-test harness (`*.it-spec.ts`) — not directly executable from the GraphQL playground. Run:
 
 ```bash
-pnpm test -- test/functional/integration/user-email-change.it-spec.ts
+pnpm test -- test/functional/integration/user-email-change-rollback.it-spec.ts
 ```
 
 The integration test:
-1. Initiates a change.
-2. Confirms.
+1. Polly initiates an admin change.
+2. Alice confirms.
 3. **Mocks Kratos to fail on the email-trait write** (after 3 retry attempts).
 4. Asserts: Alkemio `user.email` is unchanged; Kratos identity `email` trait is unchanged; the pending row is in state `ROLLED_BACK`; an audit entry with outcome `ROLLED_BACK` exists; the GraphQL error code is `EMAIL_CHANGE_KRATOS_WRITE_FAILED`.
 
 A second permutation injects the failure on the Alkemio write (Kratos already succeeded, then we revert Kratos) — same expected end state: `ROLLED_BACK`.
 
-**Exercises**: FR-009, SC-003, SC-005.
+**Exercises**: FR-009, SC-002, SC-004.
 
 ---
 
-## Scenario 6 — Drift detection (FR-009a)
+## Scenario 5 — Drift detection (FR-009a)
 
 **Goal**: Fault-inject BOTH the forward Kratos write AND the rollback. Verify the system enters `DRIFT_DETECTED` and the admin can reconcile.
 
@@ -347,7 +287,7 @@ pnpm test -- test/functional/integration/user-email-change-drift.it-spec.ts
 ```
 
 The test:
-1. Confirms a pending change.
+1. Polly initiates and Alice confirms.
 2. Mocks Kratos to fail BOTH the forward write AND the rollback after retry budgets.
 3. Asserts:
    - Pending row state = `DRIFT_DETECTED`
@@ -362,7 +302,7 @@ Then, as a platform admin:
 mutation {
   adminUserEmailChangeDriftResolve(adminUserEmailChangeDriftResolveData: {
     userID: "<alice-user-id>"
-    canonicalEmail: "alice+v2@test.alkem.io"   # admin chooses the OLD value — revert
+    canonicalEmail: "alice@test.alkem.io"   # admin chooses the OLD value — revert
   }) {
     success
     email
@@ -371,18 +311,17 @@ mutation {
 ```
 
 Asserts:
-- Kratos and Alkemio both reflect `alice+v2@test.alkem.io`
+- Kratos and Alkemio both reflect `alice@test.alkem.io`
 - Audit entry written with outcome `DRIFT_RESOLVED`
 - The original `DRIFT_DETECTED` pending row is still in `DRIFT_DETECTED` (forensic evidence per FR-009b)
-- Alice can read her `pendingEmailChange` and sees `awaitingAdminReconciliation: false` only after the 30-day window elapses (or by virtue of `DRIFT_DETECTED` being terminal, no further admin action needed). Per FR-022a, while the record is still within the 30-day window, the boolean indicator is `true` to signal the abnormal state was hit; this is a one-time forensic surface, not a re-actionable item.
 
 **Exercises**: FR-009a, FR-009b.
 
 ---
 
-## Scenario 7 — Auditing surface (SC-004)
+## Scenario 6 — Auditing surface (SC-003)
 
-After running scenarios 1–6, query the audit history for Alice as Polly (platform admin):
+After running scenarios 1–5, query the audit history for Alice as Polly (platform admin):
 
 ```graphql
 query {
@@ -411,15 +350,13 @@ Expected entries (descending by timestamp; sample):
 | --- | --- | --- |
 | `DRIFT_RESOLVED` | `PLATFORM_ADMIN` | null |
 | `DRIFT_DETECTED` | `PLATFORM_ADMIN` | "kratos_unreachable" (short, non-leaky) |
+| `ROLLED_BACK` | `PLATFORM_ADMIN` | "kratos_unreachable" |
 | `COMMITTED` | `PLATFORM_ADMIN` | null |
 | `CONFIRMED` | `PLATFORM_ADMIN` | null |
 | `INITIATED` | `PLATFORM_ADMIN` | null |
-| `REJECTED_CONFLICT` | `SELF` | "conflict" (NOT "owned by bob") |
-| `COMMITTED` | `SELF` | null |
-| `CONFIRMED` | `SELF` | null |
-| `INITIATED` | `SELF` | null |
+| `REJECTED_CONFLICT` | `PLATFORM_ADMIN` | "conflict" (NOT "owned by bob") |
 
-No `token` value appears in any entry. No PII beyond `{ id, displayName }` for `initiator` / `subject`. (FR-014, FR-014a, FR-014b, SC-004)
+No `token` value appears in any entry. No PII beyond `{ id, displayName }` for `initiator` / `subject`. (FR-014, FR-014a, FR-014b, SC-003)
 
 ---
 
@@ -427,15 +364,14 @@ No `token` value appears in any entry. No PII beyond `{ id, displayName }` for `
 
 After running all scenarios:
 
-- [x] **SC-001** — Self-service end-to-end with memberships preserved
-- [x] **SC-002** — Admin-on-behalf end-to-end with status query observability
-- [x] **SC-003** — Zero divergence cases between Alkemio and Kratos
-- [x] **SC-004** — Audit entry produced for every attempt
-- [x] **SC-005** — Failed second-side commit produces zero residual changes
-- [x] **SC-006** — Token reuse / wrong-user / expired all rejected
-- [x] **SC-007** — Zero confirmation mails for rejected attempts
-- [x] **SC-008** — Old email rejected, new email succeeds at login
-- [x] **SC-009** — Existing sessions invalidated on commit
-- [x] **SC-010** — Exactly one security-signal notification on commit; zero on rejection
+- [x] **SC-001** — Admin-on-behalf end-to-end with status query observability
+- [x] **SC-002** — Zero divergence cases between Alkemio and Kratos
+- [x] **SC-003** — Audit entry produced for every attempt
+- [x] **SC-004** — Failed second-side commit produces zero residual changes
+- [x] **SC-005** — Token reuse / wrong-user / expired all rejected
+- [x] **SC-006** — Zero confirmation mails for rejected attempts
+- [x] **SC-007** — Old email rejected, new email succeeds at login
+- [x] **SC-008** — Existing sessions invalidated on commit
+- [x] **SC-009** — Exactly one security-signal notification on commit; zero on rejection
 
 If any checkbox fails, the feature is not yet shippable. The integration tests (`*.it-spec.ts`) under `test/functional/integration/` are the automated equivalent and MUST also be green.

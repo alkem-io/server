@@ -1,7 +1,9 @@
 # Phase 1 — GraphQL Contract
 
-**Feature**: 097-change-user-email
+**Feature**: 097-change-user-email (Platform Admin)
 **Date**: 2026-05-13
+**Last Updated**: 2026-05-18 (split from unified spec; me-shape moved to 098)
+**Companion**: `/specs/098-self-service-email-change/contracts/graphql.md` adds 1 input, 1 mutation, 1 query field, and extends `UserEmailChangePending` with `initiatorAdmin?` + `awaitingAdminReconciliation`.
 
 This file enumerates the GraphQL surface introduced by this feature. The SDL fragments below are the *contract* that the schema baseline diff (per `pnpm run schema:diff`) will validate. All additions are additive; there are no breaking changes to existing types.
 
@@ -9,8 +11,8 @@ The fragments are organised by GraphQL kind:
 1. New enums
 2. New object types (results / payloads)
 3. New input types
-4. New mutations (4)
-5. New query fields (3)
+4. New mutations (3)
+5. New query fields (2)
 6. Error code mapping
 
 ---
@@ -60,26 +62,21 @@ enum UserEmailChangeAuditOutcome {
 
 ## 2. New object types
 
-### `UserEmailChangePending` — returned by initiate mutations + the `me` query
+### `UserEmailChangePending` — returned by the admin initiate mutation
 
 ```graphql
 """
-A user's currently active email-change request, as seen by the subject user themselves.
-Never exposes the confirmation token. When the initiator is an admin, includes a
-minimal admin profile summary so the subject can identify which admin acted.
+A pending email-change request as returned to the admin caller of adminUserEmailChangeBegin.
+Never exposes the confirmation token. Spec 098 extends this type with `initiatorAdmin` and
+`awaitingAdminReconciliation` fields for the subject-user me-query; those additions are
+additive and do not alter this spec's contract.
 """
 type UserEmailChangePending {
-  """Lifecycle state. Only INITIATED, CONFIRMED, and DRIFT_DETECTED are observable here (per FR-022 / FR-022a)."""
+  """Lifecycle state of the pending change. (Spec 098 narrows the observable subset for the me-query separately.)"""
   state: UserEmailChangeStateValue!
 
-  """Whether the change was self-initiated or initiated by a platform admin."""
+  """Whether the change was self-initiated (added by spec 098) or initiated by a platform admin (this spec)."""
   initiatorRole: UserEmailChangeInitiatorRole!
-
-  """
-  Minimal profile summary of the initiating admin. Present iff initiatorRole = PLATFORM_ADMIN.
-  Never includes the admin's email or any other PII beyond id + displayName. (FR-022)
-  """
-  initiatorAdmin: UserProfileSummary
 
   """The proposed new email address."""
   newEmail: String!
@@ -89,9 +86,6 @@ type UserEmailChangePending {
 
   """Timestamp at which the confirmation token expires (issuedAt + 1 hour per FR-007b)."""
   expiryAt: DateTime!
-
-  """True iff state = DRIFT_DETECTED. When true, admin reconciliation is required (FR-022a)."""
-  awaitingAdminReconciliation: Boolean!
 }
 ```
 
@@ -218,12 +212,6 @@ type UserProfileSummary {
 ## 3. New input types
 
 ```graphql
-"""Input for meUserEmailChangeBegin. Self-service initiation."""
-input MeUserEmailChangeBeginInput {
-  """The proposed new email address. Validated by FR-004 / FR-005 / FR-006."""
-  newEmail: String!
-}
-
 """Input for adminUserEmailChangeBegin. Platform-admin-on-behalf initiation."""
 input AdminUserEmailChangeBeginInput {
   """The subject user whose email is being changed."""
@@ -260,16 +248,6 @@ input AdminUserEmailChangeDriftResolveInput {
 ```graphql
 extend type Mutation {
   """
-  Begin a change of the calling user's login email. Sends a confirmation message to the
-  proposed new address; the change is only committed after the recipient confirms by
-  invoking userEmailChangeConfirm with the token from that message. Authorization: the
-  caller must be authenticated. (FR-001, FR-002a, FR-018)
-  """
-  meUserEmailChangeBegin(
-    meUserEmailChangeBeginData: MeUserEmailChangeBeginInput!
-  ): UserEmailChangePending!
-
-  """
   Begin a change of another user's login email, acting as a platform administrator.
   Sends the confirmation to the proposed new address; the target user must confirm.
   Authorization: caller must hold AuthorizationPrivilege.PLATFORM_ADMIN. (FR-002, FR-002a, FR-013, FR-018)
@@ -304,18 +282,9 @@ extend type Mutation {
 
 ## 5. New query fields
 
-The three new queries are added as resolver fields on existing root-shaped types (`MeQueryResults` and `PlatformAdminQueryResults`).
+The two new queries are added as resolver fields on the existing root-shaped `PlatformAdminQueryResults` type. (Spec 098 adds a `pendingEmailChange` field on `MeQueryResults`.)
 
 ```graphql
-extend type MeQueryResults {
-  """
-  The calling user's currently active pending email change, if any. Returns the record while
-  it is in state INITIATED or CONFIRMED, AND while it is in DRIFT_DETECTED within the 30-day
-  retention window. Returns null otherwise. Never exposes the confirmation token. (FR-022, FR-022a)
-  """
-  pendingEmailChange: UserEmailChangePending
-}
-
 extend type PlatformAdminQueryResults {
   """
   Lifecycle state of an email change for the named subject user. Covers the active pending
@@ -375,21 +344,23 @@ The `extensions.details` payload on these errors carries the structured context 
 
 | Mutation / Query | Authentication required? | Authorization rule |
 | --- | --- | --- |
-| `meUserEmailChangeBegin` | Yes — Alkemio session | Caller is the subject (always — no `userID` argument) |
 | `adminUserEmailChangeBegin` | Yes — Alkemio session | `grantAccessOrFail(actor, platformPolicy, PLATFORM_ADMIN)` |
 | `userEmailChangeConfirm` | **No** — session-less per FR-018a | Token lookup is the sole authority |
 | `adminUserEmailChangeDriftResolve` | Yes — Alkemio session | `grantAccessOrFail(actor, platformPolicy, PLATFORM_ADMIN)` |
-| `me.pendingEmailChange` | Yes — Alkemio session | Caller reads their own row only |
 | `platformAdmin.userEmailChangeState` | Yes — Alkemio session | `grantAccessOrFail(actor, platformPolicy, PLATFORM_ADMIN)` |
 | `platformAdmin.userEmailChangeAuditEntries` | Yes — Alkemio session | `grantAccessOrFail(actor, platformPolicy, PLATFORM_ADMIN)` |
+
+(Spec 098 adds: `meUserEmailChangeBegin` and `me.pendingEmailChange`, both requiring an authenticated Alkemio session and gated by current-user equality.)
 
 ---
 
 ## 8. Schema-baseline diff expectations
 
 When `pnpm run schema:diff` runs against this PR, the expected change-report.json content is:
-- **Additions only**: 3 new enums, 6 new object types, 4 new input types, 4 new mutations, 3 new query fields (all `extend` on `MeQueryResults` / `PlatformAdminQueryResults`).
+- **Additions only**: 3 new enums, 5 new object types (`UserEmailChangePending`, `UserEmailChangeState`, `UserEmailChangeAuditEntry`, `UserEmailChangeAuditEntries`, `UserEmailChangeConfirmResult`; `UserProfileSummary` only if no equivalent already exists), 3 new input types, 3 new mutations, 2 new query fields (both `extend` on `PlatformAdminQueryResults`).
 - **No breaking changes**, no field removals, no field type changes, no nullability changes on existing fields.
 - **No deprecations** introduced.
 
 Schema baseline regeneration is handled by the post-merge `schema-baseline.yml` workflow per CLAUDE.md. The PR opening this feature MUST regenerate `schema.graphql` via `pnpm run schema:print && pnpm run schema:sort` and commit the result.
+
+Spec 098's subsequent PR will add (additive on top of this spec's baseline): 1 input (`MeUserEmailChangeBeginInput`), 1 mutation (`meUserEmailChangeBegin`), 1 query field (`MeQueryResults.pendingEmailChange`), and 2 new optional fields on `UserEmailChangePending` (`initiatorAdmin: UserProfileSummary`, `awaitingAdminReconciliation: Boolean!`). Those additions are additive and will not break this spec's baseline.

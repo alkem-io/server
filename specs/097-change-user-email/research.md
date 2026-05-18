@@ -1,9 +1,10 @@
 # Phase 0 — Research Decisions
 
-**Feature**: 097-change-user-email
+**Feature**: 097-change-user-email (Platform Admin)
 **Date**: 2026-05-13
+**Last Updated**: 2026-05-18 (split from unified spec; R6 trimmed for me-query in 098)
 
-Spec.md §Clarifications already resolves 28 ambiguities by direct contract. This document only records the **technical research decisions** that bridge those clarifications to concrete API and pattern choices. Each decision lists the alternatives that were considered and the rationale for the chosen path.
+Spec.md §Clarifications resolves 28 ambiguities by direct contract; the 2026-05-18 spec-split decision is recorded in spec.md §Clarifications §Session 2026-05-18. This document only records the **technical research decisions** that bridge those clarifications to concrete API and pattern choices. Each decision lists the alternatives that were considered and the rationale for the chosen path. Decisions are foundational unless flagged otherwise; companion spec 098 inherits them.
 
 ---
 
@@ -78,16 +79,17 @@ Spec.md §Clarifications already resolves 28 ambiguities by direct contract. Thi
 
 ---
 
-## R6 — Confirmation `me` query: how do we expose pending state without a session?
+## R6 — Confirm mutation vs subject-user read query: distinct authorization rules
 
-**Decision**: The `me.pendingEmailChange` field (FR-022) is the *subject user's view*; it requires the standard authenticated session (the user is reading their own pending change). The *confirmation mutation* (`userEmailChangeConfirm`) is the root-level, session-less mutation per FR-018a — it takes only the token and resolves the pending change purely by token lookup.
+**Decision**: The *confirmation mutation* (`userEmailChangeConfirm`) is the root-level, session-less mutation per FR-018a — it takes only the token and resolves the pending change purely by token lookup. The companion subject-user read query (`me.pendingEmailChange`, FR-022) is contracted in spec 098 and requires the standard authenticated session.
 
 **Rationale**:
-- These are two distinct paths with distinct authorization rules. FR-018a is specifically about the confirm mutation (token = sole authority). FR-022 is about the read-side query, which the spec explicitly places under the `me` shape (i.e., requires a session).
-- The token never appears in either response shape (FR-007a, FR-022); the audit query (FR-014b) and the masked-address security-signal notification (FR-016) are the only post-commit channels the subject sees.
+- These are two distinct paths with distinct authorization rules. FR-018a (this spec) is specifically about the confirm mutation: the token is the sole authority. FR-022 (098) is about the read-side query and naturally lives under the `me` shape (i.e., requires a session) since the subject is reading their own pending change.
+- The token never appears in either response shape (FR-007a); the audit query (FR-014b, this spec) and the masked-address security-signal notification (FR-016, this spec) are the only post-commit channels the subject sees from this spec's surface.
+- Keeping the contracts separate means the confirm mutation can land here (foundational, used by both flows) while the `me` query lands with the self-service surface in 098 without coupling.
 
 **Alternatives considered**:
-- Making `pendingEmailChange` also session-less and lookable-by-token: rejected (FR-022 is explicit; opening this would create an exfiltration surface where any token holder learns the proposed new email and admin identity).
+- Making any future `pendingEmailChange` field also session-less and lookable-by-token: rejected — opening this would create an exfiltration surface where any token holder learns the proposed new email (and, in 098, the admin identity).
 
 ---
 
