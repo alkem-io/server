@@ -35,7 +35,7 @@ CREATE TYPE email_change_pending_state AS ENUM (
 );
 ```
 
-Seven values, per FR-021. `initiated` and `confirmed` are non-terminal; the rest are terminal.
+Seven values, per FR-021-EXT. `initiated` and `confirmed` are non-terminal; the rest are terminal.
 
 ---
 
@@ -80,7 +80,7 @@ The in-flight pending-change record for self-initiated verification flows. **At 
 | `token` | `varchar(64)` | NOT NULL | The confirmation token, plaintext per FR-007a |
 | `issued_at` | `timestamptz` | NOT NULL | Token issue timestamp |
 | `expiry_at` | `timestamptz` | NOT NULL | `issued_at + 1 hour` per FR-007b |
-| `state` | `email_change_pending_state` | NOT NULL, default `'initiated'` | FR-021 lifecycle state |
+| `state` | `email_change_pending_state` | NOT NULL, default `'initiated'` | FR-021-EXT lifecycle state |
 | `confirmed_at` | `timestamptz` | NULL | Set when state transitions to `confirmed` |
 | `committed_at` | `timestamptz` | NULL | Set when state transitions to `committed` |
 | `failure_reason` | `varchar(128)` | NULL | Set on terminal failure outcomes — short non-leaky code |

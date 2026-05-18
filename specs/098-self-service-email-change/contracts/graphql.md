@@ -21,7 +21,7 @@ The fragments are organised by GraphQL kind:
 ## 1. New enum + additive enum extensions
 
 ```graphql
-"""Lifecycle state of an in-flight pending email-change row (FR-021)."""
+"""Lifecycle state of an in-flight pending email-change row (FR-021-EXT)."""
 enum UserEmailChangeStateValue {
   INITIATED
   CONFIRMED
@@ -111,7 +111,7 @@ type UserEmailChangeConfirmResult {
 ## 3. New input types
 
 ```graphql
-"""Input for meUserEmailChangeBegin. Self-service initiation; subject is always the caller (FR-001, FR-013)."""
+"""Input for meUserEmailChangeBegin. Self-service initiation; subject is always the caller (FR-001, FR-013-EXT)."""
 input MeUserEmailChangeBeginInput {
   """The proposed new email address. Validated by 097's FR-004 / FR-005 / FR-006 inherited rules."""
   newEmail: String!
@@ -135,7 +135,7 @@ extend type Mutation {
   to the proposed new address with initiator role tag `self`; the change is only committed
   after the caller confirms by invoking userEmailChangeConfirm with the token from that
   message. Authorization: the caller must be authenticated; the subject is always the caller
-  (no userID argument). (FR-001, FR-001a, FR-001b, FR-013)
+  (no userID argument). (FR-001, FR-001a, FR-001b, FR-013-EXT)
   """
   meUserEmailChangeBegin(
     meUserEmailChangeBeginData: MeUserEmailChangeBeginInput!
