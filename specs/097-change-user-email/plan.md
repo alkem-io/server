@@ -89,6 +89,9 @@ src/
 ├── common/enums/
 │   └── notification.event.ts                                      # EXTEND with: USER_EMAIL_CHANGE_SECURITY_SIGNAL, USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION, USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION
 │
+├── types/
+│   └── alkemio.config.ts                                          # EXTEND with: endpoints.client_web: string (for FR-016c login link in NEW-address notification)
+│
 └── migrations/
     └── <timestamp>-CreateEmailChangeAuditEntry.ts                 # NEW migration: one table + indices + two enum types
 ```
