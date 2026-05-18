@@ -380,9 +380,10 @@ export class ActorLookupService {
    * @param scope            { allPlatform: true } => any Actor on the platform of the requested types
    *                         { allPlatform: false, credentials } => Actors holding at least one of the
    *                         supplied member credentials (OR-list across the visibility-aware walk).
-   * @param actorTypes       Actor discriminators to include. Defaults to User + VirtualContributor.
+   * @param actorTypes       Actor discriminators to include. Empty/undefined falls back to the
+   *                         User + VirtualContributor default (an empty IN() would be a SQL error).
    * @param filter           Optional displayName / nameID substring filter.
-   * @param limit            Hard cap on returned rows (typeahead UX). Defaults to 25.
+   * @param limit            Hard cap on returned rows (typeahead UX). Clamped to [1, 50]; defaults to 25.
    */
   async findMentionableContributors(
     scope:
@@ -392,10 +393,21 @@ export class ActorLookupService {
     filter?: ContributorFilterInput,
     limit: number = 25
   ): Promise<IActorFull[]> {
+    const effectiveActorTypes =
+      actorTypes && actorTypes.length > 0
+        ? actorTypes
+        : [ActorType.USER, ActorType.VIRTUAL_CONTRIBUTOR];
+    const effectiveLimit = Math.min(
+      Math.max(Number.isFinite(limit) ? limit : 25, 1),
+      50
+    );
+
     const qb = this.entityManager
       .createQueryBuilder(Actor, 'actor')
       .leftJoinAndSelect('actor.profile', 'profile')
-      .where('actor.type IN (:...actorTypes)', { actorTypes });
+      .where('actor.type IN (:...actorTypes)', {
+        actorTypes: effectiveActorTypes,
+      });
 
     if (!scope.allPlatform) {
       if (scope.credentials.length === 0) {
@@ -438,7 +450,7 @@ export class ActorLookupService {
       });
     }
 
-    qb.orderBy('profile.displayName', 'ASC').take(limit);
+    qb.orderBy('profile.displayName', 'ASC').take(effectiveLimit);
 
     return qb.getMany();
   }

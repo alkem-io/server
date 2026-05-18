@@ -669,5 +669,44 @@ describe('ActorLookupService', () => {
       expect(qb.orderBy).toHaveBeenCalledWith('profile.displayName', 'ASC');
       expect(qb.take).toHaveBeenCalledWith(25);
     });
+
+    it('empty actorTypes falls back to User + VirtualContributor (prevents IN () SQL error)', async () => {
+      const qb = makeQbMock([]);
+      entityManager.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findMentionableContributors({ allPlatform: true }, []);
+
+      expect(qb.where).toHaveBeenCalledWith('actor.type IN (:...actorTypes)', {
+        actorTypes: [ActorType.USER, ActorType.VIRTUAL_CONTRIBUTOR],
+      });
+    });
+
+    it('clamps oversized limit to MAX (50)', async () => {
+      const qb = makeQbMock([]);
+      entityManager.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findMentionableContributors(
+        { allPlatform: true },
+        undefined,
+        undefined,
+        9999
+      );
+
+      expect(qb.take).toHaveBeenCalledWith(50);
+    });
+
+    it('clamps non-positive limit up to MIN (1)', async () => {
+      const qb = makeQbMock([]);
+      entityManager.createQueryBuilder.mockReturnValue(qb);
+
+      await service.findMentionableContributors(
+        { allPlatform: true },
+        undefined,
+        undefined,
+        -5
+      );
+
+      expect(qb.take).toHaveBeenCalledWith(1);
+    });
   });
 });
