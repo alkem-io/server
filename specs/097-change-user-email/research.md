@@ -73,16 +73,16 @@ Spec.md §Clarifications resolves all open questions by direct contract. This do
 
 ## R6 — Drift state without a pending entity: where do observed values live?
 
-**Decision**: For `drift_detected` audit entries, the existing `old_email` and `new_email` columns on `platform_audit_entry` carry the per-side observed values: `old_email` = the value observed on the Alkemio side at the moment of drift (= the original pre-change email, since the Alkemio write never started due to Kratos-first ordering); `new_email` = the value observed on the Kratos side at the moment of drift (= the attempted new email, since the Kratos write succeeded but the revert failed). The drift-resolve admin mutation reads the latest audit entry (filtered to `category = 'email_change'`), validates that `canonicalEmail` is one of those two values, and applies alignment writes only where the observed value differs.
+**Decision**: For `drift_detected` audit entries, the `details: jsonb` column on `platform_audit_entry` carries the per-side observed values under the email-change category's documented keys: `details.oldEmail` = the value observed on the Alkemio side at the moment of drift (= the original pre-change email, since the Alkemio write never started due to Kratos-first ordering); `details.newEmail` = the value observed on the Kratos side at the moment of drift (= the attempted new email, since the Kratos write succeeded but the revert failed). The drift-resolve admin mutation reads the latest unresolved-drift audit entry (filtered to `category = 'email_change'` AND `outcome = 'drift_detected'` AND no subsequent `drift_resolved` row), validates that `canonicalEmail` is one of those two values, and applies alignment writes only where the observed value differs. The resolution row reuses the drift row's `correlation_id` so the two rows are explicitly linked (see data-model.md §Correlation semantics).
 
 **Rationale**:
-- This spec does NOT introduce a `pending` entity (no multi-step lifecycle is needed). Drift state therefore needs to live somewhere; the audit entry is the natural home — it already carries `old_email`, `new_email`, `subject_user_id`, `failure_reason`, and `timestamp`, which is exactly what the drift-resolve mutation needs to operate.
-- The Kratos-first commit ordering (R4) means the column semantics are deterministic at drift time, so we don't need separate `observed_alkemio_email` / `observed_kratos_email` columns to disambiguate.
-- Spec 098 introduces the `email_change_pending` entity natively as part of its verification flow; when 098 lands, drift entries can additionally carry a `pending_change_id` link (added as a nullable column in 098's migration) but the audit-entry-as-drift-record contract from this spec continues to work unchanged.
+- This spec does NOT introduce a `pending` entity (no multi-step lifecycle is needed). Drift state therefore needs to live somewhere; the audit entry is the natural home — it already carries `subject_user_id`, `failure_reason`, `timestamp`, `correlation_id`, and the per-category `details` JSONB payload (which is exactly where `oldEmail` / `newEmail` belong under Path A).
+- The Kratos-first commit ordering (R4) means the JSONB-key semantics are deterministic at drift time, so we don't need separate `observed_alkemio_email` / `observed_kratos_email` keys to disambiguate.
+- Spec 098 introduces the `email_change_pending` entity natively as part of its verification flow; when 098 lands, drift entries can additionally carry a `details.pendingChangeId` link (no DDL change — just a new JSONB key documented by 098) but the audit-entry-as-drift-record contract from this spec continues to work unchanged.
 
 **Alternatives considered**:
 - Add a dedicated `email_change_drift` table just for drift records: rejected — needless duplication of structure already on the audit entry, plus a second table the drift-resolve admin mutation would have to consult. Audit-as-source-of-truth is simpler.
-- Add `observed_alkemio_email` / `observed_kratos_email` columns to the audit entry: rejected — extra columns whose contents are derivable from the Kratos-first commit ordering. If the ordering ever changes (which would itself be a spec change), the audit-entry semantics would need to be re-documented anyway.
+- Add `observed_alkemio_email` / `observed_kratos_email` typed columns to the audit entry: rejected — extra columns whose contents are derivable from the Kratos-first commit ordering. If the ordering ever changes (which would itself be a spec change), the audit-entry semantics would need to be re-documented anyway. Also violates the Path A principle that typed columns must be cross-category.
 
 ---
 
@@ -120,7 +120,7 @@ Spec.md §Clarifications resolves all open questions by direct contract. This do
 - `loginUrl` (implementation chooses the exact path; built from existing client-web host config)
 - (No internal identifiers.)
 
-**Event 3 — `USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION`** (fanned out by the notifications-service to **all platform admins** across email / push / in-app, mirroring the existing Global Role Change pattern — FR-016d):
+**Event 3 — `USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION`** (fanned out by the notifications-service to a configurable administrator recipient set — minimally global platform admins, extensible downstream to admins of the subject's spaces / leads of the subject's organisations without a further server change — FR-016d):
 - `subjectProfileSummary` (`{ id, displayName }`)
 - `oldEmail` (full — admin recipients are trusted)
 - `newEmail` (full — admin recipients are trusted)
@@ -128,20 +128,42 @@ Spec.md §Clarifications resolves all open questions by direct contract. This do
 - `initiatorRole`
 - `commitTimestampISO8601`
 - `triggerOutcome` (`COMMITTED` or `DRIFT_DETECTED` — so the template / recipient UI can render appropriate phrasing)
+- `subjectMemberships` — the subject's organisational footprint at commit time, snapshot from the credential repository at publish time:
+  - `spaces: [{ spaceId: UUID, level: SpaceLevel, roles: ('admin' | 'lead' | 'member')[] }]`
+  - `organizations: [{ organizationId: UUID, roles: ('admin' | 'associate')[] }]`
+  - Identifiers + role tags only — the membership block MUST NOT enumerate the admin / lead users of those spaces / organisations (those resolve at delivery time in the notifications-service to avoid a stale-recipient race window).
+- `subjectGlobalRoles: string[]` — the subject's global role credentials beyond `GLOBAL_ADMIN` (e.g., `GLOBAL_SUPPORT`, `GLOBAL_LICENSE_MANAGER`, `BETA_TESTER`), to support policies that cross-reference (e.g., "if subject is global-support, also notify the security ops group").
 
-The server publishes ONE event per outcome; the notifications-service is responsible for enumerating admin recipients and selecting per-recipient channels. This matches the existing Global Role Change architecture and avoids duplicating admin-recipient logic in this feature module.
+**Recipient resolution model — deliberate departure from existing Global Role Change pattern**:
 
-**Rationale**:
-- The existing `NotificationExternalAdapter` is the canonical entry point — already integrates with `alkemio-notifications` over RabbitMQ, already supports the typed-payload pattern, and already implements admin fan-out for Global Role Change.
+The existing `PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED` flow resolves recipients on the server (`notification.platform.adapter.ts` calls `getNotificationRecipientsPlatform()` against credentials `[GLOBAL_ADMIN, GLOBAL_SUPPORT, GLOBAL_LICENSE_MANAGER]` filtered by `RECEIVE_NOTIFICATIONS_ADMIN`, then embeds a `recipients: UserPayload[]` array inside the published payload). The notifications-service for that flow does not rediscover recipients — it renders the template and selects per-recipient channels over the server-provided list.
+
+FR-016d **does not follow that pattern**. Instead:
+- The server publishes ONE event per triggering outcome carrying the **subject footprint** (memberships + global roles) — NOT a pre-resolved recipient list.
+- The notifications-service is responsible for enumerating recipients at delivery time, applying its configured policy over the subject footprint (e.g., "global admins ∪ admins of `spaces[]` ∪ leads of `organizations[]`").
+- Per-recipient channel selection (email / push / in-app) remains a notifications-service responsibility, identical to the Global Role Change flow.
+
+**Why this departure** (rather than reusing the Global Role Change server-resolve pattern):
+1. **ISO 27001 trajectory** (FR-014a Session 2026-05-19): `platform_audit_entry` is being introduced as a genuinely platform-wide audit foundation. Future audit categories (`AUTHENTICATION`, `ACCESS_CONTROL`, `DATA_PRIVACY`) will repeatedly want broader recipient classes than "global admins". A payload-carries-subject-footprint shape generalises to all of them; a payload-carries-pre-resolved-recipients shape forces every future category to re-do recipient-resolver work on the server.
+2. **Recipient flexibility without server churn**: changing "who counts as an admin of this user" — adding space admins of the subject's spaces, adding org leads of the subject's orgs, restricting to a subset of global admins — becomes a pure `alkemio-notifications` policy change. No server diff, no `@alkemio/notifications-lib` bump, no audit-side `_failed` outcome semantics change.
+3. **Stale-recipient race**: the existing Global Role Change pattern computes recipients at publish time and ships them inline, which means the recipient list ages between publish and delivery. Resolving at delivery time naturally tracks role-grant changes that happen during the publish/deliver window. (This was also part of the original FR-016d rationale before this revision corrected the inconsistency.)
+
+**Cost paid for the departure**:
+- The notifications-service must grow a recipient-resolver capability for this event family. It does not have one today; today it only renders + channels-out server-provided lists. For the initial cut, the resolver can hard-code "global admins only" (replicating today's behaviour); the subject-footprint fields in the payload exist so that broader policies can be added later without re-bumping `@alkemio/notifications-lib`.
+- `@alkemio/notifications-lib` must define the membership + global-roles payload classes upfront, even though the initial notifications-service resolver will ignore them. This is the cost of forward-compatibility.
+
+**Rationale (general — three-event split)**:
+- The existing `NotificationExternalAdapter` is the canonical entry point — already integrates with `alkemio-notifications` over RabbitMQ, already supports the typed-payload pattern.
 - Three distinct events (rather than one parametrized event) keep templates simple — different recipients, different threat models, different content rules. Splitting also lets the audit table record per-channel failure distinctly (`security_signal_failed`, `new_address_notification_failed`, `global_admin_notification_failed`).
 - Masking applied at the OLD address (FR-016) is dropped for the NEW address (FR-016c, legitimate recipient) and dropped for the admin fan-out (FR-016d, trusted recipients).
 
 **Alternatives considered**:
 - A single combined event with a `recipientType` discriminator: rejected — recipient sets / channels / content rules are too divergent.
 - Inline SMTP / direct `nodemailer`: rejected (bypasses the established abstraction).
-- Server-side enumeration of platform admins for FR-016d: rejected (duplicates logic the notifications-service already owns for Global Role Change; would also create a stale-recipient race window).
+- Reuse the Global Role Change pattern exactly (server pre-resolves `recipients: UserPayload[]` for FR-016d): **rejected** — locks recipient policy to a server diff for every future broadening, conflicts with the ISO 27001 audit trajectory's expected recipient diversity, and creates the stale-recipient race window noted above. The cost of departing (notifications-service grows a resolver) is paid once and pays back across all future audit categories.
+- Embed the resolved admin / lead user-ids of the subject's spaces / organisations inside `subjectMemberships`: rejected — same stale-recipient race as the Global Role Change inline-recipients design, and unnecessary because the notifications-service can resolve them at delivery time from the same credential repository.
 
-**Open dependency note**: This requires a coordinated bump of `@alkemio/notifications-lib` and corresponding template additions (3 new templates) in the `alkemio-notifications` service. Tracked in tasks.md (T013, T014, T015).
+**Open dependency note**: This requires a coordinated bump of `@alkemio/notifications-lib` (3 new event payload classes, including the `subjectMemberships` + `subjectGlobalRoles` blocks on event 3), corresponding template additions (3 new templates), AND a new recipient-resolver capability in `alkemio-notifications` for event 3 (initial cut: global admins only, matching today's effective behaviour; future cuts can broaden using the subject footprint already carried in the payload). Tracked in tasks.md (T013, T014, T015).
 
 ---
 
@@ -153,18 +175,21 @@ The server publishes ONE event per outcome; the notifications-service is respons
 
 ## R10 — Audit-outcome canonical enumeration
 
-**Decision**: The `platform_audit_entry.outcome` column accepts the following 11 values (Postgres native enum `email_change_audit_outcome`):
+**Decision**: The `platform_audit_entry.outcome` column is typed as the cross-category Postgres native enum `platform_audit_outcome`. Initial values (the 11 outcomes this spec writes — all under `category = 'email_change'`):
 
 `committed`, `rolled_back`, `drift_detected`, `drift_resolved`, `drift_resolution_failed`, `security_signal_failed`, `new_address_notification_failed`, `global_admin_notification_failed`, `session_invalidation_failed`, `rejected_validation`, `rejected_conflict`
 
-The enum is named after the `email_change` category because the underlying `platform_audit_entry` table is a platform-wide audit-log foundation (see R14 below) but this spec is the FIRST consumer and the outcome vocabulary is email-change-specific. Future audit categories will either introduce their own outcome enums or use the `details: jsonb` column with stringified outcomes.
+The enum is cross-category by design (Path A — see R14). Per-category outcome subsets are enforced at the service / audit-service layer, not by the DB enum: a `category = 'email_change'` row must only carry one of the 11 values listed above; a future `category = 'authentication'` row must only carry the auth-specific outcomes added by that future spec. Future categories — and companion spec 098 — extend the enum additively via `ALTER TYPE platform_audit_outcome ADD VALUE 'foo'`, which is non-breaking and requires no table migration.
 
 **Rationale**:
-- Drawn from the outcomes this spec actually writes. Companion spec 098 ADDS (additively) the verification-flow outcomes when it lands (`initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`).
-- A Postgres native enum is preferred over varchar for both space economy and write-time validation. Migration adds the enum type explicitly.
+- Drawn from the outcomes this spec actually writes. Companion spec 098 ADDS (additively) the verification-flow outcomes when it lands (`initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`), still under `category = 'email_change'`.
+- A Postgres native enum is preferred over varchar for both space economy and write-time validation. The cross-category shape gives DB-level enforcement of "is this string even an outcome value the platform recognises", while service-layer code does the finer "is this outcome value valid for this category" check.
+- The GraphQL feature-scoped enum `UserEmailChangeAuditOutcome` (per contracts/graphql.md §1) exposes only the 11 email-change outcomes; the projection layer narrows the Postgres enum to the GraphQL enum when reading `category = 'email_change'` rows.
 
 **Alternatives considered**:
 - One generic `rejected` outcome with the reason in a separate column: considered, but the spec's audit-query (FR-014b) requires `outcome` to be one of the enumerated values, and splitting `rejected_validation` / `rejected_conflict` makes the GraphQL enum more useful to admins.
+- Per-category Postgres enums (`email_change_audit_outcome`, `authentication_audit_outcome`, …): rejected (Path A) — it forces a per-category column-type migration each time a new category lands, and it makes cross-category forensic queries on `outcome` impossible without union-of-columns gymnastics. A single cross-category enum extended additively is strictly simpler.
+- `varchar(64)` with service-validated values: rejected — loses DB-level CHECK on values and the typed-column ergonomics in TypeORM, for no real flexibility gain over the additive enum.
 
 ---
 
@@ -214,22 +239,24 @@ The enum is named after the `email_change` category because the underlying `plat
 
 ---
 
-## R14 — Audit storage shape: feature-scoped table vs platform-wide audit-log foundation
+## R14 — Audit storage shape: feature-scoped table vs platform-wide audit-log foundation (Path A — every typed column generic)
 
-**Decision**: Introduce the audit table as `platform_audit_entry` — a **platform-wide audit-log foundation** rather than a feature-scoped `email_change_audit_entry`. The table carries a `category` enum column (`platform_audit_category`) whose initial value is `email_change`, plus a nullable `details: jsonb` column for category-specific structured payload that doesn't fit the typed columns. The email-change feature is the FIRST consumer; future ISO 27001 categories (`authentication`, `access_control`, `data_privacy`, `configuration_change`, etc.) will be added by extending the `platform_audit_category` enum additively (non-breaking) and writing rows with the new category — either reusing the existing typed columns where applicable (subject_user_id, initiator_user_id, initiator_role, etc.) or leaving them NULL and using `details`.
+**Decision**: Introduce the audit table as `platform_audit_entry` — a **genuinely platform-wide audit-log foundation**. Every typed column on the row has meaning for every audit category; category-specific payload lives in a `details: jsonb` column under a documented per-category key convention. The typed columns are: `category` (enum discriminator), `subject_user_id`, `initiator_user_id`, `initiator_role` (cross-category `platform_audit_initiator_role` enum), `outcome` (cross-category `platform_audit_outcome` enum — see R10), `failure_reason`, `correlation_id`, and `details: jsonb`. There are no email-specific typed columns. The email-change feature is the FIRST consumer; future ISO 27001 categories (`authentication`, `access_control`, `data_privacy`, `configuration_change`, etc.) will be added by (a) extending the `platform_audit_category` enum additively, (b) extending the `platform_audit_outcome` enum additively with their per-category outcome values, and (c) documenting their own per-category JSONB key convention under `details`. No DDL migration is required when each new category lands.
 
 **Rationale**:
-- The team's mid-term goal is ISO 27001 certification in the next 6–12 months. ISO 27001 needs platform-wide audit-log evidence (auth events, access changes, data exports, admin operations). Designing this table feature-scoped now would force a generalisation migration (or a parallel audit table) later — duplicating effort.
+- The team's mid-term goal is ISO 27001 certification in the next 6–12 months. ISO 27001 needs platform-wide audit-log evidence (auth events, access changes, data exports, admin operations). A genuinely generic schema lets every future category land with zero schema migration — only enum extensions (`ALTER TYPE ... ADD VALUE`, non-breaking) and code-side JSONB key conventions.
 - A platform-wide audit log is also closer to what auditors actually want: a single source of truth for "who did what when" rather than N feature-specific log tables they have to correlate.
-- Choosing minimal forward-compat hooks (category discriminator + JSONB details) — rather than a fully-generic JSONB-everywhere shape — preserves type safety for the email-change events that this spec actually exercises. We avoid committing to a generic abstraction before ISO 27001 has produced its concrete evidence-requirements list, but we avoid a future rename / restructure for the table.
-- The GraphQL surface (`platformAdmin.userEmailChangeAuditEntries`, `UserEmailChangeAuditEntry` type, etc.) is **not** generalised — it remains an email-change-feature projection over the generic table, filtered by `category = 'email_change'`. Future categories introduce their own GraphQL surfaces. This keeps the public contract scoped and lets each feature own its read-side.
+- Path A specifically (every typed column generic; category-specific payload in JSONB) was chosen over the earlier "minimal forward-compat hooks" sketch because the earlier shape kept email-specific typed columns (`old_email`, `new_email`) on a supposedly generic table. That created the worst-of-both-worlds situation: a generic table name with category-specific columns, paid for at every future category's spec by a DDL migration to add or NULL-out category-specific columns. Path A avoids that future tax entirely.
+- The GraphQL surface (`platformAdmin.userEmailChangeAuditEntries`, `UserEmailChangeAuditEntry` type, etc.) is **not** generalised — it remains an email-change-feature projection over the generic table, filtered by `category = 'email_change'`. The GraphQL `oldEmail` / `newEmail` fields project from `details.oldEmail` / `details.newEmail`. Future categories introduce their own GraphQL surfaces. This keeps the public contract scoped and lets each feature own its read-side.
+- The `correlation_id` column is included now (Path A addition) so that drift incidents and post-commit fan-out chains can be reconstructed without value-based joins (see R6, FR-009b).
 
 **Alternatives considered**:
 - Keep `email_change_audit_entry` feature-scoped now; introduce a sibling `platform_audit_entry` table or generalise this one when ISO 27001 work starts: rejected — doubles operational complexity (two parallel audit-log tables to keep consistent) OR forces a non-trivial table rename + data migration during ISO 27001 work.
-- Generalise fully now: rename to `platform_audit_entry`; drop all typed email columns; put everything in JSONB: rejected — commits to a generic shape that may not match ISO 27001 evidence requirements once they're known; loses type-safety / DB-level enum validation for the email-change events this spec exercises today.
+- Hybrid: generic table name + email-specific typed columns + JSONB details (the earlier sketch): rejected (Path A) — sits awkwardly between "generic" and "feature-specific" and forces a DDL migration when category #2 lands. The current spec uses Path A end-to-end.
+- Fully-generic JSONB-everywhere (no typed columns at all): rejected — loses subject/initiator FK integrity, loses DB-level enum validation on category/outcome/role, makes the FR-014b query (`WHERE subject_user_id = ?`) require JSONB filtering instead of a B-tree index.
 - Defer entirely (keep feature-scoped, address ISO 27001 in a separate spec when its requirements are concrete): considered. The deciding factor is that the 6–12 month timeline is short enough that "design for it now" is not speculative — the team has clear ISO 27001 intent.
 
-**Open dependency note**: This decision is recorded in spec.md §Clarifications Session 2026-05-19. When ISO 27001 work begins, the next spec will (a) extend the `platform_audit_category` enum, (b) possibly introduce category-specific outcome enums or migrate the `outcome` column to text + service-layer validation, and (c) add GraphQL surfaces per category. No DB-level table rename or restructure is anticipated.
+**Open dependency note**: This decision is recorded in spec.md §Clarifications Session 2026-05-19. When ISO 27001 work begins, the next spec will (a) extend the `platform_audit_category` enum additively, (b) extend the `platform_audit_outcome` enum additively with that category's outcome values, (c) document its per-category JSONB key convention under `details`, and (d) add GraphQL surfaces per category. No DB-level table rename, restructure, or column addition is anticipated.
 
 ---
 
@@ -242,12 +269,12 @@ The enum is named after the `email_change` category because the underlying `plat
 | R3 | Token generation | N/A in this spec — owned by 098 |
 | R4 | Commit ordering | Kratos first, then Alkemio (cheap local rollback) |
 | R5 | Retry & drift | 3 attempts, exp. backoff with jitter; drift on rollback exhaustion |
-| R6 | Drift state | Lives on the `drift_detected` audit entry (no `pending` entity in this spec) |
+| R6 | Drift state | Lives on the `drift_detected` audit entry's `details.oldEmail` / `details.newEmail` JSONB keys; resolution rows share the drift's `correlation_id` (no `pending` entity in this spec) |
 | R7 | Uniqueness check | DB `LOWER()` query + Kratos `listIdentities`, once at commit time |
 | R8 | Outbound notifications | Extend `NotificationEvent` with THREE events (OLD-address signal, NEW-address notification, global-admin fan-out) + reuse `NotificationExternalAdapter` (admin fan-out reuses the existing Global Role Change pattern) |
 | R9 | client-web URL | N/A in this spec — owned by 098 |
-| R10 | Audit outcomes | 11-value Postgres native enum `email_change_audit_outcome`, scoped to `email_change` category; 098 extends additively |
-| R14 | Audit storage shape | `platform_audit_entry` — platform-wide audit-log foundation with `category` discriminator + `details: jsonb` column; designed for ISO 27001 reuse in 6–12 months without DB migration |
+| R10 | Audit outcomes | Cross-category Postgres native enum `platform_audit_outcome`; 11 initial values for the email-change subset; 098 and future ISO 27001 categories extend it additively via `ALTER TYPE ... ADD VALUE` |
+| R14 | Audit storage shape | `platform_audit_entry` — genuinely platform-wide audit-log foundation (Path A): every typed column generic, category-specific payload in `details: jsonb`, `correlation_id` for incident grouping; designed for ISO 27001 reuse in 6–12 months without any DDL migration |
 | R11 | Masking | `${firstChar}***@${firstChar}***.${tld}` |
 | R12 | Retention | Audit entries indefinite; no pending entity in this spec |
 | R13 | Test strategy | Unit for service + utils; integration for end-to-end with mocked Kratos |
