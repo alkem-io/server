@@ -93,6 +93,39 @@ export class NotificationExternalAdapter {
     this.notificationsClient.emit<number>(event, payload);
   }
 
+  /**
+   * Email-change publish helpers (research.md §R8). Each helper emits the same
+   * underlying RabbitMQ event via `sendExternalNotifications` — the wrappers
+   * exist so the orchestration service can call a typed API per event, and so
+   * each event has its own retry / audit envelope on the call site.
+   */
+  public async publishEmailChangeSecuritySignal(
+    payload: unknown
+  ): Promise<void> {
+    await this.sendExternalNotifications(
+      NotificationEvent.USER_EMAIL_CHANGE_SECURITY_SIGNAL,
+      payload
+    );
+  }
+
+  public async publishEmailChangeNewAddressNotification(
+    payload: unknown
+  ): Promise<void> {
+    await this.sendExternalNotifications(
+      NotificationEvent.USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION,
+      payload
+    );
+  }
+
+  public async publishEmailChangeGlobalAdminNotification(
+    payload: unknown
+  ): Promise<void> {
+    await this.sendExternalNotifications(
+      NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION,
+      payload
+    );
+  }
+
   async buildSpaceCommunityApplicationCreatedNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,

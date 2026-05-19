@@ -278,6 +278,97 @@ export class KratosService {
     return identity[0];
   }
 
+  /**
+   * Case-insensitive identity lookup by email. Returns null when the email is not
+   * registered on any Kratos identity. Used by the uniqueness check before
+   * committing a user-email-change (research.md §R7).
+   */
+  public async findIdentityByEmail(email: string): Promise<Identity | null> {
+    const { data: identities } = await this.kratosIdentityClient.listIdentities(
+      {
+        credentialsIdentifier: email,
+        includeCredential: ['password', 'oidc'],
+      }
+    );
+    if (!identities || identities.length === 0) {
+      return null;
+    }
+    return identities[0];
+  }
+
+  /**
+   * Reads the current `email` trait for an identity. Used by the drift-resolve
+   * flow (research.md §R6) when reconciling the observed per-side values to a
+   * canonical address.
+   */
+  public async getIdentityEmailTrait(
+    identityId: string
+  ): Promise<string | undefined> {
+    const identity = await this.getIdentityById(identityId);
+    if (!identity) return undefined;
+    const traits = (identity.traits ?? {}) as Record<string, unknown> & {
+      email?: string;
+    };
+    return typeof traits.email === 'string' ? traits.email : undefined;
+  }
+
+  /**
+   * Replaces the `email` trait on a Kratos identity AND marks the new address as
+   * verified in `verifiable_addresses`. Uses `updateIdentity` (research.md §R1)
+   * for atomic-replace semantics that `patchIdentity` cannot offer.
+   *
+   * FR-011: the admin's out-of-band verification of the subject is the trust
+   * source for `verified: true`; the user is not re-prompted on next login.
+   */
+  public async updateIdentityEmailTrait(
+    identityId: string,
+    newEmail: string
+  ): Promise<Identity> {
+    const existing = await this.getIdentityById(identityId);
+    if (!existing) {
+      throw new UserIdentityNotFoundException(
+        `Identity with id ${identityId} not found.`
+      );
+    }
+    const currentTraits = (existing.traits ?? {}) as Record<string, unknown>;
+    const updatedTraits = { ...currentTraits, email: newEmail };
+    const schemaId = existing.schema_id;
+
+    const { data: updated } = await this.kratosIdentityClient.updateIdentity({
+      id: identityId,
+      updateIdentityBody: {
+        schema_id: schemaId,
+        state: existing.state ?? 'active',
+        traits: updatedTraits,
+        verifiable_addresses: [
+          {
+            value: newEmail,
+            verified: true,
+            via: 'email',
+            status: 'completed',
+          },
+        ],
+      } as unknown as Parameters<
+        IdentityApi['updateIdentity']
+      >[0]['updateIdentityBody'],
+    });
+    return updated;
+  }
+
+  /**
+   * Disables every active session for an identity in a single admin call
+   * (research.md §R2). FR-017 / FR-017a: invoked from the post-commit chain in
+   * `UserEmailChangeService.applyAdminEmailChange`.
+   */
+  public async invalidateAllIdentitySessions(
+    identityId: string
+  ): Promise<void> {
+    // The @ory/kratos-client v26 admin API exposes session invalidation via
+    // `deleteIdentitySessions` (revokes ALL active sessions for the identity in
+    // a single call). Earlier client versions called this `disableIdentitySessions`.
+    await this.kratosIdentityClient.deleteIdentitySessions({ id: identityId });
+  }
+
   public async getIdentityById(
     identityId: string
   ): Promise<Identity | undefined> {
