@@ -3,7 +3,7 @@
 **Feature**: 098-self-service-email-change
 **Date**: 2026-05-18
 
-This feature introduces **one** new PostgreSQL table (`email_change_pending`), **one** new enum type (`email_change_pending_state`), and ADDITIVELY EXTENDS the `email_change_audit_outcome` enum from 097 with 7 new values. No changes to existing tables — `user.email` is read/written through the existing column. The audit table (`email_change_audit_entry`) introduced by 097 is reused without schema changes.
+This feature introduces **one** new PostgreSQL table (`email_change_pending`), **one** new enum type (`email_change_pending_state`), and ADDITIVELY EXTENDS the `email_change_audit_outcome` enum from 097 with 7 new values. No changes to existing tables — `user.email` is read/written through the existing column. The platform-wide audit table (`platform_audit_entry`) introduced by 097 is reused without schema changes; this spec's transitions write rows with `category = 'email_change'` (the same category 097 uses) — the `details: jsonb` column remains NULL for these rows.
 
 ---
 
@@ -165,7 +165,7 @@ Terminal states: `committed`, `rolled_back`, `expired`, `superseded`, `drift_det
 
 ### Token leakage guard
 
-The `token` column is NOT mirrored into `email_change_audit_entry`. This is enforced by the entity / service layer — there is simply no column to write it to. (FR-007a).
+The `token` column is NOT mirrored into `platform_audit_entry`. This is enforced by the entity / service layer — there is simply no column to write it to. (FR-007a).
 
 ---
 

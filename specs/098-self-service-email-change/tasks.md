@@ -25,7 +25,7 @@ description: 'Task list — feature 098-self-service-email-change'
 **⚠️ CRITICAL**: This phase is satisfied by the merge of spec 097. Verify before starting any S-task:
 
 - [ ] Spec 097 has been merged.
-- [ ] `email_change_audit_entry` table exists (097 T003 migration).
+- [ ] `platform_audit_entry` table exists (097 T003 migration) — the platform-wide audit-log foundation. 098 reuses it without schema changes; rows written by this spec carry `category = 'email_change'` (same category 097 uses), leveraging the typed email columns and leaving the `details: jsonb` column NULL.
 - [ ] `UserEmailChangeService` exists with `applyAdminEmailChange`, `resolveDrift`, `getAuditEntriesForSubject`, `getLatestAuditEntryForSubject` methods (097 T011 + later phases).
 - [ ] `UserEmailChangeModule` exports `UserEmailChangeService` (097 T012).
 - [ ] `email_change_initiator_role` Postgres enum already carries both `self` and `platform_admin` values (097 T003).
