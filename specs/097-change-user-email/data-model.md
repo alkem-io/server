@@ -4,7 +4,7 @@
 **Date**: 2026-05-13
 **Last Updated**: 2026-05-18 (smaller MVP — `email_change_pending` entity moved to 098)
 
-This feature introduces **one** new PostgreSQL table and **two** new enum types. No changes to existing tables — `user.email` and `user.authenticationID` are read and written through the existing columns. The Kratos identity is updated externally via the admin API (see research.md §R1).
+This feature introduces **one** new PostgreSQL table (`platform_audit_entry` — designed as a platform-wide audit-log foundation per spec.md §FR-014a / §Clarifications Session 2026-05-19) and **three** new enum types. No changes to existing tables — `user.email` and `user.authenticationID` are read and written through the existing columns. The Kratos identity is updated externally via the admin API (see research.md §R1).
 
 The pending-change entity, the token machinery, the multi-step state lifecycle, and the related Postgres enums (`email_change_pending_state`) are deferred to companion spec 098, which introduces them natively as part of its verification flow.
 
@@ -22,7 +22,17 @@ The pending-change entity, the token machinery, the multi-step state lifecycle, 
 
 ## New PostgreSQL enums
 
-### 1. `email_change_audit_outcome`
+### 1. `platform_audit_category`
+
+```sql
+CREATE TYPE platform_audit_category AS ENUM (
+  'email_change'
+);
+```
+
+Single value initially. Future ISO 27001 work extends this enum additively with categories like `authentication`, `access_control`, `data_privacy`, `configuration_change`. The category column on every audit row is what discriminates between feature audit-event vocabularies — the per-category outcome enums (like `email_change_audit_outcome` below) and the JSONB `details` column carry the category-specific data.
+
+### 2. `email_change_audit_outcome`
 
 ```sql
 CREATE TYPE email_change_audit_outcome AS ENUM (
@@ -40,9 +50,9 @@ CREATE TYPE email_change_audit_outcome AS ENUM (
 );
 ```
 
-Eleven values, per FR-014. Companion spec 098 will EXTEND this enum (additively) with the verification-flow outcomes (`initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`).
+Eleven values, per FR-014. This enum stays scoped to the `email_change` category. Companion spec 098 will EXTEND this enum (additively) with the verification-flow outcomes (`initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`). Future audit categories (ISO 27001) introduce their own outcome enums (e.g., `authentication_audit_outcome`) or use string + `details` JSONB for unstructured outcomes.
 
-### 2. `email_change_initiator_role`
+### 3. `email_change_initiator_role`
 
 ```sql
 CREATE TYPE email_change_initiator_role AS ENUM (
@@ -55,36 +65,38 @@ Two values shipped upfront so that spec 098 requires no enum migration when it l
 
 ---
 
-## Table 1 — `email_change_audit_entry`
+## Table 1 — `platform_audit_entry`
 
-Append-only audit log. **Never updated, never deleted by this feature** (FR-014a — indefinite retention; per-subject removal delegated to user-deletion workflow).
+Append-only platform-wide audit log. **Never updated, never deleted by this feature** (FR-014a — indefinite retention; per-subject removal delegated to user-deletion workflow). This spec's email-change events are the FIRST consumer; future ISO 27001 work adds further categories via additive `platform_audit_category` enum extensions plus the `details: jsonb` column for category-specific structured payload.
 
 | Column | Type | Constraints | Source / Spec Reference |
 | --- | --- | --- | --- |
 | `id` | `uuid` | PK, default `uuid_generate_v4()` | Standard primary key |
 | `row_id` | `int` | NOT NULL, GENERATED ALWAYS AS IDENTITY, unique | Pagination cursor key (per `docs/Pagination.md`) |
 | `created_date` | `timestamptz` | NOT NULL, default `now()` | Standard; doubles as the audit "timestamp" exposed in FR-014b |
-| `subject_user_id` | `uuid` | NOT NULL, FK → `user(id)` ON DELETE CASCADE | Required — every audit entry pertains to a subject user |
+| `category` | `platform_audit_category` | NOT NULL | Discriminator for which audit-event vocabulary this row uses. This spec writes `email_change` exclusively. Future categories extend the enum. |
+| `subject_user_id` | `uuid` | NOT NULL, FK → `user(id)` ON DELETE CASCADE | Required — every audit entry pertains to a subject user. For non-user-centric future categories (e.g., system-level configuration change), the convention will be to use a sentinel user representing the platform; this is a future-spec concern. |
 | `initiator_user_id` | `uuid` | NULL, FK → `user(id)` ON DELETE SET NULL | NULL allowed for early-rejection entries before the initiator's identity is fully resolved (FR-014b sentinel case) |
-| `initiator_role` | `email_change_initiator_role` | NOT NULL | Always present per FR-014b. This spec writes `platform_admin` exclusively. |
-| `old_email` | `varchar(512)` | NULL | The address on the Alkemio side at the moment of the audit-event. NULL only for entries that never had an old-email context (e.g., a validation reject with no read of the subject). |
-| `new_email` | `varchar(512)` | NULL | The proposed new address. For `drift_detected` entries, this is also the address observed on the Kratos side (Kratos write succeeded, revert failed — see spec.md §Key Entities). NULL only when the proposed new email never made it past initial validation. |
-| `outcome` | `email_change_audit_outcome` | NOT NULL | The 9-value enum above |
+| `initiator_role` | `email_change_initiator_role` | NOT NULL | Always present per FR-014b. This spec writes `platform_admin` exclusively. The column name keeps its `email_change_` prefix because the enum is scoped to email-change semantics; future categories may either reuse this enum (if applicable) or introduce their own role enum + column. |
+| `old_email` | `varchar(512)` | NULL | The address on the Alkemio side at the moment of the audit-event (category `email_change`). NULL for other categories or for entries that never had an old-email context (e.g., a validation reject with no read of the subject). |
+| `new_email` | `varchar(512)` | NULL | The proposed new address (category `email_change`). For `drift_detected` entries, this is also the address observed on the Kratos side (Kratos write succeeded, revert failed — see spec.md §Key Entities). NULL for other categories or when the proposed new email never made it past initial validation. |
+| `outcome` | `email_change_audit_outcome` | NOT NULL | The 11-value enum above. The column uses the email-change outcome enum because that is the only category at the moment. When ISO 27001 categories land, this column either (a) migrates to `text` with per-category enums enforced in service code, or (b) splits into per-category outcome columns. Either migration is non-breaking for stored rows because category discriminates the interpretation. |
 | `failure_reason` | `varchar(128)` | NULL | Non-leaky failure reason for the failure outcomes; FR-014 forbids account-enumeration content |
+| `details` | `jsonb` | NULL | Category-specific structured payload that doesn't fit the typed columns. NULL for `email_change` rows in this spec (the typed columns are sufficient). Future categories (ISO 27001) use this for their unstructured payload (e.g., request IP, user-agent, before/after diffs for configuration changes). |
 
-### Indices on `email_change_audit_entry`
+### Indices on `platform_audit_entry`
 
 ```sql
-CREATE UNIQUE INDEX pk_email_change_audit_entry ON email_change_audit_entry (id);
-CREATE UNIQUE INDEX uq_email_change_audit_entry_rowid ON email_change_audit_entry (row_id);
+CREATE UNIQUE INDEX pk_platform_audit_entry ON platform_audit_entry (id);
+CREATE UNIQUE INDEX uq_platform_audit_entry_rowid ON platform_audit_entry (row_id);
 
--- The primary read pattern: "all audit entries for subject X, newest first" (FR-014b)
-CREATE INDEX ix_email_change_audit_entry_subject_created
-  ON email_change_audit_entry (subject_user_id, created_date DESC);
+-- The primary read pattern: "all entries for subject X in category C, newest first" (FR-014b for email_change)
+CREATE INDEX ix_platform_audit_entry_subject_category_created
+  ON platform_audit_entry (subject_user_id, category, created_date DESC);
 
--- Cursor-based pagination per docs/Pagination.md
-CREATE INDEX ix_email_change_audit_entry_subject_rowid
-  ON email_change_audit_entry (subject_user_id, row_id);
+-- Cursor-based pagination per docs/Pagination.md, scoped by category for forward-compat
+CREATE INDEX ix_platform_audit_entry_subject_category_rowid
+  ON platform_audit_entry (subject_user_id, category, row_id);
 ```
 
 ### Outcome semantics
@@ -109,7 +121,7 @@ For `rejected_conflict` entries, the `new_email` column DOES contain the conflic
 
 ### Token leakage guard
 
-This feature does NOT issue a confirmation token (no platform-mediated verification). The `email_change_audit_entry` table has no `token` column. When companion spec 098 lands and adds the `email_change_pending` table with a `token` column, that token MUST NOT be mirrored into audit entries — this is enforced by 098's entity shape, not by service-layer discipline.
+This feature does NOT issue a confirmation token (no platform-mediated verification). The `platform_audit_entry` table has no `token` column. When companion spec 098 lands and adds the `email_change_pending` table with a `token` column, that token MUST NOT be mirrored into audit entries — this is enforced by 098's entity shape, not by service-layer discipline.
 
 ---
 
@@ -117,14 +129,22 @@ This feature does NOT issue a confirmation token (no platform-mediated verificat
 
 The TypeORM entity follows the project's existing patterns (see `callout.contribution.entity.ts` for the canonical style).
 
-### `UserEmailChangeAuditEntry` (file: `user.email.change.audit.entry.entity.ts`)
+### `PlatformAuditEntry` (file: `platform.audit.entry.entity.ts`)
 
 ```typescript
-@Entity({ name: 'email_change_audit_entry' })
-export class UserEmailChangeAuditEntry extends BaseAlkemioEntity implements IUserEmailChangeAuditEntry {
+@Entity({ name: 'platform_audit_entry' })
+export class PlatformAuditEntry extends BaseAlkemioEntity implements IPlatformAuditEntry {
   @Column({ unique: true, nullable: false })
   @Generated('increment')
   rowId!: number;
+
+  @Column({
+    type: 'enum',
+    enum: PlatformAuditCategory,
+    enumName: 'platform_audit_category',
+    nullable: false,
+  })
+  category!: PlatformAuditCategory;
 
   @Column('uuid', { nullable: false })
   subjectUserId!: string;
@@ -156,10 +176,13 @@ export class UserEmailChangeAuditEntry extends BaseAlkemioEntity implements IUse
 
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: true })
   failureReason?: string;
+
+  @Column('jsonb', { nullable: true })
+  details?: Record<string, unknown>;
 }
 ```
 
-The base class — `BaseAlkemioEntity` (id + createdDate + updatedDate + version) — is the lighter choice since this table needs no authorization sub-tree.
+The base class — `BaseAlkemioEntity` (id + createdDate + updatedDate + version) — is the lighter choice since this table needs no authorization sub-tree. The entity name is generic (`PlatformAuditEntry`) but the typed columns still describe the email-change shape — future ISO 27001 categories either extend the typed columns additively or use the `details` JSONB column. The email-change feature's repository and service exposing this entity use email-change-specific method names (e.g., `findEmailChangeBySubjectPaged`) that implicitly filter `category = 'email_change'`.
 
 ---
 
@@ -177,19 +200,20 @@ The base class — `BaseAlkemioEntity` (id + createdDate + updatedDate + version
 
 ## Migration plan (single migration file)
 
-File: `<timestamp>-CreateEmailChangeAuditEntry.ts`
+File: `<timestamp>-CreatePlatformAuditEntry.ts`
 
 Up:
-1. `CREATE TYPE email_change_audit_outcome AS ENUM (...)` (9 values)
-2. `CREATE TYPE email_change_initiator_role AS ENUM ('self', 'platform_admin')` (both values upfront — see assumptions)
-3. `CREATE TABLE email_change_audit_entry (...)` with all columns and constraints
-4. Create the three indices listed above
-5. Add FK constraints (`subject_user_id` → `user(id)` ON DELETE CASCADE, `initiator_user_id` → `user(id)` ON DELETE SET NULL)
+1. `CREATE TYPE platform_audit_category AS ENUM ('email_change')` (single initial value; future ISO 27001 categories extend additively)
+2. `CREATE TYPE email_change_audit_outcome AS ENUM (...)` (11 values — see §1 above)
+3. `CREATE TYPE email_change_initiator_role AS ENUM ('self', 'platform_admin')` (both values upfront — see assumptions)
+4. `CREATE TABLE platform_audit_entry (...)` with all columns (including `category`, `details: jsonb`) and constraints
+5. Create the four indices listed above (PK, row_id, subject+category+created_date, subject+category+row_id)
+6. Add FK constraints (`subject_user_id` → `user(id)` ON DELETE CASCADE, `initiator_user_id` → `user(id)` ON DELETE SET NULL)
 
 Down (rollback):
 1. Drop FK constraints
 2. Drop the table
-3. Drop the two enum types
+3. Drop the three enum types (in reverse-dependency order: `email_change_initiator_role`, `email_change_audit_outcome`, `platform_audit_category`)
 
 The migration is **idempotent under the project's validation harness** (`.scripts/migrations/run_validate_migration.sh`) — the table is new, references no existing data, no backfill is required, and the down-migration is a clean reverse.
 

@@ -7,6 +7,8 @@
 
 This file enumerates the GraphQL surface introduced by this feature. The SDL fragments below are the *contract* that the schema baseline diff (per `pnpm run schema:diff`) will validate. All additions are additive; there are no breaking changes to existing types.
 
+**Note on the underlying audit storage**: The GraphQL types `UserEmailChangeAuditEntry`, `UserEmailChangeAuditEntries`, and `UserEmailChangeAuditOutcome` are email-change-feature-scoped surfaces. As of 2026-05-19 they are projections over a generic underlying `platform_audit_entry` table (filtered to `category = 'email_change'`) — see data-model.md §Table 1 and spec.md §Clarifications Session 2026-05-19 for the audit-log-foundation rationale. The GraphQL surface keeps its email-change-scoped naming so this contract is unaffected by the storage generalisation; future ISO 27001 categories will introduce their own GraphQL surfaces over the same underlying table.
+
 The fragments are organised by GraphQL kind:
 1. New enums
 2. New object types (results / payloads)

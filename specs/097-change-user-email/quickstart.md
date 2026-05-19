@@ -16,7 +16,7 @@ The verification-based self-service flow is walked through separately in `/specs
 # Local services running (PostgreSQL 17.5, Kratos, RabbitMQ, etc.)
 pnpm run start:services
 
-# Migrations applied (including the new email_change_audit_entry table)
+# Migrations applied (including the new platform_audit_entry table — the platform-wide audit-log foundation per FR-014a)
 pnpm run migration:run
 
 # Server running with hot reload

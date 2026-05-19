@@ -73,7 +73,7 @@ Spec.md §Clarifications resolves all open questions by direct contract. This do
 
 ## R6 — Drift state without a pending entity: where do observed values live?
 
-**Decision**: For `drift_detected` audit entries, the existing `old_email` and `new_email` columns on `email_change_audit_entry` carry the per-side observed values: `old_email` = the value observed on the Alkemio side at the moment of drift (= the original pre-change email, since the Alkemio write never started due to Kratos-first ordering); `new_email` = the value observed on the Kratos side at the moment of drift (= the attempted new email, since the Kratos write succeeded but the revert failed). The drift-resolve admin mutation reads the latest audit entry, validates that `canonicalEmail` is one of those two values, and applies alignment writes only where the observed value differs.
+**Decision**: For `drift_detected` audit entries, the existing `old_email` and `new_email` columns on `platform_audit_entry` carry the per-side observed values: `old_email` = the value observed on the Alkemio side at the moment of drift (= the original pre-change email, since the Alkemio write never started due to Kratos-first ordering); `new_email` = the value observed on the Kratos side at the moment of drift (= the attempted new email, since the Kratos write succeeded but the revert failed). The drift-resolve admin mutation reads the latest audit entry (filtered to `category = 'email_change'`), validates that `canonicalEmail` is one of those two values, and applies alignment writes only where the observed value differs.
 
 **Rationale**:
 - This spec does NOT introduce a `pending` entity (no multi-step lifecycle is needed). Drift state therefore needs to live somewhere; the audit entry is the natural home — it already carries `old_email`, `new_email`, `subject_user_id`, `failure_reason`, and `timestamp`, which is exactly what the drift-resolve mutation needs to operate.
@@ -153,9 +153,11 @@ The server publishes ONE event per outcome; the notifications-service is respons
 
 ## R10 — Audit-outcome canonical enumeration
 
-**Decision**: The `email_change_audit_entry.outcome` column accepts the following 11 values (Postgres native enum):
+**Decision**: The `platform_audit_entry.outcome` column accepts the following 11 values (Postgres native enum `email_change_audit_outcome`):
 
 `committed`, `rolled_back`, `drift_detected`, `drift_resolved`, `drift_resolution_failed`, `security_signal_failed`, `new_address_notification_failed`, `global_admin_notification_failed`, `session_invalidation_failed`, `rejected_validation`, `rejected_conflict`
+
+The enum is named after the `email_change` category because the underlying `platform_audit_entry` table is a platform-wide audit-log foundation (see R14 below) but this spec is the FIRST consumer and the outcome vocabulary is email-change-specific. Future audit categories will either introduce their own outcome enums or use the `details: jsonb` column with stringified outcomes.
 
 **Rationale**:
 - Drawn from the outcomes this spec actually writes. Companion spec 098 ADDS (additively) the verification-flow outcomes when it lands (`initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`).
@@ -212,6 +214,25 @@ The server publishes ONE event per outcome; the notifications-service is respons
 
 ---
 
+## R14 — Audit storage shape: feature-scoped table vs platform-wide audit-log foundation
+
+**Decision**: Introduce the audit table as `platform_audit_entry` — a **platform-wide audit-log foundation** rather than a feature-scoped `email_change_audit_entry`. The table carries a `category` enum column (`platform_audit_category`) whose initial value is `email_change`, plus a nullable `details: jsonb` column for category-specific structured payload that doesn't fit the typed columns. The email-change feature is the FIRST consumer; future ISO 27001 categories (`authentication`, `access_control`, `data_privacy`, `configuration_change`, etc.) will be added by extending the `platform_audit_category` enum additively (non-breaking) and writing rows with the new category — either reusing the existing typed columns where applicable (subject_user_id, initiator_user_id, initiator_role, etc.) or leaving them NULL and using `details`.
+
+**Rationale**:
+- The team's mid-term goal is ISO 27001 certification in the next 6–12 months. ISO 27001 needs platform-wide audit-log evidence (auth events, access changes, data exports, admin operations). Designing this table feature-scoped now would force a generalisation migration (or a parallel audit table) later — duplicating effort.
+- A platform-wide audit log is also closer to what auditors actually want: a single source of truth for "who did what when" rather than N feature-specific log tables they have to correlate.
+- Choosing minimal forward-compat hooks (category discriminator + JSONB details) — rather than a fully-generic JSONB-everywhere shape — preserves type safety for the email-change events that this spec actually exercises. We avoid committing to a generic abstraction before ISO 27001 has produced its concrete evidence-requirements list, but we avoid a future rename / restructure for the table.
+- The GraphQL surface (`platformAdmin.userEmailChangeAuditEntries`, `UserEmailChangeAuditEntry` type, etc.) is **not** generalised — it remains an email-change-feature projection over the generic table, filtered by `category = 'email_change'`. Future categories introduce their own GraphQL surfaces. This keeps the public contract scoped and lets each feature own its read-side.
+
+**Alternatives considered**:
+- Keep `email_change_audit_entry` feature-scoped now; introduce a sibling `platform_audit_entry` table or generalise this one when ISO 27001 work starts: rejected — doubles operational complexity (two parallel audit-log tables to keep consistent) OR forces a non-trivial table rename + data migration during ISO 27001 work.
+- Generalise fully now: rename to `platform_audit_entry`; drop all typed email columns; put everything in JSONB: rejected — commits to a generic shape that may not match ISO 27001 evidence requirements once they're known; loses type-safety / DB-level enum validation for the email-change events this spec exercises today.
+- Defer entirely (keep feature-scoped, address ISO 27001 in a separate spec when its requirements are concrete): considered. The deciding factor is that the 6–12 month timeline is short enough that "design for it now" is not speculative — the team has clear ISO 27001 intent.
+
+**Open dependency note**: This decision is recorded in spec.md §Clarifications Session 2026-05-19. When ISO 27001 work begins, the next spec will (a) extend the `platform_audit_category` enum, (b) possibly introduce category-specific outcome enums or migrate the `outcome` column to text + service-layer validation, and (c) add GraphQL surfaces per category. No DB-level table rename or restructure is anticipated.
+
+---
+
 ## Summary
 
 | ID | Topic | Decision (one-liner) |
@@ -225,7 +246,8 @@ The server publishes ONE event per outcome; the notifications-service is respons
 | R7 | Uniqueness check | DB `LOWER()` query + Kratos `listIdentities`, once at commit time |
 | R8 | Outbound notifications | Extend `NotificationEvent` with THREE events (OLD-address signal, NEW-address notification, global-admin fan-out) + reuse `NotificationExternalAdapter` (admin fan-out reuses the existing Global Role Change pattern) |
 | R9 | client-web URL | N/A in this spec — owned by 098 |
-| R10 | Audit outcomes | 11-value Postgres native enum; 098 extends additively |
+| R10 | Audit outcomes | 11-value Postgres native enum `email_change_audit_outcome`, scoped to `email_change` category; 098 extends additively |
+| R14 | Audit storage shape | `platform_audit_entry` — platform-wide audit-log foundation with `category` discriminator + `details: jsonb` column; designed for ISO 27001 reuse in 6–12 months without DB migration |
 | R11 | Masking | `${firstChar}***@${firstChar}***.${tld}` |
 | R12 | Retention | Audit entries indefinite; no pending entity in this spec |
 | R13 | Test strategy | Unit for service + utils; integration for end-to-end with mocked Kratos |
