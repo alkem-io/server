@@ -56,6 +56,7 @@ function harness({
   let revertCallCount = 0;
   const kratosService = {
     findIdentityByEmail: vi.fn().mockResolvedValue(null),
+    getIdentityById: vi.fn().mockResolvedValue({ id: 'kratos-1' }),
     getIdentityEmailTrait: vi.fn(),
     updateIdentityEmailTrait: vi.fn(async (_id: string, email: string) => {
       // First (or only) call is the forward write; subsequent calls are reverts.

@@ -153,7 +153,9 @@ export class AdminUserEmailChangeResolverFields {
     userId: string
   ): Promise<UserProfileSummary | null> {
     try {
-      const user = await this.userLookupService.getUserByIdOrFail(userId);
+      const user = await this.userLookupService.getUserByIdOrFail(userId, {
+        relations: { profile: true },
+      });
       return { id: user.id, displayName: user.profile.displayName };
     } catch {
       // Reading-side robustness — if the user record is gone, the audit row

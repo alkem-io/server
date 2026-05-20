@@ -63,6 +63,7 @@ describe('Integration — drift detection + reconciliation (Scenario 4)', () => 
     let kratosCallCount = 0;
     const kratosService = {
       findIdentityByEmail: vi.fn().mockResolvedValue(null),
+      getIdentityById: vi.fn().mockResolvedValue({ id: 'kratos-1' }),
       getIdentityEmailTrait: vi.fn(async () => 'new@example.com'),
       updateIdentityEmailTrait: vi.fn(async (_id: string, _email: string) => {
         kratosCallCount += 1;

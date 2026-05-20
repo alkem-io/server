@@ -47,6 +47,7 @@ function makeService({
     findIdentityByEmail: vi
       .fn()
       .mockResolvedValue(conflictKratos ? { id: 'other-kratos' } : null),
+    getIdentityById: vi.fn().mockResolvedValue({ id: 'kratos-1' }),
     getIdentityEmailTrait: vi.fn(),
     updateIdentityEmailTrait: vi.fn(),
     invalidateAllIdentitySessions: vi.fn(),

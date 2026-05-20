@@ -87,6 +87,9 @@ function makeHarness({ initialEmail = 'old@example.com' } = {}): Harness {
       }
       return null;
     }),
+    getIdentityById: vi.fn(async (id: string) =>
+      kratosState.emailByIdentityId.has(id) ? { id } : undefined
+    ),
     getIdentityEmailTrait: vi.fn(async (id: string) =>
       kratosState.emailByIdentityId.get(id)
     ),

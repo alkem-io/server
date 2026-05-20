@@ -46,6 +46,7 @@ function makeServiceWithDrift(opts: {
 
   const kratosService = {
     findIdentityByEmail: vi.fn(),
+    getIdentityById: vi.fn().mockResolvedValue({ id: 'kratos-1' }),
     getIdentityEmailTrait: vi.fn(async () => opts.kratosCurrent),
     updateIdentityEmailTrait: vi.fn(async () => {
       if (opts.kratosWriteThrows) throw new Error('kratos down');

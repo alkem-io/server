@@ -313,12 +313,18 @@ export class KratosService {
   }
 
   /**
-   * Replaces the `email` trait on a Kratos identity AND marks the new address as
-   * verified in `verifiable_addresses`. Uses `updateIdentity` (research.md §R1)
-   * for atomic-replace semantics that `patchIdentity` cannot offer.
+   * Replaces the `email` trait on a Kratos identity, then best-effort marks the
+   * new address as verified so the user is not re-prompted on next login (FR-011).
    *
-   * FR-011: the admin's out-of-band verification of the subject is the trust
-   * source for `verified: true`; the user is not re-prompted on next login.
+   * Kratos's `updateIdentity` admin body accepts only `schema_id` / `state` /
+   * `traits` / `metadata_*` — it has NO `verifiable_addresses` field, and
+   * verifiable addresses are recomputed from the traits on every update. The
+   * verified flag is therefore applied as a follow-up `patchIdentity` step.
+   *
+   * The trait update is the load-bearing write — if it fails, the caller's
+   * commit/rollback logic engages. The verified-marking step is best-effort:
+   * a failure there is logged but does NOT fail the email change (it degrades
+   * to "user re-verifies on next login").
    */
   public async updateIdentityEmailTrait(
     identityId: string,
@@ -332,27 +338,71 @@ export class KratosService {
     }
     const currentTraits = (existing.traits ?? {}) as Record<string, unknown>;
     const updatedTraits = { ...currentTraits, email: newEmail };
-    const schemaId = existing.schema_id;
 
     const { data: updated } = await this.kratosIdentityClient.updateIdentity({
       id: identityId,
       updateIdentityBody: {
-        schema_id: schemaId,
-        state: existing.state ?? 'active',
+        schema_id: existing.schema_id,
+        state: existing.state === 'inactive' ? 'inactive' : 'active',
         traits: updatedTraits,
-        verifiable_addresses: [
+      },
+    });
+
+    await this.markIdentityEmailVerified(identityId, newEmail);
+
+    return updated;
+  }
+
+  /**
+   * Best-effort: marks the verifiable address matching `email` as verified via
+   * `patchIdentity`. Kratos exposes no single-call admin API for this; JSON
+   * Patch against the recomputed `verifiable_addresses` array is the admin path.
+   * Any failure is logged and swallowed — see `updateIdentityEmailTrait`.
+   */
+  private async markIdentityEmailVerified(
+    identityId: string,
+    email: string
+  ): Promise<void> {
+    try {
+      const identity = await this.getIdentityById(identityId);
+      const addresses =
+        (identity as OryDefaultIdentitySchema)?.verifiable_addresses ?? [];
+      const index = addresses.findIndex(
+        address => address.value?.toLowerCase() === email.toLowerCase()
+      );
+      if (index < 0) {
+        this.logger.warn(
+          `Email-change: no verifiable address found to mark verified for identity ${identityId}`,
+          LogContext.KRATOS
+        );
+        return;
+      }
+      await this.kratosIdentityClient.patchIdentity({
+        id: identityId,
+        jsonPatch: [
           {
-            value: newEmail,
-            verified: true,
-            via: 'email',
-            status: 'completed',
+            op: 'replace',
+            path: `/verifiable_addresses/${index}/verified`,
+            value: true,
+          },
+          {
+            op: 'replace',
+            path: `/verifiable_addresses/${index}/status`,
+            value: 'completed',
+          },
+          {
+            op: 'replace',
+            path: `/verifiable_addresses/${index}/verified_at`,
+            value: new Date().toISOString(),
           },
         ],
-      } as unknown as Parameters<
-        IdentityApi['updateIdentity']
-      >[0]['updateIdentityBody'],
-    });
-    return updated;
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Email-change: could not mark new address verified for identity ${identityId}: ${(error as Error)?.message}`,
+        LogContext.KRATOS
+      );
+    }
   }
 
   /**
@@ -366,7 +416,25 @@ export class KratosService {
     // The @ory/kratos-client v26 admin API exposes session invalidation via
     // `deleteIdentitySessions` (revokes ALL active sessions for the identity in
     // a single call). Earlier client versions called this `disableIdentitySessions`.
-    await this.kratosIdentityClient.deleteIdentitySessions({ id: identityId });
+    try {
+      await this.kratosIdentityClient.deleteIdentitySessions({
+        id: identityId,
+      });
+    } catch (error) {
+      // Kratos returns 404 when the identity has no active sessions to revoke.
+      // The post-condition "no active sessions exist" is already satisfied, so
+      // this is a no-op success — not a failure.
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      if (status === 404) {
+        this.logger.verbose?.(
+          `No active Kratos sessions to invalidate for identity ${identityId}`,
+          LogContext.KRATOS
+        );
+        return;
+      }
+      throw error;
+    }
   }
 
   public async getIdentityById(

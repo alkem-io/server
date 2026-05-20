@@ -49,6 +49,7 @@ describe('Integration — adminUserEmailChange rollback (Scenario 3)', () => {
     // Forward Kratos write always rejects to simulate the Scenario 3 fault.
     const kratosService = {
       findIdentityByEmail: vi.fn().mockResolvedValue(null),
+      getIdentityById: vi.fn().mockResolvedValue({ id: 'kratos-1' }),
       getIdentityEmailTrait: vi.fn(),
       updateIdentityEmailTrait: vi
         .fn()

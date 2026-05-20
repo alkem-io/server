@@ -208,6 +208,20 @@ export class UserEmailChangeService {
         { subjectUserId }
       );
     }
+    // The stored authenticationID may dangle (stale link to an identity that no
+    // longer exists in Kratos). Detect this BEFORE the commit so it surfaces as
+    // a clean 404 SUBJECT_NOT_FOUND rather than a retried 502 KRATOS_WRITE_FAILED.
+    const identity = await this.kratosService.getIdentityById(
+      subject.authenticationID
+    );
+    if (!identity) {
+      throw new UserEmailChangeException(
+        UserEmailChangeErrorCode.EMAIL_CHANGE_SUBJECT_NOT_FOUND,
+        'Subject user has no resolvable identity-provider identity.',
+        LogContext.AUTH,
+        { subjectUserId }
+      );
+    }
     return subject;
   }
 
@@ -346,6 +360,11 @@ export class UserEmailChangeService {
         )
       );
     } catch (err) {
+      this.logger.error(
+        `email_change forward Kratos write failed for subject ${subjectUserId}: ${describeError(err)}`,
+        (err as Error)?.stack ?? '',
+        LogContext.KRATOS
+      );
       await this.auditService.record({
         subjectUserId,
         initiatorUserId,
@@ -504,10 +523,16 @@ export class UserEmailChangeService {
             subjectUserId
           );
         const initiatorProfile = initiatorUserId
-          ? await this.userLookupService.getUserByIdOrFail(initiatorUserId)
+          ? await this.userLookupService.getUserByIdOrFail(initiatorUserId, {
+              relations: { profile: true },
+            })
           : undefined;
-        const subjectProfile =
-          await this.userLookupService.getUserByIdOrFail(subjectUserId);
+        const subjectProfile = await this.userLookupService.getUserByIdOrFail(
+          subjectUserId,
+          {
+            relations: { profile: true },
+          }
+        );
         await this.notificationAdapter.publishEmailChangeGlobalAdminNotification(
           {
             subjectProfileSummary: {
@@ -564,8 +589,9 @@ export class UserEmailChangeService {
         ...auditOnExhaustion,
         failureReason: extractNonLeakyReason(err),
       });
-      this.logger.warn(
-        `Post-commit side-effect failed (${auditOnExhaustion.outcome}); commit stands.`,
+      this.logger.error(
+        `Post-commit side-effect failed (${auditOnExhaustion.outcome}); commit stands. Cause: ${describeError(err)}`,
+        (err as Error)?.stack ?? '',
         LogContext.AUTH
       );
     }
@@ -622,10 +648,14 @@ export class UserEmailChangeService {
             args.subjectUserId
           );
         const subjectProfile = await this.userLookupService.getUserByIdOrFail(
-          args.subjectUserId
+          args.subjectUserId,
+          { relations: { profile: true } }
         );
         const initiatorProfile = args.initiatorUserId
-          ? await this.userLookupService.getUserByIdOrFail(args.initiatorUserId)
+          ? await this.userLookupService.getUserByIdOrFail(
+              args.initiatorUserId,
+              { relations: { profile: true } }
+            )
           : undefined;
         await this.notificationAdapter.publishEmailChangeGlobalAdminNotification(
           {
@@ -678,6 +708,36 @@ export class UserEmailChangeService {
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 function isLikelyEmail(value: string): boolean {
   return typeof value === 'string' && EMAIL_REGEX.test(value);
+}
+
+/**
+ * Builds a diagnostic (not user-facing) description of an error for server logs.
+ * Pulls the axios `response.status` + `response.data` when present so a Kratos
+ * 4xx surfaces its real cause instead of just "Request failed with status code".
+ */
+function describeError(err: unknown): string {
+  const anyErr = err as {
+    message?: string;
+    response?: { status?: number; data?: unknown };
+  };
+  const parts: string[] = [];
+  if (anyErr?.message) parts.push(anyErr.message);
+  if (anyErr?.response?.status) {
+    parts.push(`status=${anyErr.response.status}`);
+  }
+  if (anyErr?.response?.data !== undefined) {
+    let body: string;
+    try {
+      body =
+        typeof anyErr.response.data === 'string'
+          ? anyErr.response.data
+          : JSON.stringify(anyErr.response.data);
+    } catch {
+      body = '[unserialisable response body]';
+    }
+    parts.push(`body=${body.slice(0, 1000)}`);
+  }
+  return parts.join(' | ') || String(err);
 }
 
 function isLikelyNetworkError(err: unknown): boolean {
