@@ -176,8 +176,20 @@ export class CommunicationAdapter {
       this.logResponsePayload(topic, response, eventID);
 
       if (ensureSuccess) {
-        // Response types extend BaseResponse, so success/error are direct properties
-        this.ensureSuccess(operation, response, errorContext);
+        // Most response types extend BaseResponse, so success/error are direct
+        // properties. A handful (e.g. CheckRoomResponse, GetRoomInfoResponse)
+        // are server-handler responses that don't carry success/error — we never
+        // opt into ensureSuccess for those operations, but the union type forces
+        // a structural cast here. The ensureSuccess body tolerates missing
+        // success/error fields by no-op.
+        this.ensureSuccess(
+          operation,
+          response as {
+            success?: boolean;
+            error?: { code: string; message: string; details?: string };
+          },
+          errorContext
+        );
       }
 
       return response;
@@ -1423,11 +1435,16 @@ export class CommunicationAdapter {
   private ensureSuccess(
     operation: string,
     response: {
-      success: boolean;
+      success?: boolean;
       error?: { code: string; message: string; details?: string };
     },
     details?: Record<string, unknown>
   ): void {
+    // Some response types in the new matrix-adapter-lib don't extend BaseResponse
+    // (e.g. CheckRoomResponse, GetRoomInfoResponse) and have no `success` field.
+    // We never opt into ensureSuccess for those operations, but the union type
+    // forces the parameter to be permissive. The runtime check below is a
+    // no-op for those responses (undefined success → no throw).
     if (!response.success && response.error) {
       throw CommunicationAdapterException.fromAdapterError(
         operation,
