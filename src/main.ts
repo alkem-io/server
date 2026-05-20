@@ -19,6 +19,7 @@ import { renderGraphiQL } from 'graphql-helix';
 import { graphqlUploadExpress } from 'graphql-upload';
 // biome-ignore lint/correctness/noUnusedImports: apmAgent import has side effects that initialize APM
 import { apmAgent } from './apm';
+import { NonInteractiveLoginConfig } from './core/auth/non-interactive-login/non-interactive-login.config';
 import { setSessionMiddlewares } from './core/auth/oidc/session-middleware.holder';
 import { BootstrapService } from './core/bootstrap/bootstrap.service';
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
@@ -39,6 +40,12 @@ const bootstrap = async () => {
   const bootstrapService: BootstrapService = app.get(BootstrapService);
 
   app.useLogger(logger);
+
+  // Defense-in-depth boot guard for the non-interactive-login feature.
+  // Throws (and aborts startup) if NODE_ENV=production collides with
+  // identity.authentication.providers.non_interactive_login.enabled, or
+  // if the feature is enabled without a strong signing_key.
+  app.get(NonInteractiveLoginConfig).assertSafe();
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   await bootstrapService.bootstrap();

@@ -48,7 +48,6 @@ export type AlkemioConfig = {
   };
   identity: {
     authentication: {
-      api_access_enabled: boolean;
       cache_ttl: number;
       providers: {
         ory: {
@@ -81,6 +80,11 @@ export type AlkemioConfig = {
             secure: boolean;
             idle_ttl_s: number;
           };
+        };
+        non_interactive_login: {
+          enabled: boolean;
+          signing_key: string;
+          token_ttl_s: number;
         };
       };
     };
