@@ -2918,7 +2918,7 @@ input ExternalConfigInput {
   """The assistant ID backing the service in OpenAI`s assistant API"""
   assistantId: String
   """The OpenAI model to use for the service"""
-  model: OpenAIModel! = O1
+  model: OpenAIModel! = GPT_5_4_NANO
 }
 
 type FileStorageConfig {
@@ -4920,31 +4920,24 @@ input NotificationSettingInput {
 }
 
 enum OpenAIModel {
-  BABBAGE_002
-  DALL_E_2
-  DALL_E_3
-  DAVINCI_002
-  GPT_3_5_TURBO
-  GPT_4
-  GPT_4O
-  GPT_4O_AUDIO_PREVIEW
-  GPT_4O_MINI
-  GPT_4O_MINI_AUDIO_PREVIEW
-  GPT_4O_MINI_REALTIME_PREVIEW
-  GPT_4O_REALTIME_PREVIEW
-  GPT_4_5_PREVIEW
-  GPT_4_TURBO
-  O1
-  O1_MINI
+  GPT_5
+  GPT_5_1
+  GPT_5_1_MINI
+  GPT_5_2
+  GPT_5_2_PRO
+  GPT_5_4
+  GPT_5_4_MINI
+  GPT_5_4_NANO
+  GPT_5_4_PRO
+  GPT_5_5
+  GPT_5_5_PRO
+  GPT_5_MINI
+  GPT_5_NANO
+  GPT_5_PRO
+  O3
   O3_MINI
-  OMNI_MODERATION_LATEST
-  TEXT_EMBEDDING_3_LARGE
-  TEXT_EMBEDDING_3_SMALL
-  TEXT_EMBEDDING_ADA_002
-  TEXT_MODERATION_LATEST
-  TTS_1
-  TTS_1_HD
-  WHISPER_1
+  O3_PRO
+  O4_MINI
 }
 
 type Organization implements ActorFull & Groupable {
@@ -8184,6 +8177,10 @@ input UpdateUserSettingsCommunicationInput {
 input UpdateUserSettingsEntityInput {
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
+  """
+  Update the user's design version. Any integer accepted (1 = current default design generation; 2 = new design, opt-in for now and expected to become the default in a subsequent release; 3+ reserved).
+  """
+  designVersion: Int
   """Settings related to Home Space."""
   homeSpace: UpdateUserSettingsHomeSpaceInput
   """Settings related to this users Notifications preferences."""
@@ -8620,6 +8617,10 @@ type UserSettings {
   communication: UserSettingsCommunication!
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  The design version this User has selected (1 = current default design generation; 2 = new design, opt-in for now and expected to become the default in a subsequent release; 3+ reserved for future generations).
+  """
+  designVersion: Int!
   """The home space settings for this User."""
   homeSpace: UserSettingsHomeSpace!
   """The ID of the entity"""
@@ -8809,6 +8810,8 @@ type VirtualContributor implements ActorFull {
   bodyOfKnowledgeDescription: Markdown
   """The ID of the body of knowledge used by this Virtual Contributor."""
   bodyOfKnowledgeID: UUID
+  """The date when the body of knowledge was last successfully ingested."""
+  bodyOfKnowledgeLastUpdated: DateTime
   """The type of body of knowledge used by this Virtual Contributor."""
   bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType!
   """The date at which the entity was created."""

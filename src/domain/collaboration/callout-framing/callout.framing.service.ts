@@ -12,7 +12,6 @@ import {
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
 import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
 import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
-import { CreateCollaboraDocumentInput } from '@domain/collaboration/collabora-document/dto/collabora.document.dto.create';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { IPoll } from '@domain/collaboration/poll/poll.interface';

@@ -24,6 +24,7 @@ import { ICredentialDefinition } from '@domain/actor/credential/credential.defin
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
@@ -47,6 +48,7 @@ export class AccountAuthorizationService {
     private innovationHubAuthorizationService: InnovationHubAuthorizationService,
     private accountService: AccountService,
     private licenseAuthorizationService: LicenseAuthorizationService,
+    private profileAuthorizationService: ProfileAuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -59,6 +61,7 @@ export class AccountAuthorizationService {
         loadEagerRelations: false,
         relations: {
           authorization: true,
+          profile: true,
           spaces: {
             templatesManager: true,
           },
@@ -70,7 +73,7 @@ export class AccountAuthorizationService {
         },
       }
     );
-    if (!account.storageAggregator || !account.license) {
+    if (!account.storageAggregator || !account.license || !account.profile) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
         LogContext.ACCOUNT
@@ -142,7 +145,8 @@ export class AccountAuthorizationService {
       !account.innovationPacks ||
       !account.storageAggregator ||
       !account.innovationHubs ||
-      !account.license
+      !account.license ||
+      !account.profile
     ) {
       throw new RelationshipNotFoundException(
         `Unable to load Account with entities at start of auth reset: ${account.id} `,
@@ -174,6 +178,13 @@ export class AccountAuthorizationService {
         account.authorization
       );
     updatedAuthorizations.push(...storageAggregatorAuthorizations);
+
+    const profileAuthorizations =
+      await this.profileAuthorizationService.applyAuthorizationPolicy(
+        account.profile.id,
+        account.authorization
+      );
+    updatedAuthorizations.push(...profileAuthorizations);
 
     for (const vc of account.virtualContributors) {
       const updatedVcAuthorizations =
