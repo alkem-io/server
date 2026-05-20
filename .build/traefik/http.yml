@@ -211,7 +211,7 @@ http:
     # Always returns 200; per-route policy decides what missing-header means.
     alkemio-resolve:
       forwardAuth:
-        address: 'http://host.docker.internal:4000/api/auth/resolve'
+        address: 'http://host.docker.internal:4000/rest/internal/forward-auth'
         authResponseHeaders:
           - X-Alkemio-Actor-Id
         trustForwardHeader: true

@@ -8,9 +8,9 @@ import { AlkemioConfig } from '@src/types';
 import Redis from 'ioredis';
 import { createRemoteJWKSet } from 'jose';
 import { parseBearerAudAllowList } from './bearer-aud-allow-list';
+import { ForwardAuthController } from './forward-auth.controller';
 import { OidcController } from './oidc.controller';
 import { OidcService } from './oidc.service';
-import { ResolveController } from './resolve.controller';
 import { buildSessionStore } from './session-store.redis';
 import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
 import { CookieSessionStoreUnavailableFilter } from './strategies/cookie-session.exception-filter';
@@ -29,7 +29,7 @@ import {
     AuthenticationModule,
     ActorContextModule,
   ],
-  controllers: [OidcController, ResolveController],
+  controllers: [OidcController, ForwardAuthController],
   providers: [
     OidcService,
     {

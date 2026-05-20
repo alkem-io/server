@@ -7,27 +7,31 @@ import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
 const HEADER_ACTOR_ID = 'X-Alkemio-Actor-Id';
 
 /**
-  Decision endpoint. The single source-of-truth for
-  "who is this request" across every external service
+  Traefik ForwardAuth decision endpoint. Single source-of-truth for
+  "who is this request" across every external service.
+
+  Mounted under `/rest/internal/*` so it falls outside any public
+  ingress/router rule (Traefik catches `/api/auth/*` publicly; nothing
+  catches `/rest/internal/*` on the `web` entrypoint, so this path is
+  unreachable from the internet by design). The ForwardAuth middleware
+  reaches it directly via the server's container port.
 
   Semantics: ALWAYS returns 200. Absence of `X-Alkemio-Actor-Id` signals
   anonymous; per-route policy decides what unauthenticated means for its
   upstream. Authenticated users get their canonical actor id; guests get
   the synthetic `guest-<uuid>` minted by ActorContextService.createGuest.
 
-  Not exposed for browser/SPA use.
-  Reachable only internally
-  SPA identity lookups go via GraphQL `me`.
+  Not for browser/SPA use — SPA identity lookups go via GraphQL `me`.
  */
-@Controller('api/auth')
-export class ResolveController {
+@Controller('rest/internal')
+export class ForwardAuthController {
   constructor(
     private readonly authenticationService: AuthenticationService,
     @Inject(SESSION_STORE_HANDLE)
     private readonly sessionStore: SessionStoreHandle
   ) {}
 
-  @Get('resolve')
+  @Get('forward-auth')
   async resolve(
     @Query('guestName') guestNameRaw: string | undefined,
     @Req() req: Request,

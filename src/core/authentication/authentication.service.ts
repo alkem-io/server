@@ -39,9 +39,9 @@ export class AuthenticationService {
   /**
    * Resolves an ActorContext from a pre-loaded BFF session payload (from
    * Redis), or a guest name, or neither. Used by the universal traefik
-   * forwardAuth decision endpoint (`/api/auth/resolve`).
+   * forwardAuth decision endpoint (`/rest/internal/forward-auth`).
    *
-   * The caller (resolve controller) does the Redis lookup itself because the
+   * The caller (ForwardAuthController) does the Redis lookup itself because the
    * SessionStoreHandle binding lives in OidcModule's DI scope. This method
    * receives the already-loaded payload and does only the
    * actor-vs-guest-vs-anonymous decision via the existing primitives:
