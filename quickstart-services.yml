@@ -111,7 +111,10 @@ services:
         condition: service_completed_successfully
     ports:
       - 4444
-      - 4445
+      # 004 T004 — host-side mapping so alkemio-server (running natively
+      # outside compose) can reach Hydra Admin API at localhost:4445 for
+      # `client_credentials` lifecycle ops (register/rotate/revoke/RFC 7009).
+      - 4445:4445
     environment:
       - DSN=postgres://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/hydra?sslmode=disable&max_conns=20&max_idle_conns=4&max_conn_lifetime=30m&max_conn_idle_time=5m
       - SECRETS_SYSTEM=${HYDRA_SYSTEM_SECRET}
@@ -480,6 +483,12 @@ services:
     entrypoint: ["/wait"]
 
   redis:
+    # 004 T004 — alkemio-server reserves the following keyspaces on this
+    # instance:
+    #   alkemio:svc:client:<clientId>       — FR-014 admission cache (TTL 60s)
+    #   alkemio:svc:revoked-bearer:<jti>    — FR-011a bearer blocklist
+    #   alkemio:svc:cache-invalidation     — pub/sub eviction channel
+    #   bull:alkemio:svc:hydra-cleanup:*    — BullMQ cascade-revoke job state
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_redis

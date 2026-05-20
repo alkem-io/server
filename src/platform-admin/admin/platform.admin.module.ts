@@ -9,6 +9,7 @@ import { Module } from '@nestjs/common';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AdminIdentityModule } from '../core/identity/admin.identity.module';
 import { AdminCommunicationModule } from '../domain/communication/admin.communication.module';
+import { AdminServiceClientsModule } from '../domain/service-clients/admin.service-clients.module';
 import { PlatformAdminCommunicationResolverFields } from './platform.admin.resolver.communication.fields';
 import { PlatformAdminResolverFields } from './platform.admin.resolver.fields';
 import { PlatformAdminResolverQueries } from './platform.admin.resolver.queries';
@@ -26,6 +27,7 @@ import { PlatformAdminService } from './platform.admin.service';
     SpaceModule,
     AdminCommunicationModule,
     AdminIdentityModule,
+    AdminServiceClientsModule,
   ],
   providers: [
     PlatformAdminService,

@@ -1,0 +1,283 @@
+# SDL fragment — Admin GraphQL surface for service-client lifecycle,
+# platform-scope catalogue, and audit query.
+#
+# Owner: alkemio-server (src/platform-admin/domain/service-clients/)
+# Spec:  specs/004-service-client-credentials/contracts/
+#   - admin-graphql-service-clients.md
+#   - admin-graphql-platform-scope.md
+#   - admin-graphql-audit-query.md
+#
+# Trust boundary: every operation is GLOBAL_ADMIN-gated server-side via
+# the recipe in src/platform-admin/domain/service-clients/README.md.
+# Non-admin callers receive an authorization error indistinguishable from
+# "client/scope does not exist" (FR-006 single-trust-boundary).
+
+# ─────────────────────────────────────────────────────────────────────────
+# Service client — core types
+# ─────────────────────────────────────────────────────────────────────────
+
+"Service client — a machine identity registered for client_credentials grant."
+type ServiceClient {
+  "OAuth2 client_id and primary key — DNS-label shape, immutable."
+  clientId: String!
+
+  "Display name, original case preserved."
+  name: String!
+
+  "Owner User (FK-resolved so the caller can render display name without a second round-trip)."
+  owner: User!
+
+  description: String!
+
+  "Always equals clientId in v1."
+  audience: String!
+
+  configuredScopes: [PlatformScope!]!
+
+  accessTokenLifetimeSeconds: Int!
+
+  tokenEndpointAuthMethod: TokenEndpointAuthMethod!
+
+  status: ServiceClientStatus!
+
+  createdAt: DateTime!
+  lastRotatedAt: DateTime
+  lastStatusChangedAt: DateTime
+}
+
+enum ServiceClientStatus {
+  enabled
+  disabled
+}
+
+enum ServiceClientStatusFilter {
+  enabled
+  disabled
+  all
+}
+
+enum TokenEndpointAuthMethod {
+  client_secret_basic
+  client_secret_post
+}
+
+"One-time secret reveal payload — returned by register / rotate / re-enable; secret is never re-queryable."
+type ServiceClientSecretReveal {
+  client: ServiceClient!
+
+  "Plaintext secret — present exactly once in the response that produced it. Never persisted server-side in plaintext."
+  secret: String!
+}
+
+type ServiceClientConnection {
+  edges: [ServiceClient!]!
+  nextCursor: String
+}
+
+# ─────────────────────────────────────────────────────────────────────────
+# Platform scope catalogue
+# ─────────────────────────────────────────────────────────────────────────
+
+type PlatformScope {
+  "Format: <resource>:<verb>. Immutable post-create."
+  name: String!
+
+  description: String!
+
+  "FR-005 baseline membership — toggled only via setPlatformScopeBaselineMembership."
+  readOnlyBaseline: Boolean!
+
+  createdAt: DateTime!
+  createdBy: User!
+}
+
+# ─────────────────────────────────────────────────────────────────────────
+# Audit event query (FR-022a) — backs both 30-day and 1-year ES indices
+# ─────────────────────────────────────────────────────────────────────────
+
+"Discriminator for audit-event types. The same value lands in the JSON record's event_type field."
+enum AuditEventType {
+  # FR-019 / FR-021 / FR-022 — high-volume (30-day index `audit-oidc-*`)
+  request
+  token_mint
+  scope_denial
+
+  # FR-020 lifecycle (1-year index `audit-oidc-lifecycle-*`)
+  register
+  rotate
+  revoke
+  re_enable
+  cascade_revoke_synchronous
+  cascade_revoke_hydra_cleanup
+  cascade_narrow
+  scope_update
+  description_update
+  owner_reassignment
+  add_platform_scope
+  remove_platform_scope
+  set_platform_scope_baseline_membership
+
+  # FR-021a (1-year index)
+  token_revoke
+}
+
+"Service-client audit event. Returned as a uniform record across both retention indices."
+type ServiceClientAuditEvent {
+  eventType: AuditEventType!
+  timestamp: DateTime!
+
+  "Service client id when relevant."
+  clientId: String
+
+  "For lifecycle events; null on synthetic cascade hops."
+  actingAdminUserId: ID
+
+  "service-client | user | user-deletion-job"
+  actorType: String!
+
+  "success | denied | failed_terminal | invalid_audience | …"
+  outcome: String!
+
+  "GraphQL operation, e.g. mutation:createSpace."
+  operationIdentifier: String
+
+  "Type-specific extension; see audit-event-service-actor.md."
+  payload: JSON
+
+  correlationId: String!
+}
+
+type ServiceClientAuditEventConnection {
+  edges: [ServiceClientAuditEvent!]!
+  nextCursor: String
+}
+
+# ─────────────────────────────────────────────────────────────────────────
+# Inputs
+# ─────────────────────────────────────────────────────────────────────────
+
+input RegisterServiceClientInput {
+  "Required. Regex ^[a-z][a-z0-9-]{2,62}$, immutable post-create."
+  clientId: String!
+
+  "Required. Globally unique after trim + Unicode-default case-fold (NFKC + lower)."
+  name: String!
+
+  "Required. UUID of an existing platform User."
+  ownerUserId: ID!
+
+  "Required."
+  description: String!
+
+  "Optional. Omission ⇒ FR-005 read-only baseline. Explicit [] ⇒ parked-client state."
+  scopes: [String!]
+
+  "Required. 300..900 inclusive."
+  accessTokenLifetimeSeconds: Int!
+
+  "Optional. Default client_secret_basic."
+  tokenEndpointAuthMethod: TokenEndpointAuthMethod
+}
+
+input UpdateServiceClientScopesInput {
+  clientId: String!
+
+  "Full-replacement. Explicit [] admissible (parked-client). Unknown scopes rejected."
+  newScopes: [String!]!
+}
+
+input UpdateServiceClientDescriptionInput {
+  clientId: String!
+  newDescription: String!
+}
+
+input ReassignServiceClientOwnerInput {
+  clientId: String!
+  newOwnerUserId: ID!
+}
+
+input AddPlatformScopeInput {
+  "^[a-z][a-z0-9_-]+:[a-z][a-z0-9_-]+$"
+  name: String!
+
+  "Required at create, no default."
+  description: String!
+}
+
+input SetPlatformScopeBaselineMembershipInput {
+  name: String!
+  readOnlyBaseline: Boolean!
+}
+
+input ServiceClientAuditEventFilterInput {
+  clientId: String
+  scopeName: String
+  eventTypes: [AuditEventType!]
+  from: DateTime
+  to: DateTime
+}
+
+# ─────────────────────────────────────────────────────────────────────────
+# Queries
+# ─────────────────────────────────────────────────────────────────────────
+
+extend type Query {
+  "FR-002 — Cursor-paginated list. Default status filter is 'enabled', default limit 25, max 100."
+  listServiceClients(
+    status: ServiceClientStatusFilter = enabled
+    cursor: String
+    limit: Int
+  ): ServiceClientConnection!
+
+  "Single-client lookup by clientId. GLOBAL_ADMIN-gated; non-admin sees same error shape as 'not found'."
+  serviceClient(clientId: String!): ServiceClient
+
+  "Platform-scope catalogue listing. `includeNonBaseline` toggles whether non-baseline scopes are returned."
+  listPlatformScopes(includeNonBaseline: Boolean = true): [PlatformScope!]!
+
+  "Single platform-scope lookup by name."
+  platformScope(name: String!): PlatformScope
+
+  "FR-022a — Cursor-paginated audit-event query across both retention indices. Default limit 50, max 500."
+  serviceClientAuditEvents(
+    filter: ServiceClientAuditEventFilterInput!
+    cursor: String
+    limit: Int
+  ): ServiceClientAuditEventConnection!
+}
+
+# ─────────────────────────────────────────────────────────────────────────
+# Mutations
+# ─────────────────────────────────────────────────────────────────────────
+
+extend type Mutation {
+  "FR-001 — Register a service client. Returns the one-time plaintext secret in the reveal payload."
+  registerServiceClient(input: RegisterServiceClientInput!): ServiceClientSecretReveal!
+
+  "FR-002a — Full-replacement scope update. Cascade-narrow propagates via FR-014 cache ≤60 s."
+  updateServiceClientScopes(input: UpdateServiceClientScopesInput!): ServiceClient!
+
+  "FR-002b — Description-only update. Admissible against enabled and disabled clients."
+  updateServiceClientDescription(input: UpdateServiceClientDescriptionInput!): ServiceClient!
+
+  "FR-002c — Owner reassignment. Pure metadata change; no token / cache / Hydra side-effect."
+  reassignServiceClientOwner(input: ReassignServiceClientOwnerInput!): ServiceClient!
+
+  "FR-003 — Atomic secret rotation. Rejects on `status: disabled` with STATUS_PRECONDITION."
+  rotateServiceClientSecret(clientId: String!): ServiceClientSecretReveal!
+
+  "FR-004 — Idempotent on already-disabled. Cascade-revoke variant fires via the User-deletion flow, not exposed here."
+  revokeServiceClient(clientId: String!): ServiceClient!
+
+  "FR-004a — Rejects on already-enabled and on dangling owner FK with STATUS_PRECONDITION / DANGLING_OWNER_FK."
+  reEnableServiceClient(clientId: String!): ServiceClientSecretReveal!
+
+  "FR-007a — Add a platform scope. Defaults readOnlyBaseline=false; never retroactively grants holders."
+  addPlatformScope(input: AddPlatformScopeInput!): PlatformScope!
+
+  "FR-007a — Remove a platform scope. Rejects on baseline membership. Auto-fires FR-002a cascade-narrow per holder."
+  removePlatformScope(name: String!): Boolean!
+
+  "FR-007a — Toggle baseline membership on an existing platform scope. No cascade side-effect."
+  setPlatformScopeBaselineMembership(input: SetPlatformScopeBaselineMembershipInput!): PlatformScope!
+}
