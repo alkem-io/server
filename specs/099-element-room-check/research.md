@@ -8,17 +8,18 @@ This document resolves all open decision points before Phase 1 design. Each entr
 
 ## R-001: RPC handler shape
 
-**Decision**: Use NestJS `@MessagePattern(routingKey, Transport.RMQ)` on a new lightweight controller `MatrixRoomCheckController` under `src/services/adapters/communication-adapter/`. The two new routing keys (`communication.room.check`, `communication.room.info`) each get one decorated method whose return value is automatically marshalled back as the RPC reply by NestJS's RabbitMQ transport.
+**Decision**: Use `@RabbitRPC` from `@golevelup/nestjs-rabbitmq` on a new lightweight controller `MatrixRoomCheckController` under `src/services/adapters/communication-adapter/`. The two new routing keys (`communication.room.check`, `communication.room.info`) each get one decorated method whose return value is marshalled back as the RPC reply.
 
-**Rationale**: This is the established codebase precedent for request/reply RPC on RabbitMQ:
-- `WhiteboardIntegrationController` at `src/services/whiteboard-integration/whiteboard.integration.controller.ts:39` uses `@MessagePattern(WhiteboardIntegrationMessagePattern.INFO, Transport.RMQ)` with a request/reply contract on the `alkemio-whiteboards` queue.
-- `CollaborativeDocumentIntegrationController` follows the same pattern.
-- Reply correlation IDs, error envelopes, and serialisation are all handled by NestJS — no manual wiring needed.
+**Rationale revised during implementation**: The initial plan was to follow the `WhiteboardIntegrationController` precedent (NestJS `@MessagePattern(routingKey, Transport.RMQ)`), but implementation revealed that pattern would break the existing matrix-adapter event flow:
 
-The existing `CommunicationAdapterEventService` uses `@RabbitSubscribe` from `@golevelup/nestjs-rabbitmq` for async pub/sub. That decorator is the right tool for fire-and-forget events but does NOT model the reply leg of an RPC. The two new handlers need RPC semantics (the adapter waits for the reply, with a 3s budget), so `@MessagePattern` is the correct primitive.
+- `CommunicationAdapterEventService` consumes the matrix-adapter queue family via `@RabbitSubscribe` from `@golevelup/nestjs-rabbitmq`.
+- Mounting a NestJS `@MessagePattern + Transport.RMQ` consumer on the same broker would create a **competing consumer** on the matrix-adapter queue. AMQP round-robins messages across competing consumers, so the `Transport.RMQ` listener would steal messages destined for the existing `@RabbitSubscribe` handlers and break event delivery. See the comment at `main.ts:110-112` documenting this constraint.
+- `@RabbitRPC` is the golevelup primitive for request/reply on the same connection/exchange as `@RabbitSubscribe`. It supports the RPC reply leg natively (correlation-id wiring, temporary reply queue) and shares the consumer registry with the existing subscribers — no competition.
+- The `WhiteboardIntegrationController` precedent is on a *different* queue family (`alkemio-whiteboards`), which has no `@RabbitSubscribe` consumers, so `Transport.RMQ` is safe there. The matrix-adapter queue family is the special case.
 
 **Alternatives considered & rejected**:
-- *Add a "reply" topic and use two `@RabbitSubscribe` decorators (one for the request, one published as reply with correlation_id)*. Rejected: re-implements what NestJS's `@MessagePattern` already gives us, adds rollover-and-correlate complexity to every call site.
+- *NestJS `@MessagePattern(routingKey, Transport.RMQ)`* (initially planned). Rejected at implementation time: would steal messages from the existing `@RabbitSubscribe` consumers on the matrix-adapter queue.
+- *Add a "reply" topic and use two `@RabbitSubscribe` decorators (one for the request, one published as reply with correlation_id)*. Rejected: re-implements what `@RabbitRPC` already gives us, adds rollover-and-correlate complexity to every call site.
 - *HTTP webhook callback from server to adapter*. Rejected: inverts the dependency direction (server would need to know an adapter URL) and creates an additional infra surface to monitor.
 
 ---
@@ -135,7 +136,7 @@ Used at:
 ## R-007: Adapter-version backward compatibility
 
 **Decision**: Clean cutover. No legacy compatibility path needed:
-- The DM webhook HTTP endpoint (`/dm-request` on the adapter, called by the server's pre-async-flow client) is no longer used anywhere on the server side (replaced by the new `@MessagePattern` handler invoked from the adapter side).
+- The DM webhook HTTP endpoint (`/dm-request` on the adapter, called by the server's pre-async-flow client) is no longer used anywhere on the server side (replaced by the new `@RabbitRPC` handler invoked from the adapter side).
 - The deleted `097-dm-from-element` async topics (`communication.conversation.requested` / `.rejected`) are not in use anywhere — the feature was deleted before any code was committed.
 
 Rolling forward installs the new handlers; the adapter's existing infrastructure picks them up automatically once the lib bump (R-002) is in place.

@@ -324,8 +324,10 @@ export class MessagingService {
       // 2. Resolve actors. A Matrix user maps to an Alkemio Actor of any
       // subtype (User, VirtualContributor, Organization, …) — the actor table
       // is the single source of truth. validateActorsAndGetTypes throws
-      // EntityNotFoundException on any missing id; we collapse that to the
-      // wire-level ACTOR_NOT_FOUND rejection.
+      // EntityNotFoundException on any missing id; we collapse that ONLY to
+      // the wire-level ACTOR_NOT_FOUND rejection. Any other failure (DB
+      // outage, programmer error) is re-thrown so the outer try/catch maps it
+      // to INTERNAL_ERROR and the underlying cause is logged at ERROR.
       let actorTypesById: Map<string, ActorType>;
       try {
         actorTypesById =
@@ -333,7 +335,10 @@ export class MessagingService {
             creatorActorId,
             ...memberActorIds,
           ]);
-      } catch {
+      } catch (error: unknown) {
+        if (!(error instanceof EntityNotFoundException)) {
+          throw error;
+        }
         this.logger.warn?.(
           'createConversationFromExternal: one or more actors not found',
           LogContext.COMMUNICATION_CONVERSATION

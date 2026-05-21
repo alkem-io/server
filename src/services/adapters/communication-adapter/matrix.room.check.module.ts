@@ -1,6 +1,6 @@
 import { MessagingModule } from '@domain/communication/messaging/messaging.module';
 import { Module } from '@nestjs/common';
-import { MatrixRoomCheckController } from './matrix.room.check.controller';
+import { MatrixRoomCheckController } from '@services/adapters/communication-adapter/matrix.room.check.controller';
 
 /**
  * Hosts the RabbitMQ RPC handlers for the Element room-check flow (feature

@@ -1,4 +1,4 @@
-import { IActor } from './actor/actor.interface';
+import { IActor } from '@domain/actor/actor/actor.interface';
 
 /**
  * Canonical Matrix-side displayName formula for any Actor.

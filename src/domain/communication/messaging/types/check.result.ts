@@ -1,3 +1,5 @@
+import { MessagingRejectionReason } from './messaging.rejection.reasons';
+
 /**
  * Internal return type of `MessagingService.createConversationFromExternal`.
  *
@@ -6,8 +8,9 @@
  *   - `{ kind: 'accepted', alkemioRoomId }` → `{ allow: true,  alkemio_room_id }`
  *   - `{ kind: 'rejected', reason }`        → `{ allow: false, reason }`
  *
- * Rejection reason strings come from `MessagingRejectionReason` (canonical const-map).
+ * `reason` is typed as `MessagingRejectionReason` (the canonical wire-string
+ * union) so off-contract values are a compile error.
  */
 export type CheckResult =
   | { kind: 'accepted'; alkemioRoomId: string }
-  | { kind: 'rejected'; reason: string };
+  | { kind: 'rejected'; reason: MessagingRejectionReason };
