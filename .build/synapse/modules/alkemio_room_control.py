@@ -26,6 +26,7 @@ All config values are automatically detected from the AppService with id 'alkemi
 """
 
 import logging
+import uuid
 from typing import Optional
 
 from synapse.module_api import ModuleApi
@@ -351,6 +352,15 @@ class AlkemioRoomControl:
             raise SynapseError(403, reason, Codes.FORBIDDEN)
 
         alkemio_room_id = resp.get("alkemio_room_id", "")
+        try:
+            alkemio_room_id = str(uuid.UUID(alkemio_room_id))
+        except (TypeError, ValueError, AttributeError):
+            logger.error("Room check approved without valid alkemio_room_id: %s", resp)
+            raise SynapseError(
+                503,
+                "Service temporarily unavailable",
+                Codes.UNKNOWN,
+            )
         logger.info(
             "Room check approved: %s, alkemio_room_id=%s",
             user_id,
