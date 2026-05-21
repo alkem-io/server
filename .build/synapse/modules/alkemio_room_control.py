@@ -354,13 +354,13 @@ class AlkemioRoomControl:
         alkemio_room_id = resp.get("alkemio_room_id", "")
         try:
             alkemio_room_id = str(uuid.UUID(alkemio_room_id))
-        except (TypeError, ValueError, AttributeError):
+        except (TypeError, ValueError, AttributeError) as e:
             logger.error("Room check approved without valid alkemio_room_id: %s", resp)
             raise SynapseError(
                 503,
                 "Service temporarily unavailable",
                 Codes.UNKNOWN,
-            )
+            ) from e
         logger.info(
             "Room check approved: %s, alkemio_room_id=%s",
             user_id,
