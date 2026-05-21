@@ -1,11 +1,11 @@
-import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { BearerValidationError } from '@core/auth/oidc/strategies/auth.errors';
+import { HydraBearerStrategy } from '@core/auth/oidc/strategies/hydra-bearer.strategy';
 import {
   BEARER_AUD_ALLOW_LIST_HANDLE,
   BEARER_JWKS_HANDLE,
   HYDRA_ISSUER_URL_HANDLE,
-  HydraBearerStrategy,
-} from '@core/auth/oidc/strategies/hydra-bearer.strategy';
+  HydraBearerValidator,
+} from '@core/auth/oidc/strategies/hydra-bearer.validator';
 import { AUTH_STRATEGY_OIDC_HYDRA_BEARER } from '@core/auth/oidc/strategies/strategy.names';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { INestApplication } from '@nestjs/common';
@@ -93,15 +93,7 @@ export async function createBearerHarness(
           })),
         },
       },
-      {
-        provide: ActorContextService,
-        useValue: {
-          createAnonymous: vi.fn(() => ({
-            isAnonymous: true,
-            credentials: [],
-          })),
-        },
-      },
+      HydraBearerValidator,
       HydraBearerStrategy,
     ],
   }).compile();

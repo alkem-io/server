@@ -20,6 +20,7 @@ import {
   BEARER_JWKS_HANDLE,
   HYDRA_ISSUER_URL_HANDLE,
   HydraBearerStrategy,
+  HydraBearerValidator,
 } from './strategies/hydra-bearer.strategy';
 
 @Module({
@@ -84,6 +85,7 @@ import {
         return issuer_url;
       },
     },
+    HydraBearerValidator,
     HydraBearerStrategy,
     {
       provide: APP_FILTER,
