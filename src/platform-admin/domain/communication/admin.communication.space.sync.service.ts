@@ -2,6 +2,7 @@ import { JoinRuleInvite, JoinRulePublic } from '@alkemio/matrix-adapter-lib';
 import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
 import { FORUM_CATEGORY_NAMESPACE } from '@constants/forum.constants';
+import { getMatrixDisplayName } from '@domain/actor/actor.matrix.display.name';
 import { Room } from '@domain/communication/room/room.entity';
 import { User } from '@domain/community/user/user.entity';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
@@ -490,7 +491,9 @@ export class AdminCommunicationSpaceSyncService {
    * Sync display names to Matrix for all users and virtual contributors.
    */
   private async syncActorDisplayNames(): Promise<void> {
-    const users = await this.userRepository.find();
+    const users = await this.userRepository.find({
+      relations: { profile: true },
+    });
     const vcs = await this.vcRepository.find({
       relations: { profile: true },
     });
@@ -502,8 +505,7 @@ export class AdminCommunicationSpaceSyncService {
 
     let synced = 0;
     for (const user of users) {
-      const displayName =
-        `${user.firstName} ${user.lastName}`.trim() || user.nameID;
+      const displayName = getMatrixDisplayName(user);
       try {
         await this.communicationAdapter.syncActor(user.id, displayName);
         synced++;
@@ -517,7 +519,7 @@ export class AdminCommunicationSpaceSyncService {
     }
 
     for (const vc of vcs) {
-      const displayName = vc.profile?.displayName || vc.nameID;
+      const displayName = getMatrixDisplayName(vc);
       try {
         await this.communicationAdapter.syncActor(vc.id, displayName);
         synced++;

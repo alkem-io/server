@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.module';
 import { Module } from '@nestjs/common';
@@ -17,6 +18,7 @@ import { MessagingAuthorizationService } from './messaging.service.authorization
     AuthorizationModule,
     ConversationModule,
     UserLookupModule,
+    ActorLookupModule,
     ConversationMembershipModule,
     SubscriptionServiceModule,
     TypeOrmModule.forFeature([Messaging]),
