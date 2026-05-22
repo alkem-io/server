@@ -29,6 +29,7 @@ export class CreatePlatformAuditEntry1779195577000
 
     await queryRunner.query(`
       CREATE TYPE "platform_audit_outcome" AS ENUM (
+        'commit_started',
         'committed',
         'rolled_back',
         'drift_detected',
@@ -37,6 +38,7 @@ export class CreatePlatformAuditEntry1779195577000
         'security_signal_failed',
         'new_address_notification_failed',
         'global_admin_notification_failed',
+        'space_admin_notification_failed',
         'session_invalidation_failed',
         'rejected_validation',
         'rejected_conflict'
