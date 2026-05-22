@@ -220,11 +220,11 @@ extend type PlatformAdminQueryResults {
     """Pagination — items to return after the cursor."""
     after: String
     """Pagination — items to return."""
-    first: Float
+    first: Int
     """Pagination — items to return before the cursor."""
     before: String
     """Pagination — items to return."""
-    last: Float
+    last: Int
   ): UserEmailChangeAuditEntries!
 }
 ```

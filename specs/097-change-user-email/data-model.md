@@ -83,7 +83,9 @@ Append-only platform-wide audit log. **Never updated, never deleted by this feat
 | --- | --- | --- | --- |
 | `id` | `uuid` | PK, default `uuid_generate_v4()` | Standard primary key |
 | `row_id` | `int` | NOT NULL, GENERATED ALWAYS AS IDENTITY, unique | Pagination cursor key (per `docs/Pagination.md`) |
-| `created_date` | `timestamptz` | NOT NULL, default `now()` | Standard; doubles as the audit "timestamp" exposed in FR-014b |
+| `created_date` | `timestamptz` | NOT NULL, default `now()` | Inherited from `BaseAlkemioEntity`; doubles as the audit "timestamp" exposed in FR-014b |
+| `updated_date` | `timestamptz` | NOT NULL, default `now()` | Inherited from `BaseAlkemioEntity`. Unused in practice — the table is append-only — but present because the entity extends `BaseAlkemioEntity` |
+| `version` | `int` | NOT NULL, default `1` | Inherited from `BaseAlkemioEntity` optimistic-lock column. Unused in practice (append-only) but present via the base class |
 | `category` | `platform_audit_category` | NOT NULL | Discriminator for which audit-event vocabulary this row uses. This spec writes `email_change` exclusively. Future categories extend the enum. |
 | `subject_user_id` | `uuid` | NOT NULL | Required for every user-centric audit category. **No FK constraint** — the audit row references the user id by value but does NOT enforce referential integrity (see §Retention and user deletion). For non-user-centric future categories (e.g., system-level configuration change), the convention will be to use a sentinel user representing the platform; this is a future-spec concern. |
 | `initiator_user_id` | `uuid` | NULL | NULL allowed for early-rejection entries before the initiator's identity is fully resolved (FR-014b sentinel case) and for `system` / `service` initiators that have no user record. **No FK constraint** (see §Retention and user deletion). |
@@ -256,7 +258,7 @@ Up:
 1. `CREATE TYPE platform_audit_category AS ENUM ('email_change')` (single initial value; future ISO 27001 categories extend additively)
 2. `CREATE TYPE platform_audit_outcome AS ENUM (...)` (11 initial values — see §2 above; this feature itself adds 2 more (`commit_started`, `space_admin_notification_failed`) via the follow-up migrations below, and future categories extend additively via `ALTER TYPE ... ADD VALUE`)
 3. `CREATE TYPE platform_audit_initiator_role AS ENUM ('self', 'platform_admin', 'system', 'service')` (all four values upfront — see §3)
-4. `CREATE TABLE platform_audit_entry (...)` with all columns (including `category`, `correlation_id`, `details: jsonb`) and constraints
+4. `CREATE TABLE platform_audit_entry (...)` with all columns (the `BaseAlkemioEntity` columns `id`, `created_date`, `updated_date`, `version` plus `row_id`, `category`, `subject_user_id`, `initiator_user_id`, `initiator_role`, `outcome`, `failure_reason`, `correlation_id`, `details: jsonb`) and constraints
 5. Create the five indices listed above (PK, row_id, subject+category+created_date, subject+category+row_id, partial on correlation_id)
 6. (No FK constraints — `subject_user_id` and `initiator_user_id` are plain `uuid` columns. See §Retention and user deletion for rationale.)
 
