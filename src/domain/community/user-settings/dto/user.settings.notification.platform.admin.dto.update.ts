@@ -39,4 +39,13 @@ export class UpdateUserSettingsNotificationPlatformAdminInput {
   @ValidateNested()
   @Type(() => NotificationSettingInput)
   userGlobalRoleChanged?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      '[Admin] Receive a notification when a user changes their login email address',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  userEmailChanged?: NotificationSettingInput;
 }

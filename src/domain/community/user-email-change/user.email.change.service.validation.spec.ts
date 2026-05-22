@@ -2,6 +2,8 @@ import { UserService } from '@domain/community/user/user.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationExternalAdapter } from '@services/adapters/notification-external-adapter/notification.external.adapter';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -72,8 +74,15 @@ function makeService({
   const notificationAdapter = {
     publishEmailChangeSecuritySignal: vi.fn(),
     publishEmailChangeNewAddressNotification: vi.fn(),
-    publishEmailChangeGlobalAdminNotification: vi.fn(),
   } as unknown as NotificationExternalAdapter;
+
+  const notificationPlatformAdapter = {
+    userEmailChangeGlobalAdmin: vi.fn(),
+  } as unknown as NotificationPlatformAdapter;
+
+  const notificationSpaceAdapter = {
+    userEmailChangeSpaceAdmin: vi.fn(),
+  } as unknown as NotificationSpaceAdapter;
 
   const subjectFootprintResolver = {
     buildSubjectFootprint: vi.fn(),
@@ -89,6 +98,8 @@ function makeService({
     subjectFootprintResolver,
     kratosService,
     notificationAdapter,
+    notificationPlatformAdapter,
+    notificationSpaceAdapter,
     userService,
     userLookupService,
     configService,

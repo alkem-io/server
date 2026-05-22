@@ -24,10 +24,12 @@ export interface RecordEmailChangeAuditInput {
 }
 
 /**
- * The 11 outcome values the email-change category is permitted to write.
+ * The 13 outcome values the email-change category is permitted to write.
  * Service-layer enforcement of the per-category subset (data-model.md
  * §Validation rules); the cross-category Postgres enum would accept future
- * categories' outcomes, but this service rejects them.
+ * categories' outcomes, but this service rejects them. `COMMIT_STARTED` is the
+ * internal crash-window breadcrumb (research.md §R15) — a valid email-change
+ * outcome to write, but filtered out of the GraphQL-facing read methods.
  */
 const ALLOWED_EMAIL_CHANGE_OUTCOMES: ReadonlySet<PlatformAuditOutcome> =
   new Set([
@@ -39,9 +41,11 @@ const ALLOWED_EMAIL_CHANGE_OUTCOMES: ReadonlySet<PlatformAuditOutcome> =
     PlatformAuditOutcome.SECURITY_SIGNAL_FAILED,
     PlatformAuditOutcome.NEW_ADDRESS_NOTIFICATION_FAILED,
     PlatformAuditOutcome.GLOBAL_ADMIN_NOTIFICATION_FAILED,
+    PlatformAuditOutcome.SPACE_ADMIN_NOTIFICATION_FAILED,
     PlatformAuditOutcome.SESSION_INVALIDATION_FAILED,
     PlatformAuditOutcome.REJECTED_VALIDATION,
     PlatformAuditOutcome.REJECTED_CONFLICT,
+    PlatformAuditOutcome.COMMIT_STARTED,
   ]);
 
 @Injectable()

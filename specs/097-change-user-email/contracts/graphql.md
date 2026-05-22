@@ -38,6 +38,7 @@ enum UserEmailChangeAuditOutcome {
   SECURITY_SIGNAL_FAILED
   NEW_ADDRESS_NOTIFICATION_FAILED
   GLOBAL_ADMIN_NOTIFICATION_FAILED
+  SPACE_ADMIN_NOTIFICATION_FAILED
   SESSION_INVALIDATION_FAILED
   REJECTED_VALIDATION
   REJECTED_CONFLICT
@@ -268,7 +269,7 @@ The `extensions.details` payload on these errors carries the structured context 
 ## 8. Schema-baseline diff expectations
 
 When `pnpm run schema:diff` runs against this PR, the expected change-report.json content is:
-- **Additions only**: 2 new enums (`UserEmailChangeInitiatorRole` with 2 values; `UserEmailChangeAuditOutcome` with 11 values), 4 new object types (`UserEmailChangeAuditEntry`, `UserEmailChangeAuditEntries`, `UserEmailChangeResult`; `UserProfileSummary` only if no equivalent already exists), 2 new input types, 2 new mutations, 2 new query fields (both `extend` on `PlatformAdminQueryResults`).
+- **Additions only**: 2 new enums (`UserEmailChangeInitiatorRole` with 2 values; `UserEmailChangeAuditOutcome` with 12 values — the 11 original outcomes plus `SPACE_ADMIN_NOTIFICATION_FAILED`, added with the per-space email-change fan-out per spec.md §FR-016e), 4 new object types (`UserEmailChangeAuditEntry`, `UserEmailChangeAuditEntries`, `UserEmailChangeResult`; `UserProfileSummary` only if no equivalent already exists), 2 new input types, 2 new mutations, 2 new query fields (both `extend` on `PlatformAdminQueryResults`).
 - **No breaking changes**, no field removals, no field type changes, no nullability changes on existing fields.
 - **No deprecations** introduced.
 

@@ -2,7 +2,7 @@
 
 **Feature**: 097-change-user-email (Platform Admin, No Verification)
 **Date**: 2026-05-13
-**Last Updated**: 2026-05-18 (smaller MVP — token / verification decisions moved to 098's research)
+**Last Updated**: 2026-05-22 (§R8 reconciled to the FOUR-event implementation — added Event 4, the per-space admin fan-out FR-016e, plus the `space_admin_notification_failed` outcome; code is source of truth) — previously 2026-05-21 (§R4 / §R7 reconciled to the no-DB-transaction implementation; §R15 crash-window breadcrumb added) and 2026-05-18 (smaller MVP; token / verification decisions moved to 098's research)
 
 Spec.md §Clarifications resolves all open questions by direct contract. This document records the **technical research decisions** that bridge those clarifications to concrete API and pattern choices. Each decision lists the alternatives that were considered and the rationale for the chosen path. Companion spec 098 owns the additional research decisions specific to the email-ownership verification flow (token generation, TTL, supersession semantics, confirm-mutation session model).
 
@@ -48,11 +48,13 @@ Spec.md §Clarifications resolves all open questions by direct contract. This do
 
 **Rationale**:
 - Kratos is the authority for "what email can log in". Even if Alkemio is updated first, a login attempt would still hit Kratos and fail until Kratos is updated — so reaching a half-committed `Alkemio=new, Kratos=old` state leaves the user inaccessible. Neither half-state is acceptable; we want the rollback path to be cheap and idempotent. Reverting Kratos (idempotent `updateIdentity` back to old trait) is straightforward.
-- The reverse ordering — Alkemio first — would require us to revert a TypeORM write on failure of the external call. We can roll back the local transaction freely while it is still in-flight, but the Kratos call cannot happen inside the same transaction; the moment we commit the local txn we have lost the ability to atomic-roll-back. Doing Kratos first keeps the local txn open until both sides have succeeded.
+- The Alkemio `User.email` write is a single `UserService.save` that auto-commits immediately — the implementation deliberately uses **no surrounding DB transaction** (an open transaction cannot usefully span the multi-second retried Kratos HTTP call, and holding a DB connection + row locks across that retry budget is itself undesirable). An Alkemio-first ordering would therefore commit the local write before Kratos is confirmed, leaving an already-committed DB write to undo on Kratos failure. Kratos-first instead places the *first* committed write on the side whose compensation is cheap and idempotent (an `updateIdentity` revert); the Alkemio write is attempted only after the Kratos write has succeeded.
 
 **Alternatives considered**:
-- Alkemio first: rejected per the above; loses the cheap local-transaction rollback.
+- Alkemio first: rejected per the above — it commits the local DB write before the Kratos write is confirmed, forcing a DB-side compensation; Kratos-first keeps the cheap idempotent revert on the side that commits first.
 - Two-phase commit / outbox pattern: rejected (FR-009 explicitly says "compensating-action approach is acceptable"; an outbox introduces async semantics that contradict "no background reconciliation").
+
+**Implementation note (code is source of truth — reconciled 2026-05-21)**: `commitAcrossSides` performs the Alkemio write as a single `UserService.save` with no surrounding DB transaction. An earlier draft of this section described keeping a "local transaction open until both sides have succeeded"; that was never implemented and is not sound — a DB transaction cannot span the retried Kratos HTTP call. The all-or-nothing guarantee (FR-009) is delivered entirely by the compensating Kratos revert (§R5) and the drift-detected path on revert exhaustion — never by a DB-transaction rollback.
 
 ---
 
@@ -73,7 +75,7 @@ Spec.md §Clarifications resolves all open questions by direct contract. This do
 
 ## R6 — Drift state without a pending entity: where do observed values live?
 
-**Decision**: For `drift_detected` audit entries, the `details: jsonb` column on `platform_audit_entry` carries the per-side observed values under the email-change category's documented keys: `details.oldEmail` = the value observed on the Alkemio side at the moment of drift (= the original pre-change email, since the Alkemio write never started due to Kratos-first ordering); `details.newEmail` = the value observed on the Kratos side at the moment of drift (= the attempted new email, since the Kratos write succeeded but the revert failed). The drift-resolve admin mutation reads the latest unresolved-drift audit entry (filtered to `category = 'email_change'` AND `outcome = 'drift_detected'` AND no subsequent `drift_resolved` row), validates that `canonicalEmail` is one of those two values, and applies alignment writes only where the observed value differs. The resolution row reuses the drift row's `correlation_id` so the two rows are explicitly linked (see data-model.md §Correlation semantics).
+**Decision**: For `drift_detected` audit entries, the `details: jsonb` column on `platform_audit_entry` carries the per-side observed values under the email-change category's documented keys: `details.oldEmail` = the value observed on the Alkemio side at the moment of drift (= the original pre-change email, since the Alkemio write never started due to Kratos-first ordering); `details.newEmail` = the value observed on the Kratos side at the moment of drift (= the attempted new email, since the Kratos write succeeded but the revert failed). The drift-resolve admin mutation reads the latest unresolved-drift audit entry (filtered to `category = 'email_change'` AND `outcome = 'drift_detected'` AND no subsequent `drift_resolved` row), validates that `canonicalEmail` is one of those two values, and applies alignment writes only where the observed value differs. The resolution row reuses the drift row's `correlation_id` so the two rows are explicitly linked (see data-model.md §Correlation semantics). (§R15 generalises this "latest unresolved" lookup to also surface a `commit_started` crash breadcrumb; the resolution mechanics described here are unchanged.)
 
 **Rationale**:
 - This spec does NOT introduce a `pending` entity (no multi-step lifecycle is needed). Drift state therefore needs to live somewhere; the audit entry is the natural home — it already carries `subject_user_id`, `failure_reason`, `timestamp`, `correlation_id`, and the per-category `details` JSONB payload (which is exactly where `oldEmail` / `newEmail` belong under Path A).
@@ -88,12 +90,13 @@ Spec.md §Clarifications resolves all open questions by direct contract. This do
 
 ## R7 — Email uniqueness check (single-pass at commit time)
 
-**Decision**: Implement uniqueness via a database query inside the SAME transaction that prepares the Alkemio side-write. Query: `SELECT 1 FROM user WHERE LOWER(email) = LOWER($1) AND id != $userID LIMIT 1`. Combine with a Kratos lookup `kratosIdentityClient.listIdentities({ credentialsIdentifier: newEmail })` (case-insensitive on Kratos's side per `@ory/kratos-client` default). Both must return empty for the commit to proceed.
+**Decision**: Implement uniqueness as a single pre-commit check — **not** inside a DB transaction. The Alkemio side uses `UserService.getUserByEmail(newEmail)` (case-insensitive lookup on the `user.email` column); the Kratos side uses `KratosService.findIdentityByEmail(newEmail)`. The new email is a conflict when a *different* Alkemio user holds it, or when a Kratos identity other than the subject's own holds it. Both checks run once, before the two-side commit begins.
 
 **Rationale**:
 - Since there is no multi-step flow (no "initiate then confirm"), we only need a single uniqueness check at commit time. There is no equivalent of 098's FR-004a confirm-time re-check.
 - Case-insensitive comparison via `LOWER()` matches FR-006. The `email` column on `user` is already a single canonical form preserved as-supplied, with `unique: true` enforced at the DB level — but the unique constraint is by binary equality, so the explicit `LOWER()` is necessary to catch case variants.
 - The Kratos check is independent of any Alkemio user — there can be a Kratos identity for an email that has no Alkemio user (e.g., mid-registration) and we still must reject.
+- The check is **not** wrapped in a DB transaction with the Alkemio side-write — there is a deliberately-accepted TOCTOU window between the check and the commit. Closing it would require a per-subject lock (rejected just below as overkill for low-frequency admin tooling). The `user.email` DB unique constraint is the hard backstop: a racing duplicate that slips past the check fails at the DB and surfaces as a commit-time error, not a silent duplicate.
 
 **Alternatives considered**:
 - Relying solely on the DB unique constraint to fail at commit: rejected (the failure surface is a Postgres unique-violation exception that is harder to translate to a clean FR-015 `conflict` error; and the Kratos side has no equivalent constraint).
@@ -103,7 +106,7 @@ Spec.md §Clarifications resolves all open questions by direct contract. This do
 
 ## R8 — Outbound notifications: which adapter, what events / payloads?
 
-**Decision**: Add THREE new entries to `NotificationEvent` and publish each via the existing `NotificationExternalAdapter.sendExternalNotifications(event, payload)` pattern at `src/services/adapters/notification-external-adapter/notification.external.adapter.ts`. Each payload is a new typed class added to `@alkemio/notifications-lib` (extension; backward-compatible).
+**Decision**: Add FOUR new entries to `NotificationEvent` and publish each via the existing `NotificationExternalAdapter.sendExternalNotifications(event, payload)` pattern at `src/services/adapters/notification-external-adapter/notification.external.adapter.ts`. Each payload is a new typed class added to `@alkemio/notifications-lib` (extension; backward-compatible). Events 1–3 are published exactly once per triggering outcome; event 4 (the per-space fan-out) is published once per space the subject is a member of.
 
 **Event 1 — `USER_EMAIL_CHANGE_SECURITY_SIGNAL`** (sent to the **OLD** address — FR-016):
 - `recipientEmail` (the old address)
@@ -120,50 +123,68 @@ Spec.md §Clarifications resolves all open questions by direct contract. This do
 - `loginUrl` (implementation chooses the exact path; built from existing client-web host config)
 - (No internal identifiers.)
 
-**Event 3 — `USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION`** (fanned out by the notifications-service to a configurable administrator recipient set — minimally global platform admins, extensible downstream to admins of the subject's spaces / leads of the subject's organisations without a further server change — FR-016d):
+**Event 3 — `USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION`** (fanned out to the platform-admin recipient set, resolved **on the server** at publish time — FR-016d):
+- `recipients: UserPayload[]` — the resolved platform-admin recipient set, embedded in the payload by the shared `buildBaseEventPayload()` helper, exactly as every other notification event already does (see the resolution model below).
 - `subjectProfileSummary` (`{ id, displayName }`)
 - `oldEmail` (full — admin recipients are trusted)
 - `newEmail` (full — admin recipients are trusted)
 - `initiatorProfileSummary` (`{ id, displayName }`)
 - `initiatorRole`
 - `commitTimestampISO8601`
-- `triggerOutcome` (`COMMITTED` or `DRIFT_DETECTED` — so the template / recipient UI can render appropriate phrasing)
-- `subjectMemberships` — the subject's organisational footprint at commit time, snapshot from the credential repository at publish time:
-  - `spaces: [{ spaceId: UUID, level: SpaceLevel, roles: ('admin' | 'lead' | 'member')[] }]`
-  - `organizations: [{ organizationId: UUID, roles: ('admin' | 'associate')[] }]`
-  - Identifiers + role tags only — the membership block MUST NOT enumerate the admin / lead users of those spaces / organisations (those resolve at delivery time in the notifications-service to avoid a stale-recipient race window).
-- `subjectGlobalRoles: string[]` — the subject's global role credentials beyond `GLOBAL_ADMIN` (e.g., `GLOBAL_SUPPORT`, `GLOBAL_LICENSE_MANAGER`, `BETA_TESTER`), to support policies that cross-reference (e.g., "if subject is global-support, also notify the security ops group").
+- `triggerOutcome` (`COMMITTED` or `DRIFT_DETECTED` — so the template can render appropriate phrasing)
+- `subjectMemberships` / `subjectGlobalRoles` — the subject's space/organisation footprint and global-role credentials. **Retained only as optional informational context for the admin email body** (e.g., "this user administers 3 spaces"), NOT as recipient-resolution inputs. The server already builds these via `user.email.change.subject.footprint.util.ts`, so keeping them is additive; they MAY be dropped if the admin template does not surface them — an implementation call, not a wire-contract requirement.
 
-**Recipient resolution model — deliberate departure from existing Global Role Change pattern**:
+**Event 4 — `USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION`** (a **per-space** fan-out — published once per space the subject is a member of, delivered to that space's admins and leads — FR-016e):
+- The payload extends `NotificationEventPayloadSpace`, so it carries the standard space-event envelope: `eventType`, `triggeredBy`, `platform`, a server-resolved `recipients: UserPayload[]` array (that space's admins/leads, minus the subject), and the single `space` the event concerns.
+- `subjectProfileSummary` (`{ id, displayName }`)
+- `oldEmail` (full — admin / lead recipients are trusted)
+- `newEmail` (full — same rationale)
+- `initiatorProfileSummary` (`{ id, displayName }`)
+- `initiatorRole`
+- `commitTimestampISO8601`
+- `triggerOutcome` (`COMMITTED` or `DRIFT_DETECTED`)
+- (No `subjectMemberships` / `subjectGlobalRoles` — this event already concerns exactly one space; broader footprint context is the global-admin event's job.)
 
-The existing `PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED` flow resolves recipients on the server (`notification.platform.adapter.ts` calls `getNotificationRecipientsPlatform()` against credentials `[GLOBAL_ADMIN, GLOBAL_SUPPORT, GLOBAL_LICENSE_MANAGER]` filtered by `RECEIVE_NOTIFICATIONS_ADMIN`, then embeds a `recipients: UserPayload[]` array inside the published payload). The notifications-service for that flow does not rediscover recipients — it renders the template and selects per-recipient channels over the server-provided list.
+**Recipient resolution model — reuse the existing Global Role Change pattern**:
 
-FR-016d **does not follow that pattern**. Instead:
-- The server publishes ONE event per triggering outcome carrying the **subject footprint** (memberships + global roles) — NOT a pre-resolved recipient list.
-- The notifications-service is responsible for enumerating recipients at delivery time, applying its configured policy over the subject footprint (e.g., "global admins ∪ admins of `spaces[]` ∪ leads of `organizations[]`").
-- Per-recipient channel selection (email / push / in-app) remains a notifications-service responsibility, identical to the Global Role Change flow.
+The global-admin fan-out resolves its recipient set **on the server**, identically to `PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED`:
+- `NotificationPlatformAdapter` calls `getNotificationRecipientsPlatform()` → `NotificationRecipientsService.getRecipients()`, which resolves recipients against the global-admin credential set (`getGlobalAdminCriteria()` → `[GLOBAL_ADMIN, GLOBAL_SUPPORT, GLOBAL_LICENSE_MANAGER]`), filtered by each candidate's per-user notification setting and by the `RECEIVE_NOTIFICATIONS_ADMIN` privilege.
+- The resolved list is embedded as `recipients: UserPayload[]` in the published payload via `buildBaseEventPayload()` — the shape every other notification event already carries.
+- The notifications-service does NOT resolve recipients: it renders the template and sends over the server-provided list, identical to every other event.
+- The subject of the change MUST be excluded from this set — the subject already receives the security-signal and new-address messages (spec.md FR-009 / clarification 2026-05-20).
+- A `USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION` case is added to `getChannelsSettingsForEvent()`, gated on the dedicated `notification.platform.admin.userEmailChanged` per-user setting that this feature ships (default email-on; backfilled onto every existing `user_settings` row by migration `1779287475191-AddUserEmailChangedNotificationSetting`) so admins can opt out of this notification specifically.
 
-**Why this departure** (rather than reusing the Global Role Change server-resolve pattern):
-1. **ISO 27001 trajectory** (FR-014a Session 2026-05-19): `platform_audit_entry` is being introduced as a genuinely platform-wide audit foundation. Future audit categories (`AUTHENTICATION`, `ACCESS_CONTROL`, `DATA_PRIVACY`) will repeatedly want broader recipient classes than "global admins". A payload-carries-subject-footprint shape generalises to all of them; a payload-carries-pre-resolved-recipients shape forces every future category to re-do recipient-resolver work on the server.
-2. **Recipient flexibility without server churn**: changing "who counts as an admin of this user" — adding space admins of the subject's spaces, adding org leads of the subject's orgs, restricting to a subset of global admins — becomes a pure `alkemio-notifications` policy change. No server diff, no `@alkemio/notifications-lib` bump, no audit-side `_failed` outcome semantics change.
-3. **Stale-recipient race**: the existing Global Role Change pattern computes recipients at publish time and ships them inline, which means the recipient list ages between publish and delivery. Resolving at delivery time naturally tracks role-grant changes that happen during the publish/deliver window. (This was also part of the original FR-016d rationale before this revision corrected the inconsistency.)
+**Per-space fan-out — recipient resolution (Event 4 / FR-016e)**:
 
-**Cost paid for the departure**:
-- The notifications-service must grow a recipient-resolver capability for this event family. It does not have one today; today it only renders + channels-out server-provided lists. For the initial cut, the resolver can hard-code "global admins only" (replicating today's behaviour); the subject-footprint fields in the payload exist so that broader policies can be added later without re-bumping `@alkemio/notifications-lib`.
-- `@alkemio/notifications-lib` must define the membership + global-roles payload classes upfront, even though the initial notifications-service resolver will ignore them. This is the cost of forward-compatibility.
+The space-admin fan-out reuses the same server-side resolution pipeline, scoped per space:
+- `UserEmailChangeService.publishSpaceAdminNotifications` resolves the subject footprint once, then publishes one event per space the subject is a member of — any role (member, lead, or admin) — via `NotificationSpaceAdapter.userEmailChangeSpaceAdmin(eventData, spaceId)`. A subject who belongs to no space produces zero events.
+- For each space, `NotificationRecipientsService` resolves recipients against that space's authorization policy and a `getSpaceAdminAndLeadCredentialCriteria()` set — `SPACE_ADMIN ∪ SPACE_SUBSPACE_ADMIN ∪ SPACE_LEAD`. **No `RECEIVE_NOTIFICATIONS_ADMIN` privilege filter is applied** — a space lead who lacks that platform-level privilege must still be notified (FR-016e); the per-user `notification.space.admin.userEmailChanged` setting is the only gate. (That setting is also shipped by this feature — default email-on, backfilled by migration `1779480100000-AddSpaceAdminEmailChangeNotificationSetting`.)
+- The resolved recipients (minus the subject) are embedded as `recipients: UserPayload[]` via `buildSpacePayload()`; the notifications-service consumes the list directly, exactly as for the global-admin event.
+- Each per-space publish runs under its own retry / audit envelope (`runWithAuditFailure`), so one space's publish failure neither blocks the others nor masks them — exhaustion writes a `space_admin_notification_failed` audit row for that space; the commit always stands. A footprint / profile resolution failure before any per-space publish writes a single `space_admin_notification_failed` row.
+- A `USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION` case is added to `getChannelsSettingsForEvent()` (→ `notification.space.admin.userEmailChanged`) and to the space-authorization-policy branch of the recipient resolver.
 
-**Rationale (general — three-event split)**:
+**Why resolve on the server** (this reverses the original FR-016d delivery-time-resolution design):
+1. **No authenticated path in `alkemio-notifications`**: the notifications-service has no wired authentication to the server's GraphQL API — its only outbound call (the blacklist sync) is anonymous, and platform-admin emails / `usersWithAuthorizationCredential` are privileged (`READ_USERS`). Delivery-time resolution would require building service-account authentication (non-interactive Kratos login, token handling, secret management) that does not exist in that service today. This gap was surfaced by the notifications-side analysis for spec 004.
+2. **One recipient model across the system**: every other notification event already carries a server-resolved `recipients` array. The global-admin fan-out using the same shape keeps a single recipient model and reuses the proven `NotificationRecipientsService` pipeline (credential criteria + settings filter + privilege filter). The server is also where the authorization context needed to resolve admins actually lives.
+3. **No new infrastructure**: no recipient-resolver capability, no authentication, no secret to provision in `alkemio-notifications`.
+
+**Cost / accepted trade-offs**:
+- **Recipient-policy changes require a server diff**: broadening the set later (e.g. admins of the subject's spaces, leads of the subject's organisations) is a server change, not a pure notifications-service policy change. Accepted — the server is where the authorization data lives.
+- **Stale-recipient race**: recipients are computed at publish time and shipped inline, so the list can age slightly between publish and delivery — the same minor race the Global Role Change flow already accepts.
+- **ISO 27001 trajectory**: future audit categories wanting broader recipient classes will each extend the server-side resolver rather than reuse a notifications-service policy. Accepted as bounded work.
+
+**Rationale (general — four-event split)**:
 - The existing `NotificationExternalAdapter` is the canonical entry point — already integrates with `alkemio-notifications` over RabbitMQ, already supports the typed-payload pattern.
-- Three distinct events (rather than one parametrized event) keep templates simple — different recipients, different threat models, different content rules. Splitting also lets the audit table record per-channel failure distinctly (`security_signal_failed`, `new_address_notification_failed`, `global_admin_notification_failed`).
-- Masking applied at the OLD address (FR-016) is dropped for the NEW address (FR-016c, legitimate recipient) and dropped for the admin fan-out (FR-016d, trusted recipients).
+- Four distinct events (rather than one parametrized event) keep templates simple — different recipients, different threat models, different content rules. Splitting also lets the audit table record per-channel failure distinctly (`security_signal_failed`, `new_address_notification_failed`, `global_admin_notification_failed`, `space_admin_notification_failed`).
+- Masking applied at the OLD address (FR-016) is dropped for the NEW address (FR-016c, legitimate recipient) and dropped for the global-admin fan-out (FR-016d) and the per-space admin fan-out (FR-016e) — both have trusted administrator / lead recipients.
 
 **Alternatives considered**:
 - A single combined event with a `recipientType` discriminator: rejected — recipient sets / channels / content rules are too divergent.
 - Inline SMTP / direct `nodemailer`: rejected (bypasses the established abstraction).
-- Reuse the Global Role Change pattern exactly (server pre-resolves `recipients: UserPayload[]` for FR-016d): **rejected** — locks recipient policy to a server diff for every future broadening, conflicts with the ISO 27001 audit trajectory's expected recipient diversity, and creates the stale-recipient race window noted above. The cost of departing (notifications-service grows a resolver) is paid once and pays back across all future audit categories.
-- Embed the resolved admin / lead user-ids of the subject's spaces / organisations inside `subjectMemberships`: rejected — same stale-recipient race as the Global Role Change inline-recipients design, and unnecessary because the notifications-service can resolve them at delivery time from the same credential repository.
+- **Delivery-time resolution in `alkemio-notifications` (server ships only the subject footprint; the notifications-service enumerates recipients)**: **rejected** — this was the original FR-016d design, reversed here. The notifications-service has no authenticated GraphQL path to read platform-admin emails, so it would require standing up service-account authentication that does not exist; it also forks the recipient model away from every other notification event. The forward-compatibility benefit (broadening recipients without a server diff) does not outweigh that cost.
+- Carrying both a resolved `recipients` array AND the subject footprint as resolver input: unnecessary — recipients are resolved on the server; the footprint is retained only as optional email-display context (see the Event 3 payload above).
 
-**Open dependency note**: This requires a coordinated bump of `@alkemio/notifications-lib` (3 new event payload classes, including the `subjectMemberships` + `subjectGlobalRoles` blocks on event 3), corresponding template additions (3 new templates), AND a new recipient-resolver capability in `alkemio-notifications` for event 3 (initial cut: global admins only, matching today's effective behaviour; future cuts can broaden using the subject footprint already carried in the payload). Tracked in tasks.md (T013, T014, T015).
+**Open dependency note**: This requires a coordinated bump of `@alkemio/notifications-lib` (4 new event payload classes) and 4 new templates. On the server, events 3 and 4 are wired through `NotificationRecipientsService` (reusing the Global Role Change resolver path) so each published payload carries a server-resolved `recipients` array — event 3 against the global-admin credential set, event 4 against each space's admin/lead credential set — plus a `getChannelsSettingsForEvent()` case per event. The `alkemio-notifications` service needs NO recipient-resolver capability — it consumes the recipient list like every other event. Tracked in tasks.md (T013, T014, T015, and the post-merge notification-rework task T015a). The companion notifications-side scope is `prd-notifications-email-change.md`.
 
 ---
 
@@ -175,16 +196,18 @@ FR-016d **does not follow that pattern**. Instead:
 
 ## R10 — Audit-outcome canonical enumeration
 
-**Decision**: The `platform_audit_entry.outcome` column is typed as the cross-category Postgres native enum `platform_audit_outcome`. Initial values (the 11 outcomes this spec writes — all under `category = 'email_change'`):
+**Decision**: The `platform_audit_entry.outcome` column is typed as the cross-category Postgres native enum `platform_audit_outcome`. Initial values (the 11 outcomes created by the table-creation migration — all under `category = 'email_change'`):
 
 `committed`, `rolled_back`, `drift_detected`, `drift_resolved`, `drift_resolution_failed`, `security_signal_failed`, `new_address_notification_failed`, `global_admin_notification_failed`, `session_invalidation_failed`, `rejected_validation`, `rejected_conflict`
 
-The enum is cross-category by design (Path A — see R14). Per-category outcome subsets are enforced at the service / audit-service layer, not by the DB enum: a `category = 'email_change'` row must only carry one of the 11 values listed above; a future `category = 'authentication'` row must only carry the auth-specific outcomes added by that future spec. Future categories — and companion spec 098 — extend the enum additively via `ALTER TYPE platform_audit_outcome ADD VALUE 'foo'`, which is non-breaking and requires no table migration.
+Two follow-up migrations in this same feature extend the enum additively: `1779372350382-AddEmailChangeCommitStartedAuditOutcome` adds a 12th value, `commit_started` — the crash-window breadcrumb (§R15), written by the email-change category as an internal progress marker (NOT projected to the GraphQL `UserEmailChangeAuditOutcome` enum); and `1779480000000-AddEmailChangeSpaceAdminNotificationAuditOutcome` adds a 13th value, `space_admin_notification_failed` — the per-space sibling of `global_admin_notification_failed`, written when a per-space email-change fan-out (Event 4 / FR-016e) exhausts its retry budget (this one IS projected to the GraphQL enum, exactly like the other `*_notification_failed` outcomes). The email-change category therefore writes 13 outcome values; the GraphQL `UserEmailChangeAuditOutcome` projection exposes 12 of them (all but `commit_started`).
+
+The enum is cross-category by design (Path A — see R14). Per-category outcome subsets are enforced at the service / audit-service layer, not by the DB enum: a `category = 'email_change'` row must only carry one of the 13 email-change values; a future `category = 'authentication'` row must only carry the auth-specific outcomes added by that future spec. Future categories — and companion spec 098 — extend the enum additively via `ALTER TYPE platform_audit_outcome ADD VALUE 'foo'`, which is non-breaking and requires no table migration.
 
 **Rationale**:
 - Drawn from the outcomes this spec actually writes. Companion spec 098 ADDS (additively) the verification-flow outcomes when it lands (`initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`), still under `category = 'email_change'`.
 - A Postgres native enum is preferred over varchar for both space economy and write-time validation. The cross-category shape gives DB-level enforcement of "is this string even an outcome value the platform recognises", while service-layer code does the finer "is this outcome value valid for this category" check.
-- The GraphQL feature-scoped enum `UserEmailChangeAuditOutcome` (per contracts/graphql.md §1) exposes only the 11 email-change outcomes; the projection layer narrows the Postgres enum to the GraphQL enum when reading `category = 'email_change'` rows.
+- The GraphQL feature-scoped enum `UserEmailChangeAuditOutcome` (per contracts/graphql.md §1) exposes 12 of the 13 email-change outcomes — every value except the internal `commit_started` breadcrumb (§R15); the projection layer narrows the Postgres enum to the GraphQL enum when reading `category = 'email_change'` rows and filters the breadcrumb out.
 
 **Alternatives considered**:
 - One generic `rejected` outcome with the reason in a separate column: considered, but the spec's audit-query (FR-014b) requires `outcome` to be one of the enumerated values, and splitting `rejected_validation` / `rejected_conflict` makes the GraphQL enum more useful to admins.
@@ -260,6 +283,30 @@ The enum is cross-category by design (Path A — see R14). Per-category outcome 
 
 ---
 
+## R15 — Crash-window durability: the `commit_started` breadcrumb
+
+**Decision**: `commitAcrossSides` persists a `commit_started` audit entry **before** the forward Kratos write. A new `platform_audit_outcome` value `commit_started` is added by an additive follow-up migration. The drift-resolve lookup (`findLatestUnresolvedDriftBySubject`) is generalised to surface — in addition to an unresolved `drift_detected` row — a `commit_started` row that has no terminal row for its `correlation_id` and has not been superseded by a later `committed` / `drift_resolved` for the subject. `resolveDrift` consumes such a row unchanged: it reads both sides and aligns them to the admin-chosen canonical address.
+
+**Problem**: §R4's Kratos-first ordering and §R5's compensating revert make the *handled* failure modes safe — a failed forward write, or a failed Alkemio write with a successful or exhausted revert. They do not cover an *unhandled* failure: the server process being terminated (k8s rolling deploy / SIGTERM mid-request, OOM-kill, pod eviction, node loss) **between** the successful Kratos write and the Alkemio write. The saga's state lives only on the call stack, so a process death there leaves Kratos holding the new address and Alkemio the old one — real drift — with no audit row, no notification, and nothing for `resolveDrift` to find (drift detection was keyed only on `drift_detected`, which is written only when the *revert* throws). That silently reintroduces the divergence the feature exists to prevent (spec.md §User Story 2) and breaks the spec's own acceptance invariant that "the audit trail captures any compensations performed" (spec.md §Assumptions).
+
+**Rationale**:
+- A breadcrumb written before the first side-write is the minimum durable state that turns a mid-commit crash from *silent* into *discoverable*. It is an ordinary append-only audit row — no `email_change_pending` entity, no lifecycle, no background reconciler — so it stays inside the spec's simplicity constraints (plan.md §Constitution Check #10).
+- Winston / APM markers are insufficient: spec.md §FR-014a makes the audit table the system of record and explicitly says structured logs MUST NOT be treated as such. The breadcrumb therefore must be an audit row.
+- `resolveDrift` already reads both sides and writes only where they differ, so a `commit_started` row reconciles with zero new resolution code — including the benign case (crash before the Kratos write: both sides still old) where alignment is a no-op that simply closes the breadcrumb.
+- Detection is per-operation (`correlation_id`) and supersession-aware (a later `committed` / `drift_resolved` for the subject heals an earlier breadcrumb), so the common recovery path — an admin retries a crashed change and the retry commits — leaves no stale outstanding incident. Making the lookup `correlation_id`-keyed also corrected a latent recency-pairing bug in the original `drift_detected`-only query.
+
+**Alternatives considered**:
+- Persist nothing; accept the crash window as residual risk: rejected — it is the precise failure the feature exists to eliminate, and its consequence is unbounded (permanent silent drift, no notification to either address).
+- An `email_change_pending` / saga-state table: rejected — heavier than a synchronous flow needs, and explicitly deferred to spec 098 (spec.md §Out of Scope). An audit row already carries everything the breadcrumb needs (`subject`, `correlation_id`, `details.oldEmail` / `details.newEmail`).
+- A background reconciler sweeping for dangling breadcrumbs: rejected — FR-009a and plan.md §Constitution Check #10 forbid a background reconciler; detection stays on-demand at drift-resolve time.
+- Reusing the value `initiated` (reserved by spec 098 for its self-service initiation rows): rejected — 098's `confirm` reuses `commitAcrossSides` and would then write both an `initiated` row and a second breadcrumb; a distinct `commit_started` value keeps the two unambiguous.
+
+**Cost / accepted trade-offs**:
+- A successful change writes two rows (`commit_started` then `committed`) instead of one. The breadcrumb is filtered out of the GraphQL projections (FR-014b / FR-021), so the admin-facing audit history is unchanged — the extra row is internal forensic detail.
+- The breadcrumb adds one audit-table INSERT before the Kratos write — negligible against the p95 < 2 s target. If that INSERT fails the operation aborts before any side-write, which is the correct fail-safe (no safety net ⇒ do not proceed).
+
+---
+
 ## Summary
 
 | ID | Topic | Decision (one-liner) |
@@ -267,16 +314,17 @@ The enum is cross-category by design (Path A — see R14). Per-category outcome 
 | R1 | Kratos trait update API | `updateIdentity` (full replace, including `verifiable_addresses`) |
 | R2 | Kratos session invalidation | `disableIdentitySessions(id)` — single call |
 | R3 | Token generation | N/A in this spec — owned by 098 |
-| R4 | Commit ordering | Kratos first, then Alkemio (cheap local rollback) |
+| R4 | Commit ordering | Kratos first, then Alkemio; no DB transaction — all-or-nothing delivered by the compensating Kratos revert |
 | R5 | Retry & drift | 3 attempts, exp. backoff with jitter; drift on rollback exhaustion |
 | R6 | Drift state | Lives on the `drift_detected` audit entry's `details.oldEmail` / `details.newEmail` JSONB keys; resolution rows share the drift's `correlation_id` (no `pending` entity in this spec) |
-| R7 | Uniqueness check | DB `LOWER()` query + Kratos `listIdentities`, once at commit time |
-| R8 | Outbound notifications | Extend `NotificationEvent` with THREE events (OLD-address signal, NEW-address notification, global-admin fan-out) + reuse `NotificationExternalAdapter` (admin fan-out reuses the existing Global Role Change pattern) |
+| R7 | Uniqueness check | `UserService.getUserByEmail` + Kratos `findIdentityByEmail`, once pre-commit; no transaction (accepted TOCTOU window; DB unique constraint is the backstop) |
+| R8 | Outbound notifications | Extend `NotificationEvent` with FOUR events (OLD-address signal, NEW-address notification, global-admin fan-out, per-space admin fan-out) + reuse `NotificationExternalAdapter`; both admin fan-outs server-resolve recipients via the existing Global Role Change pattern (per-space event published once per space the subject is a member of) |
 | R9 | client-web URL | N/A in this spec — owned by 098 |
-| R10 | Audit outcomes | Cross-category Postgres native enum `platform_audit_outcome`; 11 initial values for the email-change subset; 098 and future ISO 27001 categories extend it additively via `ALTER TYPE ... ADD VALUE` |
+| R10 | Audit outcomes | Cross-category Postgres native enum `platform_audit_outcome`; 11 initial values for the email-change subset + `commit_started` (§R15) + `space_admin_notification_failed` (FR-016e) = 13; 098 and future ISO 27001 categories extend it additively via `ALTER TYPE ... ADD VALUE` |
 | R14 | Audit storage shape | `platform_audit_entry` — genuinely platform-wide audit-log foundation (Path A): every typed column generic, category-specific payload in `details: jsonb`, `correlation_id` for incident grouping; designed for ISO 27001 reuse in 6–12 months without any DDL migration |
 | R11 | Masking | `${firstChar}***@${firstChar}***.${tld}` |
 | R12 | Retention | Audit entries indefinite; no pending entity in this spec |
 | R13 | Test strategy | Unit for service + utils; integration for end-to-end with mocked Kratos |
+| R15 | Crash-window durability | `commit_started` audit breadcrumb written before the first side-write — a process death mid-commit stays discoverable and drift-resolvable; no pending entity, no reconciler |
 
 All NEEDS CLARIFICATION items from Technical Context are resolved by spec.md §Clarifications. No open research items remain.

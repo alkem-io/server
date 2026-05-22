@@ -3,6 +3,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { NotificationAdapterModule } from '@services/adapters/notification-adapter/notification.adapter.module';
 import { NotificationExternalAdapterModule } from '@services/adapters/notification-external-adapter/notification.external.adapter.module';
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { PlatformAuditEntry } from './platform.audit.entry.entity';
@@ -19,6 +20,7 @@ import { UserEmailChangeSubjectFootprintResolver } from './user.email.change.sub
     SpaceLookupModule,
     KratosModule,
     NotificationExternalAdapterModule,
+    NotificationAdapterModule,
   ],
   providers: [
     PlatformAuditEntryRepository,

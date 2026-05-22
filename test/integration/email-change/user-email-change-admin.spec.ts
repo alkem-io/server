@@ -2,6 +2,8 @@ import { UserService } from '@domain/community/user/user.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationExternalAdapter } from '@services/adapters/notification-external-adapter/notification.external.adapter';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { PlatformAuditInitiatorRole } from '@src/domain/community/user-email-change/enums/platform.audit.initiator.role';
@@ -123,8 +125,15 @@ function makeHarness({ initialEmail = 'old@example.com' } = {}): Harness {
   const notificationAdapter = {
     publishEmailChangeSecuritySignal: securitySignal,
     publishEmailChangeNewAddressNotification: newAddress,
-    publishEmailChangeGlobalAdminNotification: globalAdmin,
   } as unknown as NotificationExternalAdapter;
+
+  const notificationPlatformAdapter = {
+    userEmailChangeGlobalAdmin: globalAdmin,
+  } as unknown as NotificationPlatformAdapter;
+
+  const notificationSpaceAdapter = {
+    userEmailChangeSpaceAdmin: vi.fn(async () => {}),
+  } as unknown as NotificationSpaceAdapter;
 
   const configService = {
     get: vi.fn().mockReturnValue('http://localhost:3000'),
@@ -136,6 +145,8 @@ function makeHarness({ initialEmail = 'old@example.com' } = {}): Harness {
     subjectFootprintResolver,
     kratosService,
     notificationAdapter,
+    notificationPlatformAdapter,
+    notificationSpaceAdapter,
     userService,
     userLookupService,
     configService,

@@ -45,6 +45,10 @@ import { IMessage } from '@domain/communication/message/message.interface';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IUser } from '@domain/community/user/user.interface';
+import {
+  UserEmailChangeGlobalAdminNotificationPayload,
+  UserEmailChangeSpaceAdminNotificationPayload,
+} from '@domain/community/user-email-change/dto/notification.payloads';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import {
@@ -62,10 +66,12 @@ import { ClientProxy } from '@nestjs/microservices';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { AlkemioConfig } from '@src/types';
+import { NotificationInputUserEmailChangeGlobalAdmin } from '../notification-adapter/dto/platform/notification.dto.input.platform.user.email.change';
 import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutContributionCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
+import { NotificationInputUserEmailChangeSpaceAdmin } from '../notification-adapter/dto/space/notification.dto.input.space.user.email.change';
 
 interface CalloutContributionPayload {
   id: string;
@@ -113,15 +119,6 @@ export class NotificationExternalAdapter {
   ): Promise<void> {
     await this.sendExternalNotifications(
       NotificationEvent.USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION,
-      payload
-    );
-  }
-
-  public async publishEmailChangeGlobalAdminNotification(
-    payload: unknown
-  ): Promise<void> {
-    await this.sendExternalNotifications(
-      NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION,
       payload
     );
   }
@@ -778,6 +775,56 @@ export class NotificationExternalAdapter {
       type,
       role,
       ...basePayload,
+    };
+    return result;
+  }
+
+  async buildUserEmailChangeGlobalAdminNotificationPayload(
+    eventType: NotificationEvent,
+    eventData: NotificationInputUserEmailChangeGlobalAdmin,
+    recipients: IUser[]
+  ): Promise<UserEmailChangeGlobalAdminNotificationPayload> {
+    const basePayload = await this.buildBaseEventPayload(
+      eventType,
+      eventData.triggeredBy,
+      recipients
+    );
+    const result: UserEmailChangeGlobalAdminNotificationPayload = {
+      subjectProfileSummary: eventData.subjectProfileSummary,
+      oldEmail: eventData.oldEmail,
+      newEmail: eventData.newEmail,
+      initiatorProfileSummary: eventData.initiatorProfileSummary,
+      initiatorRole: eventData.initiatorRole,
+      commitTimestampISO8601: eventData.commitTimestampISO8601,
+      triggerOutcome: eventData.triggerOutcome,
+      subjectMemberships: eventData.subjectMemberships,
+      subjectGlobalRoles: eventData.subjectGlobalRoles,
+      ...basePayload,
+    };
+    return result;
+  }
+
+  async buildUserEmailChangeSpaceAdminNotificationPayload(
+    eventType: NotificationEvent,
+    eventData: NotificationInputUserEmailChangeSpaceAdmin,
+    recipients: IUser[],
+    space: ISpace
+  ): Promise<UserEmailChangeSpaceAdminNotificationPayload> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      eventData.triggeredBy,
+      recipients,
+      space
+    );
+    const result: UserEmailChangeSpaceAdminNotificationPayload = {
+      subjectProfileSummary: eventData.subjectProfileSummary,
+      oldEmail: eventData.oldEmail,
+      newEmail: eventData.newEmail,
+      initiatorProfileSummary: eventData.initiatorProfileSummary,
+      initiatorRole: eventData.initiatorRole,
+      commitTimestampISO8601: eventData.commitTimestampISO8601,
+      triggerOutcome: eventData.triggerOutcome,
+      ...spacePayload,
     };
     return result;
   }

@@ -2,6 +2,8 @@ import { UserService } from '@domain/community/user/user.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationExternalAdapter } from '@services/adapters/notification-external-adapter/notification.external.adapter';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -96,10 +98,15 @@ function harness({
     publishEmailChangeNewAddressNotification: vi
       .fn()
       .mockResolvedValue(undefined),
-    publishEmailChangeGlobalAdminNotification: vi
-      .fn()
-      .mockResolvedValue(undefined),
   } as unknown as NotificationExternalAdapter;
+
+  const notificationPlatformAdapter = {
+    userEmailChangeGlobalAdmin: vi.fn().mockResolvedValue(undefined),
+  } as unknown as NotificationPlatformAdapter;
+
+  const notificationSpaceAdapter = {
+    userEmailChangeSpaceAdmin: vi.fn().mockResolvedValue(undefined),
+  } as unknown as NotificationSpaceAdapter;
 
   const subjectFootprintResolver = {
     buildSubjectFootprint: vi.fn(async () => ({
@@ -119,12 +126,14 @@ function harness({
     subjectFootprintResolver,
     kratosService,
     notificationAdapter,
+    notificationPlatformAdapter,
+    notificationSpaceAdapter,
     userService,
     userLookupService,
     configService,
     createLogger()
   );
-  return { service, auditRows };
+  return { service, auditRows, repository, kratosService };
 }
 
 describe('UserEmailChangeService — three commit outcomes via fault injection', () => {
@@ -184,5 +193,29 @@ describe('UserEmailChangeService — three commit outcomes via fault injection',
     expect(
       auditRows.some(r => r.outcome === PlatformAuditOutcome.DRIFT_DETECTED)
     ).toBe(true);
+  });
+
+  it('writes a commit_started breadcrumb before the forward Kratos write', async () => {
+    const { service, auditRows, repository, kratosService } = harness();
+    await service.applyAdminEmailChange(
+      'admin-1',
+      'subject-1',
+      'new@example.com'
+    );
+
+    // The breadcrumb is the very first audit row, carrying both addresses.
+    expect(auditRows[0].outcome).toBe(PlatformAuditOutcome.COMMIT_STARTED);
+    expect(auditRows[0].details).toEqual({
+      oldEmail: 'old@example.com',
+      newEmail: 'new@example.com',
+    });
+
+    // ...and it is persisted BEFORE the forward Kratos identity write, so a
+    // process death in the commit window always leaves a durable trail.
+    const breadcrumbOrder = (repository.appendEmailChangeEntry as any).mock
+      .invocationCallOrder[0];
+    const kratosWriteOrder = (kratosService.updateIdentityEmailTrait as any)
+      .mock.invocationCallOrder[0];
+    expect(breadcrumbOrder).toBeLessThan(kratosWriteOrder);
   });
 });

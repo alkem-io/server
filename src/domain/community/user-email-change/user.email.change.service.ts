@@ -4,13 +4,18 @@ import { UserService } from '@domain/community/user/user.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { NotificationInputUserEmailChangeSpaceAdmin } from '@services/adapters/notification-adapter/dto/space/notification.dto.input.space.user.email.change';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationExternalAdapter } from '@services/adapters/notification-external-adapter/notification.external.adapter';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { apmAgent } from '@src/apm';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { UserEmailChangeTriggerOutcome } from './dto/notification.payloads';
 import { PlatformAuditInitiatorRole } from './enums/platform.audit.initiator.role';
 import { PlatformAuditOutcome } from './enums/platform.audit.outcome';
+import { UserEmailChangeInitiatorRole } from './enums/user.email.change.initiator.role';
 import { PlatformAuditEntry } from './platform.audit.entry.entity';
 import {
   CursorPageArgs,
@@ -52,6 +57,8 @@ export class UserEmailChangeService {
     private readonly subjectFootprintResolver: UserEmailChangeSubjectFootprintResolver,
     private readonly kratosService: KratosService,
     private readonly notificationAdapter: NotificationExternalAdapter,
+    private readonly notificationPlatformAdapter: NotificationPlatformAdapter,
+    private readonly notificationSpaceAdapter: NotificationSpaceAdapter,
     private readonly userService: UserService,
     private readonly userLookupService: UserLookupService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
@@ -351,6 +358,22 @@ export class UserEmailChangeService {
       correlationId,
     } = args;
 
+    // (0) Crash-window breadcrumb (FR-009c / research.md §R15). Persisted BEFORE the
+    // forward Kratos write so a process death between the Kratos write and the
+    // Alkemio write leaves a durable, correlatable trail — a `commit_started` row
+    // with no terminal row sharing its correlationId is the signal
+    // `adminUserEmailChangeDriftResolve` keys on. If this write itself fails the
+    // operation never starts (no side has been touched) and the error propagates.
+    await this.auditService.record({
+      subjectUserId,
+      initiatorUserId,
+      initiatorRole,
+      outcome: PlatformAuditOutcome.COMMIT_STARTED,
+      oldEmail,
+      newEmail,
+      correlationId,
+    });
+
     // (a) Forward Kratos.
     try {
       await retryWithBackoff(() =>
@@ -533,30 +556,30 @@ export class UserEmailChangeService {
             relations: { profile: true },
           }
         );
-        await this.notificationAdapter.publishEmailChangeGlobalAdminNotification(
-          {
-            subjectProfileSummary: {
-              id: subjectProfile.id,
-              displayName: subjectProfile.profile.displayName,
-            },
-            oldEmail,
-            newEmail,
-            initiatorProfileSummary: initiatorProfile
-              ? {
-                  id: initiatorProfile.id,
-                  displayName: initiatorProfile.profile.displayName,
-                }
-              : undefined,
-            initiatorRole: this.mapInitiatorRoleForNotification(initiatorRole),
-            commitTimestampISO8601,
-            triggerOutcome: 'COMMITTED',
-            subjectMemberships: {
-              spaces: footprint.spaces,
-              organizations: footprint.organizations,
-            },
-            subjectGlobalRoles: footprint.globalRoles,
-          }
-        );
+        await this.notificationPlatformAdapter.userEmailChangeGlobalAdmin({
+          triggeredBy: initiatorUserId ?? subjectUserId,
+          subjectUserID: subjectUserId,
+          subjectProfileSummary: {
+            id: subjectProfile.id,
+            displayName: subjectProfile.profile.displayName,
+          },
+          oldEmail,
+          newEmail,
+          initiatorProfileSummary: initiatorProfile
+            ? {
+                id: initiatorProfile.id,
+                displayName: initiatorProfile.profile.displayName,
+              }
+            : undefined,
+          initiatorRole: this.mapInitiatorRoleForNotification(initiatorRole),
+          commitTimestampISO8601,
+          triggerOutcome: 'COMMITTED',
+          subjectMemberships: {
+            spaces: footprint.spaces,
+            organizations: footprint.organizations,
+          },
+          subjectGlobalRoles: footprint.globalRoles,
+        });
       },
       {
         subjectUserId,
@@ -568,6 +591,19 @@ export class UserEmailChangeService {
         correlationId,
       }
     );
+
+    // (e.4) Per-space fan-out to the admins / leads of every space the
+    // subject is a member of.
+    await this.publishSpaceAdminNotifications({
+      subjectUserId,
+      initiatorUserId,
+      initiatorRole,
+      oldEmail,
+      newEmail,
+      correlationId,
+      commitTimestampISO8601,
+      triggerOutcome: 'COMMITTED',
+    });
   }
 
   private async runWithAuditFailure(
@@ -657,32 +693,32 @@ export class UserEmailChangeService {
               { relations: { profile: true } }
             )
           : undefined;
-        await this.notificationAdapter.publishEmailChangeGlobalAdminNotification(
-          {
-            subjectProfileSummary: {
-              id: subjectProfile.id,
-              displayName: subjectProfile.profile.displayName,
-            },
-            oldEmail: args.oldEmail,
-            newEmail: args.newEmail,
-            initiatorProfileSummary: initiatorProfile
-              ? {
-                  id: initiatorProfile.id,
-                  displayName: initiatorProfile.profile.displayName,
-                }
-              : undefined,
-            initiatorRole: this.mapInitiatorRoleForNotification(
-              args.initiatorRole
-            ),
-            commitTimestampISO8601,
-            triggerOutcome: 'DRIFT_DETECTED',
-            subjectMemberships: {
-              spaces: footprint.spaces,
-              organizations: footprint.organizations,
-            },
-            subjectGlobalRoles: footprint.globalRoles,
-          }
-        );
+        await this.notificationPlatformAdapter.userEmailChangeGlobalAdmin({
+          triggeredBy: args.initiatorUserId ?? args.subjectUserId,
+          subjectUserID: args.subjectUserId,
+          subjectProfileSummary: {
+            id: subjectProfile.id,
+            displayName: subjectProfile.profile.displayName,
+          },
+          oldEmail: args.oldEmail,
+          newEmail: args.newEmail,
+          initiatorProfileSummary: initiatorProfile
+            ? {
+                id: initiatorProfile.id,
+                displayName: initiatorProfile.profile.displayName,
+              }
+            : undefined,
+          initiatorRole: this.mapInitiatorRoleForNotification(
+            args.initiatorRole
+          ),
+          commitTimestampISO8601,
+          triggerOutcome: 'DRIFT_DETECTED',
+          subjectMemberships: {
+            spaces: footprint.spaces,
+            organizations: footprint.organizations,
+          },
+          subjectGlobalRoles: footprint.globalRoles,
+        });
       },
       {
         subjectUserId: args.subjectUserId,
@@ -694,14 +730,141 @@ export class UserEmailChangeService {
         correlationId: args.correlationId,
       }
     );
+
+    // (5) Per-space fan-out to the admins / leads of every space the subject
+    // is a member of — drift-detected variant.
+    await this.publishSpaceAdminNotifications({
+      subjectUserId: args.subjectUserId,
+      initiatorUserId: args.initiatorUserId,
+      initiatorRole: args.initiatorRole,
+      oldEmail: args.oldEmail,
+      newEmail: args.newEmail,
+      correlationId: args.correlationId,
+      commitTimestampISO8601,
+      triggerOutcome: 'DRIFT_DETECTED',
+    });
   }
 
-  private mapInitiatorRoleForNotification(role: PlatformAuditInitiatorRole) {
-    return role === PlatformAuditInitiatorRole.PLATFORM_ADMIN
-      ? ('PLATFORM_ADMIN' as const)
-      : role === PlatformAuditInitiatorRole.SELF
-        ? ('SELF' as const)
-        : ('PLATFORM_ADMIN' as const);
+  /**
+   * Per-space email-change fan-out (committed + drift variants). Publishes one
+   * `USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION` event per space the subject is
+   * a member of. The subject footprint + profiles are
+   * resolved once; each space is then published under its own retry/audit
+   * envelope so one space's failure neither blocks the others nor re-sends an
+   * already-delivered space. Never throws — the commit always stands.
+   */
+  private async publishSpaceAdminNotifications(args: {
+    subjectUserId: string;
+    initiatorUserId?: string;
+    initiatorRole: PlatformAuditInitiatorRole;
+    oldEmail: string;
+    newEmail: string;
+    correlationId: string;
+    commitTimestampISO8601: string;
+    triggerOutcome: UserEmailChangeTriggerOutcome;
+  }): Promise<void> {
+    const {
+      subjectUserId,
+      initiatorUserId,
+      initiatorRole,
+      oldEmail,
+      newEmail,
+      correlationId,
+      commitTimestampISO8601,
+      triggerOutcome,
+    } = args;
+
+    try {
+      const footprint =
+        await this.subjectFootprintResolver.buildSubjectFootprint(
+          subjectUserId
+        );
+      // Every space the subject is a member of qualifies — any role (member,
+      // lead, or admin); recipients are resolved per space as that space's
+      // admins/leads.
+      const qualifyingSpaceIds = footprint.spaces.map(space => space.spaceId);
+      if (qualifyingSpaceIds.length === 0) {
+        return;
+      }
+
+      const subjectProfile = await this.userLookupService.getUserByIdOrFail(
+        subjectUserId,
+        { relations: { profile: true } }
+      );
+      const initiatorProfile = initiatorUserId
+        ? await this.userLookupService.getUserByIdOrFail(initiatorUserId, {
+            relations: { profile: true },
+          })
+        : undefined;
+
+      const eventData: NotificationInputUserEmailChangeSpaceAdmin = {
+        triggeredBy: initiatorUserId ?? subjectUserId,
+        subjectUserID: subjectUserId,
+        subjectProfileSummary: {
+          id: subjectProfile.id,
+          displayName: subjectProfile.profile.displayName,
+        },
+        oldEmail,
+        newEmail,
+        initiatorProfileSummary: initiatorProfile
+          ? {
+              id: initiatorProfile.id,
+              displayName: initiatorProfile.profile.displayName,
+            }
+          : undefined,
+        initiatorRole: this.mapInitiatorRoleForNotification(initiatorRole),
+        commitTimestampISO8601,
+        triggerOutcome,
+      };
+
+      // One event per space — each under its own retry/audit envelope.
+      for (const spaceId of qualifyingSpaceIds) {
+        await this.runWithAuditFailure(
+          () =>
+            this.notificationSpaceAdapter.userEmailChangeSpaceAdmin(
+              eventData,
+              spaceId
+            ),
+          {
+            subjectUserId,
+            initiatorUserId,
+            initiatorRole,
+            outcome: PlatformAuditOutcome.SPACE_ADMIN_NOTIFICATION_FAILED,
+            oldEmail,
+            newEmail,
+            correlationId,
+          }
+        );
+      }
+    } catch (err) {
+      // Footprint / profile resolution failed — no per-space event was
+      // published. Audit once; the commit stands.
+      await this.auditService.record({
+        subjectUserId,
+        initiatorUserId,
+        initiatorRole,
+        outcome: PlatformAuditOutcome.SPACE_ADMIN_NOTIFICATION_FAILED,
+        oldEmail,
+        newEmail,
+        failureReason: extractNonLeakyReason(err),
+        correlationId,
+      });
+      this.logger.error(
+        `Post-commit side-effect failed (space_admin_notification_failed); commit stands. Cause: ${describeError(err)}`,
+        (err as Error)?.stack ?? '',
+        LogContext.AUTH
+      );
+    }
+  }
+
+  private mapInitiatorRoleForNotification(
+    role: PlatformAuditInitiatorRole
+  ): UserEmailChangeInitiatorRole {
+    // The wire value MUST be the lowercase enum value ('self' /
+    // 'platform_admin') the notifications service expects (research §R3).
+    return role === PlatformAuditInitiatorRole.SELF
+      ? UserEmailChangeInitiatorRole.SELF
+      : UserEmailChangeInitiatorRole.PLATFORM_ADMIN;
   }
 }
 

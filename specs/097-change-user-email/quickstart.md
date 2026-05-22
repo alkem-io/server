@@ -108,6 +108,10 @@ The notifications-service receives one `USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICAT
 
 Downstream per-recipient delivery is out of this spec's measurement scope (the notifications-service owns that), but a smoke check: a second platform admin (other than the initiator) receives the fan-out via her configured channels.
 
+### Step 1.3c — Confirm per-space admin fan-out notifications were published
+
+For every space the subject (Alice) is a member of — regardless of her role in it — the notifications-service receives one `USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION` event — observable the same way as Step 1.3b. Each event's payload carries the space it concerns, the server-resolved set of that space's admins/leads (Alice excluded) in `recipients`, subject `{id, displayName}`, full old/new emails, initiator `{id, displayName}`, initiator role `platform_admin`, commit timestamp, and `triggerOutcome: COMMITTED`. If Alice belongs to no space, **zero** such events are published — expected for a vanilla fixture; to exercise this path, make Alice a member of a space before Step 1.1. (FR-016e, SC-011)
+
 ### Step 1.4 — Verify Alice's data survived
 
 Query Alice's profile (as Alice, after logging in with the new email):
@@ -238,6 +242,7 @@ The test:
    - Winston error log entry tagged `email_change_drift_detected`
    - APM `captureError` was called with the same marker
    - One `USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION` event was published with `triggerOutcome: DRIFT_DETECTED` (so other admins can assist with reconciliation — FR-016d)
+   - One `USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION` event was published per space the subject is a member of, also with `triggerOutcome: DRIFT_DETECTED` (zero if the subject belongs to no space — FR-016e)
 
 Then, as a platform admin:
 
@@ -317,5 +322,6 @@ After running all scenarios:
 - [x] **SC-008** — Exactly one security-signal notification at the OLD address on commit; zero on rejection
 - [x] **SC-009** — Exactly one acknowledgement notification at the NEW address on commit; zero on rejection
 - [x] **SC-010** — Exactly one global-admin fan-out event published on commit AND on drift_detected; zero on rejection or other failure outcomes
+- [x] **SC-011** — One per-space admin fan-out event published per space the subject is a member of, on commit AND on drift_detected; zero when the subject belongs to no space, and zero on rejection or other failure outcomes
 
 If any checkbox fails, the feature is not yet shippable. The integration tests (`*.it-spec.ts`) under `test/functional/integration/` are the automated equivalent and MUST also be green.

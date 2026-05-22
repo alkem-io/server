@@ -1,7 +1,11 @@
+import {
+  BaseEventPayload,
+  NotificationEventPayloadSpace,
+} from '@alkemio/notifications-lib';
 import { UserEmailChangeInitiatorRole } from '../enums/user.email.change.initiator.role';
 
 /**
- * Wire payloads for the three email-change notification events (research.md §R8).
+ * Wire payloads for the four email-change notification events (research.md §R8).
  *
  * These shapes are mirrored by template classes in `@alkemio/notifications-lib`;
  * the typings are duplicated here so the server can publish the events without
@@ -55,8 +59,14 @@ export interface SubjectMembershipsPayload {
   organizations: SubjectOrganizationMembership[];
 }
 
-/** Fan-out to platform-admin recipient set (FR-016d). */
-export interface UserEmailChangeGlobalAdminNotificationPayload {
+/**
+ * Fan-out to platform-admin recipient set (FR-016d). Published via
+ * `buildBaseEventPayload`, so it carries the full BaseEventPayload envelope
+ * (`eventType`, `triggeredBy`, `recipients`, `platform`) with a server-resolved
+ * `recipients` array — the notifications service consumes that list directly.
+ */
+export interface UserEmailChangeGlobalAdminNotificationPayload
+  extends BaseEventPayload {
   subjectProfileSummary: UserProfileSummaryPayload;
   oldEmail: string;
   newEmail: string;
@@ -66,4 +76,24 @@ export interface UserEmailChangeGlobalAdminNotificationPayload {
   triggerOutcome: UserEmailChangeTriggerOutcome;
   subjectMemberships: SubjectMembershipsPayload;
   subjectGlobalRoles: string[];
+}
+
+/**
+ * Per-space fan-out to a space's admins + leads (the space-admin email-change
+ * notification). Published once per space the subject is a member of, via
+ * `buildBaseEventPayload`, so it carries the full
+ * BaseEventPayload envelope with a server-resolved `recipients` array (that
+ * space's admins/leads, minus the subject, minus opted-out admins) plus the
+ * single `space` it concerns — the notifications service consumes the list
+ * directly.
+ */
+export interface UserEmailChangeSpaceAdminNotificationPayload
+  extends NotificationEventPayloadSpace {
+  subjectProfileSummary: UserProfileSummaryPayload;
+  oldEmail: string;
+  newEmail: string;
+  initiatorProfileSummary?: UserProfileSummaryPayload;
+  initiatorRole: UserEmailChangeInitiatorRole;
+  commitTimestampISO8601: string;
+  triggerOutcome: UserEmailChangeTriggerOutcome;
 }

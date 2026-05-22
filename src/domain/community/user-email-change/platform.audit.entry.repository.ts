@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { Not, Repository } from 'typeorm';
 import { PlatformAuditCategory } from './enums/platform.audit.category';
 import { PlatformAuditInitiatorRole } from './enums/platform.audit.initiator.role';
 import { PlatformAuditOutcome } from './enums/platform.audit.outcome';
@@ -75,6 +75,11 @@ export class PlatformAuditEntryRepository {
       .andWhere('entry."category" = :category', {
         category: EMAIL_CHANGE_CATEGORY,
       })
+      // `commit_started` is the internal crash-window breadcrumb (research.md
+      // §R15) — never surface it on the GraphQL audit-history projection.
+      .andWhere('entry."outcome" != :excludedOutcome', {
+        excludedOutcome: PlatformAuditOutcome.COMMIT_STARTED,
+      })
       .orderBy('entry."rowId"', reverse ? 'ASC' : 'DESC')
       .take(limit + 1);
 
@@ -93,7 +98,11 @@ export class PlatformAuditEntryRepository {
     const entries = reverse ? [...slice].reverse() : slice;
 
     const total = await this.repo.count({
-      where: { subjectUserId, category: EMAIL_CHANGE_CATEGORY },
+      where: {
+        subjectUserId,
+        category: EMAIL_CHANGE_CATEGORY,
+        outcome: Not(PlatformAuditOutcome.COMMIT_STARTED),
+      },
     });
 
     const first = entries[0];
@@ -108,50 +117,94 @@ export class PlatformAuditEntryRepository {
     };
   }
 
+  /**
+   * Most recent email-change audit row for the subject, projected to the GraphQL
+   * `latestUserEmailChangeAuditEntry` field. Excludes the internal `commit_started`
+   * breadcrumb (research.md §R15) so the admin-facing "latest outcome" is always a
+   * real outcome, never plumbing.
+   */
   public async findLatestEmailChangeBySubject(
     subjectUserId: string
   ): Promise<PlatformAuditEntry | null> {
     return this.repo.findOne({
-      where: { subjectUserId, category: EMAIL_CHANGE_CATEGORY },
+      where: {
+        subjectUserId,
+        category: EMAIL_CHANGE_CATEGORY,
+        outcome: Not(PlatformAuditOutcome.COMMIT_STARTED),
+      },
       order: { rowId: 'DESC' },
     });
   }
 
   /**
-   * Most recent `drift_detected` row for the subject that has no subsequent
-   * `drift_resolved` row with a higher rowId. Required because a
-   * `global_admin_notification_failed` row written after the drift entry would
-   * shift the "latest entry" past it (tasks.md §T029).
+   * The latest *outstanding* email-change operation for the subject — the row the
+   * `adminUserEmailChangeDriftResolve` mutation reconciles.
+   *
+   * A candidate row is one with outcome `commit_started` or `drift_detected`:
+   *
+   * - `drift_detected` — the classic drift case (research.md §R6): the forward
+   *   Kratos write succeeded, the Alkemio write failed, and the compensating Kratos
+   *   revert exhausted its retry budget.
+   * - `commit_started` — the crash-window breadcrumb (research.md §R15): the
+   *   process died somewhere inside `commitAcrossSides`, so no terminal row was
+   *   ever written. The two sides may or may not actually diverge; `resolveDrift`
+   *   reads both and aligns them.
+   *
+   * A candidate is OUTSTANDING when BOTH hold:
+   *   (1) no `rolled_back` row shares its `correlationId` — a clean rollback of
+   *       that same operation means nothing is outstanding; and
+   *   (2) no later `committed` / `drift_resolved` row exists for the subject (a
+   *       higher `rowId`) — a subsequent operation that drove both sides to a
+   *       known-consistent state heals any earlier crash breadcrumb. This is the
+   *       common recovery path: an admin retries a crashed change, the retry
+   *       commits, and the stale breadcrumb is correctly treated as moot.
+   *
+   * Evaluation is per-operation (keyed on `correlationId` / `rowId`), so a later
+   * attempt cannot mask an earlier genuinely-unresolved one, and a normal completed
+   * change is excluded.
    */
   public async findLatestUnresolvedDriftBySubject(
     subjectUserId: string
   ): Promise<PlatformAuditEntry | null> {
-    const latestDrift = await this.repo.findOne({
-      where: {
-        subjectUserId,
+    return this.repo
+      .createQueryBuilder('entry')
+      .where('entry."subjectUserId" = :subjectUserId', { subjectUserId })
+      .andWhere('entry."category" = :category', {
         category: EMAIL_CHANGE_CATEGORY,
-        outcome: PlatformAuditOutcome.DRIFT_DETECTED,
-      },
-      order: { rowId: 'DESC' },
-    });
-    if (!latestDrift) {
-      return null;
-    }
-    const subsequentResolution = await this.repo.findOne({
-      where: {
-        subjectUserId,
-        category: EMAIL_CHANGE_CATEGORY,
-        outcome: PlatformAuditOutcome.DRIFT_RESOLVED,
-      },
-      order: { rowId: 'DESC' },
-    });
-    if (
-      subsequentResolution &&
-      subsequentResolution.rowId > latestDrift.rowId
-    ) {
-      return null;
-    }
-    return latestDrift;
+      })
+      .andWhere('entry."correlationId" IS NOT NULL')
+      .andWhere('entry."outcome" IN (:...candidateOutcomes)', {
+        candidateOutcomes: [
+          PlatformAuditOutcome.COMMIT_STARTED,
+          PlatformAuditOutcome.DRIFT_DETECTED,
+        ],
+      })
+      .andWhere(
+        `NOT EXISTS (
+          SELECT 1 FROM "platform_audit_entry" "rolledBack"
+          WHERE "rolledBack"."correlationId" = entry."correlationId"
+            AND "rolledBack"."category" = :category
+            AND "rolledBack"."outcome" = :rolledBackOutcome
+        )`,
+        { rolledBackOutcome: PlatformAuditOutcome.ROLLED_BACK }
+      )
+      .andWhere(
+        `NOT EXISTS (
+          SELECT 1 FROM "platform_audit_entry" "healed"
+          WHERE "healed"."subjectUserId" = entry."subjectUserId"
+            AND "healed"."category" = :category
+            AND "healed"."outcome" IN (:...healingOutcomes)
+            AND "healed"."rowId" > entry."rowId"
+        )`,
+        {
+          healingOutcomes: [
+            PlatformAuditOutcome.COMMITTED,
+            PlatformAuditOutcome.DRIFT_RESOLVED,
+          ],
+        }
+      )
+      .orderBy('entry."rowId"', 'DESC')
+      .getOne();
   }
 }
 

@@ -2,6 +2,8 @@ import { UserService } from '@domain/community/user/user.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { NotificationSpaceAdapter } from '@services/adapters/notification-adapter/notification.space.adapter';
 import { NotificationExternalAdapter } from '@services/adapters/notification-external-adapter/notification.external.adapter';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
@@ -77,10 +79,15 @@ function makeServiceWithDrift(opts: {
     publishEmailChangeNewAddressNotification: vi
       .fn()
       .mockResolvedValue(undefined),
-    publishEmailChangeGlobalAdminNotification: vi
-      .fn()
-      .mockResolvedValue(undefined),
   } as unknown as NotificationExternalAdapter;
+
+  const notificationPlatformAdapter = {
+    userEmailChangeGlobalAdmin: vi.fn().mockResolvedValue(undefined),
+  } as unknown as NotificationPlatformAdapter;
+
+  const notificationSpaceAdapter = {
+    userEmailChangeSpaceAdmin: vi.fn().mockResolvedValue(undefined),
+  } as unknown as NotificationSpaceAdapter;
 
   const subjectFootprintResolver = {
     buildSubjectFootprint: vi.fn(async () => ({
@@ -101,6 +108,8 @@ function makeServiceWithDrift(opts: {
       subjectFootprintResolver,
       kratosService,
       notificationAdapter,
+      notificationPlatformAdapter,
+      notificationSpaceAdapter,
       userService,
       userLookupService,
       configService,
@@ -205,5 +214,44 @@ describe('UserEmailChangeService.resolveDrift', () => {
         r => r.outcome === PlatformAuditOutcome.DRIFT_RESOLUTION_FAILED
       )
     ).toBe(true);
+  });
+
+  it('resolves a crash-window commit_started breadcrumb the same way as a drift row', async () => {
+    // A process death inside commitAcrossSides leaves a lone `commit_started`
+    // row (no terminal row). The repository surfaces it via
+    // findLatestUnresolvedDriftBySubject; resolveDrift reconciles it identically
+    // to a drift_detected row — it reads both sides and aligns them.
+    const breadcrumb = {
+      rowId: 50,
+      correlationId: 'corr-crash',
+      outcome: PlatformAuditOutcome.COMMIT_STARTED,
+      initiatorRole: PlatformAuditInitiatorRole.PLATFORM_ADMIN,
+      details: { oldEmail: 'old@example.com', newEmail: 'new@example.com' },
+    };
+    const { service, auditRows, kratosService } = makeServiceWithDrift({
+      driftRow: breadcrumb,
+      alkemioCurrent: 'old@example.com',
+      kratosCurrent: 'new@example.com',
+    });
+
+    const result = await service.resolveDrift(
+      'admin-1',
+      'subject-1',
+      'old@example.com'
+    );
+    expect(result).toEqual({ success: true, email: 'old@example.com' });
+
+    // Kratos realigned to the canonical address.
+    expect(kratosService.updateIdentityEmailTrait).toHaveBeenCalledWith(
+      'kratos-1',
+      'old@example.com'
+    );
+
+    // Resolution row written, chained to the breadcrumb's correlationId.
+    const resolved = auditRows.find(
+      r => r.outcome === PlatformAuditOutcome.DRIFT_RESOLVED
+    );
+    expect(resolved).toBeDefined();
+    expect(resolved.correlationId).toBe('corr-crash');
   });
 });

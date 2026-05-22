@@ -27,4 +27,11 @@ export abstract class IUserSettingsNotificationPlatformAdmin {
     description: 'Receive a notification when a new L0 Space is created',
   })
   spaceCreated!: IUserSettingsNotificationChannels;
+
+  @Field(() => IUserSettingsNotificationChannels, {
+    nullable: false,
+    description:
+      'Receive a notification when a user changes their login email address.',
+  })
+  userEmailChanged!: IUserSettingsNotificationChannels;
 }

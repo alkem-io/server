@@ -8,6 +8,11 @@ import { registerEnumType } from '@nestjs/graphql';
  * a runtime type-guard with no value translation. GraphQL clients see the UPPERCASE
  * member names (e.g. `COMMITTED`); the underlying Postgres / TypeORM column stores
  * the lowercase string values.
+ *
+ * Note: `PlatformAuditOutcome` additionally carries `COMMIT_STARTED` — an internal
+ * crash-window breadcrumb (research.md §R15) that is intentionally NOT exposed here.
+ * The repository filters those rows out of its GraphQL-facing read methods, so a
+ * `commit_started` row never reaches this projection.
  */
 export enum UserEmailChangeAuditOutcome {
   COMMITTED = 'committed',
@@ -18,6 +23,7 @@ export enum UserEmailChangeAuditOutcome {
   SECURITY_SIGNAL_FAILED = 'security_signal_failed',
   NEW_ADDRESS_NOTIFICATION_FAILED = 'new_address_notification_failed',
   GLOBAL_ADMIN_NOTIFICATION_FAILED = 'global_admin_notification_failed',
+  SPACE_ADMIN_NOTIFICATION_FAILED = 'space_admin_notification_failed',
   SESSION_INVALIDATION_FAILED = 'session_invalidation_failed',
   REJECTED_VALIDATION = 'rejected_validation',
   REJECTED_CONFLICT = 'rejected_conflict',

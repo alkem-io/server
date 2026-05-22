@@ -4,7 +4,7 @@
 **Date**: 2026-05-13
 **Last Updated**: 2026-05-19 (Path A — generic audit table; email-specific payload moved to `details` JSONB)
 
-This feature introduces **one** new PostgreSQL table (`platform_audit_entry` — a genuinely platform-wide audit-log foundation per spec.md §FR-014a / §Clarifications Session 2026-05-19) and **three** new enum types. No changes to existing tables — `user.email` and `user.authenticationID` are read and written through the existing columns. The Kratos identity is updated externally via the admin API (see research.md §R1).
+This feature introduces **one** new PostgreSQL table (`platform_audit_entry` — a genuinely platform-wide audit-log foundation per spec.md §FR-014a / §Clarifications Session 2026-05-19) and **three** new enum types. No schema (DDL) changes to existing tables — `user.email` and `user.authenticationID` are read and written through the existing columns. The only existing-table touch is an additive data backfill on the JSONB `user_settings.notification` column, adding the two new per-user notification-opt-out keys (`platform.admin.userEmailChanged`, `space.admin.userEmailChanged`) that gate the FR-016d / FR-016e admin fan-outs — see §Migration plan below. The Kratos identity is updated externally via the admin API (see research.md §R1).
 
 The pending-change entity, the token machinery, the multi-step state lifecycle, and the related Postgres enums (`email_change_pending_state`) are deferred to companion spec 098, which introduces them natively as part of its verification flow.
 
@@ -54,6 +54,10 @@ CREATE TYPE platform_audit_outcome AS ENUM (
 
 Cross-category Postgres enum, populated initially with the 11 outcomes used by the `email_change` category (per FR-014). Each category occupies its own subset of values; the `category` column on the row is what tells the reader which subset applies. Future categories — and companion spec 098 — extend this enum additively via `ALTER TYPE platform_audit_outcome ADD VALUE 'foo'`, which is non-breaking and requires no table migration. Service-layer code is responsible for enforcing per-category outcome vocabularies (i.e., a `category = 'email_change'` row must not carry an outcome value introduced by `category = 'authentication'`).
 
+A follow-up migration in this same feature (`1779372350382-AddEmailChangeCommitStartedAuditOutcome`) adds a 12th value, `commit_started` — the crash-window breadcrumb written before the first side-write (FR-009c / research.md §R15). It is a valid `email_change` outcome, but an internal progress marker rather than a terminal outcome: the repository's GraphQL-facing read methods filter it out, so it never reaches the FR-014b / FR-021 projections.
+
+A second follow-up migration (`1779480000000-AddEmailChangeSpaceAdminNotificationAuditOutcome`) adds a 13th value, `space_admin_notification_failed` — the per-space sibling of `global_admin_notification_failed`, written when the post-commit per-space email-change fan-out (FR-016e / research.md §R8 Event 4) exhausts its retry budget for a given space, or when the subject-footprint resolution that drives that fan-out fails. Unlike `commit_started`, this is an ordinary terminal failure outcome and IS projected to the GraphQL `UserEmailChangeAuditOutcome` enum, exactly like the other `*_notification_failed` outcomes. The `email_change` category therefore writes **13** outcome values in total; the GraphQL projection exposes **12** of them (all but `commit_started`).
+
 Companion spec 098 will extend this enum additively with the verification-flow outcomes (`initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`), all still under `category = 'email_change'`.
 
 ### 3. `platform_audit_initiator_role`
@@ -84,7 +88,7 @@ Append-only platform-wide audit log. **Never updated, never deleted by this feat
 | `subject_user_id` | `uuid` | NOT NULL | Required for every user-centric audit category. **No FK constraint** — the audit row references the user id by value but does NOT enforce referential integrity (see §Retention and user deletion). For non-user-centric future categories (e.g., system-level configuration change), the convention will be to use a sentinel user representing the platform; this is a future-spec concern. |
 | `initiator_user_id` | `uuid` | NULL | NULL allowed for early-rejection entries before the initiator's identity is fully resolved (FR-014b sentinel case) and for `system` / `service` initiators that have no user record. **No FK constraint** (see §Retention and user deletion). |
 | `initiator_role` | `platform_audit_initiator_role` | NOT NULL | Always present per FR-014b. This spec writes `platform_admin` exclusively. |
-| `outcome` | `platform_audit_outcome` | NOT NULL | The cross-category outcome enum. Service code enforces per-category subsets (a `category = 'email_change'` row must only carry the 11 email-change outcomes listed below). |
+| `outcome` | `platform_audit_outcome` | NOT NULL | The cross-category outcome enum. Service code enforces per-category subsets (a `category = 'email_change'` row must only carry the 13 email-change outcomes listed below). |
 | `failure_reason` | `varchar(128)` | NULL | Non-leaky failure reason for the failure outcomes; FR-014 forbids account-enumeration content |
 | `correlation_id` | `uuid` | NULL | Groups audit rows that belong to the same logical operation / incident. See §Correlation semantics below. NULL allowed (e.g., early-rejection entries that never get a correlation handle, or single-row events with no chain). |
 | `details` | `jsonb` | NULL | Category-specific structured payload. For `email_change`: `{ "oldEmail", "newEmail" }` plus optional `requestContext`. See §Details shape per category. NULL is permitted (e.g., rejection entries that recorded no payload), but the email-change category always populates `oldEmail` and/or `newEmail` when those values are known at the moment of audit. |
@@ -147,6 +151,7 @@ Future user-deletion / pseudonymization work is out of scope here (per FR-014a) 
 
 | Outcome | Written when | `details.oldEmail` / `details.newEmail` semantics |
 | --- | --- | --- |
+| `commit_started` | Persisted **before** the first side-write, at the start of `commitAcrossSides` (FR-009c) — the crash-window breadcrumb | `oldEmail` = pre-change Alkemio email; `newEmail` = proposed new email. Internal progress marker — excluded from the FR-014b / FR-021 GraphQL projections |
 | `committed` | Two-side commit succeeded | `oldEmail` = pre-change Alkemio email; `newEmail` = post-change Alkemio email (same on both sides) |
 | `rolled_back` | Forward Kratos failed OR Alkemio failed and Kratos revert succeeded | Same as above; both sides reflect `oldEmail` at the end |
 | `drift_detected` | Forward Kratos succeeded, Alkemio failed, Kratos revert exhausted | `oldEmail` = observed on Alkemio side (= original value); `newEmail` = observed on Kratos side (= attempted new value) |
@@ -155,6 +160,7 @@ Future user-deletion / pseudonymization work is out of scope here (per FR-014a) 
 | `security_signal_failed` | Post-commit mail to OLD address (FR-016) exhausted retry budget | Same as committed — `oldEmail` is the now-old (pre-change) address; `newEmail` is the now-current address |
 | `new_address_notification_failed` | Post-commit mail to NEW address (FR-016c) exhausted retry budget | Same as committed |
 | `global_admin_notification_failed` | Post-commit global-admin fan-out publish (FR-016d) exhausted retry budget. Captures failure to PUBLISH to the notifications service; per-recipient downstream delivery is out of scope. | Same as committed |
+| `space_admin_notification_failed` | Post-commit per-space admin fan-out publish (FR-016e) exhausted retry budget for one space — written once per failing space; OR the subject-footprint / profile resolution that drives the fan-out failed before any per-space publish — written once. Captures failure to PUBLISH; per-recipient downstream delivery is out of scope. | Same as committed |
 | `session_invalidation_failed` | Post-commit `disableIdentitySessions` exhausted retry budget | Same as committed |
 | `rejected_validation` | New email malformed (format / RFC) or equals current | `newEmail` = the malformed / no-change attempted value if it's safe to store; otherwise omitted |
 | `rejected_conflict` | New email already taken on Alkemio or Kratos side | `newEmail` = the attempted value (which is also the conflict-holder's address — see anti-enumeration note below) |
@@ -248,7 +254,7 @@ File: `<timestamp>-CreatePlatformAuditEntry.ts`
 
 Up:
 1. `CREATE TYPE platform_audit_category AS ENUM ('email_change')` (single initial value; future ISO 27001 categories extend additively)
-2. `CREATE TYPE platform_audit_outcome AS ENUM (...)` (11 initial values — see §2 above; future categories extend additively via `ALTER TYPE ... ADD VALUE`)
+2. `CREATE TYPE platform_audit_outcome AS ENUM (...)` (11 initial values — see §2 above; this feature itself adds 2 more (`commit_started`, `space_admin_notification_failed`) via the follow-up migrations below, and future categories extend additively via `ALTER TYPE ... ADD VALUE`)
 3. `CREATE TYPE platform_audit_initiator_role AS ENUM ('self', 'platform_admin', 'system', 'service')` (all four values upfront — see §3)
 4. `CREATE TABLE platform_audit_entry (...)` with all columns (including `category`, `correlation_id`, `details: jsonb`) and constraints
 5. Create the five indices listed above (PK, row_id, subject+category+created_date, subject+category+row_id, partial on correlation_id)
@@ -259,6 +265,20 @@ Down (rollback):
 2. Drop the three enum types (in reverse-dependency order: `platform_audit_initiator_role`, `platform_audit_outcome`, `platform_audit_category`)
 
 The migration is **idempotent under the project's validation harness** (`.scripts/migrations/run_validate_migration.sh`) — the table is new, references no existing data, no backfill is required, and the down-migration is a clean reverse.
+
+### Follow-up migrations
+
+Beyond the table-creation migration above, this feature ships **four** additive follow-up migrations. None alters the `platform_audit_entry` table itself; two extend the `platform_audit_outcome` enum and two backfill the JSONB `user_settings.notification` column.
+
+1. **`1779287475191-AddUserEmailChangedNotificationSetting.ts`** — backfills the `platform.admin.userEmailChanged` key onto the JSONB `notification` column of every existing `user_settings` row (`jsonb_set` with `COALESCE`, default `{"email": true, "inApp": false, "push": false}` — email-on so admins are informed unless they opt out). Gates the FR-016d global-admin fan-out. Additive and idempotent (the `COALESCE` preserves any value already present); the `down` migration strips the key.
+
+2. **`1779372350382-AddEmailChangeCommitStartedAuditOutcome.ts`** — adds the `commit_started` value to `platform_audit_outcome` via `ALTER TYPE "platform_audit_outcome" ADD VALUE IF NOT EXISTS 'commit_started'` — the crash-window breadcrumb (FR-009c / research.md §R15).
+
+3. **`1779480000000-AddEmailChangeSpaceAdminNotificationAuditOutcome.ts`** — adds the `space_admin_notification_failed` value to `platform_audit_outcome` via `ALTER TYPE "platform_audit_outcome" ADD VALUE IF NOT EXISTS 'space_admin_notification_failed'` — the per-space fan-out failure outcome (FR-016e / research.md §R8 Event 4).
+
+4. **`1779480100000-AddSpaceAdminEmailChangeNotificationSetting.ts`** — backfills the `space.admin.userEmailChanged` key onto every `user_settings` row, same shape and default as migration 1. Gates the FR-016e per-space fan-out.
+
+For the two `ALTER TYPE ... ADD VALUE` migrations (2 and 3) the extension is additive and non-breaking — no table rewrite, no backfill — and `ADD VALUE IF NOT EXISTS` keeps it idempotent. Their `down` migrations are a **documented no-op**: PostgreSQL has no `ALTER TYPE ... DROP VALUE`, and removing an enum value once rows reference it would require recreating the type and rewriting every dependent column — unsafe. Leaving the value in place after a revert is harmless.
 
 When companion spec 098 lands, its migration will (a) introduce the `email_change_pending` table + `email_change_pending_state` enum and (b) ADD (additively) new values to the `platform_audit_outcome` enum (`initiated`, `initiation_failed`, `confirmed`, `expired`, `superseded`, `rejected_used_token`, `rejected_expired_token`). Both are non-breaking; existing audit rows are unaffected and the `platform_audit_entry` table itself is not altered.
 

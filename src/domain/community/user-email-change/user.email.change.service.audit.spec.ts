@@ -13,9 +13,11 @@ const ALL_EMAIL_CHANGE_OUTCOMES: PlatformAuditOutcome[] = [
   PlatformAuditOutcome.SECURITY_SIGNAL_FAILED,
   PlatformAuditOutcome.NEW_ADDRESS_NOTIFICATION_FAILED,
   PlatformAuditOutcome.GLOBAL_ADMIN_NOTIFICATION_FAILED,
+  PlatformAuditOutcome.SPACE_ADMIN_NOTIFICATION_FAILED,
   PlatformAuditOutcome.SESSION_INVALIDATION_FAILED,
   PlatformAuditOutcome.REJECTED_VALIDATION,
   PlatformAuditOutcome.REJECTED_CONFLICT,
+  PlatformAuditOutcome.COMMIT_STARTED,
 ];
 
 describe('UserEmailChangeAuditService', () => {
