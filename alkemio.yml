@@ -113,9 +113,6 @@ identity:
   # client-side configuration required to authenticate to the Identity Servers (e.g. Ory Kratos) and generate
   # valid Authorization Header (Bearer access token).
   authentication:
-    # A flag setting whether Authentication based on non-interactive login is enabled.
-    api_access_enabled: ${AUTH_API_ENABLED}:true
-
     # Time-to-live of the cache for user authentication info (credentials, verified credentials) in seconds. Defaults to 60.
     cache_ttl: ${AUTH_CACHE_TTL}:60
 
@@ -242,6 +239,25 @@ identity:
           domain: ${OIDC_SESSION_COOKIE_DOMAIN}
           secure: ${OIDC_SESSION_COOKIE_SECURE}:false
           idle_ttl_s: ${OIDC_SESSION_COOKIE_IDLE_TTL_S}:1800
+
+      # Non-interactive credential→token endpoint for test harnesses and other
+      # clients that cannot perform the browser-based OIDC flow. Mounts
+      # POST /api/auth/non-interactive-login and a third Passport strategy
+      # (alongside cookie-session + hydra-bearer). The boot guard refuses to
+      # start when NODE_ENV=production AND enabled=true. Module:
+      # src/core/auth/non-interactive-login/.
+      non_interactive_login:
+        # Whether the endpoint is mounted and the strategy accepts tokens.
+        # MUST stay false in production environments.
+        enabled: ${ENABLE_NON_INTERACTIVE_LOGIN}:false
+        # HS256 signing key (hex or base64). Minimum 32 bytes when enabled.
+        # The default below is empty so a production boot with enabled=true
+        # would fail loudly. Mint via:
+        #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+        signing_key: ${NON_INTERACTIVE_LOGIN_SIGNING_KEY}:placeholder-non-interactive-login-signing-key-change-me
+        # Minted JWT lifetime in seconds. 4 hours is enough for a full e2e
+        # suite without mid-run remint; tests cache and reuse.
+        token_ttl_s: ${NON_INTERACTIVE_LOGIN_TOKEN_TTL_S}:14400
 
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.

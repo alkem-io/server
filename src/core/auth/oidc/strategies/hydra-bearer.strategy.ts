@@ -16,19 +16,26 @@ import { Strategy } from 'passport-custom';
 import { emitAudit } from '../audit';
 import { isServiceClientAudienceAllowed } from '../bearer-aud-allow-list';
 import { BearerValidationError } from './auth.errors';
+import {
+  BEARER_AUD_ALLOW_LIST_HANDLE,
+  BEARER_JWKS_HANDLE,
+  HYDRA_ISSUER_URL_HANDLE,
+  type HydraBearerContext,
+  HydraBearerValidator,
+} from './hydra-bearer.validator';
 import { AUTH_STRATEGY_OIDC_HYDRA_BEARER } from './strategy.names';
 
-export const BEARER_JWKS_HANDLE = Symbol('OIDC_BEARER_JWKS_HANDLE');
-export const BEARER_AUD_ALLOW_LIST_HANDLE = Symbol(
-  'OIDC_BEARER_AUD_ALLOW_LIST_HANDLE'
-);
-export const HYDRA_ISSUER_URL_HANDLE = Symbol('OIDC_HYDRA_ISSUER_URL_HANDLE');
-
-export type HydraBearerContext = {
-  sub: string;
-  alkemio_actor_id: string;
-  client_id: string;
-};
+export type { HydraBearerContext } from './hydra-bearer.validator';
+// Re-export so existing imports (oidc.module.ts and downstream callers) keep
+// working without a move-find-replace touch across unrelated files. The
+// validator is the single source of truth for the DI Symbol identities —
+// re-exporting the same bindings here preserves provider resolution.
+export {
+  BEARER_AUD_ALLOW_LIST_HANDLE,
+  BEARER_JWKS_HANDLE,
+  HYDRA_ISSUER_URL_HANDLE,
+  HydraBearerValidator,
+} from './hydra-bearer.validator';
 
 /**
  * 004 T032 — Service-principal request context, stashed on `req` for
@@ -50,8 +57,13 @@ const SERVICE_CLIENT_ID_RE = /^[a-z][a-z0-9-]{2,62}$/;
 const BEARER_RE = /^Bearer\s+(\S+)$/i;
 
 // FR-024 / FR-024a — verify Hydra-issued JWTs against JWKS, allow-listed
-// audiences, AND require alkemio_actor_id presence. clockTolerance is 30s
-// (jose default is 0; keep in sync with bearer-invalid.spec.ts T050 cases).
+// audiences, AND require alkemio_actor_id presence. Shared validation
+// (used by `ResolveController` forwardAuth) lives in `HydraBearerValidator`.
+// This strategy keeps a parallel implementation because the 004 T032
+// service-principal branch needs a relaxed audience check at jose-time
+// (re-validated against the catalogue cache below) — the validator's
+// strict audience prefilter would reject service-client bearers before
+// admission could run.
 @Injectable()
 export class HydraBearerStrategy extends PassportStrategy(
   Strategy,
@@ -81,6 +93,7 @@ export class HydraBearerStrategy extends PassportStrategy(
     const auth = req.headers['authorization'];
     // FR-024b state-(a) — no Authorization header at all → anonymous fall-through.
     if (typeof auth !== 'string') return null;
+
     const correlationId = getCorrelationId(req) ?? randomUUID();
     const requestId = correlationId;
     // FR-024b state-(b) — Authorization header present but malformed → invalid.

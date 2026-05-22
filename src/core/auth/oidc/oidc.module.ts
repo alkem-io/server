@@ -1,4 +1,5 @@
 import { ActorContextModule } from '@core/actor-context/actor.context.module';
+import { NonInteractiveLoginModule } from '@core/auth/non-interactive-login/non-interactive-login.module';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -20,6 +21,7 @@ import {
   BEARER_JWKS_HANDLE,
   HYDRA_ISSUER_URL_HANDLE,
   HydraBearerStrategy,
+  HydraBearerValidator,
 } from './strategies/hydra-bearer.strategy';
 
 @Module({
@@ -28,6 +30,7 @@ import {
     PassportModule,
     AuthenticationModule,
     ActorContextModule,
+    NonInteractiveLoginModule,
   ],
   controllers: [OidcController, ForwardAuthController],
   providers: [
@@ -84,6 +87,7 @@ import {
         return issuer_url;
       },
     },
+    HydraBearerValidator,
     HydraBearerStrategy,
     {
       provide: APP_FILTER,

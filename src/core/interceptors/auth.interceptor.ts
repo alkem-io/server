@@ -7,6 +7,7 @@ import {
   CookieSessionInvalidError,
 } from '@core/auth/oidc/strategies/auth.errors';
 import {
+  AUTH_STRATEGY_NON_INTERACTIVE_LOGIN,
   AUTH_STRATEGY_OIDC_COOKIE_SESSION,
   AUTH_STRATEGY_OIDC_HYDRA_BEARER,
 } from '@core/auth/oidc/strategies/strategy.names';
@@ -120,11 +121,29 @@ const getRequest = (context: ExecutionContext) => {
 // Promisified passport.authenticate
 const passportAuthenticate = async (req: IncomingMessage) => {
   return new Promise<ActorContext | undefined>((resolve, reject) => {
-    // T042b — cookie-session OR hydra-bearer. Browser sessions take the
-    // cookie path; non-interactive API clients (Hydra-issued JWTs) take the
-    // Bearer path. Strategies tried in order; first non-null user wins.
+    // T042b — cookie-session OR non-interactive-login OR hydra-bearer.
+    // Browser sessions take the cookie path; clients bearing an HS256 token
+    // signed with NON_INTERACTIVE_LOGIN_SIGNING_KEY take the
+    // non-interactive-login path; standard API clients (Hydra-issued RS256
+    // JWTs) take the Bearer path. Strategies tried in order; first non-null
+    // user wins.
+    //
+    // Order is important: `hydra-bearer` THROWS BearerValidationError when a
+    // bearer is present but the alg does not match its JWKS (RS256), which
+    // 401s the request before `non-interactive-login` ever runs. So we must
+    // try the HS256 path first. The non-interactive-login strategy does a
+    // cheap header-alg pre-check and returns null on anything that isn't
+    // HS256, so RS256 Hydra tokens fall through cleanly.
+    //
+    // The non-interactive-login strategy is always registered with passport
+    // but is inert (returns null) unless NonInteractiveLoginConfig.enabled —
+    // see the non-interactive-login module for the gate.
     passport.authenticate(
-      [AUTH_STRATEGY_OIDC_COOKIE_SESSION, AUTH_STRATEGY_OIDC_HYDRA_BEARER],
+      [
+        AUTH_STRATEGY_OIDC_COOKIE_SESSION,
+        AUTH_STRATEGY_NON_INTERACTIVE_LOGIN,
+        AUTH_STRATEGY_OIDC_HYDRA_BEARER,
+      ],
       // session: false — passport never writes to express-session here.
       // The cookie-session strategy reads `alkemio_session` itself.
       { session: false },

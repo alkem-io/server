@@ -8,6 +8,7 @@ import {
   platformMetadataQuery,
   spacesQuery,
 } from '@config/graphql';
+import { NonInteractiveLoginModule } from '@core/auth/non-interactive-login/non-interactive-login.module';
 import { OidcModule } from '@core/auth/oidc/oidc.module';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
@@ -303,6 +304,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     ScalarsModule,
     AuthenticationModule,
     OidcModule,
+    NonInteractiveLoginModule,
     HealthModule,
     AuthorizationModule,
     GraphqlGuardModule,

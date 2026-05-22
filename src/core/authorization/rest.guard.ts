@@ -9,6 +9,7 @@ import {
   CookieSessionInvalidError,
 } from '@core/auth/oidc/strategies/auth.errors';
 import {
+  AUTH_STRATEGY_NON_INTERACTIVE_LOGIN,
   AUTH_STRATEGY_OIDC_COOKIE_SESSION,
   AUTH_STRATEGY_OIDC_HYDRA_BEARER,
 } from '@core/auth/oidc/strategies/strategy.names';
@@ -20,8 +21,14 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 // session (browser) and Hydra-issued Bearer (non-interactive API clients).
 // Replaces the retired oathkeeper-jwt + oathkeeper-api-token chain.
 @Injectable()
+// Order matters: hydra-bearer throws on alg mismatch, which would 401 an
+// HS256 non-interactive-login token before its own strategy gets a chance.
+// non-interactive-login must come first; its cheap alg pre-check lets RS256
+// Hydra tokens fall through. The non-interactive-login strategy is inert
+// in production builds — see NonInteractiveLoginConfig gate.
 export class RestGuard extends AuthGuard([
   AUTH_STRATEGY_OIDC_COOKIE_SESSION,
+  AUTH_STRATEGY_NON_INTERACTIVE_LOGIN,
   AUTH_STRATEGY_OIDC_HYDRA_BEARER,
 ]) {
   constructor(
