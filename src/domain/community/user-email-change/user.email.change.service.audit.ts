@@ -3,6 +3,7 @@ import { Injectable } from '@nestjs/common';
 import { PlatformAuditInitiatorRole } from './enums/platform.audit.initiator.role';
 import { PlatformAuditOutcome } from './enums/platform.audit.outcome';
 import {
+  EmailChangeApprover,
   EmailChangeAuditDetails,
   IPlatformAuditEntry,
 } from './platform.audit.entry.interface';
@@ -15,6 +16,16 @@ export interface RecordEmailChangeAuditInput {
   outcome: PlatformAuditOutcome;
   oldEmail?: string;
   newEmail?: string;
+  /**
+   * Admin-supplied justification. Populated by the platform-admin flow;
+   * undefined for the self-service flow (spec 098).
+   */
+  reason?: string;
+  /**
+   * Organizational authorizer of the change. Populated by the platform-admin
+   * flow; undefined for the self-service flow (spec 098).
+   */
+  approver?: EmailChangeApprover;
   failureReason?: string;
   correlationId?: string;
   /**
@@ -85,6 +96,12 @@ export class UserEmailChangeAuditService {
     }
     if (input.newEmail !== undefined) {
       details.newEmail = enforceEmailLength(input.newEmail);
+    }
+    if (input.reason !== undefined) {
+      details.reason = input.reason;
+    }
+    if (input.approver !== undefined) {
+      details.approver = input.approver;
     }
     if (input.requestContext) {
       details.requestContext = input.requestContext;

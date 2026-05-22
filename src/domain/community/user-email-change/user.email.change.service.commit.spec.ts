@@ -136,6 +136,12 @@ function harness({
   return { service, auditRows, repository, kratosService };
 }
 
+const TEST_REASON = 'support ticket #4821';
+const TEST_APPROVER = {
+  name: 'Jane Approver',
+  role: 'Organization Administrator',
+};
+
 describe('UserEmailChangeService — three commit outcomes via fault injection', () => {
   beforeEach(() => vi.restoreAllMocks());
 
@@ -144,7 +150,9 @@ describe('UserEmailChangeService — three commit outcomes via fault injection',
     const result = await service.applyAdminEmailChange(
       'admin-1',
       'subject-1',
-      'new@example.com'
+      'new@example.com',
+      TEST_REASON,
+      TEST_APPROVER
     );
     expect(result.success).toBe(true);
     expect(
@@ -155,7 +163,13 @@ describe('UserEmailChangeService — three commit outcomes via fault injection',
   it('forward Kratos fails → ROLLED_BACK + EMAIL_CHANGE_KRATOS_WRITE_FAILED', async () => {
     const { service, auditRows } = harness({ kratosForwardFails: true });
     await expect(
-      service.applyAdminEmailChange('admin-1', 'subject-1', 'new@example.com')
+      service.applyAdminEmailChange(
+        'admin-1',
+        'subject-1',
+        'new@example.com',
+        TEST_REASON,
+        TEST_APPROVER
+      )
     ).rejects.toMatchObject({
       code: UserEmailChangeErrorCode.EMAIL_CHANGE_KRATOS_WRITE_FAILED,
     });
@@ -170,7 +184,13 @@ describe('UserEmailChangeService — three commit outcomes via fault injection',
   it('forward Kratos succeeds, Alkemio fails, revert ok → ROLLED_BACK', async () => {
     const { service, auditRows } = harness({ alkemioFails: true });
     await expect(
-      service.applyAdminEmailChange('admin-1', 'subject-1', 'new@example.com')
+      service.applyAdminEmailChange(
+        'admin-1',
+        'subject-1',
+        'new@example.com',
+        TEST_REASON,
+        TEST_APPROVER
+      )
     ).rejects.toBeInstanceOf(UserEmailChangeException);
     expect(
       auditRows.some(r => r.outcome === PlatformAuditOutcome.ROLLED_BACK)
@@ -186,7 +206,13 @@ describe('UserEmailChangeService — three commit outcomes via fault injection',
       kratosRevertFails: true,
     });
     await expect(
-      service.applyAdminEmailChange('admin-1', 'subject-1', 'new@example.com')
+      service.applyAdminEmailChange(
+        'admin-1',
+        'subject-1',
+        'new@example.com',
+        TEST_REASON,
+        TEST_APPROVER
+      )
     ).rejects.toMatchObject({
       code: UserEmailChangeErrorCode.EMAIL_CHANGE_DRIFT_DETECTED,
     });
@@ -200,7 +226,9 @@ describe('UserEmailChangeService — three commit outcomes via fault injection',
     await service.applyAdminEmailChange(
       'admin-1',
       'subject-1',
-      'new@example.com'
+      'new@example.com',
+      TEST_REASON,
+      TEST_APPROVER
     );
 
     // The breadcrumb is the very first audit row, carrying both addresses.
@@ -208,6 +236,8 @@ describe('UserEmailChangeService — three commit outcomes via fault injection',
     expect(auditRows[0].details).toEqual({
       oldEmail: 'old@example.com',
       newEmail: 'new@example.com',
+      reason: TEST_REASON,
+      approver: TEST_APPROVER,
     });
 
     // ...and it is persisted BEFORE the forward Kratos identity write, so a

@@ -115,7 +115,13 @@ describe('Integration — adminUserEmailChange rollback (Scenario 3)', () => {
 
   it('rolls back when forward Kratos exhausts retries', async () => {
     await expect(
-      service.applyAdminEmailChange('admin-1', 'subject-1', 'new@example.com')
+      service.applyAdminEmailChange(
+        'admin-1',
+        'subject-1',
+        'new@example.com',
+        'support ticket #4821',
+        { name: 'Jane Approver', role: 'Organization Administrator' }
+      )
     ).rejects.toMatchObject({
       code: expect.stringMatching(
         /^(EMAIL_CHANGE_KRATOS_WRITE_FAILED|EMAIL_CHANGE_KRATOS_UNREACHABLE)$/

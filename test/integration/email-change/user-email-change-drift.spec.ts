@@ -139,7 +139,13 @@ describe('Integration — drift detection + reconciliation (Scenario 4)', () => 
 
   it('writes DRIFT_DETECTED + emits Winston error + publishes GA notification', async () => {
     await expect(
-      service.applyAdminEmailChange('admin-1', 'subject-1', 'new@example.com')
+      service.applyAdminEmailChange(
+        'admin-1',
+        'subject-1',
+        'new@example.com',
+        'support ticket #4821',
+        { name: 'Jane Approver', role: 'Organization Administrator' }
+      )
     ).rejects.toMatchObject({
       code: UserEmailChangeErrorCode.EMAIL_CHANGE_DRIFT_DETECTED,
     });

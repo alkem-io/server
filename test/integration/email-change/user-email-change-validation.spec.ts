@@ -108,7 +108,13 @@ describe('Integration — adminUserEmailChange validation (Scenario 2)', () => {
 
   it('malformed → EMAIL_CHANGE_VALIDATION + REJECTED_VALIDATION audit; no Kratos call', async () => {
     await expect(
-      service.applyAdminEmailChange('admin-1', 'alice-id', 'not-an-email')
+      service.applyAdminEmailChange(
+        'admin-1',
+        'alice-id',
+        'not-an-email',
+        'support ticket #4821',
+        { name: 'Jane Approver', role: 'Organization Administrator' }
+      )
     ).rejects.toMatchObject({
       code: UserEmailChangeErrorCode.EMAIL_CHANGE_VALIDATION,
     });
@@ -125,7 +131,9 @@ describe('Integration — adminUserEmailChange validation (Scenario 2)', () => {
       service.applyAdminEmailChange(
         'admin-1',
         'alice-id',
-        'alice+v2@test.alkem.io'
+        'alice+v2@test.alkem.io',
+        'support ticket #4821',
+        { name: 'Jane Approver', role: 'Organization Administrator' }
       )
     ).rejects.toMatchObject({
       code: UserEmailChangeErrorCode.EMAIL_CHANGE_NO_CHANGE,
@@ -140,7 +148,13 @@ describe('Integration — adminUserEmailChange validation (Scenario 2)', () => {
 
   it('conflict (Alkemio holds the address) → EMAIL_CHANGE_CONFLICT + non-leaky failureReason', async () => {
     await expect(
-      service.applyAdminEmailChange('admin-1', 'alice-id', 'bob@test.alkem.io')
+      service.applyAdminEmailChange(
+        'admin-1',
+        'alice-id',
+        'bob@test.alkem.io',
+        'support ticket #4821',
+        { name: 'Jane Approver', role: 'Organization Administrator' }
+      )
     ).rejects.toMatchObject({
       code: UserEmailChangeErrorCode.EMAIL_CHANGE_CONFLICT,
     });

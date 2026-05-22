@@ -108,13 +108,25 @@ function makeService({
   return { service, auditRows, kratosService, userService };
 }
 
+const TEST_REASON = 'support ticket #4821';
+const TEST_APPROVER = {
+  name: 'Jane Approver',
+  role: 'Organization Administrator',
+};
+
 describe('UserEmailChangeService — validation rejections', () => {
   beforeEach(() => vi.restoreAllMocks());
 
   it('rejects malformed email; writes REJECTED_VALIDATION; no Kratos calls', async () => {
     const { service, auditRows, kratosService } = makeService();
     await expect(
-      service.applyAdminEmailChange('admin-1', 'subject-1', 'not-an-email')
+      service.applyAdminEmailChange(
+        'admin-1',
+        'subject-1',
+        'not-an-email',
+        TEST_REASON,
+        TEST_APPROVER
+      )
     ).rejects.toMatchObject({
       code: UserEmailChangeErrorCode.EMAIL_CHANGE_VALIDATION,
     });
@@ -134,7 +146,9 @@ describe('UserEmailChangeService — validation rejections', () => {
       service.applyAdminEmailChange(
         'admin-1',
         'subject-1',
-        'current@example.com'
+        'current@example.com',
+        TEST_REASON,
+        TEST_APPROVER
       )
     ).rejects.toMatchObject({
       code: UserEmailChangeErrorCode.EMAIL_CHANGE_NO_CHANGE,
@@ -151,7 +165,13 @@ describe('UserEmailChangeService — validation rejections', () => {
       conflictAlkemio: true,
     });
     await expect(
-      service.applyAdminEmailChange('admin-1', 'subject-1', 'other@example.com')
+      service.applyAdminEmailChange(
+        'admin-1',
+        'subject-1',
+        'other@example.com',
+        TEST_REASON,
+        TEST_APPROVER
+      )
     ).rejects.toMatchObject({
       code: UserEmailChangeErrorCode.EMAIL_CHANGE_CONFLICT,
     });
@@ -166,7 +186,13 @@ describe('UserEmailChangeService — validation rejections', () => {
   it('rejects conflict on Kratos side with identical generic reason (anti-enumeration)', async () => {
     const { service, auditRows } = makeService({ conflictKratos: true });
     await expect(
-      service.applyAdminEmailChange('admin-1', 'subject-1', 'other@example.com')
+      service.applyAdminEmailChange(
+        'admin-1',
+        'subject-1',
+        'other@example.com',
+        TEST_REASON,
+        TEST_APPROVER
+      )
     ).rejects.toMatchObject({
       code: UserEmailChangeErrorCode.EMAIL_CHANGE_CONFLICT,
     });

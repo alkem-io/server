@@ -42,6 +42,11 @@ describe('AdminUserEmailChangeResolverMutations', () => {
       resolver.adminUserEmailChange(actorContext, {
         userID: 'subject-1',
         newEmail: 'new@example.com',
+        reason: 'support ticket #4821',
+        approver: {
+          name: 'Jane Approver',
+          role: 'Organization Administrator',
+        },
       })
     ).rejects.toMatchObject({
       code: UserEmailChangeErrorCode.EMAIL_CHANGE_UNAUTHORIZED,
@@ -56,15 +61,23 @@ describe('AdminUserEmailChangeResolverMutations', () => {
       email: 'new@example.com',
     });
 
+    const approver = {
+      name: 'Jane Approver',
+      role: 'Organization Administrator',
+    };
     const result = await resolver.adminUserEmailChange(actorContext, {
       userID: 'subject-1',
       newEmail: 'new@example.com',
+      reason: 'support ticket #4821',
+      approver,
     });
 
     expect(userEmailChangeService.applyAdminEmailChange).toHaveBeenCalledWith(
       'admin-1',
       'subject-1',
-      'new@example.com'
+      'new@example.com',
+      'support ticket #4821',
+      approver
     );
     expect(result).toEqual({ success: true, email: 'new@example.com' });
   });

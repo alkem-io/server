@@ -17,6 +17,7 @@ import { PlatformAuditInitiatorRole } from './enums/platform.audit.initiator.rol
 import { PlatformAuditOutcome } from './enums/platform.audit.outcome';
 import { UserEmailChangeInitiatorRole } from './enums/user.email.change.initiator.role';
 import { PlatformAuditEntry } from './platform.audit.entry.entity';
+import { EmailChangeApprover } from './platform.audit.entry.interface';
 import {
   CursorPageArgs,
   CursorPagedAuditEntries,
@@ -75,7 +76,9 @@ export class UserEmailChangeService {
   public async applyAdminEmailChange(
     initiatorAdminId: string,
     subjectUserId: string,
-    newEmail: string
+    newEmail: string,
+    reason: string,
+    approver: EmailChangeApprover
   ): Promise<ApplyAdminEmailChangeResult> {
     const correlationId = randomUUID();
     const subject = await this.loadSubjectOrThrow(subjectUserId);
@@ -84,12 +87,16 @@ export class UserEmailChangeService {
     await this.validateNoChange(subject, newEmail, {
       correlationId,
       initiatorAdminId,
+      reason,
+      approver,
     });
     await this.validateFormatAndUniqueness(
       subject,
       newEmail,
       correlationId,
-      initiatorAdminId
+      initiatorAdminId,
+      reason,
+      approver
     );
 
     await this.commitAcrossSides({
@@ -100,6 +107,8 @@ export class UserEmailChangeService {
       initiatorRole: PlatformAuditInitiatorRole.PLATFORM_ADMIN,
       initiatorUserId: initiatorAdminId,
       correlationId,
+      reason,
+      approver,
     });
 
     return { success: true, email: newEmail };
@@ -235,7 +244,12 @@ export class UserEmailChangeService {
   private async validateNoChange(
     subject: { id: string; email: string },
     newEmail: string,
-    ctx: { correlationId: string; initiatorAdminId: string }
+    ctx: {
+      correlationId: string;
+      initiatorAdminId: string;
+      reason: string;
+      approver: EmailChangeApprover;
+    }
   ): Promise<void> {
     if (subject.email.toLowerCase() === newEmail.toLowerCase()) {
       await this.auditService.record({
@@ -245,6 +259,8 @@ export class UserEmailChangeService {
         outcome: PlatformAuditOutcome.REJECTED_VALIDATION,
         oldEmail: subject.email,
         newEmail,
+        reason: ctx.reason,
+        approver: ctx.approver,
         failureReason: 'no_change',
         correlationId: ctx.correlationId,
       });
@@ -261,7 +277,9 @@ export class UserEmailChangeService {
     subject: { id: string; email: string },
     newEmail: string,
     correlationId: string,
-    initiatorAdminId: string
+    initiatorAdminId: string,
+    reason: string,
+    approver: EmailChangeApprover
   ): Promise<void> {
     if (!isLikelyEmail(newEmail)) {
       await this.auditService.record({
@@ -271,6 +289,8 @@ export class UserEmailChangeService {
         outcome: PlatformAuditOutcome.REJECTED_VALIDATION,
         oldEmail: subject.email,
         newEmail,
+        reason,
+        approver,
         failureReason: 'malformed_email',
         correlationId,
       });
@@ -317,6 +337,8 @@ export class UserEmailChangeService {
         outcome: PlatformAuditOutcome.REJECTED_CONFLICT,
         oldEmail: subject.email,
         newEmail,
+        reason,
+        approver,
         failureReason: 'conflict',
         correlationId,
       });
@@ -347,6 +369,8 @@ export class UserEmailChangeService {
     initiatorRole: PlatformAuditInitiatorRole;
     initiatorUserId?: string;
     correlationId: string;
+    reason?: string;
+    approver?: EmailChangeApprover;
   }): Promise<void> {
     const {
       subjectUserId,
@@ -356,6 +380,8 @@ export class UserEmailChangeService {
       initiatorRole,
       initiatorUserId,
       correlationId,
+      reason,
+      approver,
     } = args;
 
     // (0) Crash-window breadcrumb (FR-009c / research.md §R15). Persisted BEFORE the
@@ -371,6 +397,8 @@ export class UserEmailChangeService {
       outcome: PlatformAuditOutcome.COMMIT_STARTED,
       oldEmail,
       newEmail,
+      reason,
+      approver,
       correlationId,
     });
 
@@ -395,6 +423,8 @@ export class UserEmailChangeService {
         outcome: PlatformAuditOutcome.ROLLED_BACK,
         oldEmail,
         newEmail,
+        reason,
+        approver,
         failureReason: extractNonLeakyReason(err),
         correlationId,
       });
@@ -432,6 +462,8 @@ export class UserEmailChangeService {
           outcome: PlatformAuditOutcome.ROLLED_BACK,
           oldEmail,
           newEmail,
+          reason,
+          approver,
           failureReason: extractNonLeakyReason(alkemioErr),
           correlationId,
         });
@@ -454,6 +486,8 @@ export class UserEmailChangeService {
           oldEmail,
           newEmail,
           correlationId,
+          reason,
+          approver,
           failureReason: extractNonLeakyReason(revertErr),
         });
         throw new UserEmailChangeException(
@@ -475,6 +509,8 @@ export class UserEmailChangeService {
       outcome: PlatformAuditOutcome.COMMITTED,
       oldEmail,
       newEmail,
+      reason,
+      approver,
       correlationId,
     });
 
@@ -493,6 +529,8 @@ export class UserEmailChangeService {
         outcome: PlatformAuditOutcome.SESSION_INVALIDATION_FAILED,
         oldEmail,
         newEmail,
+        reason,
+        approver,
         correlationId,
       }
     );
@@ -513,6 +551,8 @@ export class UserEmailChangeService {
         outcome: PlatformAuditOutcome.SECURITY_SIGNAL_FAILED,
         oldEmail,
         newEmail,
+        reason,
+        approver,
         correlationId,
       }
     );
@@ -534,6 +574,8 @@ export class UserEmailChangeService {
         outcome: PlatformAuditOutcome.NEW_ADDRESS_NOTIFICATION_FAILED,
         oldEmail,
         newEmail,
+        reason,
+        approver,
         correlationId,
       }
     );
@@ -572,6 +614,8 @@ export class UserEmailChangeService {
               }
             : undefined,
           initiatorRole: this.mapInitiatorRoleForNotification(initiatorRole),
+          approver,
+          reason,
           commitTimestampISO8601,
           triggerOutcome: 'COMMITTED',
           subjectMemberships: {
@@ -588,6 +632,8 @@ export class UserEmailChangeService {
         outcome: PlatformAuditOutcome.GLOBAL_ADMIN_NOTIFICATION_FAILED,
         oldEmail,
         newEmail,
+        reason,
+        approver,
         correlationId,
       }
     );
@@ -601,6 +647,8 @@ export class UserEmailChangeService {
       oldEmail,
       newEmail,
       correlationId,
+      reason,
+      approver,
       commitTimestampISO8601,
       triggerOutcome: 'COMMITTED',
     });
@@ -615,6 +663,8 @@ export class UserEmailChangeService {
       outcome: PlatformAuditOutcome;
       oldEmail: string;
       newEmail: string;
+      reason?: string;
+      approver?: EmailChangeApprover;
       correlationId: string;
     }
   ): Promise<void> {
@@ -640,6 +690,8 @@ export class UserEmailChangeService {
     oldEmail: string;
     newEmail: string;
     correlationId: string;
+    reason?: string;
+    approver?: EmailChangeApprover;
     failureReason: string;
   }): Promise<void> {
     // (1) Persist drift_detected FIRST so T029's lookup remains correct even
@@ -651,6 +703,8 @@ export class UserEmailChangeService {
       outcome: PlatformAuditOutcome.DRIFT_DETECTED,
       oldEmail: args.oldEmail,
       newEmail: args.newEmail,
+      reason: args.reason,
+      approver: args.approver,
       failureReason: args.failureReason,
       correlationId: args.correlationId,
     });
@@ -711,6 +765,8 @@ export class UserEmailChangeService {
           initiatorRole: this.mapInitiatorRoleForNotification(
             args.initiatorRole
           ),
+          approver: args.approver,
+          reason: args.reason,
           commitTimestampISO8601,
           triggerOutcome: 'DRIFT_DETECTED',
           subjectMemberships: {
@@ -727,6 +783,8 @@ export class UserEmailChangeService {
         outcome: PlatformAuditOutcome.GLOBAL_ADMIN_NOTIFICATION_FAILED,
         oldEmail: args.oldEmail,
         newEmail: args.newEmail,
+        reason: args.reason,
+        approver: args.approver,
         correlationId: args.correlationId,
       }
     );
@@ -740,6 +798,8 @@ export class UserEmailChangeService {
       oldEmail: args.oldEmail,
       newEmail: args.newEmail,
       correlationId: args.correlationId,
+      reason: args.reason,
+      approver: args.approver,
       commitTimestampISO8601,
       triggerOutcome: 'DRIFT_DETECTED',
     });
@@ -760,6 +820,8 @@ export class UserEmailChangeService {
     oldEmail: string;
     newEmail: string;
     correlationId: string;
+    reason?: string;
+    approver?: EmailChangeApprover;
     commitTimestampISO8601: string;
     triggerOutcome: UserEmailChangeTriggerOutcome;
   }): Promise<void> {
@@ -770,6 +832,8 @@ export class UserEmailChangeService {
       oldEmail,
       newEmail,
       correlationId,
+      reason,
+      approver,
       commitTimestampISO8601,
       triggerOutcome,
     } = args;
@@ -832,6 +896,8 @@ export class UserEmailChangeService {
             outcome: PlatformAuditOutcome.SPACE_ADMIN_NOTIFICATION_FAILED,
             oldEmail,
             newEmail,
+            reason,
+            approver,
             correlationId,
           }
         );
@@ -846,6 +912,8 @@ export class UserEmailChangeService {
         outcome: PlatformAuditOutcome.SPACE_ADMIN_NOTIFICATION_FAILED,
         oldEmail,
         newEmail,
+        reason,
+        approver,
         failureReason: extractNonLeakyReason(err),
         correlationId,
       });

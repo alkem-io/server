@@ -795,6 +795,8 @@ export class NotificationExternalAdapter {
       newEmail: eventData.newEmail,
       initiatorProfileSummary: eventData.initiatorProfileSummary,
       initiatorRole: eventData.initiatorRole,
+      approver: eventData.approver,
+      reason: eventData.reason,
       commitTimestampISO8601: eventData.commitTimestampISO8601,
       triggerOutcome: eventData.triggerOutcome,
       subjectMemberships: eventData.subjectMemberships,

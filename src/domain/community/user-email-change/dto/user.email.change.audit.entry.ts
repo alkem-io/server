@@ -42,6 +42,35 @@ export class UserEmailChangeAuditEntriesPageInfo {
   hasPreviousPage!: boolean;
 }
 
+/**
+ * The organizational authority who authorized an email change. Distinct from
+ * the platform admin who operated the mutation (see `initiator`). Free-text
+ * because that authorizer is not necessarily an Alkemio account holder.
+ */
+@ObjectType('EmailChangeApprover', {
+  description:
+    'Who authorized an email change within the subject user’s organization.',
+})
+export class EmailChangeApprover {
+  @Field(() => String, {
+    nullable: false,
+    description: 'Name of the person who authorized the change.',
+  })
+  name!: string;
+
+  @Field(() => String, {
+    nullable: false,
+    description: "The approver's role or title within the organization.",
+  })
+  role!: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description: 'The organization within which the change was authorized.',
+  })
+  organization?: string;
+}
+
 @ObjectType('UserEmailChangeAuditEntry', {
   description:
     'A single email-change audit-trail entry. Append-only and retained indefinitely (FR-014a).',
@@ -89,6 +118,20 @@ export class UserEmailChangeAuditEntry {
       'Short non-leaky failure reason. Set on failure outcomes only.',
   })
   failureReason?: string;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'Admin-supplied justification for the change. Set for platform-admin-initiated changes; null for self-service entries.',
+  })
+  reason?: string;
+
+  @Field(() => EmailChangeApprover, {
+    nullable: true,
+    description:
+      'Who authorized the change within the subject user’s organization. Set for platform-admin-initiated changes; null for self-service entries.',
+  })
+  approver?: EmailChangeApprover;
 
   @Field(() => Date, { nullable: false })
   timestamp!: Date;

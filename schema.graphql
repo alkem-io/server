@@ -524,6 +524,7 @@ enum NotificationEvent {
   USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION
   USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION
   USER_EMAIL_CHANGE_SECURITY_SIGNAL
+  USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION
   USER_MENTIONED
   USER_MESSAGE
   USER_SIGN_UP_WELCOME
@@ -888,6 +889,7 @@ enum UserEmailChangeAuditOutcome {
   ROLLED_BACK
   SECURITY_SIGNAL_FAILED
   SESSION_INVALIDATION_FAILED
+  SPACE_ADMIN_NOTIFICATION_FAILED
 }
 
 """Role of the actor who initiated a user-email-change audit event."""
@@ -2576,6 +2578,16 @@ type Document {
   uploadedDate: DateTime!
   """The URL to be used to retrieve the Document"""
   url: String!
+}
+
+"""Who authorized an email change within the subject user’s organization."""
+type EmailChangeApprover {
+  """Name of the person who authorized the change."""
+  name: String!
+  """The organization within which the change was authorized."""
+  organization: String
+  """The approver's role or title within the organization."""
+  role: String!
 }
 
 type ExternalConfig {
@@ -6318,6 +6330,10 @@ type UserEmailChangeAuditEntriesPageInfo {
 A single email-change audit-trail entry. Append-only and retained indefinitely (FR-014a).
 """
 type UserEmailChangeAuditEntry {
+  """
+  Who authorized the change within the subject user’s organization. Set for platform-admin-initiated changes; null for self-service entries.
+  """
+  approver: EmailChangeApprover
   """Short non-leaky failure reason. Set on failure outcomes only."""
   failureReason: String
   id: UUID!
@@ -6335,6 +6351,10 @@ type UserEmailChangeAuditEntry {
   """
   oldEmail: String
   outcome: UserEmailChangeAuditOutcome!
+  """
+  Admin-supplied justification for the change. Set for platform-admin-initiated changes; null for self-service entries.
+  """
+  reason: String
   """The user whose email is being changed."""
   subject: UserProfileSummary!
   timestamp: DateTime!
@@ -6461,6 +6481,8 @@ type UserSettingsNotificationPlatform {
 type UserSettingsNotificationPlatformAdmin {
   """Receive a notification when a new L0 Space is created"""
   spaceCreated: UserSettingsNotificationChannels!
+  """Receive a notification when a user changes their login email address."""
+  userEmailChanged: UserSettingsNotificationChannels!
   """Receive a notification when a user global role is assigned or removed."""
   userGlobalRoleChanged: UserSettingsNotificationChannels!
   """Receive notification when a new user signs up"""
@@ -6509,6 +6531,10 @@ type UserSettingsNotificationSpaceAdmin {
   communityApplicationReceived: UserSettingsNotificationChannels!
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: UserSettingsNotificationChannels!
+  """
+  Receive a notification when the login email of an admin or lead of a Space I administer is changed (admin)
+  """
+  userEmailChanged: UserSettingsNotificationChannels!
 }
 
 type UserSettingsNotificationUser {
@@ -6872,8 +6898,16 @@ input AdminUserEmailChangeDriftResolveInput {
 }
 
 input AdminUserEmailChangeInput {
+  """
+  Who authorized the change within the subject user's organization. Distinct from the acting platform admin.
+  """
+  approver: EmailChangeApproverInput!
   """The proposed new email address."""
   newEmail: String!
+  """
+  Admin justification for the change (e.g. support-ticket reference). Recorded on every audit entry for this operation.
+  """
+  reason: String!
   """The subject user whose login email is being changed."""
   userID: UUID!
 }
@@ -7739,6 +7773,19 @@ input DiscussionsInput {
   limit: Float
   """The sort order of the Discussions to return."""
   orderBy: DiscussionsOrderBy
+}
+
+input EmailChangeApproverInput {
+  """Name of the person who authorized the change."""
+  name: String!
+  """
+  The organization within which the change was authorized, if applicable.
+  """
+  organization: String
+  """
+  The approver's role or title within the organization (e.g. 'Organization Administrator').
+  """
+  role: String!
 }
 
 input ExploreSpacesInput {
@@ -8995,6 +9042,10 @@ input UpdateUserSettingsNotificationPlatformAdminInput {
   """[Admin] Receive a notification when a new L0 Space is created"""
   spaceCreated: NotificationSettingInput
   """
+  [Admin] Receive a notification when a user changes their login email address
+  """
+  userEmailChanged: NotificationSettingInput
+  """
   [Admin] Receive a notification user is assigned or removed from a global role
   """
   userGlobalRoleChanged: NotificationSettingInput
@@ -9024,6 +9075,10 @@ input UpdateUserSettingsNotificationSpaceAdminInput {
   communityApplicationReceived: NotificationSettingInput
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: NotificationSettingInput
+  """
+  Receive a notification when the login email of an admin or lead of a Space I administer is changed (admin)
+  """
+  userEmailChanged: NotificationSettingInput
 }
 
 input UpdateUserSettingsNotificationSpaceInput {

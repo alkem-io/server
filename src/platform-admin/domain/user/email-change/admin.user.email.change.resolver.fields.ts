@@ -145,6 +145,8 @@ export class AdminUserEmailChangeResolverFields {
       newEmail: row.details?.newEmail,
       outcome: row.outcome as unknown as UserEmailChangeAuditOutcome,
       failureReason: row.failureReason,
+      reason: row.details?.reason,
+      approver: row.details?.approver,
       timestamp: row.createdDate,
     };
   }

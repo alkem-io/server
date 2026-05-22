@@ -21,9 +21,35 @@ export interface AuditRequestContext {
  * spec 098's verification-flow service is responsible for ensuring that the
  * confirmation token it issues is never mirrored into the audit-entry payload.
  */
+/**
+ * Free-text identification of the person who authorized the change within the
+ * subject's organization. Distinct from the platform admin who *operated* the
+ * mutation (recorded as `initiatorUserId`): the approver is the organizational
+ * authority that sanctioned it (e.g. the org admin of the public-administration
+ * body the subject belongs to). Free-text because that authorizer is not
+ * necessarily an Alkemio account holder.
+ */
+export interface EmailChangeApprover {
+  name: string;
+  role: string;
+  organization?: string;
+}
+
 export interface EmailChangeAuditDetails {
   oldEmail?: string;
   newEmail?: string;
+  /**
+   * Admin-supplied justification for the change. Required by the platform-admin
+   * synchronous flow (`adminUserEmailChange`), where the admin overrides a
+   * user's login email without the new mailbox proving ownership; absent for
+   * the self-service flow (spec 098), which has no admin actor.
+   */
+  reason?: string;
+  /**
+   * Who authorized the change within the subject's organization. Required by
+   * the platform-admin flow; absent for the self-service flow (spec 098).
+   */
+  approver?: EmailChangeApprover;
   requestContext?: AuditRequestContext;
 }
 

@@ -3,6 +3,7 @@ import {
   NotificationEventPayloadSpace,
 } from '@alkemio/notifications-lib';
 import { UserEmailChangeInitiatorRole } from '../enums/user.email.change.initiator.role';
+import { EmailChangeApprover } from '../platform.audit.entry.interface';
 
 /**
  * Wire payloads for the four email-change notification events (research.md §R8).
@@ -72,6 +73,16 @@ export interface UserEmailChangeGlobalAdminNotificationPayload
   newEmail: string;
   initiatorProfileSummary?: UserProfileSummaryPayload;
   initiatorRole: UserEmailChangeInitiatorRole;
+  /**
+   * Organizational authorizer of the change. Present for platform-admin
+   * changes; absent for the self-service flow (spec 098).
+   */
+  approver?: EmailChangeApprover;
+  /**
+   * Admin-supplied justification for the change. Present for platform-admin
+   * changes; absent for the self-service flow (spec 098).
+   */
+  reason?: string;
   commitTimestampISO8601: string;
   triggerOutcome: UserEmailChangeTriggerOutcome;
   subjectMemberships: SubjectMembershipsPayload;

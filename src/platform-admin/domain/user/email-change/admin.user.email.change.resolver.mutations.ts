@@ -38,7 +38,9 @@ export class AdminUserEmailChangeResolverMutations {
     const result = await this.userEmailChangeService.applyAdminEmailChange(
       actorContext.actorID,
       input.userID,
-      input.newEmail
+      input.newEmail,
+      input.reason,
+      input.approver
     );
     return result;
   }

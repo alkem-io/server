@@ -178,7 +178,9 @@ describe('Integration — adminUserEmailChange happy path (Scenario 1)', () => {
     const result = await harness.service.applyAdminEmailChange(
       'admin-1',
       'subject-1',
-      'new@example.com'
+      'new@example.com',
+      'support ticket #4821',
+      { name: 'Jane Approver', role: 'Organization Administrator' }
     );
 
     expect(result).toEqual({ success: true, email: 'new@example.com' });
@@ -214,6 +216,13 @@ describe('Integration — adminUserEmailChange happy path (Scenario 1)', () => {
     // Global-admin payload carries the subject footprint.
     const gaPayload = harness.notificationsClient.globalAdmin.mock.calls[0][0];
     expect(gaPayload.triggerOutcome).toBe('COMMITTED');
+    // The organizational authorizer + justification are carried on the admin
+    // fan-out payload.
+    expect(gaPayload.approver).toEqual({
+      name: 'Jane Approver',
+      role: 'Organization Administrator',
+    });
+    expect(gaPayload.reason).toBe('support ticket #4821');
     expect(gaPayload.subjectMemberships.spaces).toEqual([
       { spaceId: 'space-1', level: '0', roles: ['member'] },
     ]);
@@ -230,7 +239,9 @@ describe('Integration — adminUserEmailChange happy path (Scenario 1)', () => {
     const result = await harness.service.applyAdminEmailChange(
       'admin-1',
       'subject-1',
-      'new@example.com'
+      'new@example.com',
+      'support ticket #4821',
+      { name: 'Jane Approver', role: 'Organization Administrator' }
     );
 
     expect(result.success).toBe(true);
