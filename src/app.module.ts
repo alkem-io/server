@@ -51,6 +51,7 @@ import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingbac
 import { PlatformModule } from '@platform/platform/platform.module';
 import { PlatformHubModule } from '@platform/platform.hub/platform.hub.module';
 import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
+import { MatrixRoomCheckModule } from '@services/adapters/communication-adapter/matrix.room.check.module';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
@@ -348,6 +349,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     EventBusModule,
     WhiteboardIntegrationModule,
     CollaborativeDocumentIntegrationModule,
+    MatrixRoomCheckModule,
     DomainPlatformSettingsModule,
     PlatformRoleModule,
     TemplateApplierModule,
