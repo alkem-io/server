@@ -1,4 +1,5 @@
 import { ActorContextModule } from '@core/actor-context/actor.context.module';
+import { NonInteractiveLoginModule } from '@core/auth/non-interactive-login/non-interactive-login.module';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
@@ -29,6 +30,7 @@ import {
     PassportModule,
     AuthenticationModule,
     ActorContextModule,
+    NonInteractiveLoginModule,
   ],
   controllers: [OidcController, ForwardAuthController],
   providers: [

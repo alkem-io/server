@@ -1,3 +1,4 @@
+import { NonInteractiveLoginStrategy } from '@core/auth/non-interactive-login/non-interactive-login.strategy';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { Controller, Get, Inject, Query, Req, Res } from '@nestjs/common';
 import { randomUUID } from 'crypto';
@@ -7,6 +8,15 @@ import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
 import { HydraBearerValidator } from './strategies/hydra-bearer.validator';
 
 const HEADER_ACTOR_ID = 'X-Alkemio-Actor-Id';
+
+// auth-evaluation-service interprets the nil UUID as the anonymous caller
+// (see authorization-evaluation-service/internal/service/validation.go).
+// Downstream middlewares (e.g. file-service-go's ActorHeaderExtractor) require
+// `X-Alkemio-Actor-Id` to ALWAYS be present so they can distinguish
+// "gateway stamped: anonymous" from "gateway didn't run". Emitting this fixed
+// value for un-credentialed traffic keeps the contract uniform while letting
+// auth-eval still resolve GLOBAL_ANONYMOUS for public-read privileges.
+const ANONYMOUS_ACTOR_ID = '00000000-0000-0000-0000-000000000000';
 
 /**
   Traefik ForwardAuth decision endpoint. Single source-of-truth for
@@ -23,10 +33,13 @@ const HEADER_ACTOR_ID = 'X-Alkemio-Actor-Id';
     2. `Authorization: Bearer <jwt>` — API/M2M (Hydra-issued, JWKS-validated)
     3. `?guestName=` query param    — anonymous guest with display name
 
-  Semantics: ALWAYS returns 200. Absence of `X-Alkemio-Actor-Id` signals
-  anonymous; per-route policy decides what unauthenticated means for its
-  upstream. Authenticated users get their canonical actor id; guests get
-  the synthetic `guest-<uuid>` minted by ActorContextService.createGuest.
+  Semantics: ALWAYS returns 200 AND ALWAYS stamps `X-Alkemio-Actor-Id`.
+  Authenticated users get their canonical actor id; guests get the synthetic
+  `guest-<uuid>` minted by ActorContextService.createGuest; un-credentialed
+  callers get the nil-UUID sentinel (`ANONYMOUS_ACTOR_ID`), which
+  auth-evaluation-service resolves to GLOBAL_ANONYMOUS. Downstream services
+  (file-service-go, etc.) require the header to ALWAYS be present so they
+  can distinguish "gateway stamped: anonymous" from "gateway didn't run".
 
   Invalid bearer tokens (bad signature, expired, wrong audience, missing
   `alkemio_actor_id` claim) DO NOT 401 — they fall through to anonymous so a
@@ -42,7 +55,8 @@ export class ForwardAuthController {
     private readonly authenticationService: AuthenticationService,
     @Inject(SESSION_STORE_HANDLE)
     private readonly sessionStore: SessionStoreHandle,
-    private readonly hydraBearerValidator: HydraBearerValidator
+    private readonly hydraBearerValidator: HydraBearerValidator,
+    private readonly nonInteractiveLoginStrategy: NonInteractiveLoginStrategy
   ) {}
 
   @Get('forward-auth')
@@ -84,9 +98,10 @@ export class ForwardAuthController {
           cookiePayload,
           guestName
         );
-      if (ctx.actorID) {
-        res.setHeader(HEADER_ACTOR_ID, ctx.actorID);
-      }
+      res.setHeader(
+        HEADER_ACTOR_ID,
+        ctx.actorID && ctx.actorID.length > 0 ? ctx.actorID : ANONYMOUS_ACTOR_ID
+      );
       res.status(200).end();
       return;
     }
@@ -111,7 +126,23 @@ export class ForwardAuthController {
         res.status(200).end();
         return;
       } catch {
-        // Bearer invalid → fall through to anonymous/guest below.
+        // Bearer invalid as Hydra RS256 → try the HS256 non-interactive-login
+        // path below before giving up.
+      }
+
+      // 2b. Non-interactive-login bearer path — HS256 self-signed tokens
+      //     minted by `/api/auth/non-interactive-login`. Mirrors the GraphQL
+      //     Passport chain (Hydra → non-interactive-login fall-through) so
+      //     forwardAuth-protected REST routes (file-service,
+      //     collaborative-document) accept the same test bearers GraphQL does.
+      //     Strategy.validate returns null when the feature is disabled or the
+      //     token is not an HS256 non-interactive-login JWT, so this is inert
+      //     in production.
+      const niCtx = await this.nonInteractiveLoginStrategy.validate(req);
+      if (niCtx?.actorID) {
+        res.setHeader(HEADER_ACTOR_ID, niCtx.actorID);
+        res.status(200).end();
+        return;
       }
     }
 
@@ -122,9 +153,15 @@ export class ForwardAuthController {
       null,
       guestName
     );
-    if (ctx.actorID) {
-      res.setHeader(HEADER_ACTOR_ID, ctx.actorID);
-    }
+    // Always stamp the actor header. Authenticated/guest contexts carry their
+    // own actorID; anonymous contexts get the nil-UUID sentinel that
+    // auth-evaluation-service recognises as GLOBAL_ANONYMOUS. Downstream
+    // services 401 on a missing header (by design), so omitting it here would
+    // make public reads unreachable for unauthenticated callers.
+    res.setHeader(
+      HEADER_ACTOR_ID,
+      ctx.actorID && ctx.actorID.length > 0 ? ctx.actorID : ANONYMOUS_ACTOR_ID
+    );
     res.status(200).end();
   }
 }

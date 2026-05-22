@@ -39,6 +39,6 @@ import { NonInteractiveLoginStrategy } from './non-interactive-login.strategy';
     NonInteractiveLoginService,
     NonInteractiveLoginStrategy,
   ],
-  exports: [NonInteractiveLoginConfig],
+  exports: [NonInteractiveLoginConfig, NonInteractiveLoginStrategy],
 })
 export class NonInteractiveLoginModule {}
