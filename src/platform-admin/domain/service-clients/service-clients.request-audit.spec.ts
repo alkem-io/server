@@ -1,11 +1,17 @@
-import type { ActorContextService } from '@core/actor-context/actor.context.service';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import {
   HydraBearerStrategy,
   type ServicePrincipalContext,
 } from '@core/auth/oidc/strategies/hydra-bearer.strategy';
-import type { AuthenticationService } from '@core/authentication/authentication.service';
+import { AuthenticationService } from '@core/authentication/authentication.service';
 import type { Request } from 'express';
-import { type JWTVerifyGetKey } from 'jose';
+import {
+  generateKeyPair,
+  type JWTPayload,
+  type JWTVerifyGetKey,
+  type KeyLike,
+  SignJWT,
+} from 'jose';
 import { type Mock, vi } from 'vitest';
 
 import type { RevokedBearerBlocklistService } from './service-client-cache/revoked-bearer-blocklist.service';
@@ -31,6 +37,13 @@ import type {
  *     same close-frame from T087 wiring (FR-011a path).
  *   - All SP-path emissions carry `actor_type:"service-client"`.
  *
+ * **Isolation posture**: signs real JWTs with a test-owned keypair and
+ * feeds the JWKS into the strategy via DI — does NOT mock `jose`. The
+ * repo's `isolate: false` vitest setting makes file-scope `vi.mock`
+ * factories leak across worker boundaries; using real jose here keeps
+ * this spec from polluting the bearer-test-harness specs co-scheduled
+ * in the same worker.
+ *
  * Acceptance-side emission (`request{success}` after resolver returns)
  * is wired at the resolver/GraphQL middleware layer (T067/T068 area);
  * not exercised here. Missing-scope denials emit `scope_denial` from
@@ -41,22 +54,9 @@ import type {
  * audit goes to stdout for Filebeat ingestion).
  */
 
-vi.mock('jose', async () => {
-  const actual = await vi.importActual<typeof import('jose')>('jose');
-  return { ...actual, jwtVerify: vi.fn() };
-});
-
-import { jwtVerify } from 'jose';
-
-interface Harness {
-  strategy: HydraBearerStrategy;
-  cacheLookup: Mock;
-  isBlocked: Mock;
-  jwt: Mock;
-}
-
-const ISSUER = 'https://hydra.example.com/';
+const ISSUER = 'http://hydra.example';
 const STATIC_ALLOW_LIST = ['https://alkemio.example.com'];
+const KID = 'test-kid-t044';
 
 const SAMPLE_CACHED_ENABLED: CachedServiceClient = {
   name: 'Analytics Pipeline',
@@ -67,13 +67,25 @@ const SAMPLE_CACHED_ENABLED: CachedServiceClient = {
   tokenEndpointAuthMethod: 'client_secret_basic',
 };
 
-function makeHarness(): Harness {
+interface Harness {
+  strategy: HydraBearerStrategy;
+  cacheLookup: Mock;
+  isBlocked: Mock;
+  privateKey: KeyLike;
+  sign: (claims: JWTPayload) => Promise<string>;
+}
+
+async function makeHarness(): Promise<Harness> {
   const cacheLookup = vi.fn();
   const isBlocked = vi.fn().mockResolvedValue(false);
   const cache: Partial<ServiceClientCacheService> = { lookup: cacheLookup };
   const blocklist: Partial<RevokedBearerBlocklistService> = { isBlocked };
+  const { publicKey, privateKey } = await generateKeyPair('RS256', {
+    extractable: true,
+  });
+  const jwks: JWTVerifyGetKey = async () => publicKey as KeyLike;
   const strategy = new HydraBearerStrategy(
-    {} as unknown as JWTVerifyGetKey,
+    jwks,
     STATIC_ALLOW_LIST,
     ISSUER,
     { createActorContext: vi.fn() } as unknown as AuthenticationService,
@@ -81,18 +93,21 @@ function makeHarness(): Harness {
     cache as ServiceClientCacheService,
     blocklist as RevokedBearerBlocklistService
   );
-  return { strategy, cacheLookup, isBlocked, jwt: vi.mocked(jwtVerify) };
+  const sign = async (claims: JWTPayload): Promise<string> =>
+    new SignJWT(claims as Record<string, unknown>)
+      .setProtectedHeader({ alg: 'RS256', kid: KID })
+      .sign(privateKey);
+  return {
+    strategy,
+    cacheLookup,
+    isBlocked,
+    privateKey: privateKey as KeyLike,
+    sign,
+  };
 }
 
 function makeRequest(headers: Record<string, string>): Request {
   return { headers } as unknown as Request;
-}
-
-function jwtPayload(p: Record<string, unknown>) {
-  return {
-    payload: p,
-    protectedHeader: { alg: 'RS256' },
-  } as unknown as Awaited<ReturnType<typeof jwtVerify>>;
 }
 
 interface CapturedEvent {
@@ -130,33 +145,35 @@ function captureStdout(): {
     events,
     restore: () => {
       spy.mockRestore();
-      // Defensive: re-bind the real write in case the harness didn't.
       process.stdout.write = realWrite as never;
     },
   };
 }
 
+function inFuture(seconds: number): number {
+  return Math.floor(Date.now() / 1_000) + seconds;
+}
+
 describe('SP-path request audit (T044, single-emission rule)', () => {
   describe('audience denial', () => {
     it('emits exactly one request{denial_reason:"audience_not_admitted"} for the request_id', async () => {
-      const h = makeHarness();
+      const h = await makeHarness();
       h.cacheLookup.mockResolvedValueOnce(SAMPLE_CACHED_ENABLED);
-      h.jwt.mockResolvedValueOnce(
-        jwtPayload({
-          sub: 'analytics-pipeline',
-          // Audience mismatches the cache row's clientId — FR-017 invariant
-          // `aud == client_id` violated → audience_not_admitted.
-          aud: 'some-other-audience',
-          scope: 'platform:read',
-          jti: 'jti-aud',
-          exp: Math.floor(Date.now() / 1_000) + 600,
-        })
-      );
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'analytics-pipeline',
+        // Audience mismatches the cache row's clientId — FR-017 invariant
+        // `aud == client_id` violated → audience_not_admitted.
+        aud: 'some-other-audience',
+        scope: 'platform:read',
+        jti: 'jti-aud',
+        exp: inFuture(600),
+      });
 
       const cap = captureStdout();
       try {
         await expect(
-          h.strategy.validate(makeRequest({ authorization: 'Bearer t' }))
+          h.strategy.validate(makeRequest({ authorization: `Bearer ${token}` }))
         ).rejects.toThrow();
       } finally {
         cap.restore();
@@ -180,25 +197,24 @@ describe('SP-path request audit (T044, single-emission rule)', () => {
 
   describe('revoked client (catalogue status=disabled)', () => {
     it('emits exactly one request{denial_reason:"bearer_revoked"} and zero scope_denial rows', async () => {
-      const h = makeHarness();
+      const h = await makeHarness();
       h.cacheLookup.mockResolvedValueOnce({
         ...SAMPLE_CACHED_ENABLED,
         status: 'disabled',
       });
-      h.jwt.mockResolvedValueOnce(
-        jwtPayload({
-          sub: 'analytics-pipeline',
-          aud: 'analytics-pipeline',
-          scope: 'platform:read',
-          jti: 'jti-disabled',
-          exp: Math.floor(Date.now() / 1_000) + 600,
-        })
-      );
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'analytics-pipeline',
+        aud: 'analytics-pipeline',
+        scope: 'platform:read',
+        jti: 'jti-disabled',
+        exp: inFuture(600),
+      });
 
       const cap = captureStdout();
       try {
         await expect(
-          h.strategy.validate(makeRequest({ authorization: 'Bearer t' }))
+          h.strategy.validate(makeRequest({ authorization: `Bearer ${token}` }))
         ).rejects.toThrow();
       } finally {
         cap.restore();
@@ -222,23 +238,22 @@ describe('SP-path request audit (T044, single-emission rule)', () => {
 
   describe('revoked bearer (jti blocklist)', () => {
     it('emits exactly one request{denial_reason:"bearer_revoked"} and tags actor_type:"service-client"', async () => {
-      const h = makeHarness();
+      const h = await makeHarness();
       h.cacheLookup.mockResolvedValueOnce(SAMPLE_CACHED_ENABLED);
       h.isBlocked.mockResolvedValueOnce(true);
-      h.jwt.mockResolvedValueOnce(
-        jwtPayload({
-          sub: 'analytics-pipeline',
-          aud: 'analytics-pipeline',
-          scope: 'platform:read',
-          jti: 'jti-blocked',
-          exp: Math.floor(Date.now() / 1_000) + 600,
-        })
-      );
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'analytics-pipeline',
+        aud: 'analytics-pipeline',
+        scope: 'platform:read',
+        jti: 'jti-blocked',
+        exp: inFuture(600),
+      });
 
       const cap = captureStdout();
       try {
         await expect(
-          h.strategy.validate(makeRequest({ authorization: 'Bearer t' }))
+          h.strategy.validate(makeRequest({ authorization: `Bearer ${token}` }))
         ).rejects.toThrow();
       } finally {
         cap.restore();
@@ -260,25 +275,24 @@ describe('SP-path request audit (T044, single-emission rule)', () => {
       // Per the single-emission rule + FR-022 scope-denial coexistence,
       // emitting `request{success}` at the strategy would race with the
       // resolver-layer scope-denial check (T067) which can still flip
-      // the outcome to `scope_denial`. The acceptance-side `request{success}`
-      // emission is therefore deferred to the resolver-completion hook
-      // (T067/T068 wiring). This test pins the current contract: SP-path
-      // admission alone produces NO `request` row.
-      const h = makeHarness();
+      // the outcome to `scope_denial`. The acceptance-side emission is
+      // therefore deferred to the resolver-completion hook (T067/T068
+      // wiring). This test pins the current contract: SP-path admission
+      // alone produces NO `request` row.
+      const h = await makeHarness();
       h.cacheLookup.mockResolvedValueOnce(SAMPLE_CACHED_ENABLED);
-      h.jwt.mockResolvedValueOnce(
-        jwtPayload({
-          sub: 'analytics-pipeline',
-          aud: 'analytics-pipeline',
-          scope: 'platform:read',
-          jti: 'jti-ok',
-          exp: Math.floor(Date.now() / 1_000) + 600,
-        })
-      );
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'analytics-pipeline',
+        aud: 'analytics-pipeline',
+        scope: 'platform:read',
+        jti: 'jti-ok',
+        exp: inFuture(600),
+      });
 
       const cap = captureStdout();
       try {
-        const req = makeRequest({ authorization: 'Bearer t' });
+        const req = makeRequest({ authorization: `Bearer ${token}` });
         await h.strategy.validate(req);
         const sp = (
           req as Request & { servicePrincipal?: ServicePrincipalContext }

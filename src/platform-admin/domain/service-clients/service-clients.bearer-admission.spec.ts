@@ -1,12 +1,19 @@
-import type { ActorContextService } from '@core/actor-context/actor.context.service';
+import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { BearerValidationError } from '@core/auth/oidc/strategies/auth.errors';
 import {
   HydraBearerStrategy,
   type ServicePrincipalContext,
 } from '@core/auth/oidc/strategies/hydra-bearer.strategy';
-import type { AuthenticationService } from '@core/authentication/authentication.service';
+import { AuthenticationService } from '@core/authentication/authentication.service';
 import type { Request } from 'express';
-import { type JWTVerifyGetKey, errors as joseErrors } from 'jose';
+import {
+  exportJWK,
+  generateKeyPair,
+  type JWTPayload,
+  type JWTVerifyGetKey,
+  type KeyLike,
+  SignJWT,
+} from 'jose';
 import { type Mock, vi } from 'vitest';
 
 import type { RevokedBearerBlocklistService } from './service-client-cache/revoked-bearer-blocklist.service';
@@ -14,16 +21,6 @@ import type {
   CachedServiceClient,
   ServiceClientCacheService,
 } from './service-client-cache/service-client-cache.service';
-
-vi.mock('jose', async () => {
-  const actual = await vi.importActual<typeof import('jose')>('jose');
-  return {
-    ...actual,
-    jwtVerify: vi.fn(),
-  };
-});
-
-import { jwtVerify } from 'jose';
 
 /**
  * 004 T041 — Bearer admission contract test.
@@ -33,6 +30,17 @@ import { jwtVerify } from 'jose';
  * request (`req.servicePrincipal`), the **error-code surface** the
  * downstream interceptor mapper consumes, and the **scope-intersection
  * outcome** delivered to the resolver gate (T067).
+ *
+ * **Isolation posture**: this file deliberately does NOT use
+ * `vi.mock('jose', ...)`. The repo runs vitest with `isolate: false`
+ * (`vitest.config.ts`) for module-cache reuse across spec files, which
+ * makes file-scope `vi.mock` factories leak across worker boundaries
+ * non-deterministically when ANY other spec consumes the same module
+ * unmocked (e.g. `test/integration/oidc/bearer-test-harness.ts`
+ * imports real `jose`). To avoid that leak, this file signs real JWTs
+ * with a test-owned keypair and feeds the matching JWKS into
+ * `HydraBearerStrategy` via `BEARER_JWKS_HANDLE` DI — the same pattern
+ * `bearer-test-harness.ts` (003) uses.
  *
  * What this file covers (per spec tasks.md T041):
  *
@@ -65,8 +73,9 @@ import { jwtVerify } from 'jose';
  *   - Single-bearer revoke blocklist precedence (T037 covers; T087 wires).
  */
 
+const ISSUER = 'http://hydra.example';
 const STATIC_ALLOW_LIST = ['https://alkemio.example.com'];
-const ISSUER = 'https://hydra.example.com/';
+const KID = 'test-kid-t041';
 
 const SAMPLE_CACHED_ENABLED: CachedServiceClient = {
   name: 'Analytics Pipeline',
@@ -81,10 +90,11 @@ interface Harness {
   strategy: HydraBearerStrategy;
   cacheLookup: Mock;
   isBlocked: Mock;
-  jwt: Mock;
+  privateKey: KeyLike;
+  sign: (claims: JWTPayload) => Promise<string>;
 }
 
-function makeHarness(): Harness {
+async function makeHarness(): Promise<Harness> {
   const cacheLookup = vi.fn();
   const isBlocked = vi.fn().mockResolvedValue(false);
   const cache: Partial<ServiceClientCacheService> = { lookup: cacheLookup };
@@ -95,8 +105,18 @@ function makeHarness(): Harness {
   };
   const actorContextService: Partial<ActorContextService> = {};
 
+  // Real keypair — the strategy verifies signatures against the JWKS we
+  // hand it via `BEARER_JWKS_HANDLE`. No jose-mock required.
+  const { publicKey, privateKey } = await generateKeyPair('RS256', {
+    extractable: true,
+  });
+  // Exported JWK kept for parity with the 003 bearer-test-harness shape,
+  // even though we hand back a direct key resolver below.
+  await exportJWK(publicKey);
+  const jwks: JWTVerifyGetKey = async () => publicKey as KeyLike;
+
   const strategy = new HydraBearerStrategy(
-    {} as unknown as JWTVerifyGetKey,
+    jwks,
     STATIC_ALLOW_LIST,
     ISSUER,
     authService as AuthenticationService,
@@ -105,11 +125,18 @@ function makeHarness(): Harness {
     blocklist as RevokedBearerBlocklistService
   );
 
+  const sign = async (claims: JWTPayload): Promise<string> => {
+    return new SignJWT(claims as Record<string, unknown>)
+      .setProtectedHeader({ alg: 'RS256', kid: KID })
+      .sign(privateKey);
+  };
+
   return {
     strategy,
     cacheLookup,
     isBlocked,
-    jwt: vi.mocked(jwtVerify),
+    privateKey: privateKey as KeyLike,
+    sign,
   };
 }
 
@@ -117,35 +144,35 @@ function makeRequest(headers: Record<string, string>): Request {
   return { headers } as unknown as Request;
 }
 
-function jwtPayload(p: Record<string, unknown>) {
-  return {
-    payload: p,
-    protectedHeader: { alg: 'RS256' },
-  } as unknown as Awaited<ReturnType<typeof jwtVerify>>;
-}
-
 function pickSpContext(req: Request): ServicePrincipalContext | undefined {
   return (req as Request & { servicePrincipal?: ServicePrincipalContext })
     .servicePrincipal;
 }
 
+function inFuture(seconds: number): number {
+  return Math.floor(Date.now() / 1_000) + seconds;
+}
+
+function inPast(seconds: number): number {
+  return Math.floor(Date.now() / 1_000) - seconds;
+}
+
 describe('HydraBearerStrategy — bearer admission contract (T041)', () => {
   describe('resolver-facing context shape (FR-013, FR-015)', () => {
     it('populates req.servicePrincipal with kind/clientId/name/grantedScopes', async () => {
-      const h = makeHarness();
+      const h = await makeHarness();
       h.cacheLookup.mockResolvedValueOnce(SAMPLE_CACHED_ENABLED);
-      h.jwt.mockResolvedValueOnce(
-        jwtPayload({
-          sub: 'analytics-pipeline',
-          aud: 'analytics-pipeline',
-          scope: 'platform:read analytics:read',
-          jti: 'jti-1',
-          exp: Math.floor(Date.now() / 1_000) + 600,
-          iat: Math.floor(Date.now() / 1_000),
-        })
-      );
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'analytics-pipeline',
+        aud: 'analytics-pipeline',
+        scope: 'platform:read analytics:read',
+        jti: 'jti-1',
+        iat: Math.floor(Date.now() / 1_000),
+        exp: inFuture(600),
+      });
 
-      const req = makeRequest({ authorization: 'Bearer token-1' });
+      const req = makeRequest({ authorization: `Bearer ${token}` });
       await h.strategy.validate(req);
 
       const sp = pickSpContext(req);
@@ -162,49 +189,42 @@ describe('HydraBearerStrategy — bearer admission contract (T041)', () => {
     });
 
     it('falls back name=clientId when cache row predates T043 (no name field)', async () => {
-      const h = makeHarness();
-      // Stale Redis entry — written before T043 added the `name` field.
-      // The strategy must NOT NPE; it must populate `name = sub` so the
-      // SP context still reaches resolvers usable for FR-015 gating.
+      const h = await makeHarness();
       const legacyRow = {
         ...SAMPLE_CACHED_ENABLED,
       } as Partial<CachedServiceClient>;
       delete (legacyRow as { name?: unknown }).name;
       h.cacheLookup.mockResolvedValueOnce(legacyRow as CachedServiceClient);
-      h.jwt.mockResolvedValueOnce(
-        jwtPayload({
-          sub: 'analytics-pipeline',
-          aud: 'analytics-pipeline',
-          scope: 'platform:read',
-          jti: 'jti-legacy',
-          exp: Math.floor(Date.now() / 1_000) + 600,
-        })
-      );
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'analytics-pipeline',
+        aud: 'analytics-pipeline',
+        scope: 'platform:read',
+        jti: 'jti-legacy',
+        exp: inFuture(600),
+      });
 
-      const req = makeRequest({ authorization: 'Bearer token-legacy' });
+      const req = makeRequest({ authorization: `Bearer ${token}` });
       await h.strategy.validate(req);
 
       expect(pickSpContext(req)?.name).toBe('analytics-pipeline');
     });
 
     it('returns null from validate so passport does NOT resolve a user ActorContext', async () => {
-      const h = makeHarness();
+      const h = await makeHarness();
       h.cacheLookup.mockResolvedValueOnce(SAMPLE_CACHED_ENABLED);
-      h.jwt.mockResolvedValueOnce(
-        jwtPayload({
-          sub: 'analytics-pipeline',
-          aud: 'analytics-pipeline',
-          scope: 'platform:read',
-          jti: 'jti-2',
-          exp: Math.floor(Date.now() / 1_000) + 600,
-        })
-      );
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'analytics-pipeline',
+        aud: 'analytics-pipeline',
+        scope: 'platform:read',
+        jti: 'jti-2',
+        exp: inFuture(600),
+      });
 
-      const req = makeRequest({ authorization: 'Bearer token-2' });
+      const req = makeRequest({ authorization: `Bearer ${token}` });
       const result = await h.strategy.validate(req);
 
-      // Service principals do NOT resolve to an `ActorContext`. The
-      // service-principal context rides on the request side-channel.
       expect(result).toBeNull();
       expect(pickSpContext(req)).toBeDefined();
     });
@@ -212,47 +232,37 @@ describe('HydraBearerStrategy — bearer admission contract (T041)', () => {
 
   describe('scope intersection delivers an empty list when bearer + configured disjoint (FR-016)', () => {
     it('admits with empty grantedScopes when bearer scope is empty (parked-client surface)', async () => {
-      const h = makeHarness();
+      const h = await makeHarness();
       h.cacheLookup.mockResolvedValueOnce(SAMPLE_CACHED_ENABLED);
-      h.jwt.mockResolvedValueOnce(
-        jwtPayload({
-          sub: 'analytics-pipeline',
-          aud: 'analytics-pipeline',
-          scope: '',
-          jti: 'jti-empty',
-          exp: Math.floor(Date.now() / 1_000) + 600,
-        })
-      );
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'analytics-pipeline',
+        aud: 'analytics-pipeline',
+        scope: '',
+        jti: 'jti-empty',
+        exp: inFuture(600),
+      });
 
-      const req = makeRequest({ authorization: 'Bearer token-empty' });
+      const req = makeRequest({ authorization: `Bearer ${token}` });
       await h.strategy.validate(req);
       const sp = pickSpContext(req);
 
       expect(sp?.grantedScopes).toEqual([]);
-      // The resolver gate (T067) sees `grantedScopes: []` and emits the
-      // FR-016 FORBIDDEN_SCOPE denial — distinguishable from the
-      // UNAUTHENTICATED envelope that fires when no service-principal
-      // context exists on the request at all (admission failure).
     });
 
     it('admits with the intersection when bearer scope ⊋ configured scope set', async () => {
-      const h = makeHarness();
+      const h = await makeHarness();
       h.cacheLookup.mockResolvedValueOnce(SAMPLE_CACHED_ENABLED);
-      h.jwt.mockResolvedValueOnce(
-        jwtPayload({
-          sub: 'analytics-pipeline',
-          aud: 'analytics-pipeline',
-          // Bearer carries an extra scope (`platform:write`) the
-          // catalogue has not configured for this client — the
-          // intersection must silently drop it. The cache row in this
-          // test only configures `platform:read` + `analytics:read`.
-          scope: 'platform:read platform:write',
-          jti: 'jti-3',
-          exp: Math.floor(Date.now() / 1_000) + 600,
-        })
-      );
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'analytics-pipeline',
+        aud: 'analytics-pipeline',
+        scope: 'platform:read platform:write',
+        jti: 'jti-3',
+        exp: inFuture(600),
+      });
 
-      const req = makeRequest({ authorization: 'Bearer token-3' });
+      const req = makeRequest({ authorization: `Bearer ${token}` });
       await h.strategy.validate(req);
       const sp = pickSpContext(req);
 
@@ -262,68 +272,62 @@ describe('HydraBearerStrategy — bearer admission contract (T041)', () => {
   });
 
   describe('EXPIRED_BEARER (FR-024a — bearer admission error surface)', () => {
-    it('throws BearerValidationError("token_expired") when jose surfaces JWTExpired', async () => {
-      const h = makeHarness();
-      const jwtExpired = new joseErrors.JWTExpired(
-        '"exp" claim timestamp check failed',
-        // jose's JWTExpired throws with the payload as second argument;
-        // the strategy does not depend on it but we ship a minimal shape
-        // for type compatibility.
-        {} as never
-      );
-      h.jwt.mockRejectedValueOnce(jwtExpired);
+    it('throws BearerValidationError("token_expired") when the bearer is past its exp window', async () => {
+      const h = await makeHarness();
+      // Real expired token: exp 5 minutes in the past — well beyond the
+      // strategy's 30s clock tolerance. Real jose surfaces JWTExpired,
+      // which `emitFailure` maps to error_code 'token_expired'.
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'analytics-pipeline',
+        aud: 'analytics-pipeline',
+        scope: 'platform:read',
+        jti: 'jti-expired',
+        iat: inPast(900),
+        exp: inPast(300),
+      });
 
-      const req = makeRequest({ authorization: 'Bearer token-expired' });
+      const req = makeRequest({ authorization: `Bearer ${token}` });
       await expect(h.strategy.validate(req)).rejects.toMatchObject({
         name: 'BearerValidationError',
         errorCode: 'token_expired',
       });
     });
 
-    it('routes via the same code path regardless of grant type — expired-bearer is admission-level', async () => {
-      // The strategy verifies the JWT BEFORE branching on
-      // service-principal vs user-actor. A service-actor JWT that has
-      // expired surfaces `token_expired` exactly as a user-actor JWT
-      // would — keeps client-side handling uniform per
-      // `contracts/bff-bearer-service-principal.md`.
-      const h = makeHarness();
-      h.jwt.mockRejectedValueOnce(
-        new joseErrors.JWTExpired(
-          '"exp" claim timestamp check failed',
-          {} as never
-        )
-      );
-      const req = makeRequest({ authorization: 'Bearer token-expired-2' });
+    it('short-circuits before the service-principal branch (no cache lookup performed)', async () => {
+      const h = await makeHarness();
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'analytics-pipeline',
+        aud: 'analytics-pipeline',
+        scope: 'platform:read',
+        jti: 'jti-expired-2',
+        iat: inPast(900),
+        exp: inPast(300),
+      });
+
+      const req = makeRequest({ authorization: `Bearer ${token}` });
       await expect(h.strategy.validate(req)).rejects.toBeInstanceOf(
         BearerValidationError
       );
-      // No cache lookup should have been performed — JOSE-level
-      // rejection short-circuits the service-principal branch entirely.
       expect(h.cacheLookup).not.toHaveBeenCalled();
     });
   });
 
   describe('unregistered credentials fall through to 003 UNAUTHENTICATED envelope', () => {
     it('rejects when sub matches the clientId regex but cache has no row', async () => {
-      const h = makeHarness();
-      // Cache lookup returns null → catalogue does not know this
-      // clientId → service-principal branch falls through to the legacy
-      // 003 path which rejects on missing `alkemio_actor_id`.
+      const h = await makeHarness();
       h.cacheLookup.mockResolvedValueOnce(null);
-      h.jwt.mockResolvedValueOnce(
-        jwtPayload({
-          sub: 'ghost-client',
-          // Audience matches the legacy static allow-list so the FR-024a
-          // `invalid_audience` rejection does NOT fire first; the
-          // strategy proceeds to the missing-claim check.
-          aud: STATIC_ALLOW_LIST[0],
-          scope: 'platform:read',
-          jti: 'jti-ghost',
-          exp: Math.floor(Date.now() / 1_000) + 600,
-        })
-      );
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'ghost-client',
+        aud: STATIC_ALLOW_LIST[0],
+        scope: 'platform:read',
+        jti: 'jti-ghost',
+        exp: inFuture(600),
+      });
 
-      const req = makeRequest({ authorization: 'Bearer token-ghost' });
+      const req = makeRequest({ authorization: `Bearer ${token}` });
       await expect(h.strategy.validate(req)).rejects.toMatchObject({
         name: 'BearerValidationError',
         errorCode: 'missing_alkemio_actor_id',
@@ -332,48 +336,48 @@ describe('HydraBearerStrategy — bearer admission contract (T041)', () => {
     });
 
     it('rejects with invalid_audience when sub does not match catalogue regex AND aud not in static allow-list', async () => {
-      const h = makeHarness();
-      // sub is a UUID-shaped user id — does NOT match the catalogue
-      // clientId regex (`^[a-z][a-z0-9-]{2,62}$` rejects uppercase / dots).
-      h.jwt.mockResolvedValueOnce(
-        jwtPayload({
-          sub: 'A1B2C3D4-…',
-          aud: 'unknown-audience',
-          scope: '',
-          jti: 'jti-unknown',
-          exp: Math.floor(Date.now() / 1_000) + 600,
-        })
-      );
+      const h = await makeHarness();
+      const token = await h.sign({
+        iss: ISSUER,
+        // Kratos-style scoped subject with a `:` — the `:` is NOT in
+        // the catalogue clientId regex character class `[a-z0-9-]`, so
+        // the SP branch is skipped before the cache lookup runs. The
+        // strategy then falls through to the legacy 003 path, which
+        // rejects on `invalid_audience` since `aud` isn't on the
+        // static allow-list.
+        sub: 'kratos:user-id-not-a-clientid',
+        aud: 'unknown-audience',
+        scope: '',
+        jti: 'jti-unknown',
+        exp: inFuture(600),
+      });
 
-      const req = makeRequest({ authorization: 'Bearer token-unknown' });
+      const req = makeRequest({ authorization: `Bearer ${token}` });
       await expect(h.strategy.validate(req)).rejects.toMatchObject({
         name: 'BearerValidationError',
         errorCode: 'invalid_audience',
       });
-      // Cache lookup not consulted: sub failed the catalogue regex
-      // before the SP branch fired.
       expect(h.cacheLookup).not.toHaveBeenCalled();
     });
   });
 
   describe('disabled-client and revoked-bearer admission-time rejections', () => {
     it('rejects with service_client_disabled when cache reports status:disabled', async () => {
-      const h = makeHarness();
+      const h = await makeHarness();
       h.cacheLookup.mockResolvedValueOnce({
         ...SAMPLE_CACHED_ENABLED,
         status: 'disabled',
       });
-      h.jwt.mockResolvedValueOnce(
-        jwtPayload({
-          sub: 'analytics-pipeline',
-          aud: 'analytics-pipeline',
-          scope: 'platform:read',
-          jti: 'jti-disabled',
-          exp: Math.floor(Date.now() / 1_000) + 600,
-        })
-      );
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'analytics-pipeline',
+        aud: 'analytics-pipeline',
+        scope: 'platform:read',
+        jti: 'jti-disabled',
+        exp: inFuture(600),
+      });
 
-      const req = makeRequest({ authorization: 'Bearer token-disabled' });
+      const req = makeRequest({ authorization: `Bearer ${token}` });
       await expect(h.strategy.validate(req)).rejects.toMatchObject({
         name: 'BearerValidationError',
         errorCode: 'service_client_disabled',
@@ -382,20 +386,19 @@ describe('HydraBearerStrategy — bearer admission contract (T041)', () => {
     });
 
     it('rejects with token_revoked when blocklist reports the jti as blocked', async () => {
-      const h = makeHarness();
+      const h = await makeHarness();
       h.cacheLookup.mockResolvedValueOnce(SAMPLE_CACHED_ENABLED);
       h.isBlocked.mockResolvedValueOnce(true);
-      h.jwt.mockResolvedValueOnce(
-        jwtPayload({
-          sub: 'analytics-pipeline',
-          aud: 'analytics-pipeline',
-          scope: 'platform:read',
-          jti: 'jti-revoked',
-          exp: Math.floor(Date.now() / 1_000) + 600,
-        })
-      );
+      const token = await h.sign({
+        iss: ISSUER,
+        sub: 'analytics-pipeline',
+        aud: 'analytics-pipeline',
+        scope: 'platform:read',
+        jti: 'jti-revoked',
+        exp: inFuture(600),
+      });
 
-      const req = makeRequest({ authorization: 'Bearer token-revoked' });
+      const req = makeRequest({ authorization: `Bearer ${token}` });
       await expect(h.strategy.validate(req)).rejects.toMatchObject({
         name: 'BearerValidationError',
         errorCode: 'token_revoked',
