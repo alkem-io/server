@@ -153,14 +153,34 @@ export class HydraBearerStrategy extends PassportStrategy(
       if (cached !== null) {
         // status check (FR-014 / FR-017): disabled rows never admit.
         if (cached.status !== 'enabled') {
+          // 004 T044 — single-emission rule: SP-path denial rides on
+          // ONE `request` row with `denial_reason:"bearer_revoked"`
+          // (status-flipped catalogue rows are functionally indistinguishable
+          // from RFC-7009 revoked tokens at the admission gate). The legacy
+          // `auth.bearer.service_client_disabled` event is retained as a
+          // debugging breadcrumb at `outcome:"warn"` so dashboards keep
+          // their split — but the audit-of-record is the `request` row.
           emitAudit({
             event_type: 'auth.bearer.service_client_disabled',
-            outcome: 'failure',
+            outcome: 'warn',
+            actor_type: 'service-client',
             sub,
             client_id: sub,
+            service_client_id: sub,
             correlation_id: correlationId,
             request_id: requestId,
             error_code: 'service_client_disabled',
+          });
+          emitAudit({
+            event_type: 'request',
+            outcome: 'failure',
+            actor_type: 'service-client',
+            sub,
+            client_id: sub,
+            service_client_id: sub,
+            correlation_id: correlationId,
+            request_id: requestId,
+            denial_reason: 'bearer_revoked',
           });
           throw new BearerValidationError(
             'service_client_disabled',
@@ -181,14 +201,30 @@ export class HydraBearerStrategy extends PassportStrategy(
           // Spec invariant: audience = client_id, exactly one per client.
           candidateAud !== sub
         ) {
+          // 004 T044 — `request{denial_reason:"audience_not_admitted"}`
+          // per the single-emission rule. Legacy invalid_audience event
+          // retained at `outcome:"warn"` for breadcrumb continuity.
           emitAudit({
             event_type: 'auth.bearer.invalid_audience',
-            outcome: 'failure',
+            outcome: 'warn',
+            actor_type: 'service-client',
             sub,
             client_id: sub,
+            service_client_id: sub,
             correlation_id: correlationId,
             request_id: requestId,
             error_code: 'invalid_audience',
+          });
+          emitAudit({
+            event_type: 'request',
+            outcome: 'failure',
+            actor_type: 'service-client',
+            sub,
+            client_id: sub,
+            service_client_id: sub,
+            correlation_id: correlationId,
+            request_id: requestId,
+            denial_reason: 'audience_not_admitted',
           });
           throw new BearerValidationError('invalid_audience', correlationId);
         }
@@ -204,14 +240,30 @@ export class HydraBearerStrategy extends PassportStrategy(
           const blocked =
             await this.revokedBearerBlocklistService.isBlocked(jti);
           if (blocked) {
+            // 004 T044 — `request{denial_reason:"bearer_revoked"}` per
+            // the single-emission rule. Legacy token_revoked event
+            // retained at `outcome:"warn"` for breadcrumb continuity.
             emitAudit({
               event_type: 'auth.bearer.token_revoked',
-              outcome: 'failure',
+              outcome: 'warn',
+              actor_type: 'service-client',
               sub,
               client_id: sub,
+              service_client_id: sub,
               correlation_id: correlationId,
               request_id: requestId,
               error_code: 'token_revoked',
+            });
+            emitAudit({
+              event_type: 'request',
+              outcome: 'failure',
+              actor_type: 'service-client',
+              sub,
+              client_id: sub,
+              service_client_id: sub,
+              correlation_id: correlationId,
+              request_id: requestId,
+              denial_reason: 'bearer_revoked',
             });
             throw new BearerValidationError('token_revoked', correlationId);
           }
@@ -223,14 +275,20 @@ export class HydraBearerStrategy extends PassportStrategy(
         const configured = new Set(cached.scopes);
         const grantedScopes = bearerScopes.filter(s => configured.has(s));
 
+        // 004 T043 — populate the resolver-facing request context with
+        // the catalogue display `name` rather than the conservative
+        // clientId fallback. Cache shape carries `name` post-T043; older
+        // Redis entries that pre-date the field fall back to `sub` so we
+        // never NPE during the 60 s TTL window of the rolling upgrade.
+        const principalName =
+          typeof (cached as { name?: unknown }).name === 'string' &&
+          (cached as { name: string }).name.length > 0
+            ? (cached as { name: string }).name
+            : sub;
         const principal: ServicePrincipalContext = {
           kind: 'service-principal',
           clientId: sub,
-          // Name lives in the catalogue row; the cache shape per
-          // data-model §6 doesn't carry the display `name`, but
-          // resolvers needing it can look it up post-admission. Stash
-          // the clientId as the conservative default audit-friendly tag.
-          name: sub,
+          name: principalName,
           grantedScopes,
         };
         (

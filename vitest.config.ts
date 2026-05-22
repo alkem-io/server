@@ -32,9 +32,22 @@ export default defineConfig({
     pool: 'threads',
     // Match the number of workers to available CPU cores
     maxWorkers: 4,
-    // Reuse module cache across tests - avoids re-importing per test file
-    // Requires tests to not leak state (clearMocks: true handles mock call data)
-    isolate: false,
+    // Per-file module isolation. Earlier setting (`isolate: false`) reused
+    // the module cache across spec files for memory efficiency, on the
+    // assumption that `clearMocks: true` handled all leaked state.
+    //
+    // 004 T044 finding: `clearMocks` resets mock CALL DATA but NOT
+    // file-scope `vi.mock(...)` factories. When one spec mocks a module
+    // (e.g. `vi.mock('jose', ...)` in `hydra-bearer.strategy.service-principal.spec.ts`)
+    // and another spec in the same worker imports that module unmocked
+    // (e.g. `test/integration/oidc/bearer-test-harness.ts` consumes real
+    // `jose`), the mock leaks across the file boundary non-deterministically
+    // — manifesting as 3–21 flaky failures per run in a mixed sweep.
+    //
+    // `isolate: true` re-imports the module graph per spec file. Slight
+    // cold-start cost per file (~30–80 ms in this codebase) buys
+    // deterministic runs across the existing 18+ jose-mocking specs.
+    isolate: true,
     // Enable global test APIs (describe, it, expect, beforeEach, etc.)
     // This provides Jest-like API without explicit imports
     globals: true,

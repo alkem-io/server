@@ -21,6 +21,19 @@ export type AuditOutcome = 'success' | 'failure' | 'warn';
  */
 export type AuditActorType = 'user' | 'service-client' | 'user-deletion-job';
 
+/**
+ * 004 T044 — Denial-reason discriminator carried on `request` events with
+ * `outcome:"denied"`. Per the single-emission rule in
+ * `contracts/audit-event-service-actor.md`, all SP-path denials except
+ * missing-scope ride on a single `request` row with this discriminator,
+ * so that `audit-oidc-*` stays one-event-per-operation. Missing-scope
+ * denials get their own `scope_denial` event (FR-022, emitted by T068).
+ */
+export type AuditDenialReason =
+  | 'audience_not_admitted'
+  | 'bearer_expired'
+  | 'bearer_revoked';
+
 export type AuditEvent = {
   event_type: AuditEventType;
   outcome: AuditOutcome;
@@ -31,6 +44,32 @@ export type AuditEvent = {
   actor_type?: AuditActorType;
   sub?: string | null;
   client_id?: string | null;
+  /**
+   * FR-026 — mirrors `client_id` when `actor_type === "service-client"`;
+   * Filebeat/Logstash + the FR-022a audit query filter on this field
+   * regardless of how the underlying 003 emitter populated `client_id`.
+   */
+  service_client_id?: string | null;
+  /**
+   * FR-020 — present on lifecycle events whose actor is a human admin
+   * (`register`, `rotate`, `revoke`, `re_enable`, `scope_update`,
+   * `description_update`, `owner_reassignment`, platform-scope catalogue
+   * mutations).
+   */
+  acting_admin_user_id?: string | null;
+  /**
+   * FR-019 + audit contract — every `request` event carries the GraphQL
+   * operation_identifier (operation name OR persisted-query hash) so
+   * auditors can join with API traffic logs.
+   */
+  operation_identifier?: string | null;
+  /**
+   * Single-emission rule discriminator (see `AuditDenialReason`).
+   * Populated on `request` events with `outcome:"denied"`; absent on
+   * `outcome:"success"`. Missing-scope denials live on `scope_denial`,
+   * NOT here.
+   */
+  denial_reason?: AuditDenialReason | null;
   correlation_id: string;
   request_id: string;
   timestamp: string;
@@ -39,6 +78,12 @@ export type AuditEvent = {
   granted_scope?: string | null;
   truncated_input?: string | null;
   rp_id?: string | null;
+  /**
+   * Event-type-specific structured payload per the
+   * `contracts/audit-event-service-actor.md` taxonomy. Schema is
+   * documented per event_type; consumers tolerate unknown keys.
+   */
+  payload?: Record<string, unknown> | null;
 };
 
 export type AuditEventType =
@@ -55,6 +100,34 @@ export type AuditEventType =
   // revoked via RFC 7009" without parsing `error_code`.
   | 'auth.bearer.service_client_disabled'
   | 'auth.bearer.token_revoked'
+  // 004 T044 — high-volume request taxonomy per
+  // `contracts/audit-event-service-actor.md`. `request` is the one-event-
+  // per-operation record (success + non-scope denial); `scope_denial`
+  // is its FR-022 partner emitted by T068 for missing-scope denials.
+  // `token_mint` is the FR-021 record emitted by `oidc-service` AND
+  // mirrored locally for resolver-side observability.
+  | 'request'
+  | 'scope_denial'
+  | 'token_mint'
+  // 004 T044 — lifecycle taxonomy (1-year ILM index). The lifecycle
+  // emitter (T013, `ServiceClientLifecycleAudit`) owns these; listed
+  // here so the shared schema accepts them and downstream consumers
+  // (FR-022a audit query) can union the two indices behind a single
+  // type.
+  | 'register'
+  | 'rotate'
+  | 'revoke'
+  | 're_enable'
+  | 'cascade_revoke_synchronous'
+  | 'cascade_revoke_hydra_cleanup'
+  | 'cascade_narrow'
+  | 'scope_update'
+  | 'description_update'
+  | 'owner_reassignment'
+  | 'add_platform_scope'
+  | 'remove_platform_scope'
+  | 'set_platform_scope_baseline_membership'
+  | 'token_revoke'
   // FR-024b — cookie-session strategy emits these on invalid-creds
   // resolution (state b) so audit reflects authn failures distinctly from
   // anonymous fall-through.

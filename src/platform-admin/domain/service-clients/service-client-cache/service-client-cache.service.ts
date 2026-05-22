@@ -55,6 +55,15 @@ export type ServiceClientTokenEndpointAuthMethod =
   | 'client_secret_post';
 
 export interface CachedServiceClient {
+  /**
+   * 004 T043 — display name from the catalogue row (`service_client.name`).
+   * The admission gate stamps it onto `req.servicePrincipal` so resolvers
+   * and audit emitters can render a human-readable label without a
+   * second PG read. Falls back to `clientId` at the strategy if absent
+   * (e.g. legacy Redis entries written before T043 landed — they age out
+   * within 60 s).
+   */
+  name: string;
   status: ServiceClientStatus;
   scopes: string[];
   audience: string;
@@ -172,6 +181,7 @@ export class ServiceClientCacheService
     }
 
     const cached: CachedServiceClient = {
+      name: row.name,
       status: row.status,
       scopes: (row.scopes ?? []).map(s => s.scopeName),
       audience: row.audience,

@@ -46,6 +46,7 @@ const STATIC_ALLOW_LIST = ['https://alkemio.example.com'];
 const ISSUER = 'https://hydra.example.com/';
 
 const SAMPLE_CACHED_ENABLED: CachedServiceClient = {
+  name: 'Analytics Pipeline',
   status: 'enabled',
   scopes: ['platform:read', 'analytics:read'],
   audience: 'analytics-pipeline',
@@ -136,7 +137,9 @@ describe('HydraBearerStrategy — service-principal branch (T037)', () => {
     expect(principal).toEqual({
       kind: 'service-principal',
       clientId: 'analytics-pipeline',
-      name: 'analytics-pipeline',
+      // T043 — populated from the catalogue display name; the legacy
+      // `sub` fallback applies only when the cache row predates T043.
+      name: 'Analytics Pipeline',
       grantedScopes: ['platform:read', 'analytics:read'],
     });
   });

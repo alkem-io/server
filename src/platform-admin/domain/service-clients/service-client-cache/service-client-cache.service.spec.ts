@@ -71,6 +71,7 @@ function makeCacheService(
 }
 
 const SAMPLE_CACHED: CachedServiceClient = {
+  name: 'Analytics Pipeline',
   status: 'enabled',
   scopes: ['platform:read', 'analytics:read'],
   audience: 'analytics-pipeline',
@@ -103,6 +104,7 @@ describe('ServiceClientCacheService (FR-014 admission cache, T036)', () => {
       redis.get.mockResolvedValueOnce(null);
       repo.findOne.mockResolvedValueOnce({
         clientId: 'analytics-pipeline',
+        name: 'Analytics Pipeline',
         status: 'enabled',
         audience: 'analytics-pipeline',
         accessTokenLifetimeSeconds: 600,
