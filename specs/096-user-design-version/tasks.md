@@ -200,6 +200,17 @@ CodeRabbit flagged that the GraphQL input `UpdateUserSettingsEntityInput.designV
 
 Magic `1` / `2` literals replaced with `DESIGN_VERSION_CURRENT_DEFAULT` (= 1) and `DESIGN_VERSION_NEW` (= 2) in `src/domain/community/user-settings/user.settings.design.version.constants.ts`. The constants file holds the phased-rollout context (why `1` ships now, why `2` is the next flip) so a future reader doesn't have to chase the spec to interpret the numbers. Consumed by the entity, service, user.service seed, mock fixture, and tests. The migration deliberately keeps the literal `1` (TypeORM migration files are point-in-time DDL snapshots and must not import code that may evolve).
 
+### 2026-05-26 — Phase 2: default flipped from `1` to `2` for new users
+
+Product decision per [`spec.md` → Clarifications → Session 2026-05-26](./spec.md#session-2026-05-26). The follow-up release anticipated by the 2026-05-13 phased-rollout entry above.
+
+- **New migration** `src/migrations/1779797470780-FlipUserSettingsDesignVersionDefaultToNew.ts` does `ALTER TABLE "user_settings" ALTER COLUMN "designVersion" SET DEFAULT 2` (up) / `... SET DEFAULT 1` (down). **No `UPDATE` statements anywhere** — existing rows preserve their current `designVersion` value (whether default-applied `1`, explicit `1`, explicit `2`, or any other integer per FR-004). New inserts that omit the column now pick up `2`.
+- **Constants renamed**: `DESIGN_VERSION_CURRENT_DEFAULT` is now `2` (was `1`); the prior `1` constant lives on as `DESIGN_VERSION_LEGACY`. Consumers (entity decorator, `createUserSettings` ??-fallback, `getDefaultUserSettings()` seed, mock fixture) reference `DESIGN_VERSION_CURRENT_DEFAULT` symbolically and auto-track the new value.
+- **DTO + interface descriptions updated** to call `1` the legacy generation and `2` the current default (drops the "opt-in for now / subsequent release" framing). `schema.graphql` regenerated — only description-string changes on `UserSettings.designVersion` and `UpdateUserSettingsEntityInput.designVersion`.
+- **Switch test in T013** repointed: previously flipped default → `DESIGN_VERSION_NEW`. After phase 2 that would be a no-op (the new default IS `2`), so it now flips default → `DESIGN_VERSION_LEGACY` to keep exercising a real switch.
+- **Phase 1 narrative left intact.** FR-002/003/009, SC-001/002, User Story 1 in `spec.md` describe what shipped on 2026-05-13 and remain accurate as historical record; phase-2 behavior is captured in the Session 2026-05-26 clarification and the Assumptions addendum.
+- **Verification**: `SELECT "designVersion", COUNT(*) FROM user_settings GROUP BY "designVersion"` before/after the migration must show identical distribution; the column default afterwards must report `2`. The `run_validate_migration.sh` CSV diff for `user_settings` should show identical row content with only `column_default 1 → 2` in the schema-metadata diff.
+
 ### Follow-up — Client coordination (next release)
 
 The legacy `alkemio-crd-enabled` LocalStorage flag (boolean) should be retired on the client side; its replacement is a LocalStorage entry that stores the integer value of `me.user.settings.designVersion`. The server is now the source of truth.

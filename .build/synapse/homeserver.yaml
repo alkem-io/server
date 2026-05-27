@@ -398,4 +398,9 @@ rc_invites:
 #
 #federation_rr_transactions_per_room_per_second: 50
 
+# User directory search — expose every local Alkemio actor in Element's
+# people-picker, not just users that share a room with the searcher.
+user_directory:
+  enabled: true
+  search_all_users: true
 
