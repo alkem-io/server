@@ -710,7 +710,10 @@ describe('SpaceAuthorizationService', () => {
       ).toHaveBeenCalled();
     });
 
-    it('should throw when L0 space is missing templatesManager', async () => {
+    it('should skip templatesManager cascade and continue when L0 space is missing templatesManager', async () => {
+      // After the resilientCascade wrap, missing templatesManager no longer
+      // aborts the whole cascade — it's logged and the parent continues to
+      // about + profile.
       const space = createMockSpace({ templatesManager: undefined });
 
       (
@@ -725,10 +728,31 @@ describe('SpaceAuthorizationService', () => {
       (
         licenseAuthorizationService.applyAuthorizationPolicy as any
       ).mockReturnValue([]);
+      (
+        spaceAboutAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        profileAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
 
-      await expect(
-        service.propagateAuthorizationToChildEntities(space as any, true, [])
-      ).rejects.toThrow(RelationshipNotFoundException);
+      const result = await service.propagateAuthorizationToChildEntities(
+        space as any,
+        true,
+        []
+      );
+
+      expect(result).toBeDefined();
+      // templatesManager cascade was skipped (templatesManager.applyAuthorizationPolicy not called)
+      expect(
+        templatesManagerAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
+      // ...but about + profile still ran (they come after templatesManager)
+      expect(
+        spaceAboutAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalled();
+      expect(
+        profileAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalled();
     });
 
     it('should NOT propagate to templatesManager for non-L0 spaces', async () => {

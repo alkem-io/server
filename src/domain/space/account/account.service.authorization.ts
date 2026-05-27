@@ -16,6 +16,7 @@ import {
   LogContext,
 } from '@common/enums';
 import {
+  EntityNotFoundException,
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
@@ -154,10 +155,14 @@ export class AccountAuthorizationService {
       );
     }
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
+    const ctx = { accountId: account.id };
 
     for (const space of account.spaces) {
-      const spaceAuthorizations =
-        await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
+      const spaceAuthorizations = await this.resilientCascade(
+        `space ${space.id} (${space.nameID})`,
+        ctx,
+        () => this.spaceAuthorizationService.applyAuthorizationPolicy(space.id)
+      );
       this.logger.verbose?.(
         `space nameID ${space.nameID}: authorizations to reset count = ${spaceAuthorizations.length}`,
         LogContext.AUTH
@@ -165,32 +170,48 @@ export class AccountAuthorizationService {
       updatedAuthorizations.push(...spaceAuthorizations);
     }
 
-    const licenseAuthorizations =
-      this.licenseAuthorizationService.applyAuthorizationPolicy(
-        account.license,
-        account.authorization
-      );
+    const licenseAuthorizations = await this.resilientCascade(
+      'license',
+      ctx,
+      async () =>
+        this.licenseAuthorizationService.applyAuthorizationPolicy(
+          account.license!,
+          account.authorization
+        )
+    );
     updatedAuthorizations.push(...licenseAuthorizations);
 
-    const storageAggregatorAuthorizations =
-      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
-        account.storageAggregator,
-        account.authorization
-      );
+    const storageAggregatorAuthorizations = await this.resilientCascade(
+      'storage-aggregator',
+      ctx,
+      () =>
+        this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+          account.storageAggregator!,
+          account.authorization
+        )
+    );
     updatedAuthorizations.push(...storageAggregatorAuthorizations);
 
-    const profileAuthorizations =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        account.profile.id,
-        account.authorization
-      );
+    const profileAuthorizations = await this.resilientCascade(
+      'account.profile',
+      ctx,
+      () =>
+        this.profileAuthorizationService.applyAuthorizationPolicy(
+          account.profile!.id,
+          account.authorization
+        )
+    );
     updatedAuthorizations.push(...profileAuthorizations);
 
-    for (const vc of account.virtualContributors) {
-      const updatedVcAuthorizations =
-        await this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
-          vc
-        );
+    for (const vc of account.virtualContributors!) {
+      const updatedVcAuthorizations = await this.resilientCascade(
+        `vc ${vc.id} (${vc.nameID})`,
+        ctx,
+        () =>
+          this.virtualContributorAuthorizationService.applyAuthorizationPolicy(
+            vc
+          )
+      );
       updatedAuthorizations.push(...updatedVcAuthorizations);
     }
 
@@ -198,25 +219,70 @@ export class AccountAuthorizationService {
     const clonedAccountAuth =
       await this.getClonedAccountAuthExtendedForChildEntities(account);
 
-    for (const ip of account.innovationPacks) {
-      const innovationPackAuthorizations =
-        await this.innovationPackAuthorizationService.applyAuthorizationPolicy(
-          ip,
-          clonedAccountAuth
-        );
+    for (const ip of account.innovationPacks!) {
+      const innovationPackAuthorizations = await this.resilientCascade(
+        `innovation-pack ${ip.id} (${ip.nameID})`,
+        ctx,
+        () =>
+          this.innovationPackAuthorizationService.applyAuthorizationPolicy(
+            ip,
+            clonedAccountAuth
+          )
+      );
       updatedAuthorizations.push(...innovationPackAuthorizations);
     }
 
-    for (const innovationHub of account.innovationHubs) {
-      const updatedInnovationHubAuthorizations =
-        await this.innovationHubAuthorizationService.applyAuthorizationPolicy(
-          innovationHub,
-          clonedAccountAuth
-        );
+    for (const innovationHub of account.innovationHubs!) {
+      const updatedInnovationHubAuthorizations = await this.resilientCascade(
+        `innovation-hub ${innovationHub.id} (${innovationHub.nameID})`,
+        ctx,
+        () =>
+          this.innovationHubAuthorizationService.applyAuthorizationPolicy(
+            innovationHub,
+            clonedAccountAuth
+          )
+      );
       updatedAuthorizations.push(...updatedInnovationHubAuthorizations);
     }
 
     return updatedAuthorizations;
+  }
+
+  /**
+   * Wrap a sub-cascade in error containment.
+   *
+   * On data-integrity anomalies (RelationshipNotFoundException,
+   * EntityNotFoundException) the failure is logged at error level with full
+   * context but the parent cascade continues. Other exceptions propagate so
+   * they aren't silently masked.
+   *
+   * This is the architectural fix for the failure mode where a single broken
+   * child entity (e.g. a Space with collaborationId=NULL, or a Template of
+   * type='whiteboard' with whiteboardId=NULL) aborted the entire Account-level
+   * reset and left dozens of unrelated entities with empty credentialRules.
+   */
+  private async resilientCascade<T>(
+    step: string,
+    context: { accountId: string },
+    cascade: () => Promise<T[]>
+  ): Promise<T[]> {
+    try {
+      return await cascade();
+    } catch (e: unknown) {
+      if (
+        e instanceof RelationshipNotFoundException ||
+        e instanceof EntityNotFoundException
+      ) {
+        const err = e as Error;
+        this.logger.error(
+          `Auth-reset cascade step '${step}' skipped for account ${context.accountId} due to data anomaly: ${err.message}`,
+          err.stack,
+          LogContext.AUTH
+        );
+        return [];
+      }
+      throw e;
+    }
   }
 
   private async extendAuthorizationPolicy(
