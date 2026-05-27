@@ -410,6 +410,7 @@ export class CalloutService {
           memo: true,
           mediaGallery: true,
           poll: true,
+          collaboraDocument: true,
         },
         classification: {
           tagsets: true,

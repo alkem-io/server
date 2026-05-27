@@ -34,7 +34,7 @@ export class IUserSettings extends IAuthorizable {
   @Field(() => Int, {
     nullable: false,
     description:
-      'The design version this User has selected (1 = current default design generation; 2 = new design, opt-in for now and expected to become the default in a subsequent release; 3+ reserved for future generations).',
+      'The design version this User has selected (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).',
   })
   designVersion!: number;
 }
