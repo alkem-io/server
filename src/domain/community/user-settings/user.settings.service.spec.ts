@@ -12,7 +12,7 @@ import { type Mock } from 'vitest';
 import { UpdateUserSettingsEntityInput } from './dto/user.settings.dto.update';
 import {
   DESIGN_VERSION_CURRENT_DEFAULT,
-  DESIGN_VERSION_NEW,
+  DESIGN_VERSION_LEGACY,
 } from './user.settings.design.version.constants';
 import { UserSettings } from './user.settings.entity';
 import { IUserSettings } from './user.settings.interface';
@@ -270,16 +270,16 @@ describe('UserSettingsService', () => {
 
   describe('updateSettings - designVersion', () => {
     it('should update designVersion when provided', () => {
-      // buildSettings() seeds the current default; switching to the opt-in
-      // new design exercises the actual switch path.
+      // buildSettings() seeds the current default; switching back to the
+      // legacy generation exercises the actual switch path.
       const settings = buildSettings();
       const updateData: UpdateUserSettingsEntityInput = {
-        designVersion: DESIGN_VERSION_NEW,
+        designVersion: DESIGN_VERSION_LEGACY,
       };
 
       const result = service.updateSettings(settings, updateData);
 
-      expect(result.designVersion).toBe(DESIGN_VERSION_NEW);
+      expect(result.designVersion).toBe(DESIGN_VERSION_LEGACY);
     });
 
     it('should accept zero and negative integers verbatim (no clamping)', () => {
