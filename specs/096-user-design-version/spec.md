@@ -15,6 +15,10 @@
 
 - Q: What should the initial default value for `designVersion` be? → A: `1` (the current default design generation). The default will be flipped to `2` (the new design) in a subsequent release as part of a phased rollout. Users can still switch to `2` (or any other integer) via the existing update mutation today.
 
+### Session 2026-05-26
+
+- Q: When should the default flip to `2`? → A: Now. The column default moves from `1` to `2` via a new migration. New users are created with `2`; **existing user rows are not modified** — they retain whatever value they currently have (whether default-applied `1`, explicit `1`, explicit `2`, or any other integer per FR-004). The `1` value remains valid and is rebranded as the legacy design generation; users can opt back to `1` (or any integer) via `updateUserSettings`. Phase 1 history (FR-002/003/009, SC-001/002, Story 1) is left intact as the historical record of the 2026-05-13 release.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Every user has a recorded design version, defaulting to 1 (Priority: P1)
@@ -109,3 +113,4 @@ Whenever the client retrieves a user (e.g., the currently authenticated user) it
 - The interpretation of integer values (which UI to render for `1`, `2`, `3`, …) is owned by the client. The server is only responsible for accepting, storing, and returning the integer.
 - Existing user records get the default value (`1`) on first read after deployment, via either a column default or a backfill — the choice is left to the implementation plan, but the outward behavior must be that every user appears to have design version `1` until they change it.
 - The "new design" maps conceptually to `2` and is opt-in until a subsequent release flips the column default. The server does not enforce or assume the conceptual mapping; it is documentation only.
+- Phase 2 (2026-05-26) flipped the column default from `1` to `2` for new inserts only — no UPDATE was issued, so the existing user-row distribution is preserved. Phase 1 wording elsewhere in this document is left as the historical record of the 2026-05-13 release.
