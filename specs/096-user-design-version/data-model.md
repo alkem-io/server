@@ -17,11 +17,11 @@
 **TypeORM decorator**:
 
 ```ts
-@Column('int', { nullable: false, default: 1 })
+@Column('int', { nullable: false, default: DESIGN_VERSION_CURRENT_DEFAULT })
 designVersion!: number;
 ```
 
-The decorator mirrors the project convention used by `callout.entity.ts:91` (`@Column('int', { nullable: false })`) plus the explicit `default` value per the CLAUDE.md guideline: "Declare `default` in `@Column()` when the DB column has a DEFAULT".
+`DESIGN_VERSION_CURRENT_DEFAULT` is exported from `user.settings.design.version.constants.ts` and resolves to `2` after the Phase 2 (2026-05-26) flip — Phase 1 shipped with `1`. The decorator mirrors the project convention used by `callout.entity.ts:91` (`@Column('int', { nullable: false })`) plus the explicit `default` value per the CLAUDE.md guideline: "Declare `default` in `@Column()` when the DB column has a DEFAULT".
 
 ### `IUserSettings` (`src/domain/community/user-settings/user.settings.interface.ts`)
 
@@ -30,7 +30,7 @@ The decorator mirrors the project convention used by `callout.entity.ts:91` (`@C
 ```ts
 @Field(() => Int, {
   nullable: false,
-  description: 'The design version this User has selected (1 = current default design generation; 2 = new design, opt-in for now and expected to become the default in a subsequent release; 3+ reserved for future generations).',
+  description: 'The design version this User has selected (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).',
 })
 designVersion!: number;
 ```
@@ -114,7 +114,7 @@ ALTER TABLE "user_settings"
 
 ```ts
 // Skip on both undefined (field omitted) and null (explicit clear is
-// unsupported — the column is NOT NULL with a default of 1).
+// unsupported — the column is NOT NULL with a default of 2 since Phase 2).
 if (updateData.designVersion != null) {
   settings.designVersion = updateData.designVersion;
 }
@@ -132,9 +132,9 @@ The block sits at the top level of the function alongside the existing `if (upda
 
 | Surface | Compatibility |
 | ------- | ------------- |
-| `UserSettings` GraphQL output | Strictly additive — new non-null field. Clients that don't query it are unaffected; clients that do query it always get a value (default `1`). |
+| `UserSettings` GraphQL output | Strictly additive — new non-null field. Clients that don't query it are unaffected; clients that do query it always get a value (`2` for new rows after Phase 2; pre-Phase-2 rows retain whatever was persisted). |
 | `UpdateUserSettingsEntityInput` | Strictly additive — new optional field. Existing callers continue to work unchanged. |
 | `CreateUserSettingsInput` | Strictly additive — new optional field. The internal `getDefaultUserSettings()` is the only producer, and it is updated in lockstep. |
-| Database | Strictly additive — new `NOT NULL DEFAULT 1` column. No data loss, no existing column touched. Reversible via the down migration. |
+| Database | Strictly additive — Phase 1 added `NOT NULL DEFAULT 1` column; Phase 2 flipped the column default to `2` via `ALTER COLUMN ... SET DEFAULT 2`. No data loss, no existing row updated. Reversible via the down migrations. |
 | Authorization | Unchanged. |
 | Events | Unchanged (no new events). |
