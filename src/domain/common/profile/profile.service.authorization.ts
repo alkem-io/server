@@ -4,7 +4,8 @@ import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authoriz
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.interface';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { VisualAuthorizationService } from '../visual/visual.service.authorization';
 import { ProfileService } from './profile.service';
 
@@ -14,7 +15,9 @@ export class ProfileAuthorizationService {
     private authorizationPolicyService: AuthorizationPolicyService,
     private visualAuthorizationService: VisualAuthorizationService,
     private storageBucketAuthorizationService: StorageBucketAuthorizationService,
-    private profileService: ProfileService
+    private profileService: ProfileService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   async applyAuthorizationPolicy(
@@ -22,6 +25,12 @@ export class ProfileAuthorizationService {
     parentAuthorization: IAuthorizationPolicy | undefined,
     credentialRulesFromParent: IAuthorizationPolicyRuleCredential[] = []
   ): Promise<IAuthorizationPolicy[]> {
+    // [DIAG-credrules] temporary diagnostic — remove after root-cause.
+    this.logger.error(
+      `[DIAG-credrules] profile.apply ENTER: profileID=${profileID}, parentAuthId=${parentAuthorization?.id ?? 'undefined'}, parentRules=${parentAuthorization?.credentialRules?.length ?? 'undefined'}, parentCascading=${parentAuthorization?.credentialRules?.filter(r => r.cascade).length ?? 'undefined'}, credentialRulesFromParent=${credentialRulesFromParent.length}`,
+      undefined,
+      LogContext.AUTH
+    );
     const profile = await this.profileService.getProfileOrFail(profileID, {
       loadEagerRelations: false,
       relations: {
@@ -73,6 +82,12 @@ export class ProfileAuthorizationService {
         },
       },
     });
+    // [DIAG-credrules] after load — verify relations + current auth state.
+    this.logger.error(
+      `[DIAG-credrules] profile.apply LOADED: profileID=${profileID}, authId=${profile.authorization?.id ?? 'undefined'}, authRules=${profile.authorization?.credentialRules?.length ?? 'undefined'}, refs=${profile.references?.length ?? 'undefined'}, tagsets=${profile.tagsets?.length ?? 'undefined'}, visuals=${profile.visuals?.length ?? 'undefined'}, storageBucket=${profile.storageBucket?.id ?? 'undefined'}`,
+      undefined,
+      LogContext.AUTH
+    );
     if (
       !profile.references ||
       !profile.tagsets ||
@@ -94,6 +109,14 @@ export class ProfileAuthorizationService {
         parentAuthorization
       );
     profile.authorization.credentialRules.push(...credentialRulesFromParent);
+
+    // [DIAG-credrules] after inheritance — what credentialRules ended up on
+    // the profile's in-memory authorization just before push.
+    this.logger.error(
+      `[DIAG-credrules] profile.apply INHERITED: profileID=${profileID}, authId=${profile.authorization.id}, rulesAfterInherit=${profile.authorization.credentialRules.length}`,
+      undefined,
+      LogContext.AUTH
+    );
 
     updatedAuthorizations.push(profile.authorization);
 
@@ -130,6 +153,13 @@ export class ProfileAuthorizationService {
         profile.authorization
       );
     updatedAuthorizations.push(...storageBucketAuthorizations);
+
+    // [DIAG-credrules] before return — final state of profile's auth.
+    this.logger.error(
+      `[DIAG-credrules] profile.apply RETURN: profileID=${profileID}, authId=${profile.authorization.id}, finalRules=${profile.authorization.credentialRules.length}, returnedCount=${updatedAuthorizations.length}`,
+      undefined,
+      LogContext.AUTH
+    );
 
     return updatedAuthorizations;
   }

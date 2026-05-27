@@ -478,11 +478,35 @@ export class SpaceAuthorizationService {
       );
     updatedAuthorizations.push(...aboutAuthorizations);
 
-    const profileAuthorizations =
-      await this.profileAuthorizationService.applyAuthorizationPolicy(
-        space.profile.id,
-        space.authorization
+    // [DIAG-credrules] temporary diagnostic — see why space.profile cascade
+    // leaves credentialRules empty for some Spaces despite parent having
+    // cascading rules. Remove once root-caused.
+    this.logger.error(
+      `[DIAG-credrules] space.profile cascade ENTER: spaceId=${space.id}, profileId=${space.profile.id}, parentAuthId=${space.authorization.id}, parentRules=${space.authorization.credentialRules.length}, parentCascadingRules=${space.authorization.credentialRules.filter(r => r.cascade).length}`,
+      undefined,
+      LogContext.AUTH
+    );
+    let profileAuthorizations: IAuthorizationPolicy[] = [];
+    try {
+      profileAuthorizations =
+        await this.profileAuthorizationService.applyAuthorizationPolicy(
+          space.profile.id,
+          space.authorization
+        );
+      this.logger.error(
+        `[DIAG-credrules] space.profile cascade RETURN: spaceId=${space.id}, profileId=${space.profile.id}, returnedAuths=${profileAuthorizations.length}, firstAuthRules=${profileAuthorizations[0]?.credentialRules.length ?? 'n/a'}`,
+        undefined,
+        LogContext.AUTH
       );
+    } catch (e) {
+      const err = e as Error;
+      this.logger.error(
+        `[DIAG-credrules] space.profile cascade THREW: spaceId=${space.id}, profileId=${space.profile.id}, error=${err.name}: ${err.message}`,
+        err.stack,
+        LogContext.AUTH
+      );
+      throw e;
+    }
     updatedAuthorizations.push(...profileAuthorizations);
 
     return updatedAuthorizations;
