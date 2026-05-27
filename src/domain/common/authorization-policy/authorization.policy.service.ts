@@ -157,6 +157,21 @@ export class AuthorizationPolicyService {
         LogContext.AUTH
       );
     }
+    // [DIAG-credrules] log every reset() of a profile-type policy: how many
+    // rules just got wiped and who's calling. Combined with the save() log
+    // we can spot reset→save patterns that overwrite a previously-good row.
+    if (authorizationPolicy.type === 'profile') {
+      const stack = new Error().stack
+        ?.split('\n')
+        .slice(2, 7)
+        .join(' | ')
+        .replace(/\s+/g, ' ');
+      this.logger.error(
+        `[DIAG-credrules] reset(profile): id=${authorizationPolicy.id}, rulesBefore=${authorizationPolicy.credentialRules?.length ?? 'undefined'}, privBefore=${authorizationPolicy.privilegeRules?.length ?? 'undefined'}, caller=${stack}`,
+        undefined,
+        LogContext.AUTH
+      );
+    }
     authorizationPolicy.credentialRules = [];
     authorizationPolicy.privilegeRules = [];
     return authorizationPolicy;
@@ -194,6 +209,21 @@ export class AuthorizationPolicyService {
   async save(
     authorizationPolicy: IAuthorizationPolicy
   ): Promise<IAuthorizationPolicy> {
+    // [DIAG-credrules] watch every profile-type save — if a Profile auth is
+    // ever persisted with credentialRules=[] after a successful cascade,
+    // this is where the overwrite happens.
+    if (authorizationPolicy.type === 'profile') {
+      const stack = new Error().stack
+        ?.split('\n')
+        .slice(2, 7)
+        .join(' | ')
+        .replace(/\s+/g, ' ');
+      this.logger.error(
+        `[DIAG-credrules] save(profile): id=${authorizationPolicy.id}, rules=${authorizationPolicy.credentialRules?.length ?? 'undefined'}, priv=${authorizationPolicy.privilegeRules?.length ?? 'undefined'}, caller=${stack}`,
+        undefined,
+        LogContext.AUTH
+      );
+    }
     return this.authorizationPolicyRepository.save(authorizationPolicy);
   }
 
@@ -206,6 +236,28 @@ export class AuthorizationPolicyService {
     else {
       this.logger.verbose?.(
         `Saving ${authorizationPolicies.length} authorization policies`,
+        LogContext.AUTH
+      );
+    }
+
+    // [DIAG-credrules] flag any zero-rule policies in the batch + every
+    // profile-type entry, with caller stack so we can correlate which
+    // saveAll wave is responsible.
+    const profilesInBatch = authorizationPolicies.filter(
+      ap => ap.type === 'profile'
+    );
+    const zeroRuleProfiles = profilesInBatch.filter(
+      ap => (ap.credentialRules?.length ?? 0) === 0
+    );
+    if (profilesInBatch.length > 0) {
+      const stack = new Error().stack
+        ?.split('\n')
+        .slice(2, 7)
+        .join(' | ')
+        .replace(/\s+/g, ' ');
+      this.logger.error(
+        `[DIAG-credrules] saveAll(): batchSize=${authorizationPolicies.length}, profilesInBatch=${profilesInBatch.length}, zeroRuleProfiles=${zeroRuleProfiles.length}, profileIds=[${profilesInBatch.map(p => `${p.id}:${p.credentialRules?.length ?? 'undef'}`).join(', ')}], caller=${stack}`,
+        undefined,
         LogContext.AUTH
       );
     }
