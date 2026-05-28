@@ -30,7 +30,10 @@ import {
   SESSION_ABSOLUTE_TTL_S,
   type SessionStoreHandle,
 } from './session-store.redis';
-import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
+import {
+  COOKIE_SESSION_NAME,
+  SESSION_STORE_HANDLE,
+} from './strategies/cookie-session.errors';
 
 declare module 'express-session' {
   interface SessionData extends Partial<AlkemioSessionPayload> {}
@@ -39,7 +42,6 @@ declare module 'express-session' {
 const OIDC_SCOPE = 'openid profile email offline_access alkemio';
 const ERROR_HTML =
   '<!doctype html><meta charset="utf-8"><title>Authentication failed</title><p>Authentication failed.</p>';
-const SESSION_COOKIE_NAME = 'alkemio_session';
 
 // FR-022c — teardown thresholds for persistent refresh failures.
 const REFRESH_FAILURE_COUNT_THRESHOLD = 3;
@@ -479,7 +481,7 @@ export class OidcController {
         // but functionally correct.
       }
     }
-    res.cookie(SESSION_COOKIE_NAME, '', {
+    res.cookie(COOKIE_SESSION_NAME, '', {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',
@@ -518,7 +520,7 @@ export class OidcController {
     const rpId = client.metadata.client_id ?? null;
     const s = req.session;
     const storedIdToken = typeof s?.id_token === 'string' ? s.id_token : '';
-    const hasSessionCookie = !!req.cookies?.[SESSION_COOKIE_NAME];
+    const hasSessionCookie = !!req.cookies?.[COOKIE_SESSION_NAME];
 
     // FR-017d — local cleanup is unconditional. Idempotent path: if there is
     // no live OIDC session (no stored id_token) we still clear any lingering
@@ -551,7 +553,7 @@ export class OidcController {
         res.status(204).end();
         return;
       }
-      res.cookie(SESSION_COOKIE_NAME, '', {
+      res.cookie(COOKIE_SESSION_NAME, '', {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
@@ -593,7 +595,7 @@ export class OidcController {
       }
     });
 
-    res.cookie(SESSION_COOKIE_NAME, '', {
+    res.cookie(COOKIE_SESSION_NAME, '', {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',

@@ -1,12 +1,13 @@
 import { NonInteractiveLoginStrategy } from '@core/auth/non-interactive-login/non-interactive-login.strategy';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { Controller, Get, Inject, Query, Req, Res } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { AlkemioConfig } from '@src/types';
 import { randomUUID } from 'crypto';
 import type { Request, Response } from 'express';
 import type { SessionStoreHandle } from './session-store.redis';
-import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
+import {
+  COOKIE_SESSION_NAME,
+  SESSION_STORE_HANDLE,
+} from './strategies/cookie-session.errors';
 import { HydraBearerValidator } from './strategies/hydra-bearer.validator';
 
 const HEADER_ACTOR_ID = 'X-Alkemio-Actor-Id';
@@ -57,27 +58,13 @@ const ANONYMOUS_ACTOR_ID = '00000000-0000-0000-0000-000000000000';
  */
 @Controller('rest/internal')
 export class ForwardAuthController {
-  /**
-   * Resolved at construction from `identity.authentication.providers.oidc.cookie.name`.
-   * Per-environment config (`alkemio_session_sandbox`, `alkemio_session_test`, …)
-   * means the cookie name on the wire is NOT the bare `alkemio_session` literal,
-   * so we cannot guard the BFF lookup with a hardcoded key.
-   */
-  private readonly sessionCookieName: string;
-
   constructor(
     private readonly authenticationService: AuthenticationService,
     @Inject(SESSION_STORE_HANDLE)
     private readonly sessionStore: SessionStoreHandle,
     private readonly hydraBearerValidator: HydraBearerValidator,
-    private readonly nonInteractiveLoginStrategy: NonInteractiveLoginStrategy,
-    configService: ConfigService<AlkemioConfig, true>
-  ) {
-    this.sessionCookieName = configService.get(
-      'identity.authentication.providers.oidc',
-      { infer: true }
-    ).cookie.name;
-  }
+    private readonly nonInteractiveLoginStrategy: NonInteractiveLoginStrategy
+  ) {}
 
   @Get('forward-auth')
   async resolve(
@@ -96,8 +83,9 @@ export class ForwardAuthController {
     //    auto-generates a sid for every request, so without this guard the
     //    endpoint would attempt a BFF Redis lookup for unauthenticated traffic.
     //    The cookie name is per-env (`alkemio_session`, `alkemio_session_sandbox`,
-    //    …) so resolve it from config rather than hardcoding the literal.
-    const sid = req.cookies?.[this.sessionCookieName]
+    //    …) and resolved from the OIDC_SESSION_COOKIE_NAME env var at module
+    //    load — see COOKIE_SESSION_NAME in cookie-session.errors.ts.
+    const sid = req.cookies?.[COOKIE_SESSION_NAME]
       ? typeof req.sessionID === 'string' && req.sessionID.length > 0
         ? req.sessionID
         : undefined

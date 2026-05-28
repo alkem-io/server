@@ -16,4 +16,15 @@ export type CookieSessionContext = {
 };
 
 export const SESSION_STORE_HANDLE = Symbol('OIDC_SESSION_STORE_HANDLE');
-export const COOKIE_SESSION_NAME = 'alkemio_session';
+
+/**
+ * Session cookie name. Picks up the `OIDC_SESSION_COOKIE_NAME` env var that
+ * per-env overlays set (`alkemio_session_sandbox`, `alkemio_session_test`, …)
+ * via the alkemio-config ConfigMap; falls back to the alkemio.yml default
+ * `alkemio_session` for local dev / unset environments.
+ *
+ * Read once at module load — process env is populated before the Nest
+ * bootstrap runs.
+ */
+export const COOKIE_SESSION_NAME =
+  process.env.OIDC_SESSION_COOKIE_NAME?.trim() || 'alkemio_session';
