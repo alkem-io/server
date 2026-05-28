@@ -109,17 +109,9 @@ export class CollaborativeDocumentIntegrationService {
   }
 
   public async who(data: WhoInputData): Promise<string> {
-    const actorContext = await this.authenticationService.getActorContext(
-      data.auth
-    );
+    const authCtx = await this.authenticationService.getActorContext(data.auth);
 
-    // Anonymous callers must not get an actor identifier back — the
-    // RPC reply is forwarded to the collaborative-document client.
-    if (actorContext.isAnonymous) {
-      return '';
-    }
-
-    return actorContext.actorID;
+    return authCtx.actorID;
   }
 
   public async save({
