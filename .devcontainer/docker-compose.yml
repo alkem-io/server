@@ -224,7 +224,6 @@ services:
     restart: unless-stopped
     environment:
       - SYNAPSE_NO_TLS=true
-      - SYNAPSE_ENABLE_REGISTRATION=true
       - SYNAPSE_HOMESERVER_NAME=alkemio.matrix.host
       - SYNAPSE_SERVER_URL=http://synapse:8008
     ports:
