@@ -1,7 +1,9 @@
 import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CollaborationLicenseService } from '@domain/collaboration/collaboration/collaboration.service.license';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { ICalloutContribution } from './callout.contribution.interface';
@@ -16,7 +18,8 @@ export class CalloutContributionMoveResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
     private calloutContributionService: CalloutContributionService,
-    private calloutContributionMoveService: CalloutContributionMoveService
+    private calloutContributionMoveService: CalloutContributionMoveService,
+    private collaborationLicenseService: CollaborationLicenseService
   ) {}
 
   @Mutation(() => ICalloutContribution, {
@@ -37,6 +40,14 @@ export class CalloutContributionMoveResolverMutations {
       AuthorizationPrivilege.MOVE_CONTRIBUTION,
       `move contribution: ${contribution.id}`
     );
+    // Office Docs entitlement gate (FR-001/FR-004/FR-006/FR-009): when moving a
+    // Collabora Document contribution, evaluate the *target* Callout's Collaboration
+    // license only. Source state is irrelevant.
+    if (contribution.type === CalloutContributionType.COLLABORA_DOCUMENT) {
+      await this.collaborationLicenseService.ensureOfficeDocsAllowedForCallout(
+        moveContributionData.calloutID
+      );
+    }
     return this.calloutContributionMoveService.moveContributionToCallout(
       moveContributionData.contributionID,
       moveContributionData.calloutID

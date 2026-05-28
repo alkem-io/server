@@ -44,6 +44,7 @@ import { CalloutContributionService } from '../callout-contribution/callout.cont
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
 import { ImportCollaboraDocumentInput } from '../collabora-document/dto/collabora.document.dto.import';
+import { CollaborationLicenseService } from '../collaboration/collaboration.service.license';
 import { ILink } from '../link/link.interface';
 import { ICallout } from './callout.interface';
 import { CalloutService } from './callout.service';
@@ -69,6 +70,7 @@ export class CalloutResolverMutations {
     private readonly calloutContributionService: CalloutContributionService,
     private readonly temporaryStorageService: TemporaryStorageService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
+    private readonly collaborationLicenseService: CollaborationLicenseService,
     @Inject(SUBSCRIPTION_CALLOUT_POST_CREATED)
     private readonly postCreatedSubscription: PubSubEngine
   ) {}
@@ -296,6 +298,14 @@ export class CalloutResolverMutations {
       }
     }
 
+    // Office Docs entitlement gate (FR-001/FR-004/FR-009): block contributions of type
+    // Collabora Document when the owning Collaboration lacks SPACE_FLAG_OFFICE_DOCUMENTS.
+    if (contributionData.type === CalloutContributionType.COLLABORA_DOCUMENT) {
+      await this.collaborationLicenseService.ensureOfficeDocsAllowedForCallout(
+        contributionData.calloutID
+      );
+    }
+
     let contribution = await this.calloutService.createContributionOnCallout(
       contributionData,
       actorContext.actorID
@@ -471,6 +481,13 @@ export class CalloutResolverMutations {
         { calloutId: callout.id }
       );
     }
+
+    // Office Docs entitlement gate (FR-001/FR-004/FR-009): the import path
+    // introduces a Collabora Document into the target Callout's Collaboration.
+    // Gate BEFORE buffering the upload so we fail fast on unlicensed targets.
+    await this.collaborationLicenseService.ensureOfficeDocsAllowedForCallout(
+      uploadData.calloutID
+    );
 
     // Read the upload to a buffer with a configured timeout so a slow
     // or hung client can't pin Node's heap. Once direct-upload-with-

@@ -403,7 +403,7 @@ describe('UrlGeneratorService', () => {
         type: ProfileType.INNOVATION_HUB,
       } as any);
 
-      expect(result).toBe(`${ENDPOINT}/innovation-hubs/my-hub/settings`);
+      expect(result).toBe(`${ENDPOINT}/hub/my-hub`);
     });
 
     it('should generate URL for INNOVATION_PACK profile type', async () => {
