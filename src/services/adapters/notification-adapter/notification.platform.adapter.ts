@@ -21,6 +21,7 @@ import { NotificationInputPlatformForumDiscussionComment } from './dto/platform/
 import { NotificationInputPlatformForumDiscussionCreated } from './dto/platform/notification.dto.input.platform.forum.discussion.created';
 import { NotificationInputPlatformGlobalRoleChange } from './dto/platform/notification.dto.input.platform.global.role.change';
 import { NotificationInputSpaceCreated } from './dto/platform/notification.dto.input.platform.space.created';
+import { NotificationInputUserEmailChangeGlobalAdmin } from './dto/platform/notification.dto.input.platform.user.email.change';
 import { NotificationInputPlatformUserRegistered } from './dto/platform/notification.dto.input.platform.user.registered';
 import { NotificationInputPlatformUserRemoved } from './dto/platform/notification.dto.input.platform.user.removed';
 import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.space.community.invitation.platform';
@@ -133,6 +134,34 @@ export class NotificationPlatformAdapter {
         }
       );
     }
+  }
+
+  public async userEmailChangeGlobalAdmin(
+    eventData: NotificationInputUserEmailChangeGlobalAdmin
+  ): Promise<void> {
+    const event = NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION;
+    const recipients = await this.getNotificationRecipientsPlatform(
+      event,
+      eventData
+    );
+
+    // The change's subject is excluded from the admin fan-out (FR-009) — they
+    // already receive the security-signal and new-address notifications.
+    const emailRecipients = recipients.emailRecipients.filter(
+      recipient => recipient.id !== eventData.subjectUserID
+    );
+    if (emailRecipients.length === 0) {
+      return;
+    }
+
+    const payload =
+      await this.notificationExternalAdapter.buildUserEmailChangeGlobalAdminNotificationPayload(
+        event,
+        eventData,
+        emailRecipients
+      );
+
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async platformForumDiscussionCreated(

@@ -1,8 +1,10 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { CollaboraDocumentType } from '@common/enums/collabora.document.type';
 import {
   EntityNotFoundException,
   ValidationException,
 } from '@common/exceptions';
+import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { MediaGalleryService } from '@domain/common/media-gallery/media.gallery.service';
 import { MemoService } from '@domain/common/memo/memo.service';
@@ -34,6 +36,7 @@ describe('CalloutFramingService', () => {
   let namingService: NamingService;
   let authorizationPolicyService: AuthorizationPolicyService;
   let tagsetService: TagsetService;
+  let collaboraDocumentService: CollaboraDocumentService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -67,6 +70,7 @@ describe('CalloutFramingService', () => {
     namingService = module.get(NamingService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     tagsetService = module.get(TagsetService);
+    collaboraDocumentService = module.get(CollaboraDocumentService);
   });
 
   describe('createCalloutFraming', () => {
@@ -301,6 +305,99 @@ describe('CalloutFramingService', () => {
 
       expect(result.type).toBe(CalloutFramingType.MEDIA_GALLERY);
       expect(mediaGalleryService.createMediaGallery).toHaveBeenCalled();
+    });
+
+    it('should call createCollaboraDocument with the framing input on COLLABORA_DOCUMENT (blank shape)', async () => {
+      const framingData = {
+        type: CalloutFramingType.COLLABORA_DOCUMENT,
+        profile: { displayName: 'Doc Framing', tagsets: [] },
+        tags: [],
+        collaboraDocument: {
+          displayName: 'Q3 Plan',
+          documentType: CollaboraDocumentType.WORDPROCESSING,
+        },
+      } as any;
+
+      vi.mocked(tagsetService.updateTagsetInputs).mockReturnValue([]);
+      vi.mocked(profileService.createProfile).mockResolvedValue({
+        id: 'profile-1',
+      } as any);
+      vi.mocked(
+        collaboraDocumentService.createCollaboraDocument
+      ).mockResolvedValue({ id: 'collab-1' } as any);
+
+      const result = await service.createCalloutFraming(
+        framingData,
+        { id: 'agg-1' } as any,
+        'user-1'
+      );
+
+      expect(result.type).toBe(CalloutFramingType.COLLABORA_DOCUMENT);
+      expect(
+        collaboraDocumentService.createCollaboraDocument
+      ).toHaveBeenCalledWith(
+        framingData.collaboraDocument,
+        expect.anything(),
+        'user-1'
+      );
+    });
+
+    it('should call createCollaboraDocument with uploadedFile present (upload shape)', async () => {
+      const framingData = {
+        type: CalloutFramingType.COLLABORA_DOCUMENT,
+        profile: { displayName: 'Doc Framing', tagsets: [] },
+        tags: [],
+        collaboraDocument: {
+          uploadedFile: {
+            buffer: Buffer.from('fake docx bytes'),
+            filename: 'q3-plan.docx',
+            mimetype:
+              'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+          },
+        },
+      } as any;
+
+      vi.mocked(tagsetService.updateTagsetInputs).mockReturnValue([]);
+      vi.mocked(profileService.createProfile).mockResolvedValue({
+        id: 'profile-1',
+      } as any);
+      vi.mocked(
+        collaboraDocumentService.createCollaboraDocument
+      ).mockResolvedValue({ id: 'collab-1' } as any);
+
+      await service.createCalloutFraming(
+        framingData,
+        { id: 'agg-1' } as any,
+        'user-1'
+      );
+
+      expect(
+        collaboraDocumentService.createCollaboraDocument
+      ).toHaveBeenCalledWith(
+        framingData.collaboraDocument,
+        expect.anything(),
+        'user-1'
+      );
+    });
+
+    it('should throw ValidationException when COLLABORA_DOCUMENT type has no collaboraDocument data', async () => {
+      const framingData = {
+        type: CalloutFramingType.COLLABORA_DOCUMENT,
+        profile: { displayName: 'Doc Framing', tagsets: [] },
+        tags: [],
+      } as any;
+
+      vi.mocked(tagsetService.updateTagsetInputs).mockReturnValue([]);
+      vi.mocked(profileService.createProfile).mockResolvedValue({
+        id: 'profile-1',
+      } as any);
+
+      await expect(
+        service.createCalloutFraming(framingData, { id: 'agg-1' } as any)
+      ).rejects.toThrow(ValidationException);
+      expect(
+        collaboraDocumentService.createCollaboraDocument
+      ).not.toHaveBeenCalled();
     });
   });
 

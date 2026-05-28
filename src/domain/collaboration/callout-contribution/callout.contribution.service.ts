@@ -6,6 +6,8 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
+import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IMemo } from '@domain/common/memo/memo.interface';
@@ -35,6 +37,7 @@ export class CalloutContributionService {
     private whiteboardService: WhiteboardService,
     private linkService: LinkService,
     private memoService: MemoService,
+    private collaboraDocumentService: CollaboraDocumentService,
     @InjectRepository(CalloutContribution)
     private contributionRepository: Repository<CalloutContribution>
   ) {}
@@ -62,6 +65,36 @@ export class CalloutContributionService {
     return contributions;
   }
 
+  /**
+   * Phase-2 materialization for a CalloutContribution. Post/Whiteboard/Memo
+   * leaves are self-materializing inside their respective createX methods
+   * (already saved + materialized when this is called). Only LINK
+   * contributions need explicit materialize here.
+   */
+  public async materializeCalloutContributionContent(
+    contribution: ICalloutContribution,
+    contributionData: CreateCalloutContributionInput | undefined,
+    rollback: () => Promise<unknown>
+  ): Promise<void> {
+    if (contribution.type === CalloutContributionType.LINK) {
+      if (!contribution.link) {
+        throw new RelationshipNotFoundException(
+          'Missing required relation for phase-2 materialization',
+          LogContext.COLLABORATION,
+          {
+            contributionId: contribution.id,
+            missing: ['link'],
+          }
+        );
+      }
+      await this.linkService.materializeLinkContent(
+        contribution.link,
+        contributionData?.link,
+        rollback
+      );
+    }
+  }
+
   public async createCalloutContribution(
     calloutContributionData: CreateCalloutContributionInput,
     storageAggregator: IStorageAggregator,
@@ -84,7 +117,8 @@ export class CalloutContributionService {
     contribution.sortOrder = calloutContributionData.sortOrder ?? 0;
     contribution.type = calloutContributionData.type;
 
-    const { post, whiteboard, link, memo } = calloutContributionData;
+    const { post, whiteboard, link, memo, collaboraDocument } =
+      calloutContributionData;
 
     if (whiteboard) {
       contribution.whiteboard = await this.whiteboardService.createWhiteboard(
@@ -118,6 +152,15 @@ export class CalloutContributionService {
       );
     }
 
+    if (collaboraDocument) {
+      contribution.collaboraDocument =
+        await this.collaboraDocumentService.createCollaboraDocument(
+          collaboraDocument,
+          storageAggregator,
+          userID
+        );
+    }
+
     return contribution;
   }
 
@@ -143,6 +186,7 @@ export class CalloutContributionService {
       [CalloutContributionType.LINK]: 'link',
       [CalloutContributionType.WHITEBOARD]: 'whiteboard',
       [CalloutContributionType.MEMO]: 'memo',
+      [CalloutContributionType.COLLABORA_DOCUMENT]: 'collaboraDocument',
     };
 
     const declaredType = calloutContributionData.type;
@@ -182,6 +226,7 @@ export class CalloutContributionService {
           whiteboard: true,
           link: true,
           memo: true,
+          collaboraDocument: true,
         },
       }
     );
@@ -199,6 +244,12 @@ export class CalloutContributionService {
 
     if (contribution.memo) {
       await this.memoService.deleteMemo(contribution.memo.id);
+    }
+
+    if (contribution.collaboraDocument) {
+      await this.collaboraDocumentService.deleteCollaboraDocument(
+        contribution.collaboraDocument.id
+      );
     }
 
     if (contribution.authorization) {
@@ -351,6 +402,23 @@ export class CalloutContributionService {
     return calloutContribution.memo;
   }
 
+  public async getCollaboraDocument(
+    calloutContributionInput: ICalloutContribution,
+    relations?: FindOptionsRelations<ICalloutContribution>
+  ): Promise<ICollaboraDocument | null> {
+    const calloutContribution = await this.getCalloutContributionOrFail(
+      calloutContributionInput.id,
+      {
+        relations: { collaboraDocument: true, ...relations },
+      }
+    );
+    if (!calloutContribution.collaboraDocument) {
+      return null;
+    }
+
+    return calloutContribution.collaboraDocument;
+  }
+
   /**
    * Retrieves the storage bucket associated with a specific contribution.
    * @param contributionID The ID of the contribution.
@@ -384,6 +452,11 @@ export class CalloutContributionService {
               storageBucket: true,
             },
           },
+          collaboraDocument: {
+            profile: {
+              storageBucket: true,
+            },
+          },
         },
       }
     );
@@ -409,6 +482,8 @@ export class CalloutContributionService {
       return contribution.whiteboard.profile;
     } else if (contribution.memo) {
       return contribution.memo.profile;
+    } else if (contribution.collaboraDocument) {
+      return contribution.collaboraDocument.profile;
     }
     return undefined;
   }

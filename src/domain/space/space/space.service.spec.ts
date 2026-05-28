@@ -134,12 +134,21 @@ describe('SpaceService', () => {
         }
         return Promise.resolve(null);
       });
-      vi.spyOn(spaceRepository, 'find').mockResolvedValue([mockSubspace]);
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        mockSpace,
+        mockSubspace,
+      ]);
       vi.spyOn(service, 'save').mockResolvedValue(mockSpace);
+
+      const lookup = (service as any).spaceLookupService as any;
+      lookup.getAllDescendantSpaceIDs = vi.fn().mockResolvedValue([subspaceId]);
 
       // Mock the URL cache service - use direct assignment for mock objects
       const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
+      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces = vi
+        .fn()
+        .mockResolvedValue(undefined);
 
       // Act
       await service.updateSpacePlatformSettings(mockSpace, updateData);
@@ -231,12 +240,23 @@ describe('SpaceService', () => {
         }
         return Promise.resolve(null);
       });
-      vi.spyOn(spaceRepository, 'find').mockResolvedValue([mockChildSubspace]);
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        mockSubspace,
+        mockChildSubspace,
+      ]);
       vi.spyOn(service, 'save').mockResolvedValue(mockSubspace);
+
+      const lookup = (service as any).spaceLookupService as any;
+      lookup.getAllDescendantSpaceIDs = vi
+        .fn()
+        .mockResolvedValue([childSubspaceId]);
 
       // Mock the URL cache service - use direct assignment for mock objects
       const revokeUrlCacheSpy = vi.fn().mockResolvedValue(undefined);
       urlGeneratorCacheService.revokeUrlCache = revokeUrlCacheSpy;
+      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces = vi
+        .fn()
+        .mockResolvedValue(undefined);
 
       // Act
       await service.updateSpacePlatformSettings(mockSubspace, updateData);
@@ -337,6 +357,69 @@ describe('SpaceService', () => {
 
       // Assert
       expect(revokeUrlCacheSpy).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('invalidateUrlCacheForSpaceSubtree', () => {
+    it('revokes URL cache for the space and all descendants in a single fetch', async () => {
+      const rootId = 'space-root';
+      const childId = 'space-child';
+      const grandchildId = 'space-grandchild';
+
+      const lookup = (service as any).spaceLookupService as any;
+      lookup.getAllDescendantSpaceIDs = vi
+        .fn()
+        .mockResolvedValue([childId, grandchildId]);
+
+      const findSpy = vi
+        .spyOn(spaceRepository, 'find')
+        .mockResolvedValue([
+          { about: { profile: { id: `profile-${rootId}` } } },
+          { about: { profile: { id: `profile-${childId}` } } },
+          { about: { profile: { id: `profile-${grandchildId}` } } },
+        ] as any);
+
+      const revokeSpy = vi
+        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
+        .mockResolvedValue(undefined);
+      const revokeCalloutsSpy = vi.fn().mockResolvedValue(undefined);
+      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces =
+        revokeCalloutsSpy;
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      expect(findSpy).toHaveBeenCalledTimes(1);
+      expect(revokeSpy).toHaveBeenCalledTimes(3);
+      expect(revokeSpy).toHaveBeenCalledWith(`profile-${rootId}`);
+      expect(revokeSpy).toHaveBeenCalledWith(`profile-${childId}`);
+      expect(revokeSpy).toHaveBeenCalledWith(`profile-${grandchildId}`);
+      expect(revokeCalloutsSpy).toHaveBeenCalledWith([
+        rootId,
+        childId,
+        grandchildId,
+      ]);
+    });
+
+    it('skips spaces that have no profile id', async () => {
+      const rootId = 'space-root';
+      const lookup = (service as any).spaceLookupService as any;
+      lookup.getAllDescendantSpaceIDs = vi.fn().mockResolvedValue([]);
+
+      vi.spyOn(spaceRepository, 'find').mockResolvedValue([
+        { about: undefined } as any,
+      ]);
+
+      const revokeSpy = vi
+        .spyOn(urlGeneratorCacheService, 'revokeUrlCache')
+        .mockResolvedValue(undefined);
+      const revokeCalloutsSpy = vi.fn().mockResolvedValue(undefined);
+      (urlGeneratorCacheService as any).revokeUrlCachesForCalloutsInSpaces =
+        revokeCalloutsSpy;
+
+      await service.invalidateUrlCacheForSpaceSubtree(rootId);
+
+      expect(revokeSpy).not.toHaveBeenCalled();
+      expect(revokeCalloutsSpy).toHaveBeenCalledWith([rootId]);
     });
   });
 
@@ -605,6 +688,132 @@ describe('SpaceService', () => {
       const result = await service['getSpace']('missing-id');
 
       expect(result).toBeNull();
+    });
+  });
+
+  describe('getMentionableUserScope', () => {
+    const memberCredOf = (resourceID: string) => ({
+      type: 'space-member',
+      resourceID,
+    });
+
+    const makeSpace = (
+      id: string,
+      privacy: SpacePrivacyMode,
+      parentSpace?: { id: string }
+    ) =>
+      ({
+        id,
+        settings: { privacy: { mode: privacy } },
+        community: { roleSet: { id: `rs-${id}`, roles: [] } },
+        parentSpace,
+      }) as unknown as Space;
+
+    const wireRoleSet = () => {
+      const roleSetService = {
+        getCredentialForRole: vi.fn(async (rs: any) =>
+          memberCredOf(rs.id.replace('rs-', ''))
+        ),
+      };
+      service['roleSetService'] = roleSetService as any;
+      return roleSetService;
+    };
+
+    it('private L0: returns only L0 member credential', async () => {
+      wireRoleSet();
+      const l0 = makeSpace('l0', SpacePrivacyMode.PRIVATE);
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValueOnce(l0);
+
+      const result = await service.getMentionableUserScope('l0');
+
+      expect(result).toEqual({
+        allPlatform: false,
+        credentials: [memberCredOf('l0')],
+      });
+    });
+
+    it('public L0: returns allPlatform', async () => {
+      wireRoleSet();
+      const l0 = makeSpace('l0', SpacePrivacyMode.PUBLIC);
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValueOnce(l0);
+
+      const result = await service.getMentionableUserScope('l0');
+
+      expect(result).toEqual({ allPlatform: true });
+    });
+
+    it('private subspace + public parent: returns only subspace members', async () => {
+      wireRoleSet();
+      const sub = makeSpace('sub', SpacePrivacyMode.PRIVATE, { id: 'l0' });
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValueOnce(sub);
+
+      const result = await service.getMentionableUserScope('sub');
+
+      expect(result).toEqual({
+        allPlatform: false,
+        credentials: [memberCredOf('sub')],
+      });
+    });
+
+    it('public subspace + private parent: strict gate-keeper => only the private parent Members', async () => {
+      wireRoleSet();
+      const sub = makeSpace('sub', SpacePrivacyMode.PUBLIC, { id: 'l0' });
+      const l0 = makeSpace('l0', SpacePrivacyMode.PRIVATE);
+      vi.spyOn(spaceRepository, 'findOne')
+        .mockResolvedValueOnce(sub)
+        .mockResolvedValueOnce(l0);
+
+      const result = await service.getMentionableUserScope('sub');
+
+      expect(result).toEqual({
+        allPlatform: false,
+        credentials: [memberCredOf('l0')],
+      });
+    });
+
+    it('public subspace + public parent L0: chain reaches public root => allPlatform', async () => {
+      wireRoleSet();
+      const sub = makeSpace('sub', SpacePrivacyMode.PUBLIC, { id: 'l0' });
+      const l0 = makeSpace('l0', SpacePrivacyMode.PUBLIC);
+      vi.spyOn(spaceRepository, 'findOne')
+        .mockResolvedValueOnce(sub)
+        .mockResolvedValueOnce(l0);
+
+      const result = await service.getMentionableUserScope('sub');
+
+      expect(result).toEqual({ allPlatform: true });
+    });
+
+    it('L2 public, L1 public, L0 private: strict gate-keeper => only L0 Members', async () => {
+      wireRoleSet();
+      const l2 = makeSpace('l2', SpacePrivacyMode.PUBLIC, { id: 'l1' });
+      const l1 = makeSpace('l1', SpacePrivacyMode.PUBLIC, { id: 'l0' });
+      const l0 = makeSpace('l0', SpacePrivacyMode.PRIVATE);
+      vi.spyOn(spaceRepository, 'findOne')
+        .mockResolvedValueOnce(l2)
+        .mockResolvedValueOnce(l1)
+        .mockResolvedValueOnce(l0);
+
+      const result = await service.getMentionableUserScope('l2');
+
+      expect(result).toEqual({
+        allPlatform: false,
+        credentials: [memberCredOf('l0')],
+      });
+    });
+
+    it('throws when community.roleSet missing', async () => {
+      wireRoleSet();
+      const broken = {
+        id: 'broken',
+        settings: { privacy: { mode: SpacePrivacyMode.PRIVATE } },
+        community: {},
+      } as unknown as Space;
+      vi.spyOn(spaceRepository, 'findOne').mockResolvedValueOnce(broken);
+
+      await expect(service.getMentionableUserScope('broken')).rejects.toThrow(
+        RelationshipNotFoundException
+      );
     });
   });
 

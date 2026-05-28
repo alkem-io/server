@@ -108,7 +108,7 @@ describe('SpaceSettingsService', () => {
       ]);
     });
 
-    it('should replace collaboration entirely when provided', () => {
+    it('should merge collaboration when full payload is provided', () => {
       // Arrange
       const settings = cloneSettings();
       const newCollaboration = {
@@ -127,9 +127,81 @@ describe('SpaceSettingsService', () => {
       const result = service.updateSettings(settings, updateData);
 
       // Assert
-      expect(result.collaboration).toBe(newCollaboration);
+      expect(result.collaboration).toEqual(newCollaboration);
       expect(result.collaboration.allowMembersToVideoCall).toBe(true);
       expect(result.collaboration.allowGuestContributions).toBe(true);
+    });
+
+    it('should preserve unspecified collaboration fields when subset is provided', () => {
+      // Arrange — reproduces issue alkem-io/client-web#9593:
+      // sending only one flag must not clobber the others to undefined.
+      const settings = cloneSettings();
+      const updateData: UpdateSpaceSettingsEntityInput = {
+        collaboration: {
+          allowGuestContributions: true,
+        },
+      };
+
+      // Act
+      const result = service.updateSettings(settings, updateData);
+
+      // Assert
+      expect(result.collaboration.allowGuestContributions).toBe(true);
+      expect(result.collaboration.inheritMembershipRights).toBe(true);
+      expect(result.collaboration.allowMembersToCreateSubspaces).toBe(true);
+      expect(result.collaboration.allowMembersToCreateCallouts).toBe(true);
+      expect(result.collaboration.allowEventsFromSubspaces).toBe(true);
+      expect(result.collaboration.allowMembersToVideoCall).toBe(false);
+    });
+
+    it('should treat explicit false as a real value (not skipped)', () => {
+      // Arrange
+      const settings = cloneSettings();
+      const updateData: UpdateSpaceSettingsEntityInput = {
+        collaboration: {
+          inheritMembershipRights: false,
+        },
+      };
+
+      // Act
+      const result = service.updateSettings(settings, updateData);
+
+      // Assert — false must overwrite the prior true
+      expect(result.collaboration.inheritMembershipRights).toBe(false);
+      expect(result.collaboration.allowMembersToCreateSubspaces).toBe(true);
+    });
+
+    it('should ignore explicit undefined fields in collaboration subset', () => {
+      // Arrange
+      const settings = cloneSettings();
+      const updateData: UpdateSpaceSettingsEntityInput = {
+        collaboration: {
+          allowMembersToVideoCall: true,
+          allowGuestContributions: undefined,
+        },
+      };
+
+      // Act
+      const result = service.updateSettings(settings, updateData);
+
+      // Assert — undefined entry must not clobber existing value
+      expect(result.collaboration.allowMembersToVideoCall).toBe(true);
+      expect(result.collaboration.allowGuestContributions).toBe(false);
+    });
+
+    it('should leave collaboration untouched when collaboration is omitted', () => {
+      // Arrange
+      const settings = cloneSettings();
+      const before = { ...settings.collaboration };
+      const updateData: UpdateSpaceSettingsEntityInput = {
+        privacy: { mode: SpacePrivacyMode.PRIVATE },
+      };
+
+      // Act
+      const result = service.updateSettings(settings, updateData);
+
+      // Assert
+      expect(result.collaboration).toEqual(before);
     });
 
     it('should not modify settings when updateData is empty', () => {

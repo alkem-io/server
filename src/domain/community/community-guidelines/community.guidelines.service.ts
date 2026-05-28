@@ -3,7 +3,10 @@ import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
-import { EntityNotFoundException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  RelationshipNotFoundException,
+} from '@common/exceptions';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { ProfileService } from '@domain/common/profile/profile.service';
@@ -27,6 +30,11 @@ export class CommunityGuidelinesService {
     private communityGuidelinesRepository: Repository<CommunityGuidelines>
   ) {}
 
+  /**
+   * Phase 1: in-memory entity construction. The returned guidelines must be
+   * persisted by the caller (typically via cascade from a parent entity)
+   * before {@link materializeCommunityGuidelinesContent} is invoked.
+   */
   async createCommunityGuidelines(
     communityGuidelinesData: CreateCommunityGuidelinesInput,
     storageAggregator: IStorageAggregator
@@ -53,12 +61,37 @@ export class CommunityGuidelinesService {
       storageAggregator
     );
 
-    await this.profileService.addVisualsOnProfile(
-      communityGuidelines.profile,
-      communityGuidelinesData.profile.visuals,
-      [VisualType.CARD]
-    );
+    return communityGuidelines;
+  }
 
+  /**
+   * Phase 2: post-save content materialization. Re-homes any internal
+   * Alkemio URLs in the profile description/references into the guidelines'
+   * own bucket, then attaches visuals. Requires the parent entity to have
+   * been saved already (so `profile.storageBucket.id` is real).
+   */
+  async materializeCommunityGuidelinesContent(
+    communityGuidelines: ICommunityGuidelines,
+    communityGuidelinesData?: CreateCommunityGuidelinesInput
+  ): Promise<ICommunityGuidelines> {
+    if (!communityGuidelines.profile) {
+      throw new RelationshipNotFoundException(
+        'Community guidelines profile not initialized',
+        LogContext.COMMUNITY,
+        { communityGuidelinesId: communityGuidelines.id }
+      );
+    }
+    // `communityGuidelinesData` is optional because composing services
+    // (e.g. SpaceAboutService) auto-create empty guidelines when the caller
+    // doesn't supply any. Auto-created profiles still need post-save
+    // materialization (re-home description URLs, etc.) — visuals just
+    // happen to be absent in that case.
+    communityGuidelines.profile =
+      await this.profileService.materializeProfileContentAndVisuals(
+        communityGuidelines.profile,
+        communityGuidelinesData?.profile.visuals,
+        [VisualType.CARD]
+      );
     return communityGuidelines;
   }
 

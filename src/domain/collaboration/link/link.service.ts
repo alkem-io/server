@@ -41,6 +41,26 @@ export class LinkService {
     return link;
   }
 
+  /**
+   * Phase-2 materialization for a Link. Composed under callout-framing or
+   * callout-contribution; the parent entity's save persists the bucket
+   * before this is called. Re-homes any markdown URLs/references in
+   * `link.profile` and lets the supplied `rollback` cascade to the
+   * top-level parent on failure.
+   */
+  public async materializeLinkContent(
+    link: ILink,
+    linkData: CreateLinkInput | undefined,
+    rollback: () => Promise<unknown>
+  ): Promise<void> {
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      link.profile,
+      linkData?.profile?.visuals,
+      [],
+      rollback
+    );
+  }
+
   public async updateLink(linkData: UpdateLinkInput): Promise<ILink> {
     const link = await this.getLinkOrFail(linkData.ID, {
       relations: { profile: true },

@@ -5,8 +5,13 @@ import { LogContext } from '@common/enums/logging.context';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
 import { VisualType } from '@common/enums/visual.type';
-import { ValidationException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
+import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { LinkService } from '@domain/collaboration/link/link.service';
 import { IPoll } from '@domain/collaboration/poll/poll.interface';
@@ -55,6 +60,7 @@ export class CalloutFramingService {
     private tagsetService: TagsetService,
     private mediaGalleryService: MediaGalleryService,
     private pollService: PollService,
+    private collaboraDocumentService: CollaboraDocumentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
     @InjectRepository(CalloutFraming)
@@ -166,7 +172,80 @@ export class CalloutFramingService {
       calloutFraming.poll = poll;
     }
 
+    if (calloutFraming.type === CalloutFramingType.COLLABORA_DOCUMENT) {
+      if (calloutFramingData.collaboraDocument) {
+        calloutFraming.collaboraDocument =
+          await this.collaboraDocumentService.createCollaboraDocument(
+            calloutFramingData.collaboraDocument,
+            storageAggregator,
+            userID
+          );
+      } else {
+        throw new ValidationException(
+          'Callout Framing of type COLLABORA_DOCUMENT requires collaboraDocument data.',
+          LogContext.COLLABORATION
+        );
+      }
+    }
+
     return calloutFraming;
+  }
+
+  /**
+   * Phase-2 materialization for a CalloutFraming. Composed under a parent
+   * (callout, template-callout, etc.); the parent's save persists the
+   * framing's bucket before this is called.
+   *
+   * Walks the framing's own profile and the LINK child if present.
+   * Whiteboard and Memo children are self-materializing inside their own
+   * createX flows (already saved + materialized). MediaGallery handles
+   * its own visuals inline via createMediaGallery (saves the bucket
+   * eagerly). Poll has no profile.
+   */
+  public async materializeCalloutFramingContent(
+    calloutFraming: ICalloutFraming,
+    calloutFramingData: CreateCalloutFramingInput | undefined,
+    rollback: () => Promise<unknown>
+  ): Promise<void> {
+    if (!calloutFraming.profile) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        {
+          calloutFramingId: calloutFraming.id,
+          missing: ['profile'],
+        }
+      );
+    }
+    if (
+      calloutFraming.type === CalloutFramingType.LINK &&
+      !calloutFraming.link
+    ) {
+      throw new RelationshipNotFoundException(
+        'Missing required relation for phase-2 materialization',
+        LogContext.COLLABORATION,
+        {
+          calloutFramingId: calloutFraming.id,
+          missing: ['link'],
+        }
+      );
+    }
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      calloutFraming.profile,
+      calloutFramingData?.profile?.visuals,
+      [VisualType.CARD, VisualType.BANNER],
+      rollback
+    );
+    if (
+      calloutFraming.type === CalloutFramingType.LINK &&
+      calloutFraming.link
+    ) {
+      await this.linkService.materializeLinkContent(
+        calloutFraming.link,
+        calloutFramingData?.link,
+        rollback
+      );
+    }
   }
 
   private async createNewWhiteboardInCalloutFraming(
@@ -199,15 +278,14 @@ export class CalloutFramingService {
       `${memoData.profile?.displayName ?? 'memo'}`,
       reservedNameIDs
     );
+    // Memo's framing context wants both CARD (its own default) and BANNER
+    // (framing-specific). Pass the union so createMemo materializes both
+    // post-save in one shot.
     calloutFraming.memo = await this.memoService.createMemo(
       memoData,
       storageAggregator,
-      userID
-    );
-    await this.profileService.addVisualsOnProfile(
-      calloutFraming.memo.profile,
-      memoData.profile?.visuals,
-      [VisualType.BANNER]
+      userID,
+      [VisualType.CARD, VisualType.BANNER]
     );
   }
 
@@ -323,6 +401,16 @@ export class CalloutFramingService {
     ) {
       await this.pollService.deletePoll(calloutFraming.poll.id);
       calloutFraming.poll = undefined;
+    }
+
+    if (
+      calloutFraming.collaboraDocument &&
+      calloutFraming.type !== CalloutFramingType.COLLABORA_DOCUMENT
+    ) {
+      await this.collaboraDocumentService.deleteCollaboraDocument(
+        calloutFraming.collaboraDocument.id
+      );
+      calloutFraming.collaboraDocument = undefined;
     }
   }
 
@@ -487,6 +575,26 @@ export class CalloutFramingService {
         }
         break;
       }
+      case CalloutFramingType.COLLABORA_DOCUMENT: {
+        // Collabora documents are immutable once created; updates are done
+        // through the Collabora editor via WOPI. If the framing was switched
+        // to COLLABORA_DOCUMENT and no document exists, create one.
+        if (!calloutFraming.collaboraDocument) {
+          if (!calloutFramingData.collaboraDocument) {
+            throw new ValidationException(
+              'Collabora document input is required when switching to COLLABORA_DOCUMENT framing type',
+              LogContext.COLLABORATION
+            );
+          }
+          calloutFraming.collaboraDocument =
+            await this.collaboraDocumentService.createCollaboraDocument(
+              calloutFramingData.collaboraDocument,
+              storageAggregator,
+              userID
+            );
+        }
+        break;
+      }
       case CalloutFramingType.NONE:
       default: {
         // if the type is NONE we have already deleted any existing framing content
@@ -509,6 +617,7 @@ export class CalloutFramingService {
           memo: true,
           mediaGallery: true,
           poll: true,
+          collaboraDocument: true,
         },
       }
     );
@@ -538,6 +647,12 @@ export class CalloutFramingService {
 
     if (calloutFraming.poll) {
       await this.pollService.deletePoll(calloutFraming.poll.id);
+    }
+
+    if (calloutFraming.collaboraDocument) {
+      await this.collaboraDocumentService.deleteCollaboraDocument(
+        calloutFraming.collaboraDocument.id
+      );
     }
 
     if (calloutFraming.authorization) {
@@ -650,6 +765,18 @@ export class CalloutFramingService {
     calloutFramingInput: ICalloutFraming
   ): Promise<IPoll | null> {
     return this.pollService.getPollForFraming(calloutFramingInput.id);
+  }
+
+  public async getCollaboraDocument(
+    calloutFramingInput: ICalloutFraming
+  ): Promise<ICollaboraDocument | null> {
+    const calloutFraming = await this.getCalloutFramingOrFail(
+      calloutFramingInput.id,
+      {
+        relations: { collaboraDocument: true },
+      }
+    );
+    return calloutFraming.collaboraDocument ?? null;
   }
 
   public async getMediaGallery(

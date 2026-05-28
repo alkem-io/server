@@ -6,6 +6,18 @@
  * it as-is. On reuse the caller-supplied `authorizationId` / `tagsetId` are
  * ignored by Go — the existing row's values are authoritative — so the caller
  * must release the pre-created rows to avoid leaking them.
+ *
+ * `imageWidth` / `imageHeight` are post-rotation pixel dimensions populated
+ * by file-service-go for any `image/*` content (rasters via vips decode,
+ * SVG via viewBox, GIF via canvas dimensions). Absent for non-image
+ * content (PDF, video, archives, etc.). Server-side validation that
+ * needs accurate dimensions reads these instead of decoding bytes
+ * locally — file-service-go already decoded during canonicalization,
+ * no second decode needed.
+ *
+ * Also returned by the copy endpoint (POST /internal/file/copy) — copy
+ * reads the source row's cached `content_metadata` and reflects the
+ * same dims back without re-decoding the blob.
  */
 export interface CreateDocumentResult {
   id: string;
@@ -13,4 +25,6 @@ export interface CreateDocumentResult {
   mimeType: string;
   size: number;
   reused: boolean;
+  imageWidth?: number;
+  imageHeight?: number;
 }

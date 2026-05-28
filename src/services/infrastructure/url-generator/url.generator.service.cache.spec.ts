@@ -1,23 +1,35 @@
 import { LogContext } from '@common/enums/logging.context';
 import { CACHE_MANAGER } from '@nestjs/cache-manager';
 import { Test, TestingModule } from '@nestjs/testing';
+import { getEntityManagerToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { type Mock } from 'vitest';
+import { type Mock, vi } from 'vitest';
 import { UrlGeneratorCacheService } from './url.generator.service.cache';
 
 describe('UrlGeneratorCacheService', () => {
   let service: UrlGeneratorCacheService;
   let cacheManager: { get: Mock; set: Mock; del: Mock };
-  let logger: { verbose: Mock };
+  let logger: { verbose: Mock; error: Mock };
+  let entityManager: { connection: { query: Mock } };
 
   beforeEach(async () => {
+    entityManager = {
+      connection: {
+        query: vi.fn(),
+      },
+    };
+
     const module: TestingModule = await Test.createTestingModule({
       providers: [
         UrlGeneratorCacheService,
         MockCacheManager,
         MockWinstonProvider,
+        {
+          provide: getEntityManagerToken('default'),
+          useValue: entityManager,
+        },
       ],
     }).compile();
 
@@ -96,6 +108,55 @@ describe('UrlGeneratorCacheService', () => {
       await service.getUrlFromCache('entity-123');
 
       expect(logger.verbose).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('revokeUrlCachesForCalloutsInSpaces', () => {
+    it('is a no-op when no spaces are provided', async () => {
+      await service.revokeUrlCachesForCalloutsInSpaces([]);
+
+      expect(entityManager.connection.query).not.toHaveBeenCalled();
+      expect(cacheManager.del).not.toHaveBeenCalled();
+    });
+
+    it('runs a single SQL pass and revokes every distinct profile id', async () => {
+      entityManager.connection.query.mockResolvedValue([
+        { profileId: 'p-framing-1' },
+        { profileId: 'p-framing-2' },
+        { profileId: 'p-framing-1' }, // duplicate — must be deduped
+        { profileId: 'p-post-1' },
+        { profileId: null }, // null contribution profile — must be skipped
+        { profileId: 'p-memo-1' },
+      ]);
+      cacheManager.del.mockResolvedValue(undefined);
+
+      await service.revokeUrlCachesForCalloutsInSpaces(['space-a', 'space-b']);
+
+      expect(entityManager.connection.query).toHaveBeenCalledTimes(1);
+      const [, params] = entityManager.connection.query.mock.calls[0];
+      expect(params).toEqual([['space-a', 'space-b']]);
+
+      const deletedKeys = cacheManager.del.mock.calls.map(c => c[0]);
+      expect(deletedKeys).toContain('@url:urlGeneratorId:p-framing-1');
+      expect(deletedKeys).toContain('@url:urlGeneratorId:p-framing-2');
+      expect(deletedKeys).toContain('@url:urlGeneratorId:p-post-1');
+      expect(deletedKeys).toContain('@url:urlGeneratorId:p-memo-1');
+      expect(deletedKeys).toHaveLength(4); // dedup + null skipped
+    });
+
+    it('logs and continues when a single revoke fails', async () => {
+      entityManager.connection.query.mockResolvedValue([
+        { profileId: 'p-1' },
+        { profileId: 'p-2' },
+      ]);
+      cacheManager.del
+        .mockRejectedValueOnce(new Error('boom'))
+        .mockResolvedValueOnce(undefined);
+
+      await service.revokeUrlCachesForCalloutsInSpaces(['space-a']);
+
+      expect(cacheManager.del).toHaveBeenCalledTimes(2);
+      expect(logger.error).toHaveBeenCalled();
     });
   });
 });

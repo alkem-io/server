@@ -1,3 +1,4 @@
+import { VisualType } from '@common/enums/visual.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
@@ -21,6 +22,7 @@ describe('CommunityGuidelinesService', () => {
   let profileService: {
     createProfile: Mock;
     addVisualsOnProfile: Mock;
+    materializeProfileContentAndVisuals: Mock;
     updateProfile: Mock;
     deleteProfile: Mock;
     deleteAllReferencesFromProfile: Mock;
@@ -70,11 +72,13 @@ describe('CommunityGuidelinesService', () => {
   });
 
   describe('createCommunityGuidelines', () => {
-    it('should create guidelines with authorization, profile, and visuals', async () => {
+    it('builds in-memory guidelines without calling addVisualsOnProfile (phase 1)', async () => {
+      // Phase-1 createCommunityGuidelines must be pure: no addVisualsOnProfile,
+      // no markdown re-upload. Visuals attach in phase 2 once the cascade save
+      // has populated the bucket id.
       const mockProfile = { id: 'profile-1' };
       tagsetService.updateTagsetInputs.mockReturnValue([]);
       profileService.createProfile.mockResolvedValue(mockProfile);
-      profileService.addVisualsOnProfile.mockResolvedValue(undefined);
 
       const storageAggregator = { id: 'storage-1' } as any;
       const result = await service.createCommunityGuidelines(
@@ -90,7 +94,30 @@ describe('CommunityGuidelinesService', () => {
       expect(result.authorization).toBeDefined();
       expect(result.profile).toBe(mockProfile);
       expect(profileService.createProfile).toHaveBeenCalled();
-      expect(profileService.addVisualsOnProfile).toHaveBeenCalled();
+      expect(profileService.addVisualsOnProfile).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('materializeCommunityGuidelinesContent', () => {
+    it('delegates to profileService.materializeProfileContentAndVisuals with CARD visuals', async () => {
+      const guidelines = {
+        profile: { id: 'p-1', storageBucket: { id: 'sb-1' } },
+      } as any;
+      profileService.materializeProfileContentAndVisuals.mockResolvedValue(
+        guidelines.profile
+      );
+
+      const data = {
+        profile: { displayName: 'g', visuals: [{ name: 'card', uri: 'x' }] },
+      } as any;
+
+      await service.materializeCommunityGuidelinesContent(guidelines, data);
+
+      expect(
+        profileService.materializeProfileContentAndVisuals
+      ).toHaveBeenCalledWith(guidelines.profile, data.profile.visuals, [
+        VisualType.CARD,
+      ]);
     });
   });
 

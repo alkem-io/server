@@ -4,6 +4,7 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { ClassificationService } from '@domain/common/classification/classification.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { TagsetService } from '@domain/common/tagset/tagset.service';
@@ -12,8 +13,11 @@ import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.a
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Injectable } from '@nestjs/common';
+import { InjectEntityManager } from '@nestjs/typeorm';
+import { ActivityService } from '@platform/activity/activity.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { UrlGeneratorCacheService } from '@services/infrastructure/url-generator/url.generator.service.cache';
+import { EntityManager } from 'typeorm';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
 import { ICalloutsSet } from '../callouts-set/callouts.set.interface';
@@ -29,7 +33,10 @@ export class CalloutTransferService {
     private readonly profileService: ProfileService,
     private readonly tagsetService: TagsetService,
     private readonly storageAggregatorResolverService: StorageAggregatorResolverService,
-    private readonly urlGeneratorCacheService: UrlGeneratorCacheService
+    private readonly urlGeneratorCacheService: UrlGeneratorCacheService,
+    private readonly activityService: ActivityService,
+    @InjectEntityManager('default')
+    private readonly entityManager: EntityManager
   ) {}
 
   public async transferCallout(
@@ -41,6 +48,10 @@ export class CalloutTransferService {
       targetCalloutsSet.id,
       callout.nameID
     );
+
+    // Capture source calloutsSet id BEFORE swapping so we can re-stamp
+    // activity rows after the move.
+    const sourceCalloutsSetID = await this.resolveSourceCalloutsSetID(callout);
 
     // Update all the storage aggregators
     const storageAggregator =
@@ -73,7 +84,64 @@ export class CalloutTransferService {
       tagsetTemplateSet.tagsetTemplates
     );
 
+    // Re-stamp activity log rows so they follow the callout. Skipped if either
+    // calloutsSet has no associated collaboration (e.g. template scope).
+    await this.moveActivityLogForCallout(
+      updatedCallout.id,
+      sourceCalloutsSetID,
+      targetCalloutsSet.id
+    );
+
     return await this.calloutService.getCalloutOrFail(updatedCallout.id);
+  }
+
+  // Callers may pass a partial entity without calloutsSet hydrated (e.g. when
+  // iterating a CalloutsSet's callouts — TypeORM does not back-populate the
+  // inverse side), so fall back to a DB lookup and fail fast if still missing.
+  private async resolveSourceCalloutsSetID(callout: ICallout): Promise<string> {
+    if (callout.calloutsSet?.id) {
+      return callout.calloutsSet.id;
+    }
+    const persisted = await this.calloutService.getCalloutOrFail(callout.id, {
+      loadEagerRelations: false,
+      relations: { calloutsSet: true },
+      select: { id: true, calloutsSet: { id: true } },
+    });
+    if (!persisted.calloutsSet?.id) {
+      throw new RelationshipNotFoundException(
+        'Cannot resolve source CalloutsSet for callout transfer',
+        LogContext.COLLABORATION,
+        { calloutId: callout.id }
+      );
+    }
+    return persisted.calloutsSet.id;
+  }
+
+  private async moveActivityLogForCallout(
+    calloutID: string,
+    sourceCalloutsSetID: string,
+    targetCalloutsSetID: string
+  ): Promise<void> {
+    const [sourceCollab, targetCollab] = await Promise.all([
+      this.entityManager.findOne(Collaboration, {
+        loadEagerRelations: false,
+        where: { calloutsSet: { id: sourceCalloutsSetID } },
+        select: { id: true },
+      }),
+      this.entityManager.findOne(Collaboration, {
+        loadEagerRelations: false,
+        where: { calloutsSet: { id: targetCalloutsSetID } },
+        select: { id: true },
+      }),
+    ]);
+    if (!sourceCollab || !targetCollab) {
+      return;
+    }
+    await this.activityService.moveActivitiesForCallout(
+      calloutID,
+      sourceCollab.id,
+      targetCollab.id
+    );
   }
 
   private async updateStorageAggregator(

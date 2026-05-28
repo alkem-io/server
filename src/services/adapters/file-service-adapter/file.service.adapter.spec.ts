@@ -98,6 +98,59 @@ describe('FileServiceAdapter', () => {
       expect(callArgs.url).toBe('http://file-service:4003/internal/file');
     });
 
+    it('sends skipDedup=true as a multipart form field when set', async () => {
+      const responseData = {
+        id: 'doc-skip',
+        externalID: 'ext-skip',
+        mimeType: 'image/png',
+        size: 0,
+        reused: false,
+      };
+
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(responseData, 201))
+      );
+
+      await adapter.createDocument(Buffer.alloc(0), {
+        displayName: 'placeholder.docx',
+        storageBucketId: 'bucket-1',
+        authorizationId: 'auth-1',
+        tagsetId: 'tagset-1',
+        skipDedup: true,
+      });
+
+      // FormData carries the field as a serialized stream; assert via the
+      // serialized buffer rather than introspection.
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      const serialized = callArgs.data.getBuffer().toString('utf8');
+      expect(serialized).toContain('name="skipDedup"');
+      expect(serialized).toMatch(/name="skipDedup"\r\n\r\ntrue/);
+    });
+
+    it('omits skipDedup when not set (preserves dedup default)', async () => {
+      const responseData = {
+        id: 'doc-default',
+        externalID: 'ext-default',
+        mimeType: 'image/png',
+        size: 4,
+        reused: false,
+      };
+
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(responseData, 201))
+      );
+
+      await adapter.createDocument(Buffer.from('data'), {
+        displayName: 'avatar.png',
+        storageBucketId: 'bucket-1',
+        authorizationId: 'auth-1',
+      });
+
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      const serialized = callArgs.data.getBuffer().toString('utf8');
+      expect(serialized).not.toContain('name="skipDedup"');
+    });
+
     it('should throw FileServiceAdapterException on 4xx error', async () => {
       const axiosError = new AxiosError('Bad Request', '400', undefined, null, {
         status: 400,
@@ -215,6 +268,92 @@ describe('FileServiceAdapter', () => {
       ).rejects.toThrow(FileServiceAdapterException);
 
       expect(subscribeCount).toBe(3);
+    });
+  });
+
+  describe('copyDocument', () => {
+    it('POSTs JSON body to /internal/file/copy', async () => {
+      const responseData = {
+        id: 'doc-copy',
+        externalID: 'ext-shared',
+        mimeType: 'image/png',
+        size: 1024,
+        reused: false,
+      };
+
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(responseData, 201))
+      );
+
+      const result = await adapter.copyDocument({
+        sourceId: 'src-1',
+        destinationBucketId: 'bucket-2',
+        authorizationId: 'auth-2',
+        tagsetId: 'tagset-2',
+        createdBy: 'user-1',
+      });
+
+      expect(result).toEqual(responseData);
+
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.method).toBe('post');
+      expect(callArgs.url).toBe('http://file-service:4003/internal/file/copy');
+      expect(callArgs.data).toEqual({
+        sourceId: 'src-1',
+        destinationBucketId: 'bucket-2',
+        authorizationId: 'auth-2',
+        tagsetId: 'tagset-2',
+        createdBy: 'user-1',
+      });
+    });
+
+    it('passes skipDedup when true', async () => {
+      (httpService.request as Mock).mockReturnValue(
+        of(
+          axiosResponse(
+            {
+              id: 'doc-copy',
+              externalID: 'ext',
+              mimeType: 'image/png',
+              size: 1,
+              reused: false,
+            },
+            201
+          )
+        )
+      );
+
+      await adapter.copyDocument({
+        sourceId: 'src-1',
+        destinationBucketId: 'bucket-2',
+        authorizationId: 'auth-2',
+        skipDedup: true,
+      });
+
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.data.skipDedup).toBe(true);
+    });
+
+    it('surfaces 404 from file-service-go as FileServiceAdapterException', async () => {
+      const axiosError = new AxiosError('Not Found', '404', undefined, null, {
+        status: 404,
+        data: { error: 'source document not found' },
+        statusText: 'Not Found',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      });
+
+      (httpService.request as Mock).mockReturnValue(
+        throwError(() => axiosError)
+      );
+
+      await expect(
+        adapter.copyDocument({
+          sourceId: 'missing',
+          destinationBucketId: 'bucket-2',
+          authorizationId: 'auth-2',
+        })
+      ).rejects.toThrow(FileServiceAdapterException);
     });
   });
 

@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { CollaboraDocumentModule } from '@domain/collaboration/collabora-document/collabora.document.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { MemoModule } from '@domain/common/memo/memo.module';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
@@ -19,6 +20,7 @@ import { CalloutContributionAuthorizationService } from './callout.contribution.
   imports: [
     AuthorizationModule,
     AuthorizationPolicyModule,
+    CollaboraDocumentModule,
     WhiteboardModule,
     PostModule,
     NamingModule,

@@ -36,16 +36,12 @@ export class PostService {
     userID: string,
     parentSpaceId?: string
   ): Promise<IPost> {
+    // Phase 1: build entity tree in memory (no file-service-go calls).
     const post: IPost = Post.create(postInput);
     post.profile = await this.profileService.createProfile(
       postInput.profileData,
       ProfileType.POST,
       storageAggregator
-    );
-    await this.profileService.addVisualsOnProfile(
-      post.profile,
-      postInput.profileData.visuals,
-      [VisualType.BANNER, VisualType.CARD]
     );
     await this.profileService.addOrUpdateTagsetOnProfile(post.profile, {
       name: TagsetReservedName.DEFAULT,
@@ -60,7 +56,52 @@ export class PostService {
       parentContextId: parentSpaceId,
     });
 
-    return post;
+    // Phase 2: persist + materialize via the shared helper. The Matrix
+    // room created above isn't part of the DB transaction; if the save
+    // fails it's already orphaned in Matrix, so we delete it explicitly
+    // before propagating the error. After save, the OrRollback helper
+    // handles the post-save phase (cascade-deleting the room via
+    // deletePost on failure).
+    let saved: IPost;
+    try {
+      saved = await this.postRepository.save(post);
+    } catch (error) {
+      await this.cleanupOrphanRoom(
+        post.comments.id,
+        'Post save failed before materialize'
+      );
+      throw error;
+    }
+    // Helper mutates the profile in place; no explicit reassignment needed.
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      saved.profile,
+      postInput.profileData.visuals,
+      [VisualType.BANNER, VisualType.CARD],
+      () => this.deletePost(saved.id)
+    );
+    return saved;
+  }
+
+  private async cleanupOrphanRoom(
+    roomID: string,
+    context: string
+  ): Promise<void> {
+    try {
+      await this.roomService.deleteRoom({ roomID });
+    } catch (cleanupError) {
+      const stack =
+        cleanupError instanceof Error ? (cleanupError.stack ?? '') : '';
+      this.logger.error?.(
+        {
+          message: 'Cleanup of orphan Matrix room also failed',
+          context,
+          roomID,
+          cleanupError: String(cleanupError),
+        },
+        stack,
+        LogContext.SPACES
+      );
+    }
   }
 
   public async deletePost(postId: string): Promise<IPost> {

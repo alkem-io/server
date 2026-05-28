@@ -7,6 +7,7 @@ import { CollaborationService } from '@domain/collaboration/collaboration/collab
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { SpaceAboutService } from '@domain/space/space.about/space.about.service';
+import { SpaceSettingsService } from '@domain/space/space.settings/space.settings.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -24,6 +25,7 @@ describe('TemplateContentSpaceService', () => {
   let repository: Mocked<Repository<TemplateContentSpace>>;
   let collaborationService: Mocked<CollaborationService>;
   let spaceAboutService: Mocked<SpaceAboutService>;
+  let spaceSettingsService: Mocked<SpaceSettingsService>;
   let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
   let licenseService: Mocked<LicenseService>;
 
@@ -60,6 +62,9 @@ describe('TemplateContentSpaceService', () => {
     spaceAboutService = module.get(
       SpaceAboutService
     ) as Mocked<SpaceAboutService>;
+    spaceSettingsService = module.get(
+      SpaceSettingsService
+    ) as Mocked<SpaceSettingsService>;
     authorizationPolicyService = module.get(
       AuthorizationPolicyService
     ) as Mocked<AuthorizationPolicyService>;
@@ -242,6 +247,112 @@ describe('TemplateContentSpaceService', () => {
 
       expect(spaceAboutService.updateSpaceAbout).not.toHaveBeenCalled();
       expect(repository.save).toHaveBeenCalledWith(tcs);
+    });
+
+    it('should apply settings via SpaceSettingsService when settings are provided', async () => {
+      // Reproduces issue alkem-io/client-web#9593:
+      // updateTemplateContentSpace was ignoring the settings input.
+      const existingSettings = {
+        privacy: { mode: 'PUBLIC', allowPlatformSupportAsAdmin: false },
+        membership: {
+          policy: 'OPEN',
+          trustedOrganizations: [],
+          allowSubspaceAdminsToInviteMembers: false,
+        },
+        collaboration: {
+          allowGuestContributions: false,
+          allowMembersToCreateCallouts: true,
+          allowMembersToCreateSubspaces: true,
+          allowMembersToVideoCall: false,
+          allowEventsFromSubspaces: true,
+          inheritMembershipRights: true,
+        },
+      };
+      const tcs = {
+        id: 'tcs-1',
+        about: { id: 'about-1' },
+        settings: existingSettings,
+      } as unknown as TemplateContentSpace;
+
+      const mergedSettings = {
+        ...existingSettings,
+        collaboration: {
+          ...existingSettings.collaboration,
+          allowGuestContributions: true,
+        },
+      };
+
+      repository.findOne.mockResolvedValue(tcs);
+      spaceSettingsService.updateSettings.mockReturnValue(
+        mergedSettings as any
+      );
+      repository.save.mockImplementation(async (entity: any) => entity);
+
+      const settingsInput = {
+        collaboration: { allowGuestContributions: true },
+      };
+
+      const result = await service.update({
+        ID: 'tcs-1',
+        settings: settingsInput,
+      } as any);
+
+      expect(spaceSettingsService.updateSettings).toHaveBeenCalledWith(
+        existingSettings,
+        settingsInput
+      );
+      expect(result.settings).toBe(mergedSettings);
+      expect(repository.save).toHaveBeenCalledWith(
+        expect.objectContaining({ settings: mergedSettings })
+      );
+    });
+
+    it('should not invoke SpaceSettingsService when settings are omitted', async () => {
+      const tcs = {
+        id: 'tcs-1',
+        about: { id: 'about-1' },
+        settings: { privacy: { mode: 'PUBLIC' } },
+      } as unknown as TemplateContentSpace;
+
+      repository.findOne.mockResolvedValue(tcs);
+      repository.save.mockResolvedValue(tcs);
+
+      await service.update({ ID: 'tcs-1' } as any);
+
+      expect(spaceSettingsService.updateSettings).not.toHaveBeenCalled();
+    });
+
+    it('should apply both about and settings updates in the same call', async () => {
+      const existingAbout = { id: 'about-1', profile: {} };
+      const existingSettings = {
+        privacy: { mode: 'PUBLIC' },
+      };
+      const tcs = {
+        id: 'tcs-1',
+        about: existingAbout,
+        settings: existingSettings,
+      } as unknown as TemplateContentSpace;
+
+      const updatedAbout = { id: 'about-1', profile: { displayName: 'new' } };
+      const updatedSettings = { privacy: { mode: 'PRIVATE' } };
+
+      repository.findOne.mockResolvedValue(tcs);
+      spaceAboutService.updateSpaceAbout.mockResolvedValue(updatedAbout as any);
+      spaceSettingsService.updateSettings.mockReturnValue(
+        updatedSettings as any
+      );
+      repository.save.mockImplementation(async (entity: any) => entity);
+
+      const result = await service.update({
+        ID: 'tcs-1',
+        about: { displayName: 'new' },
+        settings: { privacy: { mode: 'PRIVATE' } },
+      } as any);
+
+      expect(spaceAboutService.updateSpaceAbout).toHaveBeenCalled();
+      expect(spaceSettingsService.updateSettings).toHaveBeenCalled();
+      expect(result.about).toBe(updatedAbout);
+      expect(result.settings).toBe(updatedSettings);
     });
   });
 

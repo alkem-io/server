@@ -108,6 +108,7 @@ describe('StorageBucketService', () => {
           provide: FileServiceAdapter,
           useValue: {
             createDocument: vi.fn(),
+            copyDocument: vi.fn(),
             getDocumentContent: vi.fn(),
             updateDocument: vi.fn(),
             deleteDocument: vi.fn(),
@@ -607,6 +608,173 @@ describe('StorageBucketService', () => {
       });
       expect(tagsetService.removeTagset).toHaveBeenCalledWith(
         'tagset-saved-rrf'
+      );
+    });
+  });
+
+  // ── copyDocumentToBucket ───────────────────────────────────────
+
+  describe('copyDocumentToBucket', () => {
+    const makeSourceDoc = (overrides?: Partial<IDocument>): IDocument =>
+      mockDocument({
+        id: 'src-doc',
+        displayName: 'orig.png',
+        mimeType: MimeTypeVisual.PNG,
+        size: 1234,
+        externalID: 'ext-shared',
+        createdBy: 'user-orig',
+        ...overrides,
+      });
+
+    it('delegates to fileServiceAdapter.copyDocument with caller-supplied auth/tagset', async () => {
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc();
+      const newDoc = mockDocument({ id: 'doc-new' });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'doc-new',
+        externalID: 'ext-shared',
+        mimeType: MimeTypeVisual.PNG,
+        size: 1234,
+        reused: false,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(newDoc);
+
+      const result = await service.copyDocumentToBucket(
+        'bucket-dst',
+        source,
+        'user-caller'
+      );
+
+      expect(result).toBe(newDoc);
+      expect(fileServiceAdapter.copyDocument).toHaveBeenCalledWith({
+        sourceId: 'src-doc',
+        destinationBucketId: 'bucket-dst',
+        authorizationId: 'auth-saved',
+        tagsetId: 'tagset-saved',
+        createdBy: 'user-caller',
+      });
+      // Auth + tagset stay attached (fresh row, not reused)
+      expect(authorizationPolicyService.delete).not.toHaveBeenCalled();
+      expect(tagsetService.removeTagset).not.toHaveBeenCalled();
+    });
+
+    it('releases pre-created auth + tagset when Go responds reused:true', async () => {
+      // Same dedup-reuse contract as createDocument: when Go returns an
+      // existing row, our pre-created auth/tagset are orphans and must be
+      // released so they don't accumulate in the DB.
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc();
+      const reusedDoc = mockDocument({ id: 'doc-existing' });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'doc-existing',
+        externalID: 'ext-shared',
+        mimeType: MimeTypeVisual.PNG,
+        size: 1234,
+        reused: true,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(reusedDoc);
+
+      await service.copyDocumentToBucket('bucket-dst', source);
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
+        id: 'auth-saved',
+      });
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-saved');
+      // Existing doc must NOT be deleted on reuse — it belongs to another caller.
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('rolls back pre-created resources on copy failure', async () => {
+      // Full compensation when Go's copy call throws: delete the auth and
+      // tagset rows we pre-created. No Go-side document was created here so
+      // there's nothing to delete on that side.
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc();
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.copyDocument as Mock).mockRejectedValue(
+        new Error('copy failed')
+      );
+
+      await expect(
+        service.copyDocumentToBucket('bucket-dst', source)
+      ).rejects.toThrow('copy failed');
+
+      expect(authorizationPolicyService.delete).toHaveBeenCalledWith({
+        id: 'auth-saved',
+      });
+      expect(tagsetService.removeTagset).toHaveBeenCalledWith('tagset-saved');
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('falls back to source.createdBy when no userID is supplied', async () => {
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc({ createdBy: 'orig-user' });
+      const newDoc = mockDocument({ id: 'doc-new' });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'doc-new',
+        externalID: 'ext-shared',
+        mimeType: MimeTypeVisual.PNG,
+        size: 1234,
+        reused: false,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(newDoc);
+
+      await service.copyDocumentToBucket('bucket-dst', source);
+
+      expect(fileServiceAdapter.copyDocument).toHaveBeenCalledWith(
+        expect.objectContaining({ createdBy: 'orig-user' })
+      );
+    });
+
+    it('forwards skipDedup=true to fileServiceAdapter.copyDocument', async () => {
+      // Pin the contract relied upon by profile-documents.service.ts: when the
+      // caller asks for a guaranteed-fresh row (skipDedup=true), the flag is
+      // propagated through to the adapter rather than dropped.
+      const bucket = mockStorageBucket({ id: 'bucket-dst' });
+      const source = makeSourceDoc();
+      const newDoc = mockDocument({ id: 'doc-new' });
+
+      (storageBucketRepository.findOneOrFail as Mock).mockResolvedValue(bucket);
+      (authorizationPolicyService.save as Mock).mockResolvedValue({
+        id: 'auth-saved',
+      });
+      (tagsetService.save as Mock).mockResolvedValue({ id: 'tagset-saved' });
+      (fileServiceAdapter.copyDocument as Mock).mockResolvedValue({
+        id: 'doc-new',
+        externalID: 'ext-shared',
+        mimeType: MimeTypeVisual.PNG,
+        size: 1234,
+        reused: false,
+      });
+      (documentService.getDocumentOrFail as Mock).mockResolvedValue(newDoc);
+
+      await service.copyDocumentToBucket('bucket-dst', source, 'user-1', true);
+
+      expect(fileServiceAdapter.copyDocument).toHaveBeenCalledWith(
+        expect.objectContaining({ skipDedup: true })
       );
     });
   });

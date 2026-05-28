@@ -5,6 +5,8 @@ export const POLICY_RULE_WHITEBOARD_CONTENT_UPDATE =
 export const POLICY_RULE_WHITEBOARD_GRANT_PUBLIC_SHARE =
   'policyRule-whiteboardGrantPublicShare';
 export const POLICY_RULE_MEMO_CONTENT_UPDATE = 'policyRule-memoContentUpdate';
+export const POLICY_RULE_COLLABORA_DOCUMENT_CONTENT_UPDATE =
+  'policyRule-collaboraDocumentContentUpdate';
 export const POLICY_RULE_VISUAL_UPDATE = 'policyRule-visualUpdate';
 export const POLICY_RULE_ROOM_CONTRIBUTE = 'policyRule-roomContribute';
 export const POLICY_RULE_ROOM_ADMINS = 'policyRule-roomAdminsCreate';

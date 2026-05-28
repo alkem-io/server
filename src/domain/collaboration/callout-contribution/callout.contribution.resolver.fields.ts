@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums/logging.context';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
 import { IMemo } from '@domain/common/memo/memo.interface';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { IUser } from '@domain/community/user/user.interface';
@@ -64,6 +65,18 @@ export class CalloutContributionResolverFields {
     @Parent() calloutContribution: ICalloutContribution
   ): Promise<IMemo | null> {
     return await this.calloutContributionService.getMemo(calloutContribution);
+  }
+
+  @ResolveField('collaboraDocument', () => ICollaboraDocument, {
+    nullable: true,
+    description: 'The CollaboraDocument that was contributed.',
+  })
+  async collaboraDocument(
+    @Parent() calloutContribution: ICalloutContribution
+  ): Promise<ICollaboraDocument | null> {
+    return await this.calloutContributionService.getCollaboraDocument(
+      calloutContribution
+    );
   }
 
   @ResolveField('createdBy', () => IUser, {

@@ -4,6 +4,7 @@ import { IMemo } from '@domain/common/memo/memo.interface';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { ICallout } from '../callout/callout.interface';
+import { ICollaboraDocument } from '../collabora-document/collabora.document.interface';
 import { ILink } from '../link/link.interface';
 import { IPost } from '../post/post.interface';
 
@@ -18,6 +19,8 @@ export abstract class ICalloutContribution extends IAuthorizable {
   post?: IPost;
 
   memo?: IMemo;
+
+  collaboraDocument?: ICollaboraDocument;
 
   createdBy?: string;
 
