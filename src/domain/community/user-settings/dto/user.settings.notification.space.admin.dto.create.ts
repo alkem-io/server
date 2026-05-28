@@ -33,4 +33,12 @@ export class CreateUserSettingsNotificationSpaceAdminInput {
   })
   @IsBoolean()
   collaborationCalloutContributionCreated!: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: false,
+    description:
+      'Receive a notification when the login email of an admin or lead of a Space I administer is changed (admin)',
+  })
+  @IsBoolean()
+  userEmailChanged!: CreateUserSettingsNotificationChannelsInput;
 }
