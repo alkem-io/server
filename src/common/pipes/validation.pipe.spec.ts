@@ -1,23 +1,32 @@
-import { plainToInstance } from 'class-transformer';
 import { vi } from 'vitest';
-import { ValidationPipe } from './validation.pipe';
+import type { ValidationPipe as ValidationPipeType } from './validation.pipe';
 
-// Mock the BaseHandler as a proper class constructor
+const { plainToInstanceMock, baseHandlerHandleMock } = vi.hoisted(() => ({
+  plainToInstanceMock: vi
+    .fn()
+    .mockImplementation((_cls: any, value: any) => value),
+  baseHandlerHandleMock: vi.fn().mockResolvedValue([]),
+}));
+
+vi.mock('class-transformer', () => ({
+  plainToInstance: plainToInstanceMock,
+}));
+
 vi.mock('@core/validation/handlers/base/base.handler', () => ({
   BaseHandler: class MockBaseHandler {
-    handle = vi.fn().mockResolvedValue([]);
+    handle = baseHandlerHandleMock;
   },
 }));
 
-// Mock class-transformer
-vi.mock('class-transformer', () => ({
-  plainToInstance: vi.fn().mockImplementation((_cls: any, value: any) => value),
-}));
-
 describe('ValidationPipe', () => {
-  let pipe: ValidationPipe;
+  let pipe: ValidationPipeType;
 
-  beforeEach(() => {
+  beforeAll(async () => {
+    // isolate: false in vitest.config shares the module cache across spec files.
+    // Reset + dynamic import guarantees validation.pipe re-evaluates with the
+    // class-transformer mock bound, regardless of prior spec load order.
+    vi.resetModules();
+    const { ValidationPipe } = await import('./validation.pipe');
     pipe = new ValidationPipe();
   });
 
@@ -97,14 +106,10 @@ describe('ValidationPipe', () => {
       const value = { field: 'data' };
       await pipe.transform(value, { type: 'body', metatype: MyDto });
 
-      expect(plainToInstance).toHaveBeenCalledWith(MyDto, value);
+      expect(plainToInstanceMock).toHaveBeenCalledWith(MyDto, value);
     });
 
     it('should delegate to BaseHandler for validation', async () => {
-      const { BaseHandler } = await import(
-        '@core/validation/handlers/base/base.handler'
-      );
-
       class AnotherDto {
         id!: string;
       }
@@ -112,8 +117,7 @@ describe('ValidationPipe', () => {
       const value = { id: '123' };
       await pipe.transform(value, { type: 'body', metatype: AnotherDto });
 
-      // Verify BaseHandler was instantiated
-      expect(BaseHandler).toBeDefined();
+      expect(baseHandlerHandleMock).toHaveBeenCalledWith(value, AnotherDto);
     });
   });
 });

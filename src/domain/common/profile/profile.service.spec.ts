@@ -79,11 +79,14 @@ describe('ProfileService', () => {
   });
 
   describe('createProfile', () => {
-    it('should create profile with authorization, storage bucket, location, visuals, and tagsets', async () => {
+    it('builds an in-memory profile and does NOT call file-service helpers (phase 1)', async () => {
+      // Phase 1 must be pure: file-service-go calls happen in phase 2
+      // (materializeProfileContent), AFTER the parent's cascade save has
+      // persisted the storageBucket id. See ProfileService docs.
       const storageAggregator = {
         id: 'sa-1',
       } as unknown as IStorageAggregator;
-      const storageBucket = { id: 'sb-1' };
+      const storageBucket = { id: undefined, documents: [] };
       const location = { id: 'loc-1' };
 
       vi.mocked(storageBucketService.createStorageBucket).mockReturnValue(
@@ -92,12 +95,6 @@ describe('ProfileService', () => {
       vi.mocked(locationService.createLocation).mockResolvedValue(
         location as any
       );
-      vi.mocked(
-        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
-      ).mockResolvedValue('processed-description');
-      vi.mocked(
-        profileDocumentsService.reuploadFileOnStorageBucket
-      ).mockResolvedValue(undefined as any);
 
       const tagset = { id: 'ts-1', name: 'skills', tags: [] };
       vi.mocked(tagsetService.createTagsetWithName).mockReturnValue(
@@ -122,7 +119,15 @@ describe('ProfileService', () => {
       expect(result.location).toBe(location);
       expect(result.visuals).toEqual([]);
       expect(result.tagsets).toEqual([tagset]);
-      expect(result.description).toBe('processed-description');
+      // Description is preserved verbatim — no markdown re-upload at this stage.
+      expect(result.description).toBe('A test description');
+      expect(
+        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
+      ).not.toHaveBeenCalled();
+      expect(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).not.toHaveBeenCalled();
+      expect(storageBucketService.save).not.toHaveBeenCalled();
     });
 
     it('should default tagsets to empty array when not provided', async () => {
@@ -186,6 +191,102 @@ describe('ProfileService', () => {
 
       expect(result.references).toHaveLength(1);
       expect(result.references![0].name).toBe('website');
+    });
+  });
+
+  describe('materializeProfileContent', () => {
+    it('throws when storageBucket is not persisted', async () => {
+      const profile = {
+        id: 'p-1',
+        storageBucket: { id: undefined },
+        description: '',
+        references: [],
+      } as any;
+
+      await expect(
+        (service as any).materializeProfileContent(profile)
+      ).rejects.toThrow(/must be persisted/);
+    });
+
+    it('re-uploads markdown documents and reference URIs', async () => {
+      const profile = {
+        id: 'p-1',
+        storageBucket: { id: 'sb-1', documents: [] },
+        description: '![](https://alkemio/files/abc)',
+        references: [
+          { id: 'r-1', uri: 'https://alkemio/files/xyz' },
+          { id: 'r-2', uri: 'https://external.example.com/img.png' },
+        ],
+      } as any;
+
+      vi.mocked(
+        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
+      ).mockResolvedValue('![](https://alkemio/files/abc-rehomed)');
+      vi.mocked(profileDocumentsService.reuploadFileOnStorageBucket)
+        .mockResolvedValueOnce('https://alkemio/files/xyz-rehomed')
+        .mockResolvedValueOnce('https://external.example.com/img.png');
+
+      const result = await (service as any).materializeProfileContent(profile);
+
+      expect(result.description).toBe('![](https://alkemio/files/abc-rehomed)');
+      expect(result.references![0].uri).toBe(
+        'https://alkemio/files/xyz-rehomed'
+      );
+      // External URL passes through unchanged.
+      expect(result.references![1].uri).toBe(
+        'https://external.example.com/img.png'
+      );
+    });
+  });
+
+  describe('materializeProfileContentAndVisuals', () => {
+    it('runs content materialization, visual attachment, and persists in order', async () => {
+      const profile = {
+        id: 'p-1',
+        storageBucket: { id: 'sb-1', documents: [] },
+        description: '',
+        references: [],
+        visuals: [],
+      } as any;
+      const visualsData = [{ name: 'card', uri: 'x' }] as any;
+
+      vi.mocked(
+        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
+      ).mockResolvedValue('');
+      const addVisualsSpy = vi
+        .spyOn(service, 'addVisualsOnProfile')
+        .mockResolvedValue(profile);
+      profileRepository.save = vi.fn().mockResolvedValue(profile) as any;
+
+      await service.materializeProfileContentAndVisuals(profile, visualsData, [
+        VisualType.CARD,
+      ]);
+
+      expect(addVisualsSpy).toHaveBeenCalledWith(profile, visualsData, [
+        VisualType.CARD,
+      ]);
+      expect(profileRepository.save).toHaveBeenCalledWith(profile);
+    });
+
+    it('skips addVisualsOnProfile when visualTypes is empty', async () => {
+      const profile = {
+        id: 'p-1',
+        storageBucket: { id: 'sb-1', documents: [] },
+        description: '',
+        references: [],
+        visuals: [],
+      } as any;
+
+      vi.mocked(
+        profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
+      ).mockResolvedValue('');
+      const addVisualsSpy = vi.spyOn(service, 'addVisualsOnProfile');
+      profileRepository.save = vi.fn().mockResolvedValue(profile) as any;
+
+      await service.materializeProfileContentAndVisuals(profile, undefined, []);
+
+      expect(addVisualsSpy).not.toHaveBeenCalled();
+      expect(profileRepository.save).toHaveBeenCalledWith(profile);
     });
   });
 

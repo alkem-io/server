@@ -38,4 +38,13 @@ export class UpdateUserSettingsNotificationSpaceAdminInput {
   @ValidateNested()
   @Type(() => NotificationSettingInput)
   collaborationCalloutContributionCreated?: NotificationSettingInput;
+
+  @Field(() => NotificationSettingInput, {
+    nullable: true,
+    description:
+      'Receive a notification when the login email of an admin or lead of a Space I administer is changed (admin)',
+  })
+  @ValidateNested()
+  @Type(() => NotificationSettingInput)
+  userEmailChanged?: NotificationSettingInput;
 }

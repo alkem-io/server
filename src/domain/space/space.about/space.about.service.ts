@@ -22,9 +22,10 @@ import { CreateCommunityGuidelinesInput } from '@domain/community/community-guid
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
 import { CommunityGuidelinesService } from '@domain/community/community-guidelines/community.guidelines.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
-import { Injectable } from '@nestjs/common';
+import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { CreateSpaceAboutInput } from './dto/space.about.dto.create';
@@ -42,9 +43,21 @@ export class SpaceAboutService {
     private roleSetService: RoleSetService,
     private inputCreatorService: InputCreatorService,
     @InjectRepository(SpaceAbout)
-    private spaceAboutRepository: Repository<SpaceAbout>
+    private spaceAboutRepository: Repository<SpaceAbout>,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
+  /**
+   * Phase 1: in-memory entity construction. The returned spaceAbout (and its
+   * guidelines and profiles) must be persisted by the caller — typically via
+   * cascade from a parent Space — before
+   * {@link materializeSpaceAboutContent} is invoked.
+   *
+   * No file-service-go calls happen in this phase: visuals and any markdown
+   * re-uploads are deferred to phase 2 because they need a real
+   * `storageBucket.id`, which only exists after the cascade save.
+   */
   public async createSpaceAbout(
     spaceAboutData: CreateSpaceAboutInput,
     storageAggregator: IStorageAggregator
@@ -77,17 +90,80 @@ export class SpaceAboutService {
         storageAggregator
       );
 
-    // add the visuals
-    await this.profileService.addVisualsOnProfile(
-      spaceAbout.profile,
-      spaceAboutData.profileData.visuals,
-      [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD]
-    );
-
     // Do not save here — callers assign this to a parent entity with
     // cascade: true, so the parent's save handles persistence.
     // Saving via the default repository would bypass the caller's
     // transaction and cause FK violations on storageAggregator.
+    return spaceAbout;
+  }
+
+  /**
+   * Phase 2: post-save content materialization. Re-homes any internal
+   * Alkemio URLs in the profile description/references into the new
+   * bucket, attaches visuals, and cascades to the nested guidelines.
+   * Caller must invoke this AFTER the parent's cascade save persists
+   * `spaceAbout.profile.storageBucket` (and the guidelines' bucket).
+   *
+   * `rollback` is invoked by the OrRollback helper if the profile-level
+   * materialization fails, so callers receive a fully-materialized about
+   * or a rolled-back parent — never half-state. Nested guidelines failures
+   * also trigger `rollback`.
+   */
+  public async materializeSpaceAboutContent(
+    spaceAbout: ISpaceAbout,
+    spaceAboutData: CreateSpaceAboutInput,
+    rollback: () => Promise<unknown>
+  ): Promise<ISpaceAbout> {
+    if (!spaceAbout.profile) {
+      throw new RelationshipNotFoundException(
+        'SpaceAbout profile not initialized',
+        LogContext.SPACES,
+        { spaceAboutId: spaceAbout.id }
+      );
+    }
+    spaceAbout.profile =
+      await this.profileService.materializeProfileContentAndVisualsOrRollback(
+        spaceAbout.profile,
+        spaceAboutData.profileData.visuals,
+        [VisualType.AVATAR, VisualType.BANNER, VisualType.CARD],
+        rollback
+      );
+    // createSpaceAbout always populates `spaceAbout.guidelines` (auto-creating
+    // an empty one if `spaceAboutData.guidelines` wasn't supplied), so a
+    // missing relation here is a programmer error or a bad caller load —
+    // fail fast rather than silently skipping nested materialization.
+    if (!spaceAbout.guidelines) {
+      throw new RelationshipNotFoundException(
+        'SpaceAbout guidelines not initialized for materialization',
+        LogContext.SPACES,
+        { spaceAboutId: spaceAbout.id }
+      );
+    }
+    try {
+      await this.communityGuidelinesService.materializeCommunityGuidelinesContent(
+        spaceAbout.guidelines,
+        spaceAboutData.guidelines
+      );
+    } catch (error) {
+      // Same convention as the OrRollback helper: rollback-failure is
+      // alert-worthy (logger.error) but does not replace the original
+      // materialization error.
+      await rollback().catch(rollbackError => {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message:
+              'Rollback after CommunityGuidelines materialization failure also failed',
+            spaceAboutId: spaceAbout.id,
+            rollbackError: String(rollbackError),
+          },
+          stack,
+          LogContext.SPACES
+        );
+      });
+      throw error;
+    }
     return spaceAbout;
   }
 

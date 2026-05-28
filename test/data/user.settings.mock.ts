@@ -1,3 +1,4 @@
+import { DESIGN_VERSION_CURRENT_DEFAULT } from '@domain/community/user-settings/user.settings.design.version.constants';
 import { IUserSettings } from '@domain/community/user-settings/user.settings.interface';
 
 export const userSettingsData: { userSettings: IUserSettings } = {
@@ -33,6 +34,11 @@ export const userSettingsData: { userSettings: IUserSettings } = {
             email: true,
             inApp: true,
             push: true,
+          },
+          userEmailChanged: {
+            email: true,
+            inApp: false,
+            push: false,
           },
         },
 
@@ -110,6 +116,11 @@ export const userSettingsData: { userSettings: IUserSettings } = {
             inApp: true,
             push: true,
           },
+          userEmailChanged: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
         },
 
         forumDiscussionComment: {
@@ -176,5 +187,6 @@ export const userSettingsData: { userSettings: IUserSettings } = {
       spaceID: null,
       autoRedirect: false,
     },
+    designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
   },
 };

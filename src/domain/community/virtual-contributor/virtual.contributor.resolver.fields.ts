@@ -226,4 +226,19 @@ export class VirtualContributorResolverFields {
     }
     return VirtualContributorStatus.INITIALIZING;
   }
+
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('bodyOfKnowledgeLastUpdated', () => Date, {
+    nullable: true,
+    description:
+      'The date when the body of knowledge was last successfully ingested.',
+  })
+  async bodyOfKnowledgeLastUpdated(
+    @Parent() virtualContributor: IVirtualContributor
+  ): Promise<Date | null> {
+    return this.virtualContributorService.getBodyOfKnowledgeLastUpdated(
+      virtualContributor
+    );
+  }
 }

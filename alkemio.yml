@@ -5,6 +5,16 @@
 # should have the same indentation.
 #
 # [1] https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
+## endpoints ##
+# External endpoint URLs surfaced into outbound payloads (e.g., the post-commit
+# acknowledgement notification sent to a user's new login email — see spec 097
+# §FR-016c). These are URLs targeted at end-user browsers, distinct from the
+# internal `hosting.*` paths used by the platform itself.
+endpoints:
+  # The base URL of the public client-web application. Used by post-commit
+  # email-change notifications to build a login deep link for the recipient.
+  client_web: ${ENDPOINTS_CLIENT_WEB}:http://localhost:3000
+
 ## hosting ##
 # The hosting configuration for the Alkemio Server
 hosting:
@@ -350,6 +360,12 @@ storage:
     retries: ${FILE_SERVICE_RETRIES}:2
     # Feature flag for gradual rollout
     enabled: ${FILE_SERVICE_ENABLED}:true
+
+  # Collabora / WOPI service configuration
+  collabora:
+    # URL of the WOPI service (token issuance endpoint)
+    wopi_service_url: ${WOPI_SERVICE_URL}:http://localhost:3000
+
 
   # Redis configuration
   redis:

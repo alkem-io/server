@@ -12,8 +12,8 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { CalloutsSetModule } from '../callouts-set/callouts.set.module';
 import { InnovationFlowModule } from '../innovation-flow/innovation.flow.module';
+import { CollaborationLicenseModule } from './collaboration.license.module';
 import { CollaborationAuthorizationService } from './collaboration.service.authorization';
-import { CollaborationLicenseService } from './collaboration.service.license';
 
 @Module({
   imports: [
@@ -26,18 +26,18 @@ import { CollaborationLicenseService } from './collaboration.service.license';
     CalloutsSetModule,
     PlatformRolesAccessModule,
     NamingModule,
+    CollaborationLicenseModule,
     TypeOrmModule.forFeature([Collaboration]),
   ],
   providers: [
     CollaborationService,
     CollaborationAuthorizationService,
     CollaborationResolverFields,
-    CollaborationLicenseService,
   ],
   exports: [
     CollaborationService,
     CollaborationAuthorizationService,
-    CollaborationLicenseService,
+    CollaborationLicenseModule,
   ],
 })
 export class CollaborationModule {}

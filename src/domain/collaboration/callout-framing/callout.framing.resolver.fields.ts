@@ -1,6 +1,7 @@
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
 import { ILink } from '@domain/collaboration/link/link.interface';
 import { IPoll } from '@domain/collaboration/poll/poll.interface';
 import { IMediaGallery } from '@domain/common/media-gallery/media.gallery.interface';
@@ -71,5 +72,16 @@ export class CalloutFramingResolverFields {
   })
   async poll(@Parent() calloutFraming: ICalloutFraming): Promise<IPoll | null> {
     return this.calloutFramingService.getPoll(calloutFraming);
+  }
+
+  @ResolveField('collaboraDocument', () => ICollaboraDocument, {
+    nullable: true,
+    description:
+      'The Collabora document attached to this Callout Framing, if any. Present when framing.type = COLLABORA_DOCUMENT.',
+  })
+  async collaboraDocument(
+    @Parent() calloutFraming: ICalloutFraming
+  ): Promise<ICollaboraDocument | null> {
+    return this.calloutFramingService.getCollaboraDocument(calloutFraming);
   }
 }

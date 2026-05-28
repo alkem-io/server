@@ -271,6 +271,92 @@ describe('FileServiceAdapter', () => {
     });
   });
 
+  describe('copyDocument', () => {
+    it('POSTs JSON body to /internal/file/copy', async () => {
+      const responseData = {
+        id: 'doc-copy',
+        externalID: 'ext-shared',
+        mimeType: 'image/png',
+        size: 1024,
+        reused: false,
+      };
+
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(responseData, 201))
+      );
+
+      const result = await adapter.copyDocument({
+        sourceId: 'src-1',
+        destinationBucketId: 'bucket-2',
+        authorizationId: 'auth-2',
+        tagsetId: 'tagset-2',
+        createdBy: 'user-1',
+      });
+
+      expect(result).toEqual(responseData);
+
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.method).toBe('post');
+      expect(callArgs.url).toBe('http://file-service:4003/internal/file/copy');
+      expect(callArgs.data).toEqual({
+        sourceId: 'src-1',
+        destinationBucketId: 'bucket-2',
+        authorizationId: 'auth-2',
+        tagsetId: 'tagset-2',
+        createdBy: 'user-1',
+      });
+    });
+
+    it('passes skipDedup when true', async () => {
+      (httpService.request as Mock).mockReturnValue(
+        of(
+          axiosResponse(
+            {
+              id: 'doc-copy',
+              externalID: 'ext',
+              mimeType: 'image/png',
+              size: 1,
+              reused: false,
+            },
+            201
+          )
+        )
+      );
+
+      await adapter.copyDocument({
+        sourceId: 'src-1',
+        destinationBucketId: 'bucket-2',
+        authorizationId: 'auth-2',
+        skipDedup: true,
+      });
+
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.data.skipDedup).toBe(true);
+    });
+
+    it('surfaces 404 from file-service-go as FileServiceAdapterException', async () => {
+      const axiosError = new AxiosError('Not Found', '404', undefined, null, {
+        status: 404,
+        data: { error: 'source document not found' },
+        statusText: 'Not Found',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      });
+
+      (httpService.request as Mock).mockReturnValue(
+        throwError(() => axiosError)
+      );
+
+      await expect(
+        adapter.copyDocument({
+          sourceId: 'missing',
+          destinationBucketId: 'bucket-2',
+          authorizationId: 'auth-2',
+        })
+      ).rejects.toThrow(FileServiceAdapterException);
+    });
+  });
+
   describe('deleteDocument', () => {
     it('should DELETE and return authorizationId and tagsetId', async () => {
       const responseData = {

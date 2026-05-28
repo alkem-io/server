@@ -301,6 +301,102 @@ describe('TemplateService', () => {
       expect(calloutData.isTemplate).toBe(true);
     });
 
+    it('should walk nested callout content for CALLOUT template type', async () => {
+      calloutService.createCallout.mockResolvedValue({ id: 'co-1' } as any);
+
+      const calloutData = { nameID: 'cb', isTemplate: false, sortOrder: 0 };
+      const input = baseInput(TemplateType.CALLOUT, { calloutData });
+
+      await service.createTemplate(input as any, storageAggregator);
+
+      expect(calloutService.materializeCalloutContent).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'co-1' }),
+        calloutData,
+        expect.any(Function)
+      );
+    });
+
+    it('should walk nested contentSpace for SPACE template type', async () => {
+      templateContentSpaceService.createTemplateContentSpace.mockResolvedValue({
+        id: 'tcs-1',
+      } as any);
+
+      const contentSpaceData = {
+        collaborationData: {
+          calloutsSetData: { calloutsData: [] },
+          innovationFlowData: { states: [{ displayName: 'State' }] },
+        },
+        about: {},
+        subspaces: [],
+      };
+      const input = baseInput(TemplateType.SPACE, { contentSpaceData });
+
+      await service.createTemplate(input as any, storageAggregator);
+
+      expect(
+        templateContentSpaceService.materializeTemplateContentSpaceContent
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'tcs-1' }),
+        contentSpaceData,
+        expect.any(Function)
+      );
+    });
+
+    it('rolls back the saved template when nested CALLOUT materialize fails', async () => {
+      calloutService.createCallout.mockResolvedValue({ id: 'co-1' } as any);
+      // Simulate the helper invoking rollback then re-throwing — same
+      // contract as materializeProfileContentAndVisualsOrRollback inside
+      // CalloutService.materializeCalloutContent.
+      calloutService.materializeCalloutContent.mockImplementation(
+        async (_callout, _data, rollback) => {
+          await rollback();
+          throw new Error('framing materialize failed');
+        }
+      );
+      const deleteSpy = vi
+        .spyOn(service, 'delete')
+        .mockResolvedValue({} as any);
+
+      const calloutData = { nameID: 'cb', isTemplate: false, sortOrder: 0 };
+      const input = baseInput(TemplateType.CALLOUT, { calloutData });
+
+      await expect(
+        service.createTemplate(input as any, storageAggregator)
+      ).rejects.toThrow('framing materialize failed');
+      expect(deleteSpy).toHaveBeenCalled();
+    });
+
+    it('rolls back the saved template when nested SPACE materialize fails', async () => {
+      templateContentSpaceService.createTemplateContentSpace.mockResolvedValue({
+        id: 'tcs-1',
+      } as any);
+      templateContentSpaceService.materializeTemplateContentSpaceContent.mockImplementation(
+        async (_cs, _data, rollback) => {
+          await rollback();
+          throw new Error('contentSpace materialize failed');
+        }
+      );
+      const deleteSpy = vi
+        .spyOn(service, 'delete')
+        .mockResolvedValue({} as any);
+
+      const input = baseInput(TemplateType.SPACE, {
+        contentSpaceData: {
+          collaborationData: {
+            calloutsSetData: { calloutsData: [] },
+            innovationFlowData: { states: [{ displayName: 'State' }] },
+          },
+          about: {},
+          subspaces: [],
+        },
+      });
+
+      await expect(
+        service.createTemplate(input as any, storageAggregator)
+      ).rejects.toThrow('contentSpace materialize failed');
+      expect(deleteSpy).toHaveBeenCalled();
+    });
+
     it('should throw ValidationException for unknown template type', async () => {
       await expect(
         service.createTemplate(

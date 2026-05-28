@@ -35,16 +35,65 @@ gql_request() {
     payload=$(jq -nc --arg q "$query" '{query:$q}')
   fi
 
+  # -sS: silent except for transport errors. No --fail/-f: GraphQL surfaces
+  # validation failures as 400 + JSON body we want to read. Timeouts bound
+  # the call so a hung server can't block the pipeline.
   local response
-  response=$(curl -s -X POST "$GQL_ENDPOINT" \
+  response=$(curl -sS --connect-timeout 5 --max-time 30 -X POST "$GQL_ENDPOINT" \
     -H 'Content-Type: application/json' \
     -H "Authorization: Bearer $SESSION_TOKEN" \
-    -d "$payload")
+    -d "$payload") \
+    || { echo "ERROR: curl to $GQL_ENDPOINT failed (exit $?)" >&2; return 1; }
 
   # Print the response (caller extracts what they need)
   echo "$response"
 
   # Return non-zero if there are errors and no data
+  local has_data has_errors
+  has_data=$(echo "$response" | jq -r '.data // empty')
+  has_errors=$(echo "$response" | jq -r '.errors // empty')
+  if [ -z "$has_data" ] && [ -n "$has_errors" ]; then
+    echo "GraphQL error: $(echo "$response" | jq -c '.errors')" >&2
+    return 1
+  fi
+}
+
+# Cookie-authenticated variant. Hits the interactive endpoint (which is
+# routed through Oathkeeper) so the session is exchanged for a JWT
+# carrying actor identity downstream — required for WOPI, @CurrentActor
+# privilege checks, and anything that depends on a resolved user.
+#
+# Usage:
+#   gql_request_interactive '<query>' [variables_json]
+#
+# Requires COOKIE_JAR to be set and the file to contain a valid
+# `ory_kratos_session` cookie (run interactive-login.sh first).
+GQL_INTERACTIVE_ENDPOINT="${GRAPHQL_INTERACTIVE_ENDPOINT:-http://localhost:3000/api/private/graphql}"
+
+gql_request_interactive() {
+  local query="$1"
+  local variables="${2:-}"
+
+  [ -n "${COOKIE_JAR:-}" ] || { echo "ERROR: COOKIE_JAR is not set" >&2; return 1; }
+  [ -f "$COOKIE_JAR" ] || { echo "ERROR: cookie jar not found at $COOKIE_JAR" >&2; return 1; }
+
+  local payload
+  if [ -n "$variables" ]; then
+    payload=$(jq -nc --arg q "$query" --argjson v "$variables" '{query:$q, variables:$v}')
+  else
+    payload=$(jq -nc --arg q "$query" '{query:$q}')
+  fi
+
+  # See gql_request above for the rationale on -sS + timeouts (no --fail).
+  local response
+  response=$(curl -sS --connect-timeout 5 --max-time 30 -X POST "$GQL_INTERACTIVE_ENDPOINT" \
+    -b "$COOKIE_JAR" \
+    -H 'Content-Type: application/json' \
+    -d "$payload") \
+    || { echo "ERROR: curl to $GQL_INTERACTIVE_ENDPOINT failed (exit $?)" >&2; return 1; }
+
+  echo "$response"
+
   local has_data has_errors
   has_data=$(echo "$response" | jq -r '.data // empty')
   has_errors=$(echo "$response" | jq -r '.errors // empty')

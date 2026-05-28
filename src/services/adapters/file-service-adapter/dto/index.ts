@@ -1,3 +1,4 @@
+export { CopyDocumentInput } from './copy.document.input';
 export { CreateDocumentMetadata } from './create.document.metadata';
 export { CreateDocumentResult } from './create.document.result';
 export { DeleteDocumentResult } from './delete.document.result';

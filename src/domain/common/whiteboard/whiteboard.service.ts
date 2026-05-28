@@ -47,6 +47,7 @@ export class WhiteboardService {
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<IWhiteboard> {
+    // Phase 1: build entity tree in memory (no file-service-go calls).
     const whiteboard: IWhiteboard = Whiteboard.create({
       ...whiteboardData,
     });
@@ -63,11 +64,6 @@ export class WhiteboardService {
       ProfileType.WHITEBOARD,
       storageAggregator
     );
-    await this.profileService.addVisualsOnProfile(
-      whiteboard.profile,
-      whiteboardData.profile?.visuals,
-      [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW]
-    );
     await this.profileService.addOrUpdateTagsetOnProfile(whiteboard.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: [],
@@ -78,7 +74,69 @@ export class WhiteboardService {
       coordinates: whiteboardData.previewSettings?.coordinates ?? null,
     };
 
-    return whiteboard;
+    // Phase 2: persist + materialize. The shared helper runs the file-service
+    // work and rolls back the saved entity on failure so callers receive a
+    // fully-materialized whiteboard or a thrown error, never a half-state.
+    const saved = await this.whiteboardRepository.save(whiteboard);
+    // The helper mutates the profile in place AND saves it; the saved
+    // whiteboard's `.profile` reference is the same instance, so no
+    // explicit reassignment is required (TypeORM Profile entity type
+    // wouldn't accept the IProfile return shape anyway).
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      saved.profile,
+      whiteboardData.profile?.visuals,
+      [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW],
+      () => this.deleteWhiteboard(saved.id)
+    );
+
+    // Phase 3: re-home the WB content's embedded file references into
+    // the new whiteboard's bucket. Without this, cloned WBs (template
+    // creation, space-from-template, callout-from-template, etc.)
+    // permanently reference the source's bucket — which becomes
+    // dangling the moment the source is deleted, and silently
+    // gets MOVED out of the source on the first user save. Doing it
+    // eagerly at clone time gives the new WB its own copies of
+    // referenced docs (the helper now uses COPY semantics, leaving
+    // the source intact).
+    if (saved.content) {
+      try {
+        const reuploaded = await this.reuploadDocumentsIfNotInBucket(
+          this.parseWhiteboardContent(saved.content),
+          saved.profile.id
+        );
+        const reuploadedJson = JSON.stringify(reuploaded);
+        if (reuploadedJson !== saved.content) {
+          saved.content = reuploadedJson;
+          await this.whiteboardRepository.save(saved);
+        }
+      } catch (error) {
+        await this.deleteWhiteboard(saved.id).catch(rollbackError => {
+          const stack =
+            rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+          this.logger.error?.(
+            {
+              message: 'Rollback after WB content reupload failure also failed',
+              whiteboardId: saved.id,
+              rollbackError: String(rollbackError),
+            },
+            stack,
+            LogContext.WHITEBOARDS
+          );
+        });
+        throw error;
+      }
+    }
+    return saved;
+  }
+
+  private parseWhiteboardContent(raw: string): ExcalidrawContent {
+    try {
+      return JSON.parse(raw) as ExcalidrawContent;
+    } catch {
+      // Empty / non-JSON content (legacy or fresh WB) — return a shape
+      // the reupload walker treats as a no-op (no `files` map).
+      return { elements: [], files: {} } as unknown as ExcalidrawContent;
+    }
   }
 
   async getWhiteboardOrFail(

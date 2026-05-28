@@ -45,6 +45,7 @@ subscriptions.log
 # Claude Code
 .claude/settings.local.json
 .claude/pipeline/.session-token
+.claude/pipeline/.cookie-jar
 .claude/pipeline/.env
 .claude/pipeline/results/
 .claude/pipeline/live-results/
@@ -91,7 +92,9 @@ subscriptions.log
 !.scripts/gql-validate/
 !.scripts/lib/
 !.scripts/non-interactive-login.sh
+!.scripts/interactive-login.sh
 !.scripts/gql-request.sh
+!.scripts/gql-request-interactive.sh
 .scripts/overmind/.overmind.sock
 .scripts/**/*.psql
 .storage/

@@ -78,12 +78,15 @@ describe('WhiteboardService', () => {
 
     beforeEach(() => {
       vi.mocked(profileService.createProfile).mockResolvedValue(mockProfile);
-      vi.mocked(profileService.addVisualsOnProfile).mockResolvedValue(
-        mockProfile
-      );
       vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
         {} as any
       );
+      // createWhiteboard saves+materializes internally; round-trip the
+      // entity so the test sees the same in-memory state we set up.
+      whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
+      vi.mocked(
+        profileService.materializeProfileContentAndVisualsOrRollback
+      ).mockImplementation(async profile => profile);
     });
 
     it('should create whiteboard with profile, visuals, tagset, and authorization', async () => {
@@ -107,11 +110,13 @@ describe('WhiteboardService', () => {
         mockStorageAggregator
       );
       expect(
-        vi.mocked(profileService.addVisualsOnProfile)
-      ).toHaveBeenCalledWith(mockProfile, undefined, [
-        VisualType.CARD,
-        VisualType.WHITEBOARD_PREVIEW,
-      ]);
+        vi.mocked(profileService.materializeProfileContentAndVisualsOrRollback)
+      ).toHaveBeenCalledWith(
+        mockProfile,
+        undefined,
+        [VisualType.CARD, VisualType.WHITEBOARD_PREVIEW],
+        expect.any(Function)
+      );
       expect(
         vi.mocked(profileService.addOrUpdateTagsetOnProfile)
       ).toHaveBeenCalledWith(mockProfile, {

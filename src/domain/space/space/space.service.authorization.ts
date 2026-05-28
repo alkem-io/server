@@ -29,6 +29,7 @@ import { CollaborationAuthorizationService } from '@domain/collaboration/collabo
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { CommunityAuthorizationService } from '@domain/community/community/community.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
 import { TemplatesManagerAuthorizationService } from '@domain/template/templates-manager/templates.manager.service.authorization';
@@ -50,6 +51,7 @@ export class SpaceAuthorizationService {
     private communityAuthorizationService: CommunityAuthorizationService,
     private collaborationAuthorizationService: CollaborationAuthorizationService,
     private spaceAboutAuthorizationService: SpaceAboutAuthorizationService,
+    private profileAuthorizationService: ProfileAuthorizationService,
     private templatesManagerAuthorizationService: TemplatesManagerAuthorizationService,
     private spaceLookupService: SpaceLookupService,
     private licenseAuthorizationService: LicenseAuthorizationService,
@@ -80,6 +82,7 @@ export class SpaceAuthorizationService {
         about: {
           profile: true,
         },
+        profile: true,
         storageAggregator: {
           authorization: true,
           directStorage: { authorization: true },
@@ -94,6 +97,7 @@ export class SpaceAuthorizationService {
       !space.authorization ||
       !space.community ||
       !space.community.roleSet ||
+      !space.profile ||
       !space.subspaces ||
       !space.license
     ) {
@@ -229,11 +233,14 @@ export class SpaceAuthorizationService {
       );
     updatedAuthorizations.push(...childAuthorizations);
 
-    // Finally propagate to child spaces
+    // Finally propagate to child spaces — wrap each in a resilient cascade so
+    // one broken subspace (e.g. with collaborationId=NULL) does not abort the
+    // iteration and leave its peers with stale empty rules.
     for (const subspace of space.subspaces) {
-      const updatedSubspaceAuthorizations = await this.applyAuthorizationPolicy(
-        subspace.id,
-        space.authorization
+      const updatedSubspaceAuthorizations = await this.resilientCascade(
+        `subspace ${subspace.id}`,
+        { spaceId: space.id },
+        () => this.applyAuthorizationPolicy(subspace.id, space.authorization)
       );
       this.logger.verbose?.(
         `Subspace (${subspace.id}) auth reset: saving ${updatedSubspaceAuthorizations.length} authorizations`,
@@ -245,6 +252,43 @@ export class SpaceAuthorizationService {
     }
 
     return updatedAuthorizations;
+  }
+
+  /**
+   * Wrap a sub-cascade in error containment.
+   *
+   * On data-integrity anomalies (RelationshipNotFoundException,
+   * EntityNotFoundException) the failure is logged at error level with full
+   * context but the parent cascade continues. Other exceptions (DB outage,
+   * programmer error) propagate so they aren't silently masked.
+   *
+   * This is the architectural fix for the failure mode where a single broken
+   * child entity (e.g. a Space with collaborationId=NULL, or a Template of
+   * type='whiteboard' with whiteboardId=NULL) aborted the entire Account-level
+   * reset and left dozens of unrelated entities with empty credentialRules.
+   */
+  private async resilientCascade<T>(
+    step: string,
+    context: { spaceId: string },
+    cascade: () => Promise<T[]>
+  ): Promise<T[]> {
+    try {
+      return await cascade();
+    } catch (e: unknown) {
+      if (
+        e instanceof RelationshipNotFoundException ||
+        e instanceof EntityNotFoundException
+      ) {
+        const err = e as Error;
+        this.logger.error(
+          `Auth-reset cascade step '${step}' skipped for space ${context.spaceId} due to data anomaly: ${err.message}`,
+          err.stack,
+          LogContext.AUTH
+        );
+        return [];
+      }
+      throw e;
+    }
   }
 
   private async getCredentialsWithVisibilityOfSpace(
@@ -392,6 +436,7 @@ export class SpaceAuthorizationService {
       !space.community.roleSet ||
       !space.about ||
       !space.about.profile ||
+      !space.profile ||
       !space.storageAggregator ||
       !space.license
     ) {
@@ -404,56 +449,77 @@ export class SpaceAuthorizationService {
     const updatedAuthorizations: IAuthorizationPolicy[] = [];
 
     const isSubspaceCommunity = space.level !== SpaceLevel.L0;
+    const ctx = { spaceId: space.id };
 
-    const communityAuthorizations =
-      await this.communityAuthorizationService.applyAuthorizationPolicy(
-        space.community.id,
-        space.authorization,
-        space.platformRolesAccess,
-        spaceMembershipAllowed,
-        space.settings,
-        isSubspaceCommunity
-      );
+    const communityAuthorizations = await this.resilientCascade(
+      'community',
+      ctx,
+      () =>
+        this.communityAuthorizationService.applyAuthorizationPolicy(
+          space.community!.id,
+          space.authorization!,
+          space.platformRolesAccess,
+          spaceMembershipAllowed,
+          space.settings,
+          isSubspaceCommunity
+        )
+    );
     updatedAuthorizations.push(...communityAuthorizations);
 
-    const storageAuthorizations =
-      await this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
-        space.storageAggregator,
-        space.authorization
-      );
+    const storageAuthorizations = await this.resilientCascade(
+      'storage-aggregator',
+      ctx,
+      () =>
+        this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
+          space.storageAggregator!,
+          space.authorization!
+        )
+    );
     updatedAuthorizations.push(...storageAuthorizations);
 
-    const collaborationAuthorizations =
-      await this.collaborationAuthorizationService.applyAuthorizationPolicy(
-        space.collaboration,
-        space.authorization,
-        space.platformRolesAccess,
-        space.community.roleSet,
-        space.settings
-      );
+    const collaborationAuthorizations = await this.resilientCascade(
+      'collaboration',
+      ctx,
+      () =>
+        this.collaborationAuthorizationService.applyAuthorizationPolicy(
+          space.collaboration!,
+          space.authorization!,
+          space.platformRolesAccess,
+          space.community!.roleSet!,
+          space.settings
+        )
+    );
     updatedAuthorizations.push(...collaborationAuthorizations);
 
-    const licenseAuthorizations =
-      this.licenseAuthorizationService.applyAuthorizationPolicy(
-        space.license,
-        space.authorization
-      );
+    const licenseAuthorizations = await this.resilientCascade(
+      'license',
+      ctx,
+      async () =>
+        this.licenseAuthorizationService.applyAuthorizationPolicy(
+          space.license!,
+          space.authorization!
+        )
+    );
     updatedAuthorizations.push(...licenseAuthorizations);
 
     if (space.level === SpaceLevel.L0) {
-      if (!space.templatesManager) {
-        // Must be a templatesManager
-        throw new RelationshipNotFoundException(
-          `Unable to load templatesManager on level zero space for auth reset ${space.id} `,
-          LogContext.SPACES
-        );
-      }
-
-      const templatesManagerAuthorizations =
-        await this.templatesManagerAuthorizationService.applyAuthorizationPolicy(
-          space.templatesManager.id,
-          space.authorization
-        );
+      const templatesManagerAuthorizations = await this.resilientCascade(
+        'templatesManager',
+        ctx,
+        async () => {
+          if (!space.templatesManager) {
+            throw new RelationshipNotFoundException(
+              'Unable to load templatesManager on level zero space for auth reset',
+              LogContext.SPACES,
+              { spaceId: space.id }
+            );
+          }
+          return this.templatesManagerAuthorizationService.applyAuthorizationPolicy(
+            space.templatesManager.id,
+            space.authorization!
+          );
+        }
+      );
       updatedAuthorizations.push(...templatesManagerAuthorizations);
     }
 
@@ -465,13 +531,28 @@ export class SpaceAuthorizationService {
         'Read access to About'
       );
     credentialRuleReadOnAbout.cascade = true;
-    const aboutAuthorizations =
-      await this.spaceAboutAuthorizationService.applyAuthorizationPolicy(
-        space.about.id,
-        space.authorization,
-        [credentialRuleReadOnAbout]
-      );
+    const aboutAuthorizations = await this.resilientCascade(
+      'space-about',
+      ctx,
+      () =>
+        this.spaceAboutAuthorizationService.applyAuthorizationPolicy(
+          space.about!.id,
+          space.authorization!,
+          [credentialRuleReadOnAbout]
+        )
+    );
     updatedAuthorizations.push(...aboutAuthorizations);
+
+    const profileAuthorizations = await this.resilientCascade(
+      'space.profile',
+      ctx,
+      () =>
+        this.profileAuthorizationService.applyAuthorizationPolicy(
+          space.profile!.id,
+          space.authorization!
+        )
+    );
+    updatedAuthorizations.push(...profileAuthorizations);
 
     return updatedAuthorizations;
   }

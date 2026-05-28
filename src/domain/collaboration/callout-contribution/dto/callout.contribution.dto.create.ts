@@ -1,4 +1,5 @@
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CreateCollaboraDocumentInput } from '@domain/collaboration/collabora-document/dto/collabora.document.dto.create';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
 import { CreatePostInput } from '@domain/collaboration/post/dto/post.dto.create';
 import { CreateMemoInput } from '@domain/common/memo/dto/memo.dto.create';
@@ -30,6 +31,11 @@ export class CreateCalloutContributionInput {
   @IsOptional()
   @ValidateNested({ each: true })
   memo?: CreateMemoInput;
+
+  @Field(() => CreateCollaboraDocumentInput, { nullable: true })
+  @IsOptional()
+  @ValidateNested({ each: true })
+  collaboraDocument?: CreateCollaboraDocumentInput;
 
   @Field(() => Number, {
     nullable: true,

@@ -2,6 +2,9 @@ export type AlkemioConfig = {
   authorization: {
     chunk: number;
   };
+  endpoints: {
+    client_web: string;
+  };
   hosting: {
     environment: string;
     port: number;
@@ -143,6 +146,9 @@ export type AlkemioConfig = {
       timeout: number;
       retries: number;
       enabled: boolean;
+    };
+    collabora: {
+      wopi_service_url: string;
     };
     redis: {
       host: string;

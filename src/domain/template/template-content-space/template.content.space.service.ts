@@ -17,6 +17,7 @@ import { LicenseService } from '@domain/common/license/license.service';
 import { CreateSpaceAboutInput } from '@domain/space/space.about';
 import { ISpaceAbout } from '@domain/space/space.about/space.about.interface';
 import { SpaceAboutService } from '@domain/space/space.about/space.about.service';
+import { SpaceSettingsService } from '@domain/space/space.settings/space.settings.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -32,6 +33,7 @@ export class TemplateContentSpaceService {
   constructor(
     private authorizationPolicyService: AuthorizationPolicyService,
     private spaceAboutService: SpaceAboutService,
+    private spaceSettingsService: SpaceSettingsService,
     private collaborationService: CollaborationService,
     private licenseService: LicenseService,
     @InjectRepository(TemplateContentSpace)
@@ -76,6 +78,117 @@ export class TemplateContentSpaceService {
     }
 
     return await this.save(templateContentSpace);
+  }
+
+  /**
+   * Phase-2 materialization for a TemplateContentSpace. Composed under a
+   * Template (SPACE type); the Template's save persists the entire tree
+   * before this is called.
+   *
+   * Walks the about + collaboration + recursive subspaces. Failures bubble
+   * up via the supplied rollback callback (typically deletes the top-level
+   * Template — cascade clears the rest).
+   */
+  public async materializeTemplateContentSpaceContent(
+    templateContentSpace: ITemplateContentSpace,
+    templateContentSpaceData: CreateTemplateContentSpaceInput | undefined,
+    rollback: () => Promise<unknown>
+  ): Promise<void> {
+    // Fail-fast on partial loads or DTO mismatches — silently skipping
+    // would leave content unmaterialized while the call still succeeds.
+    if (!templateContentSpaceData) {
+      await this.rollbackAndThrow(
+        rollback,
+        new EntityNotInitializedException(
+          'TemplateContentSpace materialization data not provided',
+          LogContext.TEMPLATES,
+          { templateContentSpaceId: templateContentSpace.id }
+        ),
+        templateContentSpace.id
+      );
+    }
+    if (!templateContentSpace.about) {
+      await this.rollbackAndThrow(
+        rollback,
+        new RelationshipNotFoundException(
+          'TemplateContentSpace about not initialized',
+          LogContext.TEMPLATES,
+          { templateContentSpaceId: templateContentSpace.id }
+        ),
+        templateContentSpace.id
+      );
+    }
+    if (!templateContentSpace.collaboration) {
+      await this.rollbackAndThrow(
+        rollback,
+        new RelationshipNotFoundException(
+          'TemplateContentSpace collaboration not initialized',
+          LogContext.TEMPLATES,
+          { templateContentSpaceId: templateContentSpace.id }
+        ),
+        templateContentSpace.id
+      );
+    }
+    const persistedSubspaces = templateContentSpace.subspaces ?? [];
+    const inputSubspaces = templateContentSpaceData!.subspaces ?? [];
+    if (persistedSubspaces.length !== inputSubspaces.length) {
+      await this.rollbackAndThrow(
+        rollback,
+        new EntityNotInitializedException(
+          'TemplateContentSpace subspaces are out of sync with materialization data',
+          LogContext.TEMPLATES,
+          {
+            templateContentSpaceId: templateContentSpace.id,
+            persistedSubspaces: persistedSubspaces.length,
+            inputSubspaces: inputSubspaces.length,
+          }
+        ),
+        templateContentSpace.id
+      );
+    }
+
+    await this.spaceAboutService.materializeSpaceAboutContent(
+      templateContentSpace.about!,
+      templateContentSpaceData!.about,
+      rollback
+    );
+    await this.collaborationService.materializeCollaborationContent(
+      templateContentSpace.collaboration!,
+      templateContentSpaceData!.collaborationData,
+      rollback
+    );
+    for (let i = 0; i < persistedSubspaces.length; i++) {
+      await this.materializeTemplateContentSpaceContent(
+        persistedSubspaces[i],
+        inputSubspaces[i],
+        rollback
+      );
+    }
+  }
+
+  private async rollbackAndThrow(
+    rollback: () => Promise<unknown>,
+    error: Error,
+    templateContentSpaceId: string
+  ): Promise<never> {
+    // Same convention as the OrRollback helper: rollback-failure is
+    // alert-worthy (logger.error) but does not replace the original
+    // materialization error.
+    await rollback().catch(rollbackError => {
+      const stack =
+        rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+      this.logger.error?.(
+        {
+          message:
+            'Rollback after TemplateContentSpace materialization failure also failed',
+          templateContentSpaceId,
+          rollbackError: String(rollbackError),
+        },
+        stack,
+        LogContext.TEMPLATES
+      );
+    });
+    throw error;
   }
 
   async save(
@@ -234,6 +347,13 @@ export class TemplateContentSpaceService {
           templateContentSpace.about,
           templateContentSpaceData.about
         );
+    }
+
+    if (templateContentSpaceData.settings) {
+      templateContentSpace.settings = this.spaceSettingsService.updateSettings(
+        templateContentSpace.settings,
+        templateContentSpaceData.settings
+      );
     }
 
     return await this.save(templateContentSpace);

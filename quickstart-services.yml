@@ -31,8 +31,6 @@ services:
       - 15672:15672
       - 6379:6379
       - 6060:6060
-      - 8880:8880
-      - 9980:9980
       - 8188:8188
     networks:
       - alkemio_dev_net
@@ -290,7 +288,6 @@ services:
     restart: always
     environment:
       - SYNAPSE_NO_TLS=true
-      - SYNAPSE_ENABLE_REGISTRATION=true
       - SYNAPSE_HOMESERVER_NAME
       - SYNAPSE_SERVER_URL
       - SYNAPSE_SERVER_SHARED_SECRET
@@ -379,7 +376,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.32.0
+    image: alkemio/notifications:v0.34.0
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -416,7 +413,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter-go:v0.8.14
+    image: alkemio/matrix-adapter-go:v0.8.16
     depends_on:
       - rabbitmq
     environment:
@@ -464,7 +461,7 @@ services:
       - 6379
 
   redis-commander:
-    image: rediscommander/redis-commander:latest
+    image: ghcr.io/joeferner/redis-commander:latest
     environment:
       - REDIS_HOSTS=local:redis:6379
     ports:
@@ -499,7 +496,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service-go:v0.0.13
+    image: alkemio/file-service-go:v0.0.17
     depends_on:
       postgres:
         condition: service_healthy
@@ -579,7 +576,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_authorization_evaluation
     hostname: authorization-evaluation
-    image: alkemio/authorization-evaluation-service:v0.0.2
+    image: alkemio/authorization-evaluation-service:v0.0.4
     depends_on:
       postgres:
         condition: service_healthy
@@ -620,9 +617,11 @@ services:
       - AUTH_SERVICE_URL=http://authorization-evaluation:6060
       - FILE_SERVICE_URL=http://file-service:4003
       - WOPI_COLLABORA_URL=http://collabora:9980
-      - WOPI_BASE_URL=http://localhost:8880
+      - WOPI_BASE_URL=http://localhost:3000
+      - WOPI_CALLBACK_URL=http://wopi-service:8080
       - WOPI_TOKEN_SECRET=dev-wopi-token-secret-change-in-production
       - WOPI_SERVER_PORT=8080
+      - WOPI_PROOF_VALIDATION=false
       - LOG_LEVEL=info
     restart: unless-stopped
     networks:
@@ -638,10 +637,16 @@ services:
       - aliasgroup1=http://wopi-service:8080
       - username=admin
       - password=admin
-      - extra_params=--o:ssl.enable=false --o:net.proto=IPv4
+      - extra_params=--o:ssl.enable=false --o:net.proto=IPv4 --o:security.seccomp=false --o:security.capabilities=false
       - DONT_GEN_SSL_CERT=1
     cap_add:
       - MKNOD
+    tmpfs:
+      # World-writable (mode=1777) so the non-root 'cool' user can create
+      # per-session jails here without CAP_SYS_ADMIN (we run with
+      # --o:security.capabilities=false for K8s compatibility, which disables
+      # coolmount's bind-mount path).
+      - /opt/cool/child-roots:exec,mode=1777,size=512m
     restart: unless-stopped
     networks:
       - alkemio_dev_net

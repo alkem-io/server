@@ -1,4 +1,5 @@
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { CreateCollaboraDocumentInput } from '@domain/collaboration/collabora-document/dto/collabora.document.dto.create';
 import { UpdateLinkInput } from '@domain/collaboration/link/dto';
 import { UpdatePollInput } from '@domain/collaboration/poll/dto/poll.dto.update';
 import { UpdateProfileInput } from '@domain/common/profile/dto/profile.dto.update';
@@ -66,4 +67,14 @@ export class UpdateCalloutFramingInput {
   @ValidateNested()
   @Type(() => UpdatePollInput)
   poll?: UpdatePollInput;
+
+  @Field(() => CreateCollaboraDocumentInput, {
+    nullable: true,
+    description:
+      'Collabora document input. Used when switching framing type to COLLABORA_DOCUMENT.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateCollaboraDocumentInput)
+  collaboraDocument?: CreateCollaboraDocumentInput;
 }

@@ -651,6 +651,30 @@ input AddVisualToMediaGalleryInput {
   visualType: VisualType!
 }
 
+input AdminUserEmailChangeDriftResolveInput {
+  """
+  The admin-chosen canonical email. MUST equal either the old or new email recorded on the drift_detected audit entry. Both sides are force-aligned to this value.
+  """
+  canonicalEmail: String!
+  """The subject user whose latest audit entry is drift_detected."""
+  userID: UUID!
+}
+
+input AdminUserEmailChangeInput {
+  """
+  Who authorized the change within the subject user's organization. Distinct from the acting platform admin.
+  """
+  approver: EmailChangeApproverInput!
+  """The proposed new email address."""
+  newEmail: String!
+  """
+  Admin justification for the change (e.g. support-ticket reference). Recorded on every audit entry for this operation.
+  """
+  reason: String!
+  """The subject user whose login email is being changed."""
+  userID: UUID!
+}
+
 type AiPersona {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -879,6 +903,7 @@ enum AuthorizationPolicyType {
   CALLOUT_FRAMING
   CLASSIFICATION
   COLLABORATION
+  COLLABORA_DOCUMENT
   COMMUNICATION
   COMMUNICATION_CONVERSATION
   COMMUNICATION_MESSAGING
@@ -1119,6 +1144,8 @@ enum CalloutAllowedActors {
 type CalloutContribution {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """The CollaboraDocument that was contributed."""
+  collaboraDocument: CollaboraDocument
   """The user that created this Document"""
   createdBy: User
   """The date at which the entity was created."""
@@ -1155,6 +1182,7 @@ type CalloutContributionDefaults {
 }
 
 enum CalloutContributionType {
+  COLLABORA_DOCUMENT
   LINK
   MEMO
   POST
@@ -1162,6 +1190,8 @@ enum CalloutContributionType {
 }
 
 type CalloutContributionsCountOutput {
+  """The number of contributions of type CollaboraDocument in this callout"""
+  collaboraDocument: Float!
   """The number of contributions of type Link in this callout"""
   link: Float!
   """The number of contributions of type Memo in this callout"""
@@ -1180,6 +1210,10 @@ enum CalloutDescriptionDisplayMode {
 type CalloutFraming {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """
+  The Collabora document attached to this Callout Framing, if any. Present when framing.type = COLLABORA_DOCUMENT.
+  """
+  collaboraDocument: CollaboraDocument
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
@@ -1207,6 +1241,7 @@ type CalloutFraming {
 }
 
 enum CalloutFramingType {
+  COLLABORA_DOCUMENT
   LINK
   MEDIA_GALLERY
   MEMO
@@ -1332,6 +1367,37 @@ type Classification {
   tagsets: [Tagset!]
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type CollaboraDocument {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The user that created this CollaboraDocument."""
+  createdBy: User
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The type of the collaborative document."""
+  documentType: CollaboraDocumentType!
+  """The ID of the entity"""
+  id: UUID!
+  """The Profile for this CollaboraDocument."""
+  profile: Profile!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+enum CollaboraDocumentType {
+  DRAWING
+  PRESENTATION
+  SPREADSHEET
+  WORDPROCESSING
+}
+
+type CollaboraEditorUrlResult {
+  """The time-to-live of the access token in seconds."""
+  accessTokenTTL: Float!
+  """The URL to open the document in the Collabora editor."""
+  editorUrl: String!
 }
 
 type Collaboration {
@@ -1608,6 +1674,11 @@ input ContributionsFilterInput {
   types: [CalloutContributionType!]
 }
 
+input ContributorFilterInput {
+  displayName: String
+  nameID: String
+}
+
 type Conversation {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -1797,6 +1868,7 @@ input CreateCalendarEventOnCalendarInput {
 }
 
 type CreateCalloutContributionData {
+  collaboraDocument: CreateCollaboraDocumentData
   link: CreateLinkData
   memo: CreateMemoData
   post: CreatePostData
@@ -1823,6 +1895,7 @@ input CreateCalloutContributionDefaultsInput {
 }
 
 input CreateCalloutContributionInput {
+  collaboraDocument: CreateCollaboraDocumentInput
   link: CreateLinkInput
   memo: CreateMemoInput
   post: CreatePostInput
@@ -1850,6 +1923,8 @@ type CreateCalloutData {
 }
 
 type CreateCalloutFramingData {
+  """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
+  collaboraDocument: CreateCollaboraDocumentData
   link: CreateLinkData
   memo: CreateMemoData
   """
@@ -1866,6 +1941,8 @@ type CreateCalloutFramingData {
 }
 
 input CreateCalloutFramingInput {
+  """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
+  collaboraDocument: CreateCollaboraDocumentInput
   link: CreateLinkInput
   memo: CreateMemoInput
   """
@@ -1984,6 +2061,28 @@ input CreateClassificationInput {
   tagsets: [CreateTagsetInput!]!
 }
 
+type CreateCollaboraDocumentData {
+  """
+  Title for the new collaborative document. Required for blank-create. On the upload path, defaulted from the uploaded filename (extension stripped) when absent or empty.
+  """
+  displayName: String
+  """
+  Type of document to create. Required for blank-create. On the upload path, ignored — the type is derived from the uploaded file's sniffed MIME by file-service-go.
+  """
+  documentType: CollaboraDocumentType
+}
+
+input CreateCollaboraDocumentInput {
+  """
+  Title for the new collaborative document. Required for blank-create. On the upload path, defaulted from the uploaded filename (extension stripped) when absent or empty.
+  """
+  displayName: String
+  """
+  Type of document to create. Required for blank-create. On the upload path, ignored — the type is derived from the uploaded file's sniffed MIME by file-service-go.
+  """
+  documentType: CollaboraDocumentType
+}
+
 type CreateCollaborationData {
   """The CalloutsSet to use for this Collaboration."""
   calloutsSetData: CreateCalloutsSetData!
@@ -2019,6 +2118,7 @@ input CreateCommunityGuidelinesInput {
 
 input CreateContributionOnCalloutInput {
   calloutID: UUID!
+  collaboraDocument: CreateCollaboraDocumentInput
   link: CreateLinkInput
   memo: CreateMemoInput
   post: CreatePostInput
@@ -2635,6 +2735,11 @@ input DeleteCalloutInput {
   ID: UUID!
 }
 
+input DeleteCollaboraDocumentInput {
+  """The ID of the CollaboraDocument to delete."""
+  ID: UUID!
+}
+
 input DeleteContributionInput {
   ID: UUID!
 }
@@ -2817,6 +2922,29 @@ type Document {
   url: String!
 }
 
+"""Who authorized an email change within the subject user’s organization."""
+type EmailChangeApprover {
+  """Name of the person who authorized the change."""
+  name: String!
+  """The organization within which the change was authorized."""
+  organization: String
+  """The approver's role or title within the organization."""
+  role: String!
+}
+
+input EmailChangeApproverInput {
+  """Name of the person who authorized the change."""
+  name: String!
+  """
+  The organization within which the change was authorized, if applicable.
+  """
+  organization: String
+  """
+  The approver's role or title within the organization (e.g. 'Organization Administrator').
+  """
+  role: String!
+}
+
 """An Emoji."""
 scalar Emoji
 
@@ -2842,7 +2970,7 @@ input ExternalConfigInput {
   """The assistant ID backing the service in OpenAI`s assistant API"""
   assistantId: String
   """The OpenAI model to use for the service"""
-  model: OpenAIModel! = O1
+  model: OpenAIModel! = GPT_5_4_NANO
 }
 
 type FileStorageConfig {
@@ -2993,6 +3121,21 @@ enum IdentityVerificationStatusFilter {
   ALL
   UNVERIFIED
   VERIFIED
+}
+
+input ImportCollaboraDocumentInput {
+  """
+  The ID of the Callout to attach the imported document to as a new contribution.
+  """
+  calloutID: UUID!
+  """
+  Optional title override. If absent, derived from the uploaded filename (extension stripped).
+  """
+  displayName: String
+  """
+  Optional sortOrder for the new contribution. Defaults to one less than the current minimum (new contribution appears first).
+  """
+  sortOrder: Float
 }
 
 type InAppNotification {
@@ -4050,6 +4193,7 @@ type MigrateEmbeddings {
 enum MimeType {
   AVIF
   BMP
+  CSV
   DOC
   DOCX
   GIF
@@ -4057,6 +4201,7 @@ enum MimeType {
   HEIF
   JPEG
   JPG
+  ODG
   ODP
   ODS
   ODT
@@ -4069,6 +4214,7 @@ enum MimeType {
   PPT
   PPTM
   PPTX
+  RTF
   SVG
   WEBP
   XLS
@@ -4199,6 +4345,14 @@ type Mutation {
   Remove the Kratos account associated with the specified User. Note: the Users profile on the platform is not deleted.
   """
   adminUserAccountDelete(userID: UUID!): User!
+  """
+  Change a user's login email synchronously, acting as a platform administrator. The admin is responsible for verifying the subject user's identity out-of-band — the platform does NOT send a confirmation message to the new mailbox and does NOT require the new mailbox to prove ownership. Validates uniqueness, commits Kratos → Alkemio with bounded retry, invalidates the subject's existing sessions, and sends a security-signal notification to the old address. Requires PLATFORM_ADMIN.
+  """
+  adminUserEmailChange(adminUserEmailChangeData: AdminUserEmailChangeInput!): UserEmailChangeResult!
+  """
+  Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio and Kratos to a canonical email chosen by the admin. Requires PLATFORM_ADMIN.
+  """
+  adminUserEmailChangeDriftResolve(adminUserEmailChangeDriftResolveData: AdminUserEmailChangeDriftResolveInput!): UserEmailChangeResult!
   """Create a test customer on wingback."""
   adminWingbackCreateTestCustomer: String!
   """Get wingback customer entitlements."""
@@ -4267,8 +4421,10 @@ type Mutation {
   Convert a VC of type ALKEMIO_SPACE to be of type KNOWLEDGE_BASE. All Callouts from the Space currently being used are moved to the Knowledge Base. Note: only allowed for VCs using a Space within the same Account.
   """
   convertVirtualContributorToUseKnowledgeBase(conversionData: ConversionVcSpaceToVcKnowledgeBaseInput!): VirtualContributor!
-  """Create a new Callout on the CalloutsSet."""
-  createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!): Callout!
+  """
+  Create a new Callout on the CalloutsSet. When `file` is supplied alongside a COLLABORA_DOCUMENT framing, the new callout is framed with a Collabora document populated from the uploaded bytes (file-service-go sniffs MIME, validates format and size, and derives the document type; any documentType in the input is ignored on the upload path; displayName defaults from the filename when absent). When `file` is omitted, the existing blank-create behaviour applies and framing.collaboraDocument must specify both displayName and documentType.
+  """
+  createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!, file: Upload): Callout!
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
   """
@@ -4323,6 +4479,8 @@ type Mutation {
   deleteCalendarEvent(deleteData: DeleteCalendarEventInput!): CalendarEvent!
   """Delete a Callout."""
   deleteCallout(deleteData: DeleteCalloutInput!): Callout!
+  """Deletes the specified CollaboraDocument."""
+  deleteCollaboraDocument(deleteData: DeleteCollaboraDocumentInput!): CollaboraDocument!
   """Deletes a contribution."""
   deleteContribution(deleteData: DeleteContributionInput!): CalloutContribution!
   """
@@ -4387,6 +4545,10 @@ type Mutation {
   grantCredentialToOrganization(grantCredentialData: GrantOrganizationAuthorizationCredentialInput!): Organization!
   """Grants an authorization credential to a User."""
   grantCredentialToUser(grantCredentialData: GrantAuthorizationCredentialInput!): User!
+  """
+  Import an existing file as a CollaboraDocument contribution on the callout. file-service-go sniffs the MIME from content and rejects formats Collabora cannot edit.
+  """
+  importCollaboraDocument(file: Upload!, uploadData: ImportCollaboraDocumentInput!): CalloutContribution!
   """
   Invite new Contributors or users by email to join the specified RoleSet in the Entry Role.
   """
@@ -4472,7 +4634,7 @@ type Mutation {
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
-  resetLicenseOnAccounts: Space!
+  resetLicenseOnAccounts: Boolean!
   """Revoke a credential from an Actor."""
   revokeCredentialFromActor(actorID: UUID!, credentialType: CredentialType!, resourceID: UUID): Boolean!
   """Removes an authorization credential from an Organization."""
@@ -4539,6 +4701,8 @@ type Mutation {
   updateCalloutsSortOrder(sortOrderData: UpdateCalloutsSortOrderInput!): [Callout!]!
   """Updates a Tagset on a Classification."""
   updateClassificationTagset(updateData: UpdateClassificationSelectTagsetValueInput!): Tagset!
+  """Updates the specified CollaboraDocument."""
+  updateCollaboraDocument(updateData: UpdateCollaboraDocumentInput!): CollaboraDocument!
   """
   Updates a Collaboration using the Space content from the specified Template. Behavior depends on parameter combinations: (1) Flow Only: deleteExistingCallouts=false, addCallouts=false - updates only InnovationFlow states; (2) Add Posts: deleteExistingCallouts=false, addCallouts=true - keeps existing and adds template callouts; (3) Replace All: deleteExistingCallouts=true, addCallouts=true - deletes existing then adds template callouts; (4) Delete Only: deleteExistingCallouts=true, addCallouts=false - deletes existing callouts and updates InnovationFlow states. Execution order: delete (if requested) → update flow states (always) → add (if requested).
   """
@@ -4723,6 +4887,10 @@ enum NotificationEvent {
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
   SPACE_LEAD_COMMUNICATION_MESSAGE
   USER_COMMENT_REPLY
+  USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION
+  USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION
+  USER_EMAIL_CHANGE_SECURITY_SIGNAL
+  USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION
   USER_MENTIONED
   USER_MESSAGE
   USER_SIGN_UP_WELCOME
@@ -4768,6 +4936,9 @@ enum NotificationEventPayload {
   SPACE_COMMUNITY_INVITATION
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
   USER
+  USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION
+  USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION
+  USER_EMAIL_CHANGE_SECURITY_SIGNAL
   USER_MESSAGE_DIRECT
   USER_MESSAGE_ROOM
   VIRTUAL_CONTRIBUTOR
@@ -4816,31 +4987,24 @@ input NotificationSettingInput {
 }
 
 enum OpenAIModel {
-  BABBAGE_002
-  DALL_E_2
-  DALL_E_3
-  DAVINCI_002
-  GPT_3_5_TURBO
-  GPT_4
-  GPT_4O
-  GPT_4O_AUDIO_PREVIEW
-  GPT_4O_MINI
-  GPT_4O_MINI_AUDIO_PREVIEW
-  GPT_4O_MINI_REALTIME_PREVIEW
-  GPT_4O_REALTIME_PREVIEW
-  GPT_4_5_PREVIEW
-  GPT_4_TURBO
-  O1
-  O1_MINI
+  GPT_5
+  GPT_5_1
+  GPT_5_1_MINI
+  GPT_5_2
+  GPT_5_2_PRO
+  GPT_5_4
+  GPT_5_4_MINI
+  GPT_5_4_NANO
+  GPT_5_4_PRO
+  GPT_5_5
+  GPT_5_5_PRO
+  GPT_5_MINI
+  GPT_5_NANO
+  GPT_5_PRO
+  O3
   O3_MINI
-  OMNI_MODERATION_LATEST
-  TEXT_EMBEDDING_3_LARGE
-  TEXT_EMBEDDING_3_SMALL
-  TEXT_EMBEDDING_ADA_002
-  TEXT_MODERATION_LATEST
-  TTS_1
-  TTS_1_HD
-  WHISPER_1
+  O3_PRO
+  O4_MINI
 }
 
 type Organization implements ActorFull & Groupable {
@@ -5093,6 +5257,10 @@ type PlatformAdminQueryResults {
   """
   innovationPacks(queryData: InnovationPacksInput): [InnovationPack!]!
   """
+  The most recent email-change audit entry for the named subject user. Returns null if no audit entry exists.
+  """
+  latestUserEmailChangeAuditEntry(userID: UUID!): UserEmailChangeAuditEntry
+  """
   Retrieve all Organizations on the Platform. This is only available to Platform Admins.
   """
   organizations(
@@ -5117,6 +5285,10 @@ type PlatformAdminQueryResults {
     """Return Spaces matching the provided filter."""
     filter: SpaceFilterInput
   ): [Space!]!
+  """
+  Paginated email-change audit-entry history for the named subject user, ordered by timestamp descending. Cursor pagination per docs/Pagination.md.
+  """
+  userEmailChangeAuditEntries(after: String, before: String, first: Float, last: Float, userID: UUID!): UserEmailChangeAuditEntries!
   """
   Retrieve all Users on the Platform. This is only available to Platform Admins.
   """
@@ -5521,6 +5693,7 @@ enum ProfileType {
   ACCOUNT
   CALENDAR_EVENT
   CALLOUT_FRAMING
+  COLLABORA_DOCUMENT
   COMMUNITY_GUIDELINES
   CONTRIBUTION_LINK
   DISCUSSION
@@ -5708,6 +5881,8 @@ type Query {
   adminIdentitiesUnverified: [KratosIdentity!]!
   """Alkemio AiServer"""
   aiServer: AiServer!
+  """Retrieves the editor URL for the specified CollaboraDocument."""
+  collaboraEditorUrl(collaboraDocumentID: UUID!): CollaboraEditorUrlResult!
   """Active Spaces only, order by most active in the past X days."""
   exploreSpaces(options: ExploreSpacesInput): [Space!]!
   """
@@ -5922,6 +6097,10 @@ type RelayPaginatedSpace implements ActorFull {
   levelZeroSpaceID: String!
   """The License operating on this Space."""
   license: License!
+  """
+  Capped list of Contributors (Users, Virtual Contributors, …) that may be @mentioned in this Space. Scope adapts to the Space's privacy and the privacy of its ancestors: a private Space yields only its own Members; a public Space includes its Members plus the Members of each ancestor, walking up until the first private ancestor (inclusive) or until the public L0 root is reached, in which case all platform Contributors of the requested types are returned. Use `filter` for typeahead search and `types` to restrict which Contributor kinds are returned.
+  """
+  mentionableContributors(filter: ContributorFilterInput, limit: Int, types: [ActorType!]): [ActorFull!]!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
   """Whether this Space is pinned in its parent Space."""
@@ -6724,6 +6903,10 @@ type Space implements ActorFull {
   levelZeroSpaceID: String!
   """The License operating on this Space."""
   license: License!
+  """
+  Capped list of Contributors (Users, Virtual Contributors, …) that may be @mentioned in this Space. Scope adapts to the Space's privacy and the privacy of its ancestors: a private Space yields only its own Members; a public Space includes its Members plus the Members of each ancestor, walking up until the first private ancestor (inclusive) or until the public L0 root is reached, in which case all platform Contributors of the requested types are returned. Use `filter` for typeahead search and `types` to restrict which Contributor kinds are returned.
+  """
+  mentionableContributors(filter: ContributorFilterInput, limit: Int, types: [ActorType!]): [ActorFull!]!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
   """Whether this Space is pinned in its parent Space."""
@@ -7468,6 +7651,10 @@ input UpdateCalloutEntityInput {
 }
 
 input UpdateCalloutFramingInput {
+  """
+  Collabora document input. Used when switching framing type to COLLABORA_DOCUMENT.
+  """
+  collaboraDocument: CreateCollaboraDocumentInput
   link: UpdateLinkInput
   """The new markdown content for the Memo."""
   memoContent: Markdown
@@ -7542,6 +7729,13 @@ input UpdateClassificationSelectTagsetValueInput {
   tagsetName: String!
 }
 
+input UpdateCollaboraDocumentInput {
+  """The ID of the CollaboraDocument to update."""
+  ID: UUID!
+  """Updated display name for the document."""
+  displayName: String
+}
+
 input UpdateCollaborationFromSpaceTemplateInput {
   """Add the Callouts from the Collaboration Template"""
   addCallouts: Boolean = false
@@ -7598,7 +7792,7 @@ input UpdateDiscussionInput {
 input UpdateDocumentInput {
   ID: UUID!
   """
-  The display name for the Document. Not supported — rejected with a ValidationException if provided.
+  Display name. Currently rejected with a ValidationException — for documents owned by a parent entity (e.g., CollaboraDocument, Profile), use the parent's update mutation, which carries the context (file extension, MIME, profile coupling) needed to keep editor titles, download names, and the file-service row in sync. Direct rename via updateDocument will be wired when documents become a directly-managed resource (e.g., a per-space documents collection).
   """
   displayName: String
   tagset: UpdateTagsetInput
@@ -7914,19 +8108,19 @@ input UpdateSpaceSettingsCollaborationInput {
   """
   Flag to control if events from Subspaces are visible on this Space calendar as well.
   """
-  allowEventsFromSubspaces: Boolean!
+  allowEventsFromSubspaces: Boolean
   """Flag to control if guest users can contribute to this Space."""
-  allowGuestContributions: Boolean!
+  allowGuestContributions: Boolean
   """Flag to control if members can create callouts."""
-  allowMembersToCreateCallouts: Boolean!
+  allowMembersToCreateCallouts: Boolean
   """Flag to control if members can create subspaces."""
-  allowMembersToCreateSubspaces: Boolean!
+  allowMembersToCreateSubspaces: Boolean
   """Flag to control if members can create video calls in this Space."""
-  allowMembersToVideoCall: Boolean!
+  allowMembersToVideoCall: Boolean
   """
   Flag to control if ability to contribute is inherited from parent Space.
   """
-  inheritMembershipRights: Boolean!
+  inheritMembershipRights: Boolean
 }
 
 input UpdateSpaceSettingsEntityInput {
@@ -8066,6 +8260,10 @@ input UpdateUserSettingsCommunicationInput {
 input UpdateUserSettingsEntityInput {
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
+  """
+  Update the user's design version. Any integer accepted (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).
+  """
+  designVersion: Int
   """Settings related to Home Space."""
   homeSpace: UpdateUserSettingsHomeSpaceInput
   """Settings related to this users Notifications preferences."""
@@ -8116,6 +8314,10 @@ input UpdateUserSettingsNotificationPlatformAdminInput {
   """[Admin] Receive a notification when a new L0 Space is created"""
   spaceCreated: NotificationSettingInput
   """
+  [Admin] Receive a notification when a user changes their login email address
+  """
+  userEmailChanged: NotificationSettingInput
+  """
   [Admin] Receive a notification user is assigned or removed from a global role
   """
   userGlobalRoleChanged: NotificationSettingInput
@@ -8145,6 +8347,10 @@ input UpdateUserSettingsNotificationSpaceAdminInput {
   communityApplicationReceived: NotificationSettingInput
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: NotificationSettingInput
+  """
+  Receive a notification when the login email of an admin or lead of a Space I administer is changed (admin)
+  """
+  userEmailChanged: NotificationSettingInput
 }
 
 input UpdateUserSettingsNotificationSpaceInput {
@@ -8471,6 +8677,92 @@ input UserAuthorizationResetInput {
   userID: UUID!
 }
 
+"""
+Cursor-paginated list of email-change audit entries (per docs/Pagination.md).
+"""
+type UserEmailChangeAuditEntries {
+  auditEntries: [UserEmailChangeAuditEntry!]!
+  pageInfo: UserEmailChangeAuditEntriesPageInfo!
+  total: Float!
+}
+
+type UserEmailChangeAuditEntriesPageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
+"""
+A single email-change audit-trail entry. Append-only and retained indefinitely (FR-014a).
+"""
+type UserEmailChangeAuditEntry {
+  """
+  Who authorized the change within the subject user’s organization. Set for platform-admin-initiated changes; null for self-service entries.
+  """
+  approver: EmailChangeApprover
+  """Short non-leaky failure reason. Set on failure outcomes only."""
+  failureReason: String
+  id: UUID!
+  """
+  The user who initiated the change. Null for entries whose initiator could not be resolved (early validation rejects); initiatorRole is still present.
+  """
+  initiator: UserProfileSummary
+  initiatorRole: UserEmailChangeInitiatorRole!
+  """
+  For commit/rollback entries: the proposed/applied new address. For drift_detected entries: the value observed on the Kratos side at the moment of drift.
+  """
+  newEmail: String
+  """
+  Old email at the time of this audit entry. Null only for entries with no old-email context.
+  """
+  oldEmail: String
+  outcome: UserEmailChangeAuditOutcome!
+  """
+  Admin-supplied justification for the change. Set for platform-admin-initiated changes; null for self-service entries.
+  """
+  reason: String
+  """The user whose email is being changed."""
+  subject: UserProfileSummary!
+  timestamp: DateTime!
+}
+
+"""
+Outcome recorded for a single user-email-change audit entry. Spec 098 extends this enum additively with verification-flow outcomes.
+"""
+enum UserEmailChangeAuditOutcome {
+  COMMITTED
+  DRIFT_DETECTED
+  DRIFT_RESOLUTION_FAILED
+  DRIFT_RESOLVED
+  GLOBAL_ADMIN_NOTIFICATION_FAILED
+  NEW_ADDRESS_NOTIFICATION_FAILED
+  REJECTED_CONFLICT
+  REJECTED_VALIDATION
+  ROLLED_BACK
+  SECURITY_SIGNAL_FAILED
+  SESSION_INVALIDATION_FAILED
+  SPACE_ADMIN_NOTIFICATION_FAILED
+}
+
+"""Role of the actor who initiated a user-email-change audit event."""
+enum UserEmailChangeInitiatorRole {
+  PLATFORM_ADMIN
+  SELF
+}
+
+"""
+Result returned to the admin caller. Deliberately minimal — failures surface as typed GraphQL errors instead of returning false. Returned by both adminUserEmailChange and adminUserEmailChangeDriftResolve.
+"""
+type UserEmailChangeResult {
+  """The committed (canonical) email. Present on success."""
+  email: String
+  """
+  Always true on success. Failures throw typed GraphQL errors instead of returning false.
+  """
+  success: Boolean!
+}
+
 input UserFilterInput {
   displayName: String
   email: String
@@ -8495,6 +8787,14 @@ type UserGroup {
   updatedDate: DateTime!
 }
 
+"""
+Minimal user-profile summary identifying a user without exposing PII beyond id + displayName.
+"""
+type UserProfileSummary {
+  displayName: String!
+  id: UUID!
+}
+
 type UserSettings {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -8502,6 +8802,10 @@ type UserSettings {
   communication: UserSettingsCommunication!
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  The design version this User has selected (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).
+  """
+  designVersion: Int!
   """The home space settings for this User."""
   homeSpace: UserSettingsHomeSpace!
   """The ID of the entity"""
@@ -8575,6 +8879,8 @@ type UserSettingsNotificationPlatform {
 type UserSettingsNotificationPlatformAdmin {
   """Receive a notification when a new L0 Space is created"""
   spaceCreated: UserSettingsNotificationChannels!
+  """Receive a notification when a user changes their login email address."""
+  userEmailChanged: UserSettingsNotificationChannels!
   """Receive a notification when a user global role is assigned or removed."""
   userGlobalRoleChanged: UserSettingsNotificationChannels!
   """Receive notification when a new user signs up"""
@@ -8623,6 +8929,10 @@ type UserSettingsNotificationSpaceAdmin {
   communityApplicationReceived: UserSettingsNotificationChannels!
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: UserSettingsNotificationChannels!
+  """
+  Receive a notification when the login email of an admin or lead of a Space I administer is changed (admin)
+  """
+  userEmailChanged: UserSettingsNotificationChannels!
 }
 
 type UserSettingsNotificationUser {
@@ -8691,6 +9001,8 @@ type VirtualContributor implements ActorFull {
   bodyOfKnowledgeDescription: Markdown
   """The ID of the body of knowledge used by this Virtual Contributor."""
   bodyOfKnowledgeID: UUID
+  """The date when the body of knowledge was last successfully ingested."""
+  bodyOfKnowledgeLastUpdated: DateTime
   """The type of body of knowledge used by this Virtual Contributor."""
   bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType!
   """The date at which the entity was created."""
