@@ -34,13 +34,32 @@ Repeatedly: wait for the next CR review → invoke `cr-triage` (which applies ac
    gh pr view ${PR_NUMBER:-} --json number,headRefName,baseRefName,state,url,author
    ```
    Abort if state ≠ OPEN.
+
 2. Snapshot the **starting point**:
-   - `last_review_id` = id of the most recent CR review at start (or `null`)
-   - `last_review_time` = its `submitted_at` (or `null`)
-   - `trigger_time` = now (the moment we started this loop)
+   - `last_review_id` = id of the most recent CR review-with-body at start (or `null`)
+   - `last_review_time` = `max(latest review-with-body.submitted_at, latest completion-marker.created_at)` at start (or `null`)
    - `round` = 0
    - `mode` = "autonomous" if args contain it, else "interactive"
-3. Announce to the user one line: `cr-loop started for PR #N — mode=…, cap=10, poll=120s.`
+
+3. **Ensure a CR review is in flight** (the loop has nothing to wait for otherwise). Determine whether CR is already busy on the latest commit, has already finished it, or is unaware of it:
+   ```bash
+   # HEAD commit time on the PR branch
+   last_commit_time=$(git log -1 --format=%cI HEAD)
+
+   # Latest user-posted "@coderabbit review" trigger (by anyone, not just us)
+   last_user_trigger=$(gh api repos/{owner}/{repo}/issues/<N>/comments \
+     --jq '[.[] | select(.user.login != "coderabbitai[bot]") | select(.body | test("@coderabbit\\s+review"; "i"))] | sort_by(.created_at) | last | .created_at')
+   ```
+   Then branch:
+   - **CR already reviewed the latest commit** (`last_review_time >= last_commit_time`) → don't trigger. Set `trigger_time = last_review_time`. First iteration will hit step C terminal or find the existing review and either exit success or invoke cr-triage.
+   - **A review is already in flight** (`last_user_trigger > last_review_time` AND `last_user_trigger > last_commit_time`, OR no `last_review_time` at all but a recent user trigger exists) → don't trigger; CR is working. Set `trigger_time = last_user_trigger`.
+   - **CR is unaware of the latest commit** → post the nudge:
+     ```bash
+     gh pr comment <N> --body "@coderabbit review"
+     ```
+     Set `trigger_time = now`.
+
+4. Announce to the user one line: `cr-loop started for PR #N — mode=…, cap=10, poll=120s, initial state: <reviewed-already|in-flight|just-triggered>.`
 
 State carries across ScheduleWakeup ticks via the conversation history; do not write state files.
 
