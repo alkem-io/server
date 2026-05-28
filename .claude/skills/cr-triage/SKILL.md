@@ -1,7 +1,7 @@
 ---
 name: "cr-triage"
 description: "Triage the latest CodeRabbit review on the current PR: classify every finding (inline, outside-diff, nitpick), apply accepts, push, and request the next CR review round."
-argument-hint: "Optional PR number (defaults to the current branch's PR)"
+argument-hint: "Optional PR number and/or the word 'autonomous' to skip the confirmation pause"
 user-invocable: true
 disable-model-invocation: false
 ---
@@ -12,7 +12,10 @@ disable-model-invocation: false
 $ARGUMENTS
 ```
 
-If non-empty, treat as the PR number; otherwise auto-discover from the current branch via `gh pr view`.
+Args parsing:
+- If a token matches `^\d+$` → treat as PR number.
+- If a token equals `autonomous` (case-insensitive) → enable **autonomous mode** (skip the confirmation pause in step 3; the model commits to its own verdicts).
+- Otherwise → interactive mode (default); auto-discover PR from current branch via `gh pr view`.
 
 ## Goal
 
@@ -59,7 +62,7 @@ Filter to comments whose `pull_request_review_id` matches the latest review id A
 
 **Bucket C — Nitpicks** (parsed from the review body — section header literal "Nitpick comments").
 
-### 3. Produce a triage table — PAUSE for confirmation
+### 3. Produce a triage table — PAUSE for confirmation (interactive mode)
 
 Show the user a single table:
 
@@ -75,7 +78,14 @@ Verdicts:
 - **REJECT** — won't fix; needs a reply ONLY if the bucket is `inline`.
 - **DEFER** — track elsewhere for later; treat as REJECT for reply purposes (i.e., reply only if `inline`).
 
-**STOP here.** Wait for the user to confirm or revise verdicts before continuing.
+**Interactive mode (default):** STOP here. Wait for the user to confirm or revise verdicts before continuing.
+
+**Autonomous mode (`autonomous` flag in args):** Skip the pause. Apply this verdict policy:
+- ACCEPT — clearly-correct findings: typos, dead code, narrow bug fixes CR identifies precisely, mechanical refactors confined to one file, nitpicks that don't change behavior.
+- REJECT — clearly-wrong findings: false positives, comments that misunderstand intent, suggestions that conflict with existing project conventions or with hard rules in `CLAUDE.md`.
+- DEFER — anything ambiguous: large-scope refactors, public-API changes, anything touching authorization/security logic, anything where you would need to ask a human. Surface deferrals in the final report so the user can decide later.
+
+Still emit the table to the transcript so the user can audit verdicts after the fact.
 
 ### 4. Apply accepts
 
