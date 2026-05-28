@@ -5089,6 +5089,10 @@ type RelayPaginatedSpace implements ActorFull {
   levelZeroSpaceID: String!
   """The License operating on this Space."""
   license: License!
+  """
+  Capped list of Contributors (Users, Virtual Contributors, …) that may be @mentioned in this Space. Scope adapts to the Space's privacy and the privacy of its ancestors: a private Space yields only its own Members; a public Space includes its Members plus the Members of each ancestor, walking up until the first private ancestor (inclusive) or until the public L0 root is reached, in which case all platform Contributors of the requested types are returned. Use `filter` for typeahead search and `types` to restrict which Contributor kinds are returned.
+  """
+  mentionableContributors(filter: ContributorFilterInput, limit: Int, types: [ActorType!]): [ActorFull!]!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
   """Whether this Space is pinned in its parent Space."""
@@ -5619,6 +5623,10 @@ type Space implements ActorFull {
   levelZeroSpaceID: String!
   """The License operating on this Space."""
   license: License!
+  """
+  Capped list of Contributors (Users, Virtual Contributors, …) that may be @mentioned in this Space. Scope adapts to the Space's privacy and the privacy of its ancestors: a private Space yields only its own Members; a public Space includes its Members plus the Members of each ancestor, walking up until the first private ancestor (inclusive) or until the public L0 root is reached, in which case all platform Contributors of the requested types are returned. Use `filter` for typeahead search and `types` to restrict which Contributor kinds are returned.
+  """
+  mentionableContributors(filter: ContributorFilterInput, limit: Int, types: [ActorType!]): [ActorFull!]!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
   """Whether this Space is pinned in its parent Space."""
@@ -6278,7 +6286,7 @@ type UserSettings {
   """The date at which the entity was created."""
   createdDate: DateTime!
   """
-  The design version this User has selected (1 = current default design generation; 2 = new design, opt-in for now and expected to become the default in a subsequent release; 3+ reserved for future generations).
+  The design version this User has selected (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).
   """
   designVersion: Int!
   """The home space settings for this User."""
@@ -6859,6 +6867,11 @@ input ContributionsFilterInput {
   IDs: [UUID!]
   """The contributions types to return. If omitted return all."""
   types: [CalloutContributionType!]
+}
+
+input ContributorFilterInput {
+  displayName: String
+  nameID: String
 }
 
 input ConversationVcResetInput {
@@ -8819,7 +8832,7 @@ input UpdateUserSettingsEntityInput {
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
   """
-  Update the user's design version. Any integer accepted (1 = current default design generation; 2 = new design, opt-in for now and expected to become the default in a subsequent release; 3+ reserved).
+  Update the user's design version. Any integer accepted (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).
   """
   designVersion: Int
   """Settings related to Home Space."""

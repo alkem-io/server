@@ -241,6 +241,8 @@ Key rules:
 - PostgreSQL 17.5 (new `collabora_document` table + FK on `callout_contribution`) (086-collabora-integration)
 - TypeScript 5.3, Node.js 22 LTS (Volta 22.21.1) + NestJS 10, Apollo Server 4, GraphQL 16, TypeORM 0.3 (custom fork `pkg.pr.new/antst/typeorm`), `graphql-upload` v15 (existing — used by every current `Upload` mutation), `class-validator`, `class-transformer` (095-collabora-import)
 - PostgreSQL 17.5; framing Collabora document persisted via existing `collabora_document` table; bytes via existing storage subsystem and file-service-go (Go service exposing the upload/sniff/validate API used today by `importCollaboraDocument`) (095-collabora-import)
+- TypeScript 5.3 on Node.js 22 LTS (Volta-pinned 22.21.1). + NestJS 10 (`@nestjs/event-emitter`, `@nestjs/microservices` for `@MessagePattern` + `Transport.RMQ`), `@golevelup/nestjs-rabbitmq` (existing, used by the adapter event service), TypeORM 0.3 (custom fork `pkg.pr.new/antst/typeorm`), Apollo Server 4 / GraphQL 16 (the `conversationCreated` subscription already exists — not modified). `@alkemio/matrix-adapter-lib` MAY need a version bump to expose the two new routing keys as constants; if the lib release slips, server inline-defines the routing-key strings as a temporary bridge. (099-element-room-check)
+- PostgreSQL 17.5. **No schema migration required** — reuses existing `conversation`, `room`, `conversation_membership` tables. `Room.type` enum already contains `CONVERSATION_DIRECT` and `CONVERSATION_GROUP`. (099-element-room-check)
 
 ## Recent Changes
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting

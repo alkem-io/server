@@ -12,7 +12,7 @@ This guide walks through verifying the feature end-to-end against a local Alkemi
 4. GraphQL Playground accessible at `http://localhost:3000/graphiql`
 5. A valid Kratos session for an authenticated user (use `/register-user` skill for a fresh user, or `/non-interactive-login` / `/interactive-login` for an existing one)
 
-## Story 1 — New user gets `designVersion: 1`
+## Story 1 — New user gets `designVersion: 2` *(Phase 2)*
 
 1. Register a new user (e.g., via the `/register-user` skill or your usual signup flow).
 2. Query the freshly-created user's settings:
@@ -30,17 +30,35 @@ This guide walks through verifying the feature end-to-end against a local Alkemi
    }
    ```
 
-3. **Expected**: `me.user.settings.designVersion === 1`.
+3. **Expected**: `me.user.settings.designVersion === 2` (Phase 2 default).
 
-This validates **FR-002, FR-003, FR-008** and **Story 1** acceptance scenarios 1 + 2.
+This validates **FR-002, FR-003, FR-008** and Story 1 acceptance for new users in the Phase-2 release.
 
-## Story 1 (continued) — Existing user surfaces `designVersion: 1`
+## Story 1 (continued) — Existing user keeps their current value *(Phase 2 invariant)*
 
-1. Log in as a user that existed **before** the migration ran (any account from `restore-dbs` or a long-lived dev account).
+1. Log in as a user that existed **before** the Phase-2 migration ran (any account from `restore-dbs` or a long-lived dev account that was on the column-default `1` from Phase 1, or a user that previously opted into `2` or any other integer).
 2. Run the same query as above.
-3. **Expected**: `me.user.settings.designVersion === 1` — the migration's `NOT NULL DEFAULT 1` backfilled every pre-existing row.
+3. **Expected**: `me.user.settings.designVersion` returns **whatever value was persisted before the migration**. Phase-1 default-applied users still see `1`; Phase-1 opt-ins to `2` still see `2`; any other integer set via `updateUserSettings` is preserved verbatim. The Phase-2 migration is column-default DDL only — **no row was updated**.
 
-This validates **FR-009** and **Story 1** acceptance scenario 3.
+This validates the Phase-2 preserved-choice invariant (Session 2026-05-26 clarification) and supersedes the Phase-1 reading that the existing-user value is `1`. FR-009 itself still holds for the Phase-1 release window.
+
+## Phase 2 preserved-choice check (operator)
+
+Before and after running `pnpm run migration:run` on a populated dev DB, compare the row distribution:
+
+```bash
+docker exec alkemio_dev_postgres psql -U synapse -d alkemio \
+  -c 'SELECT "designVersion", COUNT(*) FROM user_settings GROUP BY "designVersion" ORDER BY "designVersion";'
+```
+
+Expected: identical row distribution before and after. Then confirm the column default flipped:
+
+```bash
+docker exec alkemio_dev_postgres psql -U synapse -d alkemio \
+  -c "SELECT column_default FROM information_schema.columns WHERE table_name='user_settings' AND column_name='designVersion';"
+```
+
+Expected after Phase-2 migration: `2`.
 
 ## Story 2 — Switch design version
 
@@ -135,7 +153,7 @@ To roll back during local testing:
 pnpm run migration:revert
 ```
 
-The down migration drops the `designVersion` column. Re-running `migration:run` re-creates it with the default `1`.
+The most recent down migration (`FlipUserSettingsDesignVersionDefaultToNew`) resets the column default to `1`; reverting further drops the column entirely. Re-running `migration:run` re-creates it (default `1` from Phase 1) and then flips the default to `2` (Phase 2). Existing rows are not touched by either direction.
 
 ## Test plan summary
 
