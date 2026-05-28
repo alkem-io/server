@@ -7,6 +7,7 @@ import {
 } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { introducesCollaboraDocument } from '@domain/collaboration/callout/callout.collabora.gate.util';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -17,6 +18,7 @@ import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
 import { CalloutsSetService } from '../callouts-set/callouts.set.service';
+import { CollaborationLicenseService } from '../collaboration/collaboration.service.license';
 import { CalloutTransferService } from './callout.transfer.service';
 import { TransferCalloutInput } from './dto/callouts.set.dto.transfer.callout';
 
@@ -31,6 +33,7 @@ export class CalloutTransferResolverMutations {
     private calloutService: CalloutService,
     private calloutTransferService: CalloutTransferService,
     private roomResolverService: RoomResolverService,
+    private collaborationLicenseService: CollaborationLicenseService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -80,6 +83,15 @@ export class CalloutTransferResolverMutations {
       AuthorizationPrivilege.TRANSFER_RESOURCE_ACCEPT,
       `callouts set transfer callout: ${callout.id}`
     );
+
+    // Office Docs entitlement gate (FR-001/FR-004/FR-006/FR-009): transfer is an
+    // introduction path. If the source Callout has Collabora framing or allows
+    // Collabora contributions, the target's Collaboration license governs (FR-006).
+    if (introducesCollaboraDocument(callout)) {
+      await this.collaborationLicenseService.ensureOfficeDocsAllowedForCalloutsSet(
+        targetCalloutsSet.id
+      );
+    }
 
     // Transfer is authorized, now try to execute it
     await this.calloutTransferService.transferCallout(

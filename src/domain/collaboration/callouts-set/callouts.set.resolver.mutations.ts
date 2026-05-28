@@ -10,6 +10,7 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
+import { introducesCollaboraDocument } from '@domain/collaboration/callout/callout.collabora.gate.util';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -29,6 +30,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
+import { CollaborationLicenseService } from '../collaboration/collaboration.service.license';
 import { CalloutsSetService } from './callouts.set.service';
 import { CreateCalloutOnCalloutsSetInput } from './dto/callouts.set.dto.create.callout';
 import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.callouts.sort.order';
@@ -49,6 +51,7 @@ export class CalloutsSetResolverMutations {
     private roomResolverService: RoomResolverService,
     private temporaryStorageService: TemporaryStorageService,
     private configService: ConfigService<AlkemioConfig, true>,
+    private collaborationLicenseService: CollaborationLicenseService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -72,6 +75,17 @@ export class CalloutsSetResolverMutations {
       AuthorizationPrivilege.CREATE_CALLOUT,
       `create callout on callouts Set: ${calloutsSet.id}`
     );
+
+    // Office Docs entitlement gate (FR-001/FR-004/FR-009): block introduction of a
+    // Collabora Document — in framing form, contribution-allowed form, or via attached
+    // contributions — when the owning Collaboration lacks SPACE_FLAG_OFFICE_DOCUMENTS.
+    // Runs BEFORE the fileUpload buffering below so we fail fast without burning
+    // CPU/memory on an upload that will be rejected.
+    if (introducesCollaboraDocument(calloutData)) {
+      await this.collaborationLicenseService.ensureOfficeDocsAllowedForCalloutsSet(
+        calloutData.calloutsSetID
+      );
+    }
 
     if (fileUpload) {
       // Reject before buffering if the file isn't being routed to a
