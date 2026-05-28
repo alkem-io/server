@@ -1,9 +1,13 @@
 import { LogContext } from '@common/enums';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
+import { CollaborationLicenseService } from '@domain/collaboration/collaboration/collaboration.service.license';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { CreateInnovationFlowStateInput } from '@domain/collaboration/innovation-flow-state/dto/innovation.flow.state.dto.create';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -24,6 +28,7 @@ export class TemplateApplierService {
     private readonly inputCreatorService: InputCreatorService,
     private readonly storageAggregatorResolverService: StorageAggregatorResolverService,
     private readonly collaborationService: CollaborationService,
+    private readonly collaborationLicenseService: CollaborationLicenseService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -54,6 +59,21 @@ export class TemplateApplierService {
       );
     }
 
+    // Office Docs entitlement gate (FR-001/FR-004/FR-005/FR-009): pre-flight scan
+    // before any persistence. If the source template introduces a Collabora Document
+    // (framing or contribution-allowed) into the target Collaboration and the target
+    // is unentitled, the entire apply MUST be rejected atomically (FR-005, SC-006).
+    if (
+      updateData.addCallouts &&
+      this.templateContentIntroducesCollaboraDocument(
+        templateWithContentSpace.contentSpace
+      )
+    ) {
+      await this.collaborationLicenseService.ensureOfficeDocsAllowedForCollaboration(
+        targetCollaboration.id
+      );
+    }
+
     return this.updateCollaborationFromTemplateContentSpace(
       targetCollaboration,
       templateWithContentSpace.contentSpace,
@@ -61,6 +81,35 @@ export class TemplateApplierService {
       updateData.deleteExistingCallouts,
       userID
     );
+  }
+
+  /**
+   * Pre-flight scan: detects whether applying the given template content space would
+   * introduce a Collabora Document into the target Collaboration via any source
+   * Callout's framing-type or allowed contribution types (FR-004).
+   */
+  private templateContentIntroducesCollaboraDocument(
+    templateContentSpace: ITemplateContentSpace
+  ): boolean {
+    const sourceCallouts =
+      templateContentSpace.collaboration?.calloutsSet?.callouts ?? [];
+    return sourceCallouts.some((callout: ICallout) =>
+      this.calloutIntroducesCollaboraDocument(callout)
+    );
+  }
+
+  private calloutIntroducesCollaboraDocument(callout: ICallout): boolean {
+    if (callout.framing?.type === CalloutFramingType.COLLABORA_DOCUMENT) {
+      return true;
+    }
+    const allowedTypes = callout.settings?.contribution?.allowedTypes;
+    if (
+      Array.isArray(allowedTypes) &&
+      allowedTypes.includes(CalloutContributionType.COLLABORA_DOCUMENT)
+    ) {
+      return true;
+    }
+    return false;
   }
 
   private async updateCollaborationFromTemplateContentSpace(

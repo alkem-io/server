@@ -1,5 +1,6 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
+import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
@@ -29,6 +30,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
+import { CollaborationLicenseService } from '../collaboration/collaboration.service.license';
 import { CalloutsSetService } from './callouts.set.service';
 import { CreateCalloutOnCalloutsSetInput } from './dto/callouts.set.dto.create.callout';
 import { UpdateCalloutsSortOrderInput } from './dto/callouts.set.dto.update.callouts.sort.order';
@@ -49,6 +51,7 @@ export class CalloutsSetResolverMutations {
     private roomResolverService: RoomResolverService,
     private temporaryStorageService: TemporaryStorageService,
     private configService: ConfigService<AlkemioConfig, true>,
+    private collaborationLicenseService: CollaborationLicenseService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -72,6 +75,17 @@ export class CalloutsSetResolverMutations {
       AuthorizationPrivilege.CREATE_CALLOUT,
       `create callout on callouts Set: ${calloutsSet.id}`
     );
+
+    // Office Docs entitlement gate (FR-001/FR-004/FR-009): block introduction of a
+    // Collabora Document — in framing form, contribution-allowed form, or via attached
+    // contributions — when the owning Collaboration lacks SPACE_FLAG_OFFICE_DOCUMENTS.
+    // Runs BEFORE the fileUpload buffering below so we fail fast without burning
+    // CPU/memory on an upload that will be rejected.
+    if (this.introducesCollaboraDocument(calloutData)) {
+      await this.collaborationLicenseService.ensureOfficeDocsAllowedForCalloutsSet(
+        calloutData.calloutsSetID
+      );
+    }
 
     if (fileUpload) {
       // Reject before buffering if the file isn't being routed to a
@@ -241,5 +255,34 @@ export class CalloutsSetResolverMutations {
       calloutsSet,
       sortOrderData
     );
+  }
+
+  /**
+   * Detects whether a CreateCalloutOnCalloutsSetInput introduces a Collabora Document
+   * — in any of three forms: framing-typed callout, allowed-contribution-type, or
+   * attached contribution. Used to scope the Office Docs entitlement gate (FR-004).
+   */
+  private introducesCollaboraDocument(
+    calloutData: CreateCalloutOnCalloutsSetInput
+  ): boolean {
+    if (calloutData.framing?.type === CalloutFramingType.COLLABORA_DOCUMENT) {
+      return true;
+    }
+    if (
+      calloutData.settings?.contribution?.allowedTypes?.includes(
+        CalloutContributionType.COLLABORA_DOCUMENT
+      )
+    ) {
+      return true;
+    }
+    if (
+      calloutData.contributions?.some(
+        contribution =>
+          contribution.type === CalloutContributionType.COLLABORA_DOCUMENT
+      )
+    ) {
+      return true;
+    }
+    return false;
   }
 }
