@@ -12,6 +12,7 @@ import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { TemporaryStorageModule } from '@services/infrastructure/temporary-storage/temporary.storage.module';
 import { CalloutModule } from '../callout/callout.module';
+import { CollaborationLicenseModule } from '../collaboration/collaboration.license.module';
 import { PostModule } from '../post/post.module';
 import { CalloutsSet } from './callouts.set.entity';
 import { CalloutsSetResolverFields } from './callouts.set.resolver.fields';
@@ -24,6 +25,7 @@ import { CalloutsSetAuthorizationService } from './callouts.set.service.authoriz
     AuthorizationPolicyModule,
     AuthorizationModule,
     CalloutModule,
+    CollaborationLicenseModule,
     TemporaryStorageModule,
     TagsetTemplateSetModule,
     StorageAggregatorResolverModule,

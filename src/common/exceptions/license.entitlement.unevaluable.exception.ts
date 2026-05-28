@@ -2,7 +2,7 @@ import { AlkemioErrorStatus, LogContext } from '@common/enums';
 import { BaseException } from './base.exception';
 import { ExceptionDetails } from './exception.details';
 
-export class LicenseEntitlementNotAvailableException extends BaseException {
+export class LicenseEntitlementUnevaluableException extends BaseException {
   constructor(
     message: string,
     context: LogContext,
@@ -12,7 +12,7 @@ export class LicenseEntitlementNotAvailableException extends BaseException {
     super(
       message,
       context,
-      code ?? AlkemioErrorStatus.LICENSE_ENTITLEMENT_NOT_AVAILABLE,
+      code ?? AlkemioErrorStatus.LICENSE_ENTITLEMENT_UNEVALUABLE,
       details
     );
   }

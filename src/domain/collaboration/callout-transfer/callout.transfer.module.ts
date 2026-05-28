@@ -11,6 +11,7 @@ import { StorageAggregatorResolverModule } from '@services/infrastructure/storag
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { CalloutModule } from '../callout/callout.module';
 import { CalloutsSetModule } from '../callouts-set/callouts.set.module';
+import { CollaborationLicenseModule } from '../collaboration/collaboration.license.module';
 import { CalloutTransferResolverMutations } from './callout.transfer.resolver.mutations';
 import { CalloutTransferService } from './callout.transfer.service';
 
@@ -22,6 +23,7 @@ import { CalloutTransferService } from './callout.transfer.service';
     StorageAggregatorResolverModule,
     CalloutModule,
     CalloutsSetModule,
+    CollaborationLicenseModule,
     StorageBucketModule,
     ProfileModule,
     TagsetModule,

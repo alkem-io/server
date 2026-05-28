@@ -289,6 +289,7 @@ export class CollaborationAuthorizationService {
         contributors,
         CREDENTIAL_RULE_COLLABORATION_CONTRIBUTORS
       );
+    contributorsRule.cascade = true;
     newRules.push(contributorsRule);
 
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
