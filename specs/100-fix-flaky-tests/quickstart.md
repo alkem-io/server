@@ -6,23 +6,24 @@ This document tells a contributor how to verify that a fix from the punch list (
 
 ## One-time setup
 
-The feature adds a single `pnpm` script for repeated execution. Confirm it exists:
+The feature adds a single `pnpm` script that wraps a shell-loop around `vitest run --coverage` (Vitest 4 has no native `--repeat=N` CLI flag, so the loop lives in a wrapper script). Confirm both pieces exist:
 
 ```bash
 grep '"test:flake-verify"' package.json
+ls -l .scripts/test/flake-verify.sh
 ```
 
 Expected output:
 
 ```json
-"test:flake-verify": "vitest run --coverage --repeat=200"
+"test:flake-verify": ".scripts/test/flake-verify.sh"
 ```
 
-If the script is missing, the fix PR adds it. Until then, equivalent ad-hoc form:
-
-```bash
-pnpm exec vitest run --coverage --repeat=200 <path-to-spec>
+```text
+-rwxr-xr-x  ... .scripts/test/flake-verify.sh
 ```
+
+Iteration count defaults to 200; override with the `FLAKE_VERIFY_RUNS` environment variable (e.g., `FLAKE_VERIFY_RUNS=50 pnpm test:flake-verify ...` for a quicker smoke check).
 
 ## Verifying a single fix
 

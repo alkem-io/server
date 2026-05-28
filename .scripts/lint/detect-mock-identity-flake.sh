@@ -58,9 +58,16 @@ for file in "${FILES[@]}"; do
     continue
   fi
   if ! awk '
-    /vi\.mock\(/ { mock_block = 1; depth = 0; for (i = 1; i <= length($0); i++) { c = substr($0,i,1); if (c == "(") depth++; if (c == ")") depth--; }; next }
-    mock_block && /vi\.fn\(/ { print FILENAME ":" FNR ": vi.fn() inside vi.mock factory"; found = 1 }
-    mock_block && depth <= 0 { mock_block = 0 }
+    /vi\.mock\(/ { mock_block = 1; depth = 0 }
+    mock_block {
+      for (i = 1; i <= length($0); i++) {
+        c = substr($0, i, 1)
+        if (c == "(") depth++
+        if (c == ")") depth--
+      }
+      if (/vi\.fn\(/) { print FILENAME ":" FNR ": vi.fn() inside vi.mock factory"; found = 1 }
+      if (depth <= 0) mock_block = 0
+    }
     END { exit found ? 0 : 1 }
   ' "$file" >/dev/null 2>&1; then
     continue

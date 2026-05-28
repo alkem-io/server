@@ -23,6 +23,11 @@ set -euo pipefail
 
 RUNS="${FLAKE_VERIFY_RUNS:-200}"
 
+if ! [[ "$RUNS" =~ ^[1-9][0-9]*$ ]]; then
+  echo "Error: FLAKE_VERIFY_RUNS must be a positive integer (got: '$RUNS')." >&2
+  exit 64
+fi
+
 if [ "$#" -eq 0 ]; then
   echo "Usage: $0 <spec-path> [<spec-path>...]" >&2
   echo "Set FLAKE_VERIFY_RUNS to override default 200 iterations." >&2

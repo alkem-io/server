@@ -191,25 +191,26 @@ Each section follows the format:
 
 ## Decision 8: Verification harness (FR-012, SC-001)
 
-**Decision**: Adopt Vitest's `--repeat=N` flag for per-file 200x verification, executed under coverage mode. Wrap as a one-line `pnpm` script in `package.json`:
+**Decision**: Add a small bash wrapper at `.scripts/test/flake-verify.sh` that loops `pnpm exec vitest run --coverage` for `FLAKE_VERIFY_RUNS` iterations (default 200), and expose it as a `pnpm` script:
 
 ```json
 {
   "scripts": {
-    "test:flake-verify": "vitest run --coverage --repeat=200"
+    "test:flake-verify": ".scripts/test/flake-verify.sh"
   }
 }
 ```
 
-A target file is verified by passing its path: `pnpm test:flake-verify src/common/pipes/validation.pipe.spec.ts`.
+A target file is verified by passing its path: `pnpm test:flake-verify src/common/pipes/validation.pipe.spec.ts`. Iteration count is overridable: `FLAKE_VERIFY_RUNS=50 pnpm test:flake-verify ...`.
 
 **Rationale**:
-- Vitest 4.x supports `--repeat` natively; no shell-loop needed.
-- Coverage mode is the trigger condition for the mock-identity flake; baking it into the verify script means contributors can't accidentally verify in non-coverage mode.
-- Single `pnpm` script keeps `quickstart.md` short and avoids per-fix bespoke verification commands.
+- **Vitest 4 does not expose a `--repeat=N` (or `--repeats=N`) CLI flag for repeating a whole run.** This was discovered during implementation: an earlier draft of this decision claimed otherwise. The `repeats` config option exists only at the per-test (`it.repeats`) level, which re-runs a test body but does not re-exercise module loading — and module loading is exactly what the v8-coverage mock-identity flake depends on. A per-process loop is therefore required.
+- Coverage mode is the trigger condition for the mock-identity flake; baking it into the wrapper means contributors can't accidentally verify in non-coverage mode.
+- Single `pnpm` entry point keeps `quickstart.md` short and avoids per-fix bespoke verification commands.
 
 **Alternatives considered**:
-- **Bash `for` loop**: Works, but boilerplate per fix.
+- **Native Vitest `--repeat` CLI flag**: would have been ideal — does not exist in Vitest 4 (the CLI rejects both `--repeat` and `--repeats`).
+- **`it.repeats`**: re-runs the test body within a single Vitest process. Does not re-exercise module resolution, so does not stress the v8-coverage failure mode that drove #6012. Rejected.
 - **Add a CI workflow that runs the verify**: Out of scope per Q5 (no new CI workflows).
 - **Run all files 200x in CI**: Cost-prohibitive; the spec only requires per-fix verification, which is local.
 

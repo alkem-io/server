@@ -37,7 +37,7 @@ Single project — sources under `src/`, additional unit-style specs under `test
 
 **⚠️ CRITICAL**: T001 must complete before US1 / US2 verification tasks (T004, T011) can run.
 
-- [X] T001 Add `"test:flake-verify": "vitest run --coverage --repeat=200"` script to `package.json` scripts section, between the existing `test:ci` and `test` entries (per `research.md` Decision 8 and `quickstart.md`).
+- [X] T001 Wire up the `test:flake-verify` mechanism. Adds `"test:flake-verify": ".scripts/test/flake-verify.sh"` to `package.json` scripts section (between the existing `test:ci` and `test` entries) AND creates the wrapper script `.scripts/test/flake-verify.sh` that loops `pnpm exec vitest run --coverage` for `FLAKE_VERIFY_RUNS` iterations (default 200). Vitest 4 does not expose a `--repeat=N` CLI flag (verified during implementation — neither `--repeat` nor `--repeats` is recognised), so the loop lives in the wrapper rather than in the npm script value. See `research.md` Decision 8 and `quickstart.md`.
 
 **Checkpoint**: `pnpm test:flake-verify <path>` resolves; ready for fix work.
 
