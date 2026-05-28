@@ -93,6 +93,8 @@ subscriptions.log
 !.scripts/lib/
 !.scripts/non-interactive-login.sh
 !.scripts/interactive-login.sh
+!.scripts/test/
+!.scripts/lint/
 !.scripts/gql-request.sh
 !.scripts/gql-request-interactive.sh
 .scripts/overmind/.overmind.sock
