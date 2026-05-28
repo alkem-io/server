@@ -55,30 +55,45 @@ gh pr view <N> --json state,reviews --jq '{state, reviews}'
 ```
 
 - `state ≠ OPEN` (CLOSED / MERGED) → STOP, report.
-- Any review by a non-`coderabbitai` user with state `APPROVED` or `CHANGES_REQUESTED` submitted after `trigger_time` → STOP, escalate (human stepped in).
+- Any review by a non-`coderabbitai[bot]` user with state `APPROVED` or `CHANGES_REQUESTED` submitted after `trigger_time` → STOP, escalate (human stepped in).
 - `round ≥ MAX_ROUNDS` → STOP, report cap hit.
 
-### B. Find a fresh CR review
+### B. Find a fresh CR signal (review OR completion marker)
 
+CR signals "I finished a pass" via two surfaces — check both, take whichever is newer than `last_review_time`:
+
+**B.1. Review with content** (typical when CR found actionable items):
 ```bash
 if [ -n "$last_review_time" ] && [ "$last_review_time" != "null" ]; then
   gh api repos/{owner}/{repo}/pulls/<N>/reviews \
-    --jq "[.[] | select(.user.login == \"coderabbitai\") | select(.submitted_at > \"$last_review_time\")] | sort_by(.submitted_at) | last"
+    --jq "[.[] | select(.user.login == \"coderabbitai[bot]\") | select(.body != \"\" and .body != null) | select(.submitted_at > \"$last_review_time\")] | sort_by(.submitted_at) | last"
 else
   gh api repos/{owner}/{repo}/pulls/<N>/reviews \
-    --jq '[.[] | select(.user.login == "coderabbitai")] | sort_by(.submitted_at) | last'
+    --jq '[.[] | select(.user.login == "coderabbitai[bot]") | select(.body != "" and .body != null)] | sort_by(.submitted_at) | last'
 fi
 ```
 
-(If `last_review_time` is null/empty, take the most recent CR review unconditionally — the jq `>` comparison against the literal string `"null"` would otherwise filter out everything.)
+(Empty-body reviews from CR are per-thread reply acknowledgments, not actual review passes — filter them out.)
 
-- Empty result AND `now - trigger_time < WAIT_BUDGET_PER_ROUND` → ScheduleWakeup(POLL_INTERVAL, reason="polling CR on PR #N round R"). DO NOT call cr-triage this tick. END.
-- Empty result AND `now - trigger_time ≥ WAIT_BUDGET_PER_ROUND` → STOP, escalate ("CR did not respond within the per-round budget").
-- Non-empty → continue to C.
+**B.2. Top-level completion marker** (CR posts this when a pass concludes — and when it found 0 actionable, this is the ONLY surface that signals the pass):
+```bash
+gh api repos/{owner}/{repo}/issues/<N>/comments \
+  --jq "[.[] | select(.user.login == \"coderabbitai[bot]\") | select(.body | contains(\"coderabbit-review-completion-marker\")) | select(.created_at > \"$last_review_time\")] | sort_by(.created_at) | last"
+```
+
+(If `last_review_time` is null/empty, drop the `> $last_review_time` clause in both queries and take the most recent unconditionally — the jq `>` comparison against the literal string `"null"` would otherwise filter out everything.)
+
+Combine results — `latest_signal` = whichever of B.1 or B.2 has the newer timestamp.
+
+- `latest_signal` empty AND `now - trigger_time < WAIT_BUDGET_PER_ROUND` → ScheduleWakeup(POLL_INTERVAL, reason="polling CR on PR #N round R"). DO NOT call cr-triage this tick. END.
+- `latest_signal` empty AND `now - trigger_time ≥ WAIT_BUDGET_PER_ROUND` → STOP, escalate ("CR did not respond within the per-round budget").
+- `latest_signal` non-empty → continue to C.
 
 ### C. Terminal check
 
-If the new review body contains the literal string `Actionable comments posted: 0` → STOP, success. In the report, note the nitpick count if any (the user can run `/cr-triage` manually to polish nitpicks).
+If `latest_signal.body` contains the literal string `Actionable comments posted: 0` → STOP, success. In the report, note the nitpick count if any (the user can run `/cr-triage` manually to polish nitpicks).
+
+Note: both surfaces from step B carry this same literal — the completion marker comment is typically `"<!-- coderabbit-review-completion-marker -->\n**Actionable comments posted: 0**"`, and a review with content starts with `**Actionable comments posted: N**` on its first line.
 
 ### D. Invoke cr-triage
 

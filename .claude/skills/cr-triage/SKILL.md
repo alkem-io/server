@@ -42,7 +42,7 @@ These are non-negotiable. If you cannot satisfy a rule, STOP and ask the user.
 gh pr view --json number,headRefName,baseRefName,url
 # Latest CR review on this PR
 gh api repos/{owner}/{repo}/pulls/<N>/reviews \
-  --jq '[.[] | select(.user.login == "coderabbitai")] | sort_by(.submitted_at) | last'
+  --jq '[.[] | select(.user.login == "coderabbitai[bot]")] | sort_by(.submitted_at) | last'
 ```
 
 Capture: review id, body, `submitted_at`.
@@ -53,7 +53,7 @@ Capture: review id, body, `submitted_at`.
 
 ```bash
 gh api repos/{owner}/{repo}/pulls/<N>/comments --paginate \
-  --jq '[.[] | select(.user.login == "coderabbitai")]'
+  --jq '[.[] | select(.user.login == "coderabbitai[bot]")]'
 ```
 
 Filter to comments whose `pull_request_review_id` matches the latest review id AND whose thread is not already resolved.
