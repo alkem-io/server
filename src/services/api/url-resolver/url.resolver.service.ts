@@ -250,8 +250,6 @@ export class UrlResolverService {
       }
       case UrlPathBase.ADMIN:
         return await this.populateAdminResult(result, urlPath);
-      case UrlPathBase.INNOVATION_HUBS:
-        return await this.populateInnovationHubResult(result, urlPath);
       case UrlPathBase.HUB:
         return await this.populateHubResult(result, urlPath);
       case UrlPathBase.INNOVATION_LIBRARY:
@@ -435,43 +433,6 @@ export class UrlResolverService {
     // Not yet needed
     result.type = UrlType.ADMIN;
     return Promise.resolve(result);
-  }
-
-  private async populateInnovationHubResult(
-    result: UrlResolverQueryResults,
-    urlPath: string
-  ): Promise<UrlResolverQueryResults> {
-    result.type = UrlType.INNOVATION_HUB;
-    const innovationHubMatch = Utils.innovationHubPathMatcher(urlPath);
-    if (!innovationHubMatch || !innovationHubMatch.params) {
-      return result;
-    }
-    const params = innovationHubMatch.params as {
-      innovationHubNameID?: string | string[];
-      path?: string | string[];
-    };
-
-    const innovationHubNameID = Utils.getMatchedResultAsString(
-      params.innovationHubNameID
-    );
-
-    if (!innovationHubNameID) {
-      throw new ValidationException(
-        'Unable to resolve innovation hub from URL',
-        LogContext.URL_RESOLVER,
-        {
-          urlPath,
-        }
-      );
-    }
-
-    const innovationHub =
-      await this.innovationHubService.getInnovationHubByNameIdOrFail(
-        innovationHubNameID
-      );
-    result.innovationHubId = innovationHub.id;
-
-    return result;
   }
 
   private async populateHubResult(
