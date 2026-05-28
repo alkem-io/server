@@ -34,4 +34,12 @@ export class CreateUserSettingsNotificationPlatformAdminInput {
   })
   @IsBoolean()
   userGlobalRoleChanged!: CreateUserSettingsNotificationChannelsInput;
+
+  @Field(() => CreateUserSettingsNotificationChannelsInput, {
+    nullable: false,
+    description:
+      '[Admin] Receive a notification when a user changes their login email address',
+  })
+  @IsBoolean()
+  userEmailChanged!: CreateUserSettingsNotificationChannelsInput;
 }

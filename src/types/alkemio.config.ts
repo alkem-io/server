@@ -2,6 +2,9 @@ export type AlkemioConfig = {
   authorization: {
     chunk: number;
   };
+  endpoints: {
+    client_web: string;
+  };
   hosting: {
     environment: string;
     port: number;

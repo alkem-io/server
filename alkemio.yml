@@ -5,6 +5,16 @@
 # should have the same indentation.
 #
 # [1] https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
+## endpoints ##
+# External endpoint URLs surfaced into outbound payloads (e.g., the post-commit
+# acknowledgement notification sent to a user's new login email — see spec 097
+# §FR-016c). These are URLs targeted at end-user browsers, distinct from the
+# internal `hosting.*` paths used by the platform itself.
+endpoints:
+  # The base URL of the public client-web application. Used by post-commit
+  # email-change notifications to build a login deep link for the recipient.
+  client_web: ${ENDPOINTS_CLIENT_WEB}:http://localhost:3000
+
 ## hosting ##
 # The hosting configuration for the Alkemio Server
 hosting:

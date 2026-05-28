@@ -61,6 +61,7 @@ import { PlatformAdminModule } from '@src/platform-admin/admin/platform.admin.mo
 import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
 import { DomainPlatformSettingsModule } from '@src/platform-admin/domain/organization/domain.platform.settings.module';
 import { AdminUsersModule } from '@src/platform-admin/domain/user/admin.users.module';
+import { AdminUserEmailChangeModule } from '@src/platform-admin/domain/user/email-change/admin.user.email.change.module';
 import { InAppNotificationAdminModule } from '@src/platform-admin/in-app-notification/in.app.notification.admin.module';
 import { AdminLicensingModule } from '@src/platform-admin/licensing/admin.licensing.module';
 import { AdminContributorsModule } from '@src/platform-admin/services/avatars/admin.avatar.module';
@@ -206,6 +207,7 @@ class SchemaBootstrapStubModule {}
     ActivityLogModule,
     AdminContributorsModule,
     AdminUsersModule,
+    AdminUserEmailChangeModule,
     AdminCommunicationModule,
     AdminSearchIngestModule,
     AdminLicensingModule,

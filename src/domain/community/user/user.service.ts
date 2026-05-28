@@ -296,6 +296,7 @@ export class UserService {
             userProfileRemoved: { email: false, inApp: false, push: false },
             spaceCreated: { email: false, inApp: false, push: false },
             userGlobalRoleChanged: { email: false, inApp: false, push: false },
+            userEmailChanged: { email: true, inApp: false, push: false },
           },
         },
         space: {
@@ -316,6 +317,7 @@ export class UserService {
               inApp: true,
               push: true,
             },
+            userEmailChanged: { email: true, inApp: false, push: false },
           },
           communicationUpdates: { email: true, inApp: true, push: true },
           collaborationCalloutContributionCreated: {
