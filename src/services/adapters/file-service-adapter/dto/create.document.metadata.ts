@@ -17,4 +17,13 @@ export interface CreateDocumentMetadata {
   temporaryLocation?: boolean;
   allowedMimeTypes?: string;
   maxFileSize?: number;
+  /**
+   * Bypass file-service-go's per-bucket content-hash dedup and force a fresh
+   * row even if an identical-content row already exists in the same bucket.
+   * Used by placeholder-then-edit flows (e.g. Collabora documents) where two
+   * logical documents must NOT share a backing row even though their initial
+   * content (often `Buffer.alloc(0)`) is identical. Default false preserves
+   * dedup for genuine content uploads.
+   */
+  skipDedup?: boolean;
 }

@@ -14,6 +14,7 @@ import { Invitation } from '@domain/access/invitation/invitation.entity';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { ActorService } from '@domain/actor/actor/actor.service';
 import { ActorQueryArgs } from '@domain/actor/actor/dto';
+import { getMatrixDisplayName } from '@domain/actor/actor.matrix.display.name';
 import { ICredential } from '@domain/actor/credential/credential.interface';
 import { CredentialsSearchInput } from '@domain/actor/credential/dto/credentials.dto.search';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create';
@@ -198,8 +199,7 @@ export class VirtualContributorService {
 
     // Sync the VC to the communication adapter
     // VirtualContributor.id (which is Actor.id) is used as the AlkemioActorID
-    const displayName =
-      virtualContributor.profile?.displayName || virtualContributor.nameID;
+    const displayName = getMatrixDisplayName(virtualContributor);
     try {
       await this.communicationAdapter.syncActor(
         virtualContributor.id,

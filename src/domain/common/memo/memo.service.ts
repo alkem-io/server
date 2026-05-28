@@ -44,8 +44,10 @@ export class MemoService {
   async createMemo(
     { markdown, ...restOfMemoData }: CreateMemoInput,
     storageAggregator: IStorageAggregator,
-    userID?: string
+    userID?: string,
+    visualTypes: VisualType[] = [VisualType.CARD]
   ): Promise<IMemo> {
+    // Phase 1: build entity tree in memory (no file-service-go calls).
     const binaryUpdateV2 = this.markdownToStateUpdate(markdown);
     const content = binaryUpdateV2 ? Buffer.from(binaryUpdateV2) : undefined;
     const memo: IMemo = Memo.create({
@@ -63,17 +65,24 @@ export class MemoService {
       ProfileType.MEMO,
       storageAggregator
     );
-    await this.profileService.addVisualsOnProfile(
-      memo.profile,
-      restOfMemoData.profile?.visuals,
-      [VisualType.CARD]
-    );
     await this.profileService.addOrUpdateTagsetOnProfile(memo.profile, {
       name: TagsetReservedName.DEFAULT,
       tags: [],
     });
 
-    return this.save(memo);
+    // Phase 2: persist + materialize via the shared helper.
+    // `visualTypes` is parameterised so callout-framing can request the
+    // [CARD, BANNER] union (otherwise the framing context would lose
+    // BANNER without re-running materialize).
+    const saved = await this.save(memo);
+    saved.profile =
+      await this.profileService.materializeProfileContentAndVisualsOrRollback(
+        saved.profile,
+        restOfMemoData.profile?.visuals,
+        visualTypes,
+        () => this.deleteMemo(saved.id)
+      );
+    return saved;
   }
 
   async getMemoOrFail(

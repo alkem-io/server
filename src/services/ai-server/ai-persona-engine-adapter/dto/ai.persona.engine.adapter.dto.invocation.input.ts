@@ -15,6 +15,7 @@ export class RoomDetails {
   roomID!: string;
   threadID?: string;
   actorID!: string;
+  vcInteractionID?: string | null;
 }
 
 export class ResultHandler {

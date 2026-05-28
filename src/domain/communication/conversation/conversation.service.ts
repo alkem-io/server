@@ -76,7 +76,8 @@ export class ConversationService {
     memberActorIds: string[],
     roomType: RoomType,
     displayName?: string,
-    avatarUrl?: string
+    avatarUrl?: string,
+    externalRoomId?: string
   ): Promise<IConversation> {
     const allMemberIds = [...new Set([creatorActorId, ...memberActorIds])];
 
@@ -93,13 +94,21 @@ export class ConversationService {
       AuthorizationPolicyType.COMMUNICATION_CONVERSATION
     );
 
-    // Create room
-    conversation.room = await this.createConversationRoom(
-      allMemberIds,
-      roomType,
-      displayName,
-      avatarUrl
-    );
+    // Create room — either by asking the adapter to create the Matrix room
+    // (normal flow) or with a pre-assigned UUID (Element room-check flow:
+    // Synapse creates the Matrix room, the adapter reconciles it; the server
+    // MUST NOT ask the adapter to create a room here).
+    conversation.room = externalRoomId
+      ? await this.roomService.createRoomFromExternal({
+          id: externalRoomId,
+          type: roomType,
+        })
+      : await this.createConversationRoom(
+          allMemberIds,
+          roomType,
+          displayName,
+          avatarUrl
+        );
 
     // Save conversation to get ID
     const savedConversation = await this.conversationRepository.save(

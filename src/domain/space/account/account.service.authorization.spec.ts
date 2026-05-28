@@ -4,6 +4,7 @@ import {
 } from '@common/exceptions';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseAuthorizationService } from '@domain/common/license/license.service.authorization';
+import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { VirtualContributorAuthorizationService } from '@domain/community/virtual-contributor/virtual.contributor.service.authorization';
 import { InnovationHubAuthorizationService } from '@domain/innovation-hub/innovation.hub.service.authorization';
 import { StorageAggregatorAuthorizationService } from '@domain/storage/storage-aggregator/storage.aggregator.service.authorization';
@@ -28,6 +29,7 @@ describe('AccountAuthorizationService', () => {
   let storageAggregatorAuthorizationService: StorageAggregatorAuthorizationService;
   let innovationHubAuthorizationService: InnovationHubAuthorizationService;
   let licenseAuthorizationService: LicenseAuthorizationService;
+  let profileAuthorizationService: ProfileAuthorizationService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -58,6 +60,11 @@ describe('AccountAuthorizationService', () => {
       InnovationHubAuthorizationService
     );
     licenseAuthorizationService = module.get(LicenseAuthorizationService);
+    profileAuthorizationService = module.get(ProfileAuthorizationService);
+
+    (
+      profileAuthorizationService.applyAuthorizationPolicy as any
+    ).mockResolvedValue([]);
   });
 
   it('should be defined', () => {
@@ -78,6 +85,7 @@ describe('AccountAuthorizationService', () => {
       innovationHubs: [],
       storageAggregator: { id: 'storage-1' },
       license: { id: 'license-1' },
+      profile: { id: 'account-profile-1' },
       ...overrides,
     }) as any;
 

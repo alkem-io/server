@@ -71,15 +71,11 @@ export class InnovationPackService {
       AuthorizationPolicyType.INNOVATION_PACK
     );
 
+    // Phase 1: build entity in memory.
     innovationPack.profile = await this.profileService.createProfile(
       innovationPackData.profileData,
       ProfileType.INNOVATION_PACK,
       storageAggregator
-    );
-    await this.profileService.addVisualsOnProfile(
-      innovationPack.profile,
-      innovationPackData.profileData.visuals,
-      [VisualType.AVATAR, VisualType.CARD]
     );
 
     innovationPack.listedInStore = true;
@@ -96,7 +92,17 @@ export class InnovationPackService {
     innovationPack.templatesSet =
       await this.templatesSetService.createTemplatesSet();
 
-    return await this.save(innovationPack);
+    // Phase 2: persist + materialize via the shared helper. Rolls back on
+    // materialization failure.
+    const saved = await this.save(innovationPack);
+    saved.profile =
+      await this.profileService.materializeProfileContentAndVisualsOrRollback(
+        saved.profile,
+        innovationPackData.profileData?.visuals,
+        [VisualType.AVATAR, VisualType.CARD],
+        () => this.deleteInnovationPack({ ID: saved.id })
+      );
+    return saved;
   }
 
   async save(innovationPack: IInnovationPack): Promise<IInnovationPack> {

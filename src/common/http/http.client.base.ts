@@ -1,6 +1,6 @@
 import { HttpService } from '@nestjs/axios';
 import { LoggerService } from '@nestjs/common';
-import { AxiosResponse, isAxiosError } from 'axios';
+import { AxiosResponse } from 'axios';
 import {
   catchError,
   firstValueFrom,
@@ -11,6 +11,7 @@ import {
   timer,
 } from 'rxjs';
 import { CircuitBreaker, type CircuitBreakerConfig } from './circuit.breaker';
+import { classifyError, isRetriable } from './retry.policy';
 
 export type HttpMethod = 'get' | 'post' | 'put' | 'patch' | 'delete';
 
@@ -36,8 +37,11 @@ export interface HttpClientBaseConfig {
  *  - Generic typed `sendRequest<T>()` for JSON responses
  *  - `sendBinaryRequest()` for raw binary downloads (returns `Buffer`)
  *  - Per-request timeout
- *  - Retry with linear backoff (500ms × retry count) for transport / 5xx failures
- *  - Pluggable circuit breaker (via `CircuitBreaker`)
+ *  - Retry with linear backoff (500ms × retry count), scoped by the
+ *    retry policy in `retry.policy.ts` (method + error class aware)
+ *  - Pluggable circuit breaker (via `CircuitBreaker`) — only errors we
+ *    would retry count toward the failure threshold; client errors and
+ *    non-retriable POST failures don't trip it
  *  - Uniform verbose/warn logging
  *
  * Both transport methods share the same pipeline via `runPipeline(...)`;
@@ -120,6 +124,7 @@ export abstract class HttpClientBase {
     });
     return this.runPipeline(
       operation,
+      method,
       request$,
       response => response.data as TResult,
       context
@@ -148,6 +153,7 @@ export abstract class HttpClientBase {
     });
     return this.runPipeline(
       operation,
+      method,
       request$,
       response => Buffer.from(response.data),
       context
@@ -167,6 +173,7 @@ export abstract class HttpClientBase {
 
   private runPipeline<TRaw, TResult>(
     operation: string,
+    method: HttpMethod,
     request$: Observable<AxiosResponse<TRaw>>,
     transform: (response: AxiosResponse<TRaw>) => TResult,
     context?: Record<string, unknown>
@@ -176,13 +183,12 @@ export abstract class HttpClientBase {
       retry({
         count: this.retries,
         delay: (error, retryCount) => {
-          // Don't retry 4xx errors (client errors)
-          if (
-            isAxiosError(error) &&
-            error.response?.status &&
-            error.response.status >= 400 &&
-            error.response.status < 500
-          ) {
+          // Per retry.policy.ts: retry on classes where the request is
+          // known not to have reached the server (pre-send transport,
+          // 504) or where the server invites retry (503), plus ambiguous
+          // failures only when the method is idempotent. Everything else
+          // — notably POST 5xx, POST timeouts, and 4xx — propagates.
+          if (!isRetriable(classifyError(error), method)) {
             throw error;
           }
           this.logger.warn?.(
@@ -201,12 +207,18 @@ export abstract class HttpClientBase {
         return transform(response);
       }),
       catchError(error => {
-        const result = this.circuitBreaker.onFailure();
-        if (result.opened) {
-          this.logger.warn?.(
-            `${this.logPrefix} circuit breaker opened after ${result.failureCount} failures`,
-            this.logContext
-          );
+        // Only count errors that indicate downstream health issues. A
+        // content-specific 500 or a 4xx says nothing about whether the
+        // service is up, so letting it count toward the circuit
+        // threshold would trip the breaker on user input alone.
+        if (isRetriable(classifyError(error), method)) {
+          const result = this.circuitBreaker.onFailure();
+          if (result.opened) {
+            this.logger.warn?.(
+              `${this.logPrefix} circuit breaker opened after ${result.failureCount} failures`,
+              this.logContext
+            );
+          }
         }
         throw this.handleError(operation, error, context);
       })

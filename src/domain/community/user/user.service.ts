@@ -23,6 +23,7 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { actorDefaults } from '@domain/actor/actor/actor.defaults';
 import { ActorService } from '@domain/actor/actor/actor.service';
+import { getMatrixDisplayName } from '@domain/actor/actor.matrix.display.name';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -54,6 +55,7 @@ import { RoleSetRoleWithParentCredentials } from '../../access/role-set/dto/role
 import { UserLookupService } from '../user-lookup/user.lookup.service';
 import { CreateUserSettingsInput } from '../user-settings/dto/user.settings.dto.create';
 import { UpdateUserSettingsEntityInput } from '../user-settings/dto/user.settings.dto.update';
+import { DESIGN_VERSION_CURRENT_DEFAULT } from '../user-settings/user.settings.design.version.constants';
 import { UserSettingsService } from '../user-settings/user.settings.service';
 import { UpdateUserPlatformSettingsInput } from './dto/user.dto.update.platform.settings';
 import { UsersQueryArgs } from './dto/users.query.args';
@@ -228,8 +230,7 @@ export class UserService {
 
     // Sync the user to the communication adapter
     // User.id (which is Actor.id) is used as the AlkemioActorID for all communication operations
-    const displayName =
-      `${user.firstName} ${user.lastName}`.trim() || user.email;
+    const displayName = getMatrixDisplayName(user);
 
     try {
       await this.communicationAdapter.syncActor(user.id, displayName);
@@ -295,6 +296,7 @@ export class UserService {
             userProfileRemoved: { email: false, inApp: false, push: false },
             spaceCreated: { email: false, inApp: false, push: false },
             userGlobalRoleChanged: { email: false, inApp: false, push: false },
+            userEmailChanged: { email: true, inApp: false, push: false },
           },
         },
         space: {
@@ -315,6 +317,7 @@ export class UserService {
               inApp: true,
               push: true,
             },
+            userEmailChanged: { email: true, inApp: false, push: false },
           },
           communicationUpdates: { email: true, inApp: true, push: true },
           collaborationCalloutContributionCreated: {
@@ -384,6 +387,7 @@ export class UserService {
         spaceID: null,
         autoRedirect: false,
       },
+      designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
     };
     return settings;
   }

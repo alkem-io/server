@@ -442,6 +442,9 @@ export class AccountResolverMutations {
     const spaceAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
     await this.authorizationPolicyService.saveAll(spaceAuthorizations);
+
+    await this.spaceService.invalidateUrlCacheForSpaceSubtree(space.id);
+
     // TODO: check if still needed later
     return await this.spaceService.getSpaceOrFail(space.id);
   }

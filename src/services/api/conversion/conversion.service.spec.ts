@@ -1,21 +1,38 @@
+import { AccountType } from '@common/enums/account.type';
 import {
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
+import { AccountHostService } from '@domain/space/account.host/account.host.service';
 import { SpaceService } from '@domain/space/space/space.service';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { TemplateService } from '@domain/template/template/template.service';
+import { TemplatesManagerService } from '@domain/template/templates-manager/templates.manager.service';
 import { Test, TestingModule } from '@nestjs/testing';
+import { ActivityService } from '@platform/activity/activity.service';
+import { PlatformService } from '@platform/platform/platform.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
+import { InputCreatorService } from '../input-creator/input.creator.service';
 import { ConversionService } from './conversion.service';
 
 describe('ConversionService', () => {
   let service: ConversionService;
   let spaceService: Record<string, Mock>;
-  let _roleSetService: Record<string, Mock>;
+  let roleSetService: Record<string, Mock>;
   let _namingService: Record<string, Mock>;
+  let spaceLookupService: Record<string, Mock>;
+  let accountHostService: Record<string, Mock>;
+  let platformService: Record<string, Mock>;
+  let templatesManagerService: Record<string, Mock>;
+  let templateService: Record<string, Mock>;
+  let inputCreatorService: Record<string, Mock>;
+  let innovationFlowService: Record<string, Mock>;
+  let activityService: Record<string, Mock>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -28,7 +45,7 @@ describe('ConversionService', () => {
 
     service = module.get(ConversionService);
     spaceService = module.get(SpaceService) as unknown as Record<string, Mock>;
-    _roleSetService = module.get(RoleSetService) as unknown as Record<
+    roleSetService = module.get(RoleSetService) as unknown as Record<
       string,
       Mock
     >;
@@ -36,7 +53,47 @@ describe('ConversionService', () => {
       string,
       Mock
     >;
+    spaceLookupService = module.get(SpaceLookupService) as unknown as Record<
+      string,
+      Mock
+    >;
+    accountHostService = module.get(AccountHostService) as unknown as Record<
+      string,
+      Mock
+    >;
+    platformService = module.get(PlatformService) as unknown as Record<
+      string,
+      Mock
+    >;
+    templatesManagerService = module.get(
+      TemplatesManagerService
+    ) as unknown as Record<string, Mock>;
+    templateService = module.get(TemplateService) as unknown as Record<
+      string,
+      Mock
+    >;
+    inputCreatorService = module.get(InputCreatorService) as unknown as Record<
+      string,
+      Mock
+    >;
+    innovationFlowService = module.get(
+      InnovationFlowService
+    ) as unknown as Record<string, Mock>;
+    activityService = module.get(ActivityService) as unknown as Record<
+      string,
+      Mock
+    >;
   });
+
+  // Stubs every roleSetService accessor used by getSpaceCommunityRoles so
+  // happy-path conversion code reaches the structural updates.
+  const stubEmptyCommunityRoles = () => {
+    vi.mocked(roleSetService.getUsersWithRole).mockResolvedValue([]);
+    vi.mocked(roleSetService.getOrganizationsWithRole).mockResolvedValue([]);
+    vi.mocked(roleSetService.getVirtualContributorsWithRole).mockResolvedValue(
+      []
+    );
+  };
 
   describe('convertSpaceL1ToSpaceL0OrFail', () => {
     it('should throw EntityNotInitializedException when L1 space is missing community', async () => {
@@ -82,6 +139,82 @@ describe('ConversionService', () => {
       await expect(
         service.convertSpaceL1ToSpaceL0OrFail({ spaceL1ID: 'space-l1' })
       ).rejects.toThrow(EntityNotInitializedException);
+    });
+
+    it('assigns a fresh Free license to the promoted L0 (no inheritance from parent)', async () => {
+      const parentLicenseId = 'parent-license-id';
+      const freshLicense = { id: 'fresh-license-id' };
+      const spaceL1 = {
+        id: 'space-l1',
+        nameID: 'l1-name',
+        levelZeroSpaceID: 'space-l0',
+        community: { roleSet: { id: 'roleset-l1' } },
+        collaboration: { innovationFlow: { id: 'flow-l1', states: [] } },
+        storageAggregator: { id: 'sa-l1', parentStorageAggregator: undefined },
+        subspaces: [],
+        parentSpace: { id: 'space-l0' },
+      };
+      const spaceL0Orig = {
+        id: 'space-l0',
+        license: { id: parentLicenseId },
+        account: {
+          id: 'account-1',
+          accountType: AccountType.USER,
+          storageAggregator: { id: 'sa-account' },
+        },
+        subspaces: [{ id: 'space-l1' }],
+      };
+
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(spaceL1 as never)
+        .mockResolvedValueOnce(spaceL0Orig as never);
+      vi.mocked(spaceService.createLicenseForSpaceL0).mockReturnValue(
+        freshLicense as never
+      );
+      vi.mocked(
+        spaceService.createTemplatesManagerForSpaceL0
+      ).mockResolvedValue({} as never);
+      vi.mocked(spaceService.save).mockImplementation(
+        async (s: unknown) => s as never
+      );
+
+      vi.mocked(roleSetService.getUsersWithRole).mockResolvedValue([]);
+      vi.mocked(
+        _namingService.getReservedNameIDsLevelZeroSpaces
+      ).mockResolvedValue([]);
+      vi.mocked(
+        _namingService.createNameIdAvoidingReservedNameIDs
+      ).mockReturnValue('promoted-name');
+
+      vi.mocked(platformService.getTemplatesManagerOrFail).mockResolvedValue({
+        id: 'platform-tm',
+      } as never);
+      vi.mocked(
+        templatesManagerService.getTemplateFromTemplateDefault
+      ).mockResolvedValue({ id: 'template-l0' } as never);
+      vi.mocked(templateService.getTemplateOrFail).mockResolvedValue({
+        contentSpace: {
+          collaboration: { innovationFlow: { states: [] } },
+        },
+      } as never);
+      vi.mocked(
+        inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState
+      ).mockReturnValue([]);
+      vi.mocked(
+        innovationFlowService.updateInnovationFlowStates
+      ).mockImplementation(async (flow: unknown) => flow as never);
+
+      const result = await service.convertSpaceL1ToSpaceL0OrFail({
+        spaceL1ID: 'space-l1',
+      });
+
+      expect(spaceService.createLicenseForSpaceL0).toHaveBeenCalledTimes(1);
+      expect(result.license).toBe(freshLicense);
+      expect(result.license?.id).not.toBe(parentLicenseId);
+      expect(accountHostService.assignLicensePlansToSpace).toHaveBeenCalledWith(
+        'space-l1',
+        AccountType.USER
+      );
     });
 
     it('should throw EntityNotInitializedException when L0 space is missing account', async () => {
@@ -174,6 +307,74 @@ describe('ConversionService', () => {
         })
       ).rejects.toThrow(EntityNotInitializedException);
     });
+
+    // Issue alkem-io/server#6019 — pending invites/apps must be cleared on
+    // any conversion, otherwise accept-flow breaks (alkem-io/server#5069).
+    it('should clear pending invitations and applications on the converted L1 roleSet', async () => {
+      const roleSetL1 = { id: 'roleset-l1' };
+      const spaceL1 = {
+        id: 'space-l1',
+        levelZeroSpaceID: 'l0-a',
+        community: { roleSet: roleSetL1 },
+        storageAggregator: { id: 'sa-l1' },
+      };
+      const parentL1 = {
+        id: 'parent-l1',
+        levelZeroSpaceID: 'l0-a',
+        storageAggregator: { id: 'sa-parent-l1' },
+        community: { roleSet: { id: 'roleset-parent-l1' } },
+      };
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(spaceL1)
+        .mockResolvedValueOnce(parentL1);
+      stubEmptyCommunityRoles();
+      vi.mocked(
+        roleSetService.setParentRoleSetAndCredentials
+      ).mockResolvedValue(roleSetL1);
+      vi.mocked(spaceService.save).mockImplementation(async (s: unknown) => s);
+
+      await service.convertSpaceL1ToSpaceL2OrFail({
+        spaceL1ID: 'space-l1',
+        parentSpaceL1ID: 'parent-l1',
+      });
+
+      expect(
+        roleSetService.removePendingInvitationsAndApplications
+      ).toHaveBeenCalledWith('roleset-l1');
+    });
+
+    it('should drop the stale SUBSPACE_CREATED activity entry on the source L0', async () => {
+      const roleSetL1 = { id: 'roleset-l1' };
+      const spaceL1 = {
+        id: 'space-l1',
+        levelZeroSpaceID: 'l0-a',
+        community: { roleSet: roleSetL1 },
+        storageAggregator: { id: 'sa-l1' },
+      };
+      const parentL1 = {
+        id: 'parent-l1',
+        levelZeroSpaceID: 'l0-a',
+        storageAggregator: { id: 'sa-parent-l1' },
+        community: { roleSet: { id: 'roleset-parent-l1' } },
+      };
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(spaceL1)
+        .mockResolvedValueOnce(parentL1);
+      stubEmptyCommunityRoles();
+      vi.mocked(
+        roleSetService.setParentRoleSetAndCredentials
+      ).mockResolvedValue(roleSetL1);
+      vi.mocked(spaceService.save).mockImplementation(async (s: unknown) => s);
+
+      await service.convertSpaceL1ToSpaceL2OrFail({
+        spaceL1ID: 'space-l1',
+        parentSpaceL1ID: 'parent-l1',
+      });
+
+      expect(
+        activityService.removeSubspaceCreatedActivityForResource
+      ).toHaveBeenCalledWith('space-l1');
+    });
   });
 
   describe('convertSpaceL2ToSpaceL1OrFail', () => {
@@ -206,6 +407,129 @@ describe('ConversionService', () => {
       await expect(
         service.convertSpaceL2ToSpaceL1OrFail({ spaceL2ID: 'space-l2' })
       ).rejects.toThrow(EntityNotInitializedException);
+    });
+
+    // Issue alkem-io/server#6019.
+    it('should clear pending invitations and applications on the promoted L2 roleSet', async () => {
+      const roleSetL2 = { id: 'roleset-l2' };
+      const spaceL2Initial = {
+        id: 'space-l2',
+        levelZeroSpaceID: 'space-l0',
+        community: { roleSet: roleSetL2 },
+      };
+      const spaceL0 = {
+        id: 'space-l0',
+        storageAggregator: { id: 'sa-l0' },
+        community: { roleSet: { id: 'roleset-l0' } },
+      };
+      // Inside updateChildSpaceL2ToL1 a fresh getSpaceOrFail loads richer data.
+      const spaceL2Loaded = {
+        id: 'space-l2',
+        storageAggregator: { id: 'sa-l2', parentStorageAggregator: null },
+        parentSpace: { id: 'former-parent' },
+        community: { roleSet: roleSetL2 },
+      };
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(spaceL2Initial)
+        .mockResolvedValueOnce(spaceL0)
+        .mockResolvedValueOnce(spaceL2Loaded)
+        .mockResolvedValueOnce(spaceL2Loaded); // final return
+      vi.mocked(roleSetService.getUsersWithRole).mockResolvedValue([]);
+      vi.mocked(
+        roleSetService.setParentRoleSetAndCredentials
+      ).mockResolvedValue(roleSetL2);
+      vi.mocked(spaceService.save).mockImplementation(async (s: unknown) => s);
+
+      await service.convertSpaceL2ToSpaceL1OrFail({ spaceL2ID: 'space-l2' });
+
+      expect(
+        roleSetService.removePendingInvitationsAndApplications
+      ).toHaveBeenCalledWith('roleset-l2');
+    });
+  });
+
+  // ── L1 → L0 promotion: clears pending invites/apps for both the promoted
+  // space AND every L2 descendant (each becomes an L1 in the new tree).
+  describe('convertSpaceL1ToSpaceL0OrFail — pending invites cleanup', () => {
+    it('should clear pending invitations on the promoted L1 and every descendant', async () => {
+      const roleSetL1 = { id: 'roleset-l1' };
+      const spaceL1 = {
+        id: 'space-l1',
+        levelZeroSpaceID: 'space-l0',
+        community: { roleSet: roleSetL1 },
+        collaboration: { innovationFlow: { id: 'flow-l1', states: [] } },
+        storageAggregator: { id: 'sa-l1', parentStorageAggregator: null },
+        subspaces: [],
+        parentSpace: { id: 'old-l0' },
+      };
+      const spaceL0 = {
+        id: 'space-l0',
+        subspaces: [{ id: 'space-l1' }],
+        account: {
+          id: 'account',
+          accountType: 'BASIC',
+          storageAggregator: { id: 'sa-account' },
+        },
+      };
+      const descendantL2 = {
+        id: 'space-l2-a',
+        community: { roleSet: { id: 'roleset-l2-a' } },
+      };
+      vi.mocked(spaceService.getSpaceOrFail)
+        .mockResolvedValueOnce(spaceL1)
+        .mockResolvedValueOnce(spaceL0);
+      vi.mocked(spaceService.getAllSpaces).mockImplementation(((
+        options: any
+      ) => {
+        expect(options).toMatchObject({
+          relations: { community: { roleSet: true } },
+        });
+        expect(options?.where?.id?._value ?? options?.where?.id?.value).toEqual(
+          ['space-l2-a']
+        );
+        return Promise.resolve([descendantL2]);
+      }) as never);
+      vi.mocked(spaceLookupService.getAllDescendantSpaceIDs).mockResolvedValue([
+        'space-l2-a',
+      ]);
+      vi.mocked(roleSetService.getUsersWithRole).mockResolvedValue([]);
+      vi.mocked(spaceService.save).mockImplementation(async (s: unknown) => s);
+      vi.mocked(spaceService.createLicenseForSpaceL0).mockReturnValue({});
+      vi.mocked(
+        spaceService.createTemplatesManagerForSpaceL0
+      ).mockResolvedValue({});
+      vi.mocked(platformService.getTemplatesManagerOrFail).mockResolvedValue({
+        id: 'platform-tm',
+      });
+      vi.mocked(
+        templatesManagerService.getTemplateFromTemplateDefault
+      ).mockResolvedValue({ id: 'template-id' });
+      vi.mocked(templateService.getTemplateOrFail).mockResolvedValue({
+        contentSpace: {
+          collaboration: { innovationFlow: { states: [] } },
+        },
+      });
+      vi.mocked(
+        inputCreatorService.buildCreateInnovationFlowStateInputFromInnovationFlowState
+      ).mockReturnValue([]);
+      vi.mocked(
+        innovationFlowService.updateInnovationFlowStates
+      ).mockResolvedValue({ id: 'flow-l1', states: [] });
+      vi.mocked(
+        _namingService.getReservedNameIDsLevelZeroSpaces
+      ).mockResolvedValue([]);
+      vi.mocked(
+        _namingService.createNameIdAvoidingReservedNameIDs
+      ).mockReturnValue('promoted-name');
+      vi.mocked(accountHostService.assignLicensePlansToSpace).mockResolvedValue(
+        undefined
+      );
+
+      await service.convertSpaceL1ToSpaceL0OrFail({ spaceL1ID: 'space-l1' });
+
+      expect(
+        roleSetService.removePendingInvitationsAndApplications
+      ).toHaveBeenCalledWith(['roleset-l1', 'roleset-l2-a']);
     });
   });
 });

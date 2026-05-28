@@ -4,12 +4,14 @@
 """
 Alkemio Room Control Module for Synapse
 
-This module restricts room creation to the Alkemio Matrix Adapter AppService.
-All users are ghost users provisioned by the AppService.
+This module controls room creation for ghost users provisioned by the AppService.
 
-- Community rooms: Only created via Alkemio Server commands (through AppService bot)
-- DM rooms: Users can attempt from Element, module notifies Adapter via webhook,
-            Adapter notifies Server, Server commands Adapter, bot creates room.
+- Spaces and rooms-inside-spaces: BLOCKED for ghost users (managed by Alkemio platform)
+- Standalone rooms (DMs, groups): Synchronous check via adapter endpoint.
+  Module calls adapter, adapter asks server for consent/dedup, on approval module
+  injects room state (power levels, visibility, io.alkemio.pending marker) and
+  strips invites. Adapter reconciles the room post-creation.
+- AppService bot and server admins: Always allowed (bypass all checks)
 
 Zero-config usage:
     modules:
@@ -24,8 +26,8 @@ All config values are automatically detected from the AppService with id 'alkemi
 """
 
 import logging
-from datetime import datetime, timezone
-from typing import Optional, Set
+import uuid
+from typing import Optional
 
 from synapse.module_api import ModuleApi
 from synapse.module_api.errors import Codes, SynapseError
@@ -40,11 +42,8 @@ ALKEMIO_VISIBILITY_EVENT = "io.alkemio.visibility"
 
 class AlkemioRoomControl:
     """
-    Spam checker module that restricts room creation.
-
-    Only the AppService bot user is allowed to create rooms.
-    When ghost users attempt to create DM rooms, the module notifies
-    the Adapter via webhook for async processing.
+    Room control module: synchronous check for standalone rooms,
+    block spaces/rooms-inside-spaces, allow bot/admins.
 
     All configuration values are auto-detected from the AppService with
     id 'alkemio-matrix-adapter'.
@@ -93,12 +92,11 @@ class AlkemioRoomControl:
         Rooms with {"visible": false} are excluded from /sync responses
         for all users except the AppService bot.
 
-        Compatible with Synapse v1.132.0.
+        Tested with Synapse v1.132.0.
         """
         try:
             sync_handler = self.api._hs.get_sync_handler()
             original_get_sync_result_builder = sync_handler.get_sync_result_builder
-            store = self.api._hs.get_datastores().main
             state_storage = self.api._hs.get_storage_controllers().state
             bot_mxid = f"@{self.appservice_sender}:{self.homeserver_domain}"
 
@@ -108,7 +106,6 @@ class AlkemioRoomControl:
                 )
 
                 user_id = sync_config.user.to_string()
-                logger.debug("Sync filter: user=%s, rooms=%d", user_id, len(result_builder.joined_room_ids))
 
                 # Don't filter for the bot — it needs to see everything
                 if user_id == bot_mxid:
@@ -136,7 +133,8 @@ class AlkemioRoomControl:
                             if visible is False:
                                 hidden_room_ids.add(room_id)
                     except Exception as e:
-                        logger.debug("Sync filter: error checking room %s: %s", room_id, e)
+                        logger.warning("Sync filter: error checking room %s, hiding it: %s", room_id, e)
+                        hidden_room_ids.add(room_id)
 
                 if hidden_room_ids:
                     # Rebuild with hidden rooms excluded
@@ -152,6 +150,7 @@ class AlkemioRoomControl:
                         len(hidden_room_ids), user_id,
                     )
 
+
                 return result_builder
 
             sync_handler.get_sync_result_builder = patched_get_sync_result_builder
@@ -159,6 +158,7 @@ class AlkemioRoomControl:
 
         except Exception as e:
             logger.error("Failed to patch SyncHandler: %s", str(e))
+            raise RuntimeError(f"AlkemioRoomControl: SyncHandler patch failed: {e}") from e
 
     def _detect_appservice_config(self) -> dict:
         """
@@ -238,63 +238,45 @@ class AlkemioRoomControl:
             self._http_client = SimpleHttpClient(self.api._hs)
         return self._http_client
 
-    async def _notify_dm_request(
+    async def _check_room(
         self,
-        initiator_user_id: str,
-        target_user_id: str
-    ) -> bool:
+        creator: str,
+        members: list,
+        is_direct: bool,
+    ) -> dict:
         """
-        Notify the Adapter about a DM creation request.
-
-        Args:
-            initiator_user_id: Matrix ID of user initiating the DM
-            target_user_id: Matrix ID of target user
+        Synchronous check with the adapter: consent, dedup, entity creation.
 
         Returns:
-            True if notification was sent successfully
-        """
-        import json
+            Response dict with {allow, alkemio_room_id, reason}
 
-        webhook_url = f"{self.adapter_url}/_matrix/app/alkemio/dm-request"
+        Raises:
+            SynapseError on timeout, connection failure, or server error.
+        """
+        check_url = f"{self.adapter_url}/_matrix/app/alkemio/check-room"
         payload = {
-            "inviter": initiator_user_id,
-            "invitee": target_user_id,
+            "creator": creator,
+            "members": members,
+            "is_direct": is_direct,
         }
-        headers = {
-            b"Content-Type": [b"application/json"],
-        }
-        # Add Authorization header if hs_token is configured
+        headers = {}
         if self.hs_token:
             headers[b"Authorization"] = [f"Bearer {self.hs_token}".encode()]
 
-        # Retry logic: 3 attempts with exponential backoff
-        max_retries = 3
-        for attempt in range(max_retries):
-            try:
-                await self.http_client.post_json_get_json(
-                    webhook_url,
-                    payload,
-                    headers=headers,
-                )
-                logger.info(
-                    "DM request notification sent: %s -> %s",
-                    initiator_user_id,
-                    target_user_id,
-                )
-                return True
-            except Exception as e:
-                if attempt < max_retries - 1:
-                    import asyncio
-                    await asyncio.sleep(2 ** attempt)  # Exponential backoff
-                    continue
-                logger.error(
-                    "Failed to notify adapter about DM request: %s -> %s, error: %s",
-                    initiator_user_id,
-                    target_user_id,
-                    str(e),
-                )
-                return False
-        return False
+        try:
+            resp = await self.http_client.post_json_get_json(
+                check_url,
+                payload,
+                headers=headers,
+            )
+            return resp
+        except Exception as e:
+            logger.error("Room check failed: %s", str(e))
+            raise SynapseError(
+                503,
+                "Service temporarily unavailable",
+                Codes.UNKNOWN,
+            ) from e
 
     async def on_create_room(
         self,
@@ -305,19 +287,15 @@ class AlkemioRoomControl:
         """
         Third-party rules callback for room creation.
 
-        This runs BEFORE the spam checker and can raise SynapseError with
-        a custom message that Element may display.
-
         Room creation policy:
-        - Server admins and AppService bot: Always allowed
-        - DM rooms (is_direct=true, 1 invitee): ALLOWED, but adapter is notified
-          so it can track/manage the room (e.g., set alias if room already exists)
-        - Community rooms: BLOCKED - must be created via Alkemio platform
+        - Server admins and AppService bot: Always allowed (bypass all checks)
+        - Space creation (m.space room type): BLOCKED for ghost users
+        - Room-inside-space (m.space.parent in initial_state): BLOCKED for ghost users
+        - Standalone rooms (DM or group): Synchronous check via adapter endpoint
 
-        Args:
-            requester: The user requesting room creation
-            request_content: The room creation request body
-            is_requester_admin: Whether the requester is a server admin
+        On approval the module injects power levels, visibility state, and the
+        io.alkemio.pending reconciliation marker into the creation request, then
+        strips invites so the adapter can join members directly during reconciliation.
         """
         user_id = requester.user.to_string()
 
@@ -325,39 +303,89 @@ class AlkemioRoomControl:
         if is_requester_admin or self._is_appservice_bot(user_id):
             return
 
-        # Check if this is a DM attempt
-        is_direct = request_content.get("is_direct", False)
-        invite_list = request_content.get("invite", [])
-
-        if is_direct and len(invite_list) == 1:
-            target_user_id = invite_list[0]
-            logger.info(
-                "DM creation ALLOWED - notifying adapter: %s -> %s",
-                user_id,
-                target_user_id,
+        # Block space creation for ghost users
+        room_type = request_content.get("creation_content", {}).get("type", "")
+        if room_type == "m.space":
+            logger.info("Space creation blocked: %s", user_id)
+            raise SynapseError(
+                403,
+                "Space creation is managed by Alkemio.",
+                Codes.FORBIDDEN,
             )
-            # Notify adapter about DM request (fire and forget - don't block on failure)
-            # Adapter can use this to track the DM or set an alias if room already exists
-            try:
-                await self._notify_dm_request(user_id, target_user_id)
-            except Exception as e:
-                logger.warning(
-                    "Failed to notify adapter about DM request: %s",
-                    str(e),
+
+        # Block room-inside-space creation for ghost users
+        initial_state = request_content.get("initial_state", [])
+        for state_evt in initial_state:
+            if state_evt.get("type") == "m.space.parent":
+                logger.info("Room-inside-space creation blocked: %s", user_id)
+                raise SynapseError(
+                    403,
+                    "Room creation inside spaces is managed by Alkemio.",
+                    Codes.FORBIDDEN,
                 )
 
-            # ALLOW the DM room creation to proceed
-            # The adapter will be notified and can manage the room as needed
-            return
+        # Standalone room (DM or group) — synchronous check flow
+        invite_list = request_content.get("invite", [])
+        is_direct = request_content.get("is_direct", False)
 
-        # Block non-DM room creation
+        if not invite_list:
+            logger.info("Room creation blocked (no invitees): %s", user_id)
+            raise SynapseError(
+                403,
+                "Room creation requires at least one invitee.",
+                Codes.FORBIDDEN,
+            )
+
         logger.info(
-            "Room creation blocked via third_party_rules: %s",
+            "Room check: %s creating %s with %d members",
             user_id,
+            "DM" if is_direct else "group",
+            len(invite_list),
         )
-        raise SynapseError(
-            403,
-            "Room creation is managed by Alkemio. "
-            "Please use the Alkemio platform to create spaces and rooms.",
-            Codes.FORBIDDEN,
+
+        # Call adapter check endpoint
+        resp = await self._check_room(user_id, invite_list, is_direct)
+
+        if not resp.get("allow", False):
+            reason = resp.get("reason", "Room creation not permitted")
+            logger.info("Room check rejected: %s — %s", user_id, reason)
+            raise SynapseError(403, reason, Codes.FORBIDDEN)
+
+        alkemio_room_id = resp.get("alkemio_room_id", "")
+        try:
+            alkemio_room_id = str(uuid.UUID(alkemio_room_id))
+        except (TypeError, ValueError, AttributeError) as e:
+            logger.error("Room check approved without valid alkemio_room_id: %s", resp)
+            raise SynapseError(
+                503,
+                "Service temporarily unavailable",
+                Codes.UNKNOWN,
+            ) from e
+        logger.info(
+            "Room check approved: %s, alkemio_room_id=%s",
+            user_id,
+            alkemio_room_id,
         )
+
+        # Strip invites — adapter joins members during reconciliation
+        request_content["invite"] = []
+
+        # Inject power level override
+        request_content["power_level_content_override"] = {
+            "users_default": 50,
+        }
+
+        # Inject initial state events
+        if "initial_state" not in request_content:
+            request_content["initial_state"] = []
+
+        request_content["initial_state"].append({
+            "type": ALKEMIO_VISIBILITY_EVENT,
+            "state_key": "",
+            "content": {"visible": True},
+        })
+        request_content["initial_state"].append({
+            "type": "io.alkemio.pending",
+            "state_key": "",
+            "content": {"alkemio_room_id": alkemio_room_id},
+        })

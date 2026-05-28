@@ -23,6 +23,7 @@ import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
+import type { CreateDocumentResult } from '@services/adapters/file-service-adapter/dto';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { AvatarCreatorService } from '@services/external/avatar-creator/avatar.creator.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
@@ -37,6 +38,13 @@ import { CreateStorageBucketInput } from './dto/storage.bucket.dto.create';
 import { IStorageBucketParent } from './dto/storage.bucket.dto.parent';
 import { StorageBucket } from './storage.bucket.entity';
 import { IStorageBucket } from './storage.bucket.interface';
+
+// Used when an upload arrives with no filename — e.g. a clipboard paste or
+// drag-drop that produces File { name: '' }. An empty multipart filename
+// attribute is dropped by form-data, which in turn causes file-service-go
+// to reject the part as "missing file".
+const UNSPECIFIED_FILENAME = '_unspecified_';
+
 @Injectable()
 export class StorageBucketService {
   DEFAULT_MAX_ALLOWED_FILE_SIZE = 15728640;
@@ -153,6 +161,12 @@ export class StorageBucketService {
     userID: string,
     temporaryDocument = false
   ): Promise<IDocument> {
+    // Clipboard paste and some drag-drop paths yield File { name: '' };
+    // an empty filename causes form-data to drop the `filename=` attribute,
+    // which file-service-go then rejects as a missing file part. Normalise
+    // at the boundary so downstream sees a non-empty displayName and the
+    // multipart body always carries a filename attribute.
+    const effectiveFilename = filename?.trim() || UNSPECIFIED_FILENAME;
     try {
       const streamTimeoutMs = this.configService.get<number>(
         'storage.file.stream_timeout_ms',
@@ -164,7 +178,7 @@ export class StorageBucketService {
       return await this.uploadFileAsDocumentFromBuffer(
         storageBucketId,
         buffer,
-        filename,
+        effectiveFilename,
         mimeType,
         userID,
         temporaryDocument
@@ -178,7 +192,7 @@ export class StorageBucketService {
         LogContext.STORAGE_BUCKET,
         {
           message: error.message,
-          fileName: filename,
+          fileName: effectiveFilename,
           storageBucketId,
           originalException: error,
         }
@@ -186,25 +200,119 @@ export class StorageBucketService {
     }
   }
 
+  /**
+   * Upload a buffer as a new file row in `storageBucketId`.
+   *
+   * The optional `allowedMimeTypesOverride` lets specific flows widen the
+   * accepted MIME set beyond what the destination bucket normally allows
+   * — used by the Collabora import flow, where the bucket's policy is
+   * tighter than the set of formats the editor can open. When the
+   * override is provided:
+   *   - the bucket-side `validateMimeTypes` check is skipped (the
+   *     caller-claimed mimeType may not be in `bucket.allowedMimeTypes`,
+   *     which is fine — file-service-go sniffs the actual MIME from
+   *     content and validates against the override list instead).
+   *   - the override is forwarded to file-service-go as
+   *     `allowedMimeTypes`, so its content-sniff validation enforces
+   *     exactly the caller's expected set.
+   * `validateSize` against the bucket's `maxFileSize` always applies.
+   */
   public async uploadFileAsDocumentFromBuffer(
     storageBucketId: string,
     buffer: Buffer,
     filename: string,
     mimeType: string,
     userID?: string,
-    temporaryLocation = false
+    temporaryLocation = false,
+    skipDedup = false,
+    allowedMimeTypesOverride?: string[]
   ): Promise<IDocument> {
     const storage = await this.getStorageBucketOrFail(storageBucketId, {
       relations: {},
     });
 
-    this.validateMimeTypes(storage, mimeType);
+    const effectiveAllowedMimes =
+      allowedMimeTypesOverride ?? storage.allowedMimeTypes;
+    if (!allowedMimeTypesOverride) {
+      this.validateMimeTypes(storage, mimeType);
+    }
     this.validateSize(storage, buffer.length);
 
-    // Pre-create auth policy and tagset, call Go service, load result.
-    // Full compensation: any failure anywhere in the sequence rolls back all
-    // previously created resources (auth policy, tagset, Go-side document),
-    // each cleaned up independently so one rollback failure doesn't skip others.
+    return this.persistDocumentWithPreparedAuth(
+      storageBucketId,
+      (authId, tagsetId) =>
+        this.fileServiceAdapter.createDocument(buffer, {
+          displayName: filename,
+          mimeType,
+          storageBucketId,
+          authorizationId: authId,
+          tagsetId,
+          createdBy: userID || undefined,
+          temporaryLocation,
+          allowedMimeTypes: effectiveAllowedMimes.join(','),
+          maxFileSize: storage.maxFileSize,
+          skipDedup: skipDedup || undefined,
+        })
+    );
+  }
+
+  /**
+   * Copy an existing document into another bucket via file-service-go's
+   * /internal/file/copy endpoint (v0.0.14+). No bytes traverse the wire —
+   * the new row references the same content. Replaces the legacy
+   * `getDocumentContent` + `uploadFileAsDocumentFromBuffer` round-trip.
+   *
+   * The destination bucket's allowed-mime-types and max-size policy are
+   * still enforced on the source's metadata, so a per-bucket policy that's
+   * tighter than the source bucket's still rejects the copy.
+   */
+  public async copyDocumentToBucket(
+    destinationBucketId: string,
+    sourceDocument: IDocument,
+    userID?: string,
+    skipDedup = false
+  ): Promise<IDocument> {
+    const destination = await this.getStorageBucketOrFail(destinationBucketId, {
+      relations: {},
+    });
+
+    this.validateMimeTypes(destination, sourceDocument.mimeType);
+    this.validateSize(destination, sourceDocument.size);
+
+    return this.persistDocumentWithPreparedAuth(
+      destinationBucketId,
+      (authId, tagsetId) =>
+        this.fileServiceAdapter.copyDocument({
+          sourceId: sourceDocument.id,
+          destinationBucketId,
+          authorizationId: authId,
+          tagsetId,
+          createdBy: userID || sourceDocument.createdBy || undefined,
+          skipDedup: skipDedup || undefined,
+        })
+    );
+  }
+
+  /**
+   * Shared scaffolding for any operation that needs to materialize a new
+   * `Document` row in `bucketId`: pre-create the auth-policy + tagset that
+   * the document FK-references, run the caller-supplied file-service-go
+   * call, then either:
+   *   - on dedup-reuse (`result.reused === true`): release the pre-created
+   *     rows since Go ignored them and kept the existing row's values
+   *     authoritative;
+   *   - on error: roll back every pre-created resource AND, if Go did
+   *     create a fresh row before the failure, delete it too. On reuse
+   *     during a later failure, the source row belongs to another caller
+   *     and must be preserved.
+   *
+   * Both create and copy flows go through here so the auth/tagset
+   * lifecycle and dedup-reuse contract stay consistent across the two.
+   */
+  private async persistDocumentWithPreparedAuth(
+    bucketId: string,
+    goCall: (authId: string, tagsetId: string) => Promise<CreateDocumentResult>
+  ): Promise<IDocument> {
     let savedAuth;
     let savedTagset;
     let result;
@@ -221,20 +329,10 @@ export class StorageBucketService {
       });
       savedTagset = await this.tagsetService.save(tagset);
 
-      // Delegate to Go file-service-go
-      result = await this.fileServiceAdapter.createDocument(buffer, {
-        displayName: filename,
-        mimeType,
-        storageBucketId,
-        authorizationId: savedAuth.id,
-        tagsetId: savedTagset.id,
-        createdBy: userID || undefined,
-        temporaryLocation,
-        allowedMimeTypes: storage.allowedMimeTypes.join(','),
-        maxFileSize: storage.maxFileSize,
-      });
+      result = await goCall(savedAuth.id, savedTagset.id);
 
-      // Load the document created by the Go service with relations needed for auth
+      // Load with relations needed for auth/tagset consumers. On dedup
+      // reuse this is an existing row; otherwise the freshly-inserted one.
       document = await this.documentService.getDocumentOrFail(result.id, {
         relations: {
           authorization: true,
@@ -243,11 +341,14 @@ export class StorageBucketService {
         },
       });
     } catch (error) {
-      // Rollback: delete each pre-created resource independently so one
-      // failure doesn't short-circuit the others. Bind narrowed values into
-      // const locals so the closures don't re-widen them.
+      // Independent rollbacks so one cleanup failure doesn't skip the rest.
+      // Bind narrowed values into const locals so the closures don't re-widen.
+      //
+      // Important: only delete the Go-side document if this request created
+      // it (reused=false). On a dedup reuse, `result.id` refers to someone
+      // else's existing document — deleting it would corrupt their data.
       const createdDoc = result;
-      if (createdDoc) {
+      if (createdDoc && !createdDoc.reused) {
         await tryRollback(
           () => this.fileServiceAdapter.deleteDocument(createdDoc.id),
           `Failed to rollback Go-side document ${createdDoc.id}`,
@@ -276,8 +377,45 @@ export class StorageBucketService {
       throw error;
     }
 
+    // Dedup-reuse: caller-supplied authorizationId / tagsetId were ignored
+    // by Go (existing row authoritative). Release our pre-created rows so
+    // they don't become DB orphans.
+    if (result.reused) {
+      const reusedAuth = savedAuth;
+      if (reusedAuth) {
+        await tryRollback(
+          () => this.authorizationPolicyService.delete(reusedAuth),
+          `Failed to release pre-created auth policy ${reusedAuth.id} on dedup reuse`,
+          this.logger,
+          LogContext.STORAGE_BUCKET
+        );
+      }
+      const reusedTagset = savedTagset;
+      if (reusedTagset) {
+        await tryRollback(
+          () => this.tagsetService.removeTagset(reusedTagset.id),
+          `Failed to release pre-created tagset ${reusedTagset.id} on dedup reuse`,
+          this.logger,
+          LogContext.STORAGE_BUCKET
+        );
+      }
+    }
+
+    // Attach post-rotation image dimensions (when present on the file-
+    // service-go response) as transient runtime fields on the returned
+    // entity. Server-side validators (e.g. visual.service.ts) read these
+    // instead of decoding bytes locally — file-service-go already did the
+    // canonicalizing decode and cached the values in `file.content_metadata`.
+    // Non-image uploads have undefined dims; that's expected.
+    if (result.imageWidth !== undefined) {
+      document.imageWidth = result.imageWidth;
+    }
+    if (result.imageHeight !== undefined) {
+      document.imageHeight = result.imageHeight;
+    }
+
     this.logger.verbose?.(
-      `Uploaded document '${result.externalID}' via file-service on storage bucket: ${storage.id}`,
+      `Materialized document '${result.externalID}' via file-service on storage bucket: ${bucketId}`,
       LogContext.STORAGE_BUCKET
     );
     return document;

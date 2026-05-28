@@ -98,6 +98,59 @@ describe('FileServiceAdapter', () => {
       expect(callArgs.url).toBe('http://file-service:4003/internal/file');
     });
 
+    it('sends skipDedup=true as a multipart form field when set', async () => {
+      const responseData = {
+        id: 'doc-skip',
+        externalID: 'ext-skip',
+        mimeType: 'image/png',
+        size: 0,
+        reused: false,
+      };
+
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(responseData, 201))
+      );
+
+      await adapter.createDocument(Buffer.alloc(0), {
+        displayName: 'placeholder.docx',
+        storageBucketId: 'bucket-1',
+        authorizationId: 'auth-1',
+        tagsetId: 'tagset-1',
+        skipDedup: true,
+      });
+
+      // FormData carries the field as a serialized stream; assert via the
+      // serialized buffer rather than introspection.
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      const serialized = callArgs.data.getBuffer().toString('utf8');
+      expect(serialized).toContain('name="skipDedup"');
+      expect(serialized).toMatch(/name="skipDedup"\r\n\r\ntrue/);
+    });
+
+    it('omits skipDedup when not set (preserves dedup default)', async () => {
+      const responseData = {
+        id: 'doc-default',
+        externalID: 'ext-default',
+        mimeType: 'image/png',
+        size: 4,
+        reused: false,
+      };
+
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(responseData, 201))
+      );
+
+      await adapter.createDocument(Buffer.from('data'), {
+        displayName: 'avatar.png',
+        storageBucketId: 'bucket-1',
+        authorizationId: 'auth-1',
+      });
+
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      const serialized = callArgs.data.getBuffer().toString('utf8');
+      expect(serialized).not.toContain('name="skipDedup"');
+    });
+
     it('should throw FileServiceAdapterException on 4xx error', async () => {
       const axiosError = new AxiosError('Bad Request', '400', undefined, null, {
         status: 400,
@@ -120,7 +173,7 @@ describe('FileServiceAdapter', () => {
       ).rejects.toThrow(FileServiceAdapterException);
     });
 
-    it('should retry on 5xx error then fail', async () => {
+    it('does NOT retry POST on 5xx (non-idempotent; server may have processed)', async () => {
       const axiosError = new AxiosError(
         'Internal Server Error',
         '500',
@@ -135,9 +188,6 @@ describe('FileServiceAdapter', () => {
         }
       );
 
-      // Count re-subscriptions: RxJS retry resubscribes to the source observable
-      // on each retry, not to httpService.request itself (which is called once).
-      // Using defer lets us observe each subscribe as a fresh "attempt."
       let subscribeCount = 0;
       (httpService.request as Mock).mockReturnValue(
         defer(() => {
@@ -152,10 +202,158 @@ describe('FileServiceAdapter', () => {
           storageBucketId: 'bucket-1',
           authorizationId: 'auth-1',
         })
-      ).rejects.toThrow();
+      ).rejects.toThrow(FileServiceAdapterException);
+
+      // No retries — exactly one attempt.
+      expect(subscribeCount).toBe(1);
+    });
+
+    it('DOES retry POST on 503 (server explicitly invites retry)', async () => {
+      const axiosError = new AxiosError(
+        'Service Unavailable',
+        '503',
+        undefined,
+        null,
+        {
+          status: 503,
+          data: {},
+          statusText: 'Service Unavailable',
+          headers: {},
+          config: { headers: new AxiosHeaders() },
+        }
+      );
+
+      let subscribeCount = 0;
+      (httpService.request as Mock).mockReturnValue(
+        defer(() => {
+          subscribeCount += 1;
+          return throwError(() => axiosError);
+        })
+      );
+
+      await expect(
+        adapter.createDocument(Buffer.from('data'), {
+          displayName: 'test.png',
+          storageBucketId: 'bucket-1',
+          authorizationId: 'auth-1',
+        })
+      ).rejects.toThrow(StorageServiceUnavailableException);
 
       // retries: 2 → 1 initial + 2 retries = 3 subscription attempts
       expect(subscribeCount).toBe(3);
+    });
+
+    it('DOES retry POST on pre-send transport error (request never reached server)', async () => {
+      const transportError = new AxiosError('refused', 'ECONNREFUSED');
+      transportError.code = 'ECONNREFUSED';
+      // Real connection-refused failures happen after Axios has tried to
+      // issue the request, so `.request` is set; classifyError needs
+      // that signal to distinguish from pre-request config errors.
+      (transportError as AxiosError & { request: unknown }).request = {};
+
+      let subscribeCount = 0;
+      (httpService.request as Mock).mockReturnValue(
+        defer(() => {
+          subscribeCount += 1;
+          return throwError(() => transportError);
+        })
+      );
+
+      await expect(
+        adapter.createDocument(Buffer.from('data'), {
+          displayName: 'test.png',
+          storageBucketId: 'bucket-1',
+          authorizationId: 'auth-1',
+        })
+      ).rejects.toThrow(FileServiceAdapterException);
+
+      expect(subscribeCount).toBe(3);
+    });
+  });
+
+  describe('copyDocument', () => {
+    it('POSTs JSON body to /internal/file/copy', async () => {
+      const responseData = {
+        id: 'doc-copy',
+        externalID: 'ext-shared',
+        mimeType: 'image/png',
+        size: 1024,
+        reused: false,
+      };
+
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(responseData, 201))
+      );
+
+      const result = await adapter.copyDocument({
+        sourceId: 'src-1',
+        destinationBucketId: 'bucket-2',
+        authorizationId: 'auth-2',
+        tagsetId: 'tagset-2',
+        createdBy: 'user-1',
+      });
+
+      expect(result).toEqual(responseData);
+
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.method).toBe('post');
+      expect(callArgs.url).toBe('http://file-service:4003/internal/file/copy');
+      expect(callArgs.data).toEqual({
+        sourceId: 'src-1',
+        destinationBucketId: 'bucket-2',
+        authorizationId: 'auth-2',
+        tagsetId: 'tagset-2',
+        createdBy: 'user-1',
+      });
+    });
+
+    it('passes skipDedup when true', async () => {
+      (httpService.request as Mock).mockReturnValue(
+        of(
+          axiosResponse(
+            {
+              id: 'doc-copy',
+              externalID: 'ext',
+              mimeType: 'image/png',
+              size: 1,
+              reused: false,
+            },
+            201
+          )
+        )
+      );
+
+      await adapter.copyDocument({
+        sourceId: 'src-1',
+        destinationBucketId: 'bucket-2',
+        authorizationId: 'auth-2',
+        skipDedup: true,
+      });
+
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.data.skipDedup).toBe(true);
+    });
+
+    it('surfaces 404 from file-service-go as FileServiceAdapterException', async () => {
+      const axiosError = new AxiosError('Not Found', '404', undefined, null, {
+        status: 404,
+        data: { error: 'source document not found' },
+        statusText: 'Not Found',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      });
+
+      (httpService.request as Mock).mockReturnValue(
+        throwError(() => axiosError)
+      );
+
+      await expect(
+        adapter.copyDocument({
+          sourceId: 'missing',
+          destinationBucketId: 'bucket-2',
+          authorizationId: 'auth-2',
+        })
+      ).rejects.toThrow(FileServiceAdapterException);
     });
   });
 
@@ -263,6 +461,59 @@ describe('FileServiceAdapter', () => {
       await expect(adapter.deleteDocument('doc-next')).rejects.toThrow(
         StorageServiceUnavailableException
       );
+    });
+
+    it('does NOT count non-retriable POST 5xx toward the breaker', async () => {
+      // 5xx that we don't retry (POST non-idempotent) also shouldn't
+      // count toward circuit-breaker health. Otherwise a burst of
+      // content-rejection errors for which retry wouldn't help would
+      // trip the breaker and then block unrelated, valid requests.
+      const axiosError = new AxiosError(
+        'Internal Server Error',
+        '500',
+        undefined,
+        null,
+        {
+          status: 500,
+          data: { error: 'rejected' },
+          statusText: 'Internal Server Error',
+          headers: {},
+          config: { headers: new AxiosHeaders() },
+        }
+      );
+      (httpService.request as Mock).mockReturnValue(
+        throwError(() => axiosError)
+      );
+
+      for (let i = 0; i < 10; i++) {
+        await adapter
+          .createDocument(Buffer.from('data'), {
+            displayName: `file-${i}.bin`,
+            storageBucketId: 'bucket-1',
+            authorizationId: 'auth-1',
+          })
+          .catch(() => undefined);
+      }
+
+      // After 10 POST 500s the breaker should still be closed; a fresh
+      // call is attempted, not short-circuited.
+      (httpService.request as Mock).mockClear();
+      (httpService.request as Mock).mockReturnValue(
+        of(
+          axiosResponse({
+            id: 'doc-next',
+            externalID: 'ext',
+            mimeType: 'image/png',
+            size: 4,
+          })
+        )
+      );
+      await adapter.createDocument(Buffer.from('next'), {
+        displayName: 'ok.png',
+        storageBucketId: 'bucket-1',
+        authorizationId: 'auth-1',
+      });
+      expect(httpService.request).toHaveBeenCalledTimes(1);
     });
   });
 

@@ -7,7 +7,7 @@ export class UpdateCollaboraDocumentInput {
   @Field(() => UUID, {
     description: 'The ID of the CollaboraDocument to update.',
   })
-  @IsUUID('4')
+  @IsUUID('all')
   ID!: string;
 
   @Field(() => String, {

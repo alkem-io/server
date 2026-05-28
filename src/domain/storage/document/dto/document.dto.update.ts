@@ -21,9 +21,7 @@ export class UpdateDocumentInput extends UpdateBaseAlkemioInput {
   @Field({
     nullable: true,
     description:
-      'The display name for the Document. Not supported — rejected with a ValidationException if provided.',
-    deprecationReason:
-      'Display name updates are not supported by the file service.',
+      "Display name. Currently rejected with a ValidationException — for documents owned by a parent entity (e.g., CollaboraDocument, Profile), use the parent's update mutation, which carries the context (file extension, MIME, profile coupling) needed to keep editor titles, download names, and the file-service row in sync. Direct rename via updateDocument will be wired when documents become a directly-managed resource (e.g., a per-space documents collection).",
   })
   @IsOptional()
   @MinLength(3)

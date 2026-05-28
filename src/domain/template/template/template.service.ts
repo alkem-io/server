@@ -64,10 +64,22 @@ export class TemplateService {
     private readonly logger: LoggerService
   ) {}
 
+  /**
+   * Self-contained: builds the template (with any nested entity for the
+   * declared TemplateType), persists, then runs phase-2 materialization
+   * (markdown re-upload, references, visuals, and any nested
+   * COMMUNITY_GUIDELINES profile materialization). On materialization
+   * failure the template is deleted before rethrowing — callers receive
+   * a fully-materialized template or an error, never half-state.
+   *
+   * Caller (e.g. TemplatesSetService) only needs to attach the
+   * `templatesSet` relation and re-save; no phase-2 coordination required.
+   */
   async createTemplate(
     templateData: CreateTemplateInput,
     storageAggregator: IStorageAggregator
   ): Promise<ITemplate> {
+    // Phase 1: build entity tree in memory (no file-service-go calls).
     const template: ITemplate = Template.create(templateData);
     template.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.TEMPLATE
@@ -82,17 +94,13 @@ export class TemplateService {
       name: TagsetReservedName.DEFAULT,
       tags: templateData.tags,
     });
-    await this.profileService.addVisualsOnProfile(
-      template.profile,
-      templateData.profileData.visuals,
-      [VisualType.CARD]
-    );
     switch (template.type) {
       case TemplateType.POST: {
         if (!templateData.postDefaultDescription) {
           throw new ValidationException(
-            `Post Template requires default description input: ${JSON.stringify(templateData)}`,
-            LogContext.TEMPLATES
+            'Post Template requires default description input',
+            LogContext.TEMPLATES,
+            { templateType: template.type, missing: 'postDefaultDescription' }
           );
         }
         template.postDefaultDescription = templateData.postDefaultDescription;
@@ -101,8 +109,9 @@ export class TemplateService {
       case TemplateType.COMMUNITY_GUIDELINES: {
         if (!templateData.communityGuidelinesData) {
           throw new ValidationException(
-            `Community Guidelines Template requires the community guidelines input: ${JSON.stringify(templateData)}`,
-            LogContext.TEMPLATES
+            'Community Guidelines Template requires guidelines input',
+            LogContext.TEMPLATES,
+            { templateType: template.type, missing: 'communityGuidelinesData' }
           );
         }
         const guidelinesInput: CreateCommunityGuidelinesInput =
@@ -118,8 +127,9 @@ export class TemplateService {
       case TemplateType.SPACE: {
         if (!templateData.contentSpaceData) {
           throw new ValidationException(
-            `Space Template requires space input: ${JSON.stringify(templateData)}`,
-            LogContext.TEMPLATES
+            'Space Template requires content-space input',
+            LogContext.TEMPLATES,
+            { templateType: template.type, missing: 'contentSpaceData' }
           );
         }
         const spaceData = templateData.contentSpaceData;
@@ -166,8 +176,9 @@ export class TemplateService {
       case TemplateType.WHITEBOARD: {
         if (!templateData.whiteboard) {
           throw new ValidationException(
-            `Whiteboard Template requires whiteboard input: ${JSON.stringify(templateData)}`,
-            LogContext.TEMPLATES
+            'Whiteboard Template requires whiteboard input',
+            LogContext.TEMPLATES,
+            { templateType: template.type, missing: 'whiteboard' }
           );
         }
         template.whiteboard = await this.whiteboardService.createWhiteboard(
@@ -186,8 +197,9 @@ export class TemplateService {
       case TemplateType.CALLOUT: {
         if (!templateData.calloutData) {
           throw new ValidationException(
-            `Callout Template requires callout input: ${JSON.stringify(templateData)}`,
-            LogContext.TEMPLATES
+            'Callout Template requires callout input',
+            LogContext.TEMPLATES,
+            { templateType: template.type, missing: 'calloutData' }
           );
         }
         this.overrideCalloutSettingsForTemplate(templateData.calloutData);
@@ -206,7 +218,139 @@ export class TemplateService {
         );
     }
 
-    return await this.templateRepository.save(template);
+    // Phase 2: persist + materialize own profile + cascade-materialize
+    // any nested entity tree that the type carries. The
+    // materializeProfileContentAndVisualsOrRollback helper handles
+    // own-profile rollback; nested materialization is wrapped in a
+    // follow-up try/catch that rolls back the entire template on failure
+    // (otherwise we'd leave a partially-materialized template behind).
+    //
+    // Self-materializing leaves (WHITEBOARD via WhiteboardService.create*,
+    // POST as part of POST template type — but that template type stores
+    // only postDefaultDescription, not a Post entity) need no extra walk.
+    // CALLOUT, SPACE, COMMUNITY_GUIDELINES carry deeper trees and walk
+    // through their dedicated materialize chain.
+    //
+    // For WHITEBOARD type the whiteboard was already saved+materialized by
+    // WhiteboardService.createWhiteboard above; if the templateRepository
+    // save fails the whiteboard is orphaned (no parent template references
+    // it any more), so we delete it explicitly before propagating.
+    let saved: ITemplate;
+    try {
+      saved = await this.templateRepository.save(template);
+    } catch (error) {
+      if (template.type === TemplateType.WHITEBOARD && template.whiteboard) {
+        await this.cleanupOrphanWhiteboard(
+          template.whiteboard.id,
+          'Template save failed after whiteboard create'
+        );
+      }
+      throw error;
+    }
+
+    // Helper mutates the profile in place; no explicit reassignment needed.
+    await this.profileService.materializeProfileContentAndVisualsOrRollback(
+      saved.profile,
+      templateData.profileData.visuals,
+      [VisualType.CARD],
+      () => this.delete(saved)
+    );
+
+    // rollbackTemplate logs at ERROR (not WARN) when delete itself fails,
+    // and rethrows so callers awaiting it are not silently lied to about
+    // a successful rollback. The OrRollback helper already wraps its
+    // rollback() call in its own try/catch, so any rethrow here is
+    // observed via that path; the COMMUNITY_GUIDELINES branch below
+    // wraps explicitly so the original materialization error wins.
+    const rollbackTemplate = async (): Promise<void> => {
+      try {
+        await this.delete(saved);
+      } catch (rollbackError) {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message:
+              'Rollback after nested template-content materialization failure also failed',
+            templateId: saved.id,
+            templateType: saved.type,
+          },
+          stack,
+          LogContext.TEMPLATES
+        );
+        throw rollbackError;
+      }
+    };
+
+    if (
+      saved.type === TemplateType.COMMUNITY_GUIDELINES &&
+      saved.communityGuidelines &&
+      templateData.communityGuidelinesData
+    ) {
+      try {
+        await this.communityGuidelinesService.materializeCommunityGuidelinesContent(
+          saved.communityGuidelines,
+          templateData.communityGuidelinesData
+        );
+      } catch (error) {
+        // Awaited inside its own try/catch so the rethrown rollback error
+        // doesn't replace the original materialization error.
+        try {
+          await rollbackTemplate();
+        } catch {
+          // already logged by rollbackTemplate
+        }
+        throw error;
+      }
+    }
+
+    if (
+      saved.type === TemplateType.CALLOUT &&
+      saved.callout &&
+      templateData.calloutData
+    ) {
+      await this.calloutService.materializeCalloutContent(
+        saved.callout,
+        templateData.calloutData,
+        rollbackTemplate
+      );
+    }
+
+    if (
+      saved.type === TemplateType.SPACE &&
+      saved.contentSpace &&
+      templateData.contentSpaceData
+    ) {
+      await this.templateContentSpaceService.materializeTemplateContentSpaceContent(
+        saved.contentSpace,
+        templateData.contentSpaceData,
+        rollbackTemplate
+      );
+    }
+
+    return saved;
+  }
+
+  private async cleanupOrphanWhiteboard(
+    whiteboardID: string,
+    context: string
+  ): Promise<void> {
+    try {
+      await this.whiteboardService.deleteWhiteboard(whiteboardID);
+    } catch (cleanupError) {
+      const stack =
+        cleanupError instanceof Error ? (cleanupError.stack ?? '') : '';
+      this.logger.error?.(
+        {
+          message: 'Cleanup of orphan whiteboard also failed',
+          context,
+          whiteboardID,
+          cleanupError: String(cleanupError),
+        },
+        stack,
+        LogContext.TEMPLATES
+      );
+    }
   }
 
   private overrideCalloutSettingsForTemplate(calloutData: CreateCalloutInput) {

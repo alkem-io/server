@@ -1,6 +1,7 @@
 volumes:
   alkemio_dev_postgres:
   alkemio_dev_synapse:
+  alkemio_dev_storage:
   tmpvolume:
   chroma-data:
   rabbitmq_data:
@@ -287,7 +288,6 @@ services:
     restart: always
     environment:
       - SYNAPSE_NO_TLS=true
-      - SYNAPSE_ENABLE_REGISTRATION=true
       - SYNAPSE_HOMESERVER_NAME
       - SYNAPSE_SERVER_URL
       - SYNAPSE_SERVER_SHARED_SECRET
@@ -376,7 +376,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.32.0
+    image: alkemio/notifications:v0.34.0
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -413,7 +413,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
-    image: alkemio/matrix-adapter-go:v0.8.14
+    image: alkemio/matrix-adapter-go:v0.8.16
     depends_on:
       - rabbitmq
     environment:
@@ -461,7 +461,7 @@ services:
       - 6379
 
   redis-commander:
-    image: rediscommander/redis-commander:latest
+    image: ghcr.io/joeferner/redis-commander:latest
     environment:
       - REDIS_HOSTS=local:redis:6379
     ports:
@@ -496,7 +496,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service-go:v0.0.7
+    image: alkemio/file-service-go:v0.0.17
     depends_on:
       postgres:
         condition: service_healthy
@@ -514,7 +514,7 @@ services:
       - LOG_LEVEL=info
     restart: always
     volumes:
-      - ${PWD}/.storage:/storage:rw
+      - alkemio_dev_storage:/storage
     networks:
       - alkemio_dev_net
     ports:
@@ -576,7 +576,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_authorization_evaluation
     hostname: authorization-evaluation
-    image: alkemio/authorization-evaluation-service:v0.0.2
+    image: alkemio/authorization-evaluation-service:v0.0.4
     depends_on:
       postgres:
         condition: service_healthy

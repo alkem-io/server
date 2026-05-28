@@ -88,7 +88,13 @@ function mapHttpStatusToAlkemioStatus(httpStatus?: number): AlkemioErrorStatus {
       return AlkemioErrorStatus.OPERATION_NOT_ALLOWED;
     case 413:
       return AlkemioErrorStatus.STORAGE_UPLOAD_FAILED;
+    // 415: unsupported media type (e.g. .exe uploaded).
+    // 422: MIME type accepted but content itself is unprocessable
+    //      (e.g. image decoder can't read the bytes). Both belong to
+    //      the "format / content not usable" family from the caller's
+    //      perspective; the distinction only matters to file-service.
     case 415:
+    case 422:
       return AlkemioErrorStatus.FORMAT_NOT_SUPPORTED;
     case 503:
       return AlkemioErrorStatus.STORAGE_SERVICE_UNAVAILABLE;

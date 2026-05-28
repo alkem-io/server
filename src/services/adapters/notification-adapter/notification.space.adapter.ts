@@ -47,6 +47,7 @@ import { NotificationInputCommunityCalendarEventCreated } from './dto/space/noti
 import { NotificationInputPlatformInvitation } from './dto/space/notification.dto.input.space.community.invitation.platform';
 import { NotificationInputVirtualContributorSpaceCommunityInvitationDeclined } from './dto/space/notification.dto.input.space.community.invitation.vc.declined';
 import { NotificationInputCommunityNewMember } from './dto/space/notification.dto.input.space.community.new.member';
+import { NotificationInputUserEmailChangeSpaceAdmin } from './dto/space/notification.dto.input.space.user.email.change';
 import { NotificationAdapter } from './notification.adapter';
 import { NotificationUserAdapter } from './notification.user.adapter';
 
@@ -960,6 +961,46 @@ export class NotificationSpaceAdapter {
         }
       );
     }
+  }
+
+  /**
+   * Per-space email-change fan-out (FR-016e). Published once per space the
+   * subject is a member of — delivered to that space's admins and leads, with
+   * the subject excluded; email channel only.
+   */
+  public async userEmailChangeSpaceAdmin(
+    eventData: NotificationInputUserEmailChangeSpaceAdmin,
+    spaceID: string
+  ): Promise<void> {
+    const event = NotificationEvent.USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION;
+    const recipients = await this.getNotificationRecipientsSpace(
+      event,
+      eventData,
+      spaceID
+    );
+
+    // The change's subject is excluded from the fan-out (FR-016e) — they
+    // already receive the security-signal and new-address notifications.
+    const emailRecipients = recipients.emailRecipients.filter(
+      recipient => recipient.id !== eventData.subjectUserID
+    );
+    if (emailRecipients.length === 0) {
+      return;
+    }
+
+    const space = await this.spaceLookupService.getSpaceOrFail(spaceID, {
+      relations: { about: { profile: true } },
+    });
+
+    const payload =
+      await this.notificationExternalAdapter.buildUserEmailChangeSpaceAdminNotificationPayload(
+        event,
+        eventData,
+        emailRecipients,
+        space
+      );
+
+    this.notificationExternalAdapter.sendExternalNotifications(event, payload);
   }
 
   public async spaceCommunityPlatformInvitationCreated(

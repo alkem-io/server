@@ -112,6 +112,19 @@ import { Subscriber } from './subscriber';
               routingKey: 'libra-flow',
               durable: true,
             },
+            {
+              // Engine result queue — external VC engines publish to
+              // the `event-bus` exchange with routing key
+              // `invoke-engine-result`.  Declaring it here makes
+              // golevelup re-assert the binding on every reconnect,
+              // eliminating the drift where the queue was recreated
+              // (via Subscriber.createSubscriber) without its binding
+              // and engine replies silently vanished.
+              name: eventBusConfig.invoke_engine_result,
+              exchange: eventBusConfig.exchange,
+              routingKey: 'invoke-engine-result',
+              durable: true,
+            },
           ],
         };
       },

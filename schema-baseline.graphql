@@ -27,9 +27,19 @@ type Account implements ActorFull {
   """The ID of the Actor"""
   id: UUID!
   """The InnovationHubs for this Account."""
-  innovationHubs: [InnovationHub!]!
+  innovationHubs(
+    """
+    Filter InnovationHubs by SearchVisibility. If not specified, all InnovationHubs are returned.
+    """
+    searchVisibility: [SearchVisibility!]
+  ): [InnovationHub!]!
   """The InnovationPacks for this Account."""
-  innovationPacks: [InnovationPack!]!
+  innovationPacks(
+    """
+    Filter InnovationPacks by SearchVisibility. If not specified, all InnovationPacks are returned.
+    """
+    searchVisibility: [SearchVisibility!]
+  ): [InnovationPack!]!
   """The License operating on this Account."""
   license: License!
   """A name identifier of the Account, unique within the platform."""
@@ -625,6 +635,11 @@ enum ActorType {
   VIRTUAL_CONTRIBUTOR
 }
 
+input AddPollOptionInput {
+  pollID: UUID!
+  text: String!
+}
+
 input AddVisualToMediaGalleryInput {
   """The ID of the media gallery."""
   mediaGalleryID: String!
@@ -634,6 +649,30 @@ input AddVisualToMediaGalleryInput {
   The type of visual to add (e.g. MEDIA_GALLERY_IMAGE, MEDIA_GALLERY_VIDEO).
   """
   visualType: VisualType!
+}
+
+input AdminUserEmailChangeDriftResolveInput {
+  """
+  The admin-chosen canonical email. MUST equal either the old or new email recorded on the drift_detected audit entry. Both sides are force-aligned to this value.
+  """
+  canonicalEmail: String!
+  """The subject user whose latest audit entry is drift_detected."""
+  userID: UUID!
+}
+
+input AdminUserEmailChangeInput {
+  """
+  Who authorized the change within the subject user's organization. Distinct from the acting platform admin.
+  """
+  approver: EmailChangeApproverInput!
+  """The proposed new email address."""
+  newEmail: String!
+  """
+  Admin justification for the change (e.g. support-ticket reference). Recorded on every audit entry for this operation.
+  """
+  reason: String!
+  """The subject user whose login email is being changed."""
+  userID: UUID!
 }
 
 type AiPersona {
@@ -713,6 +752,13 @@ input ApplicationEventInput {
 input ApplyForEntryRoleOnRoleSetInput {
   questions: [CreateNVPInput!]!
   roleSetID: UUID!
+}
+
+input AssignConversationMemberInput {
+  """The ID of the conversation to add a member to."""
+  conversationID: UUID!
+  """The ID of the member (user or VC) to add."""
+  memberID: UUID!
 }
 
 input AssignLicensePlanToAccount {
@@ -857,6 +903,7 @@ enum AuthorizationPolicyType {
   CALLOUT_FRAMING
   CLASSIFICATION
   COLLABORATION
+  COLLABORA_DOCUMENT
   COMMUNICATION
   COMMUNICATION_CONVERSATION
   COMMUNICATION_MESSAGING
@@ -882,6 +929,7 @@ enum AuthorizationPolicyType {
   ORGANIZATION
   ORGANIZATION_VERIFICATION
   PLATFORM
+  POLL
   POST
   PROFILE
   REFERENCE
@@ -1096,6 +1144,8 @@ enum CalloutAllowedActors {
 type CalloutContribution {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """The CollaboraDocument that was contributed."""
+  collaboraDocument: CollaboraDocument
   """The user that created this Document"""
   createdBy: User
   """The date at which the entity was created."""
@@ -1132,6 +1182,7 @@ type CalloutContributionDefaults {
 }
 
 enum CalloutContributionType {
+  COLLABORA_DOCUMENT
   LINK
   MEMO
   POST
@@ -1139,6 +1190,8 @@ enum CalloutContributionType {
 }
 
 type CalloutContributionsCountOutput {
+  """The number of contributions of type CollaboraDocument in this callout"""
+  collaboraDocument: Float!
   """The number of contributions of type Link in this callout"""
   link: Float!
   """The number of contributions of type Memo in this callout"""
@@ -1149,9 +1202,18 @@ type CalloutContributionsCountOutput {
   whiteboard: Float!
 }
 
+enum CalloutDescriptionDisplayMode {
+  COLLAPSED
+  EXPANDED
+}
+
 type CalloutFraming {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """
+  The Collabora document attached to this Callout Framing, if any. Present when framing.type = COLLABORA_DOCUMENT.
+  """
+  collaboraDocument: CollaboraDocument
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
@@ -1162,6 +1224,10 @@ type CalloutFraming {
   mediaGallery: MediaGallery
   """The Memo for framing the associated Callout."""
   memo: Memo
+  """
+  The Poll attached to this Callout Framing, if any. Present when framing.type = POLL.
+  """
+  poll: Poll
   """The Profile for framing the associated Callout."""
   profile: Profile!
   """
@@ -1175,10 +1241,12 @@ type CalloutFraming {
 }
 
 enum CalloutFramingType {
+  COLLABORA_DOCUMENT
   LINK
   MEDIA_GALLERY
   MEMO
   NONE
+  POLL
   WHITEBOARD
 }
 
@@ -1277,6 +1345,15 @@ enum CalloutsSetType {
   KNOWLEDGE_BASE
 }
 
+input CastPollVoteInput {
+  """The ID of the Poll to vote on."""
+  pollID: UUID!
+  """
+  The complete set of selected PollOption IDs. When updating an existing vote, the entire selection set must be provided. Count must be ≥ poll.minResponses and ≤ poll.maxResponses. All IDs must belong to the specified poll.
+  """
+  selectedOptionIDs: [UUID!]!
+}
+
 type Classification {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -1290,6 +1367,37 @@ type Classification {
   tagsets: [Tagset!]
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type CollaboraDocument {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """The user that created this CollaboraDocument."""
+  createdBy: User
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The type of the collaborative document."""
+  documentType: CollaboraDocumentType!
+  """The ID of the entity"""
+  id: UUID!
+  """The Profile for this CollaboraDocument."""
+  profile: Profile!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+enum CollaboraDocumentType {
+  DRAWING
+  PRESENTATION
+  SPREADSHEET
+  WORDPROCESSING
+}
+
+type CollaboraEditorUrlResult {
+  """The time-to-live of the access token in seconds."""
+  accessTokenTTL: Float!
+  """The URL to open the document in the Collabora editor."""
+  editorUrl: String!
 }
 
 type Collaboration {
@@ -1391,11 +1499,6 @@ input CommunicationAdminUpdateRoomStateInput {
   isPublic: Boolean!
   isWorldVisible: Boolean!
   roomID: String!
-}
-
-enum CommunicationConversationType {
-  USER_USER
-  USER_VC
 }
 
 input CommunicationSendMessageToCommunityLeadsInput {
@@ -1571,6 +1674,11 @@ input ContributionsFilterInput {
   types: [CalloutContributionType!]
 }
 
+input ContributorFilterInput {
+  displayName: String
+  nameID: String
+}
+
 type Conversation {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -1578,27 +1686,17 @@ type Conversation {
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  """All members of this Conversation, returned as actors with their types."""
+  members: [Actor!]!
   messaging: Messaging!
   """The room for this Conversation."""
-  room: Room
-  """
-  The type of this Conversation (USER_USER or USER_VC), inferred from member agent types.
-  """
-  type: CommunicationConversationType!
+  room: Room!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
-  """
-  The other user participating in this Conversation (excludes the current user).
-  """
-  user: User
-  """
-  The virtual contributor participating in this Conversation (only for USER_AGENT conversations).
-  """
-  virtualContributor: VirtualContributor
 }
 
 """
-Event fired when a new conversation is created. Each member receives a personalized event with the other participant resolved via conversation.user or conversation.virtualContributor.
+Event fired when a new conversation is created. All members receive the event with the full conversation and its members list.
 """
 type ConversationCreatedEvent {
   """The conversation that was created."""
@@ -1609,14 +1707,38 @@ type ConversationCreatedEvent {
   message: Message
 }
 
+"""
+The type of conversation to create. Maps to room type: DIRECT → DM room, GROUP → group room.
+"""
+enum ConversationCreationType {
+  DIRECT
+  GROUP
+}
+
+"""Event fired when a conversation is deleted. All members are notified."""
+type ConversationDeletedEvent {
+  """
+  The ID of the deleted conversation. UUID only — conversation no longer exists.
+  """
+  conversationID: UUID!
+}
+
 """Payload for conversation subscription events."""
 type ConversationEventSubscriptionResult {
   """Present when eventType is CONVERSATION_CREATED."""
   conversationCreated: ConversationCreatedEvent
+  """Present when eventType is CONVERSATION_DELETED."""
+  conversationDeleted: ConversationDeletedEvent
+  """Present when eventType is CONVERSATION_UPDATED."""
+  conversationUpdated: ConversationUpdatedEvent
   """
   The type of event. Use this to determine which payload field is populated.
   """
   eventType: ConversationEventType!
+  """Present when eventType is MEMBER_ADDED."""
+  memberAdded: ConversationMemberAddedEvent
+  """Present when eventType is MEMBER_REMOVED."""
+  memberRemoved: ConversationMemberRemovedEvent
   """Present when eventType is MESSAGE_RECEIVED."""
   messageReceived: ConversationMessageReceivedEvent
   """Present when eventType is MESSAGE_REMOVED."""
@@ -1628,9 +1750,33 @@ type ConversationEventSubscriptionResult {
 """The type of conversation event."""
 enum ConversationEventType {
   CONVERSATION_CREATED
+  CONVERSATION_DELETED
+  CONVERSATION_UPDATED
+  MEMBER_ADDED
+  MEMBER_REMOVED
   MESSAGE_RECEIVED
   MESSAGE_REMOVED
   READ_RECEIPT_UPDATED
+}
+
+"""Event fired when a member is added to a group conversation."""
+type ConversationMemberAddedEvent {
+  """The actor that was added as a member."""
+  addedMember: Actor!
+  """The conversation the member was added to."""
+  conversation: Conversation!
+}
+
+"""
+Event fired when a member is removed from or leaves a group conversation.
+"""
+type ConversationMemberRemovedEvent {
+  """The conversation the member was removed from."""
+  conversation: Conversation!
+  """
+  The ID of the removed member. UUID only — removed member may not be resolvable after removal.
+  """
+  removedMemberID: UUID!
 }
 
 """Event fired when a new message is received in a conversation."""
@@ -1655,6 +1801,12 @@ type ConversationReadReceiptUpdatedEvent {
   lastReadEventId: MessageID!
   """The room ID where the read receipt was updated."""
   roomId: UUID!
+}
+
+"""Event fired when a conversation is updated (displayName, avatarUrl)."""
+type ConversationUpdatedEvent {
+  """The conversation that was updated."""
+  conversation: Conversation!
 }
 
 input ConversationVcResetInput {
@@ -1716,6 +1868,7 @@ input CreateCalendarEventOnCalendarInput {
 }
 
 type CreateCalloutContributionData {
+  collaboraDocument: CreateCollaboraDocumentData
   link: CreateLinkData
   memo: CreateMemoData
   post: CreatePostData
@@ -1742,6 +1895,7 @@ input CreateCalloutContributionDefaultsInput {
 }
 
 input CreateCalloutContributionInput {
+  collaboraDocument: CreateCollaboraDocumentInput
   link: CreateLinkInput
   memo: CreateMemoInput
   post: CreatePostInput
@@ -1769,8 +1923,14 @@ type CreateCalloutData {
 }
 
 type CreateCalloutFramingData {
+  """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
+  collaboraDocument: CreateCollaboraDocumentData
   link: CreateLinkData
   memo: CreateMemoData
+  """
+  Poll definition to attach to this Callout Framing. Required when type = POLL. Ignored for all other framing types.
+  """
+  poll: CreatePollData
   profile: CreateProfileData!
   tags: [String!]
   """
@@ -1781,8 +1941,14 @@ type CreateCalloutFramingData {
 }
 
 input CreateCalloutFramingInput {
+  """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
+  collaboraDocument: CreateCollaboraDocumentInput
   link: CreateLinkInput
   memo: CreateMemoInput
+  """
+  Poll definition to attach to this Callout Framing. Required when type = POLL. Ignored for all other framing types.
+  """
+  poll: CreatePollInput
   profile: CreateProfileInput!
   tags: [String!]
   """
@@ -1895,6 +2061,28 @@ input CreateClassificationInput {
   tagsets: [CreateTagsetInput!]!
 }
 
+type CreateCollaboraDocumentData {
+  """
+  Title for the new collaborative document. Required for blank-create. On the upload path, defaulted from the uploaded filename (extension stripped) when absent or empty.
+  """
+  displayName: String
+  """
+  Type of document to create. Required for blank-create. On the upload path, ignored — the type is derived from the uploaded file's sniffed MIME by file-service-go.
+  """
+  documentType: CollaboraDocumentType
+}
+
+input CreateCollaboraDocumentInput {
+  """
+  Title for the new collaborative document. Required for blank-create. On the upload path, defaulted from the uploaded filename (extension stripped) when absent or empty.
+  """
+  displayName: String
+  """
+  Type of document to create. Required for blank-create. On the upload path, ignored — the type is derived from the uploaded file's sniffed MIME by file-service-go.
+  """
+  documentType: CollaboraDocumentType
+}
+
 type CreateCollaborationData {
   """The CalloutsSet to use for this Collaboration."""
   calloutsSetData: CreateCalloutsSetData!
@@ -1930,6 +2118,7 @@ input CreateCommunityGuidelinesInput {
 
 input CreateContributionOnCalloutInput {
   calloutID: UUID!
+  collaboraDocument: CreateCollaboraDocumentInput
   link: CreateLinkInput
   memo: CreateMemoInput
   post: CreatePostInput
@@ -1940,9 +2129,22 @@ input CreateContributionOnCalloutInput {
 }
 
 input CreateConversationInput {
-  userID: UUID!
-  virtualContributorID: UUID
-  wellKnownVirtualContributor: VirtualContributorWellKnown
+  """
+  Optional avatar URL for GROUP conversations. Ignored for DIRECT conversations. Accepts mxc:// or https:// URLs.
+  """
+  avatarUrl: String
+  """
+  Optional display name for GROUP conversations. Ignored for DIRECT conversations (Synapse uses the other member name automatically).
+  """
+  displayName: String
+  """
+  IDs of members to add. For DIRECT: exactly 1 ID. For GROUP: 1+ IDs. Creator is auto-included.
+  """
+  memberIDs: [UUID!]!
+  """
+  The type of conversation to create: DIRECT for 1-on-1, GROUP for multi-party.
+  """
+  type: ConversationCreationType!
 }
 
 type CreateInnovationFlowData {
@@ -2113,6 +2315,36 @@ input CreateOrganizationInput {
   website: String
 }
 
+type CreatePollData {
+  """
+  Initial options for the poll. Minimum 2 options required. Options appear in the order provided.
+  """
+  options: [String!]!
+  """
+  Poll configuration settings (all immutable after creation). Optional; uses defaults for any unspecified settings.
+  """
+  settings: PollSettingsData
+  """
+  Poll title. Optional. Maximum length 512 characters. Becomes an empty string if not provided.
+  """
+  title: String
+}
+
+input CreatePollInput {
+  """
+  Initial options for the poll. Minimum 2 options required. Options appear in the order provided.
+  """
+  options: [String!]!
+  """
+  Poll configuration settings (all immutable after creation). Optional; uses defaults for any unspecified settings.
+  """
+  settings: PollSettingsInput
+  """
+  Poll title. Optional. Maximum length 512 characters. Becomes an empty string if not provided.
+  """
+  title: String
+}
+
 type CreatePostData {
   tags: [String!]
 }
@@ -2215,10 +2447,19 @@ input CreateSpaceSettingsCollaborationInput {
 input CreateSpaceSettingsInput {
   """"""
   collaboration: CreateSpaceSettingsCollaborationInput
+  """The layout settings for this Space."""
+  layout: CreateSpaceSettingsLayoutInput
   """"""
   membership: CreateSpaceSettingsMembershipInput
   """"""
   privacy: CreateSpaceSettingsPrivacyInput
+  """The sort mode for subspaces: Alphabetical or Custom."""
+  sortMode: SpaceSortMode
+}
+
+input CreateSpaceSettingsLayoutInput {
+  """The default display mode for callout descriptions."""
+  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode!
 }
 
 input CreateSpaceSettingsMembershipInput {
@@ -2456,6 +2697,7 @@ enum CredentialType {
   ORGANIZATION_OWNER
   SPACE_ADMIN
   SPACE_FEATURE_MEMO_MULTI_USER
+  SPACE_FEATURE_OFFICE_DOCUMENTS
   SPACE_FEATURE_SAVE_AS_TEMPLATE
   SPACE_FEATURE_VIRTUAL_CONTRIBUTORS
   SPACE_FEATURE_WHITEBOARD_MULTI_USER
@@ -2490,6 +2732,11 @@ input DeleteCalendarEventInput {
 }
 
 input DeleteCalloutInput {
+  ID: UUID!
+}
+
+input DeleteCollaboraDocumentInput {
+  """The ID of the CollaboraDocument to delete."""
   ID: UUID!
 }
 
@@ -2675,6 +2922,29 @@ type Document {
   url: String!
 }
 
+"""Who authorized an email change within the subject user’s organization."""
+type EmailChangeApprover {
+  """Name of the person who authorized the change."""
+  name: String!
+  """The organization within which the change was authorized."""
+  organization: String
+  """The approver's role or title within the organization."""
+  role: String!
+}
+
+input EmailChangeApproverInput {
+  """Name of the person who authorized the change."""
+  name: String!
+  """
+  The organization within which the change was authorized, if applicable.
+  """
+  organization: String
+  """
+  The approver's role or title within the organization (e.g. 'Organization Administrator').
+  """
+  role: String!
+}
+
 """An Emoji."""
 scalar Emoji
 
@@ -2700,7 +2970,7 @@ input ExternalConfigInput {
   """The assistant ID backing the service in OpenAI`s assistant API"""
   assistantId: String
   """The OpenAI model to use for the service"""
-  model: OpenAIModel! = O1
+  model: OpenAIModel! = GPT_5_4_NANO
 }
 
 type FileStorageConfig {
@@ -2853,6 +3123,21 @@ enum IdentityVerificationStatusFilter {
   VERIFIED
 }
 
+input ImportCollaboraDocumentInput {
+  """
+  The ID of the Callout to attach the imported document to as a new contribution.
+  """
+  calloutID: UUID!
+  """
+  Optional title override. If absent, derived from the uploaded filename (extension stripped).
+  """
+  displayName: String
+  """
+  Optional sortOrder for the new contribution. Defaults to one less than the current minimum (new contribution appears first).
+  """
+  sortOrder: Float
+}
+
 type InAppNotification {
   """The category of the notification event."""
   category: NotificationEventCategory!
@@ -2976,6 +3261,19 @@ type InAppNotificationPayloadSpaceCollaborationCalloutPostComment implements InA
   """The details of the message."""
   messageDetails: MessageDetails
   """The Space where the comment was made."""
+  space: Space!
+  """The payload type."""
+  type: NotificationEventPayload!
+}
+
+type InAppNotificationPayloadSpaceCollaborationPoll implements InAppNotificationPayload {
+  """The Callout that contains the poll."""
+  callout: Callout!
+  """The Poll this notification relates to."""
+  poll: Poll!
+  """The ID of the Poll this notification relates to."""
+  pollID: UUID!
+  """Where the callout is located."""
   space: Space!
   """The payload type."""
   type: NotificationEventPayload!
@@ -3302,6 +3600,11 @@ type LatestReleaseDiscussion {
   nameID: String!
 }
 
+input LeaveConversationInput {
+  """The ID of the conversation to leave."""
+  conversationID: UUID!
+}
+
 type Library {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -3386,6 +3689,7 @@ enum LicenseEntitlementType {
   ACCOUNT_SPACE_PREMIUM
   ACCOUNT_VIRTUAL_CONTRIBUTOR
   SPACE_FLAG_MEMO_MULTI_USER
+  SPACE_FLAG_OFFICE_DOCUMENTS
   SPACE_FLAG_SAVE_AS_TEMPLATE
   SPACE_FLAG_VIRTUAL_CONTRIBUTOR_ACCESS
   SPACE_FLAG_WHITEBOARD_MULTI_USER
@@ -3467,6 +3771,7 @@ type Licensing {
 enum LicensingCredentialBasedCredentialType {
   ACCOUNT_LICENSE_PLUS
   SPACE_FEATURE_MEMO_MULTI_USER
+  SPACE_FEATURE_OFFICE_DOCUMENTS
   SPACE_FEATURE_SAVE_AS_TEMPLATE
   SPACE_FEATURE_VIRTUAL_CONTRIBUTORS
   SPACE_FEATURE_WHITEBOARD_MULTI_USER
@@ -3716,14 +4021,10 @@ type LookupQueryResults {
 scalar Markdown
 
 type MeConversationsResult {
-  """Conversations between users."""
-  users: [Conversation!]!
   """
-  Get a conversation with a well-known virtual contributor for the current user.
+  All conversations (direct and group) for the current authenticated user. Client handles categorization by room type and member actor types.
   """
-  virtualContributor(wellKnown: VirtualContributorWellKnown!): Conversation
-  """Conversations between users and virtual contributors."""
-  virtualContributors: [Conversation!]!
+  conversations: [Conversation!]!
 }
 
 type MeQueryResults {
@@ -3892,6 +4193,7 @@ type MigrateEmbeddings {
 enum MimeType {
   AVIF
   BMP
+  CSV
   DOC
   DOCX
   GIF
@@ -3899,6 +4201,7 @@ enum MimeType {
   HEIF
   JPEG
   JPG
+  ODG
   ODP
   ODS
   ODT
@@ -3911,6 +4214,7 @@ enum MimeType {
   PPT
   PPTM
   PPTX
+  RTF
   SVG
   WEBP
   XLS
@@ -3960,11 +4264,43 @@ input MoveCalloutContributionInput {
   contributionID: UUID!
 }
 
+input MoveSpaceL1ToSpaceL0Input {
+  """
+  Send invitations to former community members who are also in the target L0 community.
+  """
+  autoInvite: Boolean = false
+  """Custom invitation message. Used only when autoInvite is true."""
+  invitationMessage: String
+  """The L1 subspace to move to a different L0 space."""
+  spaceL1ID: UUID!
+  """The target L0 space (must be different from the current parent L0)."""
+  targetSpaceL0ID: UUID!
+}
+
+input MoveSpaceL1ToSpaceL2Input {
+  """
+  Send invitations to former community members who are also in the target L0 community.
+  """
+  autoInvite: Boolean = false
+  """Custom invitation message. Used only when autoInvite is true."""
+  invitationMessage: String
+  """The L1 subspace to move and demote to L2."""
+  spaceL1ID: UUID!
+  """
+  The target L1 subspace in a different L0 (new parent for the demoted space).
+  """
+  targetSpaceL1ID: UUID!
+}
+
 type Mutation {
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
   """Adds a full email address to the platform notification blacklist"""
   addNotificationEmailToBlacklist(input: NotificationEmailAddressInput!): [String!]!
+  """
+  Add a new option to a Poll. Requires UPDATE privilege, or CONTRIBUTE privilege when the poll setting allowContributorsAddOptions is enabled. The new option is appended with the next available sort order.
+  """
+  addPollOption(optionData: AddPollOptionInput!): Poll!
   """Add a reaction to a message from the specified Room."""
   addReactionToMessageInRoom(reactionData: RoomAddReactionToMessageInput!): Reaction!
   """Adds a new visual to the specified media gallery."""
@@ -3977,6 +4313,10 @@ type Mutation {
   adminCommunicationMigrateOrphanedConversations: CommunicationAdminMigrateRoomsResult!
   """Remove an orphaned room from messaging platform."""
   adminCommunicationRemoveOrphanedRoom(orphanedRoomData: CommunicationAdminRemoveOrphanedRoomInput!): Boolean!
+  """
+  Synchronize all Alkemio spaces into the Matrix space hierarchy. Idempotent — safe to call multiple times.
+  """
+  adminCommunicationSyncSpaceHierarchy: Boolean!
   """Allow updating the state flags of a particular rule."""
   adminCommunicationUpdateRoomState(roomStateData: CommunicationAdminUpdateRoomStateInput!): Boolean!
   """Delete a Kratos identity by ID."""
@@ -4005,6 +4345,14 @@ type Mutation {
   Remove the Kratos account associated with the specified User. Note: the Users profile on the platform is not deleted.
   """
   adminUserAccountDelete(userID: UUID!): User!
+  """
+  Change a user's login email synchronously, acting as a platform administrator. The admin is responsible for verifying the subject user's identity out-of-band — the platform does NOT send a confirmation message to the new mailbox and does NOT require the new mailbox to prove ownership. Validates uniqueness, commits Kratos → Alkemio with bounded retry, invalidates the subject's existing sessions, and sends a security-signal notification to the old address. Requires PLATFORM_ADMIN.
+  """
+  adminUserEmailChange(adminUserEmailChangeData: AdminUserEmailChangeInput!): UserEmailChangeResult!
+  """
+  Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio and Kratos to a canonical email chosen by the admin. Requires PLATFORM_ADMIN.
+  """
+  adminUserEmailChangeDriftResolve(adminUserEmailChangeDriftResolveData: AdminUserEmailChangeDriftResolveInput!): UserEmailChangeResult!
   """Create a test customer on wingback."""
   adminWingbackCreateTestCustomer: String!
   """Get wingback customer entitlements."""
@@ -4019,6 +4367,10 @@ type Mutation {
   aiServerUpdateAiPersona(aiPersonaData: UpdateAiPersonaInput!): AiPersona!
   """Apply to join the specified RoleSet in the entry Role."""
   applyForEntryRoleOnRoleSet(applicationData: ApplyForEntryRoleOnRoleSetInput!): Application!
+  """
+  Assign a member to a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_ADDED subscription event.
+  """
+  assignConversationMember(memberData: AssignConversationMemberInput!): Boolean!
   """Assign the specified LicensePlan to an Account."""
   assignLicensePlanToAccount(planData: AssignLicensePlanToAccount!): Account!
   """Assign the specified LicensePlan to a Space."""
@@ -4051,6 +4403,10 @@ type Mutation {
   authorizationPolicyResetOnUser(authorizationResetData: UserAuthorizationResetInput!): User!
   """Reset the specified Authorization Policy to global admin privileges"""
   authorizationPolicyResetToGlobalAdminsAccess(authorizationID: String!): Authorization!
+  """
+  Cast or update a vote on a Poll. Requires CONTRIBUTE privilege on the Poll (space member). If the calling user has already voted, their vote is REPLACED ENTIRELY with the new selection set.
+  """
+  castPollVote(voteData: CastPollVoteInput!): Poll!
   """Deletes collections nameID-..."""
   cleanupCollections: MigrateEmbeddings!
   """Move an L1 Space up in the hierarchy, to be a L0 Space."""
@@ -4065,11 +4421,15 @@ type Mutation {
   Convert a VC of type ALKEMIO_SPACE to be of type KNOWLEDGE_BASE. All Callouts from the Space currently being used are moved to the Knowledge Base. Note: only allowed for VCs using a Space within the same Account.
   """
   convertVirtualContributorToUseKnowledgeBase(conversionData: ConversionVcSpaceToVcKnowledgeBaseInput!): VirtualContributor!
-  """Create a new Callout on the CalloutsSet."""
-  createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!): Callout!
+  """
+  Create a new Callout on the CalloutsSet. When `file` is supplied alongside a COLLABORA_DOCUMENT framing, the new callout is framed with a Collabora document populated from the uploaded bytes (file-service-go sniffs MIME, validates format and size, and derives the document type; any documentType in the input is ignored on the upload path; displayName defaults from the filename when absent). When `file` is omitted, the existing blank-create behaviour applies and framing.collaboraDocument must specify both displayName and documentType.
+  """
+  createCalloutOnCalloutsSet(calloutData: CreateCalloutOnCalloutsSetInput!, file: Upload): Callout!
   """Create a new Contribution on the Callout."""
   createContributionOnCallout(contributionData: CreateContributionOnCalloutInput!): CalloutContribution!
-  """Create a new Conversation on the Messaging."""
+  """
+  Create a new Conversation. Use type DIRECT for 1-on-1, GROUP for multi-party.
+  """
   createConversation(conversationData: CreateConversationInput!): Conversation!
   """Creates a new Discussion as part of this Forum."""
   createDiscussion(createData: ForumCreateDiscussionInput!): Discussion!
@@ -4119,10 +4479,12 @@ type Mutation {
   deleteCalendarEvent(deleteData: DeleteCalendarEventInput!): CalendarEvent!
   """Delete a Callout."""
   deleteCallout(deleteData: DeleteCalloutInput!): Callout!
+  """Deletes the specified CollaboraDocument."""
+  deleteCollaboraDocument(deleteData: DeleteCollaboraDocumentInput!): CollaboraDocument!
   """Deletes a contribution."""
   deleteContribution(deleteData: DeleteContributionInput!): CalloutContribution!
   """
-  Deletes a Conversation. The Matrix room is only deleted if no reciprocal conversation exists.
+  Deletes a Conversation. All members are notified via CONVERSATION_DELETED event.
   """
   deleteConversation(deleteData: DeleteConversationInput!): Conversation!
   """Deletes the specified Discussion."""
@@ -4167,6 +4529,10 @@ type Mutation {
   deleteVisualFromMediaGallery(deleteData: DeleteVisualFromMediaGalleryInput!): Visual!
   """Deletes the specified Whiteboard."""
   deleteWhiteboard(whiteboardData: DeleteWhiteboardInput!): Whiteboard!
+  """
+  Re-enable a previously disabled push notification subscription for the current user.
+  """
+  enablePushSubscription(subscriptionData: UnsubscribeFromPushNotificationsInput!): PushSubscription!
   """Trigger an event on the Application."""
   eventOnApplication(eventData: ApplicationEventInput!): Application!
   """Trigger an event on the Invitation."""
@@ -4180,6 +4546,10 @@ type Mutation {
   """Grants an authorization credential to a User."""
   grantCredentialToUser(grantCredentialData: GrantAuthorizationCredentialInput!): User!
   """
+  Import an existing file as a CollaboraDocument contribution on the callout. file-service-go sniffs the MIME from content and rejects formats Collabora cannot edit.
+  """
+  importCollaboraDocument(file: Upload!, uploadData: ImportCollaboraDocumentInput!): CalloutContribution!
+  """
   Invite new Contributors or users by email to join the specified RoleSet in the Entry Role.
   """
   inviteForEntryRoleOnRoleSet(invitationData: InviteForEntryRoleOnRoleSetInput!): [RoleSetInvitationResult!]!
@@ -4187,6 +4557,10 @@ type Mutation {
   Join the specified RoleSet using the entry Role, without going through an approval process.
   """
   joinRoleSet(joinData: JoinAsEntryRoleOnRoleSetInput!): RoleSet!
+  """
+  Leave a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_REMOVED subscription event. If the last member leaves, the conversation is auto-deleted and a CONVERSATION_DELETED event follows.
+  """
+  leaveConversation(leaveData: LeaveConversationInput!): Boolean!
   """Reset the License with Entitlements on the specified Account."""
   licenseResetOnAccount(resetData: AccountLicenseResetInput!): Account!
   """Marks a message as read for the current user."""
@@ -4201,6 +4575,14 @@ type Mutation {
   markNotificationsAsUnread(filter: NotificationEventsFilterInput): Boolean!
   """Moves the specified Contribution to another Callout."""
   moveContributionToCallout(moveContributionData: MoveCalloutContributionInput!): CalloutContribution!
+  """
+  Move an L1 subspace to a different L0 space. The subspace remains at level 1       but changes parent. All content moves with it. All community memberships are cleared.       Requires platform admin privileges.
+  """
+  moveSpaceL1ToSpaceL0(moveData: MoveSpaceL1ToSpaceL0Input!): Space!
+  """
+  Move an L1 subspace to become an L2 sub-subspace under a target L1 in a different L0 space.       The space is demoted from level 1 to level 2. All community roles are cleared.       Requires platform admin privileges.
+  """
+  moveSpaceL1ToSpaceL2(moveData: MoveSpaceL1ToSpaceL2Input!): Space!
   """Refresh the Bodies of Knowledge on All VCs"""
   refreshAllBodiesOfKnowledge: Boolean!
   """
@@ -4209,6 +4591,10 @@ type Mutation {
   refreshVirtualContributorBodyOfKnowledge(refreshData: RefreshVirtualContributorBodyOfKnowledgeInput!): Boolean!
   """Empties the CommunityGuidelines."""
   removeCommunityGuidelinesContent(communityGuidelinesData: RemoveCommunityGuidelinesContentInput!): CommunityGuidelines!
+  """
+  Remove a member from a group conversation. Returns true when the RPC is sent. Actual membership change arrives via MEMBER_REMOVED subscription event.
+  """
+  removeConversationMember(memberData: RemoveConversationMemberInput!): Boolean!
   """Remove the default callout template from an InnovationFlowState."""
   removeDefaultCalloutTemplateOnInnovationFlowState(removeData: RemoveDefaultCalloutTemplateOnInnovationFlowStateInput!): InnovationFlowState!
   """Removes an Iframe Allowed URL from the Platform Settings"""
@@ -4219,6 +4605,14 @@ type Mutation {
   removeNotificationEmailFromBlacklist(input: NotificationEmailAddressInput!): [String!]!
   """Removes a User from a Role on the Platform."""
   removePlatformRoleFromUser(roleData: RemovePlatformRoleInput!): User!
+  """
+  Remove an option from a Poll. Requires UPDATE privilege. Poll must retain at least 2 options. Votes that selected this option are deleted and affected voters are notified.
+  """
+  removePollOption(optionData: RemovePollOptionInput!): Poll!
+  """
+  Remove the current user vote from a Poll. Requires CONTRIBUTE privilege on the Poll. If the user has not voted, returns a validation error.
+  """
+  removePollVote(voteData: RemovePollVoteInput!): Poll!
   """Remove a reaction on a message from the specified Room."""
   removeReactionToMessageInRoom(reactionData: RoomRemoveReactionToMessageInput!): Boolean!
   """
@@ -4233,10 +4627,14 @@ type Mutation {
   removeRoleFromVirtualContributor(roleData: RemoveRoleOnRoleSetInput!): VirtualContributor!
   """Removes the specified User from specified user group"""
   removeUserFromGroup(membershipData: RemoveUserGroupMemberInput!): UserGroup!
+  """
+  Reorder Poll options. Requires UPDATE privilege. The provided list must contain exactly the same option IDs as the current poll options.
+  """
+  reorderPollOptions(optionData: ReorderPollOptionsInput!): Poll!
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
-  resetLicenseOnAccounts: Space!
+  resetLicenseOnAccounts: Boolean!
   """Revoke a credential from an Actor."""
   revokeCredentialFromActor(actorID: UUID!, credentialType: CredentialType!, resourceID: UUID): Boolean!
   """Removes an authorization credential from an Organization."""
@@ -4264,6 +4662,10 @@ type Mutation {
   """
   setPlatformWellKnownVirtualContributor(mappingData: SetPlatformWellKnownVirtualContributorInput!): PlatformWellKnownVirtualContributors!
   """
+  Subscribe the current user's device to push notifications. If the subscription endpoint already exists, it is updated. If the user has reached the maximum number of subscriptions (10), the oldest subscription is automatically replaced.
+  """
+  subscribeToPushNotifications(subscriptionData: SubscribeToPushNotificationsInput!): PushSubscription!
+  """
   Transfer the specified Callout from its current CalloutsSet to the target CalloutsSet. Note: this is experimental, and only for GlobalAdmins. The user that executes the transfer becomes the creator of the Callout.
   """
   transferCallout(transferData: TransferCalloutInput!): Callout!
@@ -4275,6 +4677,10 @@ type Mutation {
   transferSpaceToAccount(transferData: TransferAccountSpaceInput!): Space!
   """Transfer the specified Virtual Contributor to another Account."""
   transferVirtualContributorToAccount(transferData: TransferAccountVirtualContributorInput!): InnovationPack!
+  """
+  Disable a push notification subscription for the current user. The subscription is retained but will not receive notifications until re-enabled.
+  """
+  unsubscribeFromPushNotifications(subscriptionData: UnsubscribeFromPushNotificationsInput!): PushSubscription!
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
   """Update the baseline License Plan on the specified Account."""
@@ -4295,6 +4701,8 @@ type Mutation {
   updateCalloutsSortOrder(sortOrderData: UpdateCalloutsSortOrderInput!): [Callout!]!
   """Updates a Tagset on a Classification."""
   updateClassificationTagset(updateData: UpdateClassificationSelectTagsetValueInput!): Tagset!
+  """Updates the specified CollaboraDocument."""
+  updateCollaboraDocument(updateData: UpdateCollaboraDocumentInput!): CollaboraDocument!
   """
   Updates a Collaboration using the Space content from the specified Template. Behavior depends on parameter combinations: (1) Flow Only: deleteExistingCallouts=false, addCallouts=false - updates only InnovationFlow states; (2) Add Posts: deleteExistingCallouts=false, addCallouts=true - keeps existing and adds template callouts; (3) Replace All: deleteExistingCallouts=true, addCallouts=true - deletes existing then adds template callouts; (4) Delete Only: deleteExistingCallouts=true, addCallouts=false - deletes existing callouts and updates InnovationFlow states. Execution order: delete (if requested) → update flow states (always) → add (if requested).
   """
@@ -4303,6 +4711,10 @@ type Mutation {
   updateCommunityGuidelines(communityGuidelinesData: UpdateCommunityGuidelinesEntityInput!): CommunityGuidelines!
   """Update the sortOrder field of the Contributions of s Callout."""
   updateContributionsSortOrder(sortOrderData: UpdateContributionCalloutsSortOrderInput!): [CalloutContribution!]!
+  """
+  Update a group conversation (display name, avatar). Returns true when the RPC is sent. Actual changes arrive via CONVERSATION_UPDATED subscription events. When both fields are provided, clients may receive separate update events for each.
+  """
+  updateConversation(updateData: UpdateConversationInput!): Boolean!
   """Updates the specified Discussion."""
   updateDiscussion(updateData: UpdateDiscussionInput!): Discussion!
   """Updates the specified Document."""
@@ -4337,6 +4749,14 @@ type Mutation {
   updateOrganizationSettings(settingsData: UpdateOrganizationSettingsInput!): Organization!
   """Updates one of the Setting on the Platform"""
   updatePlatformSettings(settingsData: UpdatePlatformSettingsInput!): PlatformSettings!
+  """
+  Update the text of an existing Poll option. Requires UPDATE privilege. Votes that selected this option are deleted and affected voters are notified.
+  """
+  updatePollOption(optionData: UpdatePollOptionInput!): Poll!
+  """
+  Change the status of a Poll (OPEN ↔ CLOSED). Requires UPDATE privilege on the parent Callout. When a poll is CLOSED, all state-mutating operations are rejected. Idempotent: setting to current status succeeds without error.
+  """
+  updatePollStatus(statusData: UpdatePollStatusInput!): Poll!
   """Updates the specified Post."""
   updatePost(postData: UpdatePostInput!): Post!
   """Updates the specified Profile."""
@@ -4349,6 +4769,10 @@ type Mutation {
   updateSpacePlatformSettings(updateData: UpdateSpacePlatformSettingsInput!): Space!
   """Updates one of the Setting on a Space"""
   updateSpaceSettings(settingsData: UpdateSpaceSettingsInput!): Space!
+  """
+  Updates the pinned state of a Subspace within the specified Space. Returns the updated Subspace.
+  """
+  updateSubspacePinned(pinnedData: UpdateSubspacePinnedInput!): Space!
   """
   Update the sortOrder field of the supplied Subspaces to increase as per the order that they are provided in.
   """
@@ -4453,12 +4877,20 @@ enum NotificationEvent {
   SPACE_COLLABORATION_CALLOUT_CONTRIBUTION
   SPACE_COLLABORATION_CALLOUT_POST_CONTRIBUTION_COMMENT
   SPACE_COLLABORATION_CALLOUT_PUBLISHED
+  SPACE_COLLABORATION_POLL_MODIFIED_ON_POLL_I_VOTED_ON
+  SPACE_COLLABORATION_POLL_VOTE_AFFECTED_BY_OPTION_CHANGE
+  SPACE_COLLABORATION_POLL_VOTE_CAST_ON_OWN_POLL
+  SPACE_COLLABORATION_POLL_VOTE_CAST_ON_POLL_I_VOTED_ON
   SPACE_COMMUNICATION_UPDATE
   SPACE_COMMUNITY_CALENDAR_EVENT_COMMENT
   SPACE_COMMUNITY_CALENDAR_EVENT_CREATED
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
   SPACE_LEAD_COMMUNICATION_MESSAGE
   USER_COMMENT_REPLY
+  USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION
+  USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION
+  USER_EMAIL_CHANGE_SECURITY_SIGNAL
+  USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION
   USER_MENTIONED
   USER_MESSAGE
   USER_SIGN_UP_WELCOME
@@ -4494,6 +4926,7 @@ enum NotificationEventPayload {
   SPACE_COLLABORATION_CALLOUT
   SPACE_COLLABORATION_CALLOUT_COMMENT
   SPACE_COLLABORATION_CALLOUT_POST_COMMENT
+  SPACE_COLLABORATION_POLL
   SPACE_COMMUNICATION_MESSAGE_DIRECT
   SPACE_COMMUNICATION_UPDATE
   SPACE_COMMUNITY_ACTOR
@@ -4503,6 +4936,9 @@ enum NotificationEventPayload {
   SPACE_COMMUNITY_INVITATION
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
   USER
+  USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION
+  USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION
+  USER_EMAIL_CHANGE_SECURITY_SIGNAL
   USER_MESSAGE_DIRECT
   USER_MESSAGE_ROOM
   VIRTUAL_CONTRIBUTOR
@@ -4518,6 +4954,8 @@ type NotificationRecipientResult {
   emailRecipients: [User!]!
   """The in-app recipients for the notification."""
   inAppRecipients: [User!]!
+  """The push recipients for the notification."""
+  pushRecipients: [User!]!
   """The user that triggered the event."""
   triggeredBy: User
 }
@@ -4544,34 +4982,29 @@ input NotificationSettingInput {
   email: Boolean
   """Enable in-app notifications for this setting"""
   inApp: Boolean
+  """Enable push notifications for this setting"""
+  push: Boolean
 }
 
 enum OpenAIModel {
-  BABBAGE_002
-  DALL_E_2
-  DALL_E_3
-  DAVINCI_002
-  GPT_3_5_TURBO
-  GPT_4
-  GPT_4O
-  GPT_4O_AUDIO_PREVIEW
-  GPT_4O_MINI
-  GPT_4O_MINI_AUDIO_PREVIEW
-  GPT_4O_MINI_REALTIME_PREVIEW
-  GPT_4O_REALTIME_PREVIEW
-  GPT_4_5_PREVIEW
-  GPT_4_TURBO
-  O1
-  O1_MINI
+  GPT_5
+  GPT_5_1
+  GPT_5_1_MINI
+  GPT_5_2
+  GPT_5_2_PRO
+  GPT_5_4
+  GPT_5_4_MINI
+  GPT_5_4_NANO
+  GPT_5_4_PRO
+  GPT_5_5
+  GPT_5_5_PRO
+  GPT_5_MINI
+  GPT_5_NANO
+  GPT_5_PRO
+  O3
   O3_MINI
-  OMNI_MODERATION_LATEST
-  TEXT_EMBEDDING_3_LARGE
-  TEXT_EMBEDDING_3_SMALL
-  TEXT_EMBEDDING_ADA_002
-  TEXT_MODERATION_LATEST
-  TTS_1
-  TTS_1_HD
-  WHISPER_1
+  O3_PRO
+  O4_MINI
 }
 
 type Organization implements ActorFull & Groupable {
@@ -4807,6 +5240,10 @@ type PlatformAdminIdentityQueryResults {
 }
 
 type PlatformAdminQueryResults {
+  """
+  Retrieve all Accounts on the Platform. This is only available to Platform Admins.
+  """
+  accounts: [Account!]!
   """Lookup Communication related information."""
   communication: PlatformAdminCommunicationQueryResults!
   """Lookup Identity related information."""
@@ -4819,6 +5256,10 @@ type PlatformAdminQueryResults {
   Retrieve all Innovation Packs on the Platform. This is only available to Platform Admins.
   """
   innovationPacks(queryData: InnovationPacksInput): [InnovationPack!]!
+  """
+  The most recent email-change audit entry for the named subject user. Returns null if no audit entry exists.
+  """
+  latestUserEmailChangeAuditEntry(userID: UUID!): UserEmailChangeAuditEntry
   """
   Retrieve all Organizations on the Platform. This is only available to Platform Admins.
   """
@@ -4844,6 +5285,10 @@ type PlatformAdminQueryResults {
     """Return Spaces matching the provided filter."""
     filter: SpaceFilterInput
   ): [Space!]!
+  """
+  Paginated email-change audit-entry history for the named subject user, ordered by timestamp descending. Cursor pagination per docs/Pagination.md.
+  """
+  userEmailChangeAuditEntries(after: String, before: String, first: Float, last: Float, userID: UUID!): UserEmailChangeAuditEntries!
   """
   Retrieve all Users on the Platform. This is only available to Platform Admins.
   """
@@ -5009,6 +5454,187 @@ type PlatformWellKnownVirtualContributors {
   mappings: [PlatformWellKnownVirtualContributorMapping!]!
 }
 
+type Poll {
+  """The authorization rules for the entity"""
+  authorization: Authorization
+  """
+  Whether the current user can see detailed results (visibility gate passed).
+  """
+  canSeeDetailedResults: Boolean!
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """
+  [Future] Date/time after which the poll automatically closes. Always null in this iteration.
+  """
+  deadline: DateTime
+  """The ID of the entity"""
+  id: UUID!
+  """
+  The current user's vote on this poll, or null if the current user has not voted.
+  """
+  myVote: PollVote
+  """
+  The selectable options for this poll, always ordered by sortOrder ascending.
+  """
+  options: [PollOption!]!
+  """Configuration settings for this poll (immutable after creation)."""
+  settings: PollSettings!
+  """
+  Current lifecycle status of this poll. Always OPEN in this iteration; CLOSED reserved for future use.
+  """
+  status: PollStatus!
+  """Poll title."""
+  title: String!
+  """
+  Total number of votes cast on this poll. Null when resultsVisibility = HIDDEN and the current user has not voted.
+  """
+  totalVotes: Int
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+"""The type of event that occurred on a poll."""
+enum PollEventType {
+  POLL_OPTIONS_CHANGED
+  POLL_STATUS_CHANGED
+  POLL_VOTE_UPDATED
+}
+
+type PollOption {
+  createdDate: DateTime!
+  id: UUID!
+  """
+  Position of this option in the creation order (used for tie-breaking in results).
+  """
+  sortOrder: Int!
+  text: String!
+  updatedDate: DateTime!
+  """
+  Number of votes this option has received. Null when results are hidden or resultsDetail = PERCENTAGE.
+  """
+  voteCount: Int
+  """
+  Percentage of total votes this option has received (0–100). Null when results are hidden or resultsDetail = COUNT. Null when totalVotes = 0.
+  """
+  votePercentage: Float
+  """
+  List of space members who voted for this option. Null when results are hidden or resultsDetail is not FULL.
+  """
+  voters: [User!]
+}
+
+type PollOptionsChangedSubscriptionResult {
+  """
+  The updated Poll. Fields are filtered per subscriber's visibility context.
+  """
+  poll: Poll!
+  """The type of poll event."""
+  pollEventType: PollEventType!
+}
+
+"""Controls the level of detail shown in poll results."""
+enum PollResultsDetail {
+  """Vote count per option; no voter identities."""
+  COUNT
+  """Counts and voter list per option — fully transparent (default)."""
+  FULL
+  """Only percentage per option; no vote counts or voter identities."""
+  PERCENTAGE
+}
+
+"""Controls when poll results become visible to voters."""
+enum PollResultsVisibility {
+  """Results hidden until the viewer has cast their own vote."""
+  HIDDEN
+  """
+  Only the total vote count is shown before voting; details (depending on PollResultsDetail) become available after voting.
+  """
+  TOTAL_ONLY
+  """
+  Full results always visible regardless of whether the viewer has voted (default).
+  """
+  VISIBLE
+}
+
+type PollSettings {
+  """
+  Whether users with CONTRIBUTE privilege can add new options to the poll. Immutable after poll creation. Default: false.
+  """
+  allowContributorsAddOptions: Boolean!
+  """
+  Maximum number of options a voter may select (0 = unlimited). Immutable after poll creation.
+  """
+  maxResponses: Int!
+  """
+  Minimum number of options a voter must select (≥ 1). Immutable after poll creation.
+  """
+  minResponses: Int!
+  """
+  Controls how much detail is shown in results. Immutable after poll creation.
+  """
+  resultsDetail: PollResultsDetail!
+  """
+  Controls when results become visible to voters. Immutable after poll creation.
+  """
+  resultsVisibility: PollResultsVisibility!
+}
+
+type PollSettingsData {
+  """Whether voters can add new options to the poll. Defaults to false."""
+  allowContributorsAddOptions: Boolean
+  """Maximum selections allowed. Defaults to 1. Set to 0 for unlimited."""
+  maxResponses: Int
+  """Minimum selections required. Defaults to 1."""
+  minResponses: Int
+  """How much detail is shown. Defaults to FULL."""
+  resultsDetail: PollResultsDetail
+  """When results become visible. Defaults to VISIBLE."""
+  resultsVisibility: PollResultsVisibility
+}
+
+input PollSettingsInput {
+  """Whether voters can add new options to the poll. Defaults to false."""
+  allowContributorsAddOptions: Boolean
+  """Maximum selections allowed. Defaults to 1. Set to 0 for unlimited."""
+  maxResponses: Int
+  """Minimum selections required. Defaults to 1."""
+  minResponses: Int
+  """How much detail is shown. Defaults to FULL."""
+  resultsDetail: PollResultsDetail
+  """When results become visible. Defaults to VISIBLE."""
+  resultsVisibility: PollResultsVisibility
+}
+
+"""
+Lifecycle status of a Poll. OPEN allows voting and option management; CLOSED prevents all state-mutating operations.
+"""
+enum PollStatus {
+  CLOSED
+  OPEN
+}
+
+type PollVote {
+  """ID of the user who cast this vote."""
+  createdBy: UUID!
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The ID of the entity"""
+  id: UUID!
+  """The options selected in this vote."""
+  selectedOptions: [PollOption!]!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
+}
+
+type PollVoteUpdatedSubscriptionResult {
+  """
+  The updated Poll. Fields are filtered per subscriber's visibility context.
+  """
+  poll: Poll!
+  """The type of poll event."""
+  pollEventType: PollEventType!
+}
+
 type Post {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -5067,6 +5693,7 @@ enum ProfileType {
   ACCOUNT
   CALENDAR_EVENT
   CALLOUT_FRAMING
+  COLLABORA_DOCUMENT
   COMMUNITY_GUIDELINES
   CONTRIBUTION_LINK
   DISCUSSION
@@ -5202,11 +5829,32 @@ type PruneInAppNotificationAdminResult {
   removedCountOutsideRetentionPeriod: Int!
 }
 
+"""
+Represents a user's push notification subscription for a specific device/browser.
+"""
+type PushSubscription {
+  """When this subscription was created."""
+  createdDate: DateTime!
+  """Unique identifier for this subscription."""
+  id: UUID!
+  """
+  Last time a notification was successfully delivered to this subscription.
+  """
+  lastActiveDate: DateTime
+  """Current status of the subscription."""
+  status: PushSubscriptionStatus!
+  """Browser/device user agent string for display purposes."""
+  userAgent: String
+}
+
+"""Status of a push notification subscription."""
+enum PushSubscriptionStatus {
+  ACTIVE
+  DISABLED
+  EXPIRED
+}
+
 type Query {
-  """
-  The Accounts on this platform; If accessed through an Innovation Hub will return ONLY the Accounts defined in it.
-  """
-  accounts: [Account!]!
   """Activity events related to the current user."""
   activityFeed(
     """A pivot cursor after which items are selected"""
@@ -5233,6 +5881,8 @@ type Query {
   adminIdentitiesUnverified: [KratosIdentity!]!
   """Alkemio AiServer"""
   aiServer: AiServer!
+  """Retrieves the editor URL for the specified CollaboraDocument."""
+  collaboraEditorUrl(collaboraDocumentID: UUID!): CollaboraEditorUrlResult!
   """Active Spaces only, order by most active in the past X days."""
   exploreSpaces(options: ExploreSpacesInput): [Space!]!
   """
@@ -5245,6 +5895,10 @@ type Query {
   lookupByName: LookupByNameQueryResults!
   """Information about the current authenticated user"""
   me: MeQueryResults!
+  """
+  Returns the current user's push notification subscriptions (active and disabled). Requires authentication.
+  """
+  myPushSubscriptions: [PushSubscription!]!
   """The notificationRecipients for the provided event on the given entity."""
   notificationRecipients(eventData: NotificationRecipientsInput!): NotificationRecipientResult!
   """A particular Organization"""
@@ -5346,6 +6000,10 @@ type Query {
   ): PaginatedUsers!
   """All Users that hold credentials matching the supplied criteria."""
   usersWithAuthorizationCredential(credentialsCriteriaData: UsersWithAuthorizationCredentialInput!): [User!]!
+  """
+  Returns the VAPID public key needed by clients to subscribe to push notifications. Returns null if push notifications are not enabled on this server.
+  """
+  vapidPublicKey: String
   """A particular VirtualContributor"""
   virtualContributor(ID: UUID!): VirtualContributor!
   """
@@ -5429,6 +6087,8 @@ type RelayPaginatedSpace implements ActorFull {
   credentials: [Credential!]
   """The ID of the Actor"""
   id: UUID!
+  """The layout settings for this Space. Accessible without READ privilege."""
+  layout: SpaceSettingsLayout!
   """
   The level of this Space, representing the number of Spaces above this one.
   """
@@ -5437,14 +6097,24 @@ type RelayPaginatedSpace implements ActorFull {
   levelZeroSpaceID: String!
   """The License operating on this Space."""
   license: License!
+  """
+  Capped list of Contributors (Users, Virtual Contributors, …) that may be @mentioned in this Space. Scope adapts to the Space's privacy and the privacy of its ancestors: a private Space yields only its own Members; a public Space includes its Members plus the Members of each ancestor, walking up until the first private ancestor (inclusive) or until the public L0 root is reached, in which case all platform Contributors of the requested types are returned. Use `filter` for typeahead search and `types` to restrict which Contributor kinds are returned.
+  """
+  mentionableContributors(filter: ContributorFilterInput, limit: Int, types: [ActorType!]): [ActorFull!]!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
+  """Whether this Space is pinned in its parent Space."""
+  pinned: Boolean!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
   """The profile for this Actor."""
   profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
+  """
+  The sort mode for subspaces of this Space: Alphabetical or Custom. Accessible without READ privilege.
+  """
+  sortMode: SpaceSortMode!
   """The sorting order for this Space within its parent."""
   sortOrder: Int!
   """The StorageAggregator in use by this Space"""
@@ -5494,6 +6164,13 @@ input RemoveCommunityGuidelinesContentInput {
   communityGuidelinesID: UUID!
 }
 
+input RemoveConversationMemberInput {
+  """The ID of the conversation to remove a member from."""
+  conversationID: UUID!
+  """The ID of the member (user or VC) to remove."""
+  memberID: UUID!
+}
+
 input RemoveDefaultCalloutTemplateOnInnovationFlowStateInput {
   flowStateID: UUID!
 }
@@ -5501,6 +6178,16 @@ input RemoveDefaultCalloutTemplateOnInnovationFlowStateInput {
 input RemovePlatformRoleInput {
   actorID: UUID!
   role: RoleName!
+}
+
+input RemovePollOptionInput {
+  optionID: UUID!
+  pollID: UUID!
+}
+
+input RemovePollVoteInput {
+  """The ID of the Poll from which to remove the current user vote."""
+  pollID: UUID!
 }
 
 input RemoveRoleOnRoleSetInput {
@@ -5512,6 +6199,11 @@ input RemoveRoleOnRoleSetInput {
 input RemoveUserGroupMemberInput {
   groupID: UUID!
   userID: UUID!
+}
+
+input ReorderPollOptionsInput {
+  optionIDs: [UUID!]!
+  pollID: UUID!
 }
 
 input RevokeAuthorizationCredentialInput {
@@ -5809,6 +6501,8 @@ type RolesResultSpace {
 type Room {
   """The authorization rules for the entity"""
   authorization: Authorization
+  """The avatar URL of the Room (mxc:// or https://). Fetched from Matrix."""
+  avatarUrl: String
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The display name of the Room."""
@@ -5821,6 +6515,10 @@ type Room {
   messages: [Message!]!
   """The number of messages in the Room."""
   messagesCount: Int!
+  """
+  The type of room (e.g., post, callout, conversation_direct, conversation_group).
+  """
+  type: RoomType!
   """
   Simple unread message count for the current user. Use unreadCounts for per-thread breakdown.
   """
@@ -5922,6 +6620,18 @@ type RoomThreadUnreadCount {
   count: Int!
   """The thread ID."""
   threadId: MessageID!
+}
+
+"""The type of room."""
+enum RoomType {
+  CALENDAR_EVENT
+  CALLOUT
+  CONVERSATION
+  CONVERSATION_DIRECT
+  CONVERSATION_GROUP
+  DISCUSSION_FORUM
+  POST
+  UPDATES
 }
 
 """Unread message counts for a Room."""
@@ -6183,6 +6893,8 @@ type Space implements ActorFull {
   credentials: [Credential!]
   """The ID of the Actor"""
   id: UUID!
+  """The layout settings for this Space. Accessible without READ privilege."""
+  layout: SpaceSettingsLayout!
   """
   The level of this Space, representing the number of Spaces above this one.
   """
@@ -6191,14 +6903,24 @@ type Space implements ActorFull {
   levelZeroSpaceID: String!
   """The License operating on this Space."""
   license: License!
+  """
+  Capped list of Contributors (Users, Virtual Contributors, …) that may be @mentioned in this Space. Scope adapts to the Space's privacy and the privacy of its ancestors: a private Space yields only its own Members; a public Space includes its Members plus the Members of each ancestor, walking up until the first private ancestor (inclusive) or until the public L0 root is reached, in which case all platform Contributors of the requested types are returned. Use `filter` for typeahead search and `types` to restrict which Contributor kinds are returned.
+  """
+  mentionableContributors(filter: ContributorFilterInput, limit: Int, types: [ActorType!]): [ActorFull!]!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
+  """Whether this Space is pinned in its parent Space."""
+  pinned: Boolean!
   """The calculated platform access for this Space."""
   platformAccess: PlatformRolesAccess!
   """The profile for this Actor."""
   profile: Profile
   """The settings for this Space."""
   settings: SpaceSettings!
+  """
+  The sort mode for subspaces of this Space: Alphabetical or Custom. Accessible without READ privilege.
+  """
+  sortMode: SpaceSortMode!
   """The sorting order for this Space within its parent."""
   sortOrder: Int!
   """The StorageAggregator in use by this Space"""
@@ -6304,10 +7026,14 @@ enum SpacePrivacyMode {
 type SpaceSettings {
   """The collaboration settings for this Space."""
   collaboration: SpaceSettingsCollaboration!
+  """The layout settings for this Space."""
+  layout: SpaceSettingsLayout!
   """The membership settings for this Space."""
   membership: SpaceSettingsMembership!
   """The privacy settings for this Space"""
   privacy: SpaceSettingsPrivacy!
+  """The sort mode for subspaces of this Space: Alphabetical or Custom."""
+  sortMode: SpaceSortMode!
 }
 
 type SpaceSettingsCollaboration {
@@ -6329,6 +7055,11 @@ type SpaceSettingsCollaboration {
   inheritMembershipRights: Boolean!
 }
 
+type SpaceSettingsLayout {
+  """The default display mode for callout descriptions in this Space."""
+  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode!
+}
+
 type SpaceSettingsMembership {
   """Allow subspace admins to invite to this Space."""
   allowSubspaceAdminsToInviteMembers: Boolean!
@@ -6343,6 +7074,11 @@ type SpaceSettingsPrivacy {
   allowPlatformSupportAsAdmin: Boolean!
   """The privacy mode for this Space"""
   mode: SpacePrivacyMode!
+}
+
+enum SpaceSortMode {
+  ALPHABETICAL
+  CUSTOM
 }
 
 type SpaceSubscription {
@@ -6478,6 +7214,21 @@ type StorageConfig {
   file: FileStorageConfig!
 }
 
+input SubscribeToPushNotificationsInput {
+  """The auth key from PushSubscription.getKey('auth'), Base64URL-encoded"""
+  auth: String!
+  """The push service endpoint URL from PushSubscription.endpoint"""
+  endpoint: String!
+  """
+  The p256dh key from PushSubscription.getKey('p256dh'), Base64URL-encoded
+  """
+  p256dh: String!
+  """
+  Optional browser/device user agent for display in subscription management UI
+  """
+  userAgent: String
+}
+
 type Subscription {
   activityCreated(input: ActivityCreatedSubscriptionInput!): ActivityCreatedSubscriptionResult!
   """
@@ -6488,7 +7239,7 @@ type Subscription {
     calloutID: UUID!
   ): CalloutPostCreated!
   """
-  Receive conversation events for the authenticated user. Includes new conversations, messages, and read receipts.
+  Receive conversation events for the authenticated user. Includes conversation lifecycle (created, updated, deleted), messages (received, removed), membership changes (member added, removed), and read receipts.
   """
   conversationEvents: ConversationEventSubscriptionResult!
   """Receive updates on Discussions"""
@@ -6502,6 +7253,20 @@ type Subscription {
   Counter of unread in-app notifications for the currently authenticated user.
   """
   notificationsUnreadCount: Int!
+  """
+  Subscribe to option changes on a specific Poll. Fires when options are added, removed, updated, or reordered. Always delivered regardless of resultsVisibility.
+  """
+  pollOptionsChanged(
+    """The ID of the Poll to subscribe to."""
+    pollID: UUID!
+  ): PollOptionsChangedSubscriptionResult!
+  """
+  Subscribe to vote updates on a specific Poll. Fires when votes are cast or updated. When resultsVisibility = HIDDEN and the subscriber has not voted, events are suppressed.
+  """
+  pollVoteUpdated(
+    """The ID of the Poll to subscribe to."""
+    pollID: UUID!
+  ): PollVoteUpdatedSubscriptionResult!
   """Receive Room event"""
   roomEvents(
     """The Room to receive the events from."""
@@ -6802,6 +7567,11 @@ input TransferCalloutInput {
 """A uuid identifier. Length 36 characters."""
 scalar UUID
 
+input UnsubscribeFromPushNotificationsInput {
+  """The ID of the push subscription to remove."""
+  subscriptionID: UUID!
+}
+
 input UpdateAiPersonaInput {
   ID: UUID!
   engine: AiPersonaEngine
@@ -6881,9 +7651,17 @@ input UpdateCalloutEntityInput {
 }
 
 input UpdateCalloutFramingInput {
+  """
+  Collabora document input. Used when switching framing type to COLLABORA_DOCUMENT.
+  """
+  collaboraDocument: CreateCollaboraDocumentInput
   link: UpdateLinkInput
   """The new markdown content for the Memo."""
   memoContent: Markdown
+  """
+  Updates for the Poll attached to this Framing. Only applies when type = POLL.
+  """
+  poll: UpdatePollInput
   """The Profile of the Template."""
   profile: UpdateProfileInput
   """The type of additional content attached to the framing of the callout."""
@@ -6951,6 +7729,13 @@ input UpdateClassificationSelectTagsetValueInput {
   tagsetName: String!
 }
 
+input UpdateCollaboraDocumentInput {
+  """The ID of the CollaboraDocument to update."""
+  ID: UUID!
+  """Updated display name for the document."""
+  displayName: String
+}
+
 input UpdateCollaborationFromSpaceTemplateInput {
   """Add the Callouts from the Collaboration Template"""
   addCallouts: Boolean = false
@@ -6979,6 +7764,19 @@ input UpdateContributionCalloutsSortOrderInput {
   contributionIDs: [UUID!]!
 }
 
+input UpdateConversationInput {
+  """
+  Avatar URL for the conversation. Accepts mxc:// or https:// URLs. Pass empty string to remove.
+  """
+  avatarUrl: String
+  """The ID of the conversation to update."""
+  conversationID: UUID!
+  """
+  New display name for the conversation. Only GROUP conversations support custom names.
+  """
+  displayName: String
+}
+
 input UpdateDiscussionInput {
   ID: UUID!
   """The category for the Discussion"""
@@ -6993,8 +7791,10 @@ input UpdateDiscussionInput {
 
 input UpdateDocumentInput {
   ID: UUID!
-  """The display name for the Document."""
-  displayName: String!
+  """
+  Display name. Currently rejected with a ValidationException — for documents owned by a parent entity (e.g., CollaboraDocument, Profile), use the parent's update mutation, which carries the context (file extension, MIME, profile coupling) needed to keep editor titles, download names, and the file-service row in sync. Direct rename via updateDocument will be wired when documents become a directly-managed resource (e.g., a per-space documents collection).
+  """
+  displayName: String
   tagset: UpdateTagsetInput
 }
 
@@ -7222,6 +8022,26 @@ input UpdatePlatformSettingsIntegrationInput {
   notificationEmailBlacklist: [String!]
 }
 
+input UpdatePollInput {
+  """
+  Updated title for the Poll (max 512 chars). This is the only mutable property once a poll is created; options are managed via separate mutations.
+  """
+  title: String
+}
+
+input UpdatePollOptionInput {
+  optionID: UUID!
+  pollID: UUID!
+  text: String!
+}
+
+input UpdatePollStatusInput {
+  """The ID of the Poll to update."""
+  pollID: UUID!
+  """The new status for the poll."""
+  status: PollStatus!
+}
+
 input UpdatePostInput {
   ID: UUID!
   """
@@ -7288,28 +8108,32 @@ input UpdateSpaceSettingsCollaborationInput {
   """
   Flag to control if events from Subspaces are visible on this Space calendar as well.
   """
-  allowEventsFromSubspaces: Boolean!
+  allowEventsFromSubspaces: Boolean
   """Flag to control if guest users can contribute to this Space."""
-  allowGuestContributions: Boolean!
+  allowGuestContributions: Boolean
   """Flag to control if members can create callouts."""
-  allowMembersToCreateCallouts: Boolean!
+  allowMembersToCreateCallouts: Boolean
   """Flag to control if members can create subspaces."""
-  allowMembersToCreateSubspaces: Boolean!
+  allowMembersToCreateSubspaces: Boolean
   """Flag to control if members can create video calls in this Space."""
-  allowMembersToVideoCall: Boolean!
+  allowMembersToVideoCall: Boolean
   """
   Flag to control if ability to contribute is inherited from parent Space.
   """
-  inheritMembershipRights: Boolean!
+  inheritMembershipRights: Boolean
 }
 
 input UpdateSpaceSettingsEntityInput {
   """"""
   collaboration: UpdateSpaceSettingsCollaborationInput
+  """The layout settings for this Space."""
+  layout: UpdateSpaceSettingsLayoutInput
   """"""
   membership: UpdateSpaceSettingsMembershipInput
   """"""
   privacy: UpdateSpaceSettingsPrivacyInput
+  """The sort mode for subspaces: Alphabetical or Custom."""
+  sortMode: SpaceSortMode
 }
 
 input UpdateSpaceSettingsInput {
@@ -7317,6 +8141,11 @@ input UpdateSpaceSettingsInput {
   settings: UpdateSpaceSettingsEntityInput!
   """The identifier for the Space whose settings are to be updated."""
   spaceID: String!
+}
+
+input UpdateSpaceSettingsLayoutInput {
+  """The default display mode for callout descriptions."""
+  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode!
 }
 
 input UpdateSpaceSettingsMembershipInput {
@@ -7333,6 +8162,15 @@ input UpdateSpaceSettingsPrivacyInput {
   allowPlatformSupportAsAdmin: Boolean
   """"""
   mode: SpacePrivacyMode
+}
+
+input UpdateSubspacePinnedInput {
+  """Whether the subspace should be pinned (true) or unpinned (false)."""
+  pinned: Boolean!
+  """The ID of the parent Space containing the subspace."""
+  spaceID: UUID!
+  """The ID of the subspace to pin or unpin."""
+  subspaceID: UUID!
 }
 
 input UpdateSubspacesSortOrderInput {
@@ -7422,6 +8260,10 @@ input UpdateUserSettingsCommunicationInput {
 input UpdateUserSettingsEntityInput {
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
+  """
+  Update the user's design version. Any integer accepted (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).
+  """
+  designVersion: Int
   """Settings related to Home Space."""
   homeSpace: UpdateUserSettingsHomeSpaceInput
   """Settings related to this users Notifications preferences."""
@@ -7472,6 +8314,10 @@ input UpdateUserSettingsNotificationPlatformAdminInput {
   """[Admin] Receive a notification when a new L0 Space is created"""
   spaceCreated: NotificationSettingInput
   """
+  [Admin] Receive a notification when a user changes their login email address
+  """
+  userEmailChanged: NotificationSettingInput
+  """
   [Admin] Receive a notification user is assigned or removed from a global role
   """
   userGlobalRoleChanged: NotificationSettingInput
@@ -7501,6 +8347,10 @@ input UpdateUserSettingsNotificationSpaceAdminInput {
   communityApplicationReceived: NotificationSettingInput
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: NotificationSettingInput
+  """
+  Receive a notification when the login email of an admin or lead of a Space I administer is changed (admin)
+  """
+  userEmailChanged: NotificationSettingInput
 }
 
 input UpdateUserSettingsNotificationSpaceInput {
@@ -7514,6 +8364,18 @@ input UpdateUserSettingsNotificationSpaceInput {
   collaborationCalloutPostContributionComment: NotificationSettingInput
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: NotificationSettingInput
+  """Receive a notification when a poll you voted on is modified"""
+  collaborationPollModifiedOnPollIVotedOn: NotificationSettingInput
+  """
+  Receive a notification when a poll option you voted for is changed or removed
+  """
+  collaborationPollVoteAffectedByOptionChange: NotificationSettingInput
+  """Receive a notification when a vote is cast on a poll you created"""
+  collaborationPollVoteCastOnOwnPoll: NotificationSettingInput
+  """
+  Receive a notification when another user votes on a poll you already voted on
+  """
+  collaborationPollVoteCastOnPollIVotedOn: NotificationSettingInput
   """Receive a notification for community updates"""
   communicationUpdates: NotificationSettingInput
   """Receive a notification when a calendar event is created"""
@@ -7815,6 +8677,92 @@ input UserAuthorizationResetInput {
   userID: UUID!
 }
 
+"""
+Cursor-paginated list of email-change audit entries (per docs/Pagination.md).
+"""
+type UserEmailChangeAuditEntries {
+  auditEntries: [UserEmailChangeAuditEntry!]!
+  pageInfo: UserEmailChangeAuditEntriesPageInfo!
+  total: Float!
+}
+
+type UserEmailChangeAuditEntriesPageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
+"""
+A single email-change audit-trail entry. Append-only and retained indefinitely (FR-014a).
+"""
+type UserEmailChangeAuditEntry {
+  """
+  Who authorized the change within the subject user’s organization. Set for platform-admin-initiated changes; null for self-service entries.
+  """
+  approver: EmailChangeApprover
+  """Short non-leaky failure reason. Set on failure outcomes only."""
+  failureReason: String
+  id: UUID!
+  """
+  The user who initiated the change. Null for entries whose initiator could not be resolved (early validation rejects); initiatorRole is still present.
+  """
+  initiator: UserProfileSummary
+  initiatorRole: UserEmailChangeInitiatorRole!
+  """
+  For commit/rollback entries: the proposed/applied new address. For drift_detected entries: the value observed on the Kratos side at the moment of drift.
+  """
+  newEmail: String
+  """
+  Old email at the time of this audit entry. Null only for entries with no old-email context.
+  """
+  oldEmail: String
+  outcome: UserEmailChangeAuditOutcome!
+  """
+  Admin-supplied justification for the change. Set for platform-admin-initiated changes; null for self-service entries.
+  """
+  reason: String
+  """The user whose email is being changed."""
+  subject: UserProfileSummary!
+  timestamp: DateTime!
+}
+
+"""
+Outcome recorded for a single user-email-change audit entry. Spec 098 extends this enum additively with verification-flow outcomes.
+"""
+enum UserEmailChangeAuditOutcome {
+  COMMITTED
+  DRIFT_DETECTED
+  DRIFT_RESOLUTION_FAILED
+  DRIFT_RESOLVED
+  GLOBAL_ADMIN_NOTIFICATION_FAILED
+  NEW_ADDRESS_NOTIFICATION_FAILED
+  REJECTED_CONFLICT
+  REJECTED_VALIDATION
+  ROLLED_BACK
+  SECURITY_SIGNAL_FAILED
+  SESSION_INVALIDATION_FAILED
+  SPACE_ADMIN_NOTIFICATION_FAILED
+}
+
+"""Role of the actor who initiated a user-email-change audit event."""
+enum UserEmailChangeInitiatorRole {
+  PLATFORM_ADMIN
+  SELF
+}
+
+"""
+Result returned to the admin caller. Deliberately minimal — failures surface as typed GraphQL errors instead of returning false. Returned by both adminUserEmailChange and adminUserEmailChangeDriftResolve.
+"""
+type UserEmailChangeResult {
+  """The committed (canonical) email. Present on success."""
+  email: String
+  """
+  Always true on success. Failures throw typed GraphQL errors instead of returning false.
+  """
+  success: Boolean!
+}
+
 input UserFilterInput {
   displayName: String
   email: String
@@ -7839,6 +8787,14 @@ type UserGroup {
   updatedDate: DateTime!
 }
 
+"""
+Minimal user-profile summary identifying a user without exposing PII beyond id + displayName.
+"""
+type UserProfileSummary {
+  displayName: String!
+  id: UUID!
+}
+
 type UserSettings {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -7846,6 +8802,10 @@ type UserSettings {
   communication: UserSettingsCommunication!
   """The date at which the entity was created."""
   createdDate: DateTime!
+  """
+  The design version this User has selected (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).
+  """
+  designVersion: Int!
   """The home space settings for this User."""
   homeSpace: UserSettingsHomeSpace!
   """The ID of the entity"""
@@ -7890,6 +8850,8 @@ type UserSettingsNotificationChannels {
   email: Boolean!
   """Receive notifications by inApp."""
   inApp: Boolean!
+  """Receive push notifications."""
+  push: Boolean!
 }
 
 type UserSettingsNotificationOrganization {
@@ -7917,6 +8879,8 @@ type UserSettingsNotificationPlatform {
 type UserSettingsNotificationPlatformAdmin {
   """Receive a notification when a new L0 Space is created"""
   spaceCreated: UserSettingsNotificationChannels!
+  """Receive a notification when a user changes their login email address."""
+  userEmailChanged: UserSettingsNotificationChannels!
   """Receive a notification when a user global role is assigned or removed."""
   userGlobalRoleChanged: UserSettingsNotificationChannels!
   """Receive notification when a new user signs up"""
@@ -7938,6 +8902,18 @@ type UserSettingsNotificationSpace {
   collaborationCalloutPostContributionComment: UserSettingsNotificationChannels!
   """Receive a notification when a callout is published"""
   collaborationCalloutPublished: UserSettingsNotificationChannels!
+  """Receive a notification when a poll you voted on is modified"""
+  collaborationPollModifiedOnPollIVotedOn: UserSettingsNotificationChannels!
+  """
+  Receive a notification when a poll option you voted for is changed or removed
+  """
+  collaborationPollVoteAffectedByOptionChange: UserSettingsNotificationChannels!
+  """Receive a notification when a vote is cast on a poll you created"""
+  collaborationPollVoteCastOnOwnPoll: UserSettingsNotificationChannels!
+  """
+  Receive a notification when another user votes on a poll you already voted on
+  """
+  collaborationPollVoteCastOnPollIVotedOn: UserSettingsNotificationChannels!
   """Receive a notification for community updates"""
   communicationUpdates: UserSettingsNotificationChannels!
   """Receive a notification when a calendar event is created"""
@@ -7953,6 +8929,10 @@ type UserSettingsNotificationSpaceAdmin {
   communityApplicationReceived: UserSettingsNotificationChannels!
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: UserSettingsNotificationChannels!
+  """
+  Receive a notification when the login email of an admin or lead of a Space I administer is changed (admin)
+  """
+  userEmailChanged: UserSettingsNotificationChannels!
 }
 
 type UserSettingsNotificationUser {
@@ -8021,6 +9001,8 @@ type VirtualContributor implements ActorFull {
   bodyOfKnowledgeDescription: Markdown
   """The ID of the body of knowledge used by this Virtual Contributor."""
   bodyOfKnowledgeID: UUID
+  """The date when the body of knowledge was last successfully ingested."""
+  bodyOfKnowledgeLastUpdated: DateTime
   """The type of body of knowledge used by this Virtual Contributor."""
   bodyOfKnowledgeType: VirtualContributorBodyOfKnowledgeType!
   """The date at which the entity was created."""
