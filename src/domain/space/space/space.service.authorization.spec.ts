@@ -1,4 +1,8 @@
-import { AuthorizationCredential, AuthorizationPrivilege } from '@common/enums';
+import {
+  AuthorizationCredential,
+  AuthorizationPrivilege,
+  LogContext,
+} from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { RoleName } from '@common/enums/role.name';
@@ -22,6 +26,8 @@ import { TemplatesManagerAuthorizationService } from '@domain/template/templates
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { vi } from 'vitest';
 import { SpaceAboutAuthorizationService } from '../space.about/space.about.service.authorization';
 import { SpaceLookupService } from '../space.lookup/space.lookup.service';
 import { SpaceAuthorizationService } from './space.service.authorization';
@@ -39,6 +45,7 @@ describe('SpaceAuthorizationService', () => {
   let licenseAuthorizationService: LicenseAuthorizationService;
   let templatesManagerAuthorizationService: TemplatesManagerAuthorizationService;
   let platformRolesAccessService: PlatformRolesAccessService;
+  let logger: { error: ReturnType<typeof vi.fn> };
 
   const defaultSettings = {
     privacy: {
@@ -126,6 +133,7 @@ describe('SpaceAuthorizationService', () => {
       TemplatesManagerAuthorizationService
     );
     platformRolesAccessService = module.get(PlatformRolesAccessService);
+    logger = module.get(WINSTON_MODULE_NEST_PROVIDER) as any;
 
     (
       profileAuthorizationService.applyAuthorizationPolicy as any
@@ -710,7 +718,10 @@ describe('SpaceAuthorizationService', () => {
       ).toHaveBeenCalled();
     });
 
-    it('should throw when L0 space is missing templatesManager', async () => {
+    it('should skip templatesManager cascade and continue when L0 space is missing templatesManager', async () => {
+      // After the resilientCascade wrap, missing templatesManager no longer
+      // aborts the whole cascade — it's logged and the parent continues to
+      // about + profile.
       const space = createMockSpace({ templatesManager: undefined });
 
       (
@@ -725,10 +736,41 @@ describe('SpaceAuthorizationService', () => {
       (
         licenseAuthorizationService.applyAuthorizationPolicy as any
       ).mockReturnValue([]);
+      (
+        spaceAboutAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        profileAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
 
-      await expect(
-        service.propagateAuthorizationToChildEntities(space as any, true, [])
-      ).rejects.toThrow(RelationshipNotFoundException);
+      logger.error.mockClear();
+
+      const result = await service.propagateAuthorizationToChildEntities(
+        space as any,
+        true,
+        []
+      );
+
+      expect(result).toBeDefined();
+      // templatesManager cascade was skipped (templatesManager.applyAuthorizationPolicy not called)
+      expect(
+        templatesManagerAuthorizationService.applyAuthorizationPolicy
+      ).not.toHaveBeenCalled();
+      // ...but about + profile still ran (they come after templatesManager)
+      expect(
+        spaceAboutAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalled();
+      expect(
+        profileAuthorizationService.applyAuthorizationPolicy
+      ).toHaveBeenCalled();
+      // ...and the resilient-cascade logged the skip with step + space context.
+      expect(logger.error).toHaveBeenCalledWith(
+        expect.stringMatching(
+          /Auth-reset cascade step 'templatesManager' skipped for space space-1/
+        ),
+        expect.any(String),
+        LogContext.AUTH
+      );
     });
 
     it('should NOT propagate to templatesManager for non-L0 spaces', async () => {
