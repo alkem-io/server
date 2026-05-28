@@ -8,14 +8,14 @@ import {
 import { LicenseEntitlementNotAvailableException } from '@common/exceptions/license.entitlement.not.available.exception';
 import { LicenseEntitlementUnevaluableException } from '@common/exceptions/license.entitlement.unevaluable.exception';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LicenseService } from '@domain/common/license/license.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
-import { Collaboration } from './collaboration.entity';
-import { ICollaboration } from './collaboration.interface';
 
 const OFFICE_DOCS_USER_FACING_MESSAGE =
   'Office Docs is not enabled for this Collaboration.';
@@ -48,8 +48,9 @@ export class CollaborationLicenseService {
     });
     if (!collaborationEntity) {
       throw new EntityNotFoundException(
-        `Collaboration not found at start of license reset: ${collaborationID}`,
-        LogContext.LICENSE
+        'Collaboration not found at start of license reset',
+        LogContext.LICENSE,
+        { collaborationId: collaborationID }
       );
     }
     const collaboration: ICollaboration = collaborationEntity;

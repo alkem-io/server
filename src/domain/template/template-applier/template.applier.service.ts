@@ -1,8 +1,6 @@
 import { LogContext } from '@common/enums';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
-import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { ICallout } from '@domain/collaboration/callout/callout.interface';
+import { introducesCollaboraDocument } from '@domain/collaboration/callout/callout.collabora.gate.util';
 import { CalloutService } from '@domain/collaboration/callout/callout.service';
 import { CalloutsSetService } from '@domain/collaboration/callouts-set/callouts.set.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
@@ -63,11 +61,12 @@ export class TemplateApplierService {
     // before any persistence. If the source template introduces a Collabora Document
     // (framing or contribution-allowed) into the target Collaboration and the target
     // is unentitled, the entire apply MUST be rejected atomically (FR-005, SC-006).
+    const templateCallouts =
+      templateWithContentSpace.contentSpace.collaboration?.calloutsSet
+        ?.callouts ?? [];
     if (
       updateData.addCallouts &&
-      this.templateContentIntroducesCollaboraDocument(
-        templateWithContentSpace.contentSpace
-      )
+      templateCallouts.some(callout => introducesCollaboraDocument(callout))
     ) {
       await this.collaborationLicenseService.ensureOfficeDocsAllowedForCollaboration(
         targetCollaboration.id
@@ -81,35 +80,6 @@ export class TemplateApplierService {
       updateData.deleteExistingCallouts,
       userID
     );
-  }
-
-  /**
-   * Pre-flight scan: detects whether applying the given template content space would
-   * introduce a Collabora Document into the target Collaboration via any source
-   * Callout's framing-type or allowed contribution types (FR-004).
-   */
-  private templateContentIntroducesCollaboraDocument(
-    templateContentSpace: ITemplateContentSpace
-  ): boolean {
-    const sourceCallouts =
-      templateContentSpace.collaboration?.calloutsSet?.callouts ?? [];
-    return sourceCallouts.some((callout: ICallout) =>
-      this.calloutIntroducesCollaboraDocument(callout)
-    );
-  }
-
-  private calloutIntroducesCollaboraDocument(callout: ICallout): boolean {
-    if (callout.framing?.type === CalloutFramingType.COLLABORA_DOCUMENT) {
-      return true;
-    }
-    const allowedTypes = callout.settings?.contribution?.allowedTypes;
-    if (
-      Array.isArray(allowedTypes) &&
-      allowedTypes.includes(CalloutContributionType.COLLABORA_DOCUMENT)
-    ) {
-      return true;
-    }
-    return false;
   }
 
   private async updateCollaborationFromTemplateContentSpace(

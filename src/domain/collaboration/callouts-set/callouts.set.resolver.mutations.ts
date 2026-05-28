@@ -1,6 +1,5 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
@@ -27,6 +26,7 @@ import { InstrumentResolver } from '@src/apm/decorators';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { introducesCollaboraDocument } from '../callout/callout.collabora.gate.util';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
@@ -81,7 +81,7 @@ export class CalloutsSetResolverMutations {
     // contributions — when the owning Collaboration lacks SPACE_FLAG_OFFICE_DOCUMENTS.
     // Runs BEFORE the fileUpload buffering below so we fail fast without burning
     // CPU/memory on an upload that will be rejected.
-    if (this.introducesCollaboraDocument(calloutData)) {
+    if (introducesCollaboraDocument(calloutData)) {
       await this.collaborationLicenseService.ensureOfficeDocsAllowedForCalloutsSet(
         calloutData.calloutsSetID
       );
@@ -255,34 +255,5 @@ export class CalloutsSetResolverMutations {
       calloutsSet,
       sortOrderData
     );
-  }
-
-  /**
-   * Detects whether a CreateCalloutOnCalloutsSetInput introduces a Collabora Document
-   * — in any of three forms: framing-typed callout, allowed-contribution-type, or
-   * attached contribution. Used to scope the Office Docs entitlement gate (FR-004).
-   */
-  private introducesCollaboraDocument(
-    calloutData: CreateCalloutOnCalloutsSetInput
-  ): boolean {
-    if (calloutData.framing?.type === CalloutFramingType.COLLABORA_DOCUMENT) {
-      return true;
-    }
-    if (
-      calloutData.settings?.contribution?.allowedTypes?.includes(
-        CalloutContributionType.COLLABORA_DOCUMENT
-      )
-    ) {
-      return true;
-    }
-    if (
-      calloutData.contributions?.some(
-        contribution =>
-          contribution.type === CalloutContributionType.COLLABORA_DOCUMENT
-      )
-    ) {
-      return true;
-    }
-    return false;
   }
 }

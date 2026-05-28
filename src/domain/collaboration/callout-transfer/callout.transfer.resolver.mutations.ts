@@ -1,8 +1,6 @@
 import { CurrentActor } from '@common/decorators/current-actor.decorator';
 import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { CalloutContributionType } from '@common/enums/callout.contribution.type';
-import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import {
   RelationshipNotFoundException,
   ValidationException,
@@ -15,6 +13,7 @@ import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { introducesCollaboraDocument } from '../callout/callout.collabora.gate.util';
 import { ICallout } from '../callout/callout.interface';
 import { CalloutService } from '../callout/callout.service';
 import { CalloutAuthorizationService } from '../callout/callout.service.authorization';
@@ -88,7 +87,7 @@ export class CalloutTransferResolverMutations {
     // Office Docs entitlement gate (FR-001/FR-004/FR-006/FR-009): transfer is an
     // introduction path. If the source Callout has Collabora framing or allows
     // Collabora contributions, the target's Collaboration license governs (FR-006).
-    if (this.calloutIntroducesCollaboraDocument(callout)) {
+    if (introducesCollaboraDocument(callout)) {
       await this.collaborationLicenseService.ensureOfficeDocsAllowedForCalloutsSet(
         targetCalloutsSet.id
       );
@@ -115,24 +114,5 @@ export class CalloutTransferResolverMutations {
 
     await this.authorizationPolicyService.saveAll(authorizations);
     return this.calloutService.getCalloutOrFail(callout.id);
-  }
-
-  /**
-   * Detects whether a source Callout introduces a Collabora Document — by framing
-   * type or by allowing Collabora Document contributions — for Office Docs gating
-   * (FR-004).
-   */
-  private calloutIntroducesCollaboraDocument(callout: ICallout): boolean {
-    if (callout.framing?.type === CalloutFramingType.COLLABORA_DOCUMENT) {
-      return true;
-    }
-    const allowedTypes = callout.settings?.contribution?.allowedTypes;
-    if (
-      Array.isArray(allowedTypes) &&
-      allowedTypes.includes(CalloutContributionType.COLLABORA_DOCUMENT)
-    ) {
-      return true;
-    }
-    return false;
   }
 }

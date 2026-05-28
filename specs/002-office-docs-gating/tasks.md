@@ -43,7 +43,7 @@ description: 'Task list for Callout Introduction Gating for Collabora Document b
   - `ensureOfficeDocsAllowedForCallout(calloutID: string): Promise<void>` — same, but parent resolution starts from a Callout.
   - `ensureOfficeDocsAllowedForCollaboration(collaborationID: string): Promise<void>` — direct resolution.
   - All three log every decision point via the injected Winston logger with `LogContext.LICENSE`, structured `details: { collaborationId }`, and a static **kebab-case identifier** as the **log** message (independent of the **exception** message — the two strings have different audiences):
-    - `debug` on the allowed branch — log identifier `"office-docs-entitlement-allowed"` (required by constitution principle 5: license-check decision points).
+    - `verbose` on the allowed branch (the codebase's Winston-mapped equivalent of debug) — log identifier `"office-docs-entitlement-allowed"` (required by constitution principle 5: license-check decision points).
     - `warn` on entitlement-absent — log identifier `"office-docs-entitlement-absent"`.
     - `error` on unevaluable — log identifier `"office-docs-entitlement-unevaluable"`.
   - Depends on T004.

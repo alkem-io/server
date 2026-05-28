@@ -1,9 +1,9 @@
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
+import { CollaborationLicenseService } from '@domain/collaboration/collaboration/collaboration.service.license';
 import { LicenseModule } from '@domain/common/license/license.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
-import { Collaboration } from './collaboration.entity';
-import { CollaborationLicenseService } from './collaboration.service.license';
 
 /**
  * Leaf module that exports `CollaborationLicenseService` without pulling in the rest of
