@@ -61,11 +61,16 @@ gh pr view <N> --json state,reviews --jq '{state, reviews}'
 ### B. Find a fresh CR review
 
 ```bash
-gh api repos/{owner}/{repo}/pulls/<N>/reviews \
-  --jq "[.[] | select(.user.login == \"coderabbitai\") | select(.submitted_at > \"$last_review_time\")] | sort_by(.submitted_at) | last"
+if [ -n "$last_review_time" ] && [ "$last_review_time" != "null" ]; then
+  gh api repos/{owner}/{repo}/pulls/<N>/reviews \
+    --jq "[.[] | select(.user.login == \"coderabbitai\") | select(.submitted_at > \"$last_review_time\")] | sort_by(.submitted_at) | last"
+else
+  gh api repos/{owner}/{repo}/pulls/<N>/reviews \
+    --jq '[.[] | select(.user.login == "coderabbitai")] | sort_by(.submitted_at) | last'
+fi
 ```
 
-(If `last_review_time` is null, take the most recent CR review unconditionally.)
+(If `last_review_time` is null/empty, take the most recent CR review unconditionally — the jq `>` comparison against the literal string `"null"` would otherwise filter out everything.)
 
 - Empty result AND `now - trigger_time < WAIT_BUDGET_PER_ROUND` → ScheduleWakeup(POLL_INTERVAL, reason="polling CR on PR #N round R"). DO NOT call cr-triage this tick. END.
 - Empty result AND `now - trigger_time ≥ WAIT_BUDGET_PER_ROUND` → STOP, escalate ("CR did not respond within the per-round budget").
