@@ -3,7 +3,9 @@ import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { getCorrelationId } from '@core/middleware/correlation-id.middleware';
 import { Inject, Injectable } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
+import { AlkemioConfig } from '@src/types';
 import { randomUUID } from 'crypto';
 import type { Request } from 'express';
 import { Strategy } from 'passport-custom';
@@ -15,7 +17,6 @@ import type {
 } from '../session-store.redis';
 import { CookieSessionInvalidError } from './auth.errors';
 import {
-  COOKIE_SESSION_NAME,
   CookieSessionContext,
   SESSION_STORE_HANDLE,
   SessionStoreUnavailableError,
@@ -32,13 +33,25 @@ export class CookieSessionStrategy extends PassportStrategy(
   Strategy,
   AUTH_STRATEGY_OIDC_COOKIE_SESSION
 ) {
+  /**
+   * Per-env session cookie name resolved from `oidc.cookie.name`. Only used
+   * by the rare `req.sessionID`-missing fallback path below; the primary
+   * path uses the sid express-session already parsed for us.
+   */
+  private readonly sessionCookieName: string;
+
   constructor(
     @Inject(SESSION_STORE_HANDLE)
     private readonly sessionStore: SessionStoreHandle,
     private readonly authService: AuthenticationService,
-    private readonly actorContextService: ActorContextService
+    private readonly actorContextService: ActorContextService,
+    configService: ConfigService<AlkemioConfig, true>
   ) {
     super();
+    this.sessionCookieName = configService.get(
+      'identity.authentication.providers.oidc.cookie.name',
+      { infer: true }
+    );
   }
 
   async validate(req: Request): Promise<ActorContext | null> {
@@ -50,7 +63,7 @@ export class CookieSessionStrategy extends PassportStrategy(
     const sid =
       typeof req.sessionID === 'string' && req.sessionID.length > 0
         ? req.sessionID
-        : req.cookies?.[COOKIE_SESSION_NAME];
+        : req.cookies?.[this.sessionCookieName];
     if (typeof sid !== 'string' || sid.length === 0) return null;
 
     let payload: AlkemioSessionPayload | null;

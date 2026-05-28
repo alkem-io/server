@@ -58,10 +58,10 @@ const ANONYMOUS_ACTOR_ID = '00000000-0000-0000-0000-000000000000';
 @Controller('rest/internal')
 export class ForwardAuthController {
   /**
-   * Resolved at construction from `identity.authentication.providers.oidc.cookie.name`.
-   * Per-environment config (`alkemio_session_sandbox`, `alkemio_session_test`, …)
-   * means the cookie name on the wire is NOT the bare `alkemio_session` literal,
-   * so we cannot guard the BFF lookup with a hardcoded key.
+   * Per-env session cookie name (`alkemio_session_sandbox`, …) resolved once
+   * at construction from `oidc.cookie.name`. Hardcoding the literal would
+   * make the BFF lookup guard below miss the cookie in every non-default
+   * environment.
    */
   private readonly sessionCookieName: string;
 
@@ -95,8 +95,7 @@ export class ForwardAuthController {
     //    request actually carried the session cookie — express-session
     //    auto-generates a sid for every request, so without this guard the
     //    endpoint would attempt a BFF Redis lookup for unauthenticated traffic.
-    //    The cookie name is per-env (`alkemio_session`, `alkemio_session_sandbox`,
-    //    …) so resolve it from config rather than hardcoding the literal.
+    //    The cookie name is per-env
     const sid = req.cookies?.[this.sessionCookieName]
       ? typeof req.sessionID === 'string' && req.sessionID.length > 0
         ? req.sessionID

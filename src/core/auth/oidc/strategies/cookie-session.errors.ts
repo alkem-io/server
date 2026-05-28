@@ -16,4 +16,3 @@ export type CookieSessionContext = {
 };
 
 export const SESSION_STORE_HANDLE = Symbol('OIDC_SESSION_STORE_HANDLE');
-export const COOKIE_SESSION_NAME = 'alkemio_session';

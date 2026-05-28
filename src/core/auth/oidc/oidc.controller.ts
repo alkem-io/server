@@ -7,6 +7,8 @@ import {
   Req,
   Res,
 } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
+import { AlkemioConfig } from '@src/types';
 import { randomUUID, timingSafeEqual } from 'crypto';
 import type { Request, Response } from 'express';
 import { generators, type TokenSet } from 'openid-client';
@@ -39,7 +41,6 @@ declare module 'express-session' {
 const OIDC_SCOPE = 'openid profile email offline_access alkemio';
 const ERROR_HTML =
   '<!doctype html><meta charset="utf-8"><title>Authentication failed</title><p>Authentication failed.</p>';
-const SESSION_COOKIE_NAME = 'alkemio_session';
 
 // FR-022c — teardown thresholds for persistent refresh failures.
 const REFRESH_FAILURE_COUNT_THRESHOLD = 3;
@@ -79,8 +80,17 @@ const TERMINAL_REFRESH_ERRORS = new Set([
 
 @Controller('api/auth/oidc')
 export class OidcController {
+  /**
+   * Per-env session cookie name (`alkemio_session_sandbox`, …) resolved from
+   * `oidc.cookie.name`. Logout / cookie-clear paths MUST use this — hardcoding
+   * `alkemio_session` makes Set-Cookie clearance a no-op against the real
+   * env-suffixed cookie in every non-default environment.
+   */
+  private readonly sessionCookieName: string;
+
   constructor(
     private readonly oidcService: OidcService,
+    configService: ConfigService<AlkemioConfig, true>,
     // FR-022c — sessionStore optional because some test harnesses replace
     // OidcController via custom providers and don't wire SESSION_STORE_HANDLE.
     // When absent, tearDownSession falls back to legacy destroy-only behaviour
@@ -88,7 +98,12 @@ export class OidcController {
     @Optional()
     @Inject(SESSION_STORE_HANDLE)
     private readonly sessionStore?: SessionStoreHandle
-  ) {}
+  ) {
+    this.sessionCookieName = configService.get(
+      'identity.authentication.providers.oidc.cookie.name',
+      { infer: true }
+    );
+  }
 
   @Get('login')
   async login(
@@ -479,7 +494,7 @@ export class OidcController {
         // but functionally correct.
       }
     }
-    res.cookie(SESSION_COOKIE_NAME, '', {
+    res.cookie(this.sessionCookieName, '', {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',
@@ -518,7 +533,7 @@ export class OidcController {
     const rpId = client.metadata.client_id ?? null;
     const s = req.session;
     const storedIdToken = typeof s?.id_token === 'string' ? s.id_token : '';
-    const hasSessionCookie = !!req.cookies?.[SESSION_COOKIE_NAME];
+    const hasSessionCookie = !!req.cookies?.[this.sessionCookieName];
 
     // FR-017d — local cleanup is unconditional. Idempotent path: if there is
     // no live OIDC session (no stored id_token) we still clear any lingering
@@ -551,7 +566,7 @@ export class OidcController {
         res.status(204).end();
         return;
       }
-      res.cookie(SESSION_COOKIE_NAME, '', {
+      res.cookie(this.sessionCookieName, '', {
         httpOnly: true,
         sameSite: 'lax',
         path: '/',
@@ -593,7 +608,7 @@ export class OidcController {
       }
     });
 
-    res.cookie(SESSION_COOKIE_NAME, '', {
+    res.cookie(this.sessionCookieName, '', {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',

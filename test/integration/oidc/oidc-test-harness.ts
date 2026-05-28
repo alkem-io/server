@@ -16,6 +16,7 @@ import { CookieSessionStrategy } from '@core/auth/oidc/strategies/cookie-session
 import { AUTH_STRATEGY_OIDC_COOKIE_SESSION } from '@core/auth/oidc/strategies/strategy.names';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { INestApplication } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import cookieParser from 'cookie-parser';
 import express, {
@@ -212,6 +213,42 @@ export async function createOidcHarness(
       { provide: OidcService, useValue: oidcService },
       { provide: SESSION_STORE_HANDLE, useValue: sessionStore },
       {
+        // Minimal ConfigService stub — production OidcController,
+        // CookieSessionStrategy and CookieSessionStoreUnavailableFilter all
+        // read `identity.authentication.providers.oidc(.cookie.name)` to
+        // learn the per-env session cookie name. Callers use either the
+        // parent path (then `.cookie.name` on the object) or the full
+        // dotted path; the walker handles both so the harness doesn't care.
+        // The cookie name is pinned to the historical default
+        // `alkemio_session` so existing fixtures keep working.
+        provide: ConfigService,
+        useValue: (() => {
+          const configTree = {
+            identity: {
+              authentication: {
+                providers: {
+                  oidc: {
+                    cookie: { name: 'alkemio_session' },
+                  },
+                },
+              },
+            },
+          };
+          return {
+            get: (path: string) =>
+              path
+                .split('.')
+                .reduce<any>(
+                  (node, segment) =>
+                    node && typeof node === 'object'
+                      ? node[segment]
+                      : undefined,
+                  configTree
+                ),
+          };
+        })(),
+      },
+      {
         provide: AuthenticationService,
         useValue: {
           createActorContext: vi.fn(async (id: string) => ({
@@ -319,7 +356,7 @@ export async function createOidcHarness(
       res.status(200).json({ data: { me: { id: 'placeholder' } } });
     }
   );
-  app.use(cookieSessionStoreUnavailableMiddleware);
+  app.use(cookieSessionStoreUnavailableMiddleware('alkemio_session'));
   for (const mw of opts.middleware ?? []) app.use(mw);
   await app.init();
 
