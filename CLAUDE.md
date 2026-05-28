@@ -171,6 +171,10 @@ Winston logger signatures:
 - Align new GraphQL surface area with `docs/Pagination.md`
 - Enforce DTO validation
 
+## Testing
+
+When writing or reviewing tests, consult [`docs/testing-flakiness.md`](docs/testing-flakiness.md) for flakiness anti-patterns this project has paid for and the recommended replacements.
+
 ## Linting and Formatting
 
 **Biome** for linting and formatting (config: `biome.json`). Inline ignore: `// biome-ignore lint/rule-name: reason`
