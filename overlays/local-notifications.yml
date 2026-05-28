@@ -1,0 +1,21 @@
+# Local-dev override for testing the password-change observer end-to-end.
+#
+# Swaps the upstream alkemio/notifications:vX.Y.Z image for a locally-built
+# one that contains:
+#   - the USER_PASSWORD_CHANGE_SECURITY_SIGNAL event handler
+#   - the user.password.change.security.signal nunjucks template
+#   - @alkemio/notifications-lib@0.17.0 (not yet on npm)
+#
+# Bring up:
+#   docker compose -f quickstart-services.yml -f overlays/local-notifications.yml \
+#     up -d --no-deps notifications
+#
+# Revert (restores the registry image specified in quickstart-services.yml):
+#   docker compose -f quickstart-services.yml up -d --no-deps --force-recreate notifications
+services:
+  # NB: the service key in quickstart-services.yml is `notification` (singular).
+  # Mismatching that key creates a brand-new orphan service on the default
+  # network instead of overriding the running one.
+  notification:
+    image: alkemio/notifications:local-pwc
+    pull_policy: never

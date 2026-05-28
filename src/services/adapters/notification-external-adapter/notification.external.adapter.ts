@@ -123,6 +123,20 @@ export class NotificationExternalAdapter {
     );
   }
 
+  /**
+   * Password-change observer publish helper. Sent to the user's current email
+   * address whenever a Kratos-side password change is observed — the platform
+   * never sees the credential, only the fact of the change.
+   */
+  public async publishPasswordChangeSecuritySignal(
+    payload: unknown
+  ): Promise<void> {
+    await this.sendExternalNotifications(
+      NotificationEvent.USER_PASSWORD_CHANGE_SECURITY_SIGNAL,
+      payload
+    );
+  }
+
   async buildSpaceCommunityApplicationCreatedNotificationPayload(
     eventType: NotificationEvent,
     triggeredBy: string,
