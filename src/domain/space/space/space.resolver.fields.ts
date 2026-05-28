@@ -1,4 +1,5 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { SpaceSortMode } from '@common/enums/space.sort.mode';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
@@ -13,8 +14,10 @@ import {
 import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
 import { Loader } from '@core/dataloader/decorators';
 import { ILoader } from '@core/dataloader/loader.interface';
+import { ContributorFilterInput } from '@core/filtering/input-types';
 import { IPlatformRolesAccess } from '@domain/access/platform-roles-access/platform.roles.access.interface';
-import { IActor } from '@domain/actor/actor/actor.interface';
+import { IActor, IActorFull } from '@domain/actor/actor/actor.interface';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICollaboration } from '@domain/collaboration/collaboration/collaboration.interface';
 import { ILicense } from '@domain/common/license/license.interface';
 import { LimitAndShuffleIdsQueryArgs } from '@domain/common/query-args/limit-and-shuffle.ids.query.args';
@@ -26,7 +29,7 @@ import { SpaceService } from '@domain/space/space/space.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { ITemplatesManager } from '@domain/template/templates-manager';
 import { UseGuards } from '@nestjs/common';
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationActorHasPrivilege,
   CurrentActor,
@@ -42,7 +45,8 @@ import { ISpaceSubscription } from './space.license.subscription.interface';
 export class SpaceResolverFields {
   constructor(
     private spaceService: SpaceService,
-    private spaceLookupService: SpaceLookupService
+    private spaceLookupService: SpaceLookupService,
+    private actorLookupService: ActorLookupService
   ) {}
 
   @ResolveField('community', () => ICommunity, {
@@ -274,6 +278,36 @@ export class SpaceResolverFields {
   async templatesManager(@Parent() space: ISpace): Promise<ITemplatesManager> {
     return await this.spaceService.getTemplatesManagerOrFail(
       space.levelZeroSpaceID
+    );
+  }
+
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('mentionableContributors', () => [IActorFull], {
+    nullable: false,
+    description:
+      'Capped list of Contributors (Users, Virtual Contributors, …) that may be ' +
+      "@mentioned in this Space. Scope adapts to the Space's privacy and the " +
+      'privacy of its ancestors: a private Space yields only its own Members; ' +
+      'a public Space includes its Members plus the Members of each ancestor, ' +
+      'walking up until the first private ancestor (inclusive) or until the ' +
+      'public L0 root is reached, in which case all platform Contributors of the ' +
+      'requested types are returned. Use `filter` for typeahead search and ' +
+      '`types` to restrict which Contributor kinds are returned.',
+  })
+  async mentionableContributors(
+    @Parent() space: ISpace,
+    @Args('filter', { nullable: true }) filter?: ContributorFilterInput,
+    @Args('limit', { type: () => Int, nullable: true }) limit?: number,
+    @Args('types', { type: () => [ActorType], nullable: true })
+    types?: ActorType[]
+  ): Promise<IActorFull[]> {
+    const scope = await this.spaceService.getMentionableUserScope(space.id);
+    return this.actorLookupService.findMentionableContributors(
+      scope,
+      types,
+      filter,
+      limit
     );
   }
 }

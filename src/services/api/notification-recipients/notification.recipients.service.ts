@@ -259,6 +259,8 @@ export class NotificationRecipientsService {
         return notificationSettings.platform.admin.spaceCreated;
       case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED:
         return notificationSettings.platform.admin.userGlobalRoleChanged;
+      case NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION:
+        return notificationSettings.platform.admin.userEmailChanged;
       case NotificationEvent.ORGANIZATION_ADMIN_MESSAGE:
         return notificationSettings.organization.adminMessageReceived;
       case NotificationEvent.ORGANIZATION_ADMIN_MENTIONED:
@@ -287,6 +289,8 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_ADMIN_COLLABORATION_CALLOUT_CONTRIBUTION:
         return notificationSettings.space.admin
           .collaborationCalloutContributionCreated;
+      case NotificationEvent.USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION:
+        return notificationSettings.space.admin.userEmailChanged;
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
         return notificationSettings.space
           .collaborationCalloutContributionCreated;
@@ -367,7 +371,8 @@ export class NotificationRecipientsService {
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
       case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED:
       case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
-      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED: {
+      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED:
+      case NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION: {
         privilegeRequired = AuthorizationPrivilege.RECEIVE_NOTIFICATIONS_ADMIN;
         credentialCriteria = this.getGlobalAdminCriteria();
         break;
@@ -387,6 +392,14 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE: {
         // no need to have the admin privilege, only LEAD
         credentialCriteria = this.getSpaceLeadCredentialCriteria(spaceID);
+        break;
+      }
+      case NotificationEvent.USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION: {
+        // Admins AND leads of the space receive this. No admin-privilege
+        // filter — a lead who lacks RECEIVE_NOTIFICATIONS_ADMIN must still be
+        // notified (FR-016e); the per-user opt-out preference is the gate.
+        credentialCriteria =
+          this.getSpaceAdminAndLeadCredentialCriteria(spaceID);
         break;
       }
       case NotificationEvent.SPACE_ADMIN_COMMUNITY_NEW_MEMBER:
@@ -469,7 +482,8 @@ export class NotificationRecipientsService {
       case NotificationEvent.PLATFORM_ADMIN_GLOBAL_ROLE_CHANGED:
       case NotificationEvent.PLATFORM_ADMIN_SPACE_CREATED:
       case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_CREATED:
-      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED: {
+      case NotificationEvent.PLATFORM_ADMIN_USER_PROFILE_REMOVED:
+      case NotificationEvent.USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION: {
         // get the platform authorization policy
         return await this.platformAuthorizationService.getPlatformAuthorizationPolicy();
       }
@@ -504,6 +518,7 @@ export class NotificationRecipientsService {
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_CONTRIBUTION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_COMMENT:
       case NotificationEvent.SPACE_LEAD_COMMUNICATION_MESSAGE:
+      case NotificationEvent.USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION:
       case NotificationEvent.SPACE_COLLABORATION_CALLOUT_PUBLISHED:
       case NotificationEvent.SPACE_COMMUNITY_CALENDAR_EVENT_CREATED: {
         // get the space authorization policy
@@ -651,6 +666,33 @@ export class NotificationRecipientsService {
       );
     }
     return [
+      {
+        type: AuthorizationCredential.SPACE_LEAD,
+        resourceID: spaceID,
+      },
+    ];
+  }
+
+  private getSpaceAdminAndLeadCredentialCriteria(
+    spaceID: string | undefined
+  ): CredentialsSearchInput[] {
+    if (!spaceID) {
+      throw new ValidationException(
+        'Space ID is required for notification recipients',
+        LogContext.NOTIFICATIONS
+      );
+    }
+    // Admins of a space (SPACE_ADMIN), admins of a subspace
+    // (SPACE_SUBSPACE_ADMIN), and leads (SPACE_LEAD) — OR-combined.
+    return [
+      {
+        type: AuthorizationCredential.SPACE_ADMIN,
+        resourceID: spaceID,
+      },
+      {
+        type: AuthorizationCredential.SPACE_SUBSPACE_ADMIN,
+        resourceID: spaceID,
+      },
       {
         type: AuthorizationCredential.SPACE_LEAD,
         resourceID: spaceID,

@@ -109,6 +109,10 @@ export class UserSettingsService {
           settings.notification.platform.admin.userGlobalRoleChanged,
           adminData.userGlobalRoleChanged
         );
+        this.updateNotificationSetting(
+          settings.notification.platform.admin.userEmailChanged,
+          adminData.userEmailChanged
+        );
       }
     }
 
@@ -146,6 +150,10 @@ export class UserSettingsService {
           settings.notification.space.admin
             .collaborationCalloutContributionCreated,
           adminData.collaborationCalloutContributionCreated
+        );
+        this.updateNotificationSetting(
+          settings.notification.space.admin.userEmailChanged,
+          adminData.userEmailChanged
         );
       }
 

@@ -49,6 +49,7 @@ import { LicensingWingbackSubscriptionModule } from '@platform/licensing/wingbac
 import { PlatformModule } from '@platform/platform/platform.module';
 import { PlatformHubModule } from '@platform/platform.hub/platform.hub.module';
 import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
+import { MatrixRoomCheckModule } from '@services/adapters/communication-adapter/matrix.room.check.module';
 import { ActivityLogModule } from '@services/api/activity-log/activity.log.module';
 import { ConversionModule } from '@services/api/conversion/conversion.module';
 import { InputCreatorModule } from '@services/api/input-creator/input.creator.module';
@@ -78,6 +79,7 @@ import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
 import { DomainPlatformSettingsModule } from '@src/platform-admin/domain/organization/domain.platform.settings.module';
 import { AdminUsersModule } from '@src/platform-admin/domain/user/admin.users.module';
+import { AdminUserEmailChangeModule } from '@src/platform-admin/domain/user/email-change/admin.user.email.change.module';
 import { AdminLicensingModule } from '@src/platform-admin/licensing/admin.licensing.module';
 import { AdminContributorsModule } from '@src/platform-admin/services/avatars/admin.avatar.module';
 import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation/admin.geolocation.module';
@@ -298,6 +300,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     KonfigModule,
     AdminContributorsModule,
     AdminUsersModule,
+    AdminUserEmailChangeModule,
     AdminCommunicationModule,
     AdminSearchIngestModule,
     AdminLicensingModule,
@@ -333,6 +336,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     EventBusModule,
     WhiteboardIntegrationModule,
     CollaborativeDocumentIntegrationModule,
+    MatrixRoomCheckModule,
     DomainPlatformSettingsModule,
     PlatformRoleModule,
     TemplateApplierModule,

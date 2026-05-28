@@ -1,9 +1,13 @@
+import { ActorType, LogContext } from '@common/enums';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
   ValidationException,
 } from '@common/exceptions';
+import { Actor } from '@domain/actor/actor/actor.entity';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
@@ -20,13 +24,16 @@ import { ConversationMembership } from '../conversation-membership/conversation.
 import { Messaging } from './messaging.entity';
 import { IMessaging } from './messaging.interface';
 import { MessagingService } from './messaging.service';
+import { MessagingRejectionReason } from './types/messaging.rejection.reasons';
 
 describe('MessagingService', () => {
   let service: MessagingService;
   let conversationService: Mocked<ConversationService>;
-  let _conversationAuthorizationService: Mocked<ConversationAuthorizationService>;
+  let conversationAuthorizationService: Mocked<ConversationAuthorizationService>;
   let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
-  let _subscriptionPublishService: Mocked<SubscriptionPublishService>;
+  let subscriptionPublishService: Mocked<SubscriptionPublishService>;
+  let userLookupService: Mocked<UserLookupService>;
+  let actorLookupService: Mocked<ActorLookupService>;
   let messagingRepo: Mocked<Repository<Messaging>>;
   let conversationMembershipRepo: Mocked<Repository<ConversationMembership>>;
   let entityManager: Mocked<EntityManager>;
@@ -59,6 +66,7 @@ describe('MessagingService', () => {
                 getOne: vi.fn(),
               }),
             }),
+            find: vi.fn().mockResolvedValue([]),
           };
         }
         return defaultMockerFactory(token);
@@ -67,11 +75,13 @@ describe('MessagingService', () => {
 
     service = module.get(MessagingService);
     conversationService = module.get(ConversationService);
-    _conversationAuthorizationService = module.get(
+    conversationAuthorizationService = module.get(
       ConversationAuthorizationService
     );
     authorizationPolicyService = module.get(AuthorizationPolicyService);
-    _subscriptionPublishService = module.get(SubscriptionPublishService);
+    subscriptionPublishService = module.get(SubscriptionPublishService);
+    userLookupService = module.get(UserLookupService);
+    actorLookupService = module.get(ActorLookupService);
     messagingRepo = module.get(getRepositoryToken(Messaging));
     conversationMembershipRepo = module.get(
       getRepositoryToken(ConversationMembership)
@@ -250,6 +260,656 @@ describe('MessagingService', () => {
       ).toHaveBeenCalledWith('agent-caller', 'agent-invited');
       expect(result).toBe(existingConversation);
       expect(conversationService.createConversation).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('createConversationFromExternal', () => {
+    const creatorId = '11111111-1111-4111-8111-111111111111';
+    const memberId = '22222222-2222-4222-8222-222222222222';
+    const vcMemberId = '99999999-9999-4999-8999-999999999999';
+
+    const stubPlatformMessaging = () => {
+      const mockPlatformRepo = {
+        createQueryBuilder: vi.fn().mockReturnValue({
+          leftJoinAndSelect: vi.fn().mockReturnThis(),
+          getOne: vi.fn().mockResolvedValue({
+            messaging: { id: 'platform-messaging' } as IMessaging,
+          }),
+        }),
+      };
+      entityManager.getRepository.mockReturnValue(mockPlatformRepo as any);
+    };
+
+    // Stub actor-type resolution for the given map of id → ActorType.
+    // The default fallback for everything else is USER.
+    const stubActorTypes = (override: Record<string, ActorType> = {}) => {
+      actorLookupService.validateActorsAndGetTypes.mockImplementation(
+        async (ids: string[]) =>
+          new Map(ids.map(id => [id, override[id] ?? ActorType.USER]))
+      );
+    };
+
+    const consentingUserActor = (id: string) =>
+      ({
+        id,
+        settings: {
+          communication: { allowOtherUsersToSendMessages: true },
+        },
+      }) as any;
+
+    const denyingUserActor = (id: string) =>
+      ({
+        id,
+        settings: {
+          communication: { allowOtherUsersToSendMessages: false },
+        },
+      }) as any;
+
+    // T016 — covers data-model.md test matrix row 1
+    it('DM happy path: creates Conversation+Room with assigned UUID, fires subscription once', async () => {
+      stubPlatformMessaging();
+      stubActorTypes();
+      userLookupService.getUsersByIds.mockResolvedValue([
+        consentingUserActor(memberId),
+      ]);
+      conversationService.findConversationBetweenActors.mockResolvedValue(null);
+
+      const createdConversation = {
+        id: 'conv-1',
+        room: { id: 'unused-by-mock' },
+      } as unknown as IConversation;
+      conversationService.createConversation.mockResolvedValue(
+        createdConversation
+      );
+      conversationService.save.mockResolvedValue(createdConversation);
+      conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      conversationService.getConversationOrFail.mockResolvedValue(
+        createdConversation
+      );
+
+      const result = await service.createConversationFromExternal({
+        creatorActorId: creatorId,
+        memberActorIds: [memberId],
+        isDirect: true,
+      });
+
+      expect(result.kind).toBe('accepted');
+      if (result.kind !== 'accepted') return; // narrow for TS
+      expect(result.alkemioRoomId).toMatch(
+        /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/
+      );
+
+      // ConversationService.createConversation called with the assigned UUID
+      // (6th arg) and CONVERSATION_DIRECT.
+      expect(conversationService.createConversation).toHaveBeenCalledTimes(1);
+      const callArgs = conversationService.createConversation.mock.calls[0];
+      expect(callArgs[0]).toBe(creatorId); // creatorActorId
+      expect(callArgs[1]).toEqual([memberId]); // consentingIds
+      expect(callArgs[2]).toBe('conversation_direct'); // RoomType.CONVERSATION_DIRECT
+      expect(callArgs[5]).toBe(result.alkemioRoomId); // externalRoomId
+
+      // Subscription publish fires exactly once with both members in the fan-out.
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).toHaveBeenCalledTimes(1);
+      const publishedEvent =
+        subscriptionPublishService.publishConversationEvent.mock.calls[0][0];
+      expect(publishedEvent.memberActorIds).toEqual(
+        expect.arrayContaining([creatorId, memberId])
+      );
+      expect(publishedEvent.memberActorIds).toHaveLength(2);
+    });
+
+    // T020 — covers data-model.md test matrix row 2
+    it('DM consent denied: rejects with MESSAGING_DISABLED and creates no Conversation', async () => {
+      stubPlatformMessaging();
+      stubActorTypes();
+      userLookupService.getUsersByIds.mockResolvedValue([
+        denyingUserActor(memberId),
+      ]);
+      conversationService.findConversationBetweenActors.mockResolvedValue(null);
+
+      const result = await service.createConversationFromExternal({
+        creatorActorId: creatorId,
+        memberActorIds: [memberId],
+        isDirect: true,
+      });
+
+      expect(result).toEqual({
+        kind: 'rejected',
+        reason: MessagingRejectionReason.MESSAGING_DISABLED,
+      });
+
+      expect(conversationService.createConversation).not.toHaveBeenCalled();
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).not.toHaveBeenCalled();
+    });
+
+    // T017 — covers data-model.md test matrix row 4
+    it('group happy path: all consenting → CONVERSATION_GROUP with N members + fan-out covers all', async () => {
+      const memberB = '33333333-3333-4333-8333-333333333333';
+      const memberC = '44444444-4444-4444-8444-444444444444';
+      stubPlatformMessaging();
+      stubActorTypes();
+      userLookupService.getUsersByIds.mockResolvedValue([
+        consentingUserActor(memberId),
+        consentingUserActor(memberB),
+        consentingUserActor(memberC),
+      ]);
+
+      const createdConversation = {
+        id: 'conv-group-1',
+        room: { id: 'unused-by-mock' },
+      } as unknown as IConversation;
+      conversationService.createConversation.mockResolvedValue(
+        createdConversation
+      );
+      conversationService.save.mockResolvedValue(createdConversation);
+      conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      conversationService.getConversationOrFail.mockResolvedValue(
+        createdConversation
+      );
+
+      const result = await service.createConversationFromExternal({
+        creatorActorId: creatorId,
+        memberActorIds: [memberId, memberB, memberC],
+        isDirect: false,
+      });
+
+      expect(result.kind).toBe('accepted');
+
+      const callArgs = conversationService.createConversation.mock.calls[0];
+      expect(callArgs[1]).toEqual([memberId, memberB, memberC]);
+      expect(callArgs[2]).toBe('conversation_group');
+
+      const publishedEvent =
+        subscriptionPublishService.publishConversationEvent.mock.calls[0][0];
+      expect(publishedEvent.memberActorIds).toHaveLength(4);
+      expect(publishedEvent.memberActorIds).toEqual(
+        expect.arrayContaining([creatorId, memberId, memberB, memberC])
+      );
+    });
+
+    // T018 — covers data-model.md test matrix row 7
+    it('group with same membership as existing group is NOT deduplicated', async () => {
+      const memberB = '33333333-3333-4333-8333-333333333333';
+      const memberC = '44444444-4444-4444-8444-444444444444';
+      stubPlatformMessaging();
+      stubActorTypes();
+      userLookupService.getUsersByIds.mockResolvedValue([
+        consentingUserActor(memberId),
+        consentingUserActor(memberB),
+        consentingUserActor(memberC),
+      ]);
+
+      const createdConversation = {
+        id: 'conv-group-new',
+        room: { id: 'unused-by-mock' },
+      } as unknown as IConversation;
+      conversationService.createConversation.mockResolvedValue(
+        createdConversation
+      );
+      conversationService.save.mockResolvedValue(createdConversation);
+      conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      conversationService.getConversationOrFail.mockResolvedValue(
+        createdConversation
+      );
+
+      const result = await service.createConversationFromExternal({
+        creatorActorId: creatorId,
+        memberActorIds: [memberId, memberB, memberC],
+        isDirect: false,
+      });
+
+      // Group flow never probes findConversationBetweenActors — that probe is
+      // DM-only by design.
+      expect(
+        conversationService.findConversationBetweenActors
+      ).not.toHaveBeenCalled();
+      expect(result.kind).toBe('accepted');
+      expect(conversationService.createConversation).toHaveBeenCalledTimes(1);
+    });
+
+    // T019 — covers data-model.md test matrix row 6
+    it('group partial consent: only consenting members registered + fan-out excludes deniers', async () => {
+      const memberB = '33333333-3333-4333-8333-333333333333';
+      const memberC = '44444444-4444-4444-8444-444444444444';
+      stubPlatformMessaging();
+      stubActorTypes();
+      userLookupService.getUsersByIds.mockResolvedValue([
+        consentingUserActor(memberId),
+        denyingUserActor(memberB),
+        consentingUserActor(memberC),
+      ]);
+
+      const createdConversation = {
+        id: 'conv-group-partial',
+        room: { id: 'unused-by-mock' },
+      } as unknown as IConversation;
+      conversationService.createConversation.mockResolvedValue(
+        createdConversation
+      );
+      conversationService.save.mockResolvedValue(createdConversation);
+      conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      conversationService.getConversationOrFail.mockResolvedValue(
+        createdConversation
+      );
+
+      const result = await service.createConversationFromExternal({
+        creatorActorId: creatorId,
+        memberActorIds: [memberId, memberB, memberC],
+        isDirect: false,
+      });
+
+      expect(result.kind).toBe('accepted');
+
+      const callArgs = conversationService.createConversation.mock.calls[0];
+      // Denying memberB filtered out; consenting memberId + memberC remain.
+      expect(callArgs[1]).toEqual([memberId, memberC]);
+
+      const publishedEvent =
+        subscriptionPublishService.publishConversationEvent.mock.calls[0][0];
+      expect(publishedEvent.memberActorIds).toEqual(
+        expect.arrayContaining([creatorId, memberId, memberC])
+      );
+      expect(publishedEvent.memberActorIds).not.toContain(memberB);
+      expect(publishedEvent.memberActorIds).toHaveLength(3);
+    });
+
+    // T021 — covers data-model.md test matrix row 3
+    it('DM duplicate: existing conversation between actors → reject DUPLICATE_DIRECT_CONVERSATION', async () => {
+      stubPlatformMessaging();
+      stubActorTypes();
+      conversationService.findConversationBetweenActors.mockResolvedValue({
+        id: 'pre-existing-conv',
+      } as unknown as IConversation);
+
+      const result = await service.createConversationFromExternal({
+        creatorActorId: creatorId,
+        memberActorIds: [memberId],
+        isDirect: true,
+      });
+
+      expect(result).toEqual({
+        kind: 'rejected',
+        reason: MessagingRejectionReason.DUPLICATE_DIRECT_CONVERSATION,
+      });
+      expect(conversationService.createConversation).not.toHaveBeenCalled();
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).not.toHaveBeenCalled();
+      // dedup short-circuits BEFORE the consent helper runs — so the
+      // user-table lookup that the consent helper performs is never invoked.
+      expect(userLookupService.getUsersByIds).not.toHaveBeenCalled();
+    });
+
+    // T022 — covers data-model.md test matrix row 5
+    it('group all denied: zero consenters → reject NO_RECIPIENTS_ALLOW_MESSAGING', async () => {
+      const memberB = '33333333-3333-4333-8333-333333333333';
+      const memberC = '44444444-4444-4444-8444-444444444444';
+      stubPlatformMessaging();
+      stubActorTypes();
+      userLookupService.getUsersByIds.mockResolvedValue([
+        denyingUserActor(memberId),
+        denyingUserActor(memberB),
+        denyingUserActor(memberC),
+      ]);
+
+      const result = await service.createConversationFromExternal({
+        creatorActorId: creatorId,
+        memberActorIds: [memberId, memberB, memberC],
+        isDirect: false,
+      });
+
+      expect(result).toEqual({
+        kind: 'rejected',
+        reason: MessagingRejectionReason.NO_RECIPIENTS_ALLOW_MESSAGING,
+      });
+      expect(conversationService.createConversation).not.toHaveBeenCalled();
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).not.toHaveBeenCalled();
+    });
+
+    // T023 — covers data-model.md test matrix rows 10–13
+    describe('malformed payloads → MALFORMED_REQUEST', () => {
+      const malformedExpect = (result: { kind: string; reason?: string }) => {
+        expect(result).toEqual({
+          kind: 'rejected',
+          reason: MessagingRejectionReason.MALFORMED_REQUEST,
+        });
+      };
+
+      it('DM with 2 members rejects', async () => {
+        const result = await service.createConversationFromExternal({
+          creatorActorId: creatorId,
+          memberActorIds: [memberId, '33333333-3333-4333-8333-333333333333'],
+          isDirect: true,
+        });
+        malformedExpect(result);
+        expect(
+          actorLookupService.validateActorsAndGetTypes
+        ).not.toHaveBeenCalled();
+      });
+
+      it('group with 0 members rejects', async () => {
+        const result = await service.createConversationFromExternal({
+          creatorActorId: creatorId,
+          memberActorIds: [],
+          isDirect: false,
+        });
+        malformedExpect(result);
+        expect(
+          actorLookupService.validateActorsAndGetTypes
+        ).not.toHaveBeenCalled();
+      });
+
+      it('creator id duplicated in members rejects', async () => {
+        const result = await service.createConversationFromExternal({
+          creatorActorId: creatorId,
+          memberActorIds: [creatorId, memberId],
+          isDirect: false,
+        });
+        malformedExpect(result);
+        expect(
+          actorLookupService.validateActorsAndGetTypes
+        ).not.toHaveBeenCalled();
+      });
+
+      it('non-UUID actor id rejects', async () => {
+        const result = await service.createConversationFromExternal({
+          creatorActorId: creatorId,
+          memberActorIds: ['not-a-uuid'],
+          isDirect: true,
+        });
+        malformedExpect(result);
+        expect(
+          actorLookupService.validateActorsAndGetTypes
+        ).not.toHaveBeenCalled();
+      });
+    });
+
+    // T024 — covers data-model.md test matrix rows 8–9
+    describe('unknown actor → ACTOR_NOT_FOUND', () => {
+      it('unknown creator id rejects', async () => {
+        actorLookupService.validateActorsAndGetTypes.mockRejectedValue(
+          new EntityNotFoundException('Actor not found', LogContext.COMMUNITY)
+        );
+
+        const result = await service.createConversationFromExternal({
+          creatorActorId: creatorId,
+          memberActorIds: [memberId],
+          isDirect: true,
+        });
+
+        expect(result).toEqual({
+          kind: 'rejected',
+          reason: MessagingRejectionReason.ACTOR_NOT_FOUND,
+        });
+        expect(conversationService.createConversation).not.toHaveBeenCalled();
+      });
+
+      it('unknown member id (one of several) rejects', async () => {
+        const memberB = '33333333-3333-4333-8333-333333333333';
+        actorLookupService.validateActorsAndGetTypes.mockRejectedValue(
+          new EntityNotFoundException(
+            'One or more actors not found',
+            LogContext.COMMUNITY
+          )
+        );
+
+        const result = await service.createConversationFromExternal({
+          creatorActorId: creatorId,
+          memberActorIds: [memberId, memberB],
+          isDirect: false,
+        });
+
+        expect(result).toEqual({
+          kind: 'rejected',
+          reason: MessagingRejectionReason.ACTOR_NOT_FOUND,
+        });
+        expect(conversationService.createConversation).not.toHaveBeenCalled();
+      });
+    });
+
+    // Mixed actor type scenarios — covers the "Matrix user maps to any Actor"
+    // generalization. The consent gate applies ONLY to USER-type actors;
+    // VirtualContributor / Organization / Space / Account members are exempt.
+    describe('mixed actor types — non-User actors bypass consent', () => {
+      it('DM with VC target: no consent evaluation, VC always registered', async () => {
+        stubPlatformMessaging();
+        stubActorTypes({ [vcMemberId]: ActorType.VIRTUAL_CONTRIBUTOR });
+        conversationService.findConversationBetweenActors.mockResolvedValue(
+          null
+        );
+
+        const createdConversation = {
+          id: 'conv-vc',
+          room: { id: 'unused-by-mock' },
+        } as unknown as IConversation;
+        conversationService.createConversation.mockResolvedValue(
+          createdConversation
+        );
+        conversationService.save.mockResolvedValue(createdConversation);
+        conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+          []
+        );
+        authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+        conversationService.getConversationOrFail.mockResolvedValue(
+          createdConversation
+        );
+
+        const result = await service.createConversationFromExternal({
+          creatorActorId: creatorId,
+          memberActorIds: [vcMemberId],
+          isDirect: true,
+        });
+
+        expect(result.kind).toBe('accepted');
+        expect(conversationService.createConversation).toHaveBeenCalledTimes(1);
+        // VC has no settings.communication.allowOtherUsersToSendMessages —
+        // the user-table lookup the consent helper performs must be skipped
+        // entirely when no consent-evaluable members remain.
+        expect(userLookupService.getUsersByIds).not.toHaveBeenCalled();
+        const callArgs = conversationService.createConversation.mock.calls[0];
+        expect(callArgs[1]).toEqual([vcMemberId]);
+      });
+
+      it('group with mix of denying USER + consenting VC: VC alone keeps the room alive', async () => {
+        stubPlatformMessaging();
+        stubActorTypes({ [vcMemberId]: ActorType.VIRTUAL_CONTRIBUTOR });
+        userLookupService.getUsersByIds.mockResolvedValue([
+          denyingUserActor(memberId),
+        ]);
+
+        const createdConversation = {
+          id: 'conv-mixed',
+          room: { id: 'unused-by-mock' },
+        } as unknown as IConversation;
+        conversationService.createConversation.mockResolvedValue(
+          createdConversation
+        );
+        conversationService.save.mockResolvedValue(createdConversation);
+        conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+          []
+        );
+        authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+        conversationService.getConversationOrFail.mockResolvedValue(
+          createdConversation
+        );
+
+        const result = await service.createConversationFromExternal({
+          creatorActorId: creatorId,
+          memberActorIds: [memberId, vcMemberId],
+          isDirect: false,
+        });
+
+        expect(result.kind).toBe('accepted');
+        const callArgs = conversationService.createConversation.mock.calls[0];
+        // memberId is a USER who denies → filtered out. vcMemberId is exempt
+        // → stays. Final registered membership is just the VC.
+        expect(callArgs[1]).toEqual([vcMemberId]);
+      });
+    });
+
+    // T027 — covers data-model.md test matrix rows 15–16
+    describe('getRoomInfo', () => {
+      const roomId = '55555555-5555-4555-8555-555555555555';
+
+      // getRoomInfo loads members via entityManager.find(Actor, ...) so the
+      // resolver works for any actor type, not just Users.
+      const stubActorsFind = (actors: any[]) => {
+        entityManager.find.mockImplementation(async (entity: any) =>
+          entity === Actor ? actors : []
+        );
+      };
+
+      it('hit on a direct conversation: returns conversation_direct + helper-resolved displayNames', async () => {
+        conversationService.findConversationByRoomId.mockResolvedValue({
+          id: 'conv-direct',
+          room: { id: roomId, type: 'conversation_direct' },
+        } as any);
+        conversationService.getConversationMembers.mockResolvedValue([
+          { actorID: creatorId } as any,
+          { actorID: memberId } as any,
+        ]);
+        stubActorsFind([
+          {
+            id: creatorId,
+            profile: { displayName: 'Creator Name' },
+            nameID: 'creator-nameid',
+          },
+          {
+            id: memberId,
+            profile: { displayName: '   ' }, // whitespace → falls back to nameID
+            nameID: 'member-nameid',
+          },
+        ]);
+
+        const result = await service.getRoomInfo(roomId);
+
+        expect(result.type).toBe('conversation_direct');
+        expect(result.isDirect).toBe(true);
+        expect(result.members).toEqual([
+          { actorId: creatorId, displayName: 'Creator Name' },
+          { actorId: memberId, displayName: 'member-nameid' },
+        ]);
+      });
+
+      it('hit on a group conversation: returns conversation_group + isDirect=false', async () => {
+        conversationService.findConversationByRoomId.mockResolvedValue({
+          id: 'conv-group',
+          room: { id: roomId, type: 'conversation_group' },
+        } as any);
+        conversationService.getConversationMembers.mockResolvedValue([
+          { actorID: creatorId } as any,
+        ]);
+        stubActorsFind([
+          {
+            id: creatorId,
+            profile: { displayName: 'Solo' },
+            nameID: 'solo-nameid',
+          },
+        ]);
+
+        const result = await service.getRoomInfo(roomId);
+
+        expect(result.type).toBe('conversation_group');
+        expect(result.isDirect).toBe(false);
+        expect(result.members).toEqual([
+          { actorId: creatorId, displayName: 'Solo' },
+        ]);
+      });
+
+      it('hit with mixed-type members: resolves any Actor (User + VC), not just Users', async () => {
+        conversationService.findConversationByRoomId.mockResolvedValue({
+          id: 'conv-mixed',
+          room: { id: roomId, type: 'conversation_group' },
+        } as any);
+        conversationService.getConversationMembers.mockResolvedValue([
+          { actorID: creatorId } as any,
+          { actorID: vcMemberId } as any,
+        ]);
+        stubActorsFind([
+          {
+            id: creatorId,
+            profile: { displayName: 'Anton' },
+            nameID: 'anton-nameid',
+          },
+          {
+            id: vcMemberId,
+            profile: { displayName: 'Guidance VC' },
+            nameID: 'guidance',
+          },
+        ]);
+
+        const result = await service.getRoomInfo(roomId);
+
+        expect(result.members).toEqual([
+          { actorId: creatorId, displayName: 'Anton' },
+          { actorId: vcMemberId, displayName: 'Guidance VC' },
+        ]);
+      });
+
+      it('miss on a non-existent room id: empty-members envelope', async () => {
+        conversationService.findConversationByRoomId.mockResolvedValue(null);
+
+        const result = await service.getRoomInfo(roomId);
+
+        expect(result).toEqual({ type: '', isDirect: false, members: [] });
+        expect(
+          conversationService.getConversationMembers
+        ).not.toHaveBeenCalled();
+      });
+
+      it('non-UUID input short-circuits to miss envelope (no DB hit)', async () => {
+        const result = await service.getRoomInfo('not-a-uuid');
+
+        expect(result).toEqual({ type: '', isDirect: false, members: [] });
+        expect(
+          conversationService.findConversationByRoomId
+        ).not.toHaveBeenCalled();
+      });
+    });
+
+    // T025 — covers data-model.md test matrix row 14
+    it('transient persistence failure → INTERNAL_ERROR; outer try/catch caught', async () => {
+      stubPlatformMessaging();
+      stubActorTypes();
+      userLookupService.getUsersByIds.mockResolvedValue([
+        consentingUserActor(memberId),
+      ]);
+      conversationService.findConversationBetweenActors.mockResolvedValue(null);
+      conversationService.createConversation.mockRejectedValue(
+        new Error('boom: simulated QueryFailedError')
+      );
+
+      const result = await service.createConversationFromExternal({
+        creatorActorId: creatorId,
+        memberActorIds: [memberId],
+        isDirect: true,
+      });
+
+      expect(result).toEqual({
+        kind: 'rejected',
+        reason: MessagingRejectionReason.INTERNAL_ERROR,
+      });
+      expect(
+        subscriptionPublishService.publishConversationEvent
+      ).not.toHaveBeenCalled();
     });
   });
 
