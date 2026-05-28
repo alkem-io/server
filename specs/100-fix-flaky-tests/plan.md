@@ -1,7 +1,7 @@
 # Implementation Plan: Structural Fix for Flaky CI Tests
 
-**Branch**: `086-fix-flaky-tests` | **Date**: 2026-04-28 | **Spec**: [spec.md](./spec.md)
-**Input**: Feature specification from `/specs/086-fix-flaky-tests/spec.md`
+**Branch**: `100-fix-flaky-tests` | **Date**: 2026-04-28 | **Spec**: [spec.md](./spec.md)
+**Input**: Feature specification from `/specs/100-fix-flaky-tests/spec.md`
 
 ## Summary
 
@@ -50,7 +50,7 @@ The constitution principles below are evaluated against this test-infrastructure
 ### Documentation (this feature)
 
 ```text
-specs/086-fix-flaky-tests/
+specs/100-fix-flaky-tests/
 ├── plan.md              # This file
 ├── research.md          # Phase 0 — anti-pattern fix mechanisms, justified against vitest config
 ├── punch-list.md        # Phase 1 — enumerated audit sites, severity, chosen remediation (in place of data-model.md)

@@ -1,10 +1,10 @@
 ---
-description: 'Task list for feature 086-fix-flaky-tests'
+description: 'Task list for feature 100-fix-flaky-tests'
 ---
 
 # Tasks: Structural Fix for Flaky CI Tests
 
-**Input**: Design documents from `/specs/086-fix-flaky-tests/`
+**Input**: Design documents from `/specs/100-fix-flaky-tests/`
 **Prerequisites**: `plan.md`, `spec.md`, `research.md`, `punch-list.md` (data-model equivalent), `quickstart.md`
 
 **Tests**: Not requested. This feature is itself a test-infrastructure fix — verification is per-task via 200x runs (per `quickstart.md`), not via writing new tests for the fixes themselves.
@@ -117,7 +117,7 @@ Single project — sources under `src/`, additional unit-style specs under `test
 
 **Purpose**: Update tracking artifacts and assemble PR-level deliverables (FR-013).
 
-- [ ] T017 Update `specs/086-fix-flaky-tests/punch-list.md` Status fields: PL-01 through PL-08 → `fixed`; PL-09 and PL-10 → `verified-clean` (no change, recorded for traceability). Confirm the Surface field for each fixed entry matches what was actually changed (all should remain `test-only` for the current punch list).
+- [ ] T017 Update `specs/100-fix-flaky-tests/punch-list.md` Status fields: PL-01 through PL-08 → `fixed`; PL-09 and PL-10 → `verified-clean` (no change, recorded for traceability). Confirm the Surface field for each fixed entry matches what was actually changed (all should remain `test-only` for the current punch list).
 
 - [ ] T018 Assemble the PR description (FR-013) covering: (a) the audit punch list with each entry's pattern, severity, remediation, and verification evidence; (b) link to `docs/testing-flakiness.md`; (c) FR-015 evaluation outcome from T016; (d) explicit statement that no production code was modified and no CI workflow files were added (per Q1, Q5 clarifications). Reference issues #6012 and #6013 with `Closes #6012` / `Closes #6013` keywords.
 

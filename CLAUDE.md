@@ -251,8 +251,8 @@ Key rules:
 - PostgreSQL 17.5. **No schema migration required** — reuses existing `conversation`, `room`, `conversation_membership` tables. `Room.type` enum already contains `CONVERSATION_DIRECT` and `CONVERSATION_GROUP`. (099-element-room-check)
 - TypeScript 5.3, Node.js 22 LTS (Volta-pinned 22.21.1) + NestJS 10, TypeORM 0.3 (custom fork `pkg.pr.new/antst/typeorm`), Apollo Server 4, GraphQL 16, Winston, Elastic APM (002-office-docs-gating)
 - PostgreSQL 17.5 (no schema changes — read-only against `license` + `license_entitlement` rows already on Collaboration) (002-office-docs-gating)
-- TypeScript 5.3, Node.js 22 LTS (Volta-pinned 22.21.1) + Vitest 4.0.17, `@vitest/coverage-v8`, `@golevelup/ts-vitest`, NestJS testing utilities (086-fix-flaky-tests)
-- N/A (test-infrastructure work; no schema, no migrations) (086-fix-flaky-tests)
+- TypeScript 5.3, Node.js 22 LTS (Volta-pinned 22.21.1) + Vitest 4.0.17, `@vitest/coverage-v8`, `@golevelup/ts-vitest`, NestJS testing utilities (100-fix-flaky-tests)
+- N/A (test-infrastructure work; no schema, no migrations) (100-fix-flaky-tests)
 
 ## Recent Changes
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting

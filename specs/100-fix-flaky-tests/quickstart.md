@@ -1,6 +1,6 @@
 # Quickstart: Verifying Flake Fixes
 
-**Feature**: `086-fix-flaky-tests`
+**Feature**: `100-fix-flaky-tests`
 
 This document tells a contributor how to verify that a fix from the punch list (`punch-list.md`) actually closes its flake. The verification bar is per-file and per-fix: 200 consecutive runs under the same conditions that previously triggered the flake (typically v8 coverage), with zero failures (FR-012, SC-001).
 

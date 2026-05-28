@@ -1,6 +1,6 @@
 # Feature Specification: Structural Fix for Flaky CI Tests
 
-**Feature Branch**: `086-fix-flaky-tests`
+**Feature Branch**: `100-fix-flaky-tests`
 **Created**: 2026-04-28
 **Status**: Draft
 **Input**: User description: "out CI tests become flaky, and we need to properly structurally fix those issues — https://github.com/alkem-io/server/issues/6012, https://github.com/alkem-io/server/issues/6013 — And see if we have more 'flakiness' places"
@@ -122,7 +122,7 @@ After this work, a new contributor can recognise the patterns from local context
 
 - **Punch-list entry**: A specific test file and assertion that produces non-deterministic results. Attributes: file path, line range, root-cause pattern, severity (observed-on-CI / theoretical), chosen remediation (fix / downgrade-to-informational / document-and-keep), remediation surface (test-only / production-side / both). The canonical term across spec, plan, tasks, and `punch-list.md`.
 - **Anti-Pattern**: A reusable description of a class of flakiness, its failure signature, and its deterministic replacement. Documented in `docs/testing-flakiness.md` (FR-014).
-- **Audit Punch List**: The enumerated set of punch-list entries identified during the broader audit, with status (open / fixed / verified-clean / deferred-with-reason). Maintained in `specs/086-fix-flaky-tests/punch-list.md`. Used as the verification checklist for FR-013.
+- **Audit Punch List**: The enumerated set of punch-list entries identified during the broader audit, with status (open / fixed / verified-clean / deferred-with-reason). Maintained in `specs/100-fix-flaky-tests/punch-list.md`. Used as the verification checklist for FR-013.
 
 ## Success Criteria _(mandatory)_
 

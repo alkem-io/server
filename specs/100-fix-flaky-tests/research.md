@@ -1,7 +1,7 @@
 # Phase 0 Research: Anti-Pattern Fix Mechanisms
 
 **Date**: 2026-04-28
-**Feature**: `086-fix-flaky-tests`
+**Feature**: `100-fix-flaky-tests`
 
 This document records the technical decisions for *how* each anti-pattern is remediated, justified against the specific Vitest configuration in use (`pool: 'threads'`, `isolate: false`, `clearMocks: true`, v8 coverage). The spec deliberately abstains from prescribing fix mechanisms — those are research-and-design decisions captured here.
 
