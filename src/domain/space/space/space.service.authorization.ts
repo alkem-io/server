@@ -509,8 +509,9 @@ export class SpaceAuthorizationService {
         async () => {
           if (!space.templatesManager) {
             throw new RelationshipNotFoundException(
-              `Unable to load templatesManager on level zero space for auth reset ${space.id} `,
-              LogContext.SPACES
+              'Unable to load templatesManager on level zero space for auth reset',
+              LogContext.SPACES,
+              { spaceId: space.id }
             );
           }
           return this.templatesManagerAuthorizationService.applyAuthorizationPolicy(
