@@ -237,6 +237,8 @@ Key rules:
 - PostgreSQL 17.5 — existing `license_plan` table (row insert) and existing `license_policy` table (jsonb column update); no schema DDL (083-collab-entitlement)
 - TypeScript 5.3, Node.js 22 LTS (Volta pins 22.21.1) + NestJS 10, TypeORM 0.3, `@nestjs/axios` (axios ^1.12.2), `rxjs` (085-file-service-migration)
 - PostgreSQL 17.5 (file table — renamed from document — read-only for server) (085-file-service-migration)
+- TypeScript 5.3, Node.js 22 LTS (Volta-pinned 22.21.1) + Vitest 4.0.17, `@vitest/coverage-v8`, `@golevelup/ts-vitest`, NestJS testing utilities (086-fix-flaky-tests)
+- N/A (test-infrastructure work; no schema, no migrations) (086-fix-flaky-tests)
 
 ## Recent Changes
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting
