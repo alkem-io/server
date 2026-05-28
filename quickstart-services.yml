@@ -288,7 +288,6 @@ services:
     restart: always
     environment:
       - SYNAPSE_NO_TLS=true
-      - SYNAPSE_ENABLE_REGISTRATION=true
       - SYNAPSE_HOMESERVER_NAME
       - SYNAPSE_SERVER_URL
       - SYNAPSE_SERVER_SHARED_SECRET
