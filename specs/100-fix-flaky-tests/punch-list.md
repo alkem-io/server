@@ -46,7 +46,7 @@ State transitions:
 | Tracked Issue | [#6012](https://github.com/alkem-io/server/issues/6012) |
 | Remediation | Apply `vi.hoisted()` (Decision 1). Two factories need hoisting: `BaseHandler` (line 6) and `class-transformer.plainToInstance` (line 13). Update assertions at lines 100+ to reference the hoisted handle. |
 | Surface | test-only |
-| Status | open |
+| Status | fixed |
 
 **Verification target**: 200 consecutive runs under `pnpm test:flake-verify src/common/pipes/validation.pipe.spec.ts` — zero failures. Three CI occurrences observed prior to fix (PR #6011 runs 25054522143 and 25060088496; develop run 25048322310).
 
@@ -64,7 +64,7 @@ State transitions:
 | Tracked Issue | [#6013](https://github.com/alkem-io/server/issues/6013) |
 | Remediation | Two changes per Decisions 2 and 3: (a) replace `Math.random() < 0.02` with deterministic counter (`every 50th field5 line`); (b) drop the `< 5000ms` wall-clock assertion (line 58) — Vitest's 90 s `testTimeout` already enforces a hard ceiling, and the test's purpose is volume not speed. |
 | Surface | test-only |
-| Status | open |
+| Status | fixed |
 
 **Verification target**: 200 consecutive runs, zero failures. The `entries.length > 0` assertion stays.
 
@@ -82,7 +82,7 @@ State transitions:
 | Tracked Issue | — |
 | Remediation | Hoist `base64ToBuffer` mock per Decision 1. The async `importOriginal` partial-mock pattern needs the inner `vi.fn()` instances pulled into a `vi.hoisted` block so they're shared with the test-body's `vi.mocked()` references. |
 | Surface | test-only |
-| Status | open |
+| Status | fixed |
 
 ---
 
@@ -98,7 +98,7 @@ State transitions:
 | Tracked Issue | — |
 | Remediation | Apply `vi.hoisted` to the `GqlExecutionContext.create` mock per Decision 1. The current `vi.mocked()` indirection masks but does not eliminate the identity risk under coverage. Defensive fix to bring the pattern in line with the rest of the suite. |
 | Surface | test-only |
-| Status | open |
+| Status | fixed |
 
 ---
 
@@ -114,7 +114,7 @@ State transitions:
 | Tracked Issue | — |
 | Remediation | Per Decision 3: replace the `expect(elapsed).toBeLessThan(delay * 2.5)` assertion with a direct concurrency probe — a counter incremented when each promise body enters, and an assertion that all bodies entered before any resolved. Captures the actual property under test (concurrency, not speed) without referencing wall-clock. |
 | Surface | test-only |
-| Status | open |
+| Status | fixed |
 
 ---
 
@@ -130,7 +130,7 @@ State transitions:
 | Tracked Issue | — |
 | Remediation | Per Decision 3: remove both `expect(...)` budget assertions so they no longer gate the build. Optionally surface the durations via Vitest's `task.meta` attachment (visible in test reporter output) or capture them in local variables without assertion. **Do not** use `console.*` — Biome `noConsole: error` applies to spec files (no override in `biome.json`). Keep the parity assertion (light vs full schema produces the same logical structure) — that is the test's primary purpose. See task T008 for the canonical mechanism. |
 | Surface | test-only |
-| Status | open |
+| Status | fixed |
 
 ---
 
@@ -146,7 +146,7 @@ State transitions:
 | Tracked Issue | — |
 | Remediation | Per Decision 4: capture original env-var values at the start of `beforeAll`; in `afterAll`, restore them unconditionally (without try/catch swallowing). Optionally adopt `vi.stubEnv` if it shrinks the diff. |
 | Surface | test-only |
-| Status | open |
+| Status | fixed |
 
 > Note: This file lives under `test/schema-contract/integration/` but uses the `.spec.ts` suffix and is a unit-style file-system test of the contract loader, not a service-integration test. Per Decision 9, in scope.
 
@@ -164,7 +164,7 @@ State transitions:
 | Tracked Issue | — |
 | Remediation | Per Decision 4: move the `vi.spyOn(Math, 'random')` from `beforeAll`/`afterAll` to `beforeEach`/`afterEach` (or scope it inside a single test using `vi.spyOn` + `mockRestore` in `finally`). Eliminates the leakage class entirely; cost is per-test re-establishment of the spy, which is negligible. |
 | Surface | test-only |
-| Status | open |
+| Status | fixed |
 
 ---
 
