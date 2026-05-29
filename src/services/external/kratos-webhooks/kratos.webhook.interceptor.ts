@@ -29,7 +29,9 @@ export class KratosWebhookSecretInterceptor implements NestInterceptor {
       'identity.authentication.providers.ory.webhook_secret',
       { infer: true }
     );
-    this.secretName = name;
+    // Express normalizes incoming header keys to lowercase, so the configured
+    // header name must be lowercased before indexing into request.headers.
+    this.secretName = name.toLowerCase();
     this.secretValue = value;
   }
 
