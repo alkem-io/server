@@ -57,12 +57,6 @@ const ANONYMOUS_ACTOR_ID = '00000000-0000-0000-0000-000000000000';
  */
 @Controller('rest/internal')
 export class ForwardAuthController {
-  /**
-   * Per-env session cookie name (`alkemio_session_sandbox`, …) resolved once
-   * at construction from `oidc.cookie.name`. Hardcoding the literal would
-   * make the BFF lookup guard below miss the cookie in every non-default
-   * environment.
-   */
   private readonly sessionCookieName: string;
 
   constructor(
@@ -74,9 +68,9 @@ export class ForwardAuthController {
     configService: ConfigService<AlkemioConfig, true>
   ) {
     this.sessionCookieName = configService.get(
-      'identity.authentication.providers.oidc',
+      'identity.authentication.providers.oidc.cookie.name',
       { infer: true }
-    ).cookie.name;
+    );
   }
 
   @Get('forward-auth')
