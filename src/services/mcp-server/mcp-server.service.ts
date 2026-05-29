@@ -20,22 +20,46 @@ import { IncomingMessage, ServerResponse } from 'http';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { MCP_CONSTANTS, McpResourceProvider, McpTool } from './dto/mcp.types';
 
+/**
+ * Per-session MCP state. Each client session gets its OWN McpServer instance
+ * connected to its OWN transport: the MCP SDK's Server can only be connected to
+ * a single transport, so a shared server breaks the moment a second session
+ * initializes. Each session also carries its own ActorContext, captured by the
+ * session's request handlers via closure — so concurrent requests from
+ * different users can never read each other's identity.
+ */
+interface McpSession {
+  transport: StreamableHTTPServerTransport;
+  server: McpServer;
+  actorContext: ActorContext;
+}
+
 @Injectable()
 export class McpServerService implements OnModuleInit {
-  private mcpServer: McpServer;
   private resourceProviders: Map<string, McpResourceProvider> = new Map();
   private tools: Map<string, McpTool> = new Map();
-  private transports: Map<string, StreamableHTTPServerTransport> = new Map();
-  private sessionActorContext: Map<string, ActorContext> = new Map();
-  // Track current request's session ID for use in handlers
-  private currentSessionId: string | undefined;
+  private sessions: Map<string, McpSession> = new Map();
 
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
-  ) {
-    this.mcpServer = new McpServer(
+  ) {}
+
+  async onModuleInit(): Promise<void> {
+    this.logger.verbose?.(
+      'MCP Server service initialized',
+      LogContext.MCP_SERVER
+    );
+  }
+
+  /**
+   * Build a fresh McpServer with request handlers bound to a specific session's
+   * ActorContext. `getActorContext` is evaluated lazily at request time, so a
+   * session that authenticates on a later request still resolves correctly.
+   */
+  private createMcpServer(getActorContext: () => ActorContext): McpServer {
+    const mcpServer = new McpServer(
       {
         name: MCP_CONSTANTS.SERVER_NAME,
         version: MCP_CONSTANTS.SERVER_VERSION,
@@ -47,41 +71,25 @@ export class McpServerService implements OnModuleInit {
         },
       }
     );
-  }
 
-  async onModuleInit(): Promise<void> {
-    this.setupRequestHandlers();
-    this.logger.verbose?.(
-      'MCP Server service initialized',
-      LogContext.MCP_SERVER
-    );
-  }
-
-  /**
-   * Set up MCP SDK request handlers for resources and tools
-   */
-  private setupRequestHandlers(): void {
     // Handle resources/list
-    this.mcpServer.server.setRequestHandler(
-      ListResourcesRequestSchema,
-      async () => {
-        const resources = this.getResourceDefinitions();
-        this.logger.verbose?.(
-          `Listing ${resources.length} MCP resources`,
-          LogContext.MCP_SERVER
-        );
-        return { resources };
-      }
-    );
+    mcpServer.server.setRequestHandler(ListResourcesRequestSchema, async () => {
+      const resources = this.getResourceDefinitions();
+      this.logger.verbose?.(
+        `Listing ${resources.length} MCP resources`,
+        LogContext.MCP_SERVER
+      );
+      return { resources };
+    });
 
     // Handle resources/read
-    this.mcpServer.server.setRequestHandler(
+    mcpServer.server.setRequestHandler(
       ReadResourceRequestSchema,
       async request => {
         const { uri } = request.params;
-        const agentInfo = this.getCurrentActorContext();
+        const actorContext = getActorContext();
         this.logger.verbose?.(
-          `Reading MCP resource: ${uri}, user: ${agentInfo.actorID || 'anonymous'}`,
+          `Reading MCP resource: ${uri}, user: ${actorContext.actorID || 'anonymous'}`,
           LogContext.MCP_SERVER
         );
 
@@ -90,55 +98,46 @@ export class McpServerService implements OnModuleInit {
           throw new Error(`Resource not found: ${uri}`);
         }
 
-        const result = await provider.read(uri, agentInfo);
+        const result = await provider.read(uri, actorContext);
 
         return { contents: result.contents };
       }
     );
 
     // Handle tools/list
-    this.mcpServer.server.setRequestHandler(
-      ListToolsRequestSchema,
-      async () => {
-        const tools = this.getToolDefinitions();
-        this.logger.verbose?.(
-          `Listing ${tools.length} MCP tools`,
-          LogContext.MCP_SERVER
-        );
-        return { tools };
-      }
-    );
+    mcpServer.server.setRequestHandler(ListToolsRequestSchema, async () => {
+      const tools = this.getToolDefinitions();
+      this.logger.verbose?.(
+        `Listing ${tools.length} MCP tools`,
+        LogContext.MCP_SERVER
+      );
+      return { tools };
+    });
 
     // Handle tools/call
-    this.mcpServer.server.setRequestHandler(
-      CallToolRequestSchema,
-      async request => {
-        const { name, arguments: args } = request.params;
-        const agentInfo = this.getCurrentActorContext();
-        this.logger.verbose?.(
-          `Calling MCP tool: ${name}, user: ${agentInfo.actorID || 'anonymous'}`,
-          LogContext.MCP_SERVER
-        );
+    mcpServer.server.setRequestHandler(CallToolRequestSchema, async request => {
+      const { name, arguments: args } = request.params;
+      const actorContext = getActorContext();
+      this.logger.verbose?.(
+        `Calling MCP tool: ${name}, user: ${actorContext.actorID || 'anonymous'}`,
+        LogContext.MCP_SERVER
+      );
 
-        const tool = this.getTool(name);
-        if (!tool) {
-          throw new Error(`Tool not found: ${name}`);
-        }
-
-        const result = await tool.execute(args || {}, agentInfo);
-
-        // Return in MCP SDK expected format
-        return {
-          content: result.content,
-          isError: result.isError,
-        };
+      const tool = this.getTool(name);
+      if (!tool) {
+        throw new Error(`Tool not found: ${name}`);
       }
-    );
 
-    this.logger.verbose?.(
-      'MCP request handlers registered',
-      LogContext.MCP_SERVER
-    );
+      const result = await tool.execute(args || {}, actorContext);
+
+      // Return in MCP SDK expected format
+      return {
+        content: result.content,
+        isError: result.isError,
+      };
+    });
+
+    return mcpServer;
   }
 
   /**
@@ -181,7 +180,7 @@ export class McpServerService implements OnModuleInit {
     req: IncomingMessage,
     res: ServerResponse,
     sessionId?: string,
-    agentInfo?: ActorContext
+    actorContext?: ActorContext
   ): Promise<void> {
     if (!this.isEnabled()) {
       res.statusCode = 503;
@@ -189,40 +188,12 @@ export class McpServerService implements OnModuleInit {
       return;
     }
 
-    // Get transport for existing session or create new one
-    let transport: StreamableHTTPServerTransport | undefined;
-
     if (sessionId) {
-      transport = this.transports.get(sessionId);
-      if (transport) {
+      const session = this.sessions.get(sessionId);
+      if (!session) {
+        // Client sent a session ID we don't have (server restarted / expired).
         this.logger.verbose?.(
-          `Reusing existing transport for session ${sessionId}, agentInfo.actorID: ${agentInfo?.actorID || 'none'}`,
-          LogContext.MCP_SERVER
-        );
-        // Set current session ID for use in handlers
-        this.currentSessionId = sessionId;
-        // Update agent info only if the new one is authenticated
-        // This preserves the original authenticated session if subsequent requests
-        // don't include authentication credentials (relying on session)
-        if (agentInfo && agentInfo.actorID && !agentInfo.isAnonymous) {
-          this.sessionActorContext.set(sessionId, agentInfo);
-          this.logger.verbose?.(
-            `Updated agentInfo for session ${sessionId}: userID=${agentInfo.actorID}`,
-            LogContext.MCP_SERVER
-          );
-        } else {
-          // Log that we're preserving the existing session info
-          const existingInfo = this.sessionActorContext.get(sessionId);
-          this.logger.verbose?.(
-            `Preserving existing agentInfo for session ${sessionId}: userID=${existingInfo?.actorID || 'none'}`,
-            LogContext.MCP_SERVER
-          );
-        }
-      } else {
-        // Client sent session ID but we don't have it - return 404
-        // This happens if server restarted or session expired
-        this.logger.verbose?.(
-          `Session ${sessionId} not found, active sessions: ${this.transports.size}`,
+          `Session ${sessionId} not found, active sessions: ${this.sessions.size}`,
           LogContext.MCP_SERVER
         );
         res.statusCode = 404;
@@ -239,34 +210,56 @@ export class McpServerService implements OnModuleInit {
         );
         return;
       }
-    } else {
-      // No session ID - create new transport (for initialization)
-      transport = new StreamableHTTPServerTransport({
-        sessionIdGenerator: () => crypto.randomUUID(),
-        enableJsonResponse: true, // Use JSON instead of SSE for stateless HTTP
-      });
 
-      // Connect the transport to our MCP server
-      await this.mcpServer.connect(transport);
+      // Update the session's actor only if this request carries a fresh
+      // authentication; otherwise preserve the identity established at init
+      // (subsequent requests may rely on the session rather than re-sending a key).
+      if (actorContext && actorContext.actorID && !actorContext.isAnonymous) {
+        session.actorContext = actorContext;
+        this.logger.verbose?.(
+          `Updated actorContext for session ${sessionId}: userID=${actorContext.actorID}`,
+          LogContext.MCP_SERVER
+        );
+      }
 
-      this.logger.verbose?.(`Created new MCP transport`, LogContext.MCP_SERVER);
+      await session.transport.handleRequest(req, res);
+      return;
     }
 
-    // Handle the request
+    // No session ID — this is an initialization request. Create a dedicated
+    // transport + McpServer for the new session.
+    const transport = new StreamableHTTPServerTransport({
+      sessionIdGenerator: () => crypto.randomUUID(),
+      enableJsonResponse: true, // Use JSON instead of SSE for stateless HTTP
+    });
+
+    const session: McpSession = {
+      transport,
+      actorContext: actorContext ?? this.createAnonymousActorContext(),
+    } as McpSession;
+    session.server = this.createMcpServer(() => session.actorContext);
+
+    // Clean up the session map when the transport closes.
+    transport.onclose = () => {
+      if (transport.sessionId) {
+        this.sessions.delete(transport.sessionId);
+      }
+    };
+
+    // Connect this session's server to its own transport (exactly once).
+    await session.server.connect(transport);
+    this.logger.verbose?.(
+      'Created new MCP session transport',
+      LogContext.MCP_SERVER
+    );
+
     await transport.handleRequest(req, res);
 
-    // Session ID is only available after first handleRequest (when initialize is called)
-    // Store the transport and agent info in our session maps for subsequent requests
-    if (transport.sessionId && !this.transports.has(transport.sessionId)) {
-      this.transports.set(transport.sessionId, transport);
-      // Set current session ID for use in handlers
-      this.currentSessionId = transport.sessionId;
-      // Store agent info for this session
-      if (agentInfo) {
-        this.sessionActorContext.set(transport.sessionId, agentInfo);
-      }
+    // sessionId is assigned by the transport during the initialize handshake.
+    if (transport.sessionId && !this.sessions.has(transport.sessionId)) {
+      this.sessions.set(transport.sessionId, session);
       this.logger.verbose?.(
-        `Stored MCP session ${transport.sessionId}, total active: ${this.transports.size}`,
+        `Stored MCP session ${transport.sessionId}, total active: ${this.sessions.size}`,
         LogContext.MCP_SERVER
       );
     }
@@ -324,45 +317,22 @@ export class McpServerService implements OnModuleInit {
   }
 
   /**
-   * Get the underlying McpServer instance (for advanced usage)
-   */
-  getMcpServer(): McpServer {
-    return this.mcpServer;
-  }
-
-  /**
    * Close all active sessions
    */
   async closeAllSessions(): Promise<void> {
-    for (const transport of this.transports.values()) {
-      await transport.close();
+    for (const session of this.sessions.values()) {
+      await session.transport.close();
     }
-    this.transports.clear();
-    this.sessionActorContext.clear();
-    this.currentSessionId = undefined;
-  }
-
-  /**
-   * Get the ActorContext for the current request
-   * Uses the stored session ActorContext if available, otherwise creates anonymous
-   */
-  private getCurrentActorContext(): ActorContext {
-    if (this.currentSessionId) {
-      const agentInfo = this.sessionActorContext.get(this.currentSessionId);
-      if (agentInfo) {
-        return agentInfo;
-      }
-    }
-    return this.createAnonymousActorContext();
+    this.sessions.clear();
   }
 
   /**
    * Create an anonymous ActorContext for unauthenticated requests
    */
   private createAnonymousActorContext(): ActorContext {
-    const agentInfo = new ActorContext();
-    agentInfo.isAnonymous = true;
-    agentInfo.credentials = [];
-    return agentInfo;
+    const actorContext = new ActorContext();
+    actorContext.isAnonymous = true;
+    actorContext.credentials = [];
+    return actorContext;
   }
 }
