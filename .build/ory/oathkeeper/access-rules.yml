@@ -97,6 +97,23 @@
   mutators:
     - handler: id_token
 
+- id: 'alkemio:api:private:rest:mcp'
+  upstream:
+    preserve_host: true
+    url: 'http://host.docker.internal:4000'
+  match:
+    url: 'http://localhost:3000/rest/mcp<**>'
+    methods:
+      - GET
+      - POST
+      - DELETE
+  authenticators:
+    - handler: noop           # MCP handles its own auth via API keys
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: noop
+
 - id: 'alkemio:api:private:ws:socket-io'
   upstream:
     preserve_host: true

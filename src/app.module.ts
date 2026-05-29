@@ -71,6 +71,7 @@ import { KratosWebhookModule } from '@services/external/kratos-webhooks';
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
+import { McpServerModule } from '@services/mcp-server/mcp-server.module';
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { AppController } from '@src/app.controller';
 import { WinstonConfigService } from '@src/config/winston.config';
@@ -325,6 +326,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     InnovationHubModule,
     CalendarEventIcsModule,
     IdentityResolveModule,
+    McpServerModule,
     MeModule,
     VirtualActorModule,
     InputCreatorModule,

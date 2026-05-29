@@ -27,6 +27,15 @@ export class AuthInterceptor implements NestInterceptor {
     if (!req) {
       return next.handle();
     }
+
+    // If a guard has already authenticated the actor (e.g., MCP auth guard),
+    // don't overwrite with a different authentication strategy
+    const existingActor = req.user as ActorContext | undefined;
+    if (existingActor?.actorID && !existingActor?.isAnonymous) {
+      // Actor already authenticated by a guard - preserve that authentication
+      return next.handle();
+    }
+
     // attach the resolved user
     req.user = await passportAuthenticate(req);
     // pass control to the next interceptor
