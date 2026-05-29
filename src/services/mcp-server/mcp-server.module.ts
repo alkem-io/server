@@ -4,6 +4,7 @@ import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
+import { PlatformAuditEntry } from '@domain/community/user-email-change/platform.audit.entry.entity';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { TemplateModule } from '@domain/template/template/template.module';
@@ -13,6 +14,7 @@ import { ConfigModule } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityModule } from '@platform/activity/activity.module';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { McpApiKey } from './auth/mcp-api-key.entity';
 import { McpApiKeyService } from './auth/mcp-api-key.service';
 import { McpApiKeyStrategy } from './auth/mcp-api-key.strategy';
@@ -23,6 +25,7 @@ import { CalloutResourceProvider } from './resources/callout.resource';
 import { ResourceRegistry } from './resources/resource.registry';
 import { SpaceResourceProvider } from './resources/space.resource';
 import { WhiteboardResourceProvider } from './resources/whiteboard.resource';
+import { AuditLogAnalyzeTool } from './tools/audit-log-analyze.tool';
 import { CommunityActivitySummaryTool } from './tools/community-activity-summary.tool';
 import { ContributionsAnalyzeTool } from './tools/contributions-analyze.tool';
 import { TemplateNavigatorTool } from './tools/template-navigator.tool';
@@ -33,10 +36,16 @@ import { WhiteboardListTool } from './tools/whiteboard-list.tool';
 @Module({
   imports: [
     ConfigModule,
-    TypeOrmModule.forFeature([McpApiKey, Whiteboard, InnovationPack]),
+    TypeOrmModule.forFeature([
+      McpApiKey,
+      Whiteboard,
+      InnovationPack,
+      PlatformAuditEntry,
+    ]),
     PassportModule,
     ActorContextModule,
     AuthorizationModule,
+    PlatformAuthorizationPolicyModule,
     WhiteboardModule,
     CalloutModule,
     SpaceModule,
@@ -64,6 +73,7 @@ import { WhiteboardListTool } from './tools/whiteboard-list.tool';
     ContributionsAnalyzeTool,
     CommunityActivitySummaryTool,
     TemplateNavigatorTool,
+    AuditLogAnalyzeTool,
   ],
   exports: [McpServerService, McpApiKeyService],
 })
@@ -79,7 +89,8 @@ export class McpServerModule implements OnModuleInit {
     private readonly whiteboardListTool: WhiteboardListTool,
     private readonly contributionsAnalyzeTool: ContributionsAnalyzeTool,
     private readonly communityActivitySummaryTool: CommunityActivitySummaryTool,
-    private readonly templateNavigatorTool: TemplateNavigatorTool
+    private readonly templateNavigatorTool: TemplateNavigatorTool,
+    private readonly auditLogAnalyzeTool: AuditLogAnalyzeTool
   ) {}
 
   onModuleInit(): void {
@@ -94,6 +105,7 @@ export class McpServerModule implements OnModuleInit {
     this.toolRegistry.register(this.contributionsAnalyzeTool);
     this.toolRegistry.register(this.communityActivitySummaryTool);
     this.toolRegistry.register(this.templateNavigatorTool);
+    this.toolRegistry.register(this.auditLogAnalyzeTool);
 
     // Wire up registries to the MCP service
     for (const provider of this.resourceRegistry.listProviders()) {
