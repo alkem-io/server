@@ -1,13 +1,21 @@
 import { INNOVATION_HUB_INJECT_TOKEN } from '@common/constants';
 import { type Mocked, vi } from 'vitest';
 
-// Must mock @nestjs/graphql before any import that transitively uses registerEnumType
+// Must mock @nestjs/graphql before any import that transitively uses registerEnumType.
+// `vi.hoisted` keeps the mock identity stable across the factory and the test body's
+// `vi.mocked(GqlExecutionContext.create)` references — the existing `vi.mocked(...)`
+// indirection works *most* of the time but does not eliminate the divergent-identity
+// risk under v8 coverage + `isolate: false` (same flake class as #6012).
+const { gqlExecutionContextCreateMock } = vi.hoisted(() => ({
+  gqlExecutionContextCreateMock: vi.fn(),
+}));
+
 vi.mock('@nestjs/graphql', async importOriginal => {
   const actual = await importOriginal<typeof import('@nestjs/graphql')>();
   return {
     ...actual,
     GqlExecutionContext: {
-      create: vi.fn(),
+      create: gqlExecutionContextCreateMock,
     },
   };
 });

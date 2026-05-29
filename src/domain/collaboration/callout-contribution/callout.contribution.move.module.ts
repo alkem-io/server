@@ -4,6 +4,7 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { CalloutModule } from '../callout/callout.module';
+import { CollaborationLicenseModule } from '../collaboration/collaboration.license.module';
 import { CalloutContribution } from './callout.contribution.entity';
 import { CalloutContributionModule } from './callout.contribution.module';
 import { CalloutContributionMoveResolverMutations } from './callout.contribution.move.resolver.mutations';
@@ -14,6 +15,7 @@ import { CalloutContributionMoveService } from './callout.contribution.move.serv
     CalloutModule,
     AuthorizationModule,
     CalloutContributionModule,
+    CollaborationLicenseModule,
     UrlGeneratorModule,
     TypeOrmModule.forFeature([CalloutContribution, Callout]),
   ],

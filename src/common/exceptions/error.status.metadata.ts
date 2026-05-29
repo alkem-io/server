@@ -283,6 +283,11 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 108,
     userMessage: 'userMessages.operations.licenseEntitlementNotSupported',
   },
+  [AlkemioErrorStatus.LICENSE_ENTITLEMENT_UNEVALUABLE]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 121,
+    userMessage: 'userMessages.operations.licenseEntitlementUnevaluable',
+  },
   [AlkemioErrorStatus.CALLOUT_CLOSED]: {
     category: ErrorCategory.OPERATIONS,
     specificCode: 109,

@@ -21,7 +21,17 @@ describe('Override governance integration', () => {
   const tmpRoot = fs.mkdtempSync(path.join(os.tmpdir(), 'schema-override-'));
   const codeownersPath = path.join(tmpRoot, 'CODEOWNERS');
 
+  // Capture-and-restore (FR-009): if the parent process inherited these env
+  // vars, blindly `delete`ing them in afterAll would leak the *absence* into
+  // sibling test files. Capture before mutating so the original value is
+  // restored on every exit path.
+  let origCodeownersPath: string | undefined;
+  let origReviewsJson: string | undefined;
+
   beforeAll(() => {
+    origCodeownersPath = process.env.SCHEMA_OVERRIDE_CODEOWNERS_PATH;
+    origReviewsJson = process.env.SCHEMA_OVERRIDE_REVIEWS_JSON;
+
     // Simple CODEOWNERS making @alice an owner of everything
     fs.writeFileSync(codeownersPath, '* @alice\n');
     process.env.SCHEMA_OVERRIDE_CODEOWNERS_PATH = codeownersPath;
@@ -36,13 +46,24 @@ describe('Override governance integration', () => {
   });
 
   afterAll(() => {
+    // Restore env state first so a failing fs.rmSync cannot leave env vars
+    // poisoning subsequent test files.
+    if (origCodeownersPath === undefined) {
+      delete process.env.SCHEMA_OVERRIDE_CODEOWNERS_PATH;
+    } else {
+      process.env.SCHEMA_OVERRIDE_CODEOWNERS_PATH = origCodeownersPath;
+    }
+    if (origReviewsJson === undefined) {
+      delete process.env.SCHEMA_OVERRIDE_REVIEWS_JSON;
+    } else {
+      process.env.SCHEMA_OVERRIDE_REVIEWS_JSON = origReviewsJson;
+    }
+
     try {
       fs.rmSync(tmpRoot, { recursive: true, force: true });
     } catch {
-      /* ignore */
+      /* tmp cleanup is best-effort — env vars are the load-bearing restore */
     }
-    delete process.env.SCHEMA_OVERRIDE_CODEOWNERS_PATH;
-    delete process.env.SCHEMA_OVERRIDE_REVIEWS_JSON;
   });
 
   it('applies override to breaking entries', () => {
