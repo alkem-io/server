@@ -1,7 +1,7 @@
 # CLAUDE.md
 
 > **Workspace context.** This repo is part of the Alkemio polyrepo at
-> [alkem-io/alkemio-workspace](https://github.com/alkem-io/alkemio-workspace).
+> [alkem-io/agents-hq](https://github.com/alkem-io/agents-hq).
 > Cross-repo (vertical) feature specs live there under `specs/NNN-*/`. When
 > working on a `feat/NNN-...` branch in this repo, the matching workspace
 > spec is the single source of truth.
