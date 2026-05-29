@@ -36,6 +36,7 @@
     "test:debug": "vitest --inspect-brk",
     "test:ci": "vitest run --coverage && cat ./coverage-ci/lcov.info",
     "test:ci:no:coverage": "vitest run",
+    "test:flake-verify": ".scripts/test/flake-verify.sh",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource src/config/migration.create.config.ts",
     "typeorm-no-entities": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource src/config/migration.config.ts",
     "migration:create": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:create",
@@ -62,7 +63,7 @@
   },
   "dependencies": {
     "@alkemio/matrix-adapter-lib": "0.8.16",
-    "@alkemio/notifications-lib": "0.14.2",
+    "@alkemio/notifications-lib": "0.17.0",
     "@apollo/server": "^4.10.4",
     "@elastic/elasticsearch": "^8.12.2",
     "@golevelup/nestjs-rabbitmq": "^6.1.0",

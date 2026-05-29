@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { RoomModule } from '@domain/communication/room/room.module';
 import { Module } from '@nestjs/common';
@@ -20,6 +21,7 @@ import { ForumAuthorizationService } from './forum.service.authorization';
 @Module({
   imports: [
     AuthorizationModule,
+    ActorLookupModule,
     NotificationAdapterModule,
     AuthorizationPolicyModule,
     DiscussionModule,

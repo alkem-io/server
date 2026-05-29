@@ -45,6 +45,10 @@ import { IMessage } from '@domain/communication/message/message.interface';
 import { MessageDetails } from '@domain/communication/message.details/message.details.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IUser } from '@domain/community/user/user.interface';
+import {
+  UserEmailChangeGlobalAdminNotificationPayload,
+  UserEmailChangeSpaceAdminNotificationPayload,
+} from '@domain/community/user-email-change/dto/notification.payloads';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { ISpace } from '@domain/space/space/space.interface';
 import {
@@ -62,10 +66,12 @@ import { ClientProxy } from '@nestjs/microservices';
 import { IDiscussion } from '@platform/forum-discussion/discussion.interface';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { AlkemioConfig } from '@src/types';
+import { NotificationInputUserEmailChangeGlobalAdmin } from '../notification-adapter/dto/platform/notification.dto.input.platform.user.email.change';
 import { NotificationInputCollaborationCalloutComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.comment';
 import { NotificationInputCollaborationCalloutContributionCreated } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.contribution.created';
 import { NotificationInputCollaborationCalloutPostContributionComment } from '../notification-adapter/dto/space/notification.dto.input.space.collaboration.callout.post.contribution.comment';
 import { NotificationInputCommentReply } from '../notification-adapter/dto/space/notification.dto.input.space.communication.user.comment.reply';
+import { NotificationInputUserEmailChangeSpaceAdmin } from '../notification-adapter/dto/space/notification.dto.input.space.user.email.change';
 
 interface CalloutContributionPayload {
   id: string;
@@ -91,6 +97,44 @@ export class NotificationExternalAdapter {
     payload: any
   ): Promise<void> {
     this.notificationsClient.emit<number>(event, payload);
+  }
+
+  /**
+   * Email-change publish helpers (research.md §R8). Each helper emits the same
+   * underlying RabbitMQ event via `sendExternalNotifications` — the wrappers
+   * exist so the orchestration service can call a typed API per event, and so
+   * each event has its own retry / audit envelope on the call site.
+   */
+  public async publishEmailChangeSecuritySignal(
+    payload: unknown
+  ): Promise<void> {
+    await this.sendExternalNotifications(
+      NotificationEvent.USER_EMAIL_CHANGE_SECURITY_SIGNAL,
+      payload
+    );
+  }
+
+  public async publishEmailChangeNewAddressNotification(
+    payload: unknown
+  ): Promise<void> {
+    await this.sendExternalNotifications(
+      NotificationEvent.USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION,
+      payload
+    );
+  }
+
+  /**
+   * Password-change observer publish helper. Sent to the user's current email
+   * address whenever a Kratos-side password change is observed — the platform
+   * never sees the credential, only the fact of the change.
+   */
+  public async publishPasswordChangeSecuritySignal(
+    payload: unknown
+  ): Promise<void> {
+    await this.sendExternalNotifications(
+      NotificationEvent.USER_PASSWORD_CHANGE_SECURITY_SIGNAL,
+      payload
+    );
   }
 
   async buildSpaceCommunityApplicationCreatedNotificationPayload(
@@ -745,6 +789,58 @@ export class NotificationExternalAdapter {
       type,
       role,
       ...basePayload,
+    };
+    return result;
+  }
+
+  async buildUserEmailChangeGlobalAdminNotificationPayload(
+    eventType: NotificationEvent,
+    eventData: NotificationInputUserEmailChangeGlobalAdmin,
+    recipients: IUser[]
+  ): Promise<UserEmailChangeGlobalAdminNotificationPayload> {
+    const basePayload = await this.buildBaseEventPayload(
+      eventType,
+      eventData.triggeredBy,
+      recipients
+    );
+    const result: UserEmailChangeGlobalAdminNotificationPayload = {
+      subjectProfileSummary: eventData.subjectProfileSummary,
+      oldEmail: eventData.oldEmail,
+      newEmail: eventData.newEmail,
+      initiatorProfileSummary: eventData.initiatorProfileSummary,
+      initiatorRole: eventData.initiatorRole,
+      approver: eventData.approver,
+      reason: eventData.reason,
+      commitTimestampISO8601: eventData.commitTimestampISO8601,
+      triggerOutcome: eventData.triggerOutcome,
+      subjectMemberships: eventData.subjectMemberships,
+      subjectGlobalRoles: eventData.subjectGlobalRoles,
+      ...basePayload,
+    };
+    return result;
+  }
+
+  async buildUserEmailChangeSpaceAdminNotificationPayload(
+    eventType: NotificationEvent,
+    eventData: NotificationInputUserEmailChangeSpaceAdmin,
+    recipients: IUser[],
+    space: ISpace
+  ): Promise<UserEmailChangeSpaceAdminNotificationPayload> {
+    const spacePayload = await this.buildSpacePayload(
+      eventType,
+      eventData.triggeredBy,
+      recipients,
+      space
+    );
+    const result: UserEmailChangeSpaceAdminNotificationPayload = {
+      subjectProfileSummary: eventData.subjectProfileSummary,
+      oldEmail: eventData.oldEmail,
+      newEmail: eventData.newEmail,
+      initiatorProfileSummary: eventData.initiatorProfileSummary,
+      initiatorRole: eventData.initiatorRole,
+      commitTimestampISO8601: eventData.commitTimestampISO8601,
+      triggerOutcome: eventData.triggerOutcome,
+      ...spacePayload,
     };
     return result;
   }

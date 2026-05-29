@@ -170,7 +170,7 @@ export class UrlGeneratorService {
             'innovation_hub',
             profile.id
           );
-        return `${this.endpoint_cluster}/innovation-hubs/${innovationHubEntityInfo.entityNameID}/settings`;
+        return `${this.endpoint_cluster}/${UrlPathBase.HUB}/${innovationHubEntityInfo.entityNameID}`;
       }
       case ProfileType.USER_GROUP:
         // to do: implement and decide what to do with user groups

@@ -5,6 +5,16 @@
 # should have the same indentation.
 #
 # [1] https://docs.ansible.com/ansible/latest/reference_appendices/YAMLSyntax.html
+## endpoints ##
+# External endpoint URLs surfaced into outbound payloads (e.g., the post-commit
+# acknowledgement notification sent to a user's new login email — see spec 097
+# §FR-016c). These are URLs targeted at end-user browsers, distinct from the
+# internal `hosting.*` paths used by the platform itself.
+endpoints:
+  # The base URL of the public client-web application. Used by post-commit
+  # email-change notifications to build a login deep link for the recipient.
+  client_web: ${ENDPOINTS_CLIENT_WEB}:http://localhost:3000
+
 ## hosting ##
 # The hosting configuration for the Alkemio Server
 hosting:
@@ -206,6 +216,14 @@ identity:
 
         session_cookie_name: ${KRATOS_SESSION_COOKIE_NAME}:ory_kratos_session
         session_extend_enabled: ${KRATOS_SESSION_EXTEND_ENABLED}:true
+
+        # Shared-secret header validated on inbound Kratos webhooks (e.g. the
+        # settings-flow password-changed hook -> POST /rest/kratos/password-changed).
+        # The Kratos webhook config in .build/ory/kratos/ must inject this header
+        # with this value for the request to be accepted.
+        webhook_secret:
+          name: ${KRATOS_WEBHOOK_SECRET_NAME}:x-kratos-webhook-secret
+          value: ${KRATOS_WEBHOOK_SECRET_VALUE}:kratos-hook-dev-secret
 
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.

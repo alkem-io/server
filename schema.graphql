@@ -521,8 +521,13 @@ enum NotificationEvent {
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
   SPACE_LEAD_COMMUNICATION_MESSAGE
   USER_COMMENT_REPLY
+  USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION
+  USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION
+  USER_EMAIL_CHANGE_SECURITY_SIGNAL
+  USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION
   USER_MENTIONED
   USER_MESSAGE
+  USER_PASSWORD_CHANGE_SECURITY_SIGNAL
   USER_SIGN_UP_WELCOME
   USER_SPACE_COMMUNITY_APPLICATION_DECLINED
   USER_SPACE_COMMUNITY_INVITATION
@@ -566,6 +571,9 @@ enum NotificationEventPayload {
   SPACE_COMMUNITY_INVITATION
   SPACE_COMMUNITY_INVITATION_USER_PLATFORM
   USER
+  USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION
+  USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION
+  USER_EMAIL_CHANGE_SECURITY_SIGNAL
   USER_MESSAGE_DIRECT
   USER_MESSAGE_ROOM
   VIRTUAL_CONTRIBUTOR
@@ -865,6 +873,30 @@ enum UrlType {
   USER
   VERIFY
   VIRTUAL_CONTRIBUTOR
+}
+
+"""
+Outcome recorded for a single user-email-change audit entry. Spec 098 extends this enum additively with verification-flow outcomes.
+"""
+enum UserEmailChangeAuditOutcome {
+  COMMITTED
+  DRIFT_DETECTED
+  DRIFT_RESOLUTION_FAILED
+  DRIFT_RESOLVED
+  GLOBAL_ADMIN_NOTIFICATION_FAILED
+  NEW_ADDRESS_NOTIFICATION_FAILED
+  REJECTED_CONFLICT
+  REJECTED_VALIDATION
+  ROLLED_BACK
+  SECURITY_SIGNAL_FAILED
+  SESSION_INVALIDATION_FAILED
+  SPACE_ADMIN_NOTIFICATION_FAILED
+}
+
+"""Role of the actor who initiated a user-email-change audit event."""
+enum UserEmailChangeInitiatorRole {
+  PLATFORM_ADMIN
+  SELF
 }
 
 enum VirtualContributorBodyOfKnowledgeType {
@@ -2549,6 +2581,16 @@ type Document {
   url: String!
 }
 
+"""Who authorized an email change within the subject user’s organization."""
+type EmailChangeApprover {
+  """Name of the person who authorized the change."""
+  name: String!
+  """The organization within which the change was authorized."""
+  organization: String
+  """The approver's role or title within the organization."""
+  role: String!
+}
+
 type ExternalConfig {
   """The API key for the external LLM provider."""
   apiKey: String
@@ -2606,6 +2648,10 @@ type Forum {
   discussions(queryData: DiscussionsInput): [Discussion!]
   """The ID of the entity"""
   id: UUID!
+  """
+  Capped list of Contributors (Users, Virtual Contributors, …) that may be @mentioned in the platform Forum. The Forum is platform-wide, so all platform Contributors of the requested types are returned. Use `filter` for typeahead search and `types` to restrict which Contributor kinds are returned.
+  """
+  mentionableContributors(filter: ContributorFilterInput, limit: Int, types: [ActorType!]): [ActorFull!]!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }
@@ -3666,6 +3712,14 @@ type Mutation {
   Remove the Kratos account associated with the specified User. Note: the Users profile on the platform is not deleted.
   """
   adminUserAccountDelete(userID: UUID!): User!
+  """
+  Change a user's login email synchronously, acting as a platform administrator. The admin is responsible for verifying the subject user's identity out-of-band — the platform does NOT send a confirmation message to the new mailbox and does NOT require the new mailbox to prove ownership. Validates uniqueness, commits Kratos → Alkemio with bounded retry, invalidates the subject's existing sessions, and sends a security-signal notification to the old address. Requires PLATFORM_ADMIN.
+  """
+  adminUserEmailChange(adminUserEmailChangeData: AdminUserEmailChangeInput!): UserEmailChangeResult!
+  """
+  Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio and Kratos to a canonical email chosen by the admin. Requires PLATFORM_ADMIN.
+  """
+  adminUserEmailChangeDriftResolve(adminUserEmailChangeDriftResolveData: AdminUserEmailChangeDriftResolveInput!): UserEmailChangeResult!
   """Create a test customer on wingback."""
   adminWingbackCreateTestCustomer: String!
   """Get wingback customer entitlements."""
@@ -4392,6 +4446,10 @@ type PlatformAdminQueryResults {
   """
   innovationPacks(queryData: InnovationPacksInput): [InnovationPack!]!
   """
+  The most recent email-change audit entry for the named subject user. Returns null if no audit entry exists.
+  """
+  latestUserEmailChangeAuditEntry(userID: UUID!): UserEmailChangeAuditEntry
+  """
   Retrieve all Organizations on the Platform. This is only available to Platform Admins.
   """
   organizations(
@@ -4416,6 +4474,10 @@ type PlatformAdminQueryResults {
     """The IDs of the entities to return"""
     IDs: [UUID!]
   ): [Space!]!
+  """
+  Paginated email-change audit-entry history for the named subject user, ordered by timestamp descending. Cursor pagination per docs/Pagination.md.
+  """
+  userEmailChangeAuditEntries(after: String, before: String, first: Float, last: Float, userID: UUID!): UserEmailChangeAuditEntries!
   """
   Retrieve all Users on the Platform. This is only available to Platform Admins.
   """
@@ -6261,6 +6323,68 @@ type UserAuthenticationResult {
   methods: [AuthenticationType!]!
 }
 
+"""
+Cursor-paginated list of email-change audit entries (per docs/Pagination.md).
+"""
+type UserEmailChangeAuditEntries {
+  auditEntries: [UserEmailChangeAuditEntry!]!
+  pageInfo: UserEmailChangeAuditEntriesPageInfo!
+  total: Float!
+}
+
+type UserEmailChangeAuditEntriesPageInfo {
+  endCursor: String
+  hasNextPage: Boolean!
+  hasPreviousPage: Boolean!
+  startCursor: String
+}
+
+"""
+A single email-change audit-trail entry. Append-only and retained indefinitely (FR-014a).
+"""
+type UserEmailChangeAuditEntry {
+  """
+  Who authorized the change within the subject user’s organization. Set for platform-admin-initiated changes; null for self-service entries.
+  """
+  approver: EmailChangeApprover
+  """Short non-leaky failure reason. Set on failure outcomes only."""
+  failureReason: String
+  id: UUID!
+  """
+  The user who initiated the change. Null for entries whose initiator could not be resolved (early validation rejects); initiatorRole is still present.
+  """
+  initiator: UserProfileSummary
+  initiatorRole: UserEmailChangeInitiatorRole!
+  """
+  For commit/rollback entries: the proposed/applied new address. For drift_detected entries: the value observed on the Kratos side at the moment of drift.
+  """
+  newEmail: String
+  """
+  Old email at the time of this audit entry. Null only for entries with no old-email context.
+  """
+  oldEmail: String
+  outcome: UserEmailChangeAuditOutcome!
+  """
+  Admin-supplied justification for the change. Set for platform-admin-initiated changes; null for self-service entries.
+  """
+  reason: String
+  """The user whose email is being changed."""
+  subject: UserProfileSummary!
+  timestamp: DateTime!
+}
+
+"""
+Result returned to the admin caller. Deliberately minimal — failures surface as typed GraphQL errors instead of returning false. Returned by both adminUserEmailChange and adminUserEmailChangeDriftResolve.
+"""
+type UserEmailChangeResult {
+  """The committed (canonical) email. Present on success."""
+  email: String
+  """
+  Always true on success. Failures throw typed GraphQL errors instead of returning false.
+  """
+  success: Boolean!
+}
+
 type UserGroup {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -6276,6 +6400,14 @@ type UserGroup {
   profile: Profile
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+"""
+Minimal user-profile summary identifying a user without exposing PII beyond id + displayName.
+"""
+type UserProfileSummary {
+  displayName: String!
+  id: UUID!
 }
 
 type UserSettings {
@@ -6362,6 +6494,8 @@ type UserSettingsNotificationPlatform {
 type UserSettingsNotificationPlatformAdmin {
   """Receive a notification when a new L0 Space is created"""
   spaceCreated: UserSettingsNotificationChannels!
+  """Receive a notification when a user changes their login email address."""
+  userEmailChanged: UserSettingsNotificationChannels!
   """Receive a notification when a user global role is assigned or removed."""
   userGlobalRoleChanged: UserSettingsNotificationChannels!
   """Receive notification when a new user signs up"""
@@ -6410,6 +6544,10 @@ type UserSettingsNotificationSpaceAdmin {
   communityApplicationReceived: UserSettingsNotificationChannels!
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: UserSettingsNotificationChannels!
+  """
+  Receive a notification when the login email of an admin or lead of a Space I administer is changed (admin)
+  """
+  userEmailChanged: UserSettingsNotificationChannels!
 }
 
 type UserSettingsNotificationUser {
@@ -6761,6 +6899,30 @@ input AddVisualToMediaGalleryInput {
   The type of visual to add (e.g. MEDIA_GALLERY_IMAGE, MEDIA_GALLERY_VIDEO).
   """
   visualType: VisualType!
+}
+
+input AdminUserEmailChangeDriftResolveInput {
+  """
+  The admin-chosen canonical email. MUST equal either the old or new email recorded on the drift_detected audit entry. Both sides are force-aligned to this value.
+  """
+  canonicalEmail: String!
+  """The subject user whose latest audit entry is drift_detected."""
+  userID: UUID!
+}
+
+input AdminUserEmailChangeInput {
+  """
+  Who authorized the change within the subject user's organization. Distinct from the acting platform admin.
+  """
+  approver: EmailChangeApproverInput!
+  """The proposed new email address."""
+  newEmail: String!
+  """
+  Admin justification for the change (e.g. support-ticket reference). Recorded on every audit entry for this operation.
+  """
+  reason: String!
+  """The subject user whose login email is being changed."""
+  userID: UUID!
 }
 
 input ApplicationEventInput {
@@ -7629,6 +7791,19 @@ input DiscussionsInput {
   limit: Float
   """The sort order of the Discussions to return."""
   orderBy: DiscussionsOrderBy
+}
+
+input EmailChangeApproverInput {
+  """Name of the person who authorized the change."""
+  name: String!
+  """
+  The organization within which the change was authorized, if applicable.
+  """
+  organization: String
+  """
+  The approver's role or title within the organization (e.g. 'Organization Administrator').
+  """
+  role: String!
 }
 
 input ExploreSpacesInput {
@@ -8885,6 +9060,10 @@ input UpdateUserSettingsNotificationPlatformAdminInput {
   """[Admin] Receive a notification when a new L0 Space is created"""
   spaceCreated: NotificationSettingInput
   """
+  [Admin] Receive a notification when a user changes their login email address
+  """
+  userEmailChanged: NotificationSettingInput
+  """
   [Admin] Receive a notification user is assigned or removed from a global role
   """
   userGlobalRoleChanged: NotificationSettingInput
@@ -8914,6 +9093,10 @@ input UpdateUserSettingsNotificationSpaceAdminInput {
   communityApplicationReceived: NotificationSettingInput
   """Receive a notification when a new member joins the community (admin)"""
   communityNewMember: NotificationSettingInput
+  """
+  Receive a notification when the login email of an admin or lead of a Space I administer is changed (admin)
+  """
+  userEmailChanged: NotificationSettingInput
 }
 
 input UpdateUserSettingsNotificationSpaceInput {

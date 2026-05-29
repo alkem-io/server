@@ -67,6 +67,7 @@ import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-
 import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-document-integration';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { GeoLocationModule } from '@services/external/geo-location';
+import { KratosWebhookModule } from '@services/external/kratos-webhooks';
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
@@ -79,6 +80,7 @@ import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
 import { DomainPlatformSettingsModule } from '@src/platform-admin/domain/organization/domain.platform.settings.module';
 import { AdminUsersModule } from '@src/platform-admin/domain/user/admin.users.module';
+import { AdminUserEmailChangeModule } from '@src/platform-admin/domain/user/email-change/admin.user.email.change.module';
 import { AdminLicensingModule } from '@src/platform-admin/licensing/admin.licensing.module';
 import { AdminContributorsModule } from '@src/platform-admin/services/avatars/admin.avatar.module';
 import { AdminGeoLocationModule } from '@src/platform-admin/services/geolocation/admin.geolocation.module';
@@ -299,6 +301,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     KonfigModule,
     AdminContributorsModule,
     AdminUsersModule,
+    AdminUserEmailChangeModule,
     AdminCommunicationModule,
     AdminSearchIngestModule,
     AdminLicensingModule,
@@ -339,6 +342,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     PlatformRoleModule,
     TemplateApplierModule,
     WingbackWebhookModule,
+    KratosWebhookModule,
     CalloutTransferModule,
     SearchModule,
   ],

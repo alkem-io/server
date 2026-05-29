@@ -49,6 +49,17 @@ export enum NotificationEvent {
   USER_COMMENT_REPLY = 'USER_COMMENT_REPLY',
   // Virtual contributors
   VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION = 'VIRTUAL_ADMIN_SPACE_COMMUNITY_INVITATION',
+
+  // Email-change notifications (spec 097)
+  USER_EMAIL_CHANGE_SECURITY_SIGNAL = 'USER_EMAIL_CHANGE_SECURITY_SIGNAL',
+  USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION = 'USER_EMAIL_CHANGE_NEW_ADDRESS_NOTIFICATION',
+  USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION = 'USER_EMAIL_CHANGE_GLOBAL_ADMIN_NOTIFICATION',
+  USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION = 'USER_EMAIL_CHANGE_SPACE_ADMIN_NOTIFICATION',
+
+  // Password-change observer (security signal to the current address whenever
+  // a Kratos-side password change is observed). Kratos owns the credential;
+  // the platform only records and notifies.
+  USER_PASSWORD_CHANGE_SECURITY_SIGNAL = 'USER_PASSWORD_CHANGE_SECURITY_SIGNAL',
 }
 
 registerEnumType(NotificationEvent, {

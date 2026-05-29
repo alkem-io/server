@@ -288,7 +288,6 @@ services:
     restart: always
     environment:
       - SYNAPSE_NO_TLS=true
-      - SYNAPSE_ENABLE_REGISTRATION=true
       - SYNAPSE_HOMESERVER_NAME
       - SYNAPSE_SERVER_URL
       - SYNAPSE_SERVER_SHARED_SECRET
@@ -377,7 +376,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.32.0
+    image: alkemio/notifications:v0.35.0
     depends_on:
       rabbitmq:
         condition: service_healthy

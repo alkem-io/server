@@ -2,6 +2,9 @@ export type AlkemioConfig = {
   authorization: {
     chunk: number;
   };
+  endpoints: {
+    client_web: string;
+  };
   hosting: {
     environment: string;
     port: number;
@@ -64,6 +67,16 @@ export type AlkemioConfig = {
           };
           session_cookie_name: string;
           session_extend_enabled: boolean;
+          /**
+           * Shared-secret header validated on inbound Kratos webhooks
+           * (currently: `POST /rest/kratos/password-changed`). The webhook
+           * configuration in `.build/ory/kratos/` must inject this header
+           * with this value for the request to be accepted.
+           */
+          webhook_secret: {
+            name: string;
+            value: string;
+          };
         };
       };
     };
