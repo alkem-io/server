@@ -36,6 +36,7 @@
     "test:debug": "vitest --inspect-brk",
     "test:ci": "vitest run --coverage && cat ./coverage-ci/lcov.info",
     "test:ci:no:coverage": "vitest run",
+    "test:flake-verify": ".scripts/test/flake-verify.sh",
     "typeorm": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource src/config/migration.create.config.ts",
     "typeorm-no-entities": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js --dataSource src/config/migration.config.ts",
     "migration:create": "ts-node -r tsconfig-paths/register ./node_modules/typeorm/cli.js migration:create",

@@ -11,18 +11,26 @@ describe('asyncMap', () => {
     expect(result).toEqual([]);
   });
 
-  it('should process items concurrently', async () => {
-    const startTime = Date.now();
-    const delay = 50;
+  it('should dispatch mapper bodies concurrently rather than serially', async () => {
+    // The previous form asserted `elapsed < delay * 2.5` wall-clock, which
+    // flaked under CI contention. Replaced with a deterministic concurrency
+    // probe: track how many mapper bodies have *entered* by the time the
+    // first one *resolves*. asyncMap is `Promise.all(array.map(mapper))`, so
+    // all bodies are entered synchronously before any resolves; serial
+    // dispatch would observe `started === 1` at first resolution.
+    const N = 3;
+    let started = 0;
+    let startedAtFirstResolve = 0;
 
-    await asyncMap([1, 2, 3], async n => {
-      await new Promise(resolve => setTimeout(resolve, delay));
+    const result = await asyncMap([1, 2, 3], async n => {
+      started++;
+      await new Promise(resolve => setTimeout(resolve, 5));
+      if (startedAtFirstResolve === 0) startedAtFirstResolve = started;
       return n;
     });
 
-    const elapsed = Date.now() - startTime;
-    // If concurrent, total time should be roughly one delay period, not three
-    expect(elapsed).toBeLessThan(delay * 2.5);
+    expect(result).toEqual([1, 2, 3]);
+    expect(startedAtFirstResolve).toBe(N);
   });
 
   it('should preserve result order even with varying async durations', async () => {

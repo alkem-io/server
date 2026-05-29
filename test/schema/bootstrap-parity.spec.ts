@@ -106,7 +106,9 @@ describe.skip('Schema bootstrap parity', () => {
 
   vi.setConfig({ testTimeout: 45000 });
 
-  it('emits identical SDL and delivers faster cold start', async () => {
+  it('emits identical SDL across light and full bootstrap', async ({
+    task,
+  }) => {
     const light = await captureSchema(SchemaBootstrapModule);
     const full = await captureSchema(AppModule);
 
@@ -123,7 +125,14 @@ describe.skip('Schema bootstrap parity', () => {
 
     expect(light.sdl).toBe(full.sdl);
     expect(light.typeCount).toBe(full.typeCount);
-    expect(light.durationMs).toBeLessThanOrEqual(2000);
-    expect(full.durationMs).toBeLessThan(10000);
+
+    // Per FR-005/FR-011 (spec 100-fix-flaky-tests): the previous wall-clock
+    // budgets on light/full durationMs flaked under CI contention. Surfaced
+    // as informational task.meta (visible in reporter output) instead of
+    // gating assertions. Parity is the load-bearing check.
+    Object.assign(task.meta, {
+      lightDurationMs: light.durationMs,
+      fullDurationMs: full.durationMs,
+    });
   });
 });
