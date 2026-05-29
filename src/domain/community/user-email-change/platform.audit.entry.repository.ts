@@ -37,6 +37,17 @@ export interface CursorPagedAuditEntries {
 }
 
 const EMAIL_CHANGE_CATEGORY = PlatformAuditCategory.EMAIL_CHANGE;
+const PASSWORD_CHANGE_CATEGORY = PlatformAuditCategory.PASSWORD_CHANGE;
+
+export interface AppendPasswordChangeEntryInput {
+  subjectUserId: string;
+  initiatorUserId?: string;
+  initiatorRole: PlatformAuditInitiatorRole;
+  outcome: PlatformAuditOutcome;
+  failureReason?: string;
+  correlationId?: string;
+  details?: PlatformAuditDetails;
+}
 
 @Injectable()
 export class PlatformAuditEntryRepository {
@@ -59,6 +70,84 @@ export class PlatformAuditEntryRepository {
       details: input.details,
     });
     return this.repo.save(entry);
+  }
+
+  public async appendPasswordChangeEntry(
+    input: AppendPasswordChangeEntryInput
+  ): Promise<IPlatformAuditEntry> {
+    const entry = this.repo.create({
+      category: PASSWORD_CHANGE_CATEGORY,
+      subjectUserId: input.subjectUserId,
+      initiatorUserId: input.initiatorUserId,
+      initiatorRole: input.initiatorRole,
+      outcome: input.outcome,
+      failureReason: input.failureReason,
+      correlationId: input.correlationId,
+      details: input.details,
+    });
+    return this.repo.save(entry);
+  }
+
+  public async findPasswordChangeBySubjectPaged(
+    subjectUserId: string,
+    args: CursorPageArgs
+  ): Promise<CursorPagedAuditEntries> {
+    const limit = args.first ?? args.last ?? 25;
+    const reverse = args.last !== undefined || args.before !== undefined;
+    const cursorRowId = decodeCursor(args.after ?? args.before);
+
+    const qb = this.repo
+      .createQueryBuilder('entry')
+      .where('entry."subjectUserId" = :subjectUserId', { subjectUserId })
+      .andWhere('entry."category" = :category', {
+        category: PASSWORD_CHANGE_CATEGORY,
+      })
+      .orderBy('entry."rowId"', reverse ? 'ASC' : 'DESC')
+      .take(limit + 1);
+
+    if (cursorRowId !== undefined) {
+      qb.andWhere(
+        reverse
+          ? 'entry."rowId" > :cursorRowId'
+          : 'entry."rowId" < :cursorRowId',
+        { cursorRowId }
+      );
+    }
+
+    const rows = await qb.getMany();
+    const hasMore = rows.length > limit;
+    const slice = hasMore ? rows.slice(0, limit) : rows;
+    const entries = reverse ? [...slice].reverse() : slice;
+
+    const total = await this.repo.count({
+      where: {
+        subjectUserId,
+        category: PASSWORD_CHANGE_CATEGORY,
+      },
+    });
+
+    const first = entries[0];
+    const last = entries[entries.length - 1];
+    return {
+      entries,
+      total,
+      hasNextPage: reverse ? false : hasMore,
+      hasPreviousPage: reverse ? hasMore : false,
+      startCursor: first ? encodeCursor(first.rowId) : undefined,
+      endCursor: last ? encodeCursor(last.rowId) : undefined,
+    };
+  }
+
+  public async findLatestPasswordChangeBySubject(
+    subjectUserId: string
+  ): Promise<PlatformAuditEntry | null> {
+    return this.repo.findOne({
+      where: {
+        subjectUserId,
+        category: PASSWORD_CHANGE_CATEGORY,
+      },
+      order: { rowId: 'DESC' },
+    });
   }
 
   public async findEmailChangeBySubjectPaged(

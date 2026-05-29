@@ -8,4 +8,5 @@
  */
 export enum PlatformAuditCategory {
   EMAIL_CHANGE = 'email_change',
+  PASSWORD_CHANGE = 'password_change',
 }

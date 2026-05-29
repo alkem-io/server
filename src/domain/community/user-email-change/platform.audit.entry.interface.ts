@@ -54,10 +54,39 @@ export interface EmailChangeAuditDetails {
 }
 
 /**
- * Discriminated union of per-category audit-entry payloads. Future ISO 27001
- * categories add their own narrow types here under the same union.
+ * Password-change category payload shape. The audit-service projects these
+ * keys into and out of the `platform_audit_entry.details` JSONB column.
+ *
+ * The platform is an observer — Kratos owns the credential, so the platform
+ * never sees or stores the password material. The payload carries the
+ * observation timestamp from the source flow and an optional Kratos flow id
+ * for cross-system correlation; no hashes, no policy fingerprints.
  */
-export type PlatformAuditDetails = EmailChangeAuditDetails;
+export interface PasswordChangeAuditDetails {
+  /**
+   * Wall-clock timestamp the upstream flow reported as the moment the
+   * password was changed. Separate from `createdDate` (when the audit row
+   * was written) so retries / delays don't smear forensic timing.
+   */
+  observedAt?: string;
+  /**
+   * Identifier the upstream identity provider used for the flow (e.g. a
+   * Kratos settings-flow id). Optional — present when the source supplies it.
+   */
+  sourceFlowId?: string;
+  requestContext?: AuditRequestContext;
+}
+
+/**
+ * Cross-category shape of `platform_audit_entry.details`. Every field is
+ * optional — the per-category audit-service (`UserEmailChangeAuditService`,
+ * `UserPasswordChangeAuditService`, ...) enforces which keys it writes for
+ * its category. Consumers reading rows for a known category may safely treat
+ * the relevant keys as present-or-undefined; the JSONB column itself does not
+ * carry a discriminator.
+ */
+export type PlatformAuditDetails = EmailChangeAuditDetails &
+  PasswordChangeAuditDetails;
 
 /**
  * Row shape of `platform_audit_entry`. Append-only; retained indefinitely

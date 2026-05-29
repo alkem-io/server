@@ -27,4 +27,8 @@ export enum PlatformAuditOutcome {
   REJECTED_VALIDATION = 'rejected_validation',
   REJECTED_CONFLICT = 'rejected_conflict',
   COMMIT_STARTED = 'commit_started',
+  // Password-change category (observer flow): the platform observed a
+  // Kratos-side password change and recorded it; the platform is not the
+  // source of truth for the credential itself.
+  OBSERVED = 'observed',
 }
