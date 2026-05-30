@@ -1,6 +1,7 @@
 import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
+import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
@@ -28,8 +29,10 @@ import { WhiteboardResourceProvider } from './resources/whiteboard.resource';
 import { AuditLogAnalyzeTool } from './tools/audit-log-analyze.tool';
 import { CommunityActivitySummaryTool } from './tools/community-activity-summary.tool';
 import { ContributionsAnalyzeTool } from './tools/contributions-analyze.tool';
+import { CreateWhiteboardTool } from './tools/create-whiteboard.tool';
 import { TemplateNavigatorTool } from './tools/template-navigator.tool';
 import { ToolRegistry } from './tools/tool.registry';
+import { UpdateWhiteboardContentTool } from './tools/update-whiteboard-content.tool';
 import { WhiteboardAnalyzeTool } from './tools/whiteboard-analyze.tool';
 import { WhiteboardListTool } from './tools/whiteboard-list.tool';
 
@@ -41,6 +44,7 @@ import { WhiteboardListTool } from './tools/whiteboard-list.tool';
       Whiteboard,
       InnovationPack,
       PlatformAuditEntry,
+      CalloutContribution,
     ]),
     PassportModule,
     ActorContextModule,
@@ -74,6 +78,8 @@ import { WhiteboardListTool } from './tools/whiteboard-list.tool';
     CommunityActivitySummaryTool,
     TemplateNavigatorTool,
     AuditLogAnalyzeTool,
+    CreateWhiteboardTool,
+    UpdateWhiteboardContentTool,
   ],
   exports: [McpServerService, McpApiKeyService],
 })
@@ -90,7 +96,9 @@ export class McpServerModule implements OnModuleInit {
     private readonly contributionsAnalyzeTool: ContributionsAnalyzeTool,
     private readonly communityActivitySummaryTool: CommunityActivitySummaryTool,
     private readonly templateNavigatorTool: TemplateNavigatorTool,
-    private readonly auditLogAnalyzeTool: AuditLogAnalyzeTool
+    private readonly auditLogAnalyzeTool: AuditLogAnalyzeTool,
+    private readonly createWhiteboardTool: CreateWhiteboardTool,
+    private readonly updateWhiteboardContentTool: UpdateWhiteboardContentTool
   ) {}
 
   onModuleInit(): void {
@@ -106,6 +114,8 @@ export class McpServerModule implements OnModuleInit {
     this.toolRegistry.register(this.communityActivitySummaryTool);
     this.toolRegistry.register(this.templateNavigatorTool);
     this.toolRegistry.register(this.auditLogAnalyzeTool);
+    this.toolRegistry.register(this.createWhiteboardTool);
+    this.toolRegistry.register(this.updateWhiteboardContentTool);
 
     // Wire up registries to the MCP service
     for (const provider of this.resourceRegistry.listProviders()) {
