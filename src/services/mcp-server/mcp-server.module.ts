@@ -10,7 +10,7 @@ import { SpaceModule } from '@domain/space/space/space.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { TemplateModule } from '@domain/template/template/template.module';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
-import { Module, OnModuleInit } from '@nestjs/common';
+import { Module } from '@nestjs/common';
 import { ConfigModule } from '@nestjs/config';
 import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
@@ -21,6 +21,12 @@ import { McpApiKey } from './auth/mcp-api-key.entity';
 import { McpApiKeyService } from './auth/mcp-api-key.service';
 import { McpApiKeyStrategy } from './auth/mcp-api-key.strategy';
 import { McpAuthGuard } from './auth/mcp-auth.guard';
+import {
+  MCP_RESOURCE_PROVIDER,
+  MCP_TOOL,
+  McpResourceProvider,
+  McpTool,
+} from './dto/mcp.types';
 import { McpServerController } from './mcp-server.controller';
 import { McpServerService } from './mcp-server.service';
 import { CalloutResourceProvider } from './resources/callout.resource';
@@ -37,6 +43,31 @@ import { ToolRegistry } from './tools/tool.registry';
 import { UpdateWhiteboardContentTool } from './tools/update-whiteboard-content.tool';
 import { WhiteboardAnalyzeTool } from './tools/whiteboard-analyze.tool';
 import { WhiteboardListTool } from './tools/whiteboard-list.tool';
+
+/**
+ * Single source of truth for the MCP tool set. Each entry is registered as a
+ * provider AND injected into the MCP_TOOL aggregator factory below — so adding
+ * a tool is a one-line edit here, with no register() call or constructor wiring
+ * to keep in sync.
+ */
+const TOOL_PROVIDERS = [
+  WhiteboardAnalyzeTool,
+  WhiteboardListTool,
+  ContributionsAnalyzeTool,
+  CommunityActivitySummaryTool,
+  TemplateNavigatorTool,
+  AuditLogAnalyzeTool,
+  CreateWhiteboardTool,
+  UpdateWhiteboardContentTool,
+  SearchContentTool,
+];
+
+/** Single source of truth for the MCP resource providers (see TOOL_PROVIDERS). */
+const RESOURCE_PROVIDERS = [
+  WhiteboardResourceProvider,
+  CalloutResourceProvider,
+  SpaceResourceProvider,
+];
 
 @Module({
   imports: [
@@ -67,72 +98,25 @@ import { WhiteboardListTool } from './tools/whiteboard-list.tool';
     McpApiKeyService,
     McpApiKeyStrategy,
     McpAuthGuard,
-    // Registries
+    // Registries — the single source of truth the MCP service reads from.
     ResourceRegistry,
     ToolRegistry,
-    // Resource Providers
-    WhiteboardResourceProvider,
-    CalloutResourceProvider,
-    SpaceResourceProvider,
-    // Tools
-    WhiteboardAnalyzeTool,
-    WhiteboardListTool,
-    ContributionsAnalyzeTool,
-    CommunityActivitySummaryTool,
-    TemplateNavigatorTool,
-    AuditLogAnalyzeTool,
-    CreateWhiteboardTool,
-    UpdateWhiteboardContentTool,
-    SearchContentTool,
+    // Tools + resource providers as injectable providers.
+    ...TOOL_PROVIDERS,
+    ...RESOURCE_PROVIDERS,
+    // Aggregator providers: collect the instances into arrays the registries
+    // inject (NestJS has no multi-provider, so we fan them in via useFactory).
+    {
+      provide: MCP_TOOL,
+      useFactory: (...tools: McpTool[]) => tools,
+      inject: TOOL_PROVIDERS,
+    },
+    {
+      provide: MCP_RESOURCE_PROVIDER,
+      useFactory: (...providers: McpResourceProvider[]) => providers,
+      inject: RESOURCE_PROVIDERS,
+    },
   ],
   exports: [McpServerService, McpApiKeyService],
 })
-export class McpServerModule implements OnModuleInit {
-  constructor(
-    private readonly mcpServerService: McpServerService,
-    private readonly resourceRegistry: ResourceRegistry,
-    private readonly toolRegistry: ToolRegistry,
-    private readonly whiteboardResourceProvider: WhiteboardResourceProvider,
-    private readonly calloutResourceProvider: CalloutResourceProvider,
-    private readonly spaceResourceProvider: SpaceResourceProvider,
-    private readonly whiteboardAnalyzeTool: WhiteboardAnalyzeTool,
-    private readonly whiteboardListTool: WhiteboardListTool,
-    private readonly contributionsAnalyzeTool: ContributionsAnalyzeTool,
-    private readonly communityActivitySummaryTool: CommunityActivitySummaryTool,
-    private readonly templateNavigatorTool: TemplateNavigatorTool,
-    private readonly auditLogAnalyzeTool: AuditLogAnalyzeTool,
-    private readonly createWhiteboardTool: CreateWhiteboardTool,
-    private readonly updateWhiteboardContentTool: UpdateWhiteboardContentTool,
-    private readonly searchContentTool: SearchContentTool
-  ) {}
-
-  onModuleInit(): void {
-    // Register resource providers
-    this.resourceRegistry.register(this.whiteboardResourceProvider);
-    this.resourceRegistry.register(this.calloutResourceProvider);
-    this.resourceRegistry.register(this.spaceResourceProvider);
-
-    // Register tools
-    this.toolRegistry.register(this.whiteboardAnalyzeTool);
-    this.toolRegistry.register(this.whiteboardListTool);
-    this.toolRegistry.register(this.contributionsAnalyzeTool);
-    this.toolRegistry.register(this.communityActivitySummaryTool);
-    this.toolRegistry.register(this.templateNavigatorTool);
-    this.toolRegistry.register(this.auditLogAnalyzeTool);
-    this.toolRegistry.register(this.createWhiteboardTool);
-    this.toolRegistry.register(this.updateWhiteboardContentTool);
-    this.toolRegistry.register(this.searchContentTool);
-
-    // Wire up registries to the MCP service
-    for (const provider of this.resourceRegistry.listProviders()) {
-      this.mcpServerService.registerResourceProvider(provider);
-    }
-
-    for (const tool of this.toolRegistry.listTools()) {
-      const toolImpl = this.toolRegistry.getTool(tool.name);
-      if (toolImpl) {
-        this.mcpServerService.registerTool(toolImpl);
-      }
-    }
-  }
-}
+export class McpServerModule {}

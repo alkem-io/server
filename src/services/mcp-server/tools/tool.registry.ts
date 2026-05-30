@@ -1,31 +1,39 @@
 import { LogContext } from '@common/enums';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { McpTool, McpToolDefinition } from '../dto/mcp.types';
+import { MCP_TOOL, McpTool, McpToolDefinition } from '../dto/mcp.types';
 
 /**
- * Registry for MCP tools.
- * Manages tool registration and dispatches tool calls.
+ * Registry for MCP tools — the single source of truth for the tool set.
+ *
+ * Tools are collected via the MCP_TOOL multi-provider token and indexed by name
+ * at construction; there is no manual register() step. McpServerService reads
+ * the tool set from here rather than maintaining its own copy.
  */
 @Injectable()
 export class ToolRegistry {
-  private tools: Map<string, McpTool> = new Map();
+  private readonly tools = new Map<string, McpTool>();
 
   constructor(
+    @Inject(MCP_TOOL) tools: McpTool[],
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
-  ) {}
-
-  /**
-   * Register a tool
-   */
-  register(tool: McpTool): void {
-    const def = tool.getDefinition();
-    this.tools.set(def.name, tool);
-    this.logger.verbose?.(
-      `Registered MCP tool: ${def.name}`,
-      LogContext.MCP_SERVER
-    );
+  ) {
+    for (const tool of tools) {
+      const def = tool.getDefinition();
+      if (this.tools.has(def.name)) {
+        this.logger.warn?.(
+          `Duplicate MCP tool name '${def.name}' — ignoring later registration`,
+          LogContext.MCP_SERVER
+        );
+        continue;
+      }
+      this.tools.set(def.name, tool);
+      this.logger.verbose?.(
+        `Registered MCP tool: ${def.name}`,
+        LogContext.MCP_SERVER
+      );
+    }
   }
 
   /**

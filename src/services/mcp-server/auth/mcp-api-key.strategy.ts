@@ -8,6 +8,7 @@ import { AlkemioConfig } from '@src/types/alkemio.config';
 import { IncomingMessage } from 'http';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Strategy } from 'passport-custom';
+import { McpApiKeyScope } from '../dto/mcp.types';
 import { McpApiKeyService } from './mcp-api-key.service';
 
 export const AUTH_STRATEGY_MCP_API_KEY = 'mcp-api-key';
@@ -71,6 +72,12 @@ export class McpApiKeyStrategy extends PassportStrategy(
     const actorContext = await this.actorContextService.buildForUser(
       validatedKey.userId
     );
+    // Expose the key's scopes on the request so the controller can forward them
+    // to the MCP service for per-operation enforcement. Only the MCP API-key
+    // strategy sets this; JWT / Ory / anonymous callers leave it undefined.
+    (
+      request as IncomingMessage & { mcpApiKeyScopes?: McpApiKeyScope[] }
+    ).mcpApiKeyScopes = validatedKey.scopes;
     this.logger.verbose?.(
       `MCP API key authenticated: userId=${actorContext.actorID}`,
       LogContext.MCP_SERVER

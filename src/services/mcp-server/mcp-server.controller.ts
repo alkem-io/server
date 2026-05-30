@@ -73,6 +73,8 @@ export class McpServerController {
 
     // Get agent info from Passport (set by McpAuthGuard)
     const agentInfo = (req as any).user as ActorContext | undefined;
+    // API-key scopes, set by McpApiKeyStrategy when authenticated via a key.
+    const scopes = (req as any).mcpApiKeyScopes as McpApiKeyScope[] | undefined;
 
     this.logger.verbose?.(
       `MCP ${req.method} request received, session: ${sessionId || 'new'}, user: ${agentInfo?.actorID || 'anonymous'}`,
@@ -84,7 +86,8 @@ export class McpServerController {
         req as unknown as import('http').IncomingMessage,
         res as unknown as import('http').ServerResponse,
         sessionId,
-        agentInfo
+        agentInfo,
+        scopes
       );
     } catch (error) {
       this.logger.error?.(

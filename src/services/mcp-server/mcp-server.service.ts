@@ -18,30 +18,42 @@ import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { IncomingMessage, ServerResponse } from 'http';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { MCP_CONSTANTS, McpResourceProvider, McpTool } from './dto/mcp.types';
+import { scopeViolation } from './auth/mcp-scope';
+import {
+  MCP_CONSTANTS,
+  McpApiKeyScope,
+  McpResourceProvider,
+  McpTool,
+} from './dto/mcp.types';
+import { McpToolArgsValidator } from './mcp-tool-args.validator';
+import { ResourceRegistry } from './resources/resource.registry';
+import { ToolRegistry } from './tools/tool.registry';
 
 /**
  * Per-session MCP state. Each client session gets its OWN McpServer instance
  * connected to its OWN transport: the MCP SDK's Server can only be connected to
  * a single transport, so a shared server breaks the moment a second session
- * initializes. Each session also carries its own ActorContext, captured by the
- * session's request handlers via closure — so concurrent requests from
- * different users can never read each other's identity.
+ * initializes. Each session also carries its own ActorContext and API-key
+ * scopes, captured by the session's request handlers via closure — so
+ * concurrent requests from different users can never read each other's identity
+ * or authorization.
  */
 interface McpSession {
   transport: StreamableHTTPServerTransport;
   server: McpServer;
   actorContext: ActorContext;
+  scopes?: McpApiKeyScope[];
 }
 
 @Injectable()
 export class McpServerService implements OnModuleInit {
-  private resourceProviders: Map<string, McpResourceProvider> = new Map();
-  private tools: Map<string, McpTool> = new Map();
   private sessions: Map<string, McpSession> = new Map();
+  private readonly argsValidator = new McpToolArgsValidator();
 
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
+    private readonly toolRegistry: ToolRegistry,
+    private readonly resourceRegistry: ResourceRegistry,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -55,10 +67,13 @@ export class McpServerService implements OnModuleInit {
 
   /**
    * Build a fresh McpServer with request handlers bound to a specific session's
-   * ActorContext. `getActorContext` is evaluated lazily at request time, so a
-   * session that authenticates on a later request still resolves correctly.
+   * ActorContext and scopes. Both getters are evaluated lazily at request time,
+   * so a session that authenticates on a later request still resolves correctly.
    */
-  private createMcpServer(getActorContext: () => ActorContext): McpServer {
+  private createMcpServer(
+    getActorContext: () => ActorContext,
+    getScopes: () => McpApiKeyScope[] | undefined
+  ): McpServer {
     const mcpServer = new McpServer(
       {
         name: MCP_CONSTANTS.SERVER_NAME,
@@ -93,6 +108,11 @@ export class McpServerService implements OnModuleInit {
           LogContext.MCP_SERVER
         );
 
+        const scopeError = scopeViolation(getScopes(), 'read');
+        if (scopeError) {
+          throw new Error(scopeError);
+        }
+
         const provider = this.getResourceProvider(uri);
         if (!provider) {
           throw new Error(`Resource not found: ${uri}`);
@@ -123,9 +143,26 @@ export class McpServerService implements OnModuleInit {
         LogContext.MCP_SERVER
       );
 
+      // Authorization: the API key must carry the 'tools' operation.
+      const scopeError = scopeViolation(getScopes(), 'tools');
+      if (scopeError) {
+        return { content: [{ type: 'text', text: scopeError }], isError: true };
+      }
+
       const tool = this.getTool(name);
       if (!tool) {
         throw new Error(`Tool not found: ${name}`);
+      }
+
+      // Validate arguments against the tool's declared input schema before
+      // handing them to the tool implementation.
+      const argError = this.argsValidator.validate(
+        name,
+        tool.getDefinition().inputSchema,
+        args || {}
+      );
+      if (argError) {
+        return { content: [{ type: 'text', text: argError }], isError: true };
       }
 
       const result = await tool.execute(args || {}, actorContext);
@@ -148,39 +185,14 @@ export class McpServerService implements OnModuleInit {
   }
 
   /**
-   * Register a resource provider
-   */
-  registerResourceProvider(provider: McpResourceProvider): void {
-    const definitions = provider.getResourceDefinitions();
-    for (const def of definitions) {
-      this.resourceProviders.set(def.uri, provider);
-      this.logger.verbose?.(
-        `Registered MCP resource: ${def.name} at ${def.uri}`,
-        LogContext.MCP_SERVER
-      );
-    }
-  }
-
-  /**
-   * Register a tool
-   */
-  registerTool(tool: McpTool): void {
-    const def = tool.getDefinition();
-    this.tools.set(def.name, tool);
-    this.logger.verbose?.(
-      `Registered MCP tool: ${def.name}`,
-      LogContext.MCP_SERVER
-    );
-  }
-
-  /**
    * Handle an incoming MCP HTTP request
    */
   async handleRequest(
     req: IncomingMessage,
     res: ServerResponse,
     sessionId?: string,
-    actorContext?: ActorContext
+    actorContext?: ActorContext,
+    scopes?: McpApiKeyScope[]
   ): Promise<void> {
     if (!this.isEnabled()) {
       res.statusCode = 503;
@@ -211,11 +223,12 @@ export class McpServerService implements OnModuleInit {
         return;
       }
 
-      // Update the session's actor only if this request carries a fresh
+      // Update the session's actor + scopes only if this request carries a fresh
       // authentication; otherwise preserve the identity established at init
       // (subsequent requests may rely on the session rather than re-sending a key).
       if (actorContext && actorContext.actorID && !actorContext.isAnonymous) {
         session.actorContext = actorContext;
+        session.scopes = scopes;
         this.logger.verbose?.(
           `Updated actorContext for session ${sessionId}: userID=${actorContext.actorID}`,
           LogContext.MCP_SERVER
@@ -236,8 +249,12 @@ export class McpServerService implements OnModuleInit {
     const session: McpSession = {
       transport,
       actorContext: actorContext ?? this.createAnonymousActorContext(),
+      scopes,
     } as McpSession;
-    session.server = this.createMcpServer(() => session.actorContext);
+    session.server = this.createMcpServer(
+      () => session.actorContext,
+      () => session.scopes
+    );
 
     // Clean up the session map when the transport closes.
     transport.onclose = () => {
@@ -266,54 +283,31 @@ export class McpServerService implements OnModuleInit {
   }
 
   /**
-   * Get all registered resource definitions
+   * Get all registered resource definitions (delegates to the registry).
    */
   getResourceDefinitions() {
-    const resources: Array<{
-      uri: string;
-      name: string;
-      description: string;
-      mimeType: string;
-    }> = [];
-
-    for (const provider of this.resourceProviders.values()) {
-      resources.push(...provider.getResourceDefinitions());
-    }
-
-    return resources;
+    return this.resourceRegistry.listResources();
   }
 
   /**
-   * Get all registered tool definitions
+   * Get all registered tool definitions (delegates to the registry).
    */
   getToolDefinitions() {
-    return Array.from(this.tools.values()).map(tool => tool.getDefinition());
+    return this.toolRegistry.listTools();
   }
 
   /**
-   * Get a resource provider for a URI
+   * Get a resource provider for a URI (delegates to the registry).
    */
   getResourceProvider(uri: string): McpResourceProvider | undefined {
-    // First try exact match
-    if (this.resourceProviders.has(uri)) {
-      return this.resourceProviders.get(uri);
-    }
-
-    // Then try to find a provider that matches the URI pattern
-    for (const provider of this.resourceProviders.values()) {
-      if (provider.matches(uri)) {
-        return provider;
-      }
-    }
-
-    return undefined;
+    return this.resourceRegistry.getProvider(uri);
   }
 
   /**
-   * Get a tool by name
+   * Get a tool by name (delegates to the registry).
    */
   getTool(name: string): McpTool | undefined {
-    return this.tools.get(name);
+    return this.toolRegistry.getTool(name);
   }
 
   /**

@@ -91,6 +91,16 @@ export interface McpApiKeyScope {
 }
 
 /**
+ * DI tokens for collecting MCP tools / resource providers as multi-provider
+ * arrays. Each tool/resource is registered with `{ provide: MCP_TOOL,
+ * useClass: X, multi: true }`, and the registries inject the resulting array —
+ * so adding a tool is a single edit (one provider line) with no manual
+ * register() call to forget.
+ */
+export const MCP_TOOL = Symbol('MCP_TOOL');
+export const MCP_RESOURCE_PROVIDER = Symbol('MCP_RESOURCE_PROVIDER');
+
+/**
  * Constants for MCP server
  */
 export const MCP_CONSTANTS = {

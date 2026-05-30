@@ -146,7 +146,7 @@ export class SearchContentTool implements McpTool {
       matches,
       note: matches.length
         ? 'Confirm the intended entity by id before acting on it.'
-        : 'No matches. Note: whiteboard scene text is not indexed, and search requires Elasticsearch to be configured.',
+        : 'No matches. Search covers indexed profile text, post and memo content, and whiteboard scene text; it requires Elasticsearch to be configured.',
     };
 
     return {
