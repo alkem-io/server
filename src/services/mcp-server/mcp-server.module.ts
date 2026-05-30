@@ -16,6 +16,7 @@ import { PassportModule } from '@nestjs/passport';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityModule } from '@platform/activity/activity.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { SearchModule } from '@services/api/search/search.module';
 import { McpApiKey } from './auth/mcp-api-key.entity';
 import { McpApiKeyService } from './auth/mcp-api-key.service';
 import { McpApiKeyStrategy } from './auth/mcp-api-key.strategy';
@@ -30,6 +31,7 @@ import { AuditLogAnalyzeTool } from './tools/audit-log-analyze.tool';
 import { CommunityActivitySummaryTool } from './tools/community-activity-summary.tool';
 import { ContributionsAnalyzeTool } from './tools/contributions-analyze.tool';
 import { CreateWhiteboardTool } from './tools/create-whiteboard.tool';
+import { SearchContentTool } from './tools/search-content.tool';
 import { TemplateNavigatorTool } from './tools/template-navigator.tool';
 import { ToolRegistry } from './tools/tool.registry';
 import { UpdateWhiteboardContentTool } from './tools/update-whiteboard-content.tool';
@@ -57,6 +59,7 @@ import { WhiteboardListTool } from './tools/whiteboard-list.tool';
     SpaceLookupModule,
     ActivityModule,
     TemplateModule,
+    SearchModule,
   ],
   controllers: [McpServerController],
   providers: [
@@ -80,6 +83,7 @@ import { WhiteboardListTool } from './tools/whiteboard-list.tool';
     AuditLogAnalyzeTool,
     CreateWhiteboardTool,
     UpdateWhiteboardContentTool,
+    SearchContentTool,
   ],
   exports: [McpServerService, McpApiKeyService],
 })
@@ -98,7 +102,8 @@ export class McpServerModule implements OnModuleInit {
     private readonly templateNavigatorTool: TemplateNavigatorTool,
     private readonly auditLogAnalyzeTool: AuditLogAnalyzeTool,
     private readonly createWhiteboardTool: CreateWhiteboardTool,
-    private readonly updateWhiteboardContentTool: UpdateWhiteboardContentTool
+    private readonly updateWhiteboardContentTool: UpdateWhiteboardContentTool,
+    private readonly searchContentTool: SearchContentTool
   ) {}
 
   onModuleInit(): void {
@@ -116,6 +121,7 @@ export class McpServerModule implements OnModuleInit {
     this.toolRegistry.register(this.auditLogAnalyzeTool);
     this.toolRegistry.register(this.createWhiteboardTool);
     this.toolRegistry.register(this.updateWhiteboardContentTool);
+    this.toolRegistry.register(this.searchContentTool);
 
     // Wire up registries to the MCP service
     for (const provider of this.resourceRegistry.listProviders()) {
