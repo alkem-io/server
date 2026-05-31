@@ -43,7 +43,7 @@ the one new entity is in [data-model.md](./data-model.md).
 | 5. Observability & Operational Readiness | PASS | `LogContext.MCP_SERVER` throughout; auth outcomes, tool calls, session lifecycle logged; disabled-state and not-found are explicit, not silent. |
 | 6. Code Quality with Pragmatic Testing | PASS | Unit specs for several tools; risk-based. (Scope/arg-validation tests added in 101.) |
 | 7. API Consistency & Evolution Discipline | N/A | MCP tool names follow MCP snake_case convention; no GraphQL naming surface. |
-| 8. Secure-by-Design Integration | PARTIAL | Strong: hashed keys, scopes, expiry, revocation; admin gate + PII redaction on the audit tool; secrets never logged; default-off. Gap: resource-read authorization may not be enforced at read time (research.md R1) — must be closed to fully satisfy this principle for resources. |
+| 8. Secure-by-Design Integration | PASS | Hashed keys, scopes, expiry, revocation; admin gate + PII redaction on the audit tool; secrets never logged; default-off. The earlier resource-read authorization gap (research.md R1) is now **resolved** — `readResource` enforces the entity READ policy. |
 | 9. Container & Deployment Determinism | N/A | No image/bootstrap change; config via config service. |
 | 10. Simplicity & Incremental Hardening | PASS | Small pluggable units; surface ships disabled and bounded; deferred (not faked) per-space scoping. |
 
@@ -51,7 +51,7 @@ the one new entity is in [data-model.md](./data-model.md).
 
 | Item | Why it exists | Follow-up |
 |------|---------------|-----------|
-| R1: resource-read authz not enforced in read path | Providers expose `getAuthorizationPolicy` but the dispatcher doesn't evaluate it | Enforce policy (or have `read()` check `ActorContext`) — closes Secure-by-Design for resources |
+| ~~R1: resource-read authz not enforced~~ | Providers exposed `getAuthorizationPolicy` but the dispatcher didn't evaluate it | **RESOLVED** — `readResource` now evaluates the policy via `AuthorizationService.isAccessGranted(READ)` (unit-tested) |
 | R2: direct repository/`EntityManager` reads in some tools | Expedient data access for analysis tools | Route through domain services |
 | R3: `create_whiteboard` → `CalloutResolverMutations` | Reuse the proven mutation + its permission checks | Consider a domain-service entry point |
 

@@ -1,5 +1,7 @@
 import { LogContext } from '@common/enums';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { McpServer } from '@modelcontextprotocol/sdk/server/mcp.js';
 import { StreamableHTTPServerTransport } from '@modelcontextprotocol/sdk/server/streamableHttp.js';
 import {
@@ -22,6 +24,7 @@ import { scopeViolation } from './auth/mcp-scope';
 import {
   MCP_CONSTANTS,
   McpApiKeyScope,
+  McpReadResourceResult,
   McpResourceProvider,
   McpTool,
 } from './dto/mcp.types';
@@ -54,6 +57,7 @@ export class McpServerService implements OnModuleInit {
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly toolRegistry: ToolRegistry,
     private readonly resourceRegistry: ResourceRegistry,
+    private readonly authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -113,12 +117,7 @@ export class McpServerService implements OnModuleInit {
           throw new Error(scopeError);
         }
 
-        const provider = this.getResourceProvider(uri);
-        if (!provider) {
-          throw new Error(`Resource not found: ${uri}`);
-        }
-
-        const result = await provider.read(uri, actorContext);
+        const result = await this.readResource(uri, actorContext);
 
         return { contents: result.contents };
       }
@@ -301,6 +300,38 @@ export class McpServerService implements OnModuleInit {
    */
   getResourceProvider(uri: string): McpResourceProvider | undefined {
     return this.resourceRegistry.getProvider(uri);
+  }
+
+  /**
+   * Resolve, authorize, and read a resource. Read access is enforced via the
+   * provider's authorization policy and the platform AuthorizationService: the
+   * MCP resource surface MUST NOT return content the acting identity cannot
+   * read (anonymous sessions only see publicly-readable resources).
+   */
+  async readResource(
+    uri: string,
+    actorContext: ActorContext
+  ): Promise<McpReadResourceResult> {
+    const provider = this.getResourceProvider(uri);
+    if (!provider) {
+      throw new Error(`Resource not found: ${uri}`);
+    }
+
+    const authorizationPolicy = await provider.getAuthorizationPolicy(uri);
+    const accessGranted = this.authorizationService.isAccessGranted(
+      actorContext,
+      authorizationPolicy,
+      AuthorizationPrivilege.READ
+    );
+    if (!accessGranted) {
+      this.logger.warn?.(
+        `MCP resource read denied: ${uri}, user: ${actorContext.actorID || 'anonymous'}`,
+        LogContext.MCP_SERVER
+      );
+      throw new Error(`Access denied: not authorized to read resource ${uri}`);
+    }
+
+    return provider.read(uri, actorContext);
   }
 
   /**

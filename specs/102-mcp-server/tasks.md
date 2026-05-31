@@ -67,7 +67,7 @@ All paths under `src/services/mcp-server/` unless noted.
 
 ## Known follow-ups (tracked in research.md, not part of this foundation)
 
-- [ ] R1 Verify/enforce resource-read authorization in the `resources/read` path
+- [X] R1 Enforce resource-read authorization in the `resources/read` path — `McpServerService.readResource()` checks `getAuthorizationPolicy` via `isAccessGranted(READ)` (+ `mcp-server.service.spec.ts`)
 - [ ] R2 Route direct-repository read tools through domain services
 - [ ] R4 Confirm rate-limit / response-cap enforcement on every tool path
 

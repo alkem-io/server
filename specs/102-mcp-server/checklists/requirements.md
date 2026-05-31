@@ -30,12 +30,12 @@
 
 ## Retrospec accuracy caveats
 
-- **R1 (open)**: SC-005 / FR-005 / FR-009 assert resource reads are
-  permission-scoped, but the retrospec found the `resources/read` path does not
-  appear to evaluate the provider's `getAuthorizationPolicy`, and providers'
-  `read()` ignore the passed `ActorContext`. **The spec states the intended
-  behavior; the implementation may not yet meet it for resources.** Tracked as a
-  follow-up (research.md R1, tasks.md). Tool reads *do* check authorization.
+- **R1 (RESOLVED 2026-05-31)**: SC-005 / FR-005 / FR-009 assert resource reads
+  are permission-scoped. The retrospec confirmed the `resources/read` path did
+  not evaluate the provider's `getAuthorizationPolicy` (and providers' `read()`
+  ignored the `ActorContext`). **Now fixed**: `McpServerService.readResource`
+  enforces the entity READ policy via `AuthorizationService.isAccessGranted`
+  before returning content (unit-tested in `mcp-server.service.spec.ts`).
 - **R2/R3 (open)**: some read tools query repositories directly and
   `create_whiteboard` calls the resolver-mutations layer — structural notes, not
   correctness issues (auth still enforced).

@@ -111,14 +111,17 @@ LLM context.
 These are honest observations from reading the code; they are **not** changes
 made here, but should be tracked.
 
-- **R1 — Resource read authorization may not be enforced at read time.** Each
-  resource provider exposes `getAuthorizationPolicy(uri)`, but the host's
-  `resources/read` handler appears to call `provider.read(uri, actorContext)`
-  **without** evaluating that policy, and the providers' `read()` do not use the
-  passed `ActorContext`. If the underlying `get*OrFail` lookups don't enforce
-  read access, resources could be readable beyond the identity's permissions.
-  **Action**: verify and, if confirmed, enforce the authorization policy in the
-  read path (this directly backs FR-005/FR-009/SC-005 for resources).
+- **R1 — Resource read authorization was not enforced at read time. RESOLVED
+  (2026-05-31).** Confirmed real: the `resources/read` handler called
+  `provider.read(...)` without evaluating `getAuthorizationPolicy`, the
+  providers' `read()` ignored the `ActorContext`, and `get*OrFail` are bare
+  `findOne` lookups with no ACL — so any session (incl. anonymous) could read
+  any whiteboard/callout/space by id. **Fix**: `McpServerService.readResource()`
+  now resolves the provider's `getAuthorizationPolicy(uri)` and requires
+  `AuthorizationService.isAccessGranted(actor, policy, READ)` before reading;
+  denial is logged and throws. Anonymous sessions now see only
+  publicly-readable resources. Covered by `mcp-server.service.spec.ts`. This
+  satisfies FR-005/FR-009/SC-005 for resources.
 - **R2 — Some read tools query repositories/`EntityManager` directly** (e.g.
   contributions analysis, template navigation, whiteboard listing) rather than
   going through domain services — a mild deviation from the domain-centric /
