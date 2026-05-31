@@ -49,7 +49,8 @@ const URI_TYPE_PATH: Record<string, string> = {
  * What is indexed is profile text (display name, tagline, description, tags),
  * post body, memo content, and the text drawn inside a whiteboard's Excalidraw
  * scene (its text elements). Requires Elasticsearch to be configured/running;
- * with no ES it returns no results.
+ * with no ES the underlying search throws and this tool returns a clear
+ * `isError` result rather than a silent empty result set.
  *
  * This is a discovery tool: use it to find a candidate id, confirm the right
  * one, then act with analyze_whiteboard / update_whiteboard_content / etc.

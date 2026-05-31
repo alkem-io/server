@@ -95,9 +95,9 @@ key and confirm it fails closed.
 ## Success Criteria *(mandatory)*
 
 - **SC-001**: An MCP client can resolve a content description to the correct entity id with a single search call.
-- **SC-002**: In permission testing, zero results are returned that the calling actor is not authorized to read.
+- **SC-002**: Search results never include content the calling actor is not authorized to read. ACL-scoping is delegated to the platform `SearchService` (which filters by access / returns only public results for anonymous callers); it is *not* independently re-tested at the MCP boundary — verified by manual probe per the Story 1 Independent Test, not by an automated MCP-layer test.
 - **SC-003**: 100% of tool calls with missing/invalid arguments are rejected before the tool runs.
-- **SC-004**: A `read`-only key cannot invoke any tool; a `read,tools` key can — verified by tests/probes.
+- **SC-004**: A `read`-only key cannot invoke any tool; a `read,tools` key can. The scope gate (`scopeViolation`) is covered by unit tests; the end-to-end key behavior is verified by manual probe (no automated key-scoped integration test).
 - **SC-005**: Adding a new tool requires exactly one registration edit (no second registry or list to keep in sync).
 - **SC-006**: When the search backend is unavailable, the client receives a clear error 100% of the time (no hangs, no silent empties).
 
