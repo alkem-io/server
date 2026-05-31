@@ -16,7 +16,7 @@ The surface ships **disabled**. Enable via config (env-backed `alkemio.yml`):
 | `mcp.rate_limit.requests_per_minute` | `100` | Per-key request budget. |
 | `mcp.resources.max_response_items` | `100` | Response item cap. |
 
-Elasticsearch must be configured for `search_content` (the 101 increment); the
+Elasticsearch must be configured for `search_content` (the 102 increment); the
 rest of the surface works without it.
 
 ## Mint an API key (acts as you)
@@ -60,7 +60,7 @@ curl -sD - -o /dev/null -X POST $URL/rest/mcp \
 **Tools** — read: `list_whiteboards`, `analyze_whiteboard`, `analyze_contributions`,
 `community_activity_summary`, `navigate_templates`, `analyze_audit_log`
 (platform-admin only); write: `create_whiteboard`, `update_whiteboard_content`.
-(`search_content` is added by spec 101.)
+(`search_content` is added by spec 102.)
 
 **Resources** — `alkemio://whiteboards/{id}`, `alkemio://callouts/{id}`,
 `alkemio://spaces/{id}`.

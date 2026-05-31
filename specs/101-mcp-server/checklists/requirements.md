@@ -18,7 +18,7 @@
 - [x] Success criteria are measurable
 - [x] Acceptance scenarios defined for every user story
 - [x] Edge cases identified (concurrency, stale session, not-found, backend down)
-- [x] Scope is clearly bounded (foundation vs the 101 increment vs 004 client)
+- [x] Scope is clearly bounded (foundation vs the 102 increment vs 004 client)
 - [x] Dependencies and assumptions identified
 
 ## Feature Readiness
@@ -41,7 +41,7 @@
   correctness issues (auth still enforced).
 - Verification of the foundation is largely **manual/probe-level**; automated
   coverage exists for individual tools (audit-log, community-activity,
-  template-navigator specs) and, via the 101 increment, for scope + arg
+  template-navigator specs) and, via the 102 increment, for scope + arg
   validation.
 
 ## Notes

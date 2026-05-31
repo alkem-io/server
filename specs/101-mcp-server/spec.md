@@ -11,7 +11,7 @@
 > **Retrospec — foundation.** This documents the MCP server *foundation*: the
 > in-process host, its authentication, the tool/resource framework, and the
 > initial capability set. The later content-search tool and dispatch hardening
-> are the increment on top — see `specs/101-mcp-content-search-hardening/`.
+> are the increment on top — see `specs/102-mcp-content-search-hardening/`.
 > Single-repo (`server`); hosted at `/rest/mcp`.
 
 ## User Scenarios & Testing *(mandatory)*
@@ -109,7 +109,7 @@ personal data.
 - Concurrent sessions from different users MUST NOT see each other's identity or results.
 - A client presenting an unknown session id (after restart/expiry) is told to reinitialize.
 - A tool/resource not found returns an explicit error.
-- Search/analysis backends unavailable → clear error, never a hang (see also 101).
+- Search/analysis backends unavailable → clear error, never a hang (see also 102).
 
 ## Requirements *(mandatory)*
 
@@ -151,10 +151,10 @@ personal data.
 - The MCP server is hosted **in-process** by the platform `server` (not a separate deployable), so it reuses domain services, authorization, and `ActorContext` directly.
 - Transport is HTTP with per-session state (the MCP Streamable-HTTP transport); see `research.md` for why.
 - Identity is the key owner (for API keys) or the session subject (for platform tokens); there is no shared service identity for user-initiated actions.
-- Elasticsearch-backed capabilities degrade gracefully when ES is absent (detailed in the 101 increment).
+- Elasticsearch-backed capabilities degrade gracefully when ES is absent (detailed in the 102 increment).
 
 ## Out of Scope
 
-- The content-search tool and the dispatch hardening (single-source registry, input validation, scope enforcement) — covered by `specs/101-mcp-content-search-hardening/`.
+- The content-search tool and the dispatch hardening (single-source registry, input validation, scope enforcement) — covered by `specs/102-mcp-content-search-hardening/`.
 - A browser/SPA client of this surface — covered by the workspace feature `004-web-ai-assistant` (a dedicated agent service is the MCP client).
 - Per-space (`spaceIds`) key-scope enforcement (declared, not yet enforced).

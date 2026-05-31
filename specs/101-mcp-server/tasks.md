@@ -1,6 +1,6 @@
 # Tasks: MCP Server (foundation)
 
-**Input**: Design documents from `/specs/102-mcp-server/`
+**Input**: Design documents from `/specs/101-mcp-server/`
 **Status**: Implemented (retrospec) — all tasks complete (`[X]`); code shipped on
 branch `mcp-server` (commits `a185f7066`, `0c9a1d6d6`, `daaa90b10`, `eedfd2c00`).
 All paths under `src/services/mcp-server/` unless noted.
@@ -17,7 +17,7 @@ All paths under `src/services/mcp-server/` unless noted.
 - [X] T004 [US1] Expose the HTTP endpoint `@Controller('/rest/mcp')` handling all MCP methods — `mcp-server.controller.ts`
 - [X] T005 Define the framework contracts: `McpTool`, `McpToolDefinition`, `McpToolResult`, `McpResourceProvider`, `McpResourceDefinition`, `McpApiKeyScope`, `MCP_CONSTANTS` — `dto/mcp.types.ts`
 - [X] T006 Define MCP config shape + defaults (`enabled` off, `api_key_enabled` on, SSE, rate limit, response cap) — `mcp-server.config.ts` + `@src/types/alkemio.config`
-- [X] T007 Tool & resource registries — `tools/tool.registry.ts`, `resources/resource.registry.ts` (later hardened in spec 101)
+- [X] T007 Tool & resource registries — `tools/tool.registry.ts`, `resources/resource.registry.ts` (later hardened in spec 102)
 
 ---
 

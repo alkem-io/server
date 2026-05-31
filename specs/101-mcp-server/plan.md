@@ -37,11 +37,11 @@ the one new entity is in [data-model.md](./data-model.md).
 | Principle | Verdict | Notes |
 |-----------|---------|-------|
 | 1. Domain-Centric Design First | PARTIAL | Most tools delegate to domain services; some read tools query repositories/`EntityManager` directly and `create_whiteboard` calls the resolver-mutations layer (research.md R2/R3). No business logic embedded in the host. |
-| 2. Modular NestJS Boundaries | PASS | Single cohesive `McpServerModule`; no circular deps. (Registration duplication that existed here was resolved in spec 101.) |
+| 2. Modular NestJS Boundaries | PASS | Single cohesive `McpServerModule`; no circular deps. (Registration duplication that existed here was resolved in spec 102.) |
 | 3. GraphQL Schema as Stable Contract | N/A | No GraphQL surface changed. |
 | 4. Explicit Data & Event Flow | PARTIAL | Reads go through services/repositories; the one write reuses the existing mutation path (so validation→authz→op holds). Direct-repo reads noted (R2). |
 | 5. Observability & Operational Readiness | PASS | `LogContext.MCP_SERVER` throughout; auth outcomes, tool calls, session lifecycle logged; disabled-state and not-found are explicit, not silent. |
-| 6. Code Quality with Pragmatic Testing | PASS | Unit specs for several tools; risk-based. (Scope/arg-validation tests added in 101.) |
+| 6. Code Quality with Pragmatic Testing | PASS | Unit specs for several tools; risk-based. (Scope/arg-validation tests added in 102.) |
 | 7. API Consistency & Evolution Discipline | N/A | MCP tool names follow MCP snake_case convention; no GraphQL naming surface. |
 | 8. Secure-by-Design Integration | PASS | Hashed keys, scopes, expiry, revocation; admin gate + PII redaction on the audit tool; secrets never logged; default-off. The earlier resource-read authorization gap (research.md R1) is now **resolved** — `readResource` enforces the entity READ policy. |
 | 9. Container & Deployment Determinism | N/A | No image/bootstrap change; config via config service. |
@@ -83,7 +83,7 @@ src/services/mcp-server/
 
 ## Relationship to other specs
 
-- **101** (`specs/101-mcp-content-search-hardening/`) — the increment on this
+- **101** (`specs/102-mcp-content-search-hardening/`) — the increment on this
   foundation: `search_content` + single-source registry + arg validation +
   scope enforcement.
 - **workspace 004** (`004-web-ai-assistant`) — a dedicated agent service as the

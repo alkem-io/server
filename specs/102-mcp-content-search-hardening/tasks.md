@@ -1,6 +1,6 @@
 # Tasks: MCP Content Search + Tool-Call Hardening
 
-**Input**: Design documents from `/specs/101-mcp-content-search-hardening/`
+**Input**: Design documents from `/specs/102-mcp-content-search-hardening/`
 **Status**: Implemented (retrospec) — all tasks complete (`[X]`); code shipped in
 commits `600207fe2` and `f219e2351` on branch `mcp-server`.
 

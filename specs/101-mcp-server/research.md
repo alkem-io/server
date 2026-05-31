@@ -77,7 +77,7 @@ without touching the transport/session core.
 
 **Note**: The original registration wiring was duplicated (a separate map in the
 host *and* a registry) and required manual `register()` calls — this was
-**hardened in the 101 increment** (single source of truth via a DI aggregator).
+**hardened in the 102 increment** (single source of truth via a DI aggregator).
 
 ## D6 — Reuse platform authorization via `ActorContext`
 
@@ -136,5 +136,5 @@ made here, but should be tracked.
 
 ## References
 
-- 101 increment (search + dispatch hardening): `specs/101-mcp-content-search-hardening/`
+- 102 increment (search + dispatch hardening): `specs/102-mcp-content-search-hardening/`
 - Forward client feature: workspace `specs/004-web-ai-assistant/`

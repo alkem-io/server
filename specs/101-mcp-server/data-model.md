@@ -28,7 +28,7 @@ Extends `BaseAlkemioEntity` (`id` UUID PK, `createdDate`, `updatedDate`).
 ```
 McpApiKeyScope {
   operations: ('read' | 'tools')[]   // 'read' = resource reads; 'tools' = tool calls
-  spaceIds?: string[]                // OPTIONAL — declared but not yet enforced (fails closed; see 101)
+  spaceIds?: string[]                // OPTIONAL — declared but not yet enforced (fails closed; see 102)
 }
 ```
 
