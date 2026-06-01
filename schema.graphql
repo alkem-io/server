@@ -81,6 +81,7 @@ enum AiPersonaEngine {
 }
 
 enum AuthenticationType {
+  CLEVERBASE
   EMAIL
   GITHUB
   LINKEDIN
