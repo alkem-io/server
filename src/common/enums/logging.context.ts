@@ -80,6 +80,7 @@ export enum LogContext {
   OIDC = 'oidc',
   WINGBACK = 'wingback',
   WINGBACK_HOOKS = 'wingback-hooks',
+  KRATOS_HOOKS = 'kratos-hooks',
   ELASTIC_SEARCH = 'elasticsearch',
   //
   AUTH_GUARD = 'auth-guard',

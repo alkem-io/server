@@ -70,6 +70,7 @@ import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-
 import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-document-integration';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { GeoLocationModule } from '@services/external/geo-location';
+import { KratosWebhookModule } from '@services/external/kratos-webhooks';
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
@@ -358,6 +359,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     PlatformRoleModule,
     TemplateApplierModule,
     WingbackWebhookModule,
+    KratosWebhookModule,
     CalloutTransferModule,
     SearchModule,
   ],

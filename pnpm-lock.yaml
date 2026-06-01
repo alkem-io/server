@@ -12,8 +12,8 @@ importers:
         specifier: 0.8.16
         version: 0.8.16
       '@alkemio/notifications-lib':
-        specifier: 0.14.2
-        version: 0.14.2(@types/express@4.17.23)
+        specifier: 0.17.0
+        version: 0.17.0(@types/express@4.17.23)
       '@apollo/server':
         specifier: ^4.10.4
         version: 4.12.2(graphql@16.11.0)
@@ -390,16 +390,16 @@ packages:
   '@acemir/cssom@0.9.31':
     resolution: {integrity: sha512-ZnR3GSaH+/vJ0YlHau21FjfLYjMpYVIzTD8M8vIEQvIGxeOXyXdzCI140rrCY862p/C/BbzWsjc1dgnM9mkoTA==}
 
-  '@alkemio/client-lib@0.35.0':
-    resolution: {integrity: sha512-Gd7gsI/RLjDgTO42pgcewsirbAr0WCj6Gktiq0pjV1N2ZGSf1dBOEIhMCX+wHPoekCY0qs4EY1puYwBxi8/PQA==}
+  '@alkemio/client-lib@0.36.0':
+    resolution: {integrity: sha512-fPSzSjgX838+aNLiHD84JIOmbSIlAT5ZZACg5yOnUnCGlJjBMEQzGbQIWutfl/muiOZs8n+LY2e6kPytbpjsvw==}
     engines: {node: '>=16.15.0', npm: '>=8.5.5'}
 
   '@alkemio/matrix-adapter-lib@0.8.16':
     resolution: {integrity: sha512-XwnfgDpfvwOfBHXiUEys6zjAu9nLuOQgOeAKBEqwuaUKXMNEchRBpDOgdTc8Gad/ZPmvJ56XnhPuoP5Rl2yIrw==}
     engines: {node: '>=22.x', pnpm: '>=9.x'}
 
-  '@alkemio/notifications-lib@0.14.2':
-    resolution: {integrity: sha512-KlQHXbmRQRiAAOICn4AdNF2SPW6OPeYto38A9GHXXOZsVTF0U+ZsNRcklKsKP9AG8BhkbQ1nckfe6hgg4MMn0g==}
+  '@alkemio/notifications-lib@0.17.0':
+    resolution: {integrity: sha512-JQypshIuwrCyuvH2ShqFYtdxS9ZMHyBc0ZuXztcYxavo8cbJXl5xles/lZ5W+zaUEU4Y76Ca6X39PlqKoxMgzQ==}
     engines: {node: '>=20.0.0', npm: '>=8.5.5'}
 
   '@angular-devkit/core@17.3.11':
@@ -6096,7 +6096,7 @@ snapshots:
 
   '@acemir/cssom@0.9.31': {}
 
-  '@alkemio/client-lib@0.35.0(@types/express@4.17.23)':
+  '@alkemio/client-lib@0.36.0(@types/express@4.17.23)':
     dependencies:
       '@graphql-codegen/typescript-graphql-request': 4.5.9(graphql-request@3.7.0(graphql@16.11.0))(graphql-tag@2.12.6(graphql@16.11.0))(graphql@16.11.0)
       '@graphql-codegen/typescript-operations': 2.5.13(graphql@16.11.0)
@@ -6119,9 +6119,9 @@ snapshots:
 
   '@alkemio/matrix-adapter-lib@0.8.16': {}
 
-  '@alkemio/notifications-lib@0.14.2(@types/express@4.17.23)':
+  '@alkemio/notifications-lib@0.17.0(@types/express@4.17.23)':
     dependencies:
-      '@alkemio/client-lib': 0.35.0(@types/express@4.17.23)
+      '@alkemio/client-lib': 0.36.0(@types/express@4.17.23)
     transitivePeerDependencies:
       - '@types/express'
       - '@types/koa'

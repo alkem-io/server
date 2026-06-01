@@ -328,7 +328,7 @@ http:
       entryPoints:
         - 'web'
 
-    # file-service-go internal endpoints.
+    # file-service internal endpoints.
     # Placed on the public `web` entrypoint in the dev compose stack so the
     # server (running on the host) can reach file-service via Traefik on
     # localhost:3000. Production K8s deployments expose these endpoints only
@@ -342,7 +342,7 @@ http:
         - 'web'
       priority: 160
 
-    # file-service-go health endpoint
+    # file-service health endpoint
     file-service-health:
       rule: 'Path(`/file-service/health`)'
       service: 'file-service'

@@ -1,8 +1,12 @@
 import { AuthorizationPrivilege } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { GraphqlGuard } from '@core/authorization';
+import { ContributorFilterInput } from '@core/filtering/input-types';
+import { IActorFull } from '@domain/actor/actor/actor.interface';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { UUID } from '@domain/common/scalars';
 import { UseGuards } from '@nestjs/common';
-import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { Args, Int, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import {
   AuthorizationActorHasPrivilege,
   Profiling,
@@ -14,7 +18,10 @@ import { ForumService } from './forum.service';
 
 @Resolver(() => IForum)
 export class ForumResolverFields {
-  constructor(private forumService: ForumService) {}
+  constructor(
+    private forumService: ForumService,
+    private actorLookupService: ActorLookupService
+  ) {}
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
   @UseGuards(GraphqlGuard)
@@ -53,5 +60,30 @@ export class ForumResolverFields {
     discussionID: string
   ): Promise<IDiscussion> {
     return await this.forumService.getDiscussionOrFail(forum, discussionID);
+  }
+
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('mentionableContributors', () => [IActorFull], {
+    nullable: false,
+    description:
+      'Capped list of Contributors (Users, Virtual Contributors, …) that may be ' +
+      '@mentioned in the platform Forum. The Forum is platform-wide, so all ' +
+      'platform Contributors of the requested types are returned. Use `filter` ' +
+      'for typeahead search and `types` to restrict which Contributor kinds are ' +
+      'returned.',
+  })
+  async mentionableContributors(
+    @Args('filter', { nullable: true }) filter?: ContributorFilterInput,
+    @Args('limit', { type: () => Int, nullable: true }) limit?: number,
+    @Args('types', { type: () => [ActorType], nullable: true })
+    types?: ActorType[]
+  ): Promise<IActorFull[]> {
+    return this.actorLookupService.findMentionableContributors(
+      { allPlatform: true },
+      types,
+      filter,
+      limit
+    );
   }
 }
