@@ -71,7 +71,12 @@ describe('FR-005/011/012 deprecation lifecycle enforcement', () => {
   it('classifies premature removal before removeAfter as PREMATURE_REMOVAL', () => {
     // Prepare baseline with deprecated field (valid window)
     const sinceDate = '2025-10-01';
-    const removeAfter = '2026-06-01'; // must be in the future relative to today
+    // Must be in the future relative to today for the removal to count as
+    // premature. Computed dynamically (today + 180 days) rather than a hardcoded
+    // literal so the test cannot rot once the wall-clock passes a fixed date.
+    const removeAfter = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
+      .toISOString()
+      .slice(0, 10);
     const deprecatedSchema = `type Query {
       hello: String @deprecated(reason: "REMOVE_AFTER=${removeAfter} | cleanup")
     }`;
