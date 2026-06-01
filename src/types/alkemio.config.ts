@@ -59,13 +59,11 @@ export type AlkemioConfig = {
           kratos_public_base_url: string;
           kratos_public_base_url_server: string;
           kratos_admin_base_url_server: string;
-          earliest_possible_extend: number;
           admin_service_account: {
             username: string;
             password: string;
           };
           session_cookie_name: string;
-          session_extend_enabled: boolean;
           /**
            * Shared-secret header validated on inbound Kratos webhooks
            * (currently: `POST /rest/kratos/password-changed`). The webhook
@@ -92,6 +90,7 @@ export type AlkemioConfig = {
             domain: string;
             secure: boolean;
             idle_ttl_s: number;
+            absolute_ttl_s: number;
           };
         };
         non_interactive_login: {

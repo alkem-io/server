@@ -1,6 +1,5 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import RedisStore from 'connect-redis';
 import session from 'express-session';
 import helmet from 'helmet';
 import Redis from 'ioredis';
@@ -21,6 +20,10 @@ import { graphqlUploadExpress } from 'graphql-upload';
 import { apmAgent } from './apm';
 import { NonInteractiveLoginConfig } from './core/auth/non-interactive-login/non-interactive-login.config';
 import { setSessionMiddlewares } from './core/auth/oidc/session-middleware.holder';
+import {
+  buildOidcSessionRedisStore,
+  buildSessionRenewalMiddleware,
+} from './core/auth/oidc/session-store.redis';
 import { BootstrapService } from './core/bootstrap/bootstrap.service';
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
 
@@ -82,8 +85,12 @@ const bootstrap = async () => {
 
   // T016 — express-session + connect-redis bootstrap. MUST run before any
   // OIDC controller so the callback can regenerate() against a live store.
-  // Key layout: `alkemio:sid:<sid>`. TTL is set once at create via `disableTouch:true`
-  // (FR-018 / FR-020a). The cookie carries the sid only — no tokens.
+  // Key layout: `alkemio:sid:<sid>`. The cookie carries the sid only — no
+  // tokens. Two clocks (FR-018 / FR-020a): a 14-day sliding idle window
+  // (cookie maxAge + Redis key TTL) and a 30-day fixed absolute ceiling
+  // (`absolute_expires_at` payload check). `rolling` is false and the idle
+  // window is renewed lazily by sessionRenewalMiddleware so we don't re-issue
+  // the cookie / re-write Redis on every request.
   const oidcConfig = configService.get(
     'identity.authentication.providers.oidc',
     {
@@ -95,28 +102,31 @@ const bootstrap = async () => {
     host: redisConfig.host,
     port: Number(redisConfig.port),
   });
-  const sessionStore = new RedisStore({
-    client: sessionRedis,
-    prefix: 'alkemio:sid:',
-    disableTouch: true,
-  });
+  const idleTtlS = oidcConfig.cookie.idle_ttl_s;
+  const sessionStore = buildOidcSessionRedisStore(sessionRedis, idleTtlS);
   const sessionMiddleware = session({
     store: sessionStore,
     secret: oidcConfig.session_signing_key,
     name: oidcConfig.cookie.name,
     resave: false,
     saveUninitialized: false,
-    rolling: true,
+    // Renewal is handled lazily by sessionRenewalMiddleware (Kratos-style
+    // back-half extend) — keep express-session from re-issuing the cookie on
+    // every request.
+    rolling: false,
     cookie: {
       httpOnly: true,
       sameSite: 'lax',
       path: '/',
       secure: oidcConfig.cookie.secure,
       domain: oidcConfig.cookie.domain || undefined,
-      maxAge: oidcConfig.cookie.idle_ttl_s * 1000,
+      maxAge: idleTtlS * 1000,
     },
   });
   app.use(sessionMiddleware);
+  // FR-018 — lazily slide the idle window only when it crosses the half-life
+  // mark. MUST run after express-session has populated req.session.
+  app.use(buildSessionRenewalMiddleware(idleTtlS));
 
   // FR-023 (WS addendum) — graphql-ws upgrades bypass the Express pipeline,
   // so cookie-parser and express-session never run on the upgrade

@@ -1,7 +1,10 @@
+import RedisStore from 'connect-redis';
 import type { Redis } from 'ioredis';
 
 export const SESSION_KEY_PREFIX = 'alkemio:sid:';
-export const SESSION_ABSOLUTE_TTL_S = 14 * 24 * 60 * 60; // 14 days
+// Session TTLs are NOT hardcoded here — both the sliding idle window
+// (`oidc.cookie.idle_ttl_s`) and the absolute ceiling (`oidc.cookie.absolute_ttl_s`)
+// are config-driven (defaults live in alkemio.yml) and injected via ConfigService.
 // FR-022c — tombstone TTL (5 min). Long enough that the next request from a
 // browser tab that still holds the cookie reads it; short enough that Redis
 // frees the key promptly. Tombstoned payloads are NOT considered valid by the
@@ -19,6 +22,10 @@ export type AlkemioSessionPayload = {
   refresh_failure_count: number;
   refresh_failure_streak_started_at: number | null;
   last_refreshed_at?: number | null;
+  // FR-018 — epoch-seconds of the last lazy idle renewal (see
+  // buildSessionRenewalMiddleware). Distinct from `last_refreshed_at`, which
+  // tracks OIDC token rotation.
+  last_extended_at?: number | null;
   created_at: number;
   client_id: string;
   request_context_cache?: { display_name?: string; email?: string } | null;
@@ -32,8 +39,6 @@ export type AlkemioSessionPayload = {
 
 export type SessionStoreHandle = {
   get(sessionId: string): Promise<AlkemioSessionPayload | null>;
-  create(sessionId: string, payload: AlkemioSessionPayload): Promise<void>;
-  update(sessionId: string, payload: AlkemioSessionPayload): Promise<void>;
   destroy(sessionId: string): Promise<void>;
   // FR-022c — replace the payload with a tombstone (short TTL) so the next
   // request from the same cookie distinguishes torn-down (state b) from
@@ -49,31 +54,100 @@ export type SessionStoreHandle = {
   ): Promise<void>;
 };
 
-// FR-018 / FR-020a — Redis string store. Keys are `alkemio:sid:<sid>`. TTL is
-// set once at create (EX 1209600) and NEVER extended. `absolute_expires_at`
-// on the payload is the authoritative check; the key TTL is a reap backstop.
+// FR-018 / FR-020a — connect-redis store used by express-session. The session
+// is persisted through `req.session.save()` on the login callback, on `/refresh`,
+// and on lazy idle renewal (see buildSessionRenewalMiddleware), so THIS store
+// (not `buildSessionStore` below) governs the Redis key lifetime in practice.
+//
+// connect-redis derives the key TTL from `sess.cookie.expires` by default
+// (RedisStore._getTTL). Passing `ttl` as a FUNCTION short-circuits that cookie
+// path, letting us key the TTL off the 14-day idle window instead — capped by the
+// remaining time to the 30-day absolute ceiling so an abandoned key never lingers
+// past the ceiling. `disableTouch:true` keeps express-session from extending the
+// key on every read; renewal happens lazily and explicitly instead.
+export function buildOidcSessionRedisStore(
+  client: Redis,
+  idleTtlS: number
+): RedisStore {
+  return new RedisStore({
+    client,
+    prefix: SESSION_KEY_PREFIX,
+    ttl: (sess: { absolute_expires_at?: number } | undefined) => {
+      const nowS = Math.floor(Date.now() / 1000);
+      const ceilingRemainingS =
+        typeof sess?.absolute_expires_at === 'number'
+          ? sess.absolute_expires_at - nowS
+          : idleTtlS;
+      // At least 1s so connect-redis writes an EX (0/negative would delete).
+      return Math.max(1, Math.min(idleTtlS, ceilingRemainingS));
+    },
+    disableTouch: true,
+  });
+}
+
+// FR-018 — lazy idle renewal. A naive rolling session re-issues the cookie and
+// re-writes Redis on EVERY request (one Set-Cookie + one Redis write per call).
+// Instead we mirror Ory Kratos `earliest_possible_extend`: only renew once the
+// session is in the back half of its idle window. Mutating `last_extended_at`
+// marks the session dirty so express-session persists it (resetting the Redis
+// key TTL via the store's `ttl` fn) and re-issues the cookie with a fresh
+// `maxAge`. An active user triggers ~1 renewal per `idleTtlS/2`; between
+// renewals the request does zero extra writes. `rolling` MUST be false so
+// express-session does not also re-issue the cookie on untouched requests.
+type RenewableSession = {
+  sub?: string;
+  terminated_at?: number | null;
+  last_extended_at?: number | null;
+  absolute_expires_at?: number;
+  cookie?: { maxAge?: number | null };
+};
+
+export function buildSessionRenewalMiddleware(idleTtlS: number) {
+  const idleMs = idleTtlS * 1000;
+  const renewBelowMs = idleMs / 2; // renew only in the back half of the window
+  return (
+    req: { session?: RenewableSession },
+    _res: unknown,
+    next: () => void
+  ): void => {
+    const s = req.session;
+    // Only established, non-terminated OIDC sessions are renewable.
+    if (!s || !s.sub || s.terminated_at) {
+      next();
+      return;
+    }
+    const remainingMs =
+      typeof s.cookie?.maxAge === 'number' ? s.cookie.maxAge : 0;
+    if (remainingMs > renewBelowMs) {
+      next(); // still fresh — no work
+      return;
+    }
+    // Back half reached: slide the idle window. Cap at the time left to the
+    // absolute ceiling so the cookie (and the Redis key TTL, capped identically
+    // by the store) never claim to outlive `absolute_expires_at` — near the
+    // ceiling the window shrinks to the remainder, then re-login is required.
+    const nowMs = Date.now();
+    const ceilingRemainingMs =
+      typeof s.absolute_expires_at === 'number'
+        ? s.absolute_expires_at * 1000 - nowMs
+        : idleMs;
+    if (s.cookie)
+      s.cookie.maxAge = Math.max(1, Math.min(idleMs, ceilingRemainingMs));
+    s.last_extended_at = Math.floor(nowMs / 1000);
+    next();
+  };
+}
+
+// FR-018 / FR-020a — Redis read/teardown handle over the same `alkemio:sid:<sid>`
+// keys that express-session (connect-redis) writes. The strategy and forward-auth
+// read via `get`; logout/refresh-teardown use `destroy`/`markTerminated`. Writes
+// (and thus key TTL) are owned by express-session, not this handle.
 export function buildSessionStore(redis: Redis): SessionStoreHandle {
   return {
     async get(sessionId) {
       const raw = await redis.get(SESSION_KEY_PREFIX + sessionId);
       if (raw === null) return null;
       return JSON.parse(raw) as AlkemioSessionPayload;
-    },
-    async create(sessionId, payload) {
-      await redis.set(
-        SESSION_KEY_PREFIX + sessionId,
-        JSON.stringify(payload),
-        'EX',
-        SESSION_ABSOLUTE_TTL_S
-      );
-    },
-    async update(sessionId, payload) {
-      // KEEPTTL — MUST NOT reset the 14-day ceiling.
-      await redis.set(
-        SESSION_KEY_PREFIX + sessionId,
-        JSON.stringify(payload),
-        'KEEPTTL'
-      );
     },
     async destroy(sessionId) {
       await redis.del(SESSION_KEY_PREFIX + sessionId);

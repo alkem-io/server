@@ -29,7 +29,6 @@ import {
 import { validateReturnTo } from './returnto-validator';
 import {
   type AlkemioSessionPayload,
-  SESSION_ABSOLUTE_TTL_S,
   type SessionStoreHandle,
 } from './session-store.redis';
 import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
@@ -87,6 +86,10 @@ export class OidcController {
    * env-suffixed cookie in every non-default environment.
    */
   private readonly sessionCookieName: string;
+  // FR-020a — absolute ceiling (seconds) from config (`oidc.cookie.absolute_ttl_s`,
+  // default in alkemio.yml); stamped onto the session at login as
+  // `absolute_expires_at`.
+  private readonly sessionAbsoluteTtlS: number;
 
   constructor(
     private readonly oidcService: OidcService,
@@ -99,10 +102,12 @@ export class OidcController {
     @Inject(SESSION_STORE_HANDLE)
     private readonly sessionStore?: SessionStoreHandle
   ) {
-    this.sessionCookieName = configService.get(
-      'identity.authentication.providers.oidc.cookie.name',
+    const cookie = configService.get(
+      'identity.authentication.providers.oidc.cookie',
       { infer: true }
     );
+    this.sessionCookieName = cookie.name;
+    this.sessionAbsoluteTtlS = cookie.absolute_ttl_s;
   }
 
   @Get('login')
@@ -254,7 +259,7 @@ export class OidcController {
         s.id_token = tokenSet.id_token ?? '';
         s.refresh_token = tokenSet.refresh_token ?? '';
         s.expires_at = tokenSet.expires_at ?? now;
-        s.absolute_expires_at = now + SESSION_ABSOLUTE_TTL_S;
+        s.absolute_expires_at = now + this.sessionAbsoluteTtlS;
         s.sub = sub;
         s.alkemio_actor_id = alkemioActorId;
         s.refresh_failure_count = 0;

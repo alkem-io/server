@@ -198,21 +198,12 @@ identity:
         kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:3000/ory/kratos/public
         kratos_admin_base_url_server: ${AUTH_ORY_KRATOS_ADMIN_BASE_URL_SERVER}:http://localhost:3000/ory/kratos
 
-        # Session can't be extended until *earliest_possible_extend* before it expires.
-        # The format is 1d12h59m30s, 1d2h, 1h30m, 1m30s, 1s etc.
-        #
-        # If you need high flexibility when extending sessions, you can set earliest_possible_extend to lifespan,
-        # which allows sessions to be refreshed during their entire lifespan, even right after they are created.
-        # Source https://www.ory.sh/docs/kratos/session-management/refresh-extend-sessions
-        earliest_possible_extend: ${AUTH_EARLIEST_POSSIBLE_SESSION_EXTEND}:24h
-
         # credentials used for kratos related work flows
         admin_service_account:
           username: ${KRATOS_ADMIN_USERNAME}:kratos@alkem.io
           password: ${KRATOS_ADMIN_PASSWORD}:kr@t0$!!
 
         session_cookie_name: ${KRATOS_SESSION_COOKIE_NAME}:ory_kratos_session
-        session_extend_enabled: ${KRATOS_SESSION_EXTEND_ENABLED}:true
 
         # Shared-secret header validated on inbound Kratos webhooks (e.g. the
         # settings-flow password-changed hook -> POST /rest/kratos/password-changed).
@@ -256,7 +247,14 @@ identity:
           name: ${OIDC_SESSION_COOKIE_NAME}:alkemio_session
           domain: ${OIDC_SESSION_COOKIE_DOMAIN}
           secure: ${OIDC_SESSION_COOKIE_SECURE}:false
-          idle_ttl_s: ${OIDC_SESSION_COOKIE_IDLE_TTL_S}:1800
+          # Sliding idle window. Renewed lazily once past its half-life (see
+          # sessionRenewalMiddleware), so this is also the cookie maxAge and the
+          # Redis key TTL. Capped by the absolute ceiling below.
+          idle_ttl_s: ${OIDC_SESSION_COOKIE_IDLE_TTL_S}:1209600 # 14 days
+          # Absolute ceiling. Fixed at login (`absolute_expires_at = now + this`),
+          # never extended by activity or token refresh. Forces a full re-auth at
+          # this age regardless of activity. MUST be >= idle_ttl_s.
+          absolute_ttl_s: ${OIDC_SESSION_COOKIE_ABSOLUTE_TTL_S}:2592000 # 30 days
 
       # Non-interactive credential→token endpoint for test harnesses and other
       # clients that cannot perform the browser-based OIDC flow. Mounts

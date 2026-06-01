@@ -164,14 +164,6 @@ function buildToggleableSessionStore(): ToggleableSessionStore {
       }
       return data.get(sid) ?? null;
     },
-    async create(sid, payload) {
-      if (failing) await failOrPass<never>();
-      data.set(sid, payload);
-    },
-    async update(sid, payload) {
-      if (failing) await failOrPass<never>();
-      data.set(sid, payload);
-    },
     async destroy(sid) {
       if (failing) await failOrPass<never>();
       data.delete(sid);

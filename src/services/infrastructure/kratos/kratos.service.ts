@@ -4,7 +4,6 @@ import {
   BearerTokenNotFoundException,
   LoginFlowException,
   LoginFlowInitializeException,
-  SessionExtendException,
 } from '@common/exceptions/auth';
 import { UserIdentityNotFoundException } from '@common/exceptions/user/user.identity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -28,7 +27,7 @@ import { SessionInvalidReason } from './types/session.invalid.enum';
 
 /**
  * The `KratosService` class provides methods to interact with the Ory Kratos identity management system.
- * It includes functionalities for session management, such as extending sessions, retrieving sessions,
+ * It includes functionalities for session management, such as retrieving and validating sessions,
  * and obtaining bearer tokens through login flows.
  *
  * @remarks
@@ -39,7 +38,6 @@ import { SessionInvalidReason } from './types/session.invalid.enum';
  * ```typescript
  * const kratosService = new KratosService(configService);
  * const session = await kratosService.getSession('authorization-token');
- * const extendedSession = await kratosService.extendSession(session);
  * ```
  *
  * @public
@@ -85,18 +83,6 @@ export class KratosService {
         basePath: this.kratosPublicUrlServer,
       })
     );
-  }
-
-  /**
-   * Extends the given session by obtaining an admin bearer token and attempting to extend the session.
-   *
-   * @param sessionToBeExtended - The session object that needs to be extended.
-   * @returns A promise that resolves when the session has been successfully extended.
-   */
-  public async extendSession(sessionToBeExtended: Session): Promise<void> {
-    const adminBearerToken = await this.getBearerToken();
-
-    return this.tryExtendSession(sessionToBeExtended, adminBearerToken);
   }
 
   /**
@@ -152,55 +138,6 @@ export class KratosService {
     }
 
     return sessionToken;
-  }
-
-  /**
-   * Attempts to extend a given session using the Kratos Identity Client.
-   *
-   * @param sessionToBeExtended - The session object that needs to be extended.
-   * @param adminBearerToken - The admin bearer token used for authorization.
-   * @returns A promise that resolves to void if the session is successfully extended.
-   * @throws {SessionExtendException} If the request to extend the session fails.
-   *
-   * @remarks
-   * This method calls the Kratos Identity Client's `extendSession` endpoint.
-   * The endpoint typically returns a 204 No Content response on success.
-   * Older Ory Network projects may return a 200 OK response with the session in the body.
-   * Returning the session as part of the response will be deprecated in the future and should not be relied upon.
-   * https://www.ory.sh/docs/guides/session-management/refresh-extend-sessions
-   *
-   * @see {@link https://www.ory.sh/docs/reference/api#tag/identity/operation/extendSession}
-   */
-  public async tryExtendSession(
-    sessionToBeExtended: Session,
-    adminBearerToken: string
-  ): Promise<void> {
-    try {
-      /**
-       * This endpoint returns per default a 204 No Content response on success.
-       * Older Ory Network projects may return a 200 OK response with the session in the body.
-       * **Returning the session as part of the response will be deprecated in the future and should not be relied upon.**
-       * Source https://www.ory.sh/docs/reference/api#tag/identity/operation/extendSession
-       */
-      const { status } = await this.kratosIdentityClient.extendSession(
-        { id: sessionToBeExtended.id },
-        { headers: { authorization: `Bearer ${adminBearerToken}` } }
-      );
-
-      if (![200, 204].includes(status)) {
-        throw new SessionExtendException(
-          `Request to extend session ${sessionToBeExtended.id} failed with status ${status}`
-        );
-      }
-    } catch (e) {
-      if (e instanceof SessionExtendException) {
-        throw e;
-      }
-      const message = (e as Error)?.message ?? e;
-      throw new SessionExtendException(
-        `Session extend for session ${sessionToBeExtended.id} failed with: ${message}`
-      );
-    }
   }
 
   /**

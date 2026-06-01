@@ -1,4 +1,3 @@
-import ConfigUtils from '@config/config.utils';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
@@ -107,8 +106,6 @@ describe('AuthenticationService', () => {
         if (token === KratosService) {
           return {
             getSession: vi.fn(),
-            getBearerToken: vi.fn(),
-            tryExtendSession: vi.fn(),
           };
         }
 
@@ -309,110 +306,6 @@ describe('AuthenticationService', () => {
       expect(result.expiry).toEqual(new Date('2023-12-31T23:59:59Z').getTime());
     });
   });
-
-  describe('extendSession', () => {
-    it('should extend session successfully', async () => {
-      const bearerToken = 'admin-bearer-token';
-      kratosService.getBearerToken.mockResolvedValue(bearerToken);
-      kratosService.tryExtendSession.mockResolvedValue();
-
-      await service.extendSession(mockSession);
-
-      expect(kratosService.getBearerToken).toHaveBeenCalled();
-      expect(kratosService.tryExtendSession).toHaveBeenCalledWith(
-        mockSession,
-        bearerToken
-      );
-    });
-  });
-
-  describe('shouldExtendSession', () => {
-    beforeEach(() => {
-      // Mock the constructor call that sets extendSessionMinRemainingTTL
-      vi.spyOn(service as any, 'parseEarliestPossibleExtend').mockReturnValue(
-        300000
-      ); // 5 minutes
-      (service as any).extendSessionMinRemainingTTL = 300000;
-    });
-
-    it('should return false when session has no expires_at', () => {
-      const sessionWithoutExpiry = { ...mockSession, expires_at: undefined };
-
-      const result = service.shouldExtendSession(sessionWithoutExpiry);
-
-      expect(result).toBe(false);
-    });
-
-    it('should return false when extendSessionMinRemainingTTL is not set', () => {
-      (service as any).extendSessionMinRemainingTTL = undefined;
-
-      const result = service.shouldExtendSession(mockSession);
-
-      expect(result).toBe(false);
-    });
-
-    it('should return true when extendSessionMinRemainingTTL is -1 (lifespan)', () => {
-      (service as any).extendSessionMinRemainingTTL = -1;
-
-      const result = service.shouldExtendSession(mockSession);
-
-      expect(result).toBe(true);
-    });
-
-    it('should return true when session should be extended', () => {
-      // Create a session that expires soon (less than the minimum remaining TTL)
-      const soonExpiringSession = {
-        ...mockSession,
-        expires_at: new Date(Date.now() + 60000).toISOString(), // 1 minute from now
-      };
-      (service as any).extendSessionMinRemainingTTL = 300000; // 5 minutes
-
-      const result = service.shouldExtendSession(soonExpiringSession);
-
-      expect(result).toBe(true);
-    });
-
-    it('should return false when session should not be extended yet', () => {
-      // Create a session that expires far in the future
-      const farExpiringSession = {
-        ...mockSession,
-        expires_at: new Date(Date.now() + 3600000).toISOString(), // 1 hour from now
-      };
-      (service as any).extendSessionMinRemainingTTL = 300000; // 5 minutes
-
-      const result = service.shouldExtendSession(farExpiringSession);
-
-      expect(result).toBe(false);
-    });
-  });
-
-  describe('parseEarliestPossibleExtend', () => {
-    it('should return -1 for "lifespan" value', () => {
-      const result = (service as any).parseEarliestPossibleExtend('lifespan');
-
-      expect(result).toBe(-1);
-    });
-    it('should parse HMS string correctly', () => {
-      vi.spyOn(ConfigUtils, 'parseHMSString').mockReturnValue(300);
-
-      const result = (service as any).parseEarliestPossibleExtend('5m');
-
-      expect(result).toBe(300000); // 300 seconds * 1000 = 300,000 milliseconds
-    });
-
-    it('should return undefined for invalid HMS string', () => {
-      vi.spyOn(ConfigUtils, 'parseHMSString').mockReturnValue(undefined);
-
-      const result = (service as any).parseEarliestPossibleExtend('invalid');
-
-      expect(result).toBeUndefined();
-    });
-    it('should return undefined for non-string values', () => {
-      const result = (service as any).parseEarliestPossibleExtend(123);
-
-      expect(result).toBeUndefined();
-    });
-  });
 });
 
 const ConfigServiceMock = {
@@ -425,7 +318,6 @@ const ConfigServiceMock = {
           username: 'mock',
           password: 'mock',
         },
-        earliest_possible_extend: '5m',
       };
     }
     if (key === 'ssi.enabled') {
