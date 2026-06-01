@@ -6,6 +6,7 @@ volumes:
   chroma-data:
   rabbitmq_data:
     driver: local
+  alkemio_dev_redis:
 
 networks:
   alkemio_dev_net:
@@ -466,10 +467,27 @@ services:
     hostname: redis
     image: redis:7.0.2
     restart: always
+    # Mirrors the k8s config (01-redis-configmap.yml): AOF persistence so
+    # sessions survive a restart, evict least-recently-used first. Memory cap is
+    # kept at 50mb locally (dev has far fewer sessions than the 256mb cluster).
+    command:
+      - redis-server
+      - --appendonly
+      - 'yes'
+      - --appendfsync
+      - everysec
+      - --maxmemory
+      - 50mb
+      - --maxmemory-policy
+      - allkeys-lru
+      - --dir
+      - /data
     networks:
       - alkemio_dev_net
     ports:
       - 6379
+    volumes:
+      - alkemio_dev_redis:/data
 
   redis-commander:
     image: ghcr.io/joeferner/redis-commander:latest
