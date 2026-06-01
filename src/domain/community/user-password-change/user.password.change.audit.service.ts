@@ -59,6 +59,19 @@ export class UserPasswordChangeAuditService {
     });
   }
 
+  /**
+   * Idempotency check for spec 005's broker consumer (FR-005). Returns true
+   * when an `OBSERVED` password-change audit row already exists for the
+   * `(subjectUserId, sourceFlowId)` key. The consumer uses this to no-op on
+   * redelivered `USER_PASSWORD_CHANGED` events before invoking the observer.
+   */
+  public async existsObservedFor(
+    subjectUserId: string,
+    sourceFlowId: string
+  ): Promise<boolean> {
+    return this.auditRepository.existsObservedFor(subjectUserId, sourceFlowId);
+  }
+
   private buildDetails(
     input: RecordPasswordChangeAuditInput
   ): PasswordChangeAuditDetails | undefined {
