@@ -37,6 +37,17 @@ function writeSchema(p: string, sdl: string) {
   writeFileSync(p, sdl.trim() + '\n');
 }
 
+/**
+ * Returns an ISO `YYYY-MM-DD` date `n` days from today (negative = past).
+ * All fixture dates are computed relative to `new Date()` so these tests are
+ * calendar-independent and never expire (no hardcoded "time-bomb" literals).
+ */
+const isoDaysFromNow = (n: number): string => {
+  const d = new Date();
+  d.setDate(d.getDate() + n);
+  return d.toISOString().slice(0, 10);
+};
+
 describe('FR-005/011/012 deprecation lifecycle enforcement', () => {
   const tmpRoot = mkdtempSync(path.join(os.tmpdir(), 'schema-lifecycle-'));
   const reportPath = path.join(tmpRoot, 'change-report.json');
@@ -69,14 +80,12 @@ describe('FR-005/011/012 deprecation lifecycle enforcement', () => {
   });
 
   it('classifies premature removal before removeAfter as PREMATURE_REMOVAL', () => {
-    // Prepare baseline with deprecated field (valid window)
-    const sinceDate = '2025-10-01';
-    // Must be in the future relative to today for the removal to count as
-    // premature. Computed dynamically (today + 180 days) rather than a hardcoded
-    // literal so the test cannot rot once the wall-clock passes a fixed date.
-    const removeAfter = new Date(Date.now() + 180 * 24 * 60 * 60 * 1000)
-      .toISOString()
-      .slice(0, 10);
+    // Prepare baseline with deprecated field (valid window).
+    // removeAfter is comfortably in the FUTURE so removing the field now is
+    // genuinely premature; sinceDate is far enough in the past that the
+    // original deprecation window itself was valid (>= 90 days).
+    const sinceDate = isoDaysFromNow(-240);
+    const removeAfter = isoDaysFromNow(120); // future relative to today
     const deprecatedSchema = `type Query {
       hello: String @deprecated(reason: "REMOVE_AFTER=${removeAfter} | cleanup")
     }`;
@@ -121,8 +130,11 @@ describe('FR-005/011/012 deprecation lifecycle enforcement', () => {
   });
 
   it('classifies removal after removeAfter but <90 elapsed days as INFO', () => {
-    const sinceDate = '2025-09-15';
-    const removeAfter = '2025-10-01'; // already past test date but <90 days elapsed
+    // removeAfter is in the PAST (window met) and fewer than 90 days ago, while
+    // sinceDate is far enough back that the deprecation has been live >= 90 days
+    // — so retirement is valid and classified INFO ("retired after window").
+    const sinceDate = isoDaysFromNow(-150);
+    const removeAfter = isoDaysFromNow(-30); // past, but < 90 days ago
     const deprecatedSchema = `type Query { hello: String @deprecated(reason: "REMOVE_AFTER=${removeAfter} | cleanup") }`;
     const removalSchema = 'type Query { other: String }';
     const oldPath = path.join(tmpRoot, 'breaking-old.graphql');
@@ -162,8 +174,10 @@ describe('FR-005/011/012 deprecation lifecycle enforcement', () => {
   });
 
   it('classifies valid retirement (after removeAfter & >=90 days) as INFO', () => {
-    const sinceDate = '2025-05-01';
-    const removeAfter = '2025-08-15';
+    // Fully valid retirement: removeAfter well in the past AND the deprecation
+    // has been live for >= 90 days (window met + min-days met → INFO).
+    const sinceDate = isoDaysFromNow(-300);
+    const removeAfter = isoDaysFromNow(-200);
     const deprecatedSchema = `type Query { hello: String @deprecated(reason: "REMOVE_AFTER=${removeAfter} | cleanup") }`;
     const retirementSchema = 'type Query { other: String }';
     const oldPath = path.join(tmpRoot, 'retire-old.graphql');
