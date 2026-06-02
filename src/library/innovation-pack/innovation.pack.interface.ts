@@ -6,6 +6,9 @@ import { Field, ObjectType } from '@nestjs/graphql';
 
 @ObjectType('InnovationPack')
 export abstract class IInnovationPack extends INameable {
+  // Sequential cursor column for pagination (Paginationable); not exposed via GraphQL
+  rowId!: number;
+
   templatesSet?: ITemplatesSet;
 
   @Field(() => SearchVisibility, {

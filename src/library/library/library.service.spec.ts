@@ -17,6 +17,17 @@ import { vi } from 'vitest';
 import { Library } from './library.entity';
 import { LibraryService } from './library.service';
 
+// The relay-style cursor helper is exercised by its own spec
+// (relay.style.pagination.fn.spec.ts); here we stub it to assert the
+// library service's own logic (page-size clamping, type filter, template→pack
+// pairing) in isolation.
+vi.mock('@core/pagination', () => ({
+  getPaginationResults: vi.fn(),
+  PaginationArgs: class PaginationArgs {},
+}));
+
+import { getPaginationResults } from '@core/pagination';
+
 describe('LibraryService', () => {
   let service: LibraryService;
   let libraryRepository: Repository<Library>;
@@ -406,6 +417,163 @@ describe('LibraryService', () => {
       const result = await service.getTemplatesInListedInnovationPacks();
 
       expect(result).toEqual([]);
+    });
+  });
+
+  // ── getPaginatedListedInnovationPacks ─────────────────────────────
+  describe('getPaginatedListedInnovationPacks', () => {
+    const chainableQb = () => {
+      const qb: Record<string, any> = {};
+      for (const method of ['where', 'andWhere', 'innerJoin']) {
+        qb[method] = vi.fn(() => qb);
+      }
+      return qb;
+    };
+
+    beforeEach(() => {
+      (entityManager as any).createQueryBuilder = vi.fn(() => chainableQb());
+      (getPaginationResults as ReturnType<typeof vi.fn>).mockReset();
+    });
+
+    it('should page newest-first (DESC) and pass through the helper result', async () => {
+      const helperResult = {
+        total: 2,
+        items: [{ id: 'pack-a' }, { id: 'pack-b' }],
+        pageInfo: {
+          startCursor: 'pack-a',
+          endCursor: 'pack-b',
+          hasNextPage: false,
+          hasPreviousPage: false,
+        },
+      };
+      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue(
+        helperResult
+      );
+
+      const result = await service.getPaginatedListedInnovationPacks({
+        first: 10,
+      });
+
+      expect(result).toEqual(helperResult);
+      expect(getPaginationResults).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ first: 10 }),
+        'DESC'
+      );
+    });
+
+    it('should clamp a page size above the maximum to 100', async () => {
+      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue({
+        total: 0,
+        items: [],
+        pageInfo: {},
+      });
+
+      await service.getPaginatedListedInnovationPacks({ first: 500 });
+
+      expect(getPaginationResults).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ first: 100 }),
+        'DESC'
+      );
+    });
+  });
+
+  // ── getPaginatedTemplates ─────────────────────────────────────────
+  describe('getPaginatedTemplates', () => {
+    let andWhere: ReturnType<typeof vi.fn>;
+
+    const chainableQb = () => {
+      const qb: Record<string, any> = {};
+      andWhere = vi.fn(() => qb);
+      qb.innerJoinAndSelect = vi.fn(() => qb);
+      qb.innerJoin = vi.fn(() => qb);
+      qb.where = vi.fn(() => qb);
+      qb.andWhere = andWhere;
+      return qb;
+    };
+
+    beforeEach(() => {
+      (entityManager as any).createQueryBuilder = vi.fn(() => chainableQb());
+      (getPaginationResults as ReturnType<typeof vi.fn>).mockReset();
+    });
+
+    it('should pair each paginated template with its contributing pack', async () => {
+      const template = { id: 't1', templatesSet: { id: 'ts1' } };
+      const pack = { id: 'p1', templatesSet: { id: 'ts1' } };
+      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue({
+        total: 1,
+        items: [template],
+        pageInfo: { hasNextPage: false, hasPreviousPage: false },
+      });
+      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue([
+        pack,
+      ]);
+
+      const result = await service.getPaginatedTemplates({ first: 25 });
+
+      expect(result.total).toBe(1);
+      expect(result.items).toEqual([{ template, innovationPack: pack }]);
+    });
+
+    it('should apply the template-type filter when provided', async () => {
+      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue({
+        total: 0,
+        items: [],
+        pageInfo: {},
+      });
+
+      await service.getPaginatedTemplates(
+        { first: 25 },
+        { types: [TemplateType.CALLOUT] }
+      );
+
+      expect(andWhere).toHaveBeenCalledWith('template.type IN (:...types)', {
+        types: [TemplateType.CALLOUT],
+      });
+    });
+
+    it('should clamp the page size above the maximum to 100', async () => {
+      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue({
+        total: 0,
+        items: [],
+        pageInfo: {},
+      });
+
+      await service.getPaginatedTemplates({ first: 250 });
+
+      expect(getPaginationResults).toHaveBeenCalledWith(
+        expect.anything(),
+        expect.objectContaining({ first: 100 }),
+        'DESC'
+      );
+    });
+
+    it('should return an empty page without loading packs when no templates match', async () => {
+      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue({
+        total: 0,
+        items: [],
+        pageInfo: { hasNextPage: false, hasPreviousPage: false },
+      });
+
+      const result = await service.getPaginatedTemplates({ first: 25 });
+
+      expect(result.items).toEqual([]);
+      expect(entityManager.find).not.toHaveBeenCalled();
+    });
+
+    it('should throw RelationshipNotFoundException when a template has no listed pack', async () => {
+      const template = { id: 't1', templatesSet: { id: 'ts-orphan' } };
+      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue({
+        total: 1,
+        items: [template],
+        pageInfo: {},
+      });
+      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue([]);
+
+      await expect(
+        service.getPaginatedTemplates({ first: 25 })
+      ).rejects.toThrow(RelationshipNotFoundException);
     });
   });
 });

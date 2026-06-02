@@ -3,21 +3,27 @@ import { LogContext } from '@common/enums/logging.context';
 import { SearchVisibility } from '@common/enums/search.visibility';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { getPaginationResults, PaginationArgs } from '@core/pagination';
+import { IPaginatedType } from '@core/pagination/paginated.type';
 import { VirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.entity';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { InnovationHub } from '@domain/innovation-hub/innovation.hub.entity';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
+import { Template } from '@domain/template/template/template.entity';
 import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
 import { ITemplateResult } from './dto/library.dto.template.result';
 import { LibraryTemplatesFilterInput } from './dto/library.dto.templates.input';
 import { Library } from './library.entity';
 import { ILibrary } from './library.interface';
+
+/** Maximum page size for the paginated Innovation Library fields (FR-005). */
+const MAX_LIBRARY_PAGE_SIZE = 100;
 
 @Injectable()
 export class LibraryService {
@@ -164,5 +170,123 @@ export class LibraryService {
     });
 
     return templateResults;
+  }
+
+  /**
+   * Paginated listed InnovationPacks, following the documented relay-style
+   * cursor pattern (docs/Pagination.md). Pages by the `rowId` cursor,
+   * newest-first.
+   */
+  public async getPaginatedListedInnovationPacks(
+    paginationArgs: PaginationArgs
+  ): Promise<IPaginatedType<IInnovationPack>> {
+    const qb = this.entityManager
+      .createQueryBuilder(InnovationPack, 'innovationPack')
+      .where('innovationPack.listedInStore = :listed', { listed: true })
+      .andWhere('innovationPack.searchVisibility = :visibility', {
+        visibility: SearchVisibility.PUBLIC,
+      });
+
+    return getPaginationResults(qb, this.clampPageSize(paginationArgs), 'DESC');
+  }
+
+  /**
+   * Paginated Innovation Library templates, each paired with its contributing
+   * InnovationPack. The `Template` entity is paginated with the documented
+   * cursor helper (newest-first by `rowId`); the matching packs are then loaded
+   * in a single follow-up query and attached.
+   */
+  public async getPaginatedTemplates(
+    paginationArgs: PaginationArgs,
+    filter?: LibraryTemplatesFilterInput
+  ): Promise<IPaginatedType<ITemplateResult>> {
+    const qb = this.entityManager
+      .createQueryBuilder(Template, 'template')
+      .innerJoinAndSelect('template.templatesSet', 'templatesSet')
+      .innerJoin(
+        InnovationPack,
+        'innovationPack',
+        'innovationPack.templatesSetId = templatesSet.id'
+      )
+      .where('innovationPack.listedInStore = :listed', { listed: true })
+      .andWhere('innovationPack.searchVisibility = :visibility', {
+        visibility: SearchVisibility.PUBLIC,
+      });
+
+    if (filter?.types && filter.types.length > 0) {
+      qb.andWhere('template.type IN (:...types)', { types: filter.types });
+    }
+
+    const paginated = await getPaginationResults(
+      qb,
+      this.clampPageSize(paginationArgs),
+      'DESC'
+    );
+
+    return {
+      total: paginated.total,
+      items: await this.pairTemplatesWithPacks(paginated.items),
+      pageInfo: paginated.pageInfo,
+    };
+  }
+
+  /**
+   * Each Template belongs to exactly one TemplatesSet, which belongs to exactly
+   * one listed InnovationPack. Loads those packs in one query and pairs them.
+   */
+  private async pairTemplatesWithPacks(
+    templates: Template[]
+  ): Promise<ITemplateResult[]> {
+    if (templates.length === 0) {
+      return [];
+    }
+
+    const templatesSetIds = templates
+      .map(template => template.templatesSet?.id)
+      .filter((id): id is string => !!id);
+
+    const packs = await this.entityManager.find(InnovationPack, {
+      where: {
+        templatesSet: { id: In(templatesSetIds) },
+        listedInStore: true,
+        searchVisibility: SearchVisibility.PUBLIC,
+      },
+      relations: { templatesSet: true },
+    });
+
+    const packByTemplatesSetId = new Map<string, InnovationPack>();
+    for (const pack of packs) {
+      if (pack.templatesSet?.id) {
+        packByTemplatesSetId.set(pack.templatesSet.id, pack);
+      }
+    }
+
+    return templates.map(template => {
+      const innovationPack = template.templatesSet?.id
+        ? packByTemplatesSetId.get(template.templatesSet.id)
+        : undefined;
+      if (!innovationPack) {
+        throw new RelationshipNotFoundException(
+          `Unable to find listed InnovationPack for Template ${template.id}`,
+          LogContext.LIBRARY
+        );
+      }
+      return { template, innovationPack };
+    });
+  }
+
+  /** Caps the requested page size at the maximum (FR-005). */
+  private clampPageSize(paginationArgs: PaginationArgs): PaginationArgs {
+    return {
+      ...paginationArgs,
+      first:
+        paginationArgs.first !== undefined
+          ? Math.min(paginationArgs.first, MAX_LIBRARY_PAGE_SIZE)
+          : paginationArgs.first,
+      last:
+        paginationArgs.last !== undefined
+          ? Math.min(paginationArgs.last, MAX_LIBRARY_PAGE_SIZE)
+          : paginationArgs.last,
+    };
   }
 }

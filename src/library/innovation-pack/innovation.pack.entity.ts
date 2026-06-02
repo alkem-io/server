@@ -2,11 +2,26 @@ import { SearchVisibility } from '@common/enums/search.visibility';
 import { NameableEntity } from '@domain/common/entity/nameable-entity/nameable.entity';
 import { Account } from '@domain/space/account/account.entity';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Generated,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+} from 'typeorm';
 import { IInnovationPack } from './innovation.pack.interface';
 
 @Entity()
 export class InnovationPack extends NameableEntity implements IInnovationPack {
+  // Unique sequential cursor column for relay-style pagination (docs/Pagination.md)
+  @Column({
+    unique: true,
+    nullable: false,
+  })
+  @Generated('increment')
+  rowId!: number;
+
   @ManyToOne(
     () => Account,
     account => account.innovationPacks,
