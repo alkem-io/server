@@ -182,6 +182,9 @@ export class LibraryService {
   ): Promise<IPaginatedType<IInnovationPack>> {
     const qb = this.entityManager
       .createQueryBuilder(InnovationPack, 'innovationPack')
+      // Load the authorization policy so the guarded child fields (e.g.
+      // InnovationPack.templatesSet) can run their authorization check.
+      .leftJoinAndSelect('innovationPack.authorization', 'authorization_policy')
       .where('innovationPack.listedInStore = :listed', { listed: true })
       .andWhere('innovationPack.searchVisibility = :visibility', {
         visibility: SearchVisibility.PUBLIC,
@@ -251,7 +254,9 @@ export class LibraryService {
         listedInStore: true,
         searchVisibility: SearchVisibility.PUBLIC,
       },
-      relations: { templatesSet: true },
+      // authorization is required so the guarded InnovationPack.templatesSet
+      // child field can run its authorization check on the paired pack.
+      relations: { templatesSet: true, authorization: true },
     });
 
     const packByTemplatesSetId = new Map<string, InnovationPack>();

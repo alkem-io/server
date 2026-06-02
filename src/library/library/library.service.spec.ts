@@ -4,6 +4,7 @@ import {
   EntityNotFoundException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import { InnovationPack } from '@library/innovation-pack/innovation.pack.entity';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
 import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -17,16 +18,14 @@ import { vi } from 'vitest';
 import { Library } from './library.entity';
 import { LibraryService } from './library.service';
 
-// The relay-style cursor helper is exercised by its own spec
-// (relay.style.pagination.fn.spec.ts); here we stub it to assert the
-// library service's own logic (page-size clamping, type filter, template→pack
-// pairing) in isolation.
-vi.mock('@core/pagination', () => ({
-  getPaginationResults: vi.fn(),
-  PaginationArgs: class PaginationArgs {},
-}));
-
-import { getPaginationResults } from '@core/pagination';
+// NOTE: we deliberately do NOT `vi.mock('@core/pagination')`. The suite runs
+// with `isolate: false` (shared module registry across files), under which a
+// hoisted module-factory mock for the shared pagination barrel is unreliable —
+// another spec importing the real module can clobber it, intermittently letting
+// the real `getPaginationResults` run and failing with "query.getCount is not a
+// function". Instead we feed a deep (self-chaining) QueryBuilder mock and let the
+// real helper run against it — the same approach as activity.service.spec.ts.
+// The helper's own cursor algorithm is covered by relay.style.pagination.fn.spec.ts.
 
 describe('LibraryService', () => {
   let service: LibraryService;
@@ -420,92 +419,93 @@ describe('LibraryService', () => {
     });
   });
 
+  // A self-chaining QueryBuilder mock complete enough for the REAL
+  // getPaginationResults / getRelayStylePaginationResults helper to run against
+  // (getCount + getMany + the chained builder methods it touches). `items` is
+  // what a page returns; `count` is the total. No cursor (before/after) is used
+  // by these tests, so getOne is never hit.
+  const makeQb = (
+    alias: string,
+    { items = [] as any[], count = 0 } = {}
+  ): Record<string, any> => {
+    const qb: Record<string, any> = {};
+    for (const method of [
+      'where',
+      'andWhere',
+      'innerJoin',
+      'innerJoinAndSelect',
+      'leftJoinAndSelect',
+      'orderBy',
+      'addOrderBy',
+      'take',
+      'clone',
+    ]) {
+      qb[method] = vi.fn(() => qb);
+    }
+    qb.alias = alias;
+    qb.expressionMap = { orderBys: {}, wheres: [] };
+    qb.getCount = vi.fn().mockResolvedValue(count);
+    qb.getMany = vi.fn().mockResolvedValue(items);
+    qb.getOne = vi.fn().mockResolvedValue(undefined);
+    return qb;
+  };
+
   // ── getPaginatedListedInnovationPacks ─────────────────────────────
   describe('getPaginatedListedInnovationPacks', () => {
-    const chainableQb = () => {
-      const qb: Record<string, any> = {};
-      for (const method of ['where', 'andWhere', 'innerJoin']) {
-        qb[method] = vi.fn(() => qb);
-      }
-      return qb;
-    };
-
-    beforeEach(() => {
-      (entityManager as any).createQueryBuilder = vi.fn(() => chainableQb());
-      (getPaginationResults as ReturnType<typeof vi.fn>).mockReset();
-    });
-
-    it('should page newest-first (DESC) and pass through the helper result', async () => {
-      const helperResult = {
-        total: 2,
-        items: [{ id: 'pack-a' }, { id: 'pack-b' }],
-        pageInfo: {
-          startCursor: 'pack-a',
-          endCursor: 'pack-b',
-          hasNextPage: false,
-          hasPreviousPage: false,
-        },
-      };
-      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue(
-        helperResult
-      );
+    it('should page newest-first (rowId DESC) and return the helper result', async () => {
+      const items = [
+        { id: 'pack-a', rowId: 2 },
+        { id: 'pack-b', rowId: 1 },
+      ];
+      const qb = makeQb('innovationPack', { items, count: 2 });
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
 
       const result = await service.getPaginatedListedInnovationPacks({
         first: 10,
       });
 
-      expect(result).toEqual(helperResult);
-      expect(getPaginationResults).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ first: 10 }),
-        'DESC'
-      );
+      expect(result.total).toBe(2);
+      expect(result.items).toEqual(items);
+      // newest-first: rowId DESC on the query alias
+      expect(qb.orderBy).toHaveBeenCalledWith({
+        'innovationPack.rowId': 'DESC',
+      });
+      expect(qb.take).toHaveBeenCalledWith(10);
     });
 
     it('should clamp a page size above the maximum to 100', async () => {
-      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue({
-        total: 0,
-        items: [],
-        pageInfo: {},
-      });
+      const qb = makeQb('innovationPack');
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
 
       await service.getPaginatedListedInnovationPacks({ first: 500 });
 
-      expect(getPaginationResults).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ first: 100 }),
-        'DESC'
+      // clamp happens before the helper, so the helper limits the page to 100
+      expect(qb.take).toHaveBeenCalledWith(100);
+    });
+
+    // Regression: the guarded InnovationPack.templatesSet child field reads the
+    // pack's authorization policy, so the paginated query MUST load it or
+    // resolving templatesSet throws "Authorization: no definition provided".
+    it('should load the authorization relation so guarded child fields resolve', async () => {
+      const qb = makeQb('innovationPack');
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
+
+      await service.getPaginatedListedInnovationPacks({ first: 10 });
+
+      expect(qb.leftJoinAndSelect).toHaveBeenCalledWith(
+        'innovationPack.authorization',
+        'authorization_policy'
       );
     });
   });
 
   // ── getPaginatedTemplates ─────────────────────────────────────────
   describe('getPaginatedTemplates', () => {
-    let andWhere: ReturnType<typeof vi.fn>;
-
-    const chainableQb = () => {
-      const qb: Record<string, any> = {};
-      andWhere = vi.fn(() => qb);
-      qb.innerJoinAndSelect = vi.fn(() => qb);
-      qb.innerJoin = vi.fn(() => qb);
-      qb.where = vi.fn(() => qb);
-      qb.andWhere = andWhere;
-      return qb;
-    };
-
-    beforeEach(() => {
-      (entityManager as any).createQueryBuilder = vi.fn(() => chainableQb());
-      (getPaginationResults as ReturnType<typeof vi.fn>).mockReset();
-    });
-
     it('should pair each paginated template with its contributing pack', async () => {
-      const template = { id: 't1', templatesSet: { id: 'ts1' } };
+      const template = { id: 't1', rowId: 1, templatesSet: { id: 'ts1' } };
       const pack = { id: 'p1', templatesSet: { id: 'ts1' } };
-      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue({
-        total: 1,
-        items: [template],
-        pageInfo: { hasNextPage: false, hasPreviousPage: false },
-      });
+      const qb = makeQb('template', { items: [template], count: 1 });
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
       (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue([
         pack,
       ]);
@@ -514,47 +514,56 @@ describe('LibraryService', () => {
 
       expect(result.total).toBe(1);
       expect(result.items).toEqual([{ template, innovationPack: pack }]);
+      expect(qb.orderBy).toHaveBeenCalledWith({ 'template.rowId': 'DESC' });
+    });
+
+    // Regression: the paired InnovationPack's guarded templatesSet child field
+    // reads its authorization policy, so the pack lookup MUST load it.
+    it('should load the authorization relation when pairing templates with packs', async () => {
+      const template = { id: 't1', rowId: 1, templatesSet: { id: 'ts1' } };
+      const pack = { id: 'p1', templatesSet: { id: 'ts1' } };
+      const qb = makeQb('template', { items: [template], count: 1 });
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
+      (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue([
+        pack,
+      ]);
+
+      await service.getPaginatedTemplates({ first: 25 });
+
+      expect(entityManager.find).toHaveBeenCalledWith(
+        InnovationPack,
+        expect.objectContaining({
+          relations: expect.objectContaining({ authorization: true }),
+        })
+      );
     });
 
     it('should apply the template-type filter when provided', async () => {
-      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue({
-        total: 0,
-        items: [],
-        pageInfo: {},
-      });
+      const qb = makeQb('template');
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
 
       await service.getPaginatedTemplates(
         { first: 25 },
         { types: [TemplateType.CALLOUT] }
       );
 
-      expect(andWhere).toHaveBeenCalledWith('template.type IN (:...types)', {
+      expect(qb.andWhere).toHaveBeenCalledWith('template.type IN (:...types)', {
         types: [TemplateType.CALLOUT],
       });
     });
 
     it('should clamp the page size above the maximum to 100', async () => {
-      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue({
-        total: 0,
-        items: [],
-        pageInfo: {},
-      });
+      const qb = makeQb('template');
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
 
       await service.getPaginatedTemplates({ first: 250 });
 
-      expect(getPaginationResults).toHaveBeenCalledWith(
-        expect.anything(),
-        expect.objectContaining({ first: 100 }),
-        'DESC'
-      );
+      expect(qb.take).toHaveBeenCalledWith(100);
     });
 
     it('should return an empty page without loading packs when no templates match', async () => {
-      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue({
-        total: 0,
-        items: [],
-        pageInfo: { hasNextPage: false, hasPreviousPage: false },
-      });
+      const qb = makeQb('template', { items: [], count: 0 });
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
 
       const result = await service.getPaginatedTemplates({ first: 25 });
 
@@ -563,12 +572,13 @@ describe('LibraryService', () => {
     });
 
     it('should throw RelationshipNotFoundException when a template has no listed pack', async () => {
-      const template = { id: 't1', templatesSet: { id: 'ts-orphan' } };
-      (getPaginationResults as ReturnType<typeof vi.fn>).mockResolvedValue({
-        total: 1,
-        items: [template],
-        pageInfo: {},
-      });
+      const template = {
+        id: 't1',
+        rowId: 1,
+        templatesSet: { id: 'ts-orphan' },
+      };
+      const qb = makeQb('template', { items: [template], count: 1 });
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
       (entityManager.find as ReturnType<typeof vi.fn>).mockResolvedValue([]);
 
       await expect(
