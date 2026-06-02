@@ -38,15 +38,35 @@ Required variables:
 
 ## Execution
 
-1. First verify credentials exist:
+> ⚠️ Do **not** just run the script and report its output — it can report success while loading
+> nothing. Follow the robust flow in [`docs/DatabaseRestore.md`](../../docs/DatabaseRestore.md) /
+> the [`restore-dbs` skill](../skills/restore-dbs.md): preflight → quiesce → restore → verify.
+
+1. Preflight — credentials present AND have the DB-name vars (stale `.env` is the #1 silent-failure cause):
 ```bash
-test -f .scripts/backups/.env && echo "Credentials file exists" || echo "ERROR: Missing .scripts/backups/.env - copy from .env.sample and configure"
+test -f .scripts/backups/.env && grep -q POSTGRES_ALKEMIO_DB .scripts/backups/.env \
+  && echo "env OK" || echo "ERROR: copy .scripts/backups/.env.sample → .env and fill AWS keys + POSTGRES_*_DB"
 ```
 
-2. If credentials exist, run the restore script. Parse arguments from `$ARGUMENTS` (environment, restart_services, non_interactive, restore_kratos):
+2. Quiesce — bring the stack down to postgres-only so no service blocks `DROP DATABASE`:
 ```bash
-cd .scripts/backups && bash restore_latest_backup_set.sh <environment> [restart_services] [non_interactive] [restore_kratos]
+docker compose -f quickstart-services.yml --env-file .env.docker stop
+docker compose -f quickstart-services.yml --env-file .env.docker up -d postgres
 ```
+
+3. Run the restore (parse `$ARGUMENTS`: environment, restart_services, non_interactive, restore_kratos). Pass `false` for restart so you bring the stack up yourself after:
+```bash
+cd .scripts/backups && bash restore_latest_backup_set.sh <environment> false [non_interactive] [restore_kratos]
+cd ../.. && docker compose -f quickstart-services.yml --env-file .env.docker up -d
+```
+
+4. **Verify** (mandatory — DB sizes should be hundreds of MB, not ~20–30 MB):
+```bash
+docker exec alkemio_dev_postgres psql -U synapse -d postgres -tAc \
+  "select datname, pg_size_pretty(pg_database_size(datname)) from pg_database where datname in ('alkemio','synapse');"
+docker ps --filter name=alkemio_dev_synapse --format '{{.Status}}'   # must be healthy, not Restarting
+```
+If synapse crash-loops with `not native to <name>`, fix `server_name` to match the data domain — see the runbook.
 
 **Default behavior:**
 - Restores `alkemio` and `synapse` databases

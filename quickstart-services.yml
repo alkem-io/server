@@ -377,6 +377,8 @@ services:
     container_name: alkemio_dev_notifications
     hostname: notifications
     image: alkemio/notifications:v0.35.0
+    # notifications publishes amd64-only images; run under emulation on arm64 (Apple Silicon)
+    platform: linux/amd64
     depends_on:
       rabbitmq:
         condition: service_healthy

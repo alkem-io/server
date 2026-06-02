@@ -1,125 +1,98 @@
 # Database Restoration
 
-When asked to restore databases or work with backup data from environments (prod, dev, acc, sandbox), follow this guide.
+Restore a real environment's data (prod/dev/**acc**/sandbox) into the local Docker
+`alkemio_dev_postgres` container — Alkemio + Synapse, optionally Kratos.
 
-## Overview
+Full runbook + troubleshooting: [`docs/DatabaseRestore.md`](../../docs/DatabaseRestore.md).
+Invoke this when asked to "restore the acc db", "get acc data locally", etc.
 
-The restore system downloads PostgreSQL backups from Scaleway S3 and restores them to the local Docker PostgreSQL container (`alkemio_dev_postgres`).
+## Critical: this restore silently fails in two ways — always run the robust flow + verify
 
-**Databases available:**
-- `alkemio` - Main application database
-- `synapse` - Matrix/Synapse communication database
-- `kratos` - Ory Kratos identity database (optional, usually not restored)
+A naive `bash restore_latest_backup_set.sh acc` can report success while loading **nothing**.
+Two traps (both cost real debugging time on 2026-06-02):
 
-## Prerequisites
+1. **Stale `.env`** missing `POSTGRES_*_DB` → target db name is empty → `DROP DATABASE ;` errors
+   under `set -e` → restore aborts, stale seed data left behind.
+2. **Live connections** — stack services reconnect faster than the script's terminate→drop, so
+   `DROP DATABASE` fails. Restore must run with the stack **down to postgres-only**.
 
-### 1. Credentials File
+So do NOT just run the script and report its output. Follow the procedure below and **verify by
+DB size** at the end.
 
-Ensure `.scripts/backups/.env` exists:
+## Procedure (default target: acc)
 
-```bash
-# Check if credentials exist
-test -f .scripts/backups/.env && echo "OK" || echo "Missing - needs setup"
-```
-
-If missing, create from sample:
-```bash
-cp .scripts/backups/.env.sample .scripts/backups/.env
-```
-
-Required variables:
-- `AWS_ACCESS_KEY_ID` - Scaleway S3 access key
-- `AWS_SECRET_ACCESS_KEY` - Scaleway S3 secret key
-- `POSTGRES_USER` - PostgreSQL user (typically "synapse")
-- `POSTGRES_PASSWORD` - PostgreSQL password
-- `POSTGRES_ALKEMIO_DB` - Alkemio database name
-- `POSTGRES_KRATOS_DB` - Kratos database name
-- `POSTGRES_SYNAPSE_DB` - Synapse database name
-
-### 2. Docker Services
-
-The PostgreSQL container must be running:
-```bash
-docker ps | grep alkemio_dev_postgres
-```
-
-If not running:
-```bash
-pnpm run start:services
-```
-
-## Restoration Commands
-
-### Restore Full Set (Recommended)
-
-Restores alkemio + synapse (kratos optional):
+### 1. Preflight
 
 ```bash
-cd .scripts/backups && bash restore_latest_backup_set.sh <environment> [restart_services] [non_interactive] [restore_kratos]
+# .env present AND has the DB-name vars (re-copy from sample if missing — stale .env is the #1 silent-failure cause)
+test -f .scripts/backups/.env && grep -q POSTGRES_ALKEMIO_DB .scripts/backups/.env \
+  && echo "env OK" || echo "FIX: cp .scripts/backups/.env.sample .scripts/backups/.env and fill AWS keys"
+docker ps --filter name=alkemio_dev_postgres --format '{{.Names}}' | grep -q . || echo "start postgres first"
 ```
+If `.env` is missing entirely, copy from `.env.sample` and ask the user for the AWS keys.
 
-**Arguments:**
-| Arg | Values | Default | Description |
-|-----|--------|---------|-------------|
-| environment | prod/dev/acc/sandbox | prod | Source environment |
-| restart_services | true/false | true | Restart services after |
-| non_interactive | true/false | true | Skip confirmation prompts |
-| restore_kratos | true/false | false | Include kratos database |
-
-**Examples:**
-```bash
-# Restore prod, restart services
-bash restore_latest_backup_set.sh prod
-
-# Restore dev, no restart
-bash restore_latest_backup_set.sh dev false
-
-# Restore acc with kratos
-bash restore_latest_backup_set.sh acc true true true
-```
-
-### Restore Single Database
-
-For restoring just one database:
+### 2. Quiesce — stack down to postgres-only (prevents the DROP-DATABASE connection race)
 
 ```bash
-cd .scripts/backups && bash restore_latest_backup.sh <database> <environment> [non_interactive]
+docker compose -f quickstart-services.yml --env-file .env.docker stop
+docker compose -f quickstart-services.yml --env-file .env.docker up -d postgres
 ```
 
-**Examples:**
+### 3. Restore (no auto-restart). Use a 10-min timeout — downloads are ~0.8–1.3 GB.
+
 ```bash
-bash restore_latest_backup.sh alkemio prod true
-bash restore_latest_backup.sh synapse dev true
-bash restore_latest_backup.sh kratos acc true
+cd .scripts/backups && bash restore_latest_backup_set.sh <env> false
+```
+- `<env>` = `acc` (default ask), `dev`, `sandbox`, `prod`.
+- Add `true true true` (`restart non_interactive restore_kratos`) only if kratos is needed; default skips it.
+- This also sets synapse `server_name` per env in `homeserver.yaml` + `.env.docker`.
+
+### 4. Bring the full stack back up
+
+```bash
+cd ../.. && docker compose -f quickstart-services.yml --env-file .env.docker up -d
 ```
 
-## Environment Mapping
+### 5. VERIFY (mandatory — this is what catches the silent failure)
 
-| Environment | S3 Bucket | Region | Matrix Server |
-|-------------|-----------|--------|---------------|
+```bash
+# Sizes: acc ≈ hundreds of MB. ~20–30 MB = restore did NOT take → investigate before reporting success.
+docker exec alkemio_dev_postgres psql -U synapse -d postgres -tAc \
+  "select datname, pg_size_pretty(pg_database_size(datname)) from pg_database where datname in ('alkemio','synapse');"
+docker exec alkemio_dev_postgres psql -U synapse -d alkemio -tAc \
+  "select (select count(*) from \"user\") users, (select count(*) from space) spaces;"
+# Synapse must be healthy and free of domain errors:
+docker ps --filter name=alkemio_dev_synapse --format '{{.Status}}'
+docker logs --since 60s alkemio_dev_synapse 2>&1 | grep -i "not native" && echo "server_name MISMATCH" || echo "server_name OK"
+```
+Reference (acc 2026-06-02): alkemio ≈ 620 MB / 402 users / 1543 spaces; synapse ≈ 868 MB / 732 users / 10336 rooms.
+
+## If synapse crash-loops (`Found users in database not native to <name>`)
+
+`server_name` must match the restored data's user domain (acc=`matrix-acc.alkem.io`,
+dev=`matrix-dev.alkem.io`, prod=`matrix.alkem.io`, seed=`alkemio.matrix.host`). Check the actual
+domain and fix:
+```bash
+docker exec alkemio_dev_postgres psql -U synapse -d synapse -tAc "select distinct split_part(name,':',2) from users limit 5;"
+# Set server_name to match in .build/synapse/homeserver.yaml + SYNAPSE_SERVER_NAME/SYNAPSE_HOMESERVER_NAME in .env.docker, then:
+docker compose -f quickstart-services.yml --env-file .env.docker up -d --force-recreate synapse matrix-adapter
+```
+
+## Apple Silicon note
+
+`quickstart-services.yml` must keep `platform: linux/amd64` on the `notification` service (only
+amd64-only image in the stack); without it `pnpm run start:services` aborts with
+`no matching manifest for linux/arm64/v8`.
+
+## Environment → bucket
+
+| Env | Bucket | Region | server_name |
+|-----|--------|--------|-------------|
 | prod | alkemio-s3-backups-prod-paris | fr-par | matrix.alkem.io |
-| dev | alkemio-s3-backups-dev | nl-ams | matrix-dev.alkem.io |
-| acc | alkemio-s3-backups-dev | nl-ams | matrix-acc.alkem.io |
-| sandbox | alkemio-s3-backups-dev | nl-ams | matrix-sandbox.alkem.io |
+| dev / acc / sandbox | alkemio-s3-backups-dev | nl-ams | matrix-{dev,acc,sandbox}.alkem.io |
 
-## Troubleshooting
+## Single-DB restore
 
-### AWS CLI Issues
-The script auto-installs AWS CLI v2 if missing. If authentication fails:
 ```bash
-aws configure list  # Check current config
-cat ~/.aws/credentials  # Verify credentials
-```
-
-### Database Connection Errors
-Ensure container is running and healthy:
-```bash
-docker exec alkemio_dev_postgres pg_isready -U synapse
-```
-
-### Backup Not Found
-List available backups:
-```bash
-source .scripts/backups/.env
-aws s3 ls s3://alkemio-s3-backups-prod-paris/storage/postgres/backups/alkemio/
+cd .scripts/backups && bash restore_latest_backup.sh <alkemio|synapse|kratos> <env> true
 ```

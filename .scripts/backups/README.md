@@ -1,8 +1,24 @@
 # How to use these scripts?
 
+> 📘 **Full runbook (recommended):** [`docs/DatabaseRestore.md`](../../docs/DatabaseRestore.md) —
+> single-command + manual steps, verification, and troubleshooting for the silent-failure traps
+> below. Or just ask Claude: *"restore the acc db"*.
+
+> ⚠️ **Two silent-failure traps** (the script can report success while loading nothing):
+> 1. A stale `.env` missing `POSTGRES_*_DB` → empty target name → restore aborts. Re-copy from `.env.sample`.
+> 2. `DROP DATABASE` fails if stack services are connected → restore with the stack **down to
+>    postgres-only** (`docker compose -f quickstart-services.yml --env-file .env.docker stop && ... up -d postgres`).
+>
+> **Always verify by DB size afterwards** (acc ≈ hundreds of MB; ~20–30 MB means it didn't take):
+> ```bash
+> docker exec alkemio_dev_postgres psql -U synapse -d postgres -tAc \
+>   "select datname, pg_size_pretty(pg_database_size(datname)) from pg_database where datname in ('alkemio','synapse');"
+> ```
+
 ## Prerequisites
 
-- Create `.env` file in the `backups` folder. Copy the .env.sample and fill in the missing values
+- Create `.env` file in the `backups` folder. Copy the .env.sample and fill in the missing values.
+  **Keep all `POSTGRES_*_DB` vars** — the script derives the target DB name from them.
 - The `postgres` container needs to be running from `quickstart-services`, or started with `pnpm run start:services`
 
 ## The following scripts are added
