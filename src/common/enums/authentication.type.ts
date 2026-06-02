@@ -6,6 +6,7 @@ export enum AuthenticationType {
   GITHUB = 'github',
   CLEVERBASE = 'cleverbase',
   EMAIL = 'email',
+  PASSKEY = 'passkey',
   UNKNOWN = 'unknown',
 }
 

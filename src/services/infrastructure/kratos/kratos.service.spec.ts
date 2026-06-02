@@ -151,6 +151,52 @@ describe('KratosService', () => {
       expect(result).toHaveLength(3);
     });
 
+    it('should return PASSKEY when identity has passkey credentials', () => {
+      const identity = {
+        credentials: {
+          passkey: { type: 'passkey', identifiers: ['UBs4UpEGrcXkdiXg'] },
+        },
+      } as unknown as Identity;
+
+      const result = service.mapAuthenticationType(identity);
+      expect(result).toEqual([AuthenticationType.PASSKEY]);
+    });
+
+    it('should return PASSKEY for legacy webauthn credentials', () => {
+      const identity = {
+        credentials: {
+          webauthn: { type: 'webauthn', identifiers: ['legacy-key'] },
+        },
+      } as unknown as Identity;
+
+      const result = service.mapAuthenticationType(identity);
+      expect(result).toEqual([AuthenticationType.PASSKEY]);
+    });
+
+    it('should include PASSKEY alongside oidc and password (issue #9773 follow-up)', () => {
+      // Real acc identity ev.dimitrovv@gmail.com: cleverbase + linkedin oidc,
+      // a password, AND a passkey — all four must be reported.
+      const identity = {
+        credentials: {
+          oidc: {
+            identifiers: [
+              'cleverbase:1572006587f483f6c1',
+              'linkedin:9NMK-3ClHo',
+            ],
+          },
+          password: { type: 'password' },
+          passkey: { type: 'passkey', identifiers: ['TQ6uViIgcdoMpYzh'] },
+        },
+      } as unknown as Identity;
+
+      const result = service.mapAuthenticationType(identity);
+      expect(result).toContain(AuthenticationType.CLEVERBASE);
+      expect(result).toContain(AuthenticationType.LINKEDIN);
+      expect(result).toContain(AuthenticationType.EMAIL);
+      expect(result).toContain(AuthenticationType.PASSKEY);
+      expect(result).toHaveLength(4);
+    });
+
     it('should de-duplicate when multiple identifiers share a provider', () => {
       const identity = {
         credentials: {
