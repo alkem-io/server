@@ -86,6 +86,7 @@ enum AuthenticationType {
   GITHUB
   LINKEDIN
   MICROSOFT
+  PASSKEY
   UNKNOWN
 }
 

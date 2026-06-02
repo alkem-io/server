@@ -218,6 +218,8 @@ export class KratosService {
    *   - `github`    -> `AuthenticationType.GITHUB`
    *   - `cleverbase` -> `AuthenticationType.CLEVERBASE`
    * - If the identity has password credentials, it adds `AuthenticationType.EMAIL`.
+   * - If the identity has passkey (or legacy webauthn) credentials, it adds
+   *   `AuthenticationType.PASSKEY`.
    * - If none of the above conditions are met, it adds `AuthenticationType.UNKNOWN`.
    */
   public mapAuthenticationType(identity: Identity): AuthenticationType[] {
@@ -247,6 +249,13 @@ export class KratosService {
 
     if (identity.credentials.password) {
       authTypes.add(AuthenticationType.EMAIL);
+    }
+
+    // Passkeys are a separate Kratos credential type (`passkey`, with `webauthn`
+    // as the legacy key) — not OIDC and not password — so they must be detected
+    // explicitly or they never surface as an authentication method.
+    if (identity.credentials.passkey || identity.credentials.webauthn) {
+      authTypes.add(AuthenticationType.PASSKEY);
     }
 
     return authTypes.size ? [...authTypes] : [AuthenticationType.UNKNOWN];
