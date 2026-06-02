@@ -105,6 +105,49 @@ order, newest-first (DESC). No field-based ordering on the paginated fields.
 
 ---
 
+## Phase 5b: Server-side text filter (`searchTerm`) — US1 + US2 (added 2026-06-02)
+
+**Goal**: Both paginated fields accept an optional `searchTerm` matched
+case-insensitively (substring) across title, description, and tags (OR-ed),
+composing with eligibility, the type filter, and pagination/total. **Provider name
+is NOT searched** (excluded for performance — FR-022).
+
+**Independent Test**: `templatesPaginated(filter:{searchTerm:"inno"}, first:5)` →
+only templates whose title/description/tags contain "inno"; `total` = matched count;
+`innovationPacksPaginated(filter:{searchTerm:"inno"})` likewise; an item matching on
+several fields appears once.
+
+### Tests (risk-based)
+
+- [x] T021 [P] [US1/US2] Service specs in `src/library/library/library.service.spec.ts`
+  for the `searchTerm` filter on both methods — blank/whitespace term ⇒ no filter;
+  the `OR` group is applied (assert the bracketed predicate / tags `EXISTS` fragment
+  on the deep-QB mock); composes with the type filter (AND) on templates; no row
+  duplication / `total` inflation when matching multiple tags (FR-019–FR-021)
+
+### Implementation
+
+- [x] T022 Extend filter inputs: add `searchTerm?: string` to
+  `src/library/library/dto/library.dto.templates.input.ts` (`LibraryTemplatesFilterInput`);
+  create `LibraryInnovationPacksFilterInput { searchTerm?: string }` in
+  `src/library/library/dto/library.dto.innovationPacks.filter.ts`
+- [x] T023 Add a private `applySearchTerm(qb, alias, term)` helper in
+  `library.service.ts` — no-op on blank; else join `profile` and add a single
+  bracketed `OR` group: `profile.displayName`/`profile.description` `ILIKE`; tags via
+  `EXISTS` on `tagset` (by `profileId`). **No provider/account join** (depends: T022)
+- [x] T024 [US2] Wire `getPaginatedListedInnovationPacks(pagination, filter?)` to call
+  `applySearchTerm` and the resolver field to accept `filter: LibraryInnovationPacksFilterInput`
+  (depends: T023)
+- [x] T025 [US1] Wire `getPaginatedTemplates` to call `applySearchTerm` (matching the
+  template's own `profile`), composing with the existing type filter (depends: T023)
+- [x] T026 Regenerate schema + `pnpm run schema:diff`; confirm the only additions are
+  `searchTerm` on `LibraryTemplatesFilterInput`, the new `LibraryInnovationPacksFilterInput`,
+  and the `filter` arg on `innovationPacksPaginated` — all additive/non-breaking (depends: T024, T025)
+
+**Checkpoint**: free-text filtering works on both fields and composes with type + pagination.
+
+---
+
 ## Phase 6: Polish
 
 - [x] T018 [P] Run `quickstart.md` validation (queries 1–7, incl. cursor/clamp/conflict/empty edge cases + migration up/down) against `pnpm start:dev`

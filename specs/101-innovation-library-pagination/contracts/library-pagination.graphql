@@ -9,8 +9,26 @@
 # --- Reused (already in schema) ---
 # input PaginationArgs { first: Int, after: UUID, last: Int, before: UUID }
 # type PageInfo { startCursor: String, endCursor: String, hasNextPage: Boolean!, hasPreviousPage: Boolean! }
-# input LibraryTemplatesFilterInput { types: [TemplateType!] }
 # type InnovationPack { ... }   type TemplateResult { template: Template!, innovationPack: InnovationPack! }
+
+# --- Filter inputs ---
+# `searchTerm` is a single case-insensitive substring matched across title
+# (display name), description, and tags (OR-ed). Provider name is NOT searched
+# (excluded for performance). Omitted / blank = no text filter. On templates it
+# AND-composes with `types`.
+
+# LibraryTemplatesFilterInput already exists with `types`; this feature ADDS the
+# optional `searchTerm` field to it (additive — existing `types`-only use is
+# unchanged).
+input LibraryTemplatesFilterInput {
+  types: [TemplateType!]
+  searchTerm: String
+}
+
+# New input for the packs field (packs had no filter before).
+input LibraryInnovationPacksFilterInput {
+  searchTerm: String
+}
 
 # --- New output connection types (via the shared Paginate(...) factory) ---
 
@@ -38,17 +56,20 @@ extend type Library {
   """
   Paginated Innovation Packs in the platform Innovation Library.
   Cursor pagination (docs/Pagination.md); pages newest-first.
+  Optionally filtered by a free-text term (title/description/tags).
   """
   innovationPacksPaginated(
     after: UUID
     before: UUID
+    filter: LibraryInnovationPacksFilterInput
     first: Int
     last: Int
   ): PaginatedInnovationPacks!
 
   """
   Paginated Templates in the Innovation Library, each with its InnovationPack.
-  Cursor pagination; pages newest-first. Composes with the template-type filter.
+  Cursor pagination; pages newest-first. Composes with the template-type filter
+  and an optional free-text term (title/description/tags).
   """
   templatesPaginated(
     after: UUID

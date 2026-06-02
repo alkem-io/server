@@ -8,5 +8,12 @@ export class LibraryTemplatesFilterInput {
     description:
       'Return Templates within the Library matching the specified Template Types.',
   })
-  types!: TemplateType[];
+  types?: TemplateType[];
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'Return Templates whose title, description or tags contain this term (case-insensitive).',
+  })
+  searchTerm?: string;
 }

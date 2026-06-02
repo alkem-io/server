@@ -434,6 +434,7 @@ describe('LibraryService', () => {
       'andWhere',
       'innerJoin',
       'innerJoinAndSelect',
+      'leftJoin',
       'leftJoinAndSelect',
       'orderBy',
       'addOrderBy',
@@ -448,6 +449,24 @@ describe('LibraryService', () => {
     qb.getMany = vi.fn().mockResolvedValue(items);
     qb.getOne = vi.fn().mockResolvedValue(undefined);
     return qb;
+  };
+
+  // The searchTerm filter is added via `qb.andWhere(new Brackets(cb))`. This
+  // finds that Brackets among the andWhere calls and runs its callback against a
+  // fake where-expression builder, returning the builder so tests can assert the
+  // exact predicate fragments (displayName/description ILIKE + tags EXISTS).
+  const runSearchBracket = (qb: Record<string, any>) => {
+    const bracket = qb.andWhere.mock.calls
+      .map((c: any[]) => c[0])
+      .find((arg: any) => arg && typeof arg.whereFactory === 'function');
+    if (!bracket) {
+      return undefined;
+    }
+    const wqb: Record<string, any> = {};
+    wqb.where = vi.fn(() => wqb);
+    wqb.orWhere = vi.fn(() => wqb);
+    bracket.whereFactory(wqb);
+    return wqb;
   };
 
   // ── getPaginatedListedInnovationPacks ─────────────────────────────
@@ -496,6 +515,46 @@ describe('LibraryService', () => {
         'innovationPack.authorization',
         'authorization_policy'
       );
+    });
+
+    it('should filter by searchTerm over title, description and tags', async () => {
+      const qb = makeQb('innovationPack');
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
+
+      await service.getPaginatedListedInnovationPacks(
+        { first: 25 },
+        { searchTerm: 'inno' }
+      );
+
+      expect(qb.leftJoin).toHaveBeenCalledWith(
+        'innovationPack.profile',
+        'searchProfile'
+      );
+      const wqb = runSearchBracket(qb);
+      expect(wqb?.where).toHaveBeenCalledWith(
+        'searchProfile.displayName ILIKE :searchTerm',
+        { searchTerm: '%inno%' }
+      );
+      expect(wqb?.orWhere).toHaveBeenCalledWith(
+        'searchProfile.description ILIKE :searchTerm',
+        { searchTerm: '%inno%' }
+      );
+      expect(wqb?.orWhere).toHaveBeenCalledWith(
+        expect.stringContaining('EXISTS (SELECT 1 FROM tagset'),
+        { searchTerm: '%inno%' }
+      );
+    });
+
+    it('should treat a blank searchTerm as no filter', async () => {
+      const qb = makeQb('innovationPack');
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
+
+      await service.getPaginatedListedInnovationPacks(
+        { first: 25 },
+        { searchTerm: '   ' }
+      );
+
+      expect(qb.leftJoin).not.toHaveBeenCalled();
     });
   });
 
@@ -550,6 +609,60 @@ describe('LibraryService', () => {
       expect(qb.andWhere).toHaveBeenCalledWith('template.type IN (:...types)', {
         types: [TemplateType.CALLOUT],
       });
+    });
+
+    it('should filter by searchTerm over the template title, description and tags', async () => {
+      const qb = makeQb('template');
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
+
+      await service.getPaginatedTemplates(
+        { first: 25 },
+        { searchTerm: 'inno' }
+      );
+
+      expect(qb.leftJoin).toHaveBeenCalledWith(
+        'template.profile',
+        'searchProfile'
+      );
+      const wqb = runSearchBracket(qb);
+      expect(wqb?.where).toHaveBeenCalledWith(
+        'searchProfile.displayName ILIKE :searchTerm',
+        { searchTerm: '%inno%' }
+      );
+      expect(wqb?.orWhere).toHaveBeenCalledWith(
+        expect.stringContaining('EXISTS (SELECT 1 FROM tagset'),
+        { searchTerm: '%inno%' }
+      );
+    });
+
+    it('should compose the type filter (AND) with the searchTerm filter', async () => {
+      const qb = makeQb('template');
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
+
+      await service.getPaginatedTemplates(
+        { first: 25 },
+        { types: [TemplateType.CALLOUT], searchTerm: 'inno' }
+      );
+
+      // type filter still applied...
+      expect(qb.andWhere).toHaveBeenCalledWith('template.type IN (:...types)', {
+        types: [TemplateType.CALLOUT],
+      });
+      // ...and the search OR-group joined the profile too
+      expect(qb.leftJoin).toHaveBeenCalledWith(
+        'template.profile',
+        'searchProfile'
+      );
+      expect(runSearchBracket(qb)).toBeDefined();
+    });
+
+    it('should treat a blank searchTerm as no filter', async () => {
+      const qb = makeQb('template');
+      (entityManager as any).createQueryBuilder = vi.fn(() => qb);
+
+      await service.getPaginatedTemplates({ first: 25 }, { searchTerm: '  ' });
+
+      expect(qb.leftJoin).not.toHaveBeenCalled();
     });
 
     it('should clamp the page size above the maximum to 100', async () => {

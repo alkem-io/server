@@ -8,6 +8,7 @@ import { Inject, LoggerService, UseGuards } from '@nestjs/common';
 import { Args, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { LibraryInnovationPacksFilterInput } from './dto/library.dto.innovationPacks.filter';
 import { InnovationPacksInput } from './dto/library.dto.innovationPacks.input';
 import { PaginatedInnovationPacks } from './dto/library.dto.innovationPacks.paginated';
 import { ITemplateResult } from './dto/library.dto.template.result';
@@ -70,9 +71,18 @@ export class LibraryResolverFields {
       'Paginated Innovation Packs in the platform Innovation Library (newest first).',
   })
   async innovationPacksPaginated(
-    @Args({ nullable: true }) pagination: PaginationArgs
+    @Args({ nullable: true }) pagination: PaginationArgs,
+    @Args('filter', {
+      nullable: true,
+      description:
+        'Filter the Innovation Packs by a free-text term (title, description or tags).',
+    })
+    filter?: LibraryInnovationPacksFilterInput
   ): Promise<PaginatedInnovationPacks> {
-    return this.libraryService.getPaginatedListedInnovationPacks(pagination);
+    return this.libraryService.getPaginatedListedInnovationPacks(
+      pagination,
+      filter
+    );
   }
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)

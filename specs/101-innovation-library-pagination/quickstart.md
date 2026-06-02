@@ -58,6 +58,26 @@ query {
 Then re-run with `first: 10, after: "<endCursor>"`; confirm the
 next distinct slice, no repeats.
 
+## 3b. Free-text filter (`searchTerm` — title / description / tags)
+```graphql
+query {
+  platform { library {
+    templatesPaginated(filter: { searchTerm: "inno" }, first: 5) {
+      total
+      templateResults { template { id profile { displayName } } }
+      pageInfo { hasNextPage }
+    }
+    innovationPacksPaginated(filter: { searchTerm: "inno" }, first: 5) {
+      total
+      innovationPacks { id profile { displayName } }
+    }
+  } }
+}
+```
+Expect: only items whose title, description, or tags contain `inno` (case-insensitive),
+`total` = matched count, each item once. Provider name is NOT searched. On templates,
+`searchTerm` AND-composes with `types`. A blank/omitted term applies no text filter.
+
 ## 4. Backward-compatibility (must be unchanged)
 ```graphql
 query {

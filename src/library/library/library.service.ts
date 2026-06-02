@@ -16,7 +16,16 @@ import { InnovationPackService } from '@library/innovation-pack/innovation.pack.
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
+import {
+  Brackets,
+  EntityManager,
+  FindOneOptions,
+  In,
+  ObjectLiteral,
+  Repository,
+  SelectQueryBuilder,
+} from 'typeorm';
+import { LibraryInnovationPacksFilterInput } from './dto/library.dto.innovationPacks.filter';
 import { ITemplateResult } from './dto/library.dto.template.result';
 import { LibraryTemplatesFilterInput } from './dto/library.dto.templates.input';
 import { Library } from './library.entity';
@@ -148,9 +157,10 @@ export class LibraryService {
         );
       }
       let filteredTemplates = innovationPack.templatesSet.templates;
-      if (filter && filter.types) {
+      const types = filter?.types;
+      if (types) {
         filteredTemplates = filteredTemplates.filter(template =>
-          filter.types.includes(template.type)
+          types.includes(template.type)
         );
       }
       for (const template of filteredTemplates) {
@@ -178,7 +188,8 @@ export class LibraryService {
    * newest-first.
    */
   public async getPaginatedListedInnovationPacks(
-    paginationArgs: PaginationArgs
+    paginationArgs: PaginationArgs,
+    filter?: LibraryInnovationPacksFilterInput
   ): Promise<IPaginatedType<IInnovationPack>> {
     const qb = this.entityManager
       .createQueryBuilder(InnovationPack, 'innovationPack')
@@ -189,6 +200,8 @@ export class LibraryService {
       .andWhere('innovationPack.searchVisibility = :visibility', {
         visibility: SearchVisibility.PUBLIC,
       });
+
+    this.applySearchTerm(qb, 'innovationPack', filter?.searchTerm);
 
     return getPaginationResults(qb, this.clampPageSize(paginationArgs), 'DESC');
   }
@@ -219,6 +232,8 @@ export class LibraryService {
     if (filter?.types && filter.types.length > 0) {
       qb.andWhere('template.type IN (:...types)', { types: filter.types });
     }
+
+    this.applySearchTerm(qb, 'template', filter?.searchTerm);
 
     const paginated = await getPaginationResults(
       qb,
@@ -278,6 +293,43 @@ export class LibraryService {
       }
       return { template, innovationPack };
     });
+  }
+
+  /**
+   * Appends an optional free-text filter to a paginated library query: a single
+   * OR group matching the item's own profile displayName / description (ILIKE)
+   * and its tags (an EXISTS subquery on `tagset`, so a profile's many tagsets do
+   * not multiply rows and corrupt the count / page size — FR-021). No-op on a
+   * blank term (FR-019). Provider is intentionally NOT searched: it is a reverse
+   * `accountID` lookup to user/organization whose per-row EXISTS subqueries risk
+   * slowing the query (FR-022).
+   */
+  private applySearchTerm<T extends ObjectLiteral>(
+    qb: SelectQueryBuilder<T>,
+    alias: string,
+    searchTerm?: string
+  ): void {
+    const term = searchTerm?.trim();
+    if (!term) {
+      return;
+    }
+    const like = `%${term}%`;
+
+    qb.leftJoin(`${alias}.profile`, 'searchProfile').andWhere(
+      new Brackets(wqb => {
+        wqb
+          .where('searchProfile.displayName ILIKE :searchTerm', {
+            searchTerm: like,
+          })
+          .orWhere('searchProfile.description ILIKE :searchTerm', {
+            searchTerm: like,
+          })
+          .orWhere(
+            'EXISTS (SELECT 1 FROM tagset st WHERE st."profileId" = searchProfile.id AND st.tags ILIKE :searchTerm)',
+            { searchTerm: like }
+          );
+      })
+    );
   }
 
   /** Caps the requested page size at the maximum (FR-005). */
