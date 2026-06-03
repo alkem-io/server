@@ -158,7 +158,7 @@ export class LibraryService {
       }
       let filteredTemplates = innovationPack.templatesSet.templates;
       const types = filter?.types;
-      if (types) {
+      if (types?.length) {
         filteredTemplates = filteredTemplates.filter(template =>
           types.includes(template.type)
         );

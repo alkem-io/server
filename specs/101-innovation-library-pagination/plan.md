@@ -129,11 +129,11 @@ module + the `Template` entity/interface (for `rowId`) + one migration. Reuses
 5. **Search filter** — a shared helper that joins `profile` and appends the
    `searchTerm` `OR` group (title/description `ILIKE`; tags via `EXISTS`) to either
    QueryBuilder; no-op on blank term. No provider/account join.
-5. **Resolver fields** — wire both `@ResolveField`s with the `READ` guard + clamp.
-6. **Schema** — regenerate + `schema:diff`; confirm additive and that `rowId` is
+6. **Resolver fields** — wire both `@ResolveField`s with the `READ` guard + clamp.
+7. **Schema** — regenerate + `schema:diff`; confirm additive and that `rowId` is
    not exposed.
-7. **Tests** — service specs (Decision 6).
-8. **Docs/PR** — note the additive fields + the `rowId` migration.
+8. **Tests** — service specs (Decision 6).
+9. **Docs/PR** — note the additive fields + the `rowId` migration.
 
 ## Complexity Tracking
 
