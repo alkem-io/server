@@ -1,0 +1,84 @@
+# GraphQL contract — Paginated Innovation Library (additive, non-breaking)
+#
+# Follows docs/Pagination.md (relay-style cursor connection + shared PaginationArgs).
+# Existing Library.templates / Library.innovationPacks are UNCHANGED. The
+# authoritative schema is regenerated via `pnpm run schema:print && schema:sort`;
+# this file is the design contract. NOTE: the entity `rowId` columns are NOT
+# exposed as GraphQL fields (cursor key is internal, as on User/Space).
+
+# --- Reused (already in schema) ---
+# input PaginationArgs { first: Int, after: UUID, last: Int, before: UUID }
+# type PageInfo { startCursor: String, endCursor: String, hasNextPage: Boolean!, hasPreviousPage: Boolean! }
+# input LibraryTemplatesFilterInput { types: [TemplateType!] }
+# type InnovationPack { ... }   type TemplateResult { template: Template!, innovationPack: InnovationPack! }
+
+# --- New output connection types (via the shared Paginate(...) factory) ---
+
+# NOTE: `total` is `Float!` (not `Int!`) — the shared `Paginate(...)` factory
+# declares it with `@Field(() => Number)`, which maps to GraphQL `Float`. Every
+# other `Paginated*` type in the schema (PaginatedOrganization, PaginatedSpace, …)
+# is identical, so this matches the platform pattern.
+type PaginatedInnovationPacks {
+  total: Float!
+  innovationPacks: [InnovationPack!]!
+  pageInfo: PageInfo!
+}
+
+type PaginatedLibraryTemplateResults {
+  total: Float!
+  templateResults: [TemplateResult!]!
+  pageInfo: PageInfo!
+}
+
+# --- New fields on the existing Library type (additive) ---
+
+# PaginationArgs is an @ArgsType — its fields spread directly onto the field as
+# top-level args (after/before/first/last), matching usersPaginated/spacesPaginated.
+extend type Library {
+  """
+  Paginated Innovation Packs in the platform Innovation Library.
+  Cursor pagination (docs/Pagination.md); pages newest-first.
+  """
+  innovationPacksPaginated(
+    after: UUID
+    before: UUID
+    first: Int
+    last: Int
+  ): PaginatedInnovationPacks!
+
+  """
+  Paginated Templates in the Innovation Library, each with its InnovationPack.
+  Cursor pagination; pages newest-first. Composes with the template-type filter.
+  """
+  templatesPaginated(
+    after: UUID
+    before: UUID
+    filter: LibraryTemplatesFilterInput
+    first: Int
+    last: Int
+  ): PaginatedLibraryTemplateResults!
+}
+
+# --- Example operations (quickstart / contract tests) ---
+#
+# First page of templates (CALLOUT only), newest first:
+# query {
+#   platform { library {
+#     templatesPaginated(filter: { types: [CALLOUT] }, first: 25) {
+#       total
+#       templateResults { template { id profile { displayName } } innovationPack { id } }
+#       pageInfo { startCursor endCursor hasNextPage hasPreviousPage }
+#     }
+#   } }
+# }
+#
+# Next page of packs using the previous endCursor:
+# query {
+#   platform { library {
+#     innovationPacksPaginated(first: 25, after: "<endCursor>") {
+#       total
+#       innovationPacks { id profile { displayName } }
+#       pageInfo { endCursor hasNextPage }
+#     }
+#   } }
+# }
