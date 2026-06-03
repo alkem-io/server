@@ -24,7 +24,7 @@ pagination factory; the input reuses the shared `PaginationArgs`.
 - Interfaces `IInnovationPack` and `ITemplate` gain `rowId!: number;` so they
   satisfy `Paginationable` for `getPaginationResults`.
 
-Down-migration: drop the UNIQUE constraint and the column on both tables.
+Down-migration: drop the UNIQUE constraint first, then the column, on both tables.
 
 ---
 

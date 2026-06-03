@@ -287,8 +287,9 @@ export class LibraryService {
         : undefined;
       if (!innovationPack) {
         throw new RelationshipNotFoundException(
-          `Unable to find listed InnovationPack for Template ${template.id}`,
-          LogContext.LIBRARY
+          'Unable to find listed InnovationPack for Template',
+          LogContext.LIBRARY,
+          { templateId: template.id }
         );
       }
       return { template, innovationPack };

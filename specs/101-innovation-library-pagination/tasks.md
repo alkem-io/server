@@ -152,7 +152,7 @@ several fields appears once.
 
 - [x] T018 [P] Run `quickstart.md` validation (queries 1–7, incl. cursor/clamp/conflict/empty edge cases + migration up/down) against `pnpm start:dev`
 - [x] T019 [P] Run `pnpm lint` (tsc --noEmit + Biome) and fix issues in new/edited files
-- [ ] T020 Update the PR description: additive paginated fields + the `rowId` migration (idempotent, reversible); note paginated fields page newest-first with no field ordering
+- [x] T020 Update the PR description: additive paginated fields + the `rowId` migration (idempotent, reversible); note paginated fields page newest-first with no field ordering
 
 ---
 
