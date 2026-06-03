@@ -1,5 +1,6 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { GraphqlGuard } from '@core/authorization';
+import { PaginationArgs } from '@core/pagination';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { IInnovationPack } from '@library/innovation-pack/innovation.pack.interface';
@@ -8,8 +9,10 @@ import { Args, ResolveField, Resolver } from '@nestjs/graphql';
 import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { InnovationPacksInput } from './dto/library.dto.innovationPacks.input';
+import { PaginatedInnovationPacks } from './dto/library.dto.innovationPacks.paginated';
 import { ITemplateResult } from './dto/library.dto.template.result';
 import { LibraryTemplatesFilterInput } from './dto/library.dto.templates.input';
+import { PaginatedLibraryTemplateResults } from './dto/library.dto.templates.paginated';
 import { ILibrary } from './library.interface';
 import { LibraryService } from './library.service';
 
@@ -57,6 +60,37 @@ export class LibraryResolverFields {
     return await this.libraryService.getTemplatesInListedInnovationPacks(
       filter
     );
+  }
+
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('innovationPacksPaginated', () => PaginatedInnovationPacks, {
+    nullable: false,
+    description:
+      'Paginated Innovation Packs in the platform Innovation Library (newest first).',
+  })
+  async innovationPacksPaginated(
+    @Args({ nullable: true }) pagination: PaginationArgs
+  ): Promise<PaginatedInnovationPacks> {
+    return this.libraryService.getPaginatedListedInnovationPacks(pagination);
+  }
+
+  @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
+  @UseGuards(GraphqlGuard)
+  @ResolveField('templatesPaginated', () => PaginatedLibraryTemplateResults, {
+    nullable: false,
+    description:
+      'Paginated Templates in the Innovation Library, each with the InnovationPack that contributes it (newest first).',
+  })
+  async templatesPaginated(
+    @Args({ nullable: true }) pagination: PaginationArgs,
+    @Args('filter', {
+      nullable: true,
+      description: 'Only return Templates of particular TemplateTypes',
+    })
+    filter?: LibraryTemplatesFilterInput
+  ): Promise<PaginatedLibraryTemplateResults> {
+    return this.libraryService.getPaginatedTemplates(pagination, filter);
   }
 
   // TODO: these may want later to be on a Store entity
