@@ -25,8 +25,11 @@ DB size** at the end.
 
 ```bash
 # .env present AND has the DB-name vars (re-copy from sample if missing — stale .env is the #1 silent-failure cause)
-test -f .scripts/backups/.env && grep -q POSTGRES_ALKEMIO_DB .scripts/backups/.env \
-  && echo "env OK" || echo "FIX: cp .scripts/backups/.env.sample .scripts/backups/.env and fill AWS keys"
+test -f .scripts/backups/.env \
+  && grep -q POSTGRES_ALKEMIO_DB .scripts/backups/.env \
+  && grep -q POSTGRES_SYNAPSE_DB .scripts/backups/.env \
+  && grep -q POSTGRES_KRATOS_DB .scripts/backups/.env \
+  && echo "env OK" || echo "FIX: cp .scripts/backups/.env.sample .scripts/backups/.env and fill AWS keys + POSTGRES_{ALKEMIO,SYNAPSE,KRATOS}_DB"
 docker ps --filter name=alkemio_dev_postgres --format '{{.Names}}' | grep -q . || echo "start postgres first"
 ```
 If `.env` is missing entirely, copy from `.env.sample` and ask the user for the AWS keys.
@@ -44,7 +47,7 @@ docker compose -f quickstart-services.yml --env-file .env.docker up -d postgres
 cd .scripts/backups && bash restore_latest_backup_set.sh <env> false
 ```
 - `<env>` = `acc` (default ask), `dev`, `sandbox`, `prod`.
-- Add `true true true` (`restart non_interactive restore_kratos`) only if kratos is needed; default skips it.
+- Add `false true true` (`restart_services non_interactive restore_kratos`) only if kratos is needed — keep restart `false` so you bring the stack up yourself in step 4; default skips kratos.
 - This also sets synapse `server_name` per env in `homeserver.yaml` + `.env.docker`.
 
 ### 4. Bring the full stack back up

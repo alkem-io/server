@@ -42,10 +42,13 @@ Required variables:
 > nothing. Follow the robust flow in [`docs/DatabaseRestore.md`](../../docs/DatabaseRestore.md) /
 > the [`restore-dbs` skill](../skills/restore-dbs.md): preflight → quiesce → restore → verify.
 
-1. Preflight — credentials present AND have the DB-name vars (stale `.env` is the #1 silent-failure cause):
+1. Preflight — credentials present AND all DB-name vars set (stale `.env` is the #1 silent-failure cause):
 ```bash
-test -f .scripts/backups/.env && grep -q POSTGRES_ALKEMIO_DB .scripts/backups/.env \
-  && echo "env OK" || echo "ERROR: copy .scripts/backups/.env.sample → .env and fill AWS keys + POSTGRES_*_DB"
+test -f .scripts/backups/.env \
+  && grep -q POSTGRES_ALKEMIO_DB .scripts/backups/.env \
+  && grep -q POSTGRES_SYNAPSE_DB .scripts/backups/.env \
+  && grep -q POSTGRES_KRATOS_DB .scripts/backups/.env \
+  && echo "env OK" || echo "ERROR: copy .scripts/backups/.env.sample → .env and fill AWS keys + POSTGRES_{ALKEMIO,SYNAPSE,KRATOS}_DB"
 ```
 
 2. Quiesce — bring the stack down to postgres-only so no service blocks `DROP DATABASE`:

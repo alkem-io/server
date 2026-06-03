@@ -3,13 +3,13 @@
 > 📘 **Full runbook (recommended):** [`docs/DatabaseRestore.md`](../../docs/DatabaseRestore.md) —
 > single-command + manual steps, verification, and troubleshooting for the silent-failure traps
 > below. Or just ask Claude: *"restore the acc db"*.
-
+>
 > ⚠️ **Two silent-failure traps** (the script can report success while loading nothing):
 > 1. A stale `.env` missing `POSTGRES_*_DB` → empty target name → restore aborts. Re-copy from `.env.sample`.
 > 2. `DROP DATABASE` fails if stack services are connected → restore with the stack **down to
 >    postgres-only** (`docker compose -f quickstart-services.yml --env-file .env.docker stop && ... up -d postgres`).
 >
-> **Always verify by DB size afterwards** (acc ≈ hundreds of MB; ~20–30 MB means it didn't take):
+> **Always verify by DB size afterward** (acc ≈ hundreds of MB; ~20–30 MB means it didn't take):
 > ```bash
 > docker exec alkemio_dev_postgres psql -U synapse -d postgres -tAc \
 >   "select datname, pg_size_pretty(pg_database_size(datname)) from pg_database where datname in ('alkemio','synapse');"
@@ -28,7 +28,7 @@
 Run `./restore_latest_backup_set.sh`. You can optionally pass an argument for the environment `dev | acc | sandbox | prod`. If no argument is passed, `prod` is selected.
 The script will:
 - Validate prerequisites
-- Invoke `restore_latest_backup.sh` script for `alkemio`, `kratos`, and `synapse` databases
+- Invoke `restore_latest_backup.sh` for `alkemio` and `synapse` by default. `kratos` is restored **only** when the 4th argument `restore_kratos=true` (default `false`)
 - Update `.env.docker` file with the correct `homeserver` env variables for the specific environment
 - Update `homeserver.yaml` with the correct server domain
 - Restart the docker-compose (`quickstart-services`) with `pnpm run start:services`

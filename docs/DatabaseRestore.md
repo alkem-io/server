@@ -94,6 +94,7 @@ DB (`Found users in database not native to <name>`). The domain differs by sourc
 | Local **seed** | `alkemio.matrix.host` |
 | **acc** backup | `matrix-acc.alkem.io` |
 | **dev** backup | `matrix-dev.alkem.io` |
+| **sandbox** backup | `matrix-sandbox.alkem.io` |
 | **prod** backup | `matrix.alkem.io` |
 
 `restore_latest_backup_set.sh` sets this automatically per environment (in
@@ -150,7 +151,7 @@ synapse ≈ 868 MB / 732 users / 10336 rooms.
 
 | Symptom | Cause | Fix |
 |---------|-------|-----|
-| Restore "completes" but DB is ~20–30 MB / data unchanged | `.env` missing `POSTGRES_*_DB` → empty db name → `DROP DATABASE ;` errors under `set -e` and aborts | Re-copy `.env` from `.env.sample`; ensure `POSTGRES_ALKEMIO_DB`/`SYNAPSE_DB`/`KRATOS_DB` are set |
+| Restore "completes" but DB is ~20–30 MB / data unchanged | `.env` missing `POSTGRES_*_DB` → empty db name → `DROP DATABASE ;` errors under `set -e` and aborts | Re-copy `.env` from `.env.sample`; ensure `POSTGRES_ALKEMIO_DB` / `POSTGRES_SYNAPSE_DB` / `POSTGRES_KRATOS_DB` are set |
 | `DROP DATABASE ... is being accessed by other users` / restore aborts | Stack services (authorization-evaluation, file-service, oidc-service → alkemio; synapse → synapse) reconnect faster than the script's terminate→drop | Restore with stack **down to postgres-only** (see Manual procedure), then `up -d` |
 | Synapse crash-loops: `Found users in database not native to <name>` | `server_name` ≠ the user domain in the restored data | Set `server_name` to match the data's domain (see [table](#synapse-server_name-must-match-the-restored-data)), recreate synapse + matrix-adapter |
 | matrix-adapter logs 400/403 with old-domain user IDs | Adapter started before `SYNAPSE_SERVER_NAME` was corrected | `up -d --force-recreate matrix-adapter` |
