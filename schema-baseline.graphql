@@ -3621,12 +3621,40 @@ type Library {
   """The Innovation Packs in the platform Innovation Library."""
   innovationPacks(queryData: InnovationPacksInput): [InnovationPack!]!
   """
+  Paginated Innovation Packs in the platform Innovation Library (newest first).
+  """
+  innovationPacksPaginated(
+    """A pivot cursor after which items are selected"""
+    after: UUID
+    """A pivot cursor before which items are selected"""
+    before: UUID
+    """Amount of items after the cursor"""
+    first: Int
+    """Amount of items before the cursor"""
+    last: Int
+  ): PaginatedInnovationPacks!
+  """
   The Templates in the Innovation Library, together with information about the InnovationPack.
   """
   templates(
     """Only return Templates of particular TemplateTypes"""
     filter: LibraryTemplatesFilterInput
   ): [TemplateResult!]!
+  """
+  Paginated Templates in the Innovation Library, each with the InnovationPack that contributes it (newest first).
+  """
+  templatesPaginated(
+    """A pivot cursor after which items are selected"""
+    after: UUID
+    """A pivot cursor before which items are selected"""
+    before: UUID
+    """Only return Templates of particular TemplateTypes"""
+    filter: LibraryTemplatesFilterInput
+    """Amount of items after the cursor"""
+    first: Int
+    """Amount of items before the cursor"""
+    last: Int
+  ): PaginatedLibraryTemplateResults!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """The VirtualContributors listed on this platform"""
@@ -5150,6 +5178,18 @@ type PageInfo {
 type PaginatedInAppNotifications {
   inAppNotifications: [InAppNotification!]!
   pageInfo: PageInfo!
+  total: Float!
+}
+
+type PaginatedInnovationPacks {
+  innovationPacks: [InnovationPack!]!
+  pageInfo: PageInfo!
+  total: Float!
+}
+
+type PaginatedLibraryTemplateResults {
+  pageInfo: PageInfo!
+  templateResults: [TemplateResult!]!
   total: Float!
 }
 
