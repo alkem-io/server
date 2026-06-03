@@ -85,7 +85,11 @@ each returned template to its pack:
    `templatesSetId IN (returned templates' templatesSetIds)`), map each
    `Template` → `ITemplateResult { template, innovationPack }`.
 4. Return `{ total, templateResults, pageInfo }` (total + pageInfo straight from
-   step 2; cursors are template ids).
+   step 2). The **cursor tokens** exposed in `pageInfo` (`startCursor`/`endCursor`)
+   and accepted as `after`/`before` are template **`id`s (UUIDs)** — the shared
+   helper's `cursorColumn` defaults to `id`. The `rowId` keyset is the helper's
+   **internal** sort/window key (it converts the UUID cursor → `rowId` via a
+   lookup); it is never surfaced as a cursor token.
 
 **Rationale**: Reuses the documented helper unchanged; one extra bounded query
 (≤ page size packs); no in-memory full-collection load.

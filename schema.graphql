@@ -3133,6 +3133,10 @@ type Library {
     after: UUID
     """A pivot cursor before which items are selected"""
     before: UUID
+    """
+    Filter the Innovation Packs by a free-text term (title, description or tags).
+    """
+    filter: LibraryInnovationPacksFilterInput
     """Amount of items after the cursor"""
     first: Int
     """Amount of items before the cursor"""
@@ -7940,7 +7944,18 @@ input LeaveConversationInput {
   conversationID: UUID!
 }
 
+input LibraryInnovationPacksFilterInput {
+  """
+  Return Innovation Packs whose title, description or tags contain this term (case-insensitive).
+  """
+  searchTerm: String
+}
+
 input LibraryTemplatesFilterInput {
+  """
+  Return Templates whose title, description or tags contain this term (case-insensitive).
+  """
+  searchTerm: String
   """
   Return Templates within the Library matching the specified Template Types.
   """
