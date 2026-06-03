@@ -1,10 +1,12 @@
 import { LogContext } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { SearchInput } from '@services/api/search/dto/inputs';
 import { ISearchResults } from '@services/api/search/dto/results';
 import { SearchCategory } from '@services/api/search/search.category';
 import { SearchService } from '@services/api/search/search.service';
+import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { McpTool, McpToolDefinition, McpToolResult } from '../dto/mcp.types';
 
@@ -59,6 +61,7 @@ const URI_TYPE_PATH: Record<string, string> = {
 export class SearchContentTool implements McpTool {
   constructor(
     private readonly searchService: SearchService,
+    private readonly configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -81,7 +84,8 @@ export class SearchContentTool implements McpTool {
           },
           limit: {
             type: 'number',
-            description: 'Maximum results per category (default: 10, max: 25).',
+            description:
+              'Maximum results per category. Defaults to (and is capped at) the platform per-category budget, so the total across all categories stays within the platform maximum; larger values are clamped.',
           },
         },
         required: ['query'],
@@ -93,18 +97,33 @@ export class SearchContentTool implements McpTool {
     args: unknown,
     actorContext: ActorContext
   ): Promise<McpToolResult> {
-    const { query, limit = 10 } = args as SearchContentArgs;
+    const { query, limit } = args as SearchContentArgs;
 
     if (!query || !query.trim()) {
       return this.errorResult('A non-empty "query" is required.');
     }
 
     const terms = query.trim().split(/\s+/).slice(0, 5);
-    const size = Math.min(Math.max(1, Math.floor(limit)), 25);
-    const filters = Object.values(SearchCategory).map(category => ({
-      category,
-      size,
-    }));
+    // We request EVERY category, and the platform rejects a search whose summed
+    // per-category size exceeds search.max_results (validateSearchParameters).
+    // So the per-category size must be the budget split across the categories —
+    // mirroring search.extract.service (`size: maxResults / categoriesRequested`).
+    // Without this, even the default size (× categories) overflows the cap and
+    // every search_content call fails with "cannot exceed the maximum allowed".
+    const categories = Object.values(SearchCategory);
+    const maxSearchResults = this.configService.get('search.max_results', {
+      infer: true,
+    });
+    const maxPerCategory = Math.max(
+      1,
+      Math.floor(maxSearchResults / categories.length)
+    );
+    const requested =
+      typeof limit === 'number' && limit > 0
+        ? Math.floor(limit)
+        : maxPerCategory;
+    const size = Math.min(requested, maxPerCategory);
+    const filters = categories.map(category => ({ category, size }));
 
     this.logger.verbose?.(
       `search_content: terms=[${terms.join(', ')}], actor=${actorContext.actorID || 'anonymous'}`,
