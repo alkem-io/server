@@ -5,12 +5,27 @@ import { Profile } from '@domain/common/profile/profile.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { CommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.entity';
 import { TemplatesSet } from '@domain/template/templates-set/templates.set.entity';
-import { Column, Entity, JoinColumn, ManyToOne, OneToOne } from 'typeorm';
+import {
+  Column,
+  Entity,
+  Generated,
+  JoinColumn,
+  ManyToOne,
+  OneToOne,
+} from 'typeorm';
 import { TemplateContentSpace } from '../template-content-space/template.content.space.entity';
 import { ITemplate } from './template.interface';
 
 @Entity()
 export class Template extends NameableEntity implements ITemplate {
+  // Unique sequential cursor column for relay-style pagination (docs/Pagination.md)
+  @Column({
+    unique: true,
+    nullable: false,
+  })
+  @Generated('increment')
+  rowId!: number;
+
   @ManyToOne(
     () => TemplatesSet,
     templatesSet => templatesSet.templates,
