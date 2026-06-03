@@ -11,12 +11,18 @@ import { AuthInterceptor } from './auth.interceptor';
 describe('AuthInterceptor', () => {
   let interceptor: AuthInterceptor;
   let mockNext: CallHandler;
+  let actorContextService: ActorContextService;
 
   beforeEach(() => {
-    const actorContextService = {
+    actorContextService = {
       createAnonymous: vi
         .fn()
         .mockReturnValue({ isAnonymous: true, credentials: [] }),
+      createGuest: vi.fn().mockImplementation((name: string) => ({
+        isAnonymous: false,
+        guestName: name,
+        credentials: [{ type: 'global-guest', resourceID: '' }],
+      })),
     } as unknown as ActorContextService;
     interceptor = new AuthInterceptor(actorContextService);
     mockNext = {
@@ -269,6 +275,74 @@ describe('AuthInterceptor', () => {
 
       // Failed auth normalizes to an anonymous ActorContext so downstream
       // resolvers can safely read `req.user.credentials` without null guards.
+      expect(mockReq.user).toEqual({ isAnonymous: true, credentials: [] });
+    });
+  });
+
+  describe('guest header (x-guest-name)', () => {
+    const guestHeaderRequest = (encodedName: unknown) =>
+      ({
+        method: 'POST',
+        url: '/graphql',
+        headers: { 'x-guest-name': encodedName },
+      }) as any;
+
+    const noAuthenticatedUser = () =>
+      vi.spyOn(passport, 'authenticate').mockImplementation(
+        (_strategies: any, _options: any, callback: any) => (_req: any) =>
+          callback(null, false) // no session/bearer → no user
+      );
+
+    const httpContext = (req: any) =>
+      ({
+        getType: vi.fn().mockReturnValue('http'),
+        switchToHttp: vi.fn().mockReturnValue({
+          getRequest: vi.fn().mockReturnValue(req),
+        }),
+      }) as unknown as ExecutionContext;
+
+    it('resolves a guest ActorContext from a base64 x-guest-name header when unauthenticated', async () => {
+      const guestName = 'José Müller';
+      const encoded = Buffer.from(guestName, 'utf-8').toString('base64');
+      const mockReq = guestHeaderRequest(encoded);
+      noAuthenticatedUser();
+
+      await interceptor.intercept(httpContext(mockReq), mockNext);
+
+      expect(actorContextService.createGuest).toHaveBeenCalledWith(guestName);
+      expect(actorContextService.createAnonymous).not.toHaveBeenCalled();
+      expect(mockReq.user).toEqual({
+        isAnonymous: false,
+        guestName,
+        credentials: [{ type: 'global-guest', resourceID: '' }],
+      });
+    });
+
+    it('does NOT override an authenticated user with the guest header', async () => {
+      const mockUser = { actorID: 'user-1', credentials: [] };
+      const mockReq = guestHeaderRequest(
+        Buffer.from('Mallory', 'utf-8').toString('base64')
+      );
+      vi.spyOn(passport, 'authenticate').mockImplementation(
+        (_strategies: any, _options: any, callback: any) => (_req: any) =>
+          callback(null, mockUser)
+      );
+
+      await interceptor.intercept(httpContext(mockReq), mockNext);
+
+      expect(actorContextService.createGuest).not.toHaveBeenCalled();
+      expect(mockReq.user).toEqual(mockUser);
+    });
+
+    it('falls back to anonymous when the guest header is empty after decode', async () => {
+      const mockReq = guestHeaderRequest(
+        Buffer.from('   ', 'utf-8').toString('base64')
+      );
+      noAuthenticatedUser();
+
+      await interceptor.intercept(httpContext(mockReq), mockNext);
+
+      expect(actorContextService.createGuest).not.toHaveBeenCalled();
       expect(mockReq.user).toEqual({ isAnonymous: true, credentials: [] });
     });
   });
