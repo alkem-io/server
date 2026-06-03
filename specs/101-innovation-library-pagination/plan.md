@@ -22,6 +22,19 @@ template count) — those remain on the existing unpaginated fields, which are l
 untouched so current consumers (including the production client, which migrates
 separately) keep working.
 
+**Server-side text filter (added 2026-06-02).** Both paginated fields accept an
+optional `searchTerm` — a single case-insensitive substring matched (OR-ed) across
+title, description, and tags. It is applied as extra `WHERE` predicates on the
+QueryBuilder *before* the cursor helper, so it composes with `rowId` pagination and
+the `total`. Title/description are direct `ILIKE` on the joined `profile`; **tags
+use an `EXISTS` subquery** (a profile has many tagsets) to keep the result one row
+per item, so `getCount()`/`take()` stay correct. All matched fields are on the
+item's own profile, so no provider/account joins are needed. **Provider name is
+deliberately not searched** — it is a reverse `accountID` lookup to user/organization
+(no FK) whose per-row `EXISTS` subqueries risk slowing the query. Filtering only
+narrows the set — ordering is unchanged (still `rowId` DESC), so this does not
+reopen the ordering decision.
+
 ## Technical Context
 
 **Language/Version**: TypeScript 5.3, Node.js 22 LTS (Volta 22.21.1)
@@ -105,17 +118,22 @@ module + the `Template` entity/interface (for `rowId`) + one migration. Reuses
    migration (SERIAL + UNIQUE, both tables, backfilled); validate migration.
 2. **Output types** — `PaginatedInnovationPacks`, `PaginatedLibraryTemplateResults`
    via `Paginate(...)`.
-3. **Service — packs** — `getPaginatedListedInnovationPacks(pagination)`:
-   eligibility QueryBuilder → `getPaginationResults(qb, args, 'DESC')`.
+3. **Service — packs** — `getPaginatedListedInnovationPacks(pagination, filter?)`:
+   eligibility QueryBuilder (+ optional `searchTerm` `OR` group) →
+   `getPaginationResults(qb, args, 'DESC')`.
 4. **Service — templates** — `getPaginatedTemplates(pagination, filter?)`:
    `Template` QueryBuilder (join templates_set + innovation_pack for eligibility +
-   type filter) → `getPaginationResults(qb, args, 'DESC')` → pair each template
-   with its pack → `PaginatedLibraryTemplateResults`.
-5. **Resolver fields** — wire both `@ResolveField`s with the `READ` guard + clamp.
-6. **Schema** — regenerate + `schema:diff`; confirm additive and that `rowId` is
+   type filter + optional `searchTerm` `OR` group) →
+   `getPaginationResults(qb, args, 'DESC')` → pair each template with its pack →
+   `PaginatedLibraryTemplateResults`.
+5. **Search filter** — a shared helper that joins `profile` and appends the
+   `searchTerm` `OR` group (title/description `ILIKE`; tags via `EXISTS`) to either
+   QueryBuilder; no-op on blank term. No provider/account join.
+6. **Resolver fields** — wire both `@ResolveField`s with the `READ` guard + clamp.
+7. **Schema** — regenerate + `schema:diff`; confirm additive and that `rowId` is
    not exposed.
-7. **Tests** — service specs (Decision 6).
-8. **Docs/PR** — note the additive fields + the `rowId` migration.
+8. **Tests** — service specs (Decision 6).
+9. **Docs/PR** — note the additive fields + the `rowId` migration.
 
 ## Complexity Tracking
 
@@ -126,6 +144,8 @@ deviations are gone — this revision uses the documented pattern verbatim.)
 |------|-----|------|
 | `rowId` migration on 2 tables | Documented cursor helper requires a `rowId` keyset column | Additive, SERIAL-backfilled, reversible (drop column); validated via the migration harness |
 | Paginated fields lack field-based ordering | Documented helper pages in `rowId` order only | Accepted in Clarifications; ordering stays on the unpaginated fields; field-ordering is a deferred future upgrade |
+| `searchTerm` tag match via `EXISTS` subquery | A profile has many tagsets; a plain join would multiply rows and corrupt `total`/page size | One bracketed `OR` group (title/description `ILIKE` + tags `EXISTS`) AND-ed with eligibility; tag match is substring on the `simple-array` column (approximate, accepted) |
+| Provider name NOT searched | Provider is a reverse `accountID` lookup to User/Organization (no FK) needing per-row `EXISTS` against two large tables | Excluded for performance; revisitable. All searched fields live on the item's own profile, so no provider join is needed |
 
 ## Phase 2 outputs
 

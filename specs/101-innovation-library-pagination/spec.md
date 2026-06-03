@@ -54,6 +54,20 @@ specified on its own branch.
   the paginated fields; they remain available only on the existing unpaginated
   fields. (This intentionally reverses the earlier offset-pagination and
   field-ordering answers from the same session.)
+- Q: Should the paginated fields support a server-side text filter, and over which
+  fields? → A: **Yes.** Both paginated fields accept an optional free-text
+  `searchTerm`. It is matched **case-insensitively as a substring** across the
+  item's **title (display name), description, and tags**, OR-ed together (an item
+  matches if the term appears in *any* of those). The term AND-composes with the
+  existing template-type filter and with pagination (the `total` and pages reflect
+  the filtered set). A blank/omitted term means "no text filter". **Filtering only
+  narrows the set — it does not change ordering** (results still page newest-first
+  by `rowId`), so this does not reopen the field-ordering decision above.
+  **Provider name is intentionally NOT searched**: the provider is a reverse
+  `accountID` lookup to the user/organization tables (no FK join), and matching it
+  would require per-row `EXISTS` subqueries that risk slowing the query — excluded
+  for performance. Ranked/fuzzy/typo-tolerant search and per-field search operators
+  also remain out of scope.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -92,6 +106,13 @@ overlap or gaps.
 5. **Given** no explicit ordering, **When** the consumer pages through templates,
    **Then** results appear newest-first (most recently added first) and the order
    is stable across the whole traversal.
+6. **Given** a free-text search term, **When** a page of templates is requested,
+   **Then** only templates whose title, description, or tags contain the term
+   (case-insensitive) are returned, the total reflects that matched set, and paging
+   walks the matched set newest-first.
+7. **Given** both a template-type filter and a search term, **When** a page is
+   requested, **Then** only templates matching **both** the type **and** the term
+   are returned.
 
 ---
 
@@ -119,6 +140,11 @@ confirm continuity (no repeat/skip).
 3. **Given** the consumer requests a page beyond the available results, **When**
    the response is returned, **Then** it contains no packs and indicates there are
    no further pages.
+4. **Given** a free-text search term, **When** a page of packs is requested,
+   **Then** only packs whose title, description, or tags contain the term
+   (case-insensitive) are returned, the total reflects that matched set, and paging
+   walks the matched set newest-first with no item repeated even when it matches on
+   several fields at once.
 
 ---
 
@@ -167,6 +193,16 @@ alphabetical templates list).
   the traversal is not corrupted.
 - **Filter that matches nothing**: A template-type filter matching no templates
   returns an empty page with a total of zero.
+- **Blank / whitespace-only search term**: Treated as "no text filter" — the
+  eligible (and otherwise-filtered) set is returned in full, not an empty page.
+- **Search term matching nothing**: A term that matches no item's title,
+  description, or tags returns an empty page with a total of zero.
+- **Search term case / partial words**: Matching is case-insensitive substring,
+  so a lowercase term matches mixed-case content and partial words (e.g. `inno`
+  matches `Innovation`).
+- **Item matching the term on multiple fields**: An item whose term appears in,
+  say, both its description and a tag MUST still appear **once** and count
+  **once** toward the total.
 
 ## Requirements *(mandatory)*
 
@@ -221,6 +257,30 @@ alphabetical templates list).
   each have a unique sequential `rowId` column (added by migration, backfilled for
   existing rows). `rowId` is the stable, unique sort/cursor key, so ordering is
   inherently deterministic with no separate tie-breaker needed.
+- **FR-017**: The paginated templates field MUST accept an optional free-text
+  search term that restricts results to templates whose **title (display name),
+  description, or tags** contains the term.
+- **FR-018**: The paginated innovation-packs field MUST accept an optional
+  free-text search term that restricts results to packs whose **title (display
+  name), description, or tags** contains the term.
+- **FR-019**: Search matching MUST be **case-insensitive substring** matching. A
+  search term that is omitted, empty, or whitespace-only MUST behave as no filter
+  (the eligible/otherwise-filtered set is returned unchanged).
+- **FR-020**: The search term MUST compose with cursor pagination and with the
+  template-type filter: the `total`, the page slice, and the page indicators MUST
+  all reflect the **intersection** of (eligibility + type filter + search term),
+  and pages MUST continue to walk that filtered set in `rowId` (newest-first)
+  order. Filtering narrows the set only; it MUST NOT change the ordering (FR-015).
+- **FR-021**: Applying the search filter MUST NOT cause an item to be returned
+  more than once, nor inflate the `total`, when the term matches multiple of the
+  item's tags. The filter MUST be expressed so the result stays one row per item
+  (e.g. an existence check for tags rather than a row-multiplying join), so
+  per-page cost and totals stay correct (FR-014).
+- **FR-022**: Provider name MUST NOT be part of the search. The provider is a
+  reverse `accountID` lookup to the user/organization tables (no FK join), and
+  including it would require per-row `EXISTS` subqueries that risk degrading query
+  performance; it is deliberately excluded. (Provider remains available on the
+  existing unpaginated fields' results, just not as a search target.)
 
 ### Key Entities *(include if feature involves data)*
 
@@ -234,6 +294,8 @@ alphabetical templates list).
 - **Template**: A library template. Gains a `rowId` to serve as its cursor key.
 - **Page (cursor connection)**: A bounded slice of one collection plus its
   metadata — total count, start/end cursors, and has-next/has-previous flags.
+- **Tag**: A label on an item's profile (stored in the profile's tagsets). The
+  search term is matched against tags as substrings.
 
 ## Success Criteria *(mandatory)*
 
@@ -255,6 +317,10 @@ alphabetical templates list).
 - **SC-006**: Template-type filtering combined with pagination returns totals and
   pages that exactly match the equivalent filtered, unpaginated result for the
   same filter.
+- **SC-007**: A search term returns exactly the items whose title, description, or
+  tags contain it (case-insensitive), with each matching item appearing once; the
+  `total` equals the distinct count of matched items, and it composes correctly
+  with the template-type filter (results = items matching both).
 
 ## Assumptions
 
@@ -265,8 +331,12 @@ alphabetical templates list).
   `Template` (migration, backfilled).
 - **Order**: paginated fields page in `rowId` order, default newest-first (DESC).
   No field-based or random ordering on the paginated fields.
-- **Filtering scope**: the only filter composing with pagination is the existing
-  template-type filter on templates. No free-text search.
+- **Filtering scope**: two filters compose with pagination — the existing
+  template-type filter (templates only) and a new free-text `searchTerm` (both
+  collections). `searchTerm` is a single case-insensitive substring matched across
+  title, description, and tags (**not** provider — excluded for performance). Tag
+  matching is substring against the stored tag values (approximate, not
+  token-exact). No ranked/fuzzy search.
 - **Defaults**: default page size 25 (documented default); maximum 100.
 - **Eligibility unchanged**: which templates/packs appear in the library (listed
   in store, public visibility) is unchanged; pagination only changes delivery.
@@ -278,6 +348,10 @@ alphabetical templates list).
 - Field-based ordering (display name / provider name / template count) on the
   paginated fields — would require keyset-by-column infrastructure beyond the
   documented pattern; deferred.
-- Free-text or fuzzy search across the library.
+- **Provider-name search** (excluded for performance — see FR-022), and
+  **ranked, fuzzy, or typo-tolerant** search, relevance scoring, and per-field /
+  advanced search operators. The name filter shipped here is a single
+  case-insensitive **substring** (`ILIKE`) match across title, description, and
+  tags (FR-017–FR-022) — nothing more.
 - Changing which templates or packs are eligible to appear in the library.
 - Removing or altering the existing unpaginated library list fields.

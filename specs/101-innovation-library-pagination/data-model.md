@@ -24,7 +24,7 @@ pagination factory; the input reuses the shared `PaginationArgs`.
 - Interfaces `IInnovationPack` and `ITemplate` gain `rowId!: number;` so they
   satisfy `Paginationable` for `getPaginationResults`.
 
-Down-migration: drop the UNIQUE constraint and the column on both tables.
+Down-migration: drop the UNIQUE constraint first, then the column, on both tables.
 
 ---
 
@@ -52,6 +52,45 @@ has `listedInStore = true AND searchVisibility = 'PUBLIC'`.
 (rejects `first`+`last` together, `after` without `first`, etc. — FR-011).
 Page size clamped to 100 in the service (FR-005); defaults to 25 in the helper
 (FR-006).
+
+## GraphQL filter inputs
+
+- `LibraryTemplatesFilterInput` (existing) — gains an optional `searchTerm: String`
+  alongside the existing `types: [TemplateType!]`. Additive; `types`-only callers
+  unchanged.
+- `LibraryInnovationPacksFilterInput` (new) — `searchTerm: String`. The packs field
+  gains a `filter` argument of this type.
+
+`searchTerm` is a single case-insensitive substring matched (OR-ed) across title,
+description, and tags (FR-017–FR-021). **Provider name is excluded** for
+performance (FR-022). Omitted / empty / blank ⇒ no text filter (FR-019).
+
+## Filtering — how `searchTerm` maps to SQL
+
+Applied as extra `WHERE` predicates on the paginated QueryBuilder **before** the
+cursor helper runs, so it composes with `rowId`-keyset pagination and the `total`
+(FR-020). To keep the result one row per item — so `getCount()`/`take()` stay
+correct (FR-014, FR-021) — the tags match (a profile has many tagsets) uses an
+`EXISTS` subquery rather than a row-multiplying join.
+
+Let `:q = %<lowercased term>%`. For a given item (`Template` or `InnovationPack`)
+joined to its `profile`:
+
+| Field | Predicate (conceptual) |
+|-------|------------------------|
+| Title | `profile.displayName ILIKE :q` (OneToOne join, no fan-out) |
+| Description | `profile.description ILIKE :q` |
+| Tags | `EXISTS (SELECT 1 FROM tagset t WHERE t.profileId = profile.id AND t.tags ILIKE :q)` — `tagset.tags` is a `simple-array` (comma-joined TEXT), so this is a substring match |
+
+The three predicates are combined with `OR` inside a single bracketed group, which
+is then `AND`-ed with the eligibility filter (and, for templates, the type filter).
+All matched fields live on the item's own `profile`, so no join to the provider's
+account/host tables is needed.
+
+**Excluded — provider name.** Matching the provider would mean, per row,
+`EXISTS (… "user" u WHERE u.accountID = <pack>.accountId …) OR EXISTS (… organization …)`
+— a reverse `accountID` lookup (no FK) against two large tables. Dropped to keep
+the query cheap; can be revisited if needed.
 
 ## GraphQL output types (new, via the shared factory)
 
