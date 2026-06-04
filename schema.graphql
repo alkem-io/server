@@ -708,8 +708,10 @@ enum RoleName {
 }
 
 enum RoleSetInvitationResultType {
+  ALREADY_HAS_OPEN_APPLICATION
   ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET
   ALREADY_INVITED_TO_ROLE_SET
+  ALREADY_MEMBER_OF_ROLE_SET
   INVITATION_TO_PARENT_NOT_AUTHORIZED
   INVITED_TO_PLATFORM_AND_ROLE_SET
   INVITED_TO_ROLE_SET
@@ -5406,6 +5408,10 @@ type RoleSet {
 }
 
 type RoleSetInvitationResult {
+  """
+  The existing open application that blocks this invitation, when the result type is ALREADY_HAS_OPEN_APPLICATION.
+  """
+  application: Application
   invitation: Invitation
   platformInvitation: PlatformInvitation
   type: RoleSetInvitationResultType!

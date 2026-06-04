@@ -1,4 +1,5 @@
 import { ActorType } from '@common/enums/actor.type';
+import { AlkemioErrorStatus } from '@common/enums/alkemio.error.status';
 import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
@@ -1584,7 +1585,8 @@ export class RoleSetService {
     if (openApplication) {
       throw new RoleSetMembershipException(
         `Application not possible: An open application already exists for actor ${actorID} on RoleSet: ${roleSet.id}.`,
-        LogContext.COMMUNITY
+        LogContext.COMMUNITY,
+        AlkemioErrorStatus.ROLE_SET_OPEN_APPLICATION_EXISTS
       );
     }
 
@@ -1592,7 +1594,8 @@ export class RoleSetService {
     if (openInvitation) {
       throw new RoleSetMembershipException(
         `Application not possible: An open invitation already exists for actor ${actorID} on RoleSet: ${roleSet.id}.`,
-        LogContext.COMMUNITY
+        LogContext.COMMUNITY,
+        AlkemioErrorStatus.ROLE_SET_OPEN_INVITATION_EXISTS
       );
     }
 
@@ -1601,7 +1604,8 @@ export class RoleSetService {
     if (isExistingMember)
       throw new RoleSetMembershipException(
         `Application not possible: Actor ${actorID} is already a member of the RoleSet: ${roleSet.id}.`,
-        LogContext.COMMUNITY
+        LogContext.COMMUNITY,
+        AlkemioErrorStatus.ROLE_SET_ALREADY_MEMBER
       );
   }
 
@@ -1617,7 +1621,8 @@ export class RoleSetService {
       );
       throw new RoleSetMembershipException(
         `Invitation not possible: An open invitation already exists for actor ${actorID} on RoleSet: ${roleSet.id}.`,
-        LogContext.COMMUNITY
+        LogContext.COMMUNITY,
+        AlkemioErrorStatus.ROLE_SET_OPEN_INVITATION_EXISTS
       );
     }
 
@@ -1625,7 +1630,8 @@ export class RoleSetService {
     if (openApplication) {
       throw new RoleSetMembershipException(
         `Invitation not possible: An open application already exists for actor ${actorID} on RoleSet: ${roleSet.id}.`,
-        LogContext.COMMUNITY
+        LogContext.COMMUNITY,
+        AlkemioErrorStatus.ROLE_SET_OPEN_APPLICATION_EXISTS
       );
     }
 
@@ -1633,7 +1639,8 @@ export class RoleSetService {
     if (isExistingMember)
       throw new RoleSetMembershipException(
         `Invitation not possible: Actor ${actorID} is already a member of the RoleSet: ${roleSet.id}.`,
-        LogContext.COMMUNITY
+        LogContext.COMMUNITY,
+        AlkemioErrorStatus.ROLE_SET_ALREADY_MEMBER
       );
   }
 
