@@ -1,5 +1,11 @@
 # CLAUDE.md
 
+> **Workspace context.** This repo is part of the Alkemio polyrepo at
+> [alkem-io/agents-hq](https://github.com/alkem-io/agents-hq).
+> Cross-repo (vertical) feature specs live there under `specs/NNN-*/`. When
+> working on a `feat/NNN-...` branch in this repo, the matching workspace
+> spec is the single source of truth.
+
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Project Overview
@@ -165,6 +171,10 @@ Winston logger signatures:
 - Align new GraphQL surface area with `docs/Pagination.md`
 - Enforce DTO validation
 
+## Testing
+
+When writing or reviewing tests, consult [`docs/testing-flakiness.md`](docs/testing-flakiness.md) for flakiness anti-patterns this project has paid for and the recommended replacements.
+
 ## Linting and Formatting
 
 **Biome** for linting and formatting (config: `biome.json`). Inline ignore: `// biome-ignore lint/rule-name: reason`
@@ -243,7 +253,16 @@ Key rules:
 - PostgreSQL 17.5; framing Collabora document persisted via existing `collabora_document` table; bytes via existing storage subsystem and file-service-go (Go service exposing the upload/sniff/validate API used today by `importCollaboraDocument`) (095-collabora-import)
 - TypeScript 5.3 on Node.js 22 LTS (Volta-pinned 22.21.1). + NestJS 10 (`@nestjs/event-emitter`, `@nestjs/microservices` for `@MessagePattern` + `Transport.RMQ`), `@golevelup/nestjs-rabbitmq` (existing, used by the adapter event service), TypeORM 0.3 (custom fork `pkg.pr.new/antst/typeorm`), Apollo Server 4 / GraphQL 16 (the `conversationCreated` subscription already exists — not modified). `@alkemio/matrix-adapter-lib` MAY need a version bump to expose the two new routing keys as constants; if the lib release slips, server inline-defines the routing-key strings as a temporary bridge. (099-element-room-check)
 - PostgreSQL 17.5. **No schema migration required** — reuses existing `conversation`, `room`, `conversation_membership` tables. `Room.type` enum already contains `CONVERSATION_DIRECT` and `CONVERSATION_GROUP`. (099-element-room-check)
+- TypeScript 5.3, Node.js 22 LTS (Volta-pinned 22.21.1) + NestJS 10, TypeORM 0.3 (custom fork `pkg.pr.new/antst/typeorm`), Apollo Server 4, GraphQL 16, Winston, Elastic APM (002-office-docs-gating)
+- PostgreSQL 17.5 (no schema changes — read-only against `license` + `license_entitlement` rows already on Collaboration) (002-office-docs-gating)
+- TypeScript 5.3, Node.js 22 LTS (Volta-pinned 22.21.1) + Vitest 4.0.17, `@vitest/coverage-v8`, `@golevelup/ts-vitest`, NestJS testing utilities (100-fix-flaky-tests)
+- N/A (test-infrastructure work; no schema, no migrations) (100-fix-flaky-tests)
 
 ## Recent Changes
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting
 - 027-vitest-migration: Migrated from Jest to Vitest for testing
+
+<!-- SPECKIT START -->
+For additional context about technologies to be used, project structure,
+shell commands, and other important information, read the current plan
+<!-- SPECKIT END -->

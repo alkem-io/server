@@ -10,12 +10,20 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
 import { AdminWhiteboardService } from './admin.whiteboard.service';
 
-// Mock the base64ToBuffer utility
+// Mock the base64ToBuffer utility.
+// Hoisted so the mock identity is shared between the factory and the test
+// body's `vi.mocked(base64ToBuffer)` assertions. Without `vi.hoisted` the
+// factory creates a fresh `vi.fn()` each evaluation, which can split mock
+// identity under v8 coverage with `isolate: false` (same flake class as #6012).
+const { base64ToBufferMock } = vi.hoisted(() => ({
+  base64ToBufferMock: vi.fn(),
+}));
+
 vi.mock('@common/utils', async importOriginal => {
   const original = await importOriginal<typeof import('@common/utils')>();
   return {
     ...original,
-    base64ToBuffer: vi.fn(),
+    base64ToBuffer: base64ToBufferMock,
   };
 });
 

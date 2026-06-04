@@ -35,6 +35,11 @@ export const userSettingsData: { userSettings: IUserSettings } = {
             inApp: true,
             push: true,
           },
+          userEmailChanged: {
+            email: true,
+            inApp: false,
+            push: false,
+          },
         },
 
         communicationUpdates: {
@@ -107,6 +112,11 @@ export const userSettingsData: { userSettings: IUserSettings } = {
             push: true,
           },
           userGlobalRoleChanged: {
+            email: true,
+            inApp: true,
+            push: true,
+          },
+          userEmailChanged: {
             email: true,
             inApp: true,
             push: true,

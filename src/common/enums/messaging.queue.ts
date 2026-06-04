@@ -10,6 +10,8 @@ export enum MessagingQueue {
   //
   AUTH_RESET = 'alkemio-auth-reset',
   //
+  KRATOS_EVENTS = 'alkemio-kratos-events',
+  //
   SUBSCRIPTION_WHITEBOARD_CONTENT = 'alkemio-subscriptions-whiteboard-content',
   SUBSCRIPTION_VIRTUAL_UPDATED = 'alkemio-subscriptions-virtual-contributor-updated',
   SUBSCRIPTION_WHITEBOARD_SAVED = 'alkemio-subscriptions-whiteboard-saved',

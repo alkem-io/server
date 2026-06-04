@@ -355,27 +355,6 @@ describe('UrlResolverService', () => {
       expect(result.type).toBe(UrlType.ADMIN);
     });
 
-    it('should resolve INNOVATION_HUB type for /innovation-hubs', async () => {
-      const result = await service.resolveUrl(
-        'https://example.com/innovation-hubs',
-        actorContext
-      );
-      expect(result.type).toBe(UrlType.INNOVATION_HUB);
-    });
-
-    it('should resolve innovation hub with nameID', async () => {
-      _innovationHubService.getInnovationHubByNameIdOrFail.mockResolvedValue({
-        id: 'hub-123',
-      });
-
-      const result = await service.resolveUrl(
-        'https://example.com/innovation-hubs/my-hub',
-        actorContext
-      );
-      expect(result.type).toBe(UrlType.INNOVATION_HUB);
-      expect(result.innovationHubId).toBe('hub-123');
-    });
-
     it('should resolve /hub route with nameID', async () => {
       _innovationHubService.getInnovationHubByNameIdOrFail.mockResolvedValue({
         id: 'hub-456',

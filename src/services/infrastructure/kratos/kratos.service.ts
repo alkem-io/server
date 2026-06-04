@@ -209,12 +209,17 @@ export class KratosService {
    * @param identity - The identity object containing credentials.
    * @returns The corresponding authentication types based on the identity's credentials.
    *
-   * The function checks the following conditions in order:
-   * - If the identity has OIDC credentials, it examines the identifiers:
-   *   - If the identifier starts with 'microsoft', it adds `AuthenticationType.MICROSOFT`.
-   *   - If the identifier starts with 'linkedin', it adds `AuthenticationType.LINKEDIN`.
-   *   - If the identifier starts with 'github', it adds `AuthenticationType.GITHUB`.
+   * The function checks the following conditions:
+   * - For OIDC credentials it inspects EVERY linked identifier (a single Kratos
+   *   identity can have several — e.g. `['cleverbase:…', 'linkedin:…']`), mapping
+   *   each provider prefix to its `AuthenticationType`:
+   *   - `microsoft` -> `AuthenticationType.MICROSOFT`
+   *   - `linkedin`  -> `AuthenticationType.LINKEDIN`
+   *   - `github`    -> `AuthenticationType.GITHUB`
+   *   - `cleverbase` -> `AuthenticationType.CLEVERBASE`
    * - If the identity has password credentials, it adds `AuthenticationType.EMAIL`.
+   * - If the identity has passkey (or legacy webauthn) credentials, it adds
+   *   `AuthenticationType.PASSKEY`.
    * - If none of the above conditions are met, it adds `AuthenticationType.UNKNOWN`.
    */
   public mapAuthenticationType(identity: Identity): AuthenticationType[] {
@@ -222,24 +227,38 @@ export class KratosService {
       return [AuthenticationType.UNKNOWN];
     }
 
-    const authTypes: AuthenticationType[] = [];
-    const oidcIdentifiers = identity.credentials.oidc?.identifiers;
-    const identifier = oidcIdentifiers?.[0];
+    // Map each OIDC provider prefix to its AuthenticationType. Kratos stores the
+    // identifier as `<provider>:<subject>`, and one identity can carry several.
+    const oidcProviderMap: ReadonlyArray<[string, AuthenticationType]> = [
+      ['microsoft', AuthenticationType.MICROSOFT],
+      ['linkedin', AuthenticationType.LINKEDIN],
+      ['github', AuthenticationType.GITHUB],
+      ['cleverbase', AuthenticationType.CLEVERBASE],
+    ];
 
-    if (identifier) {
-      if (identifier.startsWith('microsoft'))
-        authTypes.push(AuthenticationType.MICROSOFT);
-      if (identifier.startsWith('linkedin'))
-        authTypes.push(AuthenticationType.LINKEDIN);
-      if (identifier.startsWith('github'))
-        authTypes.push(AuthenticationType.GITHUB);
+    const authTypes = new Set<AuthenticationType>();
+
+    const oidcIdentifiers = identity.credentials.oidc?.identifiers ?? [];
+    for (const identifier of oidcIdentifiers) {
+      for (const [prefix, type] of oidcProviderMap) {
+        if (identifier.startsWith(prefix)) {
+          authTypes.add(type);
+        }
+      }
     }
 
     if (identity.credentials.password) {
-      authTypes.push(AuthenticationType.EMAIL);
+      authTypes.add(AuthenticationType.EMAIL);
     }
 
-    return authTypes.length ? authTypes : [AuthenticationType.UNKNOWN];
+    // Passkeys are a separate Kratos credential type (`passkey`, with `webauthn`
+    // as the legacy key) — not OIDC and not password — so they must be detected
+    // explicitly or they never surface as an authentication method.
+    if (identity.credentials.passkey || identity.credentials.webauthn) {
+      authTypes.add(AuthenticationType.PASSKEY);
+    }
+
+    return authTypes.size ? [...authTypes] : [AuthenticationType.UNKNOWN];
   }
 
   /**
@@ -276,6 +295,165 @@ export class KratosService {
       return undefined;
     }
     return identity[0];
+  }
+
+  /**
+   * Case-insensitive identity lookup by email. Returns null when the email is not
+   * registered on any Kratos identity. Used by the uniqueness check before
+   * committing a user-email-change (research.md §R7).
+   */
+  public async findIdentityByEmail(email: string): Promise<Identity | null> {
+    const { data: identities } = await this.kratosIdentityClient.listIdentities(
+      {
+        credentialsIdentifier: email,
+        includeCredential: ['password', 'oidc'],
+      }
+    );
+    if (!identities || identities.length === 0) {
+      return null;
+    }
+    return identities[0];
+  }
+
+  /**
+   * Reads the current `email` trait for an identity. Used by the drift-resolve
+   * flow (research.md §R6) when reconciling the observed per-side values to a
+   * canonical address.
+   */
+  public async getIdentityEmailTrait(
+    identityId: string
+  ): Promise<string | undefined> {
+    const identity = await this.getIdentityById(identityId);
+    if (!identity) return undefined;
+    const traits = (identity.traits ?? {}) as Record<string, unknown> & {
+      email?: string;
+    };
+    return typeof traits.email === 'string' ? traits.email : undefined;
+  }
+
+  /**
+   * Replaces the `email` trait on a Kratos identity, then best-effort marks the
+   * new address as verified so the user is not re-prompted on next login (FR-011).
+   *
+   * Kratos's `updateIdentity` admin body accepts only `schema_id` / `state` /
+   * `traits` / `metadata_*` — it has NO `verifiable_addresses` field, and
+   * verifiable addresses are recomputed from the traits on every update. The
+   * verified flag is therefore applied as a follow-up `patchIdentity` step.
+   *
+   * The trait update is the load-bearing write — if it fails, the caller's
+   * commit/rollback logic engages. The verified-marking step is best-effort:
+   * a failure there is logged but does NOT fail the email change (it degrades
+   * to "user re-verifies on next login").
+   */
+  public async updateIdentityEmailTrait(
+    identityId: string,
+    newEmail: string
+  ): Promise<Identity> {
+    const existing = await this.getIdentityById(identityId);
+    if (!existing) {
+      throw new UserIdentityNotFoundException(
+        `Identity with id ${identityId} not found.`
+      );
+    }
+    const currentTraits = (existing.traits ?? {}) as Record<string, unknown>;
+    const updatedTraits = { ...currentTraits, email: newEmail };
+
+    const { data: updated } = await this.kratosIdentityClient.updateIdentity({
+      id: identityId,
+      updateIdentityBody: {
+        schema_id: existing.schema_id,
+        state: existing.state === 'inactive' ? 'inactive' : 'active',
+        traits: updatedTraits,
+      },
+    });
+
+    await this.markIdentityEmailVerified(identityId, newEmail);
+
+    return updated;
+  }
+
+  /**
+   * Best-effort: marks the verifiable address matching `email` as verified via
+   * `patchIdentity`. Kratos exposes no single-call admin API for this; JSON
+   * Patch against the recomputed `verifiable_addresses` array is the admin path.
+   * Any failure is logged and swallowed — see `updateIdentityEmailTrait`.
+   */
+  private async markIdentityEmailVerified(
+    identityId: string,
+    email: string
+  ): Promise<void> {
+    try {
+      const identity = await this.getIdentityById(identityId);
+      const addresses =
+        (identity as OryDefaultIdentitySchema)?.verifiable_addresses ?? [];
+      const index = addresses.findIndex(
+        address => address.value?.toLowerCase() === email.toLowerCase()
+      );
+      if (index < 0) {
+        this.logger.warn(
+          `Email-change: no verifiable address found to mark verified for identity ${identityId}`,
+          LogContext.KRATOS
+        );
+        return;
+      }
+      await this.kratosIdentityClient.patchIdentity({
+        id: identityId,
+        jsonPatch: [
+          {
+            op: 'replace',
+            path: `/verifiable_addresses/${index}/verified`,
+            value: true,
+          },
+          {
+            op: 'replace',
+            path: `/verifiable_addresses/${index}/status`,
+            value: 'completed',
+          },
+          {
+            op: 'replace',
+            path: `/verifiable_addresses/${index}/verified_at`,
+            value: new Date().toISOString(),
+          },
+        ],
+      });
+    } catch (error) {
+      this.logger.warn(
+        `Email-change: could not mark new address verified for identity ${identityId}: ${(error as Error)?.message}`,
+        LogContext.KRATOS
+      );
+    }
+  }
+
+  /**
+   * Disables every active session for an identity in a single admin call
+   * (research.md §R2). FR-017 / FR-017a: invoked from the post-commit chain in
+   * `UserEmailChangeService.applyAdminEmailChange`.
+   */
+  public async invalidateAllIdentitySessions(
+    identityId: string
+  ): Promise<void> {
+    // The @ory/kratos-client v26 admin API exposes session invalidation via
+    // `deleteIdentitySessions` (revokes ALL active sessions for the identity in
+    // a single call). Earlier client versions called this `disableIdentitySessions`.
+    try {
+      await this.kratosIdentityClient.deleteIdentitySessions({
+        id: identityId,
+      });
+    } catch (error) {
+      // Kratos returns 404 when the identity has no active sessions to revoke.
+      // The post-condition "no active sessions exist" is already satisfied, so
+      // this is a no-op success — not a failure.
+      const status = (error as { response?: { status?: number } })?.response
+        ?.status;
+      if (status === 404) {
+        this.logger.verbose?.(
+          `No active Kratos sessions to invalidate for identity ${identityId}`,
+          LogContext.KRATOS
+        );
+        return;
+      }
+      throw error;
+    }
   }
 
   public async getIdentityById(
