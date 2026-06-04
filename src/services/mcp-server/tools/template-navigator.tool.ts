@@ -77,7 +77,10 @@ export class TemplateNavigatorTool implements McpTool {
         'Navigate and discover templates across innovation packs. ' +
         'Find templates for spaces, callouts, whiteboards, posts, and community guidelines. ' +
         'Actions: "list" shows available templates, "search" finds templates by name/tags, ' +
-        '"details" shows full information about a specific template.',
+        '"details" shows full information about a specific template. ' +
+        'For a whiteboard template, "details" also returns the template\'s Excalidraw ' +
+        'scene as a `content.scene` JSON string — pass that scene as the `content` arg ' +
+        'of update_whiteboard_content to apply the template to an existing whiteboard.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -85,7 +88,8 @@ export class TemplateNavigatorTool implements McpTool {
             type: 'string',
             enum: ['list', 'search', 'details'],
             description:
-              'Action to perform: "list" templates, "search" by query, or get "details" of a template',
+              'Action to perform: "list" templates, "search" by query, or get "details" of a template. ' +
+              'For whiteboard templates, "details" returns the applicable Excalidraw scene in content.scene.',
           },
           templateType: {
             type: 'string',
@@ -689,10 +693,31 @@ export class TemplateNavigatorTool implements McpTool {
           const whiteboard = await this.templateService.getWhiteboard(
             template.id
           );
-          return {
+          // The Whiteboard entity's @AfterLoad hook (decompressValue) already
+          // decompresses `content` from the base64/zlib-encoded column into a
+          // plain Excalidraw scene JSON string — the same shape that
+          // update_whiteboard_content accepts as its `content` arg. Surface it
+          // as `scene` so the assistant can apply this template to a live board.
+          const summary: Record<string, unknown> = {
             type: 'whiteboard',
             hasContent: !!whiteboard.content,
           };
+          // Validate the scene is parseable before surfacing it; degrade
+          // gracefully (omit `scene`, keep `hasContent`) on any failure rather
+          // than throwing the whole tool result. The scene can be large — this
+          // is acceptable for an explicit 'details' request.
+          if (whiteboard.content) {
+            try {
+              JSON.parse(whiteboard.content);
+              summary.scene = whiteboard.content;
+            } catch (sceneError) {
+              this.logger.warn?.(
+                `navigate_templates details: could not parse whiteboard scene for template ${template.id}: ${sceneError instanceof Error ? sceneError.message : 'unknown error'}`,
+                LogContext.MCP_SERVER
+              );
+            }
+          }
+          return summary;
         } catch {
           return { type: 'whiteboard', hasContent: false };
         }

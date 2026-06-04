@@ -439,6 +439,97 @@ describe('TemplateNavigatorTool', () => {
       const content = parseResultContent(result);
       expect(content.error).toContain('do not have access');
     });
+
+    it('should surface the whiteboard scene for a whiteboard template', async () => {
+      const scene = JSON.stringify({
+        type: 'excalidraw',
+        elements: [{ id: 'a', type: 'rectangle' }],
+        files: {},
+      });
+      const mockTemplate = createMockTemplate({
+        id: 'wb-template-1',
+        type: TemplateType.WHITEBOARD,
+      });
+
+      vi.mocked(templateService.getTemplateOrFail).mockResolvedValue(
+        mockTemplate
+      );
+      // The Whiteboard entity's @AfterLoad already decompresses `content` to
+      // plain Excalidraw JSON, so the tool receives a decompressed string.
+      vi.mocked(templateService.getWhiteboard).mockResolvedValue({
+        content: scene,
+      } as any);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+      const agentInfo = createMockActorContext();
+      const result = await tool.execute(
+        { action: 'details', templateId: 'wb-template-1' },
+        agentInfo
+      );
+
+      expect(result.isError).toBeFalsy();
+      const content = parseResultContent(result);
+      expect(content.content.type).toBe('whiteboard');
+      expect(content.content.hasContent).toBe(true);
+      // Scene is surfaced as a JSON string that update_whiteboard_content accepts.
+      expect(content.content.scene).toBe(scene);
+      expect(JSON.parse(content.content.scene).elements).toHaveLength(1);
+    });
+
+    it('should degrade gracefully when the whiteboard scene is not valid JSON', async () => {
+      const mockTemplate = createMockTemplate({
+        id: 'wb-template-2',
+        type: TemplateType.WHITEBOARD,
+      });
+
+      vi.mocked(templateService.getTemplateOrFail).mockResolvedValue(
+        mockTemplate
+      );
+      vi.mocked(templateService.getWhiteboard).mockResolvedValue({
+        content: 'not-json{',
+      } as any);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+      const agentInfo = createMockActorContext();
+      const result = await tool.execute(
+        { action: 'details', templateId: 'wb-template-2' },
+        agentInfo
+      );
+
+      expect(result.isError).toBeFalsy();
+      const content = parseResultContent(result);
+      expect(content.content.type).toBe('whiteboard');
+      // hasContent is kept for back-compat; scene is omitted on parse failure.
+      expect(content.content.hasContent).toBe(true);
+      expect(content.content.scene).toBeUndefined();
+    });
+
+    it('should report no content for an empty whiteboard template', async () => {
+      const mockTemplate = createMockTemplate({
+        id: 'wb-template-3',
+        type: TemplateType.WHITEBOARD,
+      });
+
+      vi.mocked(templateService.getTemplateOrFail).mockResolvedValue(
+        mockTemplate
+      );
+      vi.mocked(templateService.getWhiteboard).mockResolvedValue({
+        content: '',
+      } as any);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+
+      const agentInfo = createMockActorContext();
+      const result = await tool.execute(
+        { action: 'details', templateId: 'wb-template-3' },
+        agentInfo
+      );
+
+      expect(result.isError).toBeFalsy();
+      const content = parseResultContent(result);
+      expect(content.content.type).toBe('whiteboard');
+      expect(content.content.hasContent).toBe(false);
+      expect(content.content.scene).toBeUndefined();
+    });
   });
 
   describe('execute - error handling', () => {
