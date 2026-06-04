@@ -350,9 +350,9 @@ storage:
     # Absolute path
     path: ${LOCAL_STORAGE_PATH}:.storage
 
-  # Go file-service-go HTTP API configuration
+  # Go file-service HTTP API configuration
   file_service:
-    # Base URL of the Go file-service-go internal API
+    # Base URL of the Go file-service internal API
     url: ${FILE_SERVICE_URL}:http://localhost:3000
     # HTTP request timeout in milliseconds (30s default for large file uploads)
     timeout: ${FILE_SERVICE_TIMEOUT}:30000
