@@ -4,6 +4,7 @@ export enum ActorType {
   USER = 'user',
   ORGANIZATION = 'organization',
   VIRTUAL_CONTRIBUTOR = 'virtual-contributor',
+  VIRTUAL_ASSISTANT = 'virtual-assistant',
   SPACE = 'space',
   ACCOUNT = 'account',
 }

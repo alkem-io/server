@@ -11,7 +11,14 @@ import { McpApiKey } from './mcp-api-key.entity';
 export interface CreateMcpApiKeyInput {
   name: string;
   description?: string;
-  userId: string;
+  /** Bind the key to a User (`buildForUser`). Exactly one of userId / actorId. */
+  userId?: string;
+  /**
+   * Bind the key to an Actor (`buildForActor`) — e.g. the `virtual-assistant`
+   * actor for the system-invoked path (004-web-ai-assistant T027). Exactly one
+   * of userId / actorId.
+   */
+  actorId?: string;
   scopes?: McpApiKeyScope[];
   expiresAt?: Date;
 }
@@ -43,10 +50,19 @@ export class McpApiKeyService {
     const plainTextKey = this.generateApiKey();
     const keyHash = this.hashApiKey(plainTextKey);
 
+    if (!input.userId === !input.actorId) {
+      throw new EntityNotFoundException(
+        'An MCP API key must bind to exactly one of userId / actorId',
+        LogContext.MCP_SERVER,
+        { hasUserId: !!input.userId, hasActorId: !!input.actorId }
+      );
+    }
+
     const apiKey = new McpApiKey();
     apiKey.name = input.name;
     apiKey.description = input.description;
     apiKey.userId = input.userId;
+    apiKey.actorId = input.actorId;
     apiKey.keyHash = keyHash;
     apiKey.scopes = input.scopes || [{ operations: ['read'] }];
     apiKey.expiresAt = input.expiresAt;
@@ -55,7 +71,7 @@ export class McpApiKeyService {
     const saved = await this.mcpApiKeyRepository.save(apiKey);
 
     this.logger.verbose?.(
-      `Created MCP API key: ${saved.id} for user: ${input.userId}`,
+      `Created MCP API key: ${saved.id} for ${input.actorId ? `actor: ${input.actorId}` : `user: ${input.userId}`}`,
       LogContext.MCP_SERVER
     );
 

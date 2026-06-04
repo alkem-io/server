@@ -6,6 +6,7 @@ import { CreateContributionOnCalloutInput } from '@domain/collaboration/callout/
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { McpTool, McpToolDefinition, McpToolResult } from '../dto/mcp.types';
@@ -34,6 +35,7 @@ export class CreateWhiteboardTool implements McpTool {
     private readonly calloutResolverMutations: CalloutResolverMutations,
     @InjectRepository(CalloutContribution)
     private readonly contributionRepository: Repository<CalloutContribution>,
+    private readonly urlGeneratorService: UrlGeneratorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -124,6 +126,22 @@ export class CreateWhiteboardTool implements McpTool {
         relations: { whiteboard: { profile: true } },
       });
       const whiteboard = reloaded?.whiteboard ?? contribution.whiteboard;
+      // Real, browser-openable web URL via the platform's own UrlGeneratorService.
+      // Best-effort: omit the link if it cannot be resolved rather than failing.
+      let url: string | undefined;
+      if (whiteboard) {
+        try {
+          url = await this.urlGeneratorService.getWhiteboardUrlPath(
+            whiteboard.id,
+            whiteboard.nameID
+          );
+        } catch (urlError) {
+          this.logger.verbose?.(
+            `create_whiteboard: could not resolve URL for whiteboard ${whiteboard.id}: ${urlError instanceof Error ? urlError.message : 'unknown error'}`,
+            LogContext.MCP_SERVER
+          );
+        }
+      }
       const result = {
         created: true,
         calloutId,
@@ -133,7 +151,7 @@ export class CreateWhiteboardTool implements McpTool {
               id: whiteboard.id,
               nameID: whiteboard.nameID,
               displayName: whiteboard.profile?.displayName ?? displayName,
-              uri: `alkemio://whiteboards/${whiteboard.id}`,
+              url,
             }
           : null,
       };

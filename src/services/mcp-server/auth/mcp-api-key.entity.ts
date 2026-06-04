@@ -23,9 +23,25 @@ export class McpApiKey extends BaseAlkemioEntity {
   @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
   description?: string;
 
-  @Column('uuid')
+  /**
+   * The User this key authenticates as (`buildForUser`). Retained for the
+   * existing user-bound api-key path. EXACTLY ONE of `userId` / `actorId` is set:
+   * a user-bound key sets `userId`; an actor-bound key (the `virtual-assistant`
+   * actor, 004-web-ai-assistant T027) sets `actorId` instead.
+   */
+  @Column('uuid', { nullable: true })
   @Index()
-  userId!: string;
+  userId?: string;
+
+  /**
+   * The Actor this key authenticates as (`buildForActor`) — generalizes the
+   * auth seam off the hardcoded User UUID (004-web-ai-assistant T027). Set for
+   * the system-invoked `virtual-assistant` actor credential (Flow B / FR-019);
+   * null for an ordinary user-bound key.
+   */
+  @Column('uuid', { nullable: true })
+  @Index()
+  actorId?: string;
 
   @Column('jsonb', { nullable: false })
   scopes!: McpApiKeyScope[];

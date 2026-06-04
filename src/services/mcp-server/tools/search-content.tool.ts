@@ -6,6 +6,7 @@ import { SearchInput } from '@services/api/search/dto/inputs';
 import { ISearchResults } from '@services/api/search/dto/results';
 import { SearchCategory } from '@services/api/search/search.category';
 import { SearchService } from '@services/api/search/search.service';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { McpTool, McpToolDefinition, McpToolResult } from '../dto/mcp.types';
@@ -24,22 +25,22 @@ interface LooseSearchResult {
   id: string;
   score: number;
   type: string;
-  whiteboard?: { id: string; profile?: { displayName?: string } };
-  post?: { id: string; profile?: { displayName?: string } };
-  memo?: { id: string; profile?: { displayName?: string } };
+  whiteboard?: {
+    id: string;
+    nameID?: string;
+    profile?: { displayName?: string };
+  };
+  post?: { id: string; nameID?: string; profile?: { displayName?: string } };
+  memo?: { id: string; nameID?: string; profile?: { displayName?: string } };
   callout?: { id: string; framing?: { profile?: { displayName?: string } } };
   space?: { id: string; about?: { profile?: { displayName?: string } } };
-  user?: { id: string; profile?: { displayName?: string } };
-  organization?: { id: string; profile?: { displayName?: string } };
+  user?: { id: string; nameID?: string; profile?: { displayName?: string } };
+  organization?: {
+    id: string;
+    nameID?: string;
+    profile?: { displayName?: string };
+  };
 }
-
-const URI_TYPE_PATH: Record<string, string> = {
-  whiteboard: 'whiteboards',
-  post: 'posts',
-  callout: 'callouts',
-  space: 'spaces',
-  subspace: 'spaces',
-};
 
 /**
  * Tool for full-text search across the platform (Elasticsearch-backed) to find
@@ -62,6 +63,7 @@ export class SearchContentTool implements McpTool {
   constructor(
     private readonly searchService: SearchService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
+    private readonly urlGeneratorService: UrlGeneratorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -154,10 +156,13 @@ export class SearchContentTool implements McpTool {
       results.actorResults,
     ];
 
-    const matches = groups
-      .flatMap(group => group?.results ?? [])
-      .map(r => this.toMatch(r as unknown as LooseSearchResult))
-      .sort((a, b) => b.score - a.score);
+    const matches = (
+      await Promise.all(
+        groups
+          .flatMap(group => group?.results ?? [])
+          .map(r => this.toMatch(r as unknown as LooseSearchResult))
+      )
+    ).sort((a, b) => b.score - a.score);
 
     const result = {
       query,
@@ -174,15 +179,15 @@ export class SearchContentTool implements McpTool {
     };
   }
 
-  private toMatch(r: LooseSearchResult): {
+  private async toMatch(r: LooseSearchResult): Promise<{
     type: string;
     id: string;
     displayName?: string;
     score: number;
     spaceId?: string;
     calloutId?: string;
-    uri?: string;
-  } {
+    url?: string;
+  }> {
     const entity = r.whiteboard ?? r.post ?? r.memo ?? r.user ?? r.organization;
     const displayName =
       entity?.profile?.displayName ??
@@ -202,7 +207,6 @@ export class SearchContentTool implements McpTool {
       r.organization?.id ??
       r.id;
 
-    const path = URI_TYPE_PATH[r.type];
     return {
       type: r.type,
       id: entityId,
@@ -210,8 +214,57 @@ export class SearchContentTool implements McpTool {
       score: r.score,
       spaceId: r.space?.id,
       calloutId: r.callout?.id,
-      uri: path ? `alkemio://${path}/${entityId}` : undefined,
+      // A real, browser-openable web URL built by the platform's own
+      // UrlGeneratorService — the same canonical link the rest of Alkemio uses.
+      // Best-effort per item: an unresolvable entity (template/KB callout,
+      // orphaned item) degrades to no link rather than failing the whole search.
+      url: await this.resolveUrl(r),
     };
+  }
+
+  /**
+   * Resolve a real web URL for a search result via the platform's
+   * UrlGeneratorService. Returns undefined (no link) if the URL cannot be built,
+   * so a single unresolvable entity never breaks the tool result.
+   */
+  private async resolveUrl(r: LooseSearchResult): Promise<string | undefined> {
+    try {
+      if (r.whiteboard) {
+        return await this.urlGeneratorService.getWhiteboardUrlPath(
+          r.whiteboard.id,
+          r.whiteboard.nameID ?? ''
+        );
+      }
+      if (r.memo) {
+        return await this.urlGeneratorService.getMemoUrlPath(
+          r.memo.id,
+          r.memo.nameID ?? ''
+        );
+      }
+      if (r.post) {
+        return await this.urlGeneratorService.getPostUrlPath(r.post.id);
+      }
+      if (r.callout) {
+        return await this.urlGeneratorService.getCalloutUrlPath(r.callout.id);
+      }
+      if (r.space) {
+        return await this.urlGeneratorService.getSpaceUrlPathByID(r.space.id);
+      }
+      if (r.user?.nameID) {
+        return this.urlGeneratorService.createUrlForUserNameID(r.user.nameID);
+      }
+      if (r.organization?.nameID) {
+        return this.urlGeneratorService.createUrlForOrganizationNameID(
+          r.organization.nameID
+        );
+      }
+    } catch (error) {
+      this.logger.verbose?.(
+        `search_content: could not resolve URL for ${r.type} ${r.id}: ${error instanceof Error ? error.message : 'unknown error'}`,
+        LogContext.MCP_SERVER
+      );
+    }
+    return undefined;
   }
 
   private errorResult(message: string): McpToolResult {

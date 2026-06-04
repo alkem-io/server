@@ -14,10 +14,14 @@ import {
 import { AuthGuard } from '@nestjs/passport';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AUTH_STRATEGY_MCP_API_KEY } from './mcp-api-key.strategy';
+import { AUTH_STRATEGY_MCP_DELEGATION } from './mcp-delegation.strategy';
 
 /**
  * Individual strategy guards for sequential authentication
  */
+@Injectable()
+class McpDelegationGuard extends AuthGuard(AUTH_STRATEGY_MCP_DELEGATION) {}
+
 @Injectable()
 class McpApiKeyGuard extends AuthGuard(AUTH_STRATEGY_MCP_API_KEY) {}
 
@@ -32,15 +36,30 @@ class OathkeeperApiTokenGuard extends AuthGuard(
 /**
  * Guard for MCP server endpoints.
  * Tries authentication strategies in order:
- * 1. MCP API keys (dedicated MCP auth)
- * 2. Ory JWT tokens (existing auth)
- * 3. Ory API tokens (existing auth)
+ * 1. MCP delegation (assistant actor credential + on-behalf-of user JWT — Flow A)
+ * 2. MCP API keys (dedicated MCP auth — incl. the system-invoked actor path)
+ * 3. Ory JWT tokens (existing auth)
+ * 4. Ory API tokens (existing auth)
+ *
+ * Two assistant auth paths resolve here (004-web-ai-assistant):
+ *  - Flow A (user-initiated / delegation): assistant actor credential
+ *    (`mcp_api_key`) in Authorization + the on-behalf-of user JWT in
+ *    `X-Alkemio-On-Behalf-Of`. Delegation is tried FIRST so such a call resolves
+ *    to the DELEGATED user context (authorize as the user, attribute to the
+ *    assistant) rather than a plain api-key call.
+ *  - Flow B (system-invoked / actor): the `virtual-assistant` actor's
+ *    ACTOR-BOUND `mcp_api_key` in Authorization, with NO on-behalf-of header.
+ *    Delegation no-ops without that header, so the call falls through to the
+ *    api-key strategy, which (T027) builds the actor's context via
+ *    `buildForActor` and stamps `delegationContext` with a null on-behalf-of
+ *    user. The per-tool gate then uses the actor's admin `capabilityGrant`.
  *
  * Stops at the first strategy that returns an authenticated (non-anonymous) user.
- * Falls back to anonymous if no strategy authenticates successfully.
+ * Falls back to anonymous if no strategy authenticates successfully (unchanged).
  */
 @Injectable()
 export class McpAuthGuard implements CanActivate {
+  private readonly mcpDelegationGuard = new McpDelegationGuard();
   private readonly mcpApiKeyGuard = new McpApiKeyGuard();
   private readonly oathkeeperJwtGuard = new OathkeeperJwtGuard();
   private readonly oathkeeperApiTokenGuard = new OathkeeperApiTokenGuard();
@@ -53,6 +72,7 @@ export class McpAuthGuard implements CanActivate {
   async canActivate(context: ExecutionContext): Promise<boolean> {
     const request = context.switchToHttp().getRequest();
     const strategies = [
+      { name: 'mcp-delegation', guard: this.mcpDelegationGuard },
       { name: 'mcp-api-key', guard: this.mcpApiKeyGuard },
       { name: 'oathkeeper-jwt', guard: this.oathkeeperJwtGuard },
       { name: 'oathkeeper-api-token', guard: this.oathkeeperApiTokenGuard },

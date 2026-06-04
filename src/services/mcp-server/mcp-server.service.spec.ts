@@ -30,11 +30,15 @@ describe('McpServerService.readResource — authorization', () => {
       isAccessGranted: vi.fn().mockReturnValue(opts.granted ?? true),
     };
     const logger = { warn: vi.fn(), verbose: vi.fn(), error: vi.fn() };
+    const capabilityGateService = {
+      checkToolAllowed: vi.fn().mockResolvedValue(null),
+    };
     const service = new McpServerService(
       {} as any,
       {} as any,
       resourceRegistry as any,
       authorizationService as any,
+      capabilityGateService as any,
       logger as any
     );
     return { service, provider, authorizationService, logger };

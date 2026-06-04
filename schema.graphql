@@ -68,6 +68,7 @@ enum ActorType {
   ORGANIZATION
   SPACE
   USER
+  VIRTUAL_ASSISTANT
   VIRTUAL_CONTRIBUTOR
 }
 
@@ -78,6 +79,15 @@ enum AiPersonaEngine {
   GUIDANCE
   LIBRA_FLOW
   OPENAI_ASSISTANT
+}
+
+"""
+The kind of an assistant capability — READ is enabled by default; WRITE_* are disabled by default and confirmation-gated.
+"""
+enum AssistantCapabilityKind {
+  READ
+  WRITE_ADDITIVE
+  WRITE_DESTRUCTIVE
 }
 
 enum AuthenticationType {
@@ -175,6 +185,7 @@ enum AuthorizationPolicyType {
   USER
   USER_GROUP
   USER_SETTINGS
+  VIRTUAL_ASSISTANT
   VIRTUAL_CONTRIBUTOR
   VISUAL
   WHITEBOARD
@@ -1567,6 +1578,26 @@ type Application {
   state: String!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type AssistantCapability {
+  """What the capability does (for the settings UI)."""
+  description: String!
+  """Human-readable label for the capability toggle."""
+  displayName: String!
+  """
+  READ | WRITE_ADDITIVE | WRITE_DESTRUCTIVE — drives the default (READ enabled, WRITE_* disabled) and confirmation behaviour.
+  """
+  kind: AssistantCapabilityKind!
+  """The MCP tool name, e.g. "search_content"."""
+  name: String!
+}
+
+type AssistantCapabilityToggle {
+  """The capability (MCP tool name) this toggle controls."""
+  capability: String!
+  """Whether the capability is enabled."""
+  enabled: Boolean!
 }
 
 type AuthenticationConfig {
@@ -4050,6 +4081,10 @@ type Mutation {
   unsubscribeFromPushNotifications(subscriptionData: UnsubscribeFromPushNotificationsInput!): PushSubscription!
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
+  """
+  Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires platform-admin.
+  """
+  updateAssistantActorCapabilities(grantData: GrantAssistantActorCapabilitiesInput!): VirtualAssistant!
   """Update the baseline License Plan on the specified Account."""
   updateBaselineLicensePlanOnAccount(updateData: UpdateBaselineLicensePlanOnAccount!): Account!
   """Updates the specified CalendarEvent."""
@@ -4991,6 +5026,10 @@ type Query {
   platform: Platform!
   """Allow looking up of information for Platform administration."""
   platformAdmin: PlatformAdminQueryResults!
+  """
+  The enumerable assistant capability surface (one per MCP tool), with each tool classified READ / WRITE_ADDITIVE / WRITE_DESTRUCTIVE.
+  """
+  platformCapabilities: [AssistantCapability!]!
   """Get the list of restricted space names."""
   restrictedSpaceNames: [String!]!
   """The roles that the specified Organization has."""
@@ -6411,6 +6450,10 @@ type UserProfileSummary {
 }
 
 type UserSettings {
+  """
+  The AI assistant authority settings for this User (per-capability toggles).
+  """
+  assistant: UserSettingsAssistant!
   """The authorization rules for the entity"""
   authorization: Authorization
   """The communication settings for this User."""
@@ -6431,6 +6474,13 @@ type UserSettings {
   privacy: UserSettingsPrivacy!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+type UserSettingsAssistant {
+  """
+  Per-capability enable/disable toggles bounding what the assistant may do on behalf of this user (read-only by default).
+  """
+  enabledCapabilities: [AssistantCapabilityToggle!]!
 }
 
 type UserSettingsCommunication {
@@ -6594,6 +6644,29 @@ type VcInteraction {
   threadID: MessageID!
   """The actor ID (agent.id) of the Virtual Contributor"""
   virtualContributorID: String!
+}
+
+type VirtualAssistant implements ActorFull {
+  """The authorization rules for the Actor"""
+  authorization: Authorization
+  """
+  The admin per-capability grant governing system-invoked authority for this Virtual Assistant (default read-only).
+  """
+  capabilityGrant: [AssistantCapabilityToggle!]!
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The credentials held by this Actor"""
+  credentials: [Credential!]
+  """The ID of the Actor"""
+  id: UUID!
+  """A name identifier of the entity, unique within a given scope."""
+  nameID: NameID!
+  """The profile for this Actor."""
+  profile: Profile
+  """The type of Actor"""
+  type: ActorType!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
 }
 
 type VirtualContributor implements ActorFull {
@@ -6974,6 +7047,13 @@ input AssignRoleOnRoleSetInput {
 input AssignUserGroupMemberInput {
   groupID: UUID!
   userID: UUID!
+}
+
+input AssistantCapabilityToggleInput {
+  """The capability (MCP tool name) this toggle controls."""
+  capability: String!
+  """Whether the capability is enabled."""
+  enabled: Boolean!
 }
 
 input CastPollVoteInput {
@@ -7831,6 +7911,15 @@ input ForumCreateDiscussionInput {
   forumID: UUID!
   profile: CreateProfileInput!
   tags: [String!]
+}
+
+input GrantAssistantActorCapabilitiesInput {
+  """
+  Per-capability enable/disable toggles governing what the assistant may do system-invoked (default read-only).
+  """
+  enabledCapabilities: [AssistantCapabilityToggleInput!]!
+  """The VirtualAssistant actor whose admin grant is being set."""
+  virtualAssistantID: UUID!
 }
 
 input GrantAuthorizationCredentialInput {
@@ -8998,12 +9087,21 @@ input UpdateUserPlatformSettingsInput {
   userID: String!
 }
 
+input UpdateUserSettingsAssistantInput {
+  """
+  Per-capability enable/disable toggles bounding what the assistant may do on behalf of this user.
+  """
+  enabledCapabilities: [AssistantCapabilityToggleInput!]
+}
+
 input UpdateUserSettingsCommunicationInput {
   """Allow Users to send messages to this User."""
   allowOtherUsersToSendMessages: Boolean
 }
 
 input UpdateUserSettingsEntityInput {
+  """Settings related to the AI assistant authority for this User."""
+  assistant: UpdateUserSettingsAssistantInput
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
   """

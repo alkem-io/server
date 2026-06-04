@@ -68,10 +68,38 @@ export class McpApiKeyStrategy extends PassportStrategy(
         );
       });
 
-    // Create actor context for the user associated with this API key
-    const actorContext = await this.actorContextService.buildForUser(
-      validatedKey.userId
-    );
+    // Build the ActorContext for the identity this key authenticates as.
+    // T027 (004-web-ai-assistant) generalizes the seam off the hardcoded User
+    // UUID: an ACTOR-bound key (the `virtual-assistant` actor, Flow B /
+    // system-invoked) builds via `buildForActor` and stamps attribution with a
+    // null on-behalf-of user; a user-bound key keeps the existing `buildForUser`
+    // path. Exactly one of actorId / userId is set.
+    let actorContext: ActorContext;
+    if (validatedKey.actorId) {
+      actorContext = await this.actorContextService.buildForActor(
+        validatedKey.actorId
+      );
+      if (!actorContext.isAnonymous && actorContext.actorID) {
+        // SYSTEM-INVOKED attribution (FR-019): assistantActorId == the actor,
+        // onBehalfOfUserId == null (no user). The gate uses the actor's admin
+        // capabilityGrant for this context.
+        actorContext.delegationContext = {
+          assistantActorId: actorContext.actorID,
+          onBehalfOfUserId: null,
+        };
+      }
+    } else if (validatedKey.userId) {
+      actorContext = await this.actorContextService.buildForUser(
+        validatedKey.userId
+      );
+    } else {
+      this.logger.warn?.(
+        `MCP API key ${validatedKey.id} has neither actorId nor userId`,
+        '',
+        LogContext.MCP_SERVER
+      );
+      return this.actorContextService.createAnonymous();
+    }
     // Expose the key's scopes on the request so the controller can forward them
     // to the MCP service for per-operation enforcement. Only the MCP API-key
     // strategy sets this; JWT / Ory / anonymous callers leave it undefined.
@@ -79,7 +107,7 @@ export class McpApiKeyStrategy extends PassportStrategy(
       request as IncomingMessage & { mcpApiKeyScopes?: McpApiKeyScope[] }
     ).mcpApiKeyScopes = validatedKey.scopes;
     this.logger.verbose?.(
-      `MCP API key authenticated: userId=${actorContext.actorID}`,
+      `MCP API key authenticated: actorID=${actorContext.actorID}${validatedKey.actorId ? ' (actor-bound, system-invoked)' : ''}`,
       LogContext.MCP_SERVER
     );
     return actorContext;

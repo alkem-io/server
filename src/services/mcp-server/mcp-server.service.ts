@@ -21,6 +21,7 @@ import { AlkemioConfig } from '@src/types/alkemio.config';
 import { IncomingMessage, ServerResponse } from 'http';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { scopeViolation } from './auth/mcp-scope';
+import { AssistantCapabilityGateService } from './capabilities/assistant.capability.gate.service';
 import {
   MCP_CONSTANTS,
   McpApiKeyScope,
@@ -58,6 +59,7 @@ export class McpServerService implements OnModuleInit {
     private readonly toolRegistry: ToolRegistry,
     private readonly resourceRegistry: ResourceRegistry,
     private readonly authorizationService: AuthorizationService,
+    private readonly capabilityGateService: AssistantCapabilityGateService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -108,7 +110,7 @@ export class McpServerService implements OnModuleInit {
         const { uri } = request.params;
         const actorContext = getActorContext();
         this.logger.verbose?.(
-          `Reading MCP resource: ${uri}, user: ${actorContext.actorID || 'anonymous'}`,
+          `Reading MCP resource: ${uri}, user: ${actorContext.actorID || 'anonymous'}${this.attributionSuffix(actorContext)}`,
           LogContext.MCP_SERVER
         );
 
@@ -138,7 +140,7 @@ export class McpServerService implements OnModuleInit {
       const { name, arguments: args } = request.params;
       const actorContext = getActorContext();
       this.logger.verbose?.(
-        `Calling MCP tool: ${name}, user: ${actorContext.actorID || 'anonymous'}`,
+        `Calling MCP tool: ${name}, user: ${actorContext.actorID || 'anonymous'}${this.attributionSuffix(actorContext)}`,
         LogContext.MCP_SERVER
       );
 
@@ -164,6 +166,22 @@ export class McpServerService implements OnModuleInit {
         return { content: [{ type: 'text', text: argError }], isError: true };
       }
 
+      // Per-tool capability gate (FR-018): for a DELEGATED call, the tool must
+      // be enabled in the on-behalf-of user's assistant grant. This is layered
+      // ON TOP of the per-entity AuthorizationService check inside the tool —
+      // effective authority = user privileges ∩ enabled capabilities. Refusal
+      // maps to `capability_disabled` so assistant-service can explain it.
+      const gateRefusal = await this.capabilityGateService.checkToolAllowed(
+        name,
+        actorContext
+      );
+      if (gateRefusal) {
+        return {
+          content: [{ type: 'text', text: gateRefusal }],
+          isError: true,
+        };
+      }
+
       const result = await tool.execute(args || {}, actorContext);
 
       // Return in MCP SDK expected format
@@ -174,6 +192,22 @@ export class McpServerService implements OnModuleInit {
     });
 
     return mcpServer;
+  }
+
+  /**
+   * Attribution join keys for a tool/resource call (FR-016/SC-010). For a
+   * DELEGATED (on-behalf-of) call the assistant actor + on-behalf-of user are
+   * recorded for attribution; ordinary and system-invoked actor calls carry no
+   * `delegationContext` and produce an empty suffix. These are stamped alongside
+   * the existing mcp-session-id + entity-id + timestamp join keys (FR-010 v1;
+   * no new X-Correlation-Id).
+   */
+  private attributionSuffix(actorContext: ActorContext): string {
+    const delegation = actorContext.delegationContext;
+    if (!delegation) {
+      return '';
+    }
+    return `, assistantActorId: ${delegation.assistantActorId}, onBehalfOfUserId: ${delegation.onBehalfOfUserId}`;
   }
 
   /**

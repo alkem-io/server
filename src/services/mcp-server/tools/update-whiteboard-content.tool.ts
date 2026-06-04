@@ -1,9 +1,13 @@
+import { WHITEBOARD_COLLABORATION_SERVICE } from '@common/constants/providers';
 import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
+import { ClientProxy } from '@nestjs/microservices';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
+import { WhiteboardIntegrationEventPattern } from '@services/whiteboard-integration/types/event.pattern';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { McpTool, McpToolDefinition, McpToolResult } from '../dto/mcp.types';
 
@@ -31,6 +35,9 @@ export class UpdateWhiteboardContentTool implements McpTool {
   constructor(
     private readonly whiteboardService: WhiteboardService,
     private readonly authorizationService: AuthorizationService,
+    private readonly urlGeneratorService: UrlGeneratorService,
+    @Inject(WHITEBOARD_COLLABORATION_SERVICE)
+    private readonly whiteboardCollaborationClient: ClientProxy,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -129,11 +136,48 @@ export class UpdateWhiteboardContentTool implements McpTool {
         whiteboardId,
         content
       );
+
+      // Fire-and-forget: notify the collaboration service so any OPEN Excalidraw
+      // room for this whiteboard reloads from the DB and pushes the new scene to
+      // live editors. Emitted HERE (not inside WhiteboardService.updateWhiteboardContent)
+      // because the collaboration service's own save path flows through that
+      // method — emitting there would echo on every autosave. A broker hiccup
+      // must never break the tool result, so failures are swallowed.
+      try {
+        this.whiteboardCollaborationClient.emit(
+          WhiteboardIntegrationEventPattern.CONTENT_UPDATED_EXTERNALLY,
+          { whiteboardId: updated.id }
+        );
+        this.logger.verbose?.(
+          `update_whiteboard_content: emitted ${WhiteboardIntegrationEventPattern.CONTENT_UPDATED_EXTERNALLY} for whiteboard=${updated.id}`,
+          LogContext.MCP_SERVER
+        );
+      } catch (emitError) {
+        this.logger.warn?.(
+          `update_whiteboard_content: failed to emit live-update event for ${updated.id}: ${emitError instanceof Error ? emitError.message : 'unknown error'}`,
+          LogContext.MCP_SERVER
+        );
+      }
+
+      // Real, browser-openable web URL via the platform's own UrlGeneratorService.
+      // Best-effort: omit the link if it cannot be resolved rather than failing.
+      let url: string | undefined;
+      try {
+        url = await this.urlGeneratorService.getWhiteboardUrlPath(
+          updated.id,
+          updated.nameID
+        );
+      } catch (urlError) {
+        this.logger.verbose?.(
+          `update_whiteboard_content: could not resolve URL for whiteboard ${updated.id}: ${urlError instanceof Error ? urlError.message : 'unknown error'}`,
+          LogContext.MCP_SERVER
+        );
+      }
       const result = {
         updated: true,
         whiteboardId: updated.id,
         nameID: updated.nameID,
-        uri: `alkemio://whiteboards/${updated.id}`,
+        url,
       };
       return {
         content: [{ type: 'text', text: JSON.stringify(result, null, 2) }],

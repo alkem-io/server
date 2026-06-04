@@ -18,6 +18,10 @@ export const CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS =
   'credentialRuleTypes-spacePlatformSettings';
 export const CREDENTIAL_RULE_VIRTUAL_PLATFORM_SETTINGS =
   'credentialRuleTypes-virtualContributorPlatformSettings';
+export const CREDENTIAL_RULE_TYPES_VIRTUAL_ASSISTANT_MANAGE =
+  'credentialRuleTypes-virtualAssistantManage';
+export const CREDENTIAL_RULE_TYPES_VIRTUAL_ASSISTANT_READ =
+  'credentialRuleTypes-virtualAssistantRead';
 export const CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ =
   'credentialRuleTypes-spaceGlobalRead';
 export const CREDENTIAL_RULE_TYPES_ROLESET_APPLY_GLOBAL_REGISTERED =

@@ -9,6 +9,7 @@ import {
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_SUBSPACE_CREATED,
   SUBSCRIPTION_VIRTUAL_UPDATED,
+  WHITEBOARD_COLLABORATION_SERVICE,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
 import { Global, Inject, Module, OnModuleDestroy } from '@nestjs/common';
@@ -74,6 +75,13 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
+      provide: WHITEBOARD_COLLABORATION_SERVICE,
+      useFactory: clientProxyFactory(
+        MessagingQueue.WHITEBOARD_COLLABORATION
+      ),
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
       provide: IS_SCHEMA_BOOTSTRAP,
       useValue: false,
     },
@@ -84,6 +92,7 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     NOTIFICATIONS_SERVICE,
     MATRIX_ADAPTER_SERVICE,
     AUTH_RESET_SERVICE,
+    WHITEBOARD_COLLABORATION_SERVICE,
     IS_SCHEMA_BOOTSTRAP,
   ],
 })

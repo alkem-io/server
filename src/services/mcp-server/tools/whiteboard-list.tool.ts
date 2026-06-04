@@ -5,6 +5,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { McpTool, McpToolDefinition, McpToolResult } from '../dto/mcp.types';
@@ -23,7 +24,7 @@ interface WhiteboardListItem {
   isMyContribution: boolean;
   updatedDate: Date;
   createdDate: Date;
-  uri: string;
+  url?: string;
   context?: {
     calloutId?: string;
     spaceId?: string;
@@ -40,6 +41,7 @@ export class WhiteboardListTool implements McpTool {
     @InjectRepository(Whiteboard)
     private readonly whiteboardRepository: Repository<Whiteboard>,
     private readonly authorizationService: AuthorizationService,
+    private readonly urlGeneratorService: UrlGeneratorService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -173,6 +175,23 @@ export class WhiteboardListTool implements McpTool {
           context.calloutId = whiteboard.framing.callout.id;
         }
 
+        // Real, browser-openable web URL built by the platform's own
+        // UrlGeneratorService (the canonical link the rest of Alkemio uses).
+        // Best-effort: an unresolvable board degrades to no link rather than
+        // failing the whole listing.
+        let url: string | undefined;
+        try {
+          url = await this.urlGeneratorService.getWhiteboardUrlPath(
+            whiteboard.id,
+            whiteboard.nameID
+          );
+        } catch (urlError) {
+          this.logger.verbose?.(
+            `list_whiteboards: could not resolve URL for whiteboard ${whiteboard.id}: ${urlError instanceof Error ? urlError.message : 'unknown error'}`,
+            LogContext.MCP_SERVER
+          );
+        }
+
         results.push({
           id: whiteboard.id,
           name: whiteboard.profile?.displayName || 'Untitled Whiteboard',
@@ -181,7 +200,7 @@ export class WhiteboardListTool implements McpTool {
           isMyContribution: whiteboard.createdBy === agentInfo.actorID,
           updatedDate: whiteboard.updatedDate,
           createdDate: whiteboard.createdDate,
-          uri: `alkemio://whiteboards/${whiteboard.id}`,
+          url,
           context: Object.keys(context).length > 0 ? context : undefined,
         });
       }

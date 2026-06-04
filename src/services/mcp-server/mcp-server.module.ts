@@ -1,11 +1,15 @@
 import { ActorContextModule } from '@core/actor-context/actor.context.module';
+import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { MicroservicesModule } from '@core/microservices/microservices.module';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
+import { User } from '@domain/community/user/user.entity';
 import { PlatformAuditEntry } from '@domain/community/user-email-change/platform.audit.entry.entity';
+import { VirtualAssistantModule } from '@domain/community/virtual-assistant/virtual.assistant.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { TemplateModule } from '@domain/template/template/template.module';
@@ -17,10 +21,14 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { ActivityModule } from '@platform/activity/activity.module';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { SearchModule } from '@services/api/search/search.module';
+import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
 import { McpApiKey } from './auth/mcp-api-key.entity';
 import { McpApiKeyService } from './auth/mcp-api-key.service';
 import { McpApiKeyStrategy } from './auth/mcp-api-key.strategy';
 import { McpAuthGuard } from './auth/mcp-auth.guard';
+import { McpDelegationStrategy } from './auth/mcp-delegation.strategy';
+import { AssistantCapabilityGateService } from './capabilities/assistant.capability.gate.service';
+import { AssistantCapabilityResolverQueries } from './capabilities/assistant.capability.resolver.queries';
 import {
   MCP_RESOURCE_PROVIDER,
   MCP_TOOL,
@@ -78,10 +86,14 @@ const RESOURCE_PROVIDERS = [
       InnovationPack,
       PlatformAuditEntry,
       CalloutContribution,
+      User,
     ]),
     PassportModule,
     ActorContextModule,
+    AuthenticationModule,
     AuthorizationModule,
+    MicroservicesModule,
+    VirtualAssistantModule,
     PlatformAuthorizationPolicyModule,
     WhiteboardModule,
     CalloutModule,
@@ -91,13 +103,18 @@ const RESOURCE_PROVIDERS = [
     ActivityModule,
     TemplateModule,
     SearchModule,
+    UrlGeneratorModule,
   ],
   controllers: [McpServerController],
   providers: [
     McpServerService,
     McpApiKeyService,
     McpApiKeyStrategy,
+    McpDelegationStrategy,
     McpAuthGuard,
+    // Assistant capability surface: dynamic enumeration + per-tool gate.
+    AssistantCapabilityResolverQueries,
+    AssistantCapabilityGateService,
     // Registries — the single source of truth the MCP service reads from.
     ResourceRegistry,
     ToolRegistry,
