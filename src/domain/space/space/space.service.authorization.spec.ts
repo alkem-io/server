@@ -919,6 +919,28 @@ describe('SpaceAuthorizationService', () => {
       expect(getStorageAggregatorRulesArg()).toEqual([]);
     });
 
+    it('[US2] does NOT grant FILE_UPLOAD when membership is not allowed (e.g. archived space) even if allowMembersToCreateCallouts is true', async () => {
+      // Archived spaces pass spaceMembershipAllowed=false; the upload mutation
+      // authorizes solely on FILE_UPLOAD, so the rule must be suppressed here to
+      // avoid granting upload access on an archived space's storage bucket.
+      const space = createMockSpace(); // defaultSettings: allowMembersToCreateCallouts = true
+      setupPropagateMocks();
+      (roleSetService.getCredentialsForRole as any).mockResolvedValue([
+        { type: AuthorizationCredential.SPACE_MEMBER, resourceID: 'space-1' },
+      ]);
+      (
+        roleSetService.getDirectParentCredentialForRole as any
+      ).mockResolvedValue(undefined);
+
+      await service.propagateAuthorizationToChildEntities(
+        space as any,
+        false, // spaceMembershipAllowed = false
+        []
+      );
+
+      expect(getStorageAggregatorRulesArg()).toEqual([]);
+    });
+
     it('[US3] targets create-callout actor criteria including inherited parent members and cascades', async () => {
       // defaultSettings: inheritMembershipRights = true and PUBLIC privacy, so
       // getActorCriteria appends the parent-space member credential.

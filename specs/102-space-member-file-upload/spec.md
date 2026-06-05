@@ -118,6 +118,12 @@ Space B members gain nothing. Repeat for a subspace relative to its parent.
 - **Existing spaces**: The ability becomes effective only after a Space's
   permissions are recomputed; spaces created or refreshed after the change pick it
   up automatically.
+- **Archived / non-membership spaces**: A Space whose state disables membership
+  capabilities (e.g. archived) MUST NOT grant the upload ability, even if its
+  "members may create callouts" setting is still on. Because uploading is
+  authorized purely on the upload capability (no separate read requirement),
+  leaving the grant in place would let a member write to an archived Space's
+  storage.
 
 ## Requirements *(mandatory)*
 
@@ -147,6 +153,9 @@ Space B members gain nothing. Repeat for a subspace relative to its parent.
 - **FR-008**: The granted ability MUST take effect through the platform's standard
   permission recomputation, without requiring manual, per-file or per-callout
   permission changes.
+- **FR-009**: When a Space's state disables membership capabilities (e.g. an
+  archived Space), the upload ability MUST NOT be granted to members regardless of
+  the "members may create callouts" setting value.
 
 ### Key Entities *(include if feature involves data)*
 

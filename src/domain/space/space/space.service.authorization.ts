@@ -471,11 +471,14 @@ export class SpaceAuthorizationService {
     // upload files to the Space-level storage bucket, as new callout content
     // (e.g. description images) is uploaded there temporarily before the
     // callout's own storage bucket exists. Grant FILE_UPLOAD to the same
-    // actors that may create callouts.
+    // actors that may create callouts. Gated on spaceMembershipAllowed so that
+    // archived spaces (where membership capabilities are disabled) do not grant
+    // upload access on their storage bucket.
     const storageMemberFileUploadRules =
       await this.getStorageMemberFileUploadRules(
         space.community.roleSet,
-        space.settings
+        space.settings,
+        spaceMembershipAllowed
       );
     const storageAuthorizations = await this.resilientCascade(
       'storage-aggregator',
@@ -715,9 +718,13 @@ export class SpaceAuthorizationService {
 
   private async getStorageMemberFileUploadRules(
     roleSet: IRoleSet,
-    spaceSettings: ISpaceSettings
+    spaceSettings: ISpaceSettings,
+    spaceMembershipAllowed: boolean
   ): Promise<IAuthorizationPolicyRuleCredential[]> {
-    if (!spaceSettings.collaboration.allowMembersToCreateCallouts) {
+    if (
+      !spaceMembershipAllowed ||
+      !spaceSettings.collaboration.allowMembersToCreateCallouts
+    ) {
       return [];
     }
     const criteria = await this.getActorCriteria(roleSet, spaceSettings);

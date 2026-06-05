@@ -22,6 +22,7 @@ Given the Space's authorization has been (re)computed:
 | members-may-create-callouts = **ON** | Inherited parent-space member (when membership rights inherited) | **Allowed** | **Succeeds** |
 | members-may-create-callouts = **ON** | Space admin / lead | Allowed (unchanged) | Succeeds (unchanged) |
 | members-may-create-callouts = **OFF** | Space member | **Denied** | **Denied** |
+| members-may-create-callouts = **ON**, but Space **archived** (membership disabled) | Space member | **Denied** | **Denied** |
 | any | Non-member, non-admin, no create-callout right | Denied | Denied |
 | any | Member of a **different** Space | Denied for this Space's storage | N/A |
 
@@ -40,6 +41,11 @@ Given the Space's authorization has been (re)computed:
    introduced for "temporary" uploads.
 6. **Relocation preserved**: staged callout content continues to be relocated onto
    the newly created callout; no file is left orphaned or inaccessible.
+7. **Archived spaces excluded**: when a Space's state disables membership
+   capabilities (e.g. archived), the member upload capability is not granted, even
+   if the setting is ON. Uploading is authorized solely on the upload capability
+   (no read requirement), so the grant must be suppressed rather than relying on a
+   read gate.
 
 ## Verification hooks
 
