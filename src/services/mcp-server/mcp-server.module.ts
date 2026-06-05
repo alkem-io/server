@@ -45,6 +45,7 @@ import { AuditLogAnalyzeTool } from './tools/audit-log-analyze.tool';
 import { CommunityActivitySummaryTool } from './tools/community-activity-summary.tool';
 import { ContributionsAnalyzeTool } from './tools/contributions-analyze.tool';
 import { CreateWhiteboardTool } from './tools/create-whiteboard.tool';
+import { EditWhiteboardElementsTool } from './tools/edit-whiteboard-elements.tool';
 import { SearchContentTool } from './tools/search-content.tool';
 import { TemplateNavigatorTool } from './tools/template-navigator.tool';
 import { ToolRegistry } from './tools/tool.registry';
@@ -67,6 +68,7 @@ const TOOL_PROVIDERS = [
   AuditLogAnalyzeTool,
   CreateWhiteboardTool,
   UpdateWhiteboardContentTool,
+  EditWhiteboardElementsTool,
   SearchContentTool,
 ];
 

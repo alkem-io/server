@@ -73,6 +73,9 @@ describe('US2 — delegated writes are authorization-enforced (T024)', () => {
             .fn()
             .mockResolvedValue('https://example/whiteboards/wb-1'),
         } as any,
+        // templateService — only used for the fromTemplateId path; these tests
+        // pass explicit `content`, so a bare mock suffices.
+        { getTemplateOrFail: vi.fn(), getWhiteboard: vi.fn() } as any,
         { emit: vi.fn() } as any,
         logger as any
       );

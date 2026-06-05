@@ -440,7 +440,7 @@ describe('TemplateNavigatorTool', () => {
       expect(content.error).toContain('do not have access');
     });
 
-    it('should surface the whiteboard scene for a whiteboard template', async () => {
+    it('should surface compact whiteboard metadata (element count + apply hint), NOT the scene', async () => {
       const scene = JSON.stringify({
         type: 'excalidraw',
         elements: [{ id: 'a', type: 'rectangle' }],
@@ -471,9 +471,12 @@ describe('TemplateNavigatorTool', () => {
       const content = parseResultContent(result);
       expect(content.content.type).toBe('whiteboard');
       expect(content.content.hasContent).toBe(true);
-      // Scene is surfaced as a JSON string that update_whiteboard_content accepts.
-      expect(content.content.scene).toBe(scene);
-      expect(JSON.parse(content.content.scene).elements).toHaveLength(1);
+      // Only compact metadata — the scene is applied BY REFERENCE via
+      // update_whiteboard_content(fromTemplateId) and never surfaced to the model
+      // (a large scene through the LLM stalls the turn).
+      expect(content.content.elementCount).toBe(1);
+      expect(content.content.scene).toBeUndefined();
+      expect(content.content.applyHint).toContain('fromTemplateId');
     });
 
     it('should degrade gracefully when the whiteboard scene is not valid JSON', async () => {

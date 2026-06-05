@@ -77,10 +77,11 @@ export class TemplateNavigatorTool implements McpTool {
         'Navigate and discover templates across innovation packs. ' +
         'Find templates for spaces, callouts, whiteboards, posts, and community guidelines. ' +
         'Actions: "list" shows available templates, "search" finds templates by name/tags, ' +
-        '"details" shows full information about a specific template. ' +
-        'For a whiteboard template, "details" also returns the template\'s Excalidraw ' +
-        'scene as a `content.scene` JSON string — pass that scene as the `content` arg ' +
-        'of update_whiteboard_content to apply the template to an existing whiteboard.',
+        '"details" shows information about a specific template (metadata only — for a whiteboard ' +
+        'template it reports an element count, NOT the scene). ' +
+        'To APPLY a whiteboard template to a board, call update_whiteboard_content with ' +
+        '`fromTemplateId` set to the template id — the server applies the scene by reference. ' +
+        'Never fetch or pass the scene JSON yourself.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -89,7 +90,7 @@ export class TemplateNavigatorTool implements McpTool {
             enum: ['list', 'search', 'details'],
             description:
               'Action to perform: "list" templates, "search" by query, or get "details" of a template. ' +
-              'For whiteboard templates, "details" returns the applicable Excalidraw scene in content.scene.',
+              'To apply a whiteboard template, call update_whiteboard_content with fromTemplateId — do not pass a scene.',
           },
           templateType: {
             type: 'string',
@@ -693,23 +694,22 @@ export class TemplateNavigatorTool implements McpTool {
           const whiteboard = await this.templateService.getWhiteboard(
             template.id
           );
-          // The Whiteboard entity's @AfterLoad hook (decompressValue) already
-          // decompresses `content` from the base64/zlib-encoded column into a
-          // plain Excalidraw scene JSON string — the same shape that
-          // update_whiteboard_content accepts as its `content` arg. Surface it
-          // as `scene` so the assistant can apply this template to a live board.
           const summary: Record<string, unknown> = {
             type: 'whiteboard',
             hasContent: !!whiteboard.content,
           };
-          // Validate the scene is parseable before surfacing it; degrade
-          // gracefully (omit `scene`, keep `hasContent`) on any failure rather
-          // than throwing the whole tool result. The scene can be large — this
-          // is acceptable for an explicit 'details' request.
+          // Surface only COMPACT metadata — never the scene itself. The Excalidraw
+          // scene can be tens-to-hundreds of KB; routing it through the model (in
+          // here, then back out as update_whiteboard_content's `content`) stalls the
+          // turn. To APPLY this template, the model calls update_whiteboard_content
+          // with `fromTemplateId` and the server applies the scene by reference —
+          // the scene never touches the model.
           if (whiteboard.content) {
             try {
-              JSON.parse(whiteboard.content);
-              summary.scene = whiteboard.content;
+              const scene = JSON.parse(whiteboard.content);
+              if (scene && Array.isArray(scene.elements)) {
+                summary.elementCount = scene.elements.length;
+              }
             } catch (sceneError) {
               this.logger.warn?.(
                 `navigate_templates details: could not parse whiteboard scene for template ${template.id}: ${sceneError instanceof Error ? sceneError.message : 'unknown error'}`,
@@ -717,6 +717,8 @@ export class TemplateNavigatorTool implements McpTool {
               );
             }
           }
+          summary.applyHint =
+            'To apply this template to a whiteboard, call update_whiteboard_content with fromTemplateId set to this template id. Do not fetch or pass the scene yourself.';
           return summary;
         } catch {
           return { type: 'whiteboard', hasContent: false };
