@@ -8,7 +8,6 @@
       "extensions": [
         "dbaeumer.vscode-eslint",
         "esbenp.prettier-vscode",
-        "ms-azuretools.vscode-docker",
         "eamodio.gitlens",
         "firsttris.vscode-jest-runner",
         "GraphQL.vscode-graphql",

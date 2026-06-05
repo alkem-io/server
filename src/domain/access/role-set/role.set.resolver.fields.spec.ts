@@ -1,6 +1,7 @@
 import { RoleName } from '@common/enums/role.name';
 import { ValidationException } from '@common/exceptions';
 import { PaginationInputOutOfBoundException } from '@common/exceptions/pagination/pagination.input.out.of.bounds.exception';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UserService } from '@domain/community/user/user.service';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -16,6 +17,9 @@ describe('RoleSetResolverFields', () => {
   let roleSetService: RoleSetService;
   let userService: UserService;
   let virtualActorLookupService: VirtualActorLookupService;
+  let authorizationService: AuthorizationService;
+
+  const mockActorContext = { actorID: 'actor-1', credentials: [] } as any;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -32,6 +36,8 @@ describe('RoleSetResolverFields', () => {
     virtualActorLookupService = module.get<VirtualActorLookupService>(
       VirtualActorLookupService
     );
+    authorizationService =
+      module.get<AuthorizationService>(AuthorizationService);
   });
 
   it('should be defined', () => {
@@ -59,6 +65,7 @@ describe('RoleSetResolverFields', () => {
       ).mockResolvedValue(mockResult);
 
       const result = await resolver.availableUsersForEntryRole(
+        mockActorContext,
         mockRoleSet,
         mockPagination
       );
@@ -76,7 +83,7 @@ describe('RoleSetResolverFields', () => {
       );
     });
 
-    it('should include parent role set credential when parent exists', async () => {
+    it('should restrict to parent members when caller cannot invite to the parent role set', async () => {
       const mockRoleSet = {
         id: 'rs-1',
         entryRoleName: RoleName.MEMBER,
@@ -96,6 +103,12 @@ describe('RoleSetResolverFields', () => {
       (roleSetService.getParentRoleSet as Mock).mockResolvedValue(
         parentRoleSet
       );
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue({
+        id: 'parent-rs',
+        authorization: { id: 'auth-parent' },
+      });
+      // Caller is NOT authorized to invite into the parent RoleSet
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(false);
       (roleSetService.getCredentialDefinitionForRole as Mock).mockResolvedValue(
         parentCredential
       );
@@ -103,7 +116,11 @@ describe('RoleSetResolverFields', () => {
         userService.getPaginatedAvailableEntryRoleUsers as Mock
       ).mockResolvedValue({ items: [] });
 
-      await resolver.availableUsersForEntryRole(mockRoleSet, {} as any);
+      await resolver.availableUsersForEntryRole(
+        mockActorContext,
+        mockRoleSet,
+        {} as any
+      );
 
       expect(
         userService.getPaginatedAvailableEntryRoleUsers
@@ -114,6 +131,54 @@ describe('RoleSetResolverFields', () => {
         expect.anything(),
         undefined
       );
+    });
+
+    it('should expose the full platform list when caller can invite to the parent role set', async () => {
+      const mockRoleSet = {
+        id: 'rs-1',
+        entryRoleName: RoleName.MEMBER,
+      } as any;
+      const mockRoleDefinition = {
+        credential: { type: 'space-member', resourceID: 'res-1' },
+      };
+      const parentRoleSet = { id: 'parent-rs' } as any;
+
+      (roleSetService.getRoleDefinition as Mock).mockResolvedValue(
+        mockRoleDefinition
+      );
+      (roleSetService.getParentRoleSet as Mock).mockResolvedValue(
+        parentRoleSet
+      );
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue({
+        id: 'parent-rs',
+        authorization: { id: 'auth-parent' },
+      });
+      // Caller IS authorized to invite into the parent RoleSet
+      (authorizationService.isAccessGranted as Mock).mockReturnValue(true);
+      (
+        userService.getPaginatedAvailableEntryRoleUsers as Mock
+      ).mockResolvedValue({ items: [] });
+
+      await resolver.availableUsersForEntryRole(
+        mockActorContext,
+        mockRoleSet,
+        {} as any
+      );
+
+      // No parent restriction => full platform list (current members still
+      // excluded downstream in the user service).
+      expect(
+        userService.getPaginatedAvailableEntryRoleUsers
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          parentRoleSetRole: undefined,
+        }),
+        expect.anything(),
+        undefined
+      );
+      expect(
+        roleSetService.getCredentialDefinitionForRole
+      ).not.toHaveBeenCalled();
     });
   });
 
