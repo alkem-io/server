@@ -209,12 +209,17 @@ export class KratosService {
    * @param identity - The identity object containing credentials.
    * @returns The corresponding authentication types based on the identity's credentials.
    *
-   * The function checks the following conditions in order:
-   * - If the identity has OIDC credentials, it examines the identifiers:
-   *   - If the identifier starts with 'microsoft', it adds `AuthenticationType.MICROSOFT`.
-   *   - If the identifier starts with 'linkedin', it adds `AuthenticationType.LINKEDIN`.
-   *   - If the identifier starts with 'github', it adds `AuthenticationType.GITHUB`.
+   * The function checks the following conditions:
+   * - For OIDC credentials it inspects EVERY linked identifier (a single Kratos
+   *   identity can have several — e.g. `['cleverbase:…', 'linkedin:…']`), mapping
+   *   each provider prefix to its `AuthenticationType`:
+   *   - `microsoft` -> `AuthenticationType.MICROSOFT`
+   *   - `linkedin`  -> `AuthenticationType.LINKEDIN`
+   *   - `github`    -> `AuthenticationType.GITHUB`
+   *   - `cleverbase` -> `AuthenticationType.CLEVERBASE`
    * - If the identity has password credentials, it adds `AuthenticationType.EMAIL`.
+   * - If the identity has passkey (or legacy webauthn) credentials, it adds
+   *   `AuthenticationType.PASSKEY`.
    * - If none of the above conditions are met, it adds `AuthenticationType.UNKNOWN`.
    */
   public mapAuthenticationType(identity: Identity): AuthenticationType[] {
@@ -222,24 +227,38 @@ export class KratosService {
       return [AuthenticationType.UNKNOWN];
     }
 
-    const authTypes: AuthenticationType[] = [];
-    const oidcIdentifiers = identity.credentials.oidc?.identifiers;
-    const identifier = oidcIdentifiers?.[0];
+    // Map each OIDC provider prefix to its AuthenticationType. Kratos stores the
+    // identifier as `<provider>:<subject>`, and one identity can carry several.
+    const oidcProviderMap: ReadonlyArray<[string, AuthenticationType]> = [
+      ['microsoft', AuthenticationType.MICROSOFT],
+      ['linkedin', AuthenticationType.LINKEDIN],
+      ['github', AuthenticationType.GITHUB],
+      ['cleverbase', AuthenticationType.CLEVERBASE],
+    ];
 
-    if (identifier) {
-      if (identifier.startsWith('microsoft'))
-        authTypes.push(AuthenticationType.MICROSOFT);
-      if (identifier.startsWith('linkedin'))
-        authTypes.push(AuthenticationType.LINKEDIN);
-      if (identifier.startsWith('github'))
-        authTypes.push(AuthenticationType.GITHUB);
+    const authTypes = new Set<AuthenticationType>();
+
+    const oidcIdentifiers = identity.credentials.oidc?.identifiers ?? [];
+    for (const identifier of oidcIdentifiers) {
+      for (const [prefix, type] of oidcProviderMap) {
+        if (identifier.startsWith(prefix)) {
+          authTypes.add(type);
+        }
+      }
     }
 
     if (identity.credentials.password) {
-      authTypes.push(AuthenticationType.EMAIL);
+      authTypes.add(AuthenticationType.EMAIL);
     }
 
-    return authTypes.length ? authTypes : [AuthenticationType.UNKNOWN];
+    // Passkeys are a separate Kratos credential type (`passkey`, with `webauthn`
+    // as the legacy key) — not OIDC and not password — so they must be detected
+    // explicitly or they never surface as an authentication method.
+    if (identity.credentials.passkey || identity.credentials.webauthn) {
+      authTypes.add(AuthenticationType.PASSKEY);
+    }
+
+    return authTypes.size ? [...authTypes] : [AuthenticationType.UNKNOWN];
   }
 
   /**

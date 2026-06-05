@@ -138,6 +138,42 @@ export class PlatformAuditEntryRepository {
     };
   }
 
+  /**
+   * Idempotency guard for the broker-driven password-change observation
+   * (spec 005, FR-005). Returns true when an `OBSERVED` password-change audit
+   * row already exists for the `(subjectUserId, sourceFlowId)` key — i.e. this
+   * exact password change was already recorded. At-least-once broker delivery
+   * and Kratos webhook retries can redeliver the same event; the consumer
+   * checks this before invoking the observer and no-ops (acks) when it returns
+   * true, so a real password change yields exactly one audit row + one email.
+   *
+   * Keyed on the audit table (the system of record) rather than a TTL marker:
+   * the row is the authoritative, durable dedupe key and the read is a single
+   * indexed-ish lookup on the hot path of a rare event — cheaper to reason
+   * about than a second (Redis) store and immune to marker eviction.
+   *
+   * `sourceFlowId` is matched against the `details` JSONB column.
+   */
+  public async existsObservedFor(
+    subjectUserId: string,
+    sourceFlowId: string
+  ): Promise<boolean> {
+    const count = await this.repo
+      .createQueryBuilder('entry')
+      .where('entry."subjectUserId" = :subjectUserId', { subjectUserId })
+      .andWhere('entry."category" = :category', {
+        category: PASSWORD_CHANGE_CATEGORY,
+      })
+      .andWhere('entry."outcome" = :outcome', {
+        outcome: PlatformAuditOutcome.OBSERVED,
+      })
+      .andWhere(`entry."details"->>'sourceFlowId' = :sourceFlowId`, {
+        sourceFlowId,
+      })
+      .getCount();
+    return count > 0;
+  }
+
   public async findLatestPasswordChangeBySubject(
     subjectUserId: string
   ): Promise<PlatformAuditEntry | null> {
