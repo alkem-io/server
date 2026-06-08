@@ -2,8 +2,10 @@ import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { MicroservicesModule } from '@core/microservices/microservices.module';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutModule } from '@domain/collaboration/callout/callout.module';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { CalloutsSetModule } from '@domain/collaboration/callouts-set/callouts.set.module';
 import { CollaborationModule } from '@domain/collaboration/collaboration/collaboration.module';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
@@ -45,6 +47,7 @@ import { AuditLogAnalyzeTool } from './tools/audit-log-analyze.tool';
 import { CommunityActivitySummaryTool } from './tools/community-activity-summary.tool';
 import { ContributionsAnalyzeTool } from './tools/contributions-analyze.tool';
 import { CreateWhiteboardTool } from './tools/create-whiteboard.tool';
+import { CreateWhiteboardInSpaceTool } from './tools/create-whiteboard-in-space.tool';
 import { EditWhiteboardElementsTool } from './tools/edit-whiteboard-elements.tool';
 import { SearchContentTool } from './tools/search-content.tool';
 import { TemplateNavigatorTool } from './tools/template-navigator.tool';
@@ -67,6 +70,7 @@ const TOOL_PROVIDERS = [
   TemplateNavigatorTool,
   AuditLogAnalyzeTool,
   CreateWhiteboardTool,
+  CreateWhiteboardInSpaceTool,
   UpdateWhiteboardContentTool,
   EditWhiteboardElementsTool,
   SearchContentTool,
@@ -88,6 +92,7 @@ const RESOURCE_PROVIDERS = [
       InnovationPack,
       PlatformAuditEntry,
       CalloutContribution,
+      Callout,
       User,
     ]),
     PassportModule,
@@ -99,6 +104,7 @@ const RESOURCE_PROVIDERS = [
     PlatformAuthorizationPolicyModule,
     WhiteboardModule,
     CalloutModule,
+    CalloutsSetModule,
     SpaceModule,
     CollaborationModule,
     SpaceLookupModule,
