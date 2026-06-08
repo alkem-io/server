@@ -760,6 +760,36 @@ export class RoleSetResolverMutationsMembership {
         continue;
       }
 
+      // An open application blocks invitation (createInvitationExistingActor
+      // would otherwise throw). Surface it as a typed result so the client can
+      // tell the inviter to resolve the application first.
+      const openApplication = await this.roleSetService.findOpenApplication(
+        actorID,
+        roleSet.id
+      );
+      if (openApplication) {
+        const result: RoleSetInvitationResult = {
+          type: RoleSetInvitationResultType.ALREADY_HAS_OPEN_APPLICATION,
+          application: openApplication,
+        };
+        invitationResults.push(result);
+        continue;
+      }
+
+      // Already a member: nothing to invite. Return a typed result rather than
+      // throwing a generic role-set error.
+      const isAlreadyMember = await this.roleSetService.isMember(
+        actorID,
+        roleSet
+      );
+      if (isAlreadyMember) {
+        const result: RoleSetInvitationResult = {
+          type: RoleSetInvitationResultType.ALREADY_MEMBER_OF_ROLE_SET,
+        };
+        invitationResults.push(result);
+        continue;
+      }
+
       const invitation =
         await this.roleSetService.createInvitationExistingActor(input);
 

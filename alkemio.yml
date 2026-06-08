@@ -205,14 +205,6 @@ identity:
 
         session_cookie_name: ${KRATOS_SESSION_COOKIE_NAME}:ory_kratos_session
 
-        # Shared-secret header validated on inbound Kratos webhooks (e.g. the
-        # settings-flow password-changed hook -> POST /rest/kratos/password-changed).
-        # The Kratos webhook config in .build/ory/kratos/ must inject this header
-        # with this value for the request to be accepted.
-        webhook_secret:
-          name: ${KRATOS_WEBHOOK_SECRET_NAME}:x-kratos-webhook-secret
-          value: ${KRATOS_WEBHOOK_SECRET_VALUE}:kratos-hook-dev-secret
-
       # Hydra / OIDC Relying Party configuration (alkemio-server acts as BFF).
       # Spec: specs/003-alkemio-oidc-idp/plan.md. Module: src/core/auth/oidc/.
       oidc:

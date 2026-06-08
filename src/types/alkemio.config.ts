@@ -64,16 +64,6 @@ export type AlkemioConfig = {
             password: string;
           };
           session_cookie_name: string;
-          /**
-           * Shared-secret header validated on inbound Kratos webhooks
-           * (currently: `POST /rest/kratos/password-changed`). The webhook
-           * configuration in `.build/ory/kratos/` must inject this header
-           * with this value for the request to be accepted.
-           */
-          webhook_secret: {
-            name: string;
-            value: string;
-          };
         };
         oidc: {
           issuer_url: string;

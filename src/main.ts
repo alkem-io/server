@@ -172,6 +172,11 @@ const bootstrap = async () => {
   const heartbeat = process.env.NODE_ENV === 'production' ? 30 : 120;
   const amqpEndpoint = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=${heartbeat}`;
   connectMicroservice(app, amqpEndpoint, MessagingQueue.AUTH_RESET);
+  // Kratos events (e.g. USER_PASSWORD_CHANGED published by the Go kratos-webhooks
+  // service). Dedicated durable queue — do NOT also bind it via @golevelup
+  // @RabbitSubscribe; a competing consumer would steal messages (see the
+  // golevelup note below).
+  connectMicroservice(app, amqpEndpoint, MessagingQueue.KRATOS_EVENTS);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.WHITEBOARDS);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.FILES);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.IN_APP_NOTIFICATIONS);
