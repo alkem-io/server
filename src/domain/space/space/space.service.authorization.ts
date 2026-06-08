@@ -3,6 +3,7 @@ import {
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
   CREDENTIAL_RULE_SPACE_ADMINS,
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
+  CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD,
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
   CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
   POLICY_RULE_READ_ABOUT,
@@ -466,13 +467,27 @@ export class SpaceAuthorizationService {
     );
     updatedAuthorizations.push(...communityAuthorizations);
 
+    // When members are allowed to create callouts they need to be able to
+    // upload files to the Space-level storage bucket, as new callout content
+    // (e.g. description images) is uploaded there temporarily before the
+    // callout's own storage bucket exists. Grant FILE_UPLOAD to the same
+    // actors that may create callouts. Gated on spaceMembershipAllowed so that
+    // archived spaces (where membership capabilities are disabled) do not grant
+    // upload access on their storage bucket.
+    const storageMemberFileUploadRules =
+      await this.getStorageMemberFileUploadRules(
+        space.community.roleSet,
+        space.settings,
+        spaceMembershipAllowed
+      );
     const storageAuthorizations = await this.resilientCascade(
       'storage-aggregator',
       ctx,
       () =>
         this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
           space.storageAggregator!,
-          space.authorization!
+          space.authorization!,
+          storageMemberFileUploadRules
         )
     );
     updatedAuthorizations.push(...storageAuthorizations);
@@ -699,6 +714,31 @@ export class SpaceAuthorizationService {
     );
 
     return authorization;
+  }
+
+  private async getStorageMemberFileUploadRules(
+    roleSet: IRoleSet,
+    spaceSettings: ISpaceSettings,
+    spaceMembershipAllowed: boolean
+  ): Promise<IAuthorizationPolicyRuleCredential[]> {
+    if (
+      !spaceMembershipAllowed ||
+      !spaceSettings.collaboration.allowMembersToCreateCallouts
+    ) {
+      return [];
+    }
+    const criteria = await this.getActorCriteria(roleSet, spaceSettings);
+    if (criteria.length === 0) {
+      return [];
+    }
+    const fileUploadRule = this.authorizationPolicyService.createCredentialRule(
+      [AuthorizationPrivilege.FILE_UPLOAD],
+      criteria,
+      CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD
+    );
+    // Must cascade so the rule reaches the storage aggregator's directStorage bucket.
+    fileUploadRule.cascade = true;
+    return [fileUploadRule];
   }
 
   private async getActorCriteria(
