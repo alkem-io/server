@@ -1,7 +1,6 @@
 import { WHITEBOARD_COLLABORATION_SERVICE } from '@common/constants/providers';
 import { LogContext } from '@common/enums';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
-import { TemplateType } from '@common/enums/template.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard/whiteboard.service';
@@ -12,6 +11,7 @@ import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.
 import { WhiteboardIntegrationEventPattern } from '@services/whiteboard-integration/types/event.pattern';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { McpTool, McpToolDefinition, McpToolResult } from '../dto/mcp.types';
+import { resolveTemplateScene } from './whiteboard-template-scene';
 
 interface UpdateWhiteboardContentArgs {
   whiteboardId: string;
@@ -119,7 +119,9 @@ export class UpdateWhiteboardContentTool implements McpTool {
     // scene never passes through the model) or from the explicit content arg.
     let sceneContent: string;
     if (fromTemplateId) {
-      const resolved = await this.resolveTemplateScene(
+      const resolved = await resolveTemplateScene(
+        this.templateService,
+        this.authorizationService,
         fromTemplateId,
         actorContext
       );
@@ -239,76 +241,6 @@ export class UpdateWhiteboardContentTool implements McpTool {
         `Could not update whiteboard content: ${error instanceof Error ? error.message : 'unknown error'}`
       );
     }
-  }
-
-  /**
-   * Resolve a whiteboard template's scene server-side, by reference. The scene is
-   * loaded from the template's whiteboard (the entity's @AfterLoad hook already
-   * decompresses `content` into a plain Excalidraw scene JSON string) and never
-   * passes through the model — applying a template only costs the model two ids
-   * (the target whiteboard + the template), not the whole scene. Requires READ on
-   * the template, mirroring navigate_templates.
-   */
-  private async resolveTemplateScene(
-    templateId: string,
-    actorContext: ActorContext
-  ): Promise<{ scene: string } | { error: string }> {
-    let template: Awaited<ReturnType<TemplateService['getTemplateOrFail']>>;
-    try {
-      template = await this.templateService.getTemplateOrFail(templateId, {
-        relations: { authorization: true },
-      });
-    } catch {
-      return { error: `Template not found: ${templateId}` };
-    }
-
-    if (template.type !== TemplateType.WHITEBOARD) {
-      return {
-        error: `Template ${templateId} is not a whiteboard template (type: ${template.type}). Only whiteboard templates can be applied to a whiteboard.`,
-      };
-    }
-
-    if (template.authorization) {
-      const canRead = this.authorizationService.isAccessGranted(
-        actorContext,
-        template.authorization,
-        AuthorizationPrivilege.READ
-      );
-      if (!canRead) {
-        return {
-          error:
-            'Access denied: you do not have permission to read this template.',
-        };
-      }
-    }
-
-    let templateWhiteboard: Awaited<
-      ReturnType<TemplateService['getWhiteboard']>
-    >;
-    try {
-      templateWhiteboard = await this.templateService.getWhiteboard(templateId);
-    } catch {
-      return {
-        error: `Template ${templateId} has no whiteboard content to apply.`,
-      };
-    }
-
-    if (!templateWhiteboard.content) {
-      return {
-        error: `Template ${templateId} has no whiteboard content to apply.`,
-      };
-    }
-
-    // The decompressed scene must be valid JSON (updateWhiteboardContent parses it).
-    try {
-      JSON.parse(templateWhiteboard.content);
-    } catch {
-      return {
-        error: `Template ${templateId} whiteboard content is not valid scene JSON.`,
-      };
-    }
-
-    return { scene: templateWhiteboard.content };
   }
 
   private errorResult(message: string): McpToolResult {

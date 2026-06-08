@@ -1,20 +1,29 @@
 import { LogContext } from '@common/enums';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutResolverMutations } from '@domain/collaboration/callout/callout.resolver.mutations';
 import { CreateContributionOnCalloutInput } from '@domain/collaboration/callout/dto/callout.dto.create.contribution';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { TemplateService } from '@domain/template/template/template.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { McpTool, McpToolDefinition, McpToolResult } from '../dto/mcp.types';
+import { resolveTemplateScene } from './whiteboard-template-scene';
 
 interface CreateWhiteboardArgs {
   calloutId: string;
   displayName: string;
   content?: string;
+  /**
+   * A whiteboard TEMPLATE id to fill the new board with, by reference. When set,
+   * the server loads the template scene server-side — the scene never travels
+   * through the model. Provide this OR `content` (or neither for a blank board).
+   */
+  fromTemplateId?: string;
 }
 
 /**
@@ -36,6 +45,8 @@ export class CreateWhiteboardTool implements McpTool {
     @InjectRepository(CalloutContribution)
     private readonly contributionRepository: Repository<CalloutContribution>,
     private readonly urlGeneratorService: UrlGeneratorService,
+    private readonly templateService: TemplateService,
+    private readonly authorizationService: AuthorizationService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -44,11 +55,15 @@ export class CreateWhiteboardTool implements McpTool {
     return {
       name: 'create_whiteboard',
       description:
-        'Create a whiteboard on a callout. Provide the Excalidraw scene as JSON in "content" ' +
-        '(you generate the scene; this tool persists it). Requires CONTRIBUTE access to the ' +
-        'target callout, and the callout must allow whiteboard contributions. ' +
-        'Use list_whiteboards / a callout id to pick the target. ' +
-        'The content must be a valid Excalidraw scene object: {"type":"excalidraw","version":2,"elements":[...],"appState":{...}}.',
+        'Create a whiteboard on a callout. To create it FROM A TEMPLATE, set "fromTemplateId" to ' +
+        'the whiteboard template id — PREFERRED: the server fills the new board with the template ' +
+        'scene by reference, so you must NOT generate or paste the scene yourself (do not call ' +
+        'navigate_templates "details" to fetch a scene). Otherwise set "content" to a full ' +
+        'Excalidraw scene JSON string, or omit both for a blank board. Provide at most one of ' +
+        '"fromTemplateId" or "content". Requires CONTRIBUTE access to the target callout, and the ' +
+        'callout must allow whiteboard contributions. Use list_whiteboards / a callout id to pick ' +
+        'the target. A "content" scene must look like ' +
+        '{"type":"excalidraw","version":2,"elements":[...],"appState":{...}}.',
       inputSchema: {
         type: 'object',
         properties: {
@@ -61,10 +76,18 @@ export class CreateWhiteboardTool implements McpTool {
             type: 'string',
             description: 'The display name (title) for the new whiteboard.',
           },
+          fromTemplateId: {
+            type: 'string',
+            description:
+              'A whiteboard template id to fill the new board with, by reference. PREFERRED way to ' +
+              'create a board from a template — the server applies the template scene; do not pass ' +
+              'the scene yourself. Provide this OR "content".',
+          },
           content: {
             type: 'string',
             description:
-              'The whiteboard content as an Excalidraw scene JSON string. Optional — omit for an empty whiteboard.',
+              'A full Excalidraw scene JSON string. Optional — omit for a blank board. To create ' +
+              'from a template use "fromTemplateId" instead. Provide this OR "fromTemplateId".',
           },
         },
         required: ['calloutId', 'displayName'],
@@ -76,28 +99,50 @@ export class CreateWhiteboardTool implements McpTool {
     args: unknown,
     actorContext: ActorContext
   ): Promise<McpToolResult> {
-    const { calloutId, displayName, content } = args as CreateWhiteboardArgs;
+    const { calloutId, displayName, content, fromTemplateId } =
+      args as CreateWhiteboardArgs;
 
     if (!calloutId || !displayName) {
       return this.errorResult(
         'Both "calloutId" and "displayName" are required.'
       );
     }
+    if (content && fromTemplateId) {
+      return this.errorResult(
+        'Provide only one of "fromTemplateId" or "content", not both.'
+      );
+    }
 
-    // Validate content is parseable JSON before persisting (the GraphQL scalar
-    // would do this on the normal path; we call the resolver directly).
-    if (content !== undefined && content !== '') {
+    // Resolve the scene the new board starts with: from a template (server-side,
+    // by reference — the scene never passes through the model), from the explicit
+    // content arg, or blank.
+    let sceneContent: string | undefined;
+    if (fromTemplateId) {
+      const resolved = await resolveTemplateScene(
+        this.templateService,
+        this.authorizationService,
+        fromTemplateId,
+        actorContext
+      );
+      if ('error' in resolved) {
+        return this.errorResult(resolved.error);
+      }
+      sceneContent = resolved.scene;
+    } else if (content !== undefined && content !== '') {
+      // The GraphQL scalar JSON.parses the content on the normal path; we call the
+      // resolver directly, so validate up front for a clean error message.
       try {
         JSON.parse(content);
       } catch {
         return this.errorResult(
-          'The "content" is not valid JSON. Provide a valid Excalidraw scene JSON string.'
+          'The "content" is not valid JSON. Provide a valid Excalidraw scene JSON string, or use "fromTemplateId" to start from a template.'
         );
       }
+      sceneContent = content;
     }
 
     this.logger.verbose?.(
-      `create_whiteboard: callout=${calloutId}, name="${displayName}", actor=${actorContext.actorID || 'anonymous'}`,
+      `create_whiteboard: callout=${calloutId}, name="${displayName}", actor=${actorContext.actorID || 'anonymous'}${fromTemplateId ? `, fromTemplate=${fromTemplateId}` : ''}`,
       LogContext.MCP_SERVER
     );
 
@@ -106,7 +151,7 @@ export class CreateWhiteboardTool implements McpTool {
       type: CalloutContributionType.WHITEBOARD,
       whiteboard: {
         profile: { displayName },
-        ...(content ? { content } : {}),
+        ...(sceneContent ? { content: sceneContent } : {}),
       },
     } as CreateContributionOnCalloutInput;
 

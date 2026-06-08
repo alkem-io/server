@@ -148,6 +148,10 @@ describe('US2 — delegated writes are authorization-enforced (T024)', () => {
             .fn()
             .mockResolvedValue('https://example/whiteboards/wb-new'),
         } as any,
+        // templateService + authorizationService — only used for the fromTemplateId
+        // path; these tests create with explicit/blank content, so bare mocks suffice.
+        { getTemplateOrFail: vi.fn(), getWhiteboard: vi.fn() } as any,
+        { isAccessGranted: vi.fn().mockReturnValue(true) } as any,
         logger as any
       );
       return { tool, calloutResolverMutations };
