@@ -5,6 +5,28 @@ credential-based authorization computes write access to a Space's shared storage
 the analogous "members may create callouts/subspaces" capability is already granted,
 and where a gated grant should be injected so it is correctly scoped.
 
+## Which storage bucket is the Space's shared storage for callout creation
+
+- **Decision**: The Space-level bucket that stages new callout content is the **Space
+  profile's storage bucket**, reached via `space → profile → storageBucket`
+  (`space.profile.storageBucket`). The member file-upload grant targets *this* bucket
+  and no other.
+- **Rationale**: The Space profile's storage bucket is the Space's own document store.
+  It is the semantically correct "Space storage" for content that belongs to the Space
+  before a callout exists. Granting upload here keeps the capability tightly scoped to
+  one bucket the Space owns directly.
+- **Correction of an earlier assumption** *(this supersedes the first implementation)*:
+  - The first cut granted upload on the **storage aggregator's `directStorage`**
+    bucket (`space.storageAggregator.directStorage`). That bucket is **not** the
+    create-callout upload target for spaces — only the platform and account storage
+    configs use `directStorageBucket`. Grant removed.
+  - The client's `SpaceStorageConfig` query currently resolves the upload target to
+    the **About profile's** bucket (`space.about.profile.storageBucket`). That is the
+    *wrong* bucket — uploading Space-level callout content into the About (description)
+    storage makes no semantic sense. The server grant is therefore **not** placed on
+    the About profile; the client must be corrected to point at
+    `space.profile.storageBucket`. *(Client change tracked separately.)*
+
 ## How storage upload is authorized today
 
 - **Decision**: Keep the existing upload authorization check unchanged; widen *who
@@ -53,22 +75,27 @@ and where a gated grant should be injected so it is correctly scoped.
 ## Where and when to inject the grant (scoping)
 
 - **Decision**: Compute the gated rule in the **Space authorization service** (which
-  owns the Space settings and member criteria) and pass it into the **storage
-  aggregator authorization** step as an optional set of additional credential rules,
-  marked to cascade so it reaches the Space's shared storage bucket. Gate strictly on
-  the "members may create callouts" setting.
+  owns the Space settings and member criteria) and pass it as a cascading credential
+  rule into the **Space profile authorization** step
+  (`profileAuthorizationService.applyAuthorizationPolicy(space.profile.id, …, rules)`),
+  so it reaches `space.profile.storageBucket`. Gate strictly on the "members may
+  create callouts" setting.
 - **Rationale**: Each Space (including each subspace) computes its own authorization
-  from its own settings and owns its own shared storage, so injecting at this point
-  yields correct per-Space scoping (FR-005) with no leakage across spaces. The
-  storage-aggregator authorization reset only touches that Space's own shared storage
-  bucket, so the cascade stays scoped. The optional parameter is backward-compatible
-  with the other callers (platform, account, user, organization) which pass nothing.
+  from its own settings and owns its own profile storage, so injecting at this point
+  yields correct per-Space scoping (FR-005) with no leakage across spaces. The Space
+  profile authorization reset only touches that Space's own profile subtree, whose
+  only `FILE_UPLOAD`-relevant node is its storage bucket, so the cascade stays scoped
+  to exactly the target bucket. The `profileAuthorizationService` already accepts a
+  `credentialRulesFromParent` argument, so no service signature change is needed.
 - **Alternatives considered**:
+  - *Pass the rule into the storage-aggregator authorization step* (the first
+    implementation) — rejected: lands on `directStorage`, which the create-callout
+    flow does not use for spaces.
+  - *Pass the rule into the Space About authorization step* — rejected: lands on
+    `space.about.profile.storageBucket`, the About/description storage, which is not
+    the correct home for Space-level callout content.
   - *Append the rule to the Space's top-level policy with cascade* — rejected:
-    cascades everywhere in the Space subtree, not just the shared storage.
-  - *Add the rule inside the storage-aggregator service unconditionally* — rejected:
-    that service is shared by platform/account/user/organization and has no business
-    knowing about callout settings.
+    cascades everywhere in the Space subtree, not just the Space profile storage.
 
 ## Effectivity / rollout
 

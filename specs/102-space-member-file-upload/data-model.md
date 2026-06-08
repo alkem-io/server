@@ -19,19 +19,20 @@ and `schema-baseline.graphql` are unaffected.
 | **Space** | Owns the "members may create callouts" setting and its own shared storage location. | None |
 | **Space setting: members-may-create-callouts** | The single switch that gates both callout creation and (now) the matching file-upload capability. | None — read, not modified |
 | **Space member (actor credential set)** | The actors who, when the setting is on, may create callouts and upload their files. | None — referenced, not modified |
-| **Space shared storage location** | The Space-level storage that temporarily holds new callout content; the target of the file-upload capability. | None to its data; its computed authorization policy gains one credential rule |
+| **Space shared storage location** | The Space-level storage that temporarily holds new callout content — concretely the Space profile's storage bucket (`space.profile.storageBucket`); the target of the file-upload capability. | None to its data; its computed authorization policy gains one credential rule |
 | **Authorization policy (computed)** | The recomputed access rules for the shared storage. | Gains one **conditional, cascading** credential rule granting the file-upload capability to the eligible actor set |
 
 ## Authorization rule (the one added element)
 
 - **Subject**: the actor credential set permitted to create callouts in the Space
   (members, plus inherited parent-space members where applicable).
-- **Granted capability**: file-upload on the Space's shared storage location.
+- **Granted capability**: file-upload on the Space's shared storage location (the
+  Space profile's storage bucket, `space.profile.storageBucket`).
 - **Condition**: present only when the Space's "members may create callouts" setting
   is enabled; absent otherwise.
-- **Scope/propagation**: cascades from the Space's storage aggregator down to that
-  Space's shared storage bucket only; does not extend to other spaces or to unrelated
-  child entities.
+- **Scope/propagation**: cascades from the Space profile authorization down to that
+  Space profile's storage bucket only; does not extend to the About profile storage,
+  the storage aggregator's directStorage, other spaces, or unrelated child entities.
 - **Lifecycle**: created/removed solely by the authorization-reset computation for
   the owning Space; never written ad hoc.
 
