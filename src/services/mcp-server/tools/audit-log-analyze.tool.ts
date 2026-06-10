@@ -334,7 +334,7 @@ export class AuditLogAnalyzeTool implements McpTool {
       content: [
         {
           type: 'text',
-          text: JSON.stringify(payload, null, 2),
+          text: JSON.stringify(payload),
         },
       ],
     };

@@ -148,7 +148,7 @@ export class CalloutResourceProvider implements McpResourceProvider {
         {
           uri,
           mimeType: 'application/json',
-          text: JSON.stringify(resourceData, null, 2),
+          text: JSON.stringify(resourceData),
         },
       ],
     };

@@ -31,6 +31,20 @@ interface WhiteboardListItem {
   };
 }
 
+// Listing teaser bound for per-item descriptions (full markdown descriptions
+// blew a 20-board listing up to ~14k model tokens).
+const DESCRIPTION_TEASER_LENGTH = 200;
+
+function truncate(text: string | undefined | null): string | undefined {
+  if (!text) {
+    return undefined;
+  }
+  if (text.length <= DESCRIPTION_TEASER_LENGTH) {
+    return text;
+  }
+  return `${text.slice(0, DESCRIPTION_TEASER_LENGTH)}…`;
+}
+
 /**
  * Tool for listing and discovering whiteboards the user has access to.
  * Enables AI clients to find whiteboards before analyzing them.
@@ -195,7 +209,10 @@ export class WhiteboardListTool implements McpTool {
         results.push({
           id: whiteboard.id,
           name: whiteboard.profile?.displayName || 'Untitled Whiteboard',
-          description: whiteboard.profile?.description || undefined,
+          // Truncated: full profile descriptions (often long markdown) made a
+          // 20-board listing cost ~14k model tokens; a listing needs a teaser,
+          // not the document (analyze_whiteboard serves the deep dive).
+          description: truncate(whiteboard.profile?.description),
           createdBy: whiteboard.createdBy,
           isMyContribution: whiteboard.createdBy === agentInfo.actorID,
           updatedDate: whiteboard.updatedDate,
@@ -218,14 +235,10 @@ export class WhiteboardListTool implements McpTool {
         content: [
           {
             type: 'text',
-            text: JSON.stringify(
-              {
-                summary,
-                whiteboards: results,
-              },
-              null,
-              2
-            ),
+            text: JSON.stringify({
+              summary,
+              whiteboards: results,
+            }),
           },
         ],
       };
