@@ -42,15 +42,17 @@ Single-project backend. Source under `src/`, unit specs co-located as
 
 ## Phase 2: Foundational (Blocking Prerequisites)
 
-**Purpose**: Make the Space-level storage authorization able to receive extra,
-parent-supplied credential rules and cascade them to the shared storage bucket. This
-is shared plumbing that the gating logic in Phase 3 depends on.
+**Purpose**: Confirm the injection point. The Space profile authorization step
+(`profileAuthorizationService.applyAuthorizationPolicy`) already accepts a
+`credentialRulesFromParent` argument that cascades to the profile's storage bucket, so
+no plumbing change is required — the gated rule from Phase 3 is passed straight into
+this existing parameter.
 
 **⚠️ CRITICAL**: User-story work cannot begin until this phase is complete.
 
-- [X] T002 Extend `StorageAggregatorAuthorizationService.applyAuthorizationPolicy` in `src/domain/storage/storage-aggregator/storage.aggregator.service.authorization.ts`: add an optional third parameter `additionalCredentialRules: IAuthorizationPolicyRuleCredential[] = []`; after the existing anonymous/registered read rule is appended and before the `directStorage` bucket authorization is applied, append `additionalCredentialRules` to the storage aggregator authorization so cascading rules reach the bucket. Add the import for `IAuthorizationPolicyRuleCredential` from `@core/authorization/authorization.policy.rule.credential.interface`. Existing callers (platform/account/user/organization) pass nothing and are unaffected.
+- [X] T002 No code change. Verify that `ProfileAuthorizationService.applyAuthorizationPolicy(profileID, parentAuthorization, credentialRulesFromParent)` in `src/domain/common/profile/profile.service.authorization.ts` pushes `credentialRulesFromParent` onto the profile authorization and that the profile's `storageBucket` inherits cascading rules — i.e. a `cascade: true` rule passed here reaches `space.profile.storageBucket`. (No storage-aggregator change: the grant must NOT land on `directStorage`.)
 
-**Checkpoint**: Storage-aggregator authorization accepts and propagates parent-supplied rules; no behavior change yet.
+**Checkpoint**: Injection point confirmed; the Space profile authorization will carry the rule to the Space profile storage bucket.
 
 ---
 
@@ -65,12 +67,12 @@ with an embedded image — it succeeds and the image is attached (per
 
 ### Implementation for User Story 1
 
-- [X] T003 [US1] Add a private helper `getStorageMemberFileUploadRules(roleSet, spaceSettings)` in `src/domain/space/space/space.service.authorization.ts` that returns `[]` when `spaceSettings.collaboration.allowMembersToCreateCallouts` is false; otherwise builds a credential rule granting `[AuthorizationPrivilege.FILE_UPLOAD]` to the create-callout actor criteria (reuse the existing `getActorCriteria(roleSet, spaceSettings)` helper), sets `cascade = true`, names it with `CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD`, and returns it as a single-element array (return `[]` if the criteria set is empty). Import the new constant.
-- [X] T004 [US1] In `propagateAuthorizationToChildEntities` in `src/domain/space/space/space.service.authorization.ts`, compute the rules via the new helper (using `space.community.roleSet` and `space.settings`) and pass them as the new third argument to the `storageAggregatorAuthorizationService.applyAuthorizationPolicy(space.storageAggregator!, space.authorization!, …)` call.
+- [X] T003 [US1] Add a private helper `getStorageMemberFileUploadRules(roleSet, spaceSettings, spaceMembershipAllowed)` in `src/domain/space/space/space.service.authorization.ts` that returns `[]` when `!spaceMembershipAllowed` or `spaceSettings.collaboration.allowMembersToCreateCallouts` is false; otherwise builds a credential rule granting `[AuthorizationPrivilege.FILE_UPLOAD]` to the create-callout actor criteria (reuse the existing `getActorCriteria(roleSet, spaceSettings)` helper), sets `cascade = true`, names it with `CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD`, and returns it as a single-element array (return `[]` if the criteria set is empty). Import the new constant.
+- [X] T004 [US1] In `propagateAuthorizationToChildEntities` in `src/domain/space/space/space.service.authorization.ts`, compute the rules via the new helper (using `space.community.roleSet`, `space.settings`, `spaceMembershipAllowed`) and pass them as the third argument (`credentialRulesFromParent`) to the **Space profile** authorization call: `profileAuthorizationService.applyAuthorizationPolicy(space.profile!.id, space.authorization!, storageMemberFileUploadRules)`. Do NOT pass them to the storage-aggregator or the Space About authorization calls.
 
 ### Tests for User Story 1
 
-- [X] T005 [P] [US1] In `src/domain/space/space/space.service.authorization.spec.ts`, add a test asserting that when `allowMembersToCreateCallouts` is true, the computed Space storage authorization includes a `FILE_UPLOAD` credential rule named `CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD`.
+- [X] T005 [P] [US1] In `src/domain/space/space/space.service.authorization.spec.ts`, add a test asserting that when `allowMembersToCreateCallouts` is true, the rules passed to the **Space profile** authorization call include a `FILE_UPLOAD` credential rule named `CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD` (cascading), and a sibling test asserting the rule is **absent** from both the storage-aggregator call (no extra-rules argument) and the Space About authorization call.
 
 ### Verification for User Story 1
 
@@ -91,7 +93,7 @@ creation and upload to the Space's shared storage (per `quickstart.md` → "Veri
 
 ### Tests for User Story 2
 
-- [X] T007 [P] [US2] In `src/domain/space/space/space.service.authorization.spec.ts`, add a test asserting that when `allowMembersToCreateCallouts` is false, the computed Space storage authorization does NOT include the `CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD` rule.
+- [X] T007 [P] [US2] In `src/domain/space/space/space.service.authorization.spec.ts`, add tests asserting that when `allowMembersToCreateCallouts` is false — and, separately, when `spaceMembershipAllowed` is false (archived) — the Space profile authorization call receives no `CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD` rule.
 
 ### Verification for User Story 2
 
@@ -112,7 +114,7 @@ members may upload to Space A's shared storage; repeat for a parent/subspace pai
 
 ### Tests for User Story 3
 
-- [X] T009 [P] [US3] In `src/domain/space/space/space.service.authorization.spec.ts`, add a test asserting the granted rule targets the create-callout actor criteria (members, plus inherited parent-space members where `inheritMembershipRights` + public applies) and is marked to cascade — i.e. it matches the criteria returned by `getActorCriteria` and reaches the shared storage bucket.
+- [X] T009 [P] [US3] In `src/domain/space/space/space.service.authorization.spec.ts`, add a test asserting the rule passed to the Space profile authorization call targets the create-callout actor criteria (members, plus inherited parent-space members where `inheritMembershipRights` + public applies) and is marked to cascade — i.e. it matches the criteria returned by `getActorCriteria` and reaches `space.profile.storageBucket`.
 
 ### Verification for User Story 3
 
@@ -126,8 +128,8 @@ members may upload to Space A's shared storage; repeat for a parent/subspace pai
 
 **Purpose**: Quality gates and final validation.
 
-- [X] T011 [P] Run `pnpm lint` (tsc --noEmit + biome) and fix any issues in the three changed files.
-- [X] T012 [P] Run the affected unit specs: `pnpm test -- src/domain/space/space/space.service.authorization.spec.ts` and `pnpm test -- src/domain/storage/storage-aggregator/storage.aggregator.service.authorization.spec.ts`.
+- [X] T011 [P] Run `pnpm lint` (tsc --noEmit + biome) and fix any issues in the changed files (`space.service.authorization.ts` + spec, and the reverted `storage.aggregator.service.authorization.ts`).
+- [X] T012 [P] Run the affected unit specs: `pnpm test -- src/domain/space/space/space.service.authorization.spec.ts` (and `src/domain/storage/storage-aggregator/` to confirm the storage-aggregator revert is clean).
 - [X] T013 Sanity-check that no schema change leaked: `pnpm run schema:print && pnpm run schema:sort` produce no diff to `schema.graphql`.
 - [X] T014 Run the `quickstart.md` regression check: confirm an admin can still create a callout with an embedded image exactly as before.
 
@@ -138,7 +140,7 @@ members may upload to Space A's shared storage; repeat for a parent/subspace pai
 ### Phase Dependencies
 
 - **Setup (Phase 1, T001)**: No dependencies — can start immediately.
-- **Foundational (Phase 2, T002)**: Depends on T001 (uses no constant itself, but precedes story work). BLOCKS all user stories.
+- **Foundational (Phase 2, T002)**: Verification-only (no code change); confirms the Space profile authorization injection point. Precedes story work.
 - **User Story 1 (Phase 3)**: Depends on T001 + T002. Implements the rule (T003 → T004); this also realizes the behavior asserted by US2 and US3.
 - **User Story 2 (Phase 4)** and **User Story 3 (Phase 5)**: Depend on the US1 implementation (T003–T004) existing, since they assert properties of the same rule. Their test/verification tasks are otherwise independent of each other.
 - **Polish (Phase 6)**: Depends on all desired stories being complete.
@@ -194,6 +196,13 @@ Task: "US3 manual scoping verification per quickstart.md"                       
   [P] for story traceability but touch one file — coordinate those edits.
 - This feature changes authorization computation only: no schema, migration, GraphQL
   contract, or storage-mechanism change (see `data-model.md`).
+- **Target bucket**: the grant lands on the Space profile's storage bucket
+  (`space.profile.storageBucket`) — NOT the storage aggregator's `directStorage`, and
+  NOT the About profile storage (`space.about.profile.storageBucket`).
+- **Client follow-up (separate repo)**: the client `SpaceStorageConfig` query
+  (`client-web`) currently resolves the create-callout upload target to
+  `space.about.profile.storageBucket`; it must be repointed to
+  `space.profile.storageBucket` for the end-to-end flow to use the granted bucket.
 - The new capability takes effect per Space at the next authorization reset
   (`quickstart.md` covers triggering it).
 - Commit after each logical group; keep migrations N/A (none here).

@@ -469,11 +469,13 @@ export class SpaceAuthorizationService {
 
     // When members are allowed to create callouts they need to be able to
     // upload files to the Space-level storage bucket, as new callout content
-    // (e.g. description images) is uploaded there temporarily before the
-    // callout's own storage bucket exists. Grant FILE_UPLOAD to the same
-    // actors that may create callouts. Gated on spaceMembershipAllowed so that
-    // archived spaces (where membership capabilities are disabled) do not grant
-    // upload access on their storage bucket.
+    // (e.g. description images, attached References) is uploaded there
+    // temporarily before the callout's own storage bucket exists. That
+    // Space-level bucket is the Space profile's storage bucket
+    // (`space.profile.storageBucket`); the grant is applied on the Space
+    // profile authorization below so it reaches exactly that bucket. Gated on
+    // spaceMembershipAllowed so that archived spaces (where membership
+    // capabilities are disabled) do not grant upload access.
     const storageMemberFileUploadRules =
       await this.getStorageMemberFileUploadRules(
         space.community.roleSet,
@@ -486,8 +488,7 @@ export class SpaceAuthorizationService {
       () =>
         this.storageAggregatorAuthorizationService.applyAuthorizationPolicy(
           space.storageAggregator!,
-          space.authorization!,
-          storageMemberFileUploadRules
+          space.authorization!
         )
     );
     updatedAuthorizations.push(...storageAuthorizations);
@@ -558,13 +559,19 @@ export class SpaceAuthorizationService {
     );
     updatedAuthorizations.push(...aboutAuthorizations);
 
+    // Apply the member FILE_UPLOAD grant on the Space profile: the rule
+    // cascades to the Space profile's own storage bucket
+    // (`space.profile.storageBucket`), which is the Space-level location used to
+    // stage new callout content during creation. No grant is placed on the
+    // About profile or the storage aggregator's directStorage.
     const profileAuthorizations = await this.resilientCascade(
       'space.profile',
       ctx,
       () =>
         this.profileAuthorizationService.applyAuthorizationPolicy(
           space.profile!.id,
-          space.authorization!
+          space.authorization!,
+          storageMemberFileUploadRules
         )
     );
     updatedAuthorizations.push(...profileAuthorizations);
@@ -736,7 +743,7 @@ export class SpaceAuthorizationService {
       criteria,
       CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD
     );
-    // Must cascade so the rule reaches the storage aggregator's directStorage bucket.
+    // Must cascade so the rule reaches the Space profile's storage bucket.
     fileUploadRule.cascade = true;
     return [fileUploadRule];
   }

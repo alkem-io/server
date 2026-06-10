@@ -6,6 +6,16 @@ In a Space configured to let members create callouts, members can now upload the
 files their callouts contain (e.g. a description image) without hitting a permission
 error. The capability is gated by that Space setting and scoped to that Space.
 
+The Space-level bucket that stages this content is the **Space profile's storage
+bucket** (`space.profile.storageBucket`). The grant lands there only — not on the
+storage aggregator's `directStorage`, and not on the About profile storage.
+
+> **Client note**: the `client-web` `SpaceStorageConfig` query currently uploads to
+> `space.about.profile.storageBucket`. Until that is repointed to
+> `space.profile.storageBucket`, the end-to-end create-callout flow will still target
+> the About bucket. This server change grants upload on the correct (Space profile)
+> bucket; the client fix is tracked separately.
+
 ## Prerequisites
 
 - Local stack running: `pnpm run start:services`, migrations applied
@@ -62,5 +72,6 @@ Run the affected authorization unit specs:
 
 ```bash
 pnpm test -- src/domain/space/space/space.service.authorization.spec.ts
+# Confirm the storage-aggregator revert is clean (no member grant on directStorage):
 pnpm test -- src/domain/storage/storage-aggregator/storage.aggregator.service.authorization.spec.ts
 ```

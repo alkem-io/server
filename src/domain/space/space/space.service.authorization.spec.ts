@@ -850,11 +850,29 @@ describe('SpaceAuthorizationService', () => {
       );
     };
 
-    const getStorageAggregatorRulesArg = () =>
-      (storageAggregatorAuthorizationService.applyAuthorizationPolicy as any)
-        .mock.calls[0][2];
+    // The member FILE_UPLOAD grant is applied on the Space profile, so it
+    // cascades to the Space profile's own storage bucket
+    // (`space.profile.storageBucket`) — the Space-level location used to stage
+    // new callout content during creation.
+    const getSpaceProfileRulesArg = () =>
+      (profileAuthorizationService.applyAuthorizationPolicy as any).mock
+        .calls[0][2] ?? [];
 
-    it('[US1] grants FILE_UPLOAD to members on the space storage when allowMembersToCreateCallouts is true', async () => {
+    const getStorageAggregatorCall = () =>
+      (storageAggregatorAuthorizationService.applyAuthorizationPolicy as any)
+        .mock.calls[0];
+
+    const getSpaceAboutRulesArg = () =>
+      (spaceAboutAuthorizationService.applyAuthorizationPolicy as any).mock
+        .calls[0][2] ?? [];
+
+    const findFileUploadRule = (rules: any[]) =>
+      rules.find(
+        (rule: any) =>
+          rule.name === CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD
+      );
+
+    it('[US1] grants FILE_UPLOAD to members on the Space profile storage when allowMembersToCreateCallouts is true', async () => {
       const memberCriterias = [
         { type: AuthorizationCredential.SPACE_MEMBER, resourceID: 'space-1' },
       ];
@@ -873,14 +891,14 @@ describe('SpaceAuthorizationService', () => {
         []
       );
 
-      const storageCall = (
-        storageAggregatorAuthorizationService.applyAuthorizationPolicy as any
+      // Applied against the Space's own profile and authorization
+      const profileCall = (
+        profileAuthorizationService.applyAuthorizationPolicy as any
       ).mock.calls[0];
-      // Passed against the space's own storage aggregator and authorization
-      expect(storageCall[0]).toBe(space.storageAggregator);
-      expect(storageCall[1]).toBe(space.authorization);
+      expect(profileCall[0]).toBe(space.profile!.id);
+      expect(profileCall[1]).toBe(space.authorization);
 
-      const rulesArg = storageCall[2];
+      const rulesArg = profileCall[2];
       expect(rulesArg).toHaveLength(1);
       expect(rulesArg[0].name).toBe(
         CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD
@@ -888,11 +906,35 @@ describe('SpaceAuthorizationService', () => {
       expect(rulesArg[0].grantedPrivileges).toContain(
         AuthorizationPrivilege.FILE_UPLOAD
       );
-      // Must cascade to reach the directStorage bucket
+      // Must cascade to reach the Space profile's storage bucket
       expect(rulesArg[0].cascade).toBe(true);
     });
 
-    it('[US2] does NOT grant FILE_UPLOAD when allowMembersToCreateCallouts is false', async () => {
+    it('[US1] does NOT grant FILE_UPLOAD on the storage aggregator or the About profile', async () => {
+      // The grant must land only on the Space profile's storage bucket — never
+      // on the storage aggregator's directStorage nor the About profile storage.
+      const space = createMockSpace();
+      setupPropagateMocks();
+      (roleSetService.getCredentialsForRole as any).mockResolvedValue([
+        { type: AuthorizationCredential.SPACE_MEMBER, resourceID: 'space-1' },
+      ]);
+      (
+        roleSetService.getDirectParentCredentialForRole as any
+      ).mockResolvedValue(undefined);
+
+      await service.propagateAuthorizationToChildEntities(
+        space as any,
+        true,
+        []
+      );
+
+      // Storage aggregator is invoked with no extra credential rules argument
+      expect(getStorageAggregatorCall()[2]).toBeUndefined();
+      // About path carries only the read rule, no FILE_UPLOAD grant
+      expect(findFileUploadRule(getSpaceAboutRulesArg())).toBeUndefined();
+    });
+
+    it('[US2] does NOT grant FILE_UPLOAD on the Space profile when allowMembersToCreateCallouts is false', async () => {
       const offSettings = {
         ...defaultSettings,
         collaboration: {
@@ -915,8 +957,8 @@ describe('SpaceAuthorizationService', () => {
         []
       );
 
-      // No additional credential rules handed to the storage aggregator
-      expect(getStorageAggregatorRulesArg()).toEqual([]);
+      // No credential rules handed to the Space profile
+      expect(getSpaceProfileRulesArg()).toEqual([]);
     });
 
     it('[US2] does NOT grant FILE_UPLOAD when membership is not allowed (e.g. archived space) even if allowMembersToCreateCallouts is true', async () => {
@@ -938,7 +980,7 @@ describe('SpaceAuthorizationService', () => {
         []
       );
 
-      expect(getStorageAggregatorRulesArg()).toEqual([]);
+      expect(getSpaceProfileRulesArg()).toEqual([]);
     });
 
     it('[US3] targets create-callout actor criteria including inherited parent members and cascades', async () => {
@@ -967,7 +1009,7 @@ describe('SpaceAuthorizationService', () => {
         []
       );
 
-      const rulesArg = getStorageAggregatorRulesArg();
+      const rulesArg = getSpaceProfileRulesArg();
       expect(rulesArg).toHaveLength(1);
       expect(rulesArg[0].grantedPrivileges).toEqual([
         AuthorizationPrivilege.FILE_UPLOAD,
