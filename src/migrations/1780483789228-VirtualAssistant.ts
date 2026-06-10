@@ -27,8 +27,9 @@ export class VirtualAssistant1780483789228 implements MigrationInterface {
   private readonly nameID = 'virtual-assistant';
 
   // Read-only default grant (contracts/assistant-authority.md §3): all current
-  // READ tools enabled; the two write tools disabled. Absence ⇒ disabled, so a
-  // future tool defaults disabled until an admin enables it.
+  // READ tools enabled; all four write tools disabled. Absence ⇒ disabled, so a
+  // future tool defaults disabled until an admin enables it — the explicit rows
+  // exist so the full tool surface is visible (and togglable) on the grant.
   private readonly readOnlyGrant = [
     { capability: 'search_content', enabled: true },
     { capability: 'list_whiteboards', enabled: true },
@@ -38,6 +39,8 @@ export class VirtualAssistant1780483789228 implements MigrationInterface {
     { capability: 'community_activity_summary', enabled: true },
     { capability: 'navigate_templates', enabled: true },
     { capability: 'create_whiteboard', enabled: false },
+    { capability: 'create_whiteboard_in_space', enabled: false },
+    { capability: 'edit_whiteboard_elements', enabled: false },
     { capability: 'update_whiteboard_content', enabled: false },
   ];
 
