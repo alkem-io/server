@@ -18,7 +18,9 @@ const HEADER_ACTOR_ID = 'X-Alkemio-Actor-Id';
 // "gateway stamped: anonymous" from "gateway didn't run". Emitting this fixed
 // value for un-credentialed traffic keeps the contract uniform while letting
 // auth-eval still resolve GLOBAL_ANONYMOUS for public-read privileges.
-const ANONYMOUS_ACTOR_ID = '00000000-0000-0000-0000-000000000000';
+// was set to zeros before;
+// set to empty string for compatibility reasons
+const ANONYMOUS_ACTOR_ID = '';
 
 /**
   Traefik ForwardAuth decision endpoint. Single source-of-truth for
