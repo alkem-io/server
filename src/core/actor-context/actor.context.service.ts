@@ -1,7 +1,6 @@
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
 import { isAnonymousActor } from '@core/actor-context/is.anonymous.actor';
-import { ANONYMOUS_ACTOR_ID } from '@core/auth/oidc/constants';
 import { Actor } from '@domain/actor/actor/actor.entity';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
@@ -9,7 +8,6 @@ import { ICredential } from '@domain/actor/credential/credential.interface';
 import { User } from '@domain/community/user/user.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
-import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { ActorContext } from './actor.context';
@@ -32,7 +30,7 @@ export class ActorContextService {
     };
     ctx.credentials = [anonymousCredential];
     ctx.isAnonymous = true;
-    ctx.actorID = ANONYMOUS_ACTOR_ID;
+    ctx.actorID = '';
     return ctx;
   }
 
@@ -44,7 +42,7 @@ export class ActorContextService {
     };
     ctx.credentials = [guestCredential];
     ctx.guestName = guestName;
-    ctx.actorID = ANONYMOUS_ACTOR_ID;
+    ctx.actorID = '';
     ctx.isAnonymous = false;
     return ctx;
   }
