@@ -1,6 +1,5 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
-import { IAuthorizationPolicyRuleCredential } from '@core/authorization/authorization.policy.rule.credential.interface';
 import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Injectable } from '@nestjs/common';
@@ -18,8 +17,7 @@ export class StorageAggregatorAuthorizationService {
 
   async applyAuthorizationPolicy(
     storageAggregatorInput: IStorageAggregator,
-    parentAuthorization: IAuthorizationPolicy | undefined,
-    additionalCredentialRules: IAuthorizationPolicyRuleCredential[] = []
+    parentAuthorization: IAuthorizationPolicy | undefined
   ): Promise<IAuthorizationPolicy[]> {
     const storageAggregator =
       await this.storageAggregatorService.getStorageAggregatorOrFail(
@@ -55,16 +53,6 @@ export class StorageAggregatorAuthorizationService {
         storageAggregator.authorization,
         AuthorizationPrivilege.READ
       );
-    // Additional rules supplied by the parent entity (e.g. a Space granting
-    // members FILE_UPLOAD on its storage when members can create callouts).
-    // These must cascade to reach the directStorage bucket below.
-    if (additionalCredentialRules.length > 0) {
-      storageAggregator.authorization =
-        this.authorizationPolicyService.appendCredentialAuthorizationRules(
-          storageAggregator.authorization,
-          additionalCredentialRules
-        );
-    }
     updatedAuthorizations.push(storageAggregator.authorization);
 
     const bucketAuthorizations =

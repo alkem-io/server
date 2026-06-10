@@ -51,6 +51,8 @@ Given the Space's authorization has been (re)computed:
 
 - Unit: the Space authorization computation includes the member file-upload rule when
   the setting is ON and omits it when OFF (and the rule targets the correct actor
-  set and cascades to the shared storage).
+  set, is handed to the Space profile authorization step so it cascades to
+  `space.profile.storageBucket`, and is **not** placed on the About profile storage or
+  the storage aggregator's directStorage).
 - Manual/integration: a plain member in a setting-ON Space creates a callout with an
   image without a permission error; the same member in a setting-OFF Space is denied.

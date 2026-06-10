@@ -170,7 +170,9 @@ Space B members gain nothing. Repeat for a subspace relative to its parent.
   then relocated to the callout once it exists.
 - **Shared Space Storage Location**: The Space-level storage used as the temporary
   home for callout content during creation; write access to it is the permission
-  this feature adjusts.
+  this feature adjusts. Concretely this is the **Space's own profile storage bucket**
+  (`space.profile.storageBucket`) — not the Space About/description storage, and not
+  the storage aggregator's direct storage.
 
 ## Success Criteria *(mandatory)*
 
@@ -208,3 +210,8 @@ Space B members gain nothing. Repeat for a subspace relative to its parent.
   Space's configuration and is the correct set to receive the upload ability.
 - This feature concerns authorization only; it does not change how files are stored,
   scanned, or relocated.
+- The Space's shared storage location for staged callout content is the Space's own
+  profile storage bucket (`space.profile.storageBucket`). The client currently uploads
+  to the Space About profile's storage bucket instead; correcting the client to point
+  at the Space profile bucket is a separate, client-side change outside this server
+  feature's scope.

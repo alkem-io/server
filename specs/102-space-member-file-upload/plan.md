@@ -16,10 +16,12 @@ fails mid-way with a permission error.
 The technical approach is authorization-only: when the Space authorization policy is
 (re)computed, and only when the "members may create callouts" setting is enabled,
 grant the file-upload capability on the Space's shared storage to the same set of
-actors who may create callouts. This mirrors the existing pattern that grants the
-"create subspace" capability to members when "members may create subspaces" is
-enabled. No schema, migration, GraphQL contract, or storage-mechanism change is
-required.
+actors who may create callouts. The Space's shared storage is concretely the **Space
+profile's storage bucket** (`space.profile.storageBucket`), so the grant is injected
+via the Space profile authorization step and cascades to that bucket. This mirrors the
+existing pattern that grants the "create subspace" capability to members when "members
+may create subspaces" is enabled. No schema, migration, GraphQL contract, or
+storage-mechanism change is required.
 
 ## Technical Context
 
@@ -50,7 +52,7 @@ who may not create callouts. Effective only after the Space's authorization is
 recomputed.
 
 **Scale/Scope**: Affects every Space whose "members may create callouts" setting is
-enabled. Three source files plus a constant; one new unit-test assertion area.
+enabled. One source file plus a constant; one unit-test assertion area.
 
 ## Constitution Check
 
@@ -59,10 +61,10 @@ enabled. Three source files plus a constant; one new unit-test assertion area.
 - **1. Domain-Centric Design First** — PASS. The change lives in the domain
   authorization services (`src/domain/space/...` and `src/domain/storage/...`); no
   business logic is added to resolvers or controllers.
-- **2. Modular NestJS Boundaries** — PASS. No new modules; the storage-aggregator
-  authorization service gains an optional parameter consumed by the space
-  authorization service it already depends on. No new cross-module coupling or
-  circular dependency.
+- **2. Modular NestJS Boundaries** — PASS. No new modules and no service signature
+  changes; the gated rule is passed into the existing `credentialRulesFromParent`
+  argument of the profile authorization service the Space authorization service
+  already depends on. No new cross-module coupling or circular dependency.
 - **3. GraphQL Schema as Stable Contract** — PASS. No schema change. The
   `uploadFileOnStorageBucket` mutation and all types are untouched; only the
   computed authorization policy that the existing privilege check reads changes.
@@ -109,20 +111,19 @@ specs/102-space-member-file-upload/
 src/
 ├── common/constants/authorization/
 │   └── credential.rule.constants.ts          # add a named constant for the new rule
-├── domain/storage/storage-aggregator/
-│   └── storage.aggregator.service.authorization.ts   # accept + apply optional extra credential rules, cascading to directStorage
 └── domain/space/space/
-    ├── space.service.authorization.ts        # compute the gated member file-upload rule and pass it into the storage-aggregator cascade
-    └── space.service.authorization.spec.ts   # assert gating, scoping, and absence-when-off
+    ├── space.service.authorization.ts        # compute the gated member file-upload rule and pass it into the Space profile authorization cascade
+    └── space.service.authorization.spec.ts   # assert gating, scoping, target bucket, and absence-when-off
 ```
 
 **Structure Decision**: Single-project backend. The change is confined to the
-authorization computation in two domain authorization services plus one constants
-file. The Space authorization service (which already owns the Space settings and the
-member credential criteria, and already drives the storage-aggregator authorization
-cascade) is the correct owner of the gating decision; the storage-aggregator
-authorization service is the correct place to receive and apply the resulting rule so
-it cascades to the Space's shared storage bucket.
+authorization computation in the Space authorization service plus one constants file.
+The Space authorization service already owns the Space settings, the member credential
+criteria, and the call that drives the Space profile authorization cascade — so it is
+the correct owner of both the gating decision and the injection point. The rule is
+handed to the existing `credentialRulesFromParent` parameter of the profile
+authorization service and cascades to `space.profile.storageBucket`. No change to the
+storage-aggregator authorization service is required.
 
 ## Complexity Tracking
 
