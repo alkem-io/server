@@ -132,6 +132,7 @@ The platform manages membership through one set of actions that operate on actor
 #### Organisation invitations to spaces
 
 - **FR-009**: Users MUST be able to invite an organisation to a space as a member, using the same invite action used for other contributor types.
+- **FR-009a**: Inviting or adding an organisation to a space MUST NOT be gated by any license or entitlement flag (unlike virtual contributors, which require the VC-access entitlement). Organisation membership is available to all spaces, subject only to the actor-type eligibility policy and normal authorization.
 - **FR-010**: When an organisation is invited to a space, the system MUST create a pending invitation associated with that organisation.
 - **FR-011**: An organisation MUST be invitable to a space only for the member role; the system MUST reject an attempt to invite an organisation as a lead (or any non-member role).
 - **FR-012**: A pending organisation invitation MUST be acceptable or declinable only by an admin or owner of that organisation (or an actor otherwise permitted to act on the organisation's behalf).
@@ -162,6 +163,7 @@ The feature introduces four org-admin/owner notifications, grouped into two **se
 
 - **FR-018**: When an organisation is invited to a space, the system MUST send an invitation notification email to the organisation's admins and owners.
 - **FR-019**: When an organisation becomes a member of a space (whether via accepted invitation or auto-accept), the system MUST send a "became a member" notification email to the organisation's admins and owners.
+- **FR-019f**: When an organisation becomes a member of a space, the existing space-side "new member joined" notification to the space's admins/leads MUST also fire, with the organisation as the new member (consistent with how users and virtual contributors joining are announced to the space). This is the space-recipient notification and is distinct from the organisation-recipient notification in FR-019.
 
 *Group A — membership of the organisation itself:*
 
@@ -225,4 +227,5 @@ The feature introduces four org-admin/owner notifications, grouped into two **se
 - **Existing behaviour for users and virtual contributors is preserved**: the policy encodes today's permitted combinations for those actor types so that no current capability regresses.
 - **Duplicate/idempotency and removal behaviour for organisations mirrors the existing behaviour** already in place for users and virtual contributors.
 - **Notifications use the platform's existing email/notification mechanism**; this feature adds organisation-targeted recipients and the relevant invitation/new-member payloads.
+- **Organisation membership of a space is not licensed/entitlement-gated** (FR-009a), in contrast to virtual contributors. The space-side "new member joined" notification to space admins/leads is the existing notification, extended to fire for the organisation actor type (FR-019f) — no new space-recipient notification is introduced.
 - **The four new org-admin/owner notifications require new per-user notification preferences** (FR-019a–c), organised into two independently-controllable groups: Group A (organisation's own membership — application received, new member joined) and Group B (organisation as a member of a space — invited, became member). Today the per-user organisation notification settings only cover "admin message received" and "admin mentioned"; this feature extends that settings block with the new separately-controllable toggles, following the virtual-contributor account-host invitation preference as the precedent. This entails new notification-event definitions, recipient-preference checks at send time, default values for new users, and a data migration to backfill existing users (defaulted on).
