@@ -3,7 +3,9 @@ import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoleName } from '@common/enums/role.name';
 import { ValidationException } from '@common/exceptions';
 import { PaginationInputOutOfBoundException } from '@common/exceptions/pagination/pagination.input.out.of.bounds.exception';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { GraphqlGuard } from '@core/authorization';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import { LicenseLoaderCreator } from '@core/dataloader/creators/loader.creators/license.loader.creator';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -21,7 +23,10 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { UseGuards } from '@nestjs/common';
 import { Args, Float, Parent, ResolveField, Resolver } from '@nestjs/graphql';
-import { AuthorizationActorHasPrivilege } from '@src/common/decorators';
+import {
+  AuthorizationActorHasPrivilege,
+  CurrentActor,
+} from '@src/common/decorators';
 import { IApplication } from '../application/application.interface';
 import { IInvitation } from '../invitation/invitation.interface';
 import {
@@ -39,7 +44,8 @@ export class RoleSetResolverFields {
   constructor(
     private roleSetService: RoleSetService,
     private userService: UserService,
-    private virtualActorLookupService: VirtualActorLookupService
+    private virtualActorLookupService: VirtualActorLookupService,
+    private authorizationService: AuthorizationService
   ) {}
 
   @AuthorizationActorHasPrivilege(AuthorizationPrivilege.READ)
@@ -50,6 +56,7 @@ export class RoleSetResolverFields {
       'All available users that are could join this RoleSet in the entry role.',
   })
   async availableUsersForEntryRole(
+    @CurrentActor() actorContext: ActorContext,
     @Parent() roleSet: IRoleSet,
     @Args({ nullable: true }) pagination: PaginationArgs,
     @Args('filter', { nullable: true }) filter?: UserFilterInput
@@ -59,22 +66,38 @@ export class RoleSetResolverFields {
       roleSet.entryRoleName
     );
 
-    // TODO: evaluated if this check is needed or not
-    // if (!entryRoleDefinition.requiresSameRoleInParentRoleSet) {
-    //   throw new ValidationException(
-    //     `Role ${roleSet.entryRoleName} does not require the same role in parent RoleSet.`,
-    //     LogContext.ROLES
-    //   );
-    // }
-
     const parentRoleSet = await this.roleSetService.getParentRoleSet(roleSet);
 
-    const parentRoleSetEntryRoleCredential = parentRoleSet
-      ? await this.roleSetService.getCredentialDefinitionForRole(
-          parentRoleSet,
-          roleSet.entryRoleName
-        )
-      : undefined;
+    // For a subspace the candidate pool is normally restricted to members of the
+    // parent RoleSet, because subspace membership requires parent membership.
+    // However, if the caller is authorized to invite into the parent RoleSet
+    // (parent/Space admins always are; subspace admins only when the parent Space
+    // has `allowSubspaceAdminsToInviteMembers` enabled) then inviting a
+    // non-member also pulls them into the parent, so the full platform user list
+    // becomes available. Current members of this RoleSet are excluded regardless
+    // (handled downstream in getPaginatedAvailableEntryRoleUsers).
+    let restrictToParentMembers = false;
+    if (parentRoleSet) {
+      const parentRoleSetWithAuthorization =
+        await this.roleSetService.getRoleSetOrFail(parentRoleSet.id, {
+          relations: { authorization: true },
+        });
+      const authorizedToInviteToParent =
+        this.authorizationService.isAccessGranted(
+          actorContext,
+          parentRoleSetWithAuthorization.authorization,
+          AuthorizationPrivilege.ROLESET_ENTRY_ROLE_INVITE
+        );
+      restrictToParentMembers = !authorizedToInviteToParent;
+    }
+
+    const parentRoleSetEntryRoleCredential =
+      parentRoleSet && restrictToParentMembers
+        ? await this.roleSetService.getCredentialDefinitionForRole(
+            parentRoleSet,
+            roleSet.entryRoleName
+          )
+        : undefined;
 
     const roleSetEntryRoleCredential: RoleSetRoleWithParentCredentials = {
       role: entryRoleDefinition.credential,
