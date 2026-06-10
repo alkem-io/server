@@ -5,22 +5,10 @@ import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
 import { randomUUID } from 'crypto';
 import type { Request, Response } from 'express';
+import { ANONYMOUS_ACTOR_ID, HEADER_ACTOR_ID } from './constants';
 import type { SessionStoreHandle } from './session-store.redis';
 import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
 import { HydraBearerValidator } from './strategies/hydra-bearer.validator';
-
-const HEADER_ACTOR_ID = 'X-Alkemio-Actor-Id';
-
-// auth-evaluation-service interprets the nil UUID as the anonymous caller
-// (see authorization-evaluation-service/internal/service/validation.go).
-// Downstream middlewares (e.g. file-service-go's ActorHeaderExtractor) require
-// `X-Alkemio-Actor-Id` to ALWAYS be present so they can distinguish
-// "gateway stamped: anonymous" from "gateway didn't run". Emitting this fixed
-// value for un-credentialed traffic keeps the contract uniform while letting
-// auth-eval still resolve GLOBAL_ANONYMOUS for public-read privileges.
-// was set to zeros before;
-// set to empty string for compatibility reasons
-const ANONYMOUS_ACTOR_ID = '';
 
 /**
   Traefik ForwardAuth decision endpoint. Single source-of-truth for

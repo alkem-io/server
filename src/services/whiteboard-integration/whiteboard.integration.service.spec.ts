@@ -33,7 +33,6 @@ describe('WhiteboardIntegrationService - guest handling', () => {
   let service: WhiteboardIntegrationService;
   let whiteboardService: Mocked<WhiteboardService>;
   let authorizationService: Mocked<AuthorizationService>;
-  let authenticationService: Mocked<AuthenticationService>;
   let contributionReporter: Mocked<ContributionReporterService>;
   let communityResolver: Mocked<CommunityResolverService>;
   let activityAdapter: Mocked<ActivityAdapter>;
@@ -45,7 +44,6 @@ describe('WhiteboardIntegrationService - guest handling', () => {
     new WhiteboardIntegrationService(
       logger,
       authorizationService,
-      authenticationService,
       whiteboardService,
       contributionReporter,
       communityResolver,
@@ -65,10 +63,6 @@ describe('WhiteboardIntegrationService - guest handling', () => {
     authorizationService = {
       isAccessGranted: vi.fn().mockReturnValue(true),
     } as unknown as Mocked<AuthorizationService>;
-
-    authenticationService = {
-      getActorContext: vi.fn(),
-    } as unknown as Mocked<AuthenticationService>;
 
     contributionReporter = {
       whiteboardContribution: vi.fn(),

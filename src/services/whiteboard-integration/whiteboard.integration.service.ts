@@ -1,7 +1,6 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
-import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -35,7 +34,6 @@ export class WhiteboardIntegrationService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private readonly authorizationService: AuthorizationService,
-    private readonly authenticationService: AuthenticationService,
     private readonly whiteboardService: WhiteboardService,
     private readonly contributionReporter: ContributionReporterService,
     private readonly communityResolver: CommunityResolverService,
@@ -246,6 +244,11 @@ export class WhiteboardIntegrationService {
     }
   }
 
+  // Whiteboard userIds carry guest-style sentinels the core anonymous check
+  // (empty / nil-UUID) does not cover: the literal `guest`/`n/a` placeholders
+  // and the `guest-<uuid>`/`guest_<uuid>` ids minted by createGuest. All of
+  // these must route to createGuest rather than buildForUser, which would
+  // throw on the missing user row.
   private isGuestUserIdentifier(userId: string): boolean {
     if (!userId) {
       return true;

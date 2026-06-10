@@ -1,5 +1,7 @@
 import { AuthorizationCredential, LogContext } from '@common/enums';
 import { EntityNotInitializedException } from '@common/exceptions/entity.not.initialized.exception';
+import { isAnonymousActor } from '@core/actor-context/is.anonymous.actor';
+import { ANONYMOUS_ACTOR_ID } from '@core/auth/oidc/constants';
 import { Actor } from '@domain/actor/actor/actor.entity';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { ICredentialDefinition } from '@domain/actor/credential/credential.definition.interface';
@@ -30,6 +32,7 @@ export class ActorContextService {
     };
     ctx.credentials = [anonymousCredential];
     ctx.isAnonymous = true;
+    ctx.actorID = ANONYMOUS_ACTOR_ID;
     return ctx;
   }
 
@@ -41,12 +44,7 @@ export class ActorContextService {
     };
     ctx.credentials = [guestCredential];
     ctx.guestName = guestName;
-    // Synthetic per-context identifier so consumers can treat `actorID` as the
-    // canonical "who" field across authenticated + guest paths without
-    // special-casing. Format mirrors the legacy `who()` RMQ handler output
-    // (`guest-<uuid>`); downstream credential rules key on guestName + the
-    // GLOBAL_GUEST credential, not on this id.
-    ctx.actorID = `guest-${randomUUID()}`;
+    ctx.actorID = ANONYMOUS_ACTOR_ID;
     ctx.isAnonymous = false;
     return ctx;
   }
@@ -132,5 +130,9 @@ export class ActorContextService {
       })
     );
     return ctx;
+  }
+
+  public isAnonymousActor(actorId: string) {
+    return isAnonymousActor(actorId);
   }
 }
