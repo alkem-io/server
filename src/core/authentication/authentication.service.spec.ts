@@ -72,6 +72,7 @@ describe('AuthenticationService', () => {
 
   const mockActorContext: ActorContext = {
     isAnonymous: false,
+    isGuest: false,
     actorID: 'user-id',
     guestName: undefined,
     credentials: [],

@@ -50,6 +50,7 @@ describe('ActorContextService', () => {
       const ctx = service.createAnonymous();
       expect(ctx).toBeInstanceOf(ActorContext);
       expect(ctx.isAnonymous).toBe(true);
+      expect(ctx.isGuest).toBe(false);
       expect(ctx.credentials).toHaveLength(1);
       expect(ctx.credentials[0].type).toBe(
         AuthorizationCredential.GLOBAL_ANONYMOUS
@@ -63,6 +64,7 @@ describe('ActorContextService', () => {
       const ctx = service.createGuest('test-guest');
       expect(ctx).toBeInstanceOf(ActorContext);
       expect(ctx.isAnonymous).toBe(false);
+      expect(ctx.isGuest).toBe(true);
       expect(ctx.guestName).toBe('test-guest');
       expect(ctx.credentials).toHaveLength(1);
       expect(ctx.credentials[0].type).toBe(
@@ -93,6 +95,7 @@ describe('ActorContextService', () => {
     it('returns anonymous context when userId is empty', async () => {
       const ctx = await service.buildForUser('');
       expect(ctx.isAnonymous).toBe(true);
+      expect(ctx.isGuest).toBe(false);
       expect(ctx.credentials[0].type).toBe(
         AuthorizationCredential.GLOBAL_ANONYMOUS
       );
@@ -156,6 +159,7 @@ describe('ActorContextService', () => {
       const ctx = await service.buildForActor('missing-id');
 
       expect(ctx.isAnonymous).toBe(true);
+      expect(ctx.isGuest).toBe(false);
     });
 
     it('returns context with actor credentials', async () => {
@@ -170,6 +174,7 @@ describe('ActorContextService', () => {
 
       expect(ctx.actorID).toBe('actor-1');
       expect(ctx.isAnonymous).toBe(false);
+      expect(ctx.isGuest).toBe(false);
       expect(ctx.credentials).toHaveLength(1);
       expect(ctx.credentials[0].type).toBe('space-admin');
     });
@@ -185,6 +190,63 @@ describe('ActorContextService', () => {
       const ctx = await service.buildForActor('actor-2');
 
       expect(ctx.credentials).toEqual([]);
+    });
+  });
+
+  describe('resolveActorContext', () => {
+    it('returns a guest context when guestName is provided with an anonymous actorID', async () => {
+      const ctx = await service.resolveActorContext('', '  Nick  ');
+
+      expect(ctx.isAnonymous).toBe(false);
+      expect(ctx.isGuest).toBe(true);
+      expect(ctx.guestName).toBe('Nick');
+      expect(ctx.credentials[0].type).toBe(
+        AuthorizationCredential.GLOBAL_GUEST
+      );
+    });
+
+    it('generates a default guest name when guestName is whitespace-only', async () => {
+      const ctx = await service.resolveActorContext('', '   ');
+
+      expect(ctx.guestName).toMatch(/^Guest collaborator [0-9a-f]{8}$/);
+      expect(ctx.credentials[0].type).toBe(
+        AuthorizationCredential.GLOBAL_GUEST
+      );
+    });
+
+    it('returns an anonymous context when no guestName and actorID is anonymous', async () => {
+      const ctx = await service.resolveActorContext('');
+
+      expect(ctx.isAnonymous).toBe(true);
+      expect(ctx.isGuest).toBe(false);
+      expect(ctx.credentials[0].type).toBe(
+        AuthorizationCredential.GLOBAL_ANONYMOUS
+      );
+    });
+
+    it('builds an actor context for a known actorID, ignoring guestName', async () => {
+      const mockActor = {
+        id: 'actor-1',
+        credentials: [{ type: 'space-admin', resourceID: 'space-1' }],
+      } as unknown as Actor;
+      mockEntityManager.findOne.mockResolvedValue(mockActor);
+
+      const ctx = await service.resolveActorContext('actor-1', 'Nick');
+
+      expect(ctx.actorID).toBe('actor-1');
+      expect(ctx.isAnonymous).toBe(false);
+      expect(ctx.isGuest).toBe(false);
+      expect(ctx.guestName).toBeUndefined();
+      expect(ctx.credentials[0].type).toBe('space-admin');
+    });
+
+    it('falls back to an anonymous context for an unknown actorID', async () => {
+      mockEntityManager.findOne.mockResolvedValue(null);
+
+      const ctx = await service.resolveActorContext('missing-actor');
+
+      expect(ctx.isAnonymous).toBe(true);
+      expect(ctx.isGuest).toBe(false);
     });
   });
 });

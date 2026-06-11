@@ -1,7 +1,6 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
-import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MemoService } from '@domain/common/memo';
 import { Inject, Injectable } from '@nestjs/common';
@@ -11,12 +10,7 @@ import { ContributionReporterService } from '@services/external/elasticsearch/co
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
-import {
-  FetchInputData,
-  InfoInputData,
-  SaveInputData,
-  WhoInputData,
-} from './inputs';
+import { FetchInputData, InfoInputData, SaveInputData } from './inputs';
 import {
   FetchContentData,
   FetchErrorData,
@@ -41,8 +35,7 @@ export class CollaborativeDocumentIntegrationService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: WinstonLogger,
     private readonly authorizationService: AuthorizationService,
-    private readonly authenticationService: AuthenticationService,
-    private readonly authActorInfoService: ActorContextService,
+    private readonly actorContextService: ActorContextService,
     private readonly memoService: MemoService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly contributionReporter: ContributionReporterService,
@@ -57,7 +50,7 @@ export class CollaborativeDocumentIntegrationService {
   public async accessGranted(data: AccessGrantedInputData): Promise<boolean> {
     try {
       const memo = await this.memoService.getMemoOrFail(data.documentId);
-      const actorContext = await this.authActorInfoService.buildForUser(
+      const actorContext = await this.actorContextService.resolveActorContext(
         data.userId
       );
 
@@ -106,12 +99,6 @@ export class CollaborativeDocumentIntegrationService {
     const maxCollaborators = isMultiUser ? this.maxCollaboratorsInRoom : 1;
 
     return { read, update, isMultiUser, maxCollaborators };
-  }
-
-  public async who(data: WhoInputData): Promise<string> {
-    const authCtx = await this.authenticationService.getActorContext(data.auth);
-
-    return authCtx.actorID;
   }
 
   public async save({

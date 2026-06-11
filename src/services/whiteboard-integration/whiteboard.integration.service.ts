@@ -1,5 +1,4 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
@@ -53,18 +52,10 @@ export class WhiteboardIntegrationService {
         data.whiteboardId
       );
 
-      const actorContext = await this.resolveActorContext(data);
-      if (!actorContext) {
-        this.logger.warn?.(
-          {
-            message: `Unable to build ActorContext for userId: ${data.userId}`,
-            whiteboardId: data.whiteboardId,
-            guestName: data.guestName,
-          },
-          LogContext.WHITEBOARD_INTEGRATION
-        );
-        return false;
-      }
+      const actorContext = await this.actorContextService.resolveActorContext(
+        data.userId,
+        data.guestName
+      );
 
       return this.authorizationService.isAccessGranted(
         actorContext,
@@ -213,59 +204,5 @@ export class WhiteboardIntegrationService {
           LogContext.WHITEBOARD_INTEGRATION
         );
       });
-  }
-
-  private async resolveActorContext(
-    data: AccessGrantedInputData
-  ): Promise<ActorContext | null> {
-    if (this.isGuestUserIdentifier(data.userId)) {
-      return this.actorContextService.createGuest(
-        this.normalizeGuestName(data.guestName)
-      );
-    }
-
-    try {
-      return await this.actorContextService.buildForUser(data.userId);
-    } catch (error) {
-      if (data.guestName?.trim()) {
-        this.logger.verbose?.(
-          {
-            message:
-              'Falling back to guest agent info after user lookup failure',
-            userId: data.userId,
-            whiteboardId: data.whiteboardId,
-          },
-          LogContext.WHITEBOARD_INTEGRATION
-        );
-        return this.actorContextService.createGuest(data.guestName.trim());
-      }
-
-      throw error;
-    }
-  }
-
-  // Whiteboard userIds carry guest-style sentinels the core anonymous check
-  // (empty / nil-UUID) does not cover: the literal `guest`/`n/a` placeholders
-  // and the `guest-<uuid>`/`guest_<uuid>` ids minted by createGuest. All of
-  // these must route to createGuest rather than buildForUser, which would
-  // throw on the missing user row.
-  private isGuestUserIdentifier(userId: string): boolean {
-    if (!userId) {
-      return true;
-    }
-
-    const normalized = userId.trim().toLowerCase();
-    return (
-      normalized.length === 0 ||
-      normalized === 'n/a' ||
-      normalized === 'guest' ||
-      normalized.startsWith('guest-') ||
-      normalized.startsWith('guest_')
-    );
-  }
-
-  private normalizeGuestName(guestName?: string): string {
-    const trimmed = guestName?.trim();
-    return trimmed && trimmed.length > 0 ? trimmed : 'Guest collaborator';
   }
 }
