@@ -22,7 +22,7 @@ import { FetchErrorCodes, SaveErrorCodes } from './types';
 describe('CollaborativeDocumentIntegrationService', () => {
   let service: CollaborativeDocumentIntegrationService;
   let authorizationService: { isAccessGranted: Mock };
-  let actorContextService: { buildForUser: Mock };
+  let actorContextService: { resolveActorContext: Mock };
   let memoService: {
     getMemoOrFail: Mock;
     saveContent: Mock;
@@ -71,7 +71,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
       const memo = { id: 'memo-1', authorization: { id: 'auth-1' } };
       const actorContext = { credentials: [] };
       memoService.getMemoOrFail.mockResolvedValue(memo);
-      actorContextService.buildForUser.mockResolvedValue(actorContext);
+      actorContextService.resolveActorContext.mockResolvedValue(actorContext);
       authorizationService.isAccessGranted.mockReturnValue(true);
 
       const result = await service.accessGranted({
@@ -104,7 +104,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
   describe('info', () => {
     it('should return all-false when user has no read access', async () => {
       memoService.getMemoOrFail.mockResolvedValue({ authorization: {} });
-      actorContextService.buildForUser.mockResolvedValue({});
+      actorContextService.resolveActorContext.mockResolvedValue({});
       authorizationService.isAccessGranted.mockReturnValue(false);
 
       const result = await service.info({
@@ -123,7 +123,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
     it('should return correct info with maxCollaborators based on isMultiUser', async () => {
       const memo = { authorization: { id: 'auth-1' } };
       memoService.getMemoOrFail.mockResolvedValue(memo);
-      actorContextService.buildForUser.mockResolvedValue({});
+      actorContextService.resolveActorContext.mockResolvedValue({});
       // First call: READ -> true, Second call: UPDATE_CONTENT -> true
       authorizationService.isAccessGranted
         .mockReturnValueOnce(true) // READ check in first accessGranted call
@@ -143,7 +143,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
     it('should return maxCollaborators as 1 when not multi-user', async () => {
       memoService.getMemoOrFail.mockResolvedValue({ authorization: {} });
-      actorContextService.buildForUser.mockResolvedValue({});
+      actorContextService.resolveActorContext.mockResolvedValue({});
       authorizationService.isAccessGranted.mockReturnValue(true);
       memoService.isMultiUser.mockResolvedValue(false);
 

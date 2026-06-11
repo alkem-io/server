@@ -60,17 +60,6 @@ http:
         servers:
           - url: 'http://kratos-admin-ui:8080/'
 
-    oathkeeper-proxy:
-      loadBalancer:
-        servers:
-          - url: 'http://oathkeeper:4455/'
-        serversTransport: oathkeeper-transport@file
-
-    oathkeeper-admin:
-      loadBalancer:
-        servers:
-          - url: 'http://oathkeeper:4456/'
-
     synapse:
       loadBalancer:
         servers:
@@ -82,9 +71,34 @@ http:
           - url: 'http://synapse-admin:80/'
 
     whiteboard-collaboration:
+      failover:
+        service: whiteboard-collaboration-local
+        fallback: whiteboard-collaboration-compose
+
+    whiteboard-collaboration-compose:
       loadBalancer:
         servers:
           - url: 'http://whiteboard-collaboration:4002/'
+        healthCheck:
+          path: /health
+          port: 4005
+          interval: 10s
+          timeout: 3s
+          scheme: http
+
+    # Fallback: host loopback for `npm run dev` local-whiteboard workflow.
+    # Receives traffic only when the primary is unhealthy. Same /health
+    # contract.
+    whiteboard-collaboration-local:
+      loadBalancer:
+        servers:
+          - url: 'http://host.docker.internal:4002/'
+        healthCheck:
+          path: /health
+          port: 4005
+          interval: 10s
+          timeout: 3s
+          scheme: http
 
     collaborative-document:
       loadBalancer:
@@ -148,23 +162,36 @@ http:
           - /ory/kratos/public
         forceSlash: false
 
-    strip-oathkeeper-jwks-prefix:
-      stripPrefix:
-        prefixes:
-          - /jwks
-        forceSlash: false
-
     strip-hydra-admin-prefix:
       stripPrefix:
         prefixes:
           - /hydra/admin
         forceSlash: false
 
-    oathkeeper-auth-socket-io:
+    # strips any client-supplied X-Alkemio-* identity
+    # headers before the request reaches the upstream. MUST run before
+    # `alkemio-resolve` on any router that uses it.
+    strip-client-alkemio-headers:
+      headers:
+        customRequestHeaders:
+          X-Alkemio-Actor-Id: ""
+          X-Alkemio-Actor-Name: ""
+          X-Alkemio-Session-Id: ""
+
+    # Universal traefik forwardAuth decision endpoint. alkemio-server's
+    # AuthenticationService resolves the alkemio_session cookie (or the
+    # `?guestName=` query param for guest paths) to a canonical ActorContext
+    # and emits its `actorID`:
+    #   - authenticated user → X-Alkemio-Actor-Id: <real actor id>
+    #   - guest with name    → X-Alkemio-Actor-Id: guest-<uuid>
+    #   - anonymous          → header absent
+    # Always returns 200; per-route policy decides what missing-header means.
+    alkemio-resolve:
       forwardAuth:
-        address: 'http://oathkeeper:4456/decisions'
+        address: 'http://host.docker.internal:4000/rest/internal/forward-auth'
         authResponseHeaders:
-          - Authorization
+          - X-Alkemio-Actor-Id
+        trustForwardHeader: true
 
   routers:
     oidc-public:
@@ -173,6 +200,13 @@ http:
       entryPoints:
         - 'web'
       priority: 130
+
+    api-auth-oidc:
+      rule: 'PathPrefix(`/api/auth`)'
+      service: 'alkemio-server'
+      entryPoints:
+        - 'web'
+      priority: 145
 
     hydra-public:
       rule: 'PathPrefix(`/.well-known/`) || PathPrefix(`/oauth2/`)'
@@ -198,15 +232,20 @@ http:
       entryPoints:
         - 'hydra-admin'
 
+    # Class-A partial pre-cutover (MVP scope L1; user-authorised 2026-05-07
+    # via opt-1, see specs/003-alkemio-oidc-idp/mvp-scope.md). graphql /
+    # graphiql go direct to alkemio-server; the server validates cookie +
+    # Hydra-bearer in-process per Phase 4. Oathkeeper hop on these paths was
+    # dead weight post-T042b. Phase 7 remains parked for B1+B2+B3+B4.
     graphql:
       rule: 'PathPrefix(`/graphql`)'
-      service: 'oathkeeper-proxy'
+      service: 'alkemio-server'
       entryPoints:
         - 'web'
 
     graphiql:
       rule: 'PathPrefix(`/graphiql`)'
-      service: 'oathkeeper-proxy'
+      service: 'alkemio-server'
       entryPoints:
         - 'web'
 
@@ -226,9 +265,10 @@ http:
       entryPoints:
         - 'web'
 
+    # Class-A partial pre-cutover — see comment on `graphql` router above.
     api-private-graphql:
       rule: 'PathPrefix(`/api/private/graphql`)'
-      service: 'oathkeeper-proxy'
+      service: 'alkemio-server'
       middlewares:
         - strip-api-private-prefix
       entryPoints:
@@ -255,24 +295,36 @@ http:
       service: 'whiteboard-collaboration'
       middlewares:
         - strip-api-private-prefix-socket-io
-        - oathkeeper-auth-socket-io
+        - strip-client-alkemio-headers
+        - alkemio-resolve
       entryPoints:
         - 'web'
 
+    # Direct to hocuspocus. Identity established at the gateway via
+    # `alkemio-resolve` forwardAuth (cookie or Hydra bearer → X-Alkemio-Actor-Id).
+    # Hocuspocus reads that header — no in-service token validation.
+    # `strip-client-alkemio-headers` MUST run first to prevent client-supplied
+    # spoofing of the trusted header.
     collaborative-document:
       rule: 'PathPrefix(`/api/private/hocuspocus`)'
-      service: 'oathkeeper-proxy'
+      service: 'collaborative-document'
       middlewares:
         - strip-api-private-prefix
+        - strip-client-alkemio-headers
+        - alkemio-resolve
       entryPoints:
         - 'web'
 
+    # Direct to file-service-go. Same identity-at-gateway pattern as the
+    # collaborative-document and whiteboard-collaboration routes.
     # more specific than 'api-private-rest'
     file-service:
       rule: 'PathPrefix(`/api/private/rest/storage`)'
-      service: 'oathkeeper-proxy'
+      service: 'file-service'
       middlewares:
         - strip-api-private-prefix
+        - strip-client-alkemio-headers
+        - alkemio-resolve
       entryPoints:
         - 'web'
 
@@ -308,9 +360,10 @@ http:
         - 'web'
       priority: 200
 
+    # Class-A partial pre-cutover — see comment on `graphql` router above.
     calendar-event-ics:
       rule: 'PathPrefix(`/api/private/rest/calendar`)'
-      service: 'oathkeeper-proxy'
+      service: 'alkemio-server'
       middlewares:
         - strip-api-private-prefix
       entryPoints:
@@ -352,14 +405,6 @@ http:
         - 'web'
       priority: 140
 
-    oathkeeper-jwks:
-      rule: 'PathPrefix(`/jwks`)'
-      service: 'oathkeeper-admin'
-      middlewares:
-        - strip-oathkeeper-jwks-prefix
-      entryPoints:
-        - 'web'
-
     synapse:
       rule: 'PathPrefix(`/`)'
       service: 'synapse'
@@ -390,12 +435,17 @@ http:
       entryPoints:
         - 'auth-evaluation'
 
-    # WOPI token issuance (through Oathkeeper for JWT auth)
+    # WOPI token issuance. Direct to wopi-service; identity at the gateway
+    # via alkemio-resolve forwardAuth (mirrors file-service / collaborative-
+    # document / whiteboard pattern). WOPI service reads X-Alkemio-Actor-Id
+    # from the request header — no JWT decode in-service.
     wopi-token:
       rule: 'PathPrefix(`/api/private/wopi/token`)'
-      service: 'oathkeeper-proxy'
+      service: 'wopi-service'
       middlewares:
         - strip-api-private-prefix
+        - strip-client-alkemio-headers
+        - alkemio-resolve
       entryPoints:
         - 'web'
       priority: 155
@@ -421,12 +471,6 @@ http:
       service: 'rabbitmq-management'
       entryPoints:
         - 'rabbitmq-management'
-
-  serversTransports:
-    oathkeeper-transport:
-      forwardingTimeouts:
-        responseHeaderTimeout: 120s
-        idleConnTimeout: 120s
 
 tcp:
   services:
@@ -485,4 +529,3 @@ tcp:
       service: 'matrix-adapter'
       entryPoints:
         - 'matrix-adapter'
-

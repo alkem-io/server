@@ -7,9 +7,11 @@ import { ICredential } from '@domain/actor/credential/credential.interface';
 import { User } from '@domain/community/user/user.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager } from 'typeorm';
 import { ActorContext } from './actor.context';
+import { isAnonymousActor } from './is.anonymous.actor';
 
 @Injectable()
 export class ActorContextService {
@@ -29,6 +31,8 @@ export class ActorContextService {
     };
     ctx.credentials = [anonymousCredential];
     ctx.isAnonymous = true;
+    ctx.isGuest = false;
+    ctx.actorID = '';
     return ctx;
   }
 
@@ -40,7 +44,9 @@ export class ActorContextService {
     };
     ctx.credentials = [guestCredential];
     ctx.guestName = guestName;
+    ctx.actorID = '';
     ctx.isAnonymous = false;
+    ctx.isGuest = true;
     return ctx;
   }
 
@@ -126,4 +132,28 @@ export class ActorContextService {
     );
     return ctx;
   }
+
+  public async resolveActorContext(
+    actorID: string,
+    guestName?: string
+  ): Promise<ActorContext> {
+    // is it guest?
+    if (guestName && guestName.length > 0 && isAnonymousActor(actorID)) {
+      return this.createGuest(normalizeGuestName(guestName));
+    }
+    // is it anonymous
+    if (!guestName && isAnonymousActor(actorID)) {
+      return this.createAnonymous();
+    }
+    // it's not a guest AND anonymous - it's probably a user
+    // throws if the user does not exist
+    return this.buildForUser(actorID);
+  }
 }
+
+const normalizeGuestName = (guestName?: string): string => {
+  const trimmed = guestName?.trim();
+  return trimmed && trimmed.length > 0
+    ? trimmed
+    : `Guest collaborator ${randomUUID().slice(0, 8)}`;
+};
