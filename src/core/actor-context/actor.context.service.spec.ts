@@ -224,29 +224,68 @@ describe('ActorContextService', () => {
       );
     });
 
-    it('builds an actor context for a known actorID, ignoring guestName', async () => {
-      const mockActor = {
-        id: 'actor-1',
-        credentials: [{ type: 'space-admin', resourceID: 'space-1' }],
-      } as unknown as Actor;
-      mockEntityManager.findOne.mockResolvedValue(mockActor);
-
-      const ctx = await service.resolveActorContext('actor-1', 'Nick');
-
-      expect(ctx.actorID).toBe('actor-1');
-      expect(ctx.isAnonymous).toBe(false);
-      expect(ctx.isGuest).toBe(false);
-      expect(ctx.guestName).toBeUndefined();
-      expect(ctx.credentials[0].type).toBe('space-admin');
-    });
-
-    it('falls back to an anonymous context for an unknown actorID', async () => {
-      mockEntityManager.findOne.mockResolvedValue(null);
-
-      const ctx = await service.resolveActorContext('missing-actor');
+    it('treats a whitespace-only actorID as anonymous', async () => {
+      const ctx = await service.resolveActorContext('   ');
 
       expect(ctx.isAnonymous).toBe(true);
       expect(ctx.isGuest).toBe(false);
+      expect(ctx.credentials[0].type).toBe(
+        AuthorizationCredential.GLOBAL_ANONYMOUS
+      );
+    });
+
+    it('returns an anonymous context when guestName is an empty string and actorID is anonymous', async () => {
+      const ctx = await service.resolveActorContext('', '');
+
+      expect(ctx.isAnonymous).toBe(true);
+      expect(ctx.isGuest).toBe(false);
+      expect(ctx.guestName).toBeUndefined();
+      expect(ctx.credentials[0].type).toBe(
+        AuthorizationCredential.GLOBAL_ANONYMOUS
+      );
+    });
+
+    it('builds a user context for a known actorID, ignoring guestName', async () => {
+      const mockUser = {
+        id: 'user-1',
+        authenticationID: 'kratos-id-1',
+        credentials: [{ type: 'space-admin', resourceID: 'space-1' }],
+      } as unknown as User;
+      mockEntityManager.findOneOrFail.mockResolvedValue(mockUser);
+
+      const ctx = await service.resolveActorContext('user-1', 'Nick');
+
+      expect(ctx.actorID).toBe('user-1');
+      expect(ctx.isAnonymous).toBe(false);
+      expect(ctx.isGuest).toBe(false);
+      expect(ctx.guestName).toBeUndefined();
+      expect(ctx.authenticationID).toBe('kratos-id-1');
+      expect(ctx.credentials[0].type).toBe('space-admin');
+    });
+
+    it('builds a user context for a known actorID without guestName', async () => {
+      const mockUser = {
+        id: 'user-2',
+        authenticationID: null,
+        credentials: [],
+      } as unknown as User;
+      mockEntityManager.findOneOrFail.mockResolvedValue(mockUser);
+
+      const ctx = await service.resolveActorContext('user-2');
+
+      expect(ctx.actorID).toBe('user-2');
+      expect(ctx.isGuest).toBe(false);
+      expect(ctx.credentials).toEqual([]);
+    });
+
+    it('rejects for an unknown actorID', async () => {
+      mockEntityManager.findOneOrFail.mockRejectedValue(
+        new Error('EntityNotFoundError')
+      );
+
+      await expect(
+        service.resolveActorContext('missing-actor')
+      ).rejects.toThrow('EntityNotFoundError');
     });
   });
 });

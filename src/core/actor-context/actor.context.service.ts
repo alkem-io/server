@@ -146,8 +146,8 @@ export class ActorContextService {
       return this.createAnonymous();
     }
     // it's not a guest AND anonymous - it's probably a user
-    // falls back to anonymous on failure
-    return this.buildForActor(actorID);
+    // throws if the user does not exist
+    return this.buildForUser(actorID);
   }
 }
 
