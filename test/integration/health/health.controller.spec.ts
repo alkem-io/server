@@ -15,7 +15,7 @@ import { INestApplication } from '@nestjs/common';
 import { Test } from '@nestjs/testing';
 import express from 'express';
 import request from 'supertest';
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 // FR-036a contract — alkemio-server health probes
 //   /health/live  -> 200, {status:"ok"} regardless of dep state
