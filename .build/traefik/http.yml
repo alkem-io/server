@@ -125,6 +125,12 @@ http:
         servers:
           - url: 'h2c://file-service:4003/'
 
+    # 004-web-ai-assistant (LOCAL DEV): assistant-service runs on the host.
+    assistant-service:
+      loadBalancer:
+        servers:
+          - url: 'http://host.docker.internal:4006/'
+
   middlewares:
     strip-api-private-non-interactive-prefix:
       stripPrefix:
@@ -142,6 +148,14 @@ http:
       stripPrefix:
         prefixes:
           - /api/private/ws
+        forceSlash: false
+
+    # 004-web-ai-assistant: assistant-service serves at root (/conversations),
+    # so strip the FULL /api/private/rest/assistant prefix.
+    strip-api-private-rest-assistant:
+      stripPrefix:
+        prefixes:
+          - /api/private/rest/assistant
         forceSlash: false
 
     strip-api-public-prefix:
@@ -312,6 +326,22 @@ http:
         - strip-api-private-prefix
         - strip-client-alkemio-headers
         - alkemio-resolve
+      entryPoints:
+        - 'web'
+
+    # 004-web-ai-assistant: browser /api/private/rest/assistant/* → strip full
+    # prefix → assistant-service on the host. Identity-at-gateway (OIDC):
+    # client X-Alkemio-* headers are zeroed, then alkemio-resolve forwardAuth
+    # resolves the alkemio_session cookie (or Hydra bearer) and injects
+    # X-Alkemio-Actor-Id — the only identity assistant-service accepts.
+    # more specific than 'api-private-rest'
+    assistant-service:
+      rule: 'PathPrefix(`/api/private/rest/assistant`)'
+      service: 'assistant-service'
+      middlewares:
+        - strip-client-alkemio-headers
+        - alkemio-resolve
+        - strip-api-private-rest-assistant
       entryPoints:
         - 'web'
 
