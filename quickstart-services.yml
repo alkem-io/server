@@ -246,12 +246,6 @@ services:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oidc_service
-    # Local build of the sibling oidc-service repo so in-flight fixes
-    # (e.g. pre-consent claim attachment) run instead of the pinned Hub image.
-    # Override OIDC_SERVICE_REPO_PATH if your sibling clone lives elsewhere.
-    build:
-      context: ${OIDC_SERVICE_REPO_PATH:-../oidc-service}
-      dockerfile: Dockerfile
     image: alkemio/oidc-service:v0.8.0
     depends_on:
       - hydra
