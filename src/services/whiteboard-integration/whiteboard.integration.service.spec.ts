@@ -1,7 +1,6 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
-import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { LoggerService } from '@nestjs/common';
@@ -23,9 +22,9 @@ import { AlkemioConfig } from '@src/types';
 import type { Mocked } from 'vitest';
 import { vi } from 'vitest';
 
-const buildGuestActorContext = (guestName: string): ActorContext => {
+const buildActorContext = (actorID = ''): ActorContext => {
   const actorContext = new ActorContext();
-  actorContext.guestName = guestName;
+  actorContext.actorID = actorID;
   return actorContext;
 };
 
@@ -33,7 +32,6 @@ describe('WhiteboardIntegrationService - guest handling', () => {
   let service: WhiteboardIntegrationService;
   let whiteboardService: Mocked<WhiteboardService>;
   let authorizationService: Mocked<AuthorizationService>;
-  let authenticationService: Mocked<AuthenticationService>;
   let contributionReporter: Mocked<ContributionReporterService>;
   let communityResolver: Mocked<CommunityResolverService>;
   let activityAdapter: Mocked<ActivityAdapter>;
@@ -45,7 +43,6 @@ describe('WhiteboardIntegrationService - guest handling', () => {
     new WhiteboardIntegrationService(
       logger,
       authorizationService,
-      authenticationService,
       whiteboardService,
       contributionReporter,
       communityResolver,
@@ -66,10 +63,6 @@ describe('WhiteboardIntegrationService - guest handling', () => {
       isAccessGranted: vi.fn().mockReturnValue(true),
     } as unknown as Mocked<AuthorizationService>;
 
-    authenticationService = {
-      getActorContext: vi.fn(),
-    } as unknown as Mocked<AuthenticationService>;
-
     contributionReporter = {
       whiteboardContribution: vi.fn(),
     } as unknown as Mocked<ContributionReporterService>;
@@ -84,10 +77,11 @@ describe('WhiteboardIntegrationService - guest handling', () => {
     } as unknown as Mocked<ActivityAdapter>;
 
     actorContextService = {
-      buildForUser: vi.fn(),
-      createGuest: vi
+      resolveActorContext: vi
         .fn()
-        .mockImplementation(name => buildGuestActorContext(name)),
+        .mockImplementation((actorID: string) =>
+          Promise.resolve(buildActorContext(actorID))
+        ),
     } as unknown as Mocked<ActorContextService>;
 
     configService = {
@@ -105,56 +99,31 @@ describe('WhiteboardIntegrationService - guest handling', () => {
     service = createService();
   });
 
-  it('creates guest agent info when userId is marked as not available', async () => {
+  it('resolves the actor context from userId and guestName and checks access', async () => {
+    const resolvedContext = buildActorContext('user-123');
+    actorContextService.resolveActorContext.mockResolvedValueOnce(
+      resolvedContext
+    );
+
     const payload: AccessGrantedInputData = {
-      userId: 'N/A',
-      whiteboardId: 'whiteboard-guest',
+      userId: 'user-123',
+      whiteboardId: 'whiteboard-1',
       privilege: AuthorizationPrivilege.READ,
       guestName: '  Nick  ',
     };
 
     const result = await service.accessGranted(payload);
 
-    expect(actorContextService.buildForUser).not.toHaveBeenCalled();
-    expect(actorContextService.createGuest).toHaveBeenCalledWith('Nick');
+    expect(actorContextService.resolveActorContext).toHaveBeenCalledWith(
+      'user-123',
+      '  Nick  '
+    );
     expect(authorizationService.isAccessGranted).toHaveBeenCalledWith(
-      expect.objectContaining({ guestName: 'Nick' }),
+      resolvedContext,
       expect.anything(),
       AuthorizationPrivilege.READ
     );
     expect(result).toBe(true);
-  });
-
-  it('falls back to guest credentials when lookup fails and guest name is provided', async () => {
-    actorContextService.buildForUser.mockRejectedValueOnce(
-      new Error('lookup failed')
-    );
-
-    const payload: AccessGrantedInputData = {
-      userId: 'user-123',
-      whiteboardId: 'whiteboard-guest',
-      privilege: AuthorizationPrivilege.READ,
-      guestName: 'Taylor',
-    };
-
-    const result = await service.accessGranted(payload);
-
-    expect(actorContextService.createGuest).toHaveBeenCalledWith('Taylor');
-    expect(result).toBe(true);
-  });
-
-  it('uses a default display name when no guest name is supplied', async () => {
-    const payload: AccessGrantedInputData = {
-      userId: '',
-      whiteboardId: 'whiteboard-guest',
-      privilege: AuthorizationPrivilege.READ,
-    };
-
-    await service.accessGranted(payload);
-
-    expect(actorContextService.createGuest).toHaveBeenCalledWith(
-      'Guest collaborator'
-    );
   });
 
   describe('info() – anonymous vs guest write access', () => {
@@ -225,9 +194,6 @@ describe('WhiteboardIntegrationService - guest handling', () => {
 
   describe('info() – single-user whiteboard', () => {
     beforeEach(() => {
-      const actorCtx = new ActorContext();
-      actorCtx.actorID = 'user-1';
-      actorContextService.buildForUser.mockResolvedValue(actorCtx);
       whiteboardService.isMultiUser = vi.fn().mockResolvedValue(false);
     });
 
@@ -239,47 +205,6 @@ describe('WhiteboardIntegrationService - guest handling', () => {
       } as any);
 
       expect(result.maxCollaborators).toBe(1);
-    });
-  });
-
-  describe('who()', () => {
-    it('returns empty string for anonymous users', async () => {
-      const actorCtx = new ActorContext();
-      actorCtx.isAnonymous = true;
-      authenticationService.getActorContext.mockResolvedValue(actorCtx);
-
-      const result = await service.who({
-        auth: { cookie: 'some-cookie' },
-      });
-
-      expect(result).toBe('');
-    });
-
-    it('returns guest-<uuid> for guest users', async () => {
-      const actorCtx = new ActorContext();
-      actorCtx.isAnonymous = false;
-      actorCtx.guestName = 'Taylor';
-      authenticationService.getActorContext.mockResolvedValue(actorCtx);
-
-      const result = await service.who({
-        auth: { guestName: 'Taylor' },
-      });
-
-      expect(result).toMatch(/^guest-[0-9a-f-]{36}$/);
-    });
-
-    it('returns actorID for authenticated users', async () => {
-      const actorCtx = new ActorContext();
-      actorCtx.isAnonymous = false;
-      actorCtx.guestName = undefined as any;
-      actorCtx.actorID = 'user-abc-123';
-      authenticationService.getActorContext.mockResolvedValue(actorCtx);
-
-      const result = await service.who({
-        auth: { authorization: 'Bearer token' },
-      });
-
-      expect(result).toBe('user-abc-123');
     });
   });
 
@@ -440,9 +365,9 @@ describe('WhiteboardIntegrationService - guest handling', () => {
       expect(logger.error).toHaveBeenCalled();
     });
 
-    it('returns false when resolveActorContext returns null (user lookup fails without guestName)', async () => {
-      actorContextService.buildForUser.mockRejectedValue(
-        new Error('user not found')
+    it('returns false and logs when resolveActorContext rejects', async () => {
+      actorContextService.resolveActorContext.mockRejectedValue(
+        new Error('resolution failed')
       );
 
       const result = await service.accessGranted({
@@ -451,41 +376,8 @@ describe('WhiteboardIntegrationService - guest handling', () => {
         privilege: AuthorizationPrivilege.READ,
       });
 
-      // Error is thrown by resolveActorContext and caught by accessGranted's catch
       expect(result).toBe(false);
-    });
-  });
-
-  describe('isGuestUserIdentifier (via accessGranted)', () => {
-    it.each([
-      ['', true],
-      ['guest', true],
-      ['Guest', true],
-      ['guest-abc-123', true],
-      ['guest_user', true],
-      ['GUEST', true],
-      ['n/a', true],
-      ['N/A', true],
-      ['  ', true],
-      ['user-123', false],
-      ['regular-user', false],
-    ])('identifies "%s" as guest=%s', async (userId: string, isGuest: boolean) => {
-      const actorCtx = new ActorContext();
-      actorCtx.actorID = userId;
-      actorContextService.buildForUser.mockResolvedValue(actorCtx);
-
-      await service.accessGranted({
-        userId,
-        whiteboardId: 'wb-1',
-        privilege: AuthorizationPrivilege.READ,
-      });
-
-      if (isGuest) {
-        expect(actorContextService.createGuest).toHaveBeenCalled();
-        expect(actorContextService.buildForUser).not.toHaveBeenCalled();
-      } else {
-        expect(actorContextService.buildForUser).toHaveBeenCalledWith(userId);
-      }
+      expect(logger.error).toHaveBeenCalled();
     });
   });
 });

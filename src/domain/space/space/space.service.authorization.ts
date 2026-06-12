@@ -3,6 +3,7 @@ import {
   CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE,
   CREDENTIAL_RULE_SPACE_ADMINS,
   CREDENTIAL_RULE_SPACE_MEMBERS_READ,
+  CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD,
   CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ,
   CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS,
   POLICY_RULE_READ_ABOUT,
@@ -466,6 +467,21 @@ export class SpaceAuthorizationService {
     );
     updatedAuthorizations.push(...communityAuthorizations);
 
+    // When members are allowed to create callouts they need to be able to
+    // upload files to the Space-level storage bucket, as new callout content
+    // (e.g. description images, attached References) is uploaded there
+    // temporarily before the callout's own storage bucket exists. That
+    // Space-level bucket is the Space profile's storage bucket
+    // (`space.profile.storageBucket`); the grant is applied on the Space
+    // profile authorization below so it reaches exactly that bucket. Gated on
+    // spaceMembershipAllowed so that archived spaces (where membership
+    // capabilities are disabled) do not grant upload access.
+    const storageMemberFileUploadRules =
+      await this.getStorageMemberFileUploadRules(
+        space.community.roleSet,
+        space.settings,
+        spaceMembershipAllowed
+      );
     const storageAuthorizations = await this.resilientCascade(
       'storage-aggregator',
       ctx,
@@ -543,13 +559,19 @@ export class SpaceAuthorizationService {
     );
     updatedAuthorizations.push(...aboutAuthorizations);
 
+    // Apply the member FILE_UPLOAD grant on the Space profile: the rule
+    // cascades to the Space profile's own storage bucket
+    // (`space.profile.storageBucket`), which is the Space-level location used to
+    // stage new callout content during creation. No grant is placed on the
+    // About profile or the storage aggregator's directStorage.
     const profileAuthorizations = await this.resilientCascade(
       'space.profile',
       ctx,
       () =>
         this.profileAuthorizationService.applyAuthorizationPolicy(
           space.profile!.id,
-          space.authorization!
+          space.authorization!,
+          storageMemberFileUploadRules
         )
     );
     updatedAuthorizations.push(...profileAuthorizations);
@@ -699,6 +721,31 @@ export class SpaceAuthorizationService {
     );
 
     return authorization;
+  }
+
+  private async getStorageMemberFileUploadRules(
+    roleSet: IRoleSet,
+    spaceSettings: ISpaceSettings,
+    spaceMembershipAllowed: boolean
+  ): Promise<IAuthorizationPolicyRuleCredential[]> {
+    if (
+      !spaceMembershipAllowed ||
+      !spaceSettings.collaboration.allowMembersToCreateCallouts
+    ) {
+      return [];
+    }
+    const criteria = await this.getActorCriteria(roleSet, spaceSettings);
+    if (criteria.length === 0) {
+      return [];
+    }
+    const fileUploadRule = this.authorizationPolicyService.createCredentialRule(
+      [AuthorizationPrivilege.FILE_UPLOAD],
+      criteria,
+      CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD
+    );
+    // Must cascade so the rule reaches the Space profile's storage bucket.
+    fileUploadRule.cascade = true;
+    return [fileUploadRule];
   }
 
   private async getActorCriteria(

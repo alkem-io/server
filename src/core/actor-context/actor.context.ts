@@ -15,6 +15,9 @@ export class ActorContext {
   /** Whether this is an anonymous (unauthenticated) request */
   isAnonymous: boolean = false;
 
+  /** Whether this is a guest request - guest name is populated */
+  isGuest: boolean = false;
+
   /** Kratos identity ID (immutable, stable across email changes) */
   authenticationID?: string;
 
