@@ -1,3 +1,4 @@
+import { CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD } from '@common/constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -808,6 +809,215 @@ describe('SpaceAuthorizationService', () => {
       expect(
         templatesManagerAuthorizationService.applyAuthorizationPolicy
       ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('member file upload on space storage (allowMembersToCreateCallouts)', () => {
+    // Mocks needed for propagateAuthorizationToChildEntities to run, plus a
+    // createCredentialRule that echoes its args so we can inspect the rule that
+    // is passed down to the storage aggregator.
+    const setupPropagateMocks = () => {
+      (
+        communityAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        storageAggregatorAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        collaborationAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        licenseAuthorizationService.applyAuthorizationPolicy as any
+      ).mockReturnValue([]);
+      (
+        templatesManagerAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        spaceAboutAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        profileAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      (
+        authorizationPolicyService.createCredentialRule as any
+      ).mockImplementation(
+        (grantedPrivileges: any, criterias: any, name: any) => ({
+          grantedPrivileges,
+          criterias,
+          name,
+          cascade: false,
+        })
+      );
+    };
+
+    // The member FILE_UPLOAD grant is applied on the Space profile, so it
+    // cascades to the Space profile's own storage bucket
+    // (`space.profile.storageBucket`) — the Space-level location used to stage
+    // new callout content during creation.
+    const getSpaceProfileRulesArg = () =>
+      (profileAuthorizationService.applyAuthorizationPolicy as any).mock
+        .calls[0][2] ?? [];
+
+    const getStorageAggregatorCall = () =>
+      (storageAggregatorAuthorizationService.applyAuthorizationPolicy as any)
+        .mock.calls[0];
+
+    const getSpaceAboutRulesArg = () =>
+      (spaceAboutAuthorizationService.applyAuthorizationPolicy as any).mock
+        .calls[0][2] ?? [];
+
+    const findFileUploadRule = (rules: any[]) =>
+      rules.find(
+        (rule: any) =>
+          rule.name === CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD
+      );
+
+    it('[US1] grants FILE_UPLOAD to members on the Space profile storage when allowMembersToCreateCallouts is true', async () => {
+      const memberCriterias = [
+        { type: AuthorizationCredential.SPACE_MEMBER, resourceID: 'space-1' },
+      ];
+      const space = createMockSpace();
+      setupPropagateMocks();
+      (roleSetService.getCredentialsForRole as any).mockResolvedValue(
+        memberCriterias
+      );
+      (
+        roleSetService.getDirectParentCredentialForRole as any
+      ).mockResolvedValue(undefined);
+
+      await service.propagateAuthorizationToChildEntities(
+        space as any,
+        true,
+        []
+      );
+
+      // Applied against the Space's own profile and authorization
+      const profileCall = (
+        profileAuthorizationService.applyAuthorizationPolicy as any
+      ).mock.calls[0];
+      expect(profileCall[0]).toBe(space.profile!.id);
+      expect(profileCall[1]).toBe(space.authorization);
+
+      const rulesArg = profileCall[2];
+      expect(rulesArg).toHaveLength(1);
+      expect(rulesArg[0].name).toBe(
+        CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD
+      );
+      expect(rulesArg[0].grantedPrivileges).toContain(
+        AuthorizationPrivilege.FILE_UPLOAD
+      );
+      // Must cascade to reach the Space profile's storage bucket
+      expect(rulesArg[0].cascade).toBe(true);
+    });
+
+    it('[US1] does NOT grant FILE_UPLOAD on the storage aggregator or the About profile', async () => {
+      // The grant must land only on the Space profile's storage bucket — never
+      // on the storage aggregator's directStorage nor the About profile storage.
+      const space = createMockSpace();
+      setupPropagateMocks();
+      (roleSetService.getCredentialsForRole as any).mockResolvedValue([
+        { type: AuthorizationCredential.SPACE_MEMBER, resourceID: 'space-1' },
+      ]);
+      (
+        roleSetService.getDirectParentCredentialForRole as any
+      ).mockResolvedValue(undefined);
+
+      await service.propagateAuthorizationToChildEntities(
+        space as any,
+        true,
+        []
+      );
+
+      // Storage aggregator is invoked with no extra credential rules argument
+      expect(getStorageAggregatorCall()[2]).toBeUndefined();
+      // About path carries only the read rule, no FILE_UPLOAD grant
+      expect(findFileUploadRule(getSpaceAboutRulesArg())).toBeUndefined();
+    });
+
+    it('[US2] does NOT grant FILE_UPLOAD on the Space profile when allowMembersToCreateCallouts is false', async () => {
+      const offSettings = {
+        ...defaultSettings,
+        collaboration: {
+          ...defaultSettings.collaboration,
+          allowMembersToCreateCallouts: false,
+        },
+      };
+      const space = createMockSpace({ settings: offSettings });
+      setupPropagateMocks();
+      (roleSetService.getCredentialsForRole as any).mockResolvedValue([
+        { type: AuthorizationCredential.SPACE_MEMBER, resourceID: 'space-1' },
+      ]);
+      (
+        roleSetService.getDirectParentCredentialForRole as any
+      ).mockResolvedValue(undefined);
+
+      await service.propagateAuthorizationToChildEntities(
+        space as any,
+        true,
+        []
+      );
+
+      // No credential rules handed to the Space profile
+      expect(getSpaceProfileRulesArg()).toEqual([]);
+    });
+
+    it('[US2] does NOT grant FILE_UPLOAD when membership is not allowed (e.g. archived space) even if allowMembersToCreateCallouts is true', async () => {
+      // Archived spaces pass spaceMembershipAllowed=false; the upload mutation
+      // authorizes solely on FILE_UPLOAD, so the rule must be suppressed here to
+      // avoid granting upload access on an archived space's storage bucket.
+      const space = createMockSpace(); // defaultSettings: allowMembersToCreateCallouts = true
+      setupPropagateMocks();
+      (roleSetService.getCredentialsForRole as any).mockResolvedValue([
+        { type: AuthorizationCredential.SPACE_MEMBER, resourceID: 'space-1' },
+      ]);
+      (
+        roleSetService.getDirectParentCredentialForRole as any
+      ).mockResolvedValue(undefined);
+
+      await service.propagateAuthorizationToChildEntities(
+        space as any,
+        false, // spaceMembershipAllowed = false
+        []
+      );
+
+      expect(getSpaceProfileRulesArg()).toEqual([]);
+    });
+
+    it('[US3] targets create-callout actor criteria including inherited parent members and cascades', async () => {
+      // defaultSettings: inheritMembershipRights = true and PUBLIC privacy, so
+      // getActorCriteria appends the parent-space member credential.
+      const memberCredential = {
+        type: AuthorizationCredential.SPACE_MEMBER,
+        resourceID: 'space-1',
+      };
+      const parentMemberCredential = {
+        type: AuthorizationCredential.SPACE_MEMBER,
+        resourceID: 'parent-space-1',
+      };
+      const space = createMockSpace();
+      setupPropagateMocks();
+      (roleSetService.getCredentialsForRole as any).mockResolvedValue([
+        memberCredential,
+      ]);
+      (
+        roleSetService.getDirectParentCredentialForRole as any
+      ).mockResolvedValue(parentMemberCredential);
+
+      await service.propagateAuthorizationToChildEntities(
+        space as any,
+        true,
+        []
+      );
+
+      const rulesArg = getSpaceProfileRulesArg();
+      expect(rulesArg).toHaveLength(1);
+      expect(rulesArg[0].grantedPrivileges).toEqual([
+        AuthorizationPrivilege.FILE_UPLOAD,
+      ]);
+      expect(rulesArg[0].cascade).toBe(true);
+      expect(rulesArg[0].criterias).toEqual(
+        expect.arrayContaining([memberCredential, parentMemberCredential])
+      );
     });
   });
 });

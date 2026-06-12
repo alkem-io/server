@@ -1,46 +1,54 @@
 import { LogContext } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { ANONYMOUS_ACTOR_ID } from '@core/auth/oidc/constants';
 import { AuthenticationService } from '@core/authentication/authentication.service';
 import { VirtualAssistantService } from '@domain/community/virtual-assistant/virtual.assistant.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { PassportStrategy } from '@nestjs/passport';
-import { KratosPayload } from '@services/infrastructure/kratos/types/kratos.payload';
 import { AlkemioConfig } from '@src/types';
-import { passportJwtSecret } from 'jwks-rsa';
+import { IncomingMessage } from 'http';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { ExtractJwt, Strategy } from 'passport-jwt';
+import { Strategy } from 'passport-custom';
 import { McpApiKeyService } from './mcp-api-key.service';
 
 export const AUTH_STRATEGY_MCP_DELEGATION = 'mcp-delegation';
 
 /**
- * The header carrying the on-behalf-of user's JWT for a DELEGATED MCP call.
- * DECIDED v1 (contracts/auth-identity-flow.md): the assistant ACTOR credential
- * (`mcp_api_key`) is the `Authorization`; the on-behalf-of user JWT rides here.
+ * The header carrying the on-behalf-of user's ACTOR ID for a DELEGATED MCP call.
+ * DECIDED v2 (contracts/auth-identity-flow.md, OIDC rework): the assistant ACTOR
+ * credential (`mcp_api_key`) is the `Authorization`; the on-behalf-of user's
+ * actor id (a UUID) rides here.
  */
 export const X_ALKEMIO_ON_BEHALF_OF_HEADER = 'x-alkemio-on-behalf-of';
+
+const UUID_RE =
+  /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
 /**
  * MCP delegation auth path (Flow A — user-initiated, 004-web-ai-assistant).
  *
- * assistant-service authenticates to the MCP host with its OWN `virtual-assistant`
- * actor credential (the `mcp_api_key` in `Authorization`) AND carries the
- * on-behalf-of user's JWT in the `X-Alkemio-On-Behalf-Of` header. This strategy
- * validates BOTH and builds a DELEGATED ActorContext:
+ * OIDC rework (2026-06): Oathkeeper and its id_token JWT are retired platform-wide
+ * — there is no user JWT to forward anymore. The platform's pattern for trusted
+ * downstream services is now identity-by-header: Traefik's `alkemio-resolve`
+ * forwardAuth resolves the browser session centrally and injects
+ * `X-Alkemio-Actor-Id` (zeroed at the edge so it cannot be spoofed from outside
+ * the mesh). assistant-service receives that trusted id and forwards it here.
  *
- *   - the JWT (this header) is verified via the SAME JWKS as the ordinary
- *     `oathkeeper-jwt` path → `alkemio_actor_id` → the USER's ActorContext, so
- *     entity authorization is byte-identical to GraphQL (effective ⊆ user
- *     privileges, FR-002), and
- *   - the `mcp_api_key` identifies the acting assistant; the resulting context
- *     is stamped with `delegationContext = { assistantActorId, onBehalfOfUserId }`
- *     for ATTRIBUTION only (never authorization, FR-016/SC-010).
+ * So a delegated call carries:
+ *   - `Authorization: Bearer mcp_…` — the assistant's `mcp_api_key`, which MUST
+ *     be ACTOR-BOUND to the `virtual-assistant` singleton. This credential is
+ *     the TRUST ANCHOR: the on-behalf-of header is honored for it and only it
+ *     (a user-bound or unbound key cannot impersonate anyone).
+ *   - `X-Alkemio-On-Behalf-Of: <user actor id>` — the user the assistant acts
+ *     for, as resolved by the platform edge.
  *
- * passport-jwt verifies the header JWT and calls validate() with its payload;
- * we then additionally validate the Authorization mcp_api_key. If the api_key
- * is missing/invalid, or MCP/api-key auth is disabled, we return null so the
- * guard moves on (no delegation, falls through to other strategies / anonymous).
+ * The strategy builds the USER's ActorContext from that id (same
+ * `createActorContext` as the cookie/bearer paths ⇒ entity authorization is
+ * byte-identical to GraphQL; effective ⊆ user privileges, FR-002) and stamps
+ * `delegationContext = { assistantActorId, onBehalfOfUserId }` for ATTRIBUTION
+ * only (never authorization, FR-016/SC-010). Any precondition failing returns
+ * null so the guard falls through (no delegation, never an escalation).
  */
 @Injectable()
 export class McpDelegationStrategy extends PassportStrategy(
@@ -54,33 +62,10 @@ export class McpDelegationStrategy extends PassportStrategy(
     private readonly virtualAssistantService: VirtualAssistantService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {
-    super({
-      secretOrKeyProvider: passportJwtSecret({
-        cache: true,
-        rateLimit: true,
-        jwksRequestsPerMinute: 5,
-        jwksUri: configService.get(
-          'identity.authentication.providers.ory.jwks_uri',
-          { infer: true }
-        ),
-      }),
-      issuer: configService.get(
-        'identity.authentication.providers.ory.issuer',
-        { infer: true }
-      ),
-      // Extract the on-behalf-of user JWT from the dedicated header (NOT
-      // Authorization, which carries the assistant actor's mcp_api_key).
-      jwtFromRequest: ExtractJwt.fromHeader(X_ALKEMIO_ON_BEHALF_OF_HEADER),
-      // Mirror OryStrategy: ignore exp at parse time, enforce in validate().
-      ignoreExpiration: true,
-      passReqToCallback: true,
-    });
+    super();
   }
 
-  async validate(
-    req: { headers?: Record<string, string | string[] | undefined> },
-    payload: KratosPayload
-  ): Promise<ActorContext | null> {
+  async validate(request: IncomingMessage): Promise<ActorContext | null> {
     const mcpEnabled = this.configService.get('mcp.enabled', { infer: true });
     const apiKeyEnabled = this.configService.get('mcp.api_key_enabled', {
       infer: true,
@@ -89,10 +74,23 @@ export class McpDelegationStrategy extends PassportStrategy(
       return null;
     }
 
-    // 1. Validate the assistant actor credential (Authorization: Bearer mcp_…).
-    const apiKey = this.extractApiKey(req.headers?.authorization);
+    // 1. The on-behalf-of header is what makes this a delegation call.
+    const onBehalfOf = this.extractOnBehalfOf(request);
+    if (!onBehalfOf) {
+      // Not a delegation call; let other strategies run.
+      return null;
+    }
+    if (!UUID_RE.test(onBehalfOf) || onBehalfOf === ANONYMOUS_ACTOR_ID) {
+      this.logger.verbose?.(
+        'MCP delegation: on-behalf-of header is not a usable actor id',
+        LogContext.MCP_SERVER
+      );
+      return null;
+    }
+
+    // 2. Validate the assistant actor credential (Authorization: Bearer mcp_…).
+    const apiKey = this.extractApiKey(request.headers?.authorization);
     if (!apiKey) {
-      // No actor credential ⇒ not a delegation call; let other strategies run.
       return null;
     }
     const validatedKey = await this.mcpApiKeyService.validateApiKey(apiKey);
@@ -104,28 +102,23 @@ export class McpDelegationStrategy extends PassportStrategy(
       return null;
     }
 
-    // 2. Validate the on-behalf-of user JWT (already verified by passport-jwt).
-    if (!payload.alkemio_actor_id) {
-      this.logger.verbose?.(
-        'MCP delegation: on-behalf-of JWT missing alkemio_actor_id',
-        LogContext.MCP_SERVER
-      );
-      return null;
-    }
-    if (payload.session?.expires_at && hasExpired(payload.session.expires_at)) {
-      this.logger.verbose?.(
-        'MCP delegation: on-behalf-of session expired',
+    // 3. The TRUST ANCHOR: the key must be actor-bound to the virtual-assistant
+    //    singleton. A user-bound (or unbound) key must never be able to act on
+    //    behalf of arbitrary users.
+    const assistantActor =
+      await this.virtualAssistantService.getSingletonOrFail();
+    if (validatedKey.actorId !== assistantActor.id) {
+      this.logger.warn?.(
+        'MCP delegation refused: credential is not bound to the virtual-assistant actor',
         LogContext.MCP_SERVER
       );
       return null;
     }
 
-    // 3. Build the USER's ActorContext — authorization flows entirely through
+    // 4. Build the USER's ActorContext — authorization flows entirely through
     //    the user's credentials (effective ⊆ user privileges by construction).
-    const userContext = await this.authenticationService.createActorContext(
-      payload.alkemio_actor_id,
-      payload.session ?? undefined
-    );
+    const userContext =
+      await this.authenticationService.createActorContext(onBehalfOf);
     if (userContext.isAnonymous || !userContext.actorID) {
       this.logger.verbose?.(
         'MCP delegation: on-behalf-of user resolved to anonymous',
@@ -133,12 +126,6 @@ export class McpDelegationStrategy extends PassportStrategy(
       );
       return null;
     }
-
-    // 4. Resolve the acting assistant actor for ATTRIBUTION (the singleton
-    //    virtual-assistant). T027 (S2) makes the mcp_api_key itself actor-bound;
-    //    until then we resolve the singleton — there is exactly one.
-    const assistantActor =
-      await this.virtualAssistantService.getSingletonOrFail();
 
     userContext.delegationContext = {
       assistantActorId: assistantActor.id,
@@ -152,6 +139,14 @@ export class McpDelegationStrategy extends PassportStrategy(
     return userContext;
   }
 
+  private extractOnBehalfOf(request: IncomingMessage): string | undefined {
+    const raw = request.headers?.[X_ALKEMIO_ON_BEHALF_OF_HEADER];
+    const value = Array.isArray(raw) ? raw[0] : raw;
+    return typeof value === 'string' && value.length > 0
+      ? value.trim()
+      : undefined;
+  }
+
   /** Extract an `mcp_…` key from an `Authorization: Bearer mcp_…` header. */
   private extractApiKey(
     authHeader: string | string[] | undefined
@@ -163,8 +158,3 @@ export class McpDelegationStrategy extends PassportStrategy(
     return undefined;
   }
 }
-
-const hasExpired = (expiresAt: string): boolean => {
-  const ts = Date.parse(expiresAt);
-  return Number.isFinite(ts) && Date.now() >= ts;
-};

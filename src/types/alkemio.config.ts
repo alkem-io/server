@@ -67,7 +67,6 @@ export type AlkemioConfig = {
   };
   identity: {
     authentication: {
-      api_access_enabled: boolean;
       cache_ttl: number;
       providers: {
         ory: {
@@ -76,23 +75,34 @@ export type AlkemioConfig = {
           kratos_public_base_url: string;
           kratos_public_base_url_server: string;
           kratos_admin_base_url_server: string;
-          earliest_possible_extend: number;
           admin_service_account: {
             username: string;
             password: string;
           };
           session_cookie_name: string;
-          session_extend_enabled: boolean;
-          /**
-           * Shared-secret header validated on inbound Kratos webhooks
-           * (currently: `POST /rest/kratos/password-changed`). The webhook
-           * configuration in `.build/ory/kratos/` must inject this header
-           * with this value for the request to be accepted.
-           */
-          webhook_secret: {
+        };
+        oidc: {
+          issuer_url: string;
+          jwks_url: string;
+          web_client_id: string;
+          web_redirect_uri: string;
+          bearer_aud_allow_list: string;
+          refresh_leeway_s: number;
+          pre_auth_cookie_signing_key: string;
+          state_hmac_key: string;
+          session_signing_key: string;
+          cookie: {
             name: string;
-            value: string;
+            domain: string;
+            secure: boolean;
+            idle_ttl_s: number;
+            absolute_ttl_s: number;
           };
+        };
+        non_interactive_login: {
+          enabled: boolean;
+          signing_key: string;
+          token_ttl_s: number;
         };
       };
     };

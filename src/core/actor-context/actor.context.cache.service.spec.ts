@@ -17,6 +17,7 @@ describe('ActorContextCacheService', () => {
     actorID: 'user-123',
     credentials: [{ type: 'GlobalRegistered' as any, resourceID: '' }],
     isAnonymous: false,
+    isGuest: false,
   };
 
   beforeEach(async () => {
@@ -115,6 +116,7 @@ describe('ActorContextCacheService', () => {
         actorID: '',
         credentials: [],
         isAnonymous: true,
+        isGuest: false,
       };
 
       const result = await service.setByActorID(anonymousContext);

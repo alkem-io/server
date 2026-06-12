@@ -123,9 +123,6 @@ identity:
   # client-side configuration required to authenticate to the Identity Servers (e.g. Ory Kratos) and generate
   # valid Authorization Header (Bearer access token).
   authentication:
-    # A flag setting whether Authentication based on non-interactive login is enabled.
-    api_access_enabled: ${AUTH_API_ENABLED}:true
-
     # Time-to-live of the cache for user authentication info (credentials, verified credentials) in seconds. Defaults to 60.
     cache_ttl: ${AUTH_CACHE_TTL}:60
 
@@ -201,29 +198,74 @@ identity:
         kratos_public_base_url_server: ${AUTH_ORY_KRATOS_PUBLIC_BASE_URL_SERVER}:http://localhost:3000/ory/kratos/public
         kratos_admin_base_url_server: ${AUTH_ORY_KRATOS_ADMIN_BASE_URL_SERVER}:http://localhost:3000/ory/kratos
 
-        # Session can't be extended until *earliest_possible_extend* before it expires.
-        # The format is 1d12h59m30s, 1d2h, 1h30m, 1m30s, 1s etc.
-        #
-        # If you need high flexibility when extending sessions, you can set earliest_possible_extend to lifespan,
-        # which allows sessions to be refreshed during their entire lifespan, even right after they are created.
-        # Source https://www.ory.sh/docs/kratos/session-management/refresh-extend-sessions
-        earliest_possible_extend: ${AUTH_EARLIEST_POSSIBLE_SESSION_EXTEND}:24h
-
         # credentials used for kratos related work flows
         admin_service_account:
           username: ${KRATOS_ADMIN_USERNAME}:kratos@alkem.io
           password: ${KRATOS_ADMIN_PASSWORD}:kr@t0$!!
 
         session_cookie_name: ${KRATOS_SESSION_COOKIE_NAME}:ory_kratos_session
-        session_extend_enabled: ${KRATOS_SESSION_EXTEND_ENABLED}:true
 
-        # Shared-secret header validated on inbound Kratos webhooks (e.g. the
-        # settings-flow password-changed hook -> POST /rest/kratos/password-changed).
-        # The Kratos webhook config in .build/ory/kratos/ must inject this header
-        # with this value for the request to be accepted.
-        webhook_secret:
-          name: ${KRATOS_WEBHOOK_SECRET_NAME}:x-kratos-webhook-secret
-          value: ${KRATOS_WEBHOOK_SECRET_VALUE}:kratos-hook-dev-secret
+      # Hydra / OIDC Relying Party configuration (alkemio-server acts as BFF).
+      # Spec: specs/003-alkemio-oidc-idp/plan.md. Module: src/core/auth/oidc/.
+      oidc:
+        # Hydra OIDC issuer URL (used for discovery).
+        issuer_url: ${HYDRA_ISSUER_URL}:http://localhost:3000/
+        # Hydra JWKS endpoint used for Bearer JWT signature validation (jose).
+        jwks_url: ${HYDRA_JWKS_URL}:http://localhost:3000/.well-known/jwks.json
+        # Hydra client_id registered for alkemio-client-web (public client, PKCE-S256).
+        web_client_id: ${ALKEMIO_WEB_CLIENT_ID}:alkemio-web
+        # Redirect URI registered with Hydra for the alkemio-web client. MUST match the
+        # entry in the Hydra OAuth2Client CRD / local-dev seed exactly. Per-env overlays
+        # set the public hostname; local-dev defaults to the loopback callback path.
+        web_redirect_uri: ${OIDC_WEB_REDIRECT_URI}:http://localhost:3000/api/auth/oidc/callback
+        # Comma-separated allow-list of aud values accepted on Bearer JWTs (FR-024).
+        bearer_aud_allow_list: ${BEARER_AUD_ALLOW_LIST}:alkemio-web,synapse-client,element-client,ecosystem-analytics
+        # Refresh-token rotation leeway in seconds (FR-008 grace window overlap).
+        refresh_leeway_s: ${OIDC_REFRESH_LEEWAY_S}:30
+        # HS256 signing key for the alkemio_oidc_pre_auth cookie JWS (FR-017b).
+        # Base64url/hex of 32 random bytes. The defaults below are LOCAL-DEV ONLY —
+        # they live in this committed file and are NOT secret. Override per-env via
+        # the listed env var (sandbox/dev/test/prod overlays inject real secrets via
+        # the Alkemio-secrets operator); mint via:
+        #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+        pre_auth_cookie_signing_key: ${PRE_AUTH_COOKIE_SIGNING_KEY}:placeholder-pre-auth-cookie-signing-key-change-me
+        # HS256 key for the authorization-request state parameter HMAC.
+        state_hmac_key: ${STATE_HMAC_KEY}:placeholder-state-hmac-key-change-me
+        # express-session secret for signing alkemio_session cookie.
+        session_signing_key: ${SESSION_SIGNING_KEY}:placeholder-session-signing-key-change-me
+        # alkemio_session cookie attributes. Per-env overlays set Secure + domain +
+        # per-env name suffix; the local-dev defaults below run over HTTP loopback.
+        cookie:
+          name: ${OIDC_SESSION_COOKIE_NAME}:alkemio_session
+          domain: ${OIDC_SESSION_COOKIE_DOMAIN}
+          secure: ${OIDC_SESSION_COOKIE_SECURE}:false
+          # Sliding idle window. Renewed lazily once past its half-life (see
+          # sessionRenewalMiddleware), so this is also the cookie maxAge and the
+          # Redis key TTL. Capped by the absolute ceiling below.
+          idle_ttl_s: ${OIDC_SESSION_COOKIE_IDLE_TTL_S}:1209600 # 14 days
+          # Absolute ceiling. Fixed at login (`absolute_expires_at = now + this`),
+          # never extended by activity or token refresh. Forces a full re-auth at
+          # this age regardless of activity. MUST be >= idle_ttl_s.
+          absolute_ttl_s: ${OIDC_SESSION_COOKIE_ABSOLUTE_TTL_S}:2592000 # 30 days
+
+      # Non-interactive credential→token endpoint for test harnesses and other
+      # clients that cannot perform the browser-based OIDC flow. Mounts
+      # POST /api/auth/non-interactive-login and a third Passport strategy
+      # (alongside cookie-session + hydra-bearer). The boot guard refuses to
+      # start when NODE_ENV=production AND enabled=true. Module:
+      # src/core/auth/non-interactive-login/.
+      non_interactive_login:
+        # Whether the endpoint is mounted and the strategy accepts tokens.
+        # MUST stay false in production environments.
+        enabled: ${ENABLE_NON_INTERACTIVE_LOGIN}:false
+        # HS256 signing key (hex or base64). Minimum 32 bytes when enabled.
+        # The default below is empty so a production boot with enabled=true
+        # would fail loudly. Mint via:
+        #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
+        signing_key: ${NON_INTERACTIVE_LOGIN_SIGNING_KEY}:placeholder-non-interactive-login-signing-key-change-me
+        # Minted JWT lifetime in seconds. 4 hours is enough for a full e2e
+        # suite without mid-run remint; tests cache and reuse.
+        token_ttl_s: ${NON_INTERACTIVE_LOGIN_TOKEN_TTL_S}:14400
 
 ## monitoring ##
 # This section defines settings used for DevOps - monitoring providers, endpoints, logging configuration.
