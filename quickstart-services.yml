@@ -252,7 +252,7 @@ services:
     build:
       context: ${OIDC_SERVICE_REPO_PATH:-../oidc-service}
       dockerfile: Dockerfile
-    image: alkemio/oidc-service:local
+    image: alkemio/oidc-service:v0.8.0
     depends_on:
       - hydra
       - kratos
@@ -503,7 +503,7 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:local
+    image: alkemio/whiteboard-collaboration-service:v0.11.0
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -525,7 +525,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service-go:local
+    image: alkemio/file-service:v0.1.0
     depends_on:
       postgres:
         condition: service_healthy
@@ -583,7 +583,7 @@ services:
   collaborative-document:
     container_name: alkemio_dev_collaborative-document
     hostname: collaborative-document
-    image: alkemio/collaborative-document-service:local
+    image: alkemio/collaborative-document-service:v0.4.0
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -623,7 +623,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_wopi_service
     hostname: wopi-service
-    image: alkemio/wopi-service:local
+    image: alkemio/wopi-service:v0.1.0
     depends_on:
       postgres:
         condition: service_healthy
