@@ -34,12 +34,15 @@ export class WopiServiceAdapter {
 
   /**
    * Request a WOPI access token for a document.
-   * Forwards the actor's JWT for Oathkeeper authentication on the WOPI service.
+   * This is a cluster-internal call that bypasses the Traefik gateway, so the
+   * adapter itself stamps the actor identity the WOPI service trusts via its
+   * X-Alkemio-Actor-Id header (the gateway's alkemio-resolve forwardAuth does
+   * the same for external callers).
    * Returns a ready-to-use editorUrl (constructed by the WOPI service).
    */
   async issueToken(
     documentId: string,
-    actorJWT: string
+    actorID: string
   ): Promise<WopiTokenResult> {
     const url = `${this.baseUrl}/wopi/token`;
 
@@ -54,7 +57,7 @@ export class WopiServiceAdapter {
         { documentId },
         {
           headers: {
-            Authorization: `Bearer ${actorJWT}`,
+            'X-Alkemio-Actor-Id': actorID,
             'Content-Type': 'application/json',
           },
         }

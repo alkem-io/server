@@ -9,7 +9,6 @@ import {
   InfoInputData,
   MemoContributionsInputData,
   SaveInputData,
-  WhoInputData,
 } from './inputs';
 import { HealthCheckOutputData } from './outputs';
 
@@ -71,20 +70,6 @@ describe('CollaborativeDocumentIntegrationController', () => {
 
       expect(integrationService.info).toHaveBeenCalledWith(payload);
       expect(result).toEqual(expected);
-    });
-  });
-
-  describe('who', () => {
-    it('should delegate to integrationService.who and return its result', async () => {
-      const payload = {
-        auth: { cookie: 'session=abc' },
-      } as WhoInputData;
-      integrationService.who.mockResolvedValue('user-42');
-
-      const result = await controller.who(payload, mockRmqContext);
-
-      expect(integrationService.who).toHaveBeenCalledWith(payload);
-      expect(result).toBe('user-42');
     });
   });
 
