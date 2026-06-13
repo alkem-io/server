@@ -1,6 +1,5 @@
-import { CurrentActor, Headers } from '@common/decorators';
-import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { AuthenticationException } from '@common/exceptions';
+import { CurrentActor } from '@common/decorators';
+import { AuthorizationPrivilege } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
@@ -25,8 +24,7 @@ export class CollaboraDocumentResolverQueries {
   async collaboraEditorUrl(
     @CurrentActor() actorContext: ActorContext,
     @Args('collaboraDocumentID', { type: () => UUID })
-    collaboraDocumentID: string,
-    @Headers('authorization') authorizationHeader: string
+    collaboraDocumentID: string
   ): Promise<CollaboraEditorUrlResult> {
     const collaboraDocument =
       await this.collaboraDocumentService.getCollaboraDocumentOrFail(
@@ -39,16 +37,12 @@ export class CollaboraDocumentResolverQueries {
       `read CollaboraDocument editor URL: ${collaboraDocument.id}`
     );
 
-    // Extract the JWT from the Authorization header
-    const jwt = authorizationHeader?.replace('Bearer ', '') ?? '';
-
-    if (!jwt) {
-      throw new AuthenticationException(
-        'Authorization header with a valid Bearer token is required to obtain a Collabora editor URL',
-        LogContext.COLLABORATION
-      );
-    }
-
-    return this.collaboraDocumentService.getEditorUrl(collaboraDocumentID, jwt);
+    // Identity is resolved from the ActorContext (alkemio_session cookie /
+    // forwardAuth), not an inbound Bearer JWT. The WOPI service trusts the
+    // X-Alkemio-Actor-Id header the adapter stamps on the internal call.
+    return this.collaboraDocumentService.getEditorUrl(
+      collaboraDocumentID,
+      actorContext.actorID
+    );
   }
 }

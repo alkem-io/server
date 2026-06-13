@@ -63,6 +63,29 @@ describe('InnovationFlowStateService', () => {
       expect(result.authorization).toBeDefined();
     });
 
+    it('should default settings.visible to true when not provided (FR-005)', async () => {
+      const stateData = {
+        displayName: 'Draft',
+      };
+
+      const result = await service.createInnovationFlowState(stateData as any);
+
+      expect(result.settings.visible).toBe(true);
+    });
+
+    it('should honor an explicit create-time visible=false (FR-005)', async () => {
+      const stateData = {
+        displayName: 'Hidden Draft',
+        settings: { allowNewCallouts: true, visible: false },
+      };
+
+      const result = await service.createInnovationFlowState(stateData as any);
+
+      expect(result.settings.visible).toBe(false);
+      // allowNewCallouts default behaviour is unchanged (out of scope)
+      expect(result.settings.allowNewCallouts).toBe(true);
+    });
+
     it('should default description to empty string when not provided', async () => {
       const stateData = {
         displayName: 'Draft',
@@ -126,6 +149,100 @@ describe('InnovationFlowStateService', () => {
       expect(state.settings.allowNewCallouts).toBe(false);
     });
 
+    it('should set settings.visible to false when explicitly provided (FR-002)', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: { allowNewCallouts: true, visible: true },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { allowNewCallouts: true, visible: false },
+      } as any);
+
+      expect(state.settings.visible).toBe(false);
+    });
+
+    it('should set settings.visible to true when explicitly provided (FR-002)', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: { allowNewCallouts: true, visible: false },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { allowNewCallouts: true, visible: true },
+      } as any);
+
+      expect(state.settings.visible).toBe(true);
+    });
+
+    it('should preserve stored settings.visible when omitted from the update (FR-002)', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: { allowNewCallouts: true, visible: false },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { allowNewCallouts: true },
+      } as any);
+
+      // omission is a no-op: the previously stored value is retained
+      expect(state.settings.visible).toBe(false);
+    });
+
+    it('should preserve stored settings.allowNewCallouts when omitted from the update', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: { allowNewCallouts: true, visible: true },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { visible: false },
+      } as any);
+
+      // omission is a no-op: the previously stored value is retained
+      expect(state.settings.allowNewCallouts).toBe(true);
+      expect(state.settings.visible).toBe(false);
+    });
+
+    it('should not alter allowNewCallouts when only visible changes (FR-009)', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: { allowNewCallouts: true, visible: true },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { allowNewCallouts: true, visible: false },
+      } as any);
+
+      expect(state.settings.allowNewCallouts).toBe(true);
+      expect(state.settings.visible).toBe(false);
+    });
+
     it('should default description to empty string when undefined', async () => {
       const state = {
         id: 'state-1',
@@ -175,6 +292,42 @@ describe('InnovationFlowStateService', () => {
       await expect(
         service.getInnovationFlowStateOrFail('nonexistent')
       ).rejects.toThrow(EntityNotFoundException);
+    });
+
+    it('should coerce a missing settings.visible to true on read (FR-001)', async () => {
+      const state = {
+        id: 'state-1',
+        settings: { allowNewCallouts: true },
+      } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(state);
+
+      const result = await service.getInnovationFlowStateOrFail('state-1');
+
+      expect(result.settings.visible).toBe(true);
+    });
+
+    it('should not overwrite an existing settings.visible=false on read (FR-001)', async () => {
+      const state = {
+        id: 'state-1',
+        settings: { allowNewCallouts: true, visible: false },
+      } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(state);
+
+      const result = await service.getInnovationFlowStateOrFail('state-1');
+
+      expect(result.settings.visible).toBe(false);
+    });
+
+    it('should initialize settings with visible=true when settings is entirely absent on read (FR-001)', async () => {
+      const state = {
+        id: 'state-1',
+      } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(state);
+
+      const result = await service.getInnovationFlowStateOrFail('state-1');
+
+      expect(result.settings.visible).toBe(true);
+      expect(result.settings.allowNewCallouts).toBe(true);
     });
   });
 
