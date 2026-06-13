@@ -6,23 +6,25 @@
 
 **Status**: Draft
 
-**Input**: User description: "I want to add another callout type, that is for displaying a collection of actors. The intention is to replace the block currently shown on the community page on the platform. The post type should in the first version allow selecting what types of contributors to display, users, organisations or both. The default is both. It should also have a flag to allow control of whether there should be filtering by role. It should keep the ability to search within the available contributors. In addition to having the current display of showing cards for each contributor, there should be the option to display the contributors on a map. This is then just about putting the contributors on a map, no other connectivity. The contributors without location data should be shown as cards underneath the map with a message re 'these contributors do not have location data set'. The default map display shown should be controlled by the settings for the callout, not set per user. The settings for the callout should allow choosing the map to be displayed and the default zoom level. There should be metrics shown beneath the map re # of each type of contributor (user, org, VC)."
+**Input**: A new callout type for displaying a collection of **actors**, of one of two creation-fixed kinds:
+
+- **Contributors** (users, organizations, virtual contributors) sourced from the callout's community/space — replacing the hard-coded contributor block on the community tab. The administrator selects which contributor types are shown (default all; designed to extend to "by role" once custom roles exist). Supports a card display and a contributors-only **map** display: contributors with valid stored coordinates are plotted (no new geocoding), those without are listed beneath the map under "these contributors do not have location data set", and per-type metrics (user/org/VC) are shown beneath the map. The map uses OpenStreetMap + MapLibre GL via an open, public-interest-aligned tile provider; the administrator sets the default display mode, geographic focus, and zoom (not per-user). Viewers can search by name, hover a pin for info, and click through to a contributor's page in a new tab.
+- **Spaces** (the space's subspaces) — replacing the hard-coded subspaces display on the subspaces tab. Card display only (no map), reusing the existing client subspace card unchanged.
+
+A callout displays exactly one kind, fixed at creation and not switchable. Every L0 space is guaranteed both callouts (contributors on the community tab, spaces on the subspaces tab) via updated templates plus authoritative server-side enforcement on space creation; these default callouts are non-deletable and non-movable (fixed tab and sort position), so migration only turns the existing hard-coded blocks into in-place callouts. Each callout also carries a setting for who may edit its settings. This work advances the epic side-goal of making all L0 space page content callout-driven rather than hard-coded.
 
 ## Overview
 
-This feature adds a new callout type that displays a collection of **actors**. In this first version, the actors displayed are **contributors** — users, organizations, and virtual contributors — sourced from the callout's community/space. The callout is named generically ("Actor Collection") so that it can later be expanded to display other actor kinds (e.g., spaces) without introducing a new callout type. The immediate goal is to replace the hard-coded contributor block currently shown on the community page with a configurable callout supporting card and map displays; a future expansion to space actors would additionally let the same callout replace the hard-coded "subspaces" display on the adjacent tab.
+This spec pursues two intertwined purposes. First, it advances the epic goal of making **all main body content on L0 space pages callout-driven rather than hard-coded** — replacing fixed, bespoke UI components with configurable callouts. Second, it **enriches the platform's ability to display collections of actors in a generic way** — a single callout type that can present different kinds of actors (contributors, spaces) through displays suited to each, rather than a one-off component per collection. Together these let the previously hard-coded contributor and subspaces blocks become managed callouts, and lay the groundwork for further actor collections and further callout-driven page content.
 
-## Clarifications
+This feature adds a new callout type that displays a collection of **actors**. The callout displays one of two actor kinds, chosen when the callout is created:
 
-### Session 2026-06-11
+- **Contributors** — users, organizations, and virtual contributors sourced from the callout's community/space. Goal: replace the hard-coded contributor block on the community page. Supports both card and map displays.
+- **Spaces** — the subspaces of the space the callout belongs to. Goal: replace the hard-coded "subspaces" display on the adjacent tab. Card display only (no map).
 
-- Q: How is a contributor's map position determined? → A: Use the existing profile geo-coordinates; plot only when valid coordinates exist, otherwise list beneath the map. No new geocoding is introduced (city/country-only contributors are treated as "no location data set").
-- Q: Where are search and type/role filtering applied, and how are cards loaded for large communities? → A: Server-side over the full eligible membership; card display is paginated, while the map display receives all located contributors.
-- Q: What should the role filter offer (mockup shows "All / Lead / Organization")? → A: A combined filter row mixing membership roles (e.g., Lead) and contributor types (e.g., Organization), reproducing the existing community-block control.
-- Q: Which contributors are visible to a viewer? → A: Reuse existing callout/community read authorization — show the same contributors the viewer can already see on the community page; no new visibility semantics.
-- Q: What default settings should the auto-provisioned L0 callout have? → A: Card display, all contributor types shown, role/type filter enabled — mirroring the existing community block; map is opt-in per administrator.
-- Q: When a viewer searches/filters, what do the per-type metric counts reflect? → A: The total eligible set (per the admin type selector), independent of the viewer's live search/filter.
-- Q: Default sort order of contributors in the card display? → A: Leads/admins first, then alphabetically by display name, mirroring the existing community block.
+The actor kind is a **fixed property set at creation and not changeable afterwards**: a given callout displays either contributors or spaces, never both, and cannot be switched between them. The two kinds are completely separate sets, each rendered with its existing client card (the current contributor card and the current subspace card, both unchanged). "Actor Collection" is an internal/backend name only; to end users the two are distinct, concrete options (a Contributors collection and a Spaces collection), never a single generic choice.
+
+These callouts replace the corresponding hard-coded components in the client. In line with the callout-driven goal above, the design choices here — server-provisioned, position-locked callouts replacing hard-coded blocks in place — are made so this generalises to the remaining hard-coded L0 page content later.
 
 ## User Scenarios & Testing *(mandatory)*
 
@@ -59,38 +61,80 @@ A space administrator configures an Actor Collection callout to default to a map
 3. **Given** the map display, **When** the page loads, **Then** the configured default map and default zoom level from the callout settings are applied (not a per-user preference).
 4. **Given** the map display, **When** the page loads, **Then** metrics beneath the map show the number of each contributor type (users, organizations, virtual contributors).
 5. **Given** a callout whose default display is cards, **When** the page loads, **Then** the card display is shown by default while the map remains available as an alternate view.
+6. **Given** the map display, **When** the viewer hovers over (or taps) a pin, **Then** additional information about that contributor is shown, and **When** the viewer clicks through, **Then** that contributor's page opens in a new browser tab.
+7. **Given** the base map, **When** it loads, **Then** it is served from the platform's configured open, OSM-based tile provider (no proprietary tracking provider).
 
 ---
 
-### User Story 3 - Toggle role-based filtering (Priority: P3)
+### User Story 3 - Administrator selects which contributors are displayed (Priority: P1)
 
-A space administrator decides whether viewers can filter the displayed contributors by their role (e.g., Lead vs. Member, or by being an organization). When the role-filtering flag is enabled, viewers see role filter controls; when disabled, no role filter controls are offered.
+A space administrator chooses which contributors the callout displays — all contributors, or a chosen subset of contributor types (users, organizations, virtual contributors). The default is all. A key use of this control is letting a space show **only participating organizations and not its member users**, so that a space can be made public without exposing the individuals who are members. This selection defines the eligible set that everyone then sees, searches, and (where applicable) sees plotted on the map. The selection model is designed so that, once custom roles exist, the administrator can additionally narrow the displayed set by role (e.g., only Leads) — but role-based selection is not implemented in this version.
 
-**Why this priority**: Role filtering is a refinement of the contributor display. The callout is fully usable for displaying and searching contributors without it, so it is the lowest priority of the three core stories.
+**Why this priority**: This is a privacy/safety lever, not just a cosmetic filter. A core goal of this work is that a space can choose to surface only organizations while keeping member users invisible, so the space feels safe to make public. Because that protection must hold from the moment the callout exists, the contributor-type selection is P1 — the same priority as having the callout at all. (The default remains "show all", which matches today's community block; the P1 requirement is that an administrator can restrict it, and that the restriction is enforced everywhere.)
 
-**Independent Test**: Create two callouts, one with role filtering enabled and one disabled; confirm the enabled callout offers role filter controls that narrow the list by role, and the disabled callout offers none.
+**Independent Test**: In a community containing users, organizations, and virtual contributors, configure one callout to show all types and another to show only organizations; confirm the first lists all contributors and the second lists only organizations — with member users absent from cards, map, metrics, and search — in both card and map displays.
 
 **Acceptance Scenarios**:
 
-1. **Given** an Actor Collection callout with role filtering enabled, **When** the page loads, **Then** role filter controls are shown.
-2. **Given** role filtering enabled, **When** a viewer selects a specific role filter, **Then** only contributors holding that role remain visible.
-3. **Given** an Actor Collection callout with role filtering disabled, **When** the page loads, **Then** no role filter controls are shown and all eligible contributors are listed.
+1. **Given** an Actor Collection callout with the default selection, **When** the page loads, **Then** users, organizations, and virtual contributors are all shown.
+2. **Given** the callout configured to show only users, **When** the page loads, **Then** organizations and virtual contributors are not shown and are excluded from the eligible set everywhere (cards, map, and metrics).
+3. **Given** a public space whose callout is configured to show only organizations, **When** any viewer (including an anonymous/public visitor) loads the page or searches, **Then** only organizations appear and no member user is shown or discoverable anywhere (cards, map, metrics, search).
+4. **Given** the administrator changes the contributor-type selection, **When** the page reloads, **Then** the displayed set, the map markers, and the metric counts all reflect the new selection consistently.
+5. **Given** the selection UI, **When** the administrator views it, **Then** it is laid out so that a future "by role" selection can be added alongside the "by type" selection without redesign.
 
 ---
 
-### User Story 4 - Guaranteed presence on L0 spaces (Priority: P1)
+### User Story 4 - Display a collection of spaces as cards (Priority: P2)
 
-Rather than relying on every administrator to add it manually, a top-level (L0) space always has an Actor Collection callout present at the top of its community page out of the box, so the contributor display is consistent across spaces and genuinely replaces the previous hard-coded block. The same guaranteed-presence behavior is intended for the subspaces tab once space actors are supported.
+A space administrator adds (or receives by default) a callout whose actor kind is **spaces**, which displays the subspaces of the current space using the existing subspace card (unchanged from what the client shows today). This replaces the hard-coded "subspaces" display. The actor kind is fixed when the callout is created: a spaces callout only ever shows spaces, never contributors, and cannot be switched. A spaces callout has no map display — it always uses the subspace cards.
 
-**Why this priority**: This is what makes the feature an actual replacement for the hard-coded block rather than an optional add-on. Without guaranteed presence, existing spaces would silently lose the contributor display.
+**Why this priority**: This makes the callout type a replacement for the hard-coded subspaces display as well as the contributor block, unifying both into one configurable mechanism. It is independent of the contributor stories (US1–US3) and delivers value on its own, but the contributor card display (US1) is the primary replacement target, so spaces are P2.
 
-**Independent Test**: Inspect an L0 space's community page (existing and newly created) and confirm an Actor Collection callout is present at the top with default settings, without any administrator having added it.
+**Independent Test**: Add a spaces callout to a space that has subspaces; confirm each subspace renders with the existing subspace card (unchanged), that no map option is offered, and that the actor kind cannot be changed to contributors after creation.
 
 **Acceptance Scenarios**:
 
-1. **Given** a newly created L0 space, **When** its community page is opened, **Then** an Actor Collection callout is present at the top with default settings.
-2. **Given** an existing L0 space that previously showed the hard-coded contributor block, **When** the feature is rolled out, **Then** an Actor Collection callout is present at the top of its community page.
-3. **Given** the guaranteed callout, **When** an administrator edits its settings, **Then** their configuration is preserved (the guarantee is about presence, not about locking settings).
+1. **Given** a space with subspaces, **When** a spaces callout is shown, **Then** each subspace appears using the existing subspace card, unchanged.
+2. **Given** a spaces callout, **When** the administrator opens its settings, **Then** no map display option is offered and the display is always cards.
+3. **Given** a spaces callout, **When** the administrator opens its settings, **Then** the actor kind (spaces) is shown as fixed and cannot be changed to contributors.
+4. **Given** a viewer, **When** comparing a contributors callout and a spaces callout, **Then** each uses its existing client card (the current contributor card and the current subspace card respectively), unchanged from today.
+5. **Given** a spaces callout, **When** a viewer searches by name, **Then** the listed spaces are narrowed by name (search applies to both kinds).
+
+---
+
+### User Story 5 - Guaranteed presence on L0 spaces (Priority: P1)
+
+Rather than relying on every administrator to add them manually, a top-level (L0) space always has, out of the box: a **contributors** callout at the top of its community page (replacing the hard-coded contributor block), and a **spaces** callout on its subspaces tab (replacing the hard-coded subspaces display). This keeps both displays consistent across spaces and genuinely replaces the previous hard-coded blocks.
+
+**Why this priority**: This is what makes the feature an actual replacement for the hard-coded blocks rather than an optional add-on. Without guaranteed presence, existing spaces would silently lose the contributor and/or subspaces display.
+
+**Independent Test**: Inspect an L0 space (existing and newly created) and confirm a contributors callout is present on its community page and a spaces callout on its subspaces tab, each with default settings, without any administrator having added them.
+
+**Acceptance Scenarios**:
+
+1. **Given** a newly created L0 space, **When** its community page is opened, **Then** a contributors callout is present at the top with default settings.
+2. **Given** a newly created L0 space, **When** its subspaces tab is opened, **Then** a spaces callout is present with default settings.
+3. **Given** an existing L0 space that previously showed the hard-coded contributor block and subspaces display, **When** the feature is rolled out, **Then** the corresponding contributors and spaces callouts are present.
+4. **Given** a guaranteed callout, **When** an administrator edits its (changeable) settings, **Then** their configuration is preserved (the guarantee is about presence, not about locking settings; the actor kind itself remains fixed).
+
+---
+
+### User Story 6 - Restrict who can read user information to space members (Priority: P1)
+
+A space administrator sets a **space-level** setting controlling who may read information about the space's users. By default it follows the space's visibility (a public space's users are publicly readable, as today). The administrator can instead restrict it so user information is only readable by **members of the space**. This lets a space be made public without making the list of all its users public — non-members (including anonymous visitors) see the space but not its individual users.
+
+This is distinct from the callout's contributor-type selection (US3): US3 is a per-callout choice that hides users from *everyone* for that callout, whereas this is a per-space privacy boundary that hides user information from *non-members* across the space (the contributors callout being the most visible place it applies). The two compose.
+
+**Why this priority**: It is the other half of the "safe to make public" goal — a space may want to remain a community with visible members internally while not exposing that membership list to the public. Because it governs disclosure of personal data the moment a space goes public, it must be in place from the start, so P1.
+
+**Independent Test**: On a public space, set user-information visibility to members-only; as a non-member/anonymous viewer confirm users are not readable (the contributors callout shows no users, and user data is not returned by the API), then as a member confirm users are readable again.
+
+**Acceptance Scenarios**:
+
+1. **Given** a space with the default setting, **When** the space is public, **Then** its users are readable consistent with today's behavior (the setting follows space visibility).
+2. **Given** a public space with user-information visibility set to members-only, **When** a non-member or anonymous visitor views it, **Then** user information is not readable — the contributors callout shows organizations and virtual contributors but no member users, and no user data is returned by the API.
+3. **Given** that same space, **When** a member views it, **Then** member users are readable and appear in the contributors callout as normal.
+4. **Given** the members-only setting, **When** a non-member searches or loads the map in a contributors callout, **Then** no member user is discoverable or plotted, while organizations/virtual contributors remain.
 
 ---
 
@@ -99,87 +143,144 @@ Rather than relying on every administrator to add it manually, a top-level (L0) 
 - **No contributors**: The callout has an empty source set — display an empty state rather than an error, in both card and map displays.
 - **All contributors lack location data in map mode**: The map shows no markers; all contributors appear in the "no location data set" card list beneath the map, with the explanatory message still shown.
 - **Partial location data**: A contributor has a city/country but no precise coordinates that can be resolved — treat as "no location data set" and list them beneath the map. (Validity is determined by whether usable map coordinates exist.)
-- **Contributor holds multiple roles**: When role filtering is active, the contributor matches any of the roles they hold and is not duplicated.
-- **Virtual contributors and the type selector**: The type selector exposes users, organizations, and virtual contributors as three independent toggles; deselecting a type hides those contributors from both card and map displays (their count still reflects the eligible set per FR-014).
+- **Virtual contributors and the administrator type selection**: The administrator selection exposes users, organizations, and virtual contributors as three independent options; deselecting a type removes those contributors from the eligible set in both card and map displays (so their count reflects the selected eligible set per FR-014).
 - **Search with no matches**: Display an empty result state for the current display, preserving the search input.
 - **Map/zoom settings unset**: Fall back to a sensible default map and zoom level when callout settings have not specified them.
 - **Large communities**: The displayed contributor set may be large; the display must remain responsive (see Success Criteria).
 - **Contributor removed from the community**: Once a contributor is no longer a member, they no longer appear in the callout.
+- **No subspaces (spaces callout)**: A spaces callout whose space has no subspaces shows an empty state rather than an error.
+- **Subspace added/removed (spaces callout)**: The spaces callout reflects the current set of subspaces; a removed subspace no longer appears, a newly created one does.
+- **Map settings on a spaces callout**: Not applicable — a spaces callout has no map; map-related settings (focus, zoom) and metrics do not exist for it.
+- **Visibility of subspaces**: A spaces callout shows only the subspaces the viewer is authorized to see, mirroring existing subspace read authorization (no new visibility semantics).
+- **User-info visibility vs. type selection**: If a contributors callout already excludes users by type (US3), the space's members-only user-info setting has no additional effect on that callout (users are absent for everyone regardless); the two never conflict.
+- **Member viewing a members-only space**: A member always sees member users (the restriction applies to non-members/anonymous only).
+- **Organizations/VCs under members-only**: The members-only user-info setting restricts **user** information only; organizations and virtual contributors remain readable per normal space visibility.
 
 ## Requirements *(mandatory)*
 
 ### Functional Requirements
 
-- **FR-001**: System MUST provide a new callout type, "Actor Collection", that displays a collection of actors associated with the callout's context; in this version the displayed actors are contributors.
-- **FR-002**: System MUST allow this callout type to serve as a replacement for the existing community-page contributor block.
-- **FR-003**: System MUST let an administrator configure which contributor types are displayed, with independently toggleable options for users, organizations, and virtual contributors; by default all three are displayed.
-- **FR-004**: System MUST display and count virtual contributors as a first-class contributor type on equal footing with users and organizations — they are both shown (subject to the type selector) and counted in the metrics row.
-- **FR-005**: System MUST provide a per-callout flag that controls whether role/type filtering of contributors is available to viewers; when disabled, no such filtering is offered. When enabled, the filter is a single combined control offering membership roles (e.g., Lead) alongside contributor types (e.g., Organization), reproducing the existing community-block control (e.g., "All / Lead / Organization").
-- **FR-006**: System MUST allow viewers to search the available contributors by name within the callout, in both display modes. Search MUST be applied server-side across the full eligible membership (not only the currently loaded subset).
-- **FR-006a**: System MUST apply contributor-type and role/type filtering server-side across the full eligible membership.
-- **FR-007**: System MUST support two display modes for the callout: a card display (one card per contributor) and a map display.
-- **FR-008**: System MUST let an administrator set the default display mode (cards or map) as a callout setting; this default MUST NOT be overridable as a stored per-user preference.
+- **FR-001**: System MUST provide a new callout type that displays a collection of actors associated with the callout's context. The callout displays one of two actor kinds — **contributors** or **spaces** — and "Actor Collection" is an internal/backend name only; the options exposed to end users MUST be the concrete **Contributors** collection and **Spaces** collection (see FR-005), never the generic name.
+- **FR-001a**: System MUST record the actor kind (contributors or spaces) as a property of the callout chosen at creation time, and MUST NOT allow it to be changed afterwards. A callout displays exactly one kind for its whole lifetime; the two kinds are separate sets and a callout never displays both.
+- **FR-002**: System MUST allow this callout type to replace the existing community-page contributor block (contributors kind) and the existing "subspaces" display (spaces kind).
+- **FR-003**: System MUST, for a **contributors** callout, let an administrator select which contributors are displayed, choosing among the contributor types — users, organizations, and virtual contributors — as independently selectable options; by default all are displayed. This administrator selection defines the eligible set used everywhere (cards, map, metrics, and search). It MUST support the privacy/safety case of showing **only organizations and not member users**, so a space can be made public without exposing its individual members. (Not applicable to a spaces callout, which shows the space's subspaces.)
+- **FR-003b**: System MUST enforce the contributor-type selection server-side as a hard visibility boundary for the callout: a contributor of a deselected type MUST NOT be returned to, plotted for, counted for, or discoverable via search by any viewer — including anonymous/public visitors of a public space. The selection is an exclusion of those contributors from the callout's data, not merely a UI hide.
+- **FR-003a**: System MUST shape the contributor-selection settings model and its UI so that a future "by role" dimension (selecting contributors by membership role, e.g., only Leads) can be added alongside the existing "by type" dimension without a redesign. Role-based selection itself is out of scope for this version (depends on custom roles) but MUST NOT be precluded by the choices made now (see FR-019, FR-026).
+- **FR-004**: System MUST display and count virtual contributors as a first-class contributor type on equal footing with users and organizations — they are both shown (subject to the administrator's type selection) and counted in the metrics row.
+- **FR-005**: System MUST present each actor kind to end users as a concrete, named option — a **Contributors** collection and a **Spaces** collection — never as a generic "Actor Collection" choice. The generic actor framing is a backend/internal modelling convenience only; from the user's perspective contributors and spaces are completely different things and MUST be offered as separate, concrete options (including at creation time, where the choice fixes the callout's actor kind per FR-001a).
+- **FR-006**: System MUST allow viewers to search the displayed actors by name within the callout (contributors or spaces, in whichever display modes that kind supports). Search MUST be applied server-side across the full eligible set (not only the currently loaded subset).
+- **FR-006a**: System MUST, for a contributors callout, apply the administrator's contributor-type selection server-side, so the eligible set is computed across the full membership (not just the loaded subset).
+- **FR-007**: System MUST support a card display (one card per actor) for both actor kinds, and a map display for the **contributors** kind only. A **spaces** callout MUST always display as cards and MUST NOT offer a map display.
+- **FR-007a**: System MUST reuse the existing client card displays unchanged — the current contributor card for the contributors kind and the current subspace card for the spaces kind. These are two different existing cards; this feature introduces no new card design or change to either.
+- **FR-008**: System MUST, for a contributors callout, let an administrator set the default display mode (cards or map) as a callout setting; this default MUST NOT be overridable as a stored per-user preference. (A spaces callout has no display-mode setting — it is always cards.)
 - **FR-009**: System MUST, in map display, plot each contributor that has valid stored geo-coordinates in their profile at their location on the map. "Usable location data" means valid stored coordinates; the system MUST NOT introduce new geocoding, so contributors with only city/country (and no valid coordinates) are treated as having no location data.
 - **FR-009a**: System MUST deliver all located contributors (those with valid coordinates) to the map display, independent of card-display pagination.
 - **FR-010**: System MUST, in map display, list contributors that lack usable location data as cards beneath the map.
 - **FR-011**: System MUST show the message "these contributors do not have location data set" above the list of contributors lacking location data in map display.
-- **FR-012**: System MUST allow an administrator to set the default geographic focus (the center/region the map opens on) as a callout setting; the base-map style itself is fixed by the platform in this version. (Chosen as the simpler approach; selectable base-map styles/providers are a possible later enhancement.)
+- **FR-012**: System MUST render the base map from OpenStreetMap data using the open-source MapLibre GL renderer, with base-map tiles served from an open, OSM-based hosted tile provider. The provider MUST be vetted to align with the platform's public-interest-tech values (acceptable ToS, no user tracking, workable rate limits); proprietary providers that track users or impose restrictive licensing (e.g. Google Maps, Mapbox) MUST NOT be used. The administrator sets only the default geographic focus and zoom (FR-012a, FR-013); the base map itself is not a per-callout setting but is governed centrally per FR-012b.
+- **FR-012b**: System MUST control the set of supported base maps **server-side and platform-wide** (not per callout or per space). In this version exactly **one** base map is supported, but the model/logic MUST be designed to hold multiple supported base maps so additional ones can be added later (and, later still, exposed for selection) without rework. The list of supported base maps is authoritative on the server; clients render only base maps the server declares supported.
+- **FR-012a**: System MUST allow an administrator to set the default geographic focus (the center/region the map opens on) as a callout setting.
 - **FR-013**: System MUST allow an administrator to set the default zoom level for the map as a callout setting.
-- **FR-014**: System MUST display metrics beneath the map showing the count of each contributor type (users, organizations, virtual contributors). These counts MUST reflect the total eligible set (per the administrator's type selector) and MUST NOT change in response to a viewer's live search or role/type filter.
-- **FR-015**: System MUST scope the map feature to plotting actors only — no additional interactivity or connectivity between contributors is included.
-- **FR-016**: System MUST, in this version, determine the source set of contributors for the callout from the membership of the community/space the callout belongs to (its role set).
-- **FR-017**: System MUST persist all configuration (contributor-type selection, role-filtering flag, default display mode, map geographic focus, default zoom) as part of the callout's settings.
+- **FR-013a**: System MUST keep the map legible for large communities by grouping overlapping contributor pins into a count indicator that separates into individual pins as the map is zoomed in. This is automatic display behaviour, not a configurable control, and introduces no contributor-to-contributor connectivity (FR-015).
+- **FR-013b**: System MUST let a viewer hover over (or, on touch devices, tap) a contributor's pin to see additional information about that contributor (e.g. name and key profile details), and MUST let the viewer click through from there to that contributor's page, opened in a new browser tab. This is read-only navigation to an existing contributor page; it adds no contributor-to-contributor connectivity (FR-015) and persists nothing.
+- **FR-014**: System MUST display metrics beneath the map showing the count of each contributor type (users, organizations, virtual contributors). These counts MUST reflect the total eligible set (per the administrator's type selection) and MUST NOT change in response to a viewer's live search.
+- **FR-015**: System MUST scope the map feature to plotting actors only — no connectivity, relationships, or routing between contributors is included. (Automatic pin grouping per FR-013a, and pin hover/click-through to a contributor's page per FR-013b, are display/navigation aids, not connectivity.)
+- **FR-016**: System MUST determine the callout's source set from its actor kind: a **contributors** callout sources from the membership of the community/space it belongs to (its role set); a **spaces** callout sources from the subspaces of the space it belongs to.
+- **FR-017**: System MUST persist all administrator configuration (contributor-type selection, default display mode, map geographic focus, default zoom, and the settings-edit-access level per FR-027) as part of the callout's settings. Anything a viewer does (search text, current view) is transient session state and MUST NOT be persisted as callout settings or as per-user preferences.
 - **FR-018**: System MUST present an appropriate empty state when there are no contributors to display or no search matches, rather than an error.
-- **FR-019**: System SHOULD model the callout type and its settings generically enough that future versions can (a) source actors from an administrator-curated set rather than only community membership, and (b) display additional actor kinds such as spaces — which would allow the same callout to replace the hard-coded "subspaces" display on the adjacent tab — without introducing a new callout type.
-- **FR-020**: System MUST ensure that every top-level (L0) space has an Actor Collection callout present at the top of its community page by default — for both newly created and existing L0 spaces — so the callout replaces the hard-coded contributor block without per-space manual action. The auto-provisioned callout's default settings MUST be: card display mode, all contributor types shown, and role/type filtering enabled (map display is opt-in per administrator).
+- **FR-019**: System SHOULD model the callout type and its settings generically enough that future versions can (a) source actors from an administrator-curated set rather than only community membership/subspaces, and (b) let the administrator narrow the displayed contributors by membership role once custom roles exist (see FR-003a, FR-026). (Displaying spaces is no longer future — it is in scope per FR-001/FR-016.) In all cases the user-facing options remain concrete and distinct per FR-005.
+- **FR-020**: System MUST ensure that every top-level (L0) space has, by default — for both newly created and existing L0 spaces, with no per-space manual action — a **contributors** callout on its community tab (replacing the hard-coded contributor block) and a **spaces** callout on its subspaces tab (replacing the hard-coded subspaces display). The contributors callout's default settings MUST be: card display mode and all contributor types shown (map display is opt-in per administrator). The spaces callout displays as space cards.
+- **FR-020a**: System MUST fix the layout position of these default callouts: each MUST NOT be deletable, MUST NOT be movable to a different sort-order position, and MUST NOT be movable to a different tab. Its tab and position are fixed. (This deliberately constrains the v1 migration so the only change a user perceives is the previously hard-coded block now being a callout in the same place.)
+- **FR-020b**: System MUST update all L0 space templates to include both default callouts — a contributors callout on the community tab and a spaces callout on the subspaces tab — so spaces created from a template carry them.
+- **FR-020c**: System MUST, in the server-side L0 space creation logic, guarantee that a created L0 space always has an actor-collection callout on both the community tab (contributors kind) and the subspaces tab (spaces kind), with the actor kind matching each tab's intended usage. This guarantee MUST hold independently of the template used: if a template is missing either callout, the server MUST add it during creation. This server enforcement is the authoritative backstop for the guaranteed presence (FR-020), beyond the template update (FR-020b).
 - **FR-025**: System MUST, by default, order contributors in the card display with leads/admins first, then alphabetically by display name, mirroring the existing community block.
-- **FR-021**: System MUST preserve any administrator changes to a guaranteed callout's settings; the guarantee concerns the callout being provisioned by default, not the immutability of its configuration or its permanent enforcement (an administrator may subsequently edit, reorder, or remove it).
-- **FR-022**: System SHOULD extend the same guaranteed-presence behavior to the subspaces tab once space actors are supported (future expansion, tied to FR-019).
+- **FR-021**: System MUST preserve administrator changes to a default callout's *editable* settings (e.g., contributor-type selection, default display mode, map focus/zoom, settings-edit-access). The actor kind (FR-001a) and the callout's presence and layout position (FR-020a) are NOT editable: the default callouts cannot be deleted, reordered, moved between tabs, or switched to the other actor kind.
 - **FR-023**: System MUST paginate the card display so that large communities remain responsive; the map display is exempt from pagination and receives all located contributors (per FR-009a).
-- **FR-024**: System MUST restrict the contributors shown to those the viewer is already authorized to see under existing callout/community read rules; this feature introduces no new visibility semantics.
+- **FR-024**: System MUST restrict the contributors shown to those the viewer is already authorized to see under existing callout/community read rules, and additionally under the space-level user-information visibility setting (FR-028).
+- **FR-028**: System MUST provide a **space-level** setting controlling who may read information about the space's users. It MUST offer at least two options: (a) **follow space visibility** (default — a public space's users are publicly readable, as today), and (b) **members only** — user information is readable only by members of the space. This setting governs disclosure of user (personal) data and is independent of any individual callout's configuration.
+- **FR-028a**: System MUST, when the setting is "members only", prevent non-members (including anonymous/public visitors) from reading the space's users anywhere this feature surfaces them — a contributors callout MUST omit member users from its cards, map, metrics, and search for such viewers, while still showing organizations and virtual contributors. Members MUST continue to see member users normally. This MUST be enforced server-side as a data boundary, not a UI hide.
+- **FR-028b**: System MUST scope FR-028 to **user** information only; organizations and virtual contributors remain readable per normal space visibility. The space-level setting (FR-028, applies to non-members) and the per-callout contributor-type selection (FR-003/FR-003b, applies to everyone) compose without conflict: a user hidden by either mechanism is not shown.
+- **FR-026**: System SHOULD, in a future version (dependent on custom roles), let an administrator narrow the displayed contributors by membership role as an additional selection dimension alongside contributor type. This version MUST NOT implement role-based selection but MUST leave the settings model and selection UI able to accommodate it (FR-003a).
+- **FR-027**: System MUST provide a callout setting that controls **who is allowed to edit the callout's settings** — selectable among the relevant authorization levels (e.g., space admins, the space owner, or all members). This setting governs edit access to the callout's configuration (contributor selection, display mode, map focus/zoom, and this setting itself); it does not change who can *view* the callout, which continues to follow existing read authorization (FR-024). The chosen edit-access level MUST be enforced server-side, expressed in terms of the platform's existing authorization/privilege model rather than as a free-form list.
+
+### Administrator settings vs. viewer view
+
+The callout's **actor kind** (contributors or spaces) is fixed at creation and never changes (FR-001a); for the default L0 callouts, presence and layout position are also fixed (FR-020a). Within that, the **administrator's callout settings** (persisted) hold the editable configuration — for a contributors callout: contributor-type selection, default display mode (cards/map), map default focus and zoom, and who may edit the settings; a spaces callout has only the edit-access setting (it is always cards). These apply to every viewer and are not overridable per user. A **viewer** only consumes what the administrator configured — searching by name and (for contributors) switching between card and map views within a session — none of which is persisted. Metric counts always reflect the administrator-defined eligible set (FR-014).
 
 ### Key Entities *(include if feature involves data)*
 
-- **Actor Collection Callout**: A new callout type that displays a collection of actors. Holds settings: contributor-type selection (users/organizations/both), role-filtering flag, default display mode (cards/map), chosen map, and default zoom level.
-- **Actor / Contributor**: An entity that may be displayed in the callout. In this version, contributors — users, organizations, and virtual contributors — that are members of the community/space. Has a display profile (name, avatar) and optional location data. The model is intended to accommodate other actor kinds (e.g., spaces) in future.
-- **Location data**: Geographic information associated with an actor's profile used to plot them on the map; may be present (usable) or absent (actor listed beneath the map).
-- **Role**: A membership role (e.g., Lead, Member) used for optional role-based filtering of the displayed contributors.
+- **Actor Collection Callout** (internal name; surfaced to users as a **Contributors** collection or a **Spaces** collection): A new callout type that displays a collection of actors of a single, creation-fixed **actor kind** (contributors or spaces). Holds administrator settings only. For a contributors callout: contributor selection (which types — and, in future, roles — form the eligible set), default display mode (cards/map), default map geographic focus, default zoom level, and the settings-edit-access level. For a spaces callout: the settings-edit-access level only (always cards, no map). It does NOT store viewer interaction state.
+- **Actor kind**: The fixed property (contributors or spaces) chosen at creation that determines the source set, available displays (map is contributors-only), and card type. Not changeable after creation (FR-001a).
+- **Contributor**: A user, organization, or virtual contributor that is a member of the community/space. Has a display profile (name, avatar) and optional location data. Rendered with the **existing contributor card**, unchanged (FR-007a).
+- **Space (subspace)**: A subspace of the space the callout belongs to. Rendered with the **existing subspace card**, unchanged (FR-007a). Displayed as cards only — never on a map.
+- **Location data**: Geographic information associated with a contributor's profile used to plot them on the map; may be present (usable) or absent (contributor listed beneath the map). Applies to contributors only.
+- **Role**: A membership role (e.g., Lead, Member). Used now only to order the card display (leads/admins first); in a future version it becomes an administrator selection dimension for defining the eligible set (FR-026).
 
 ## Success Criteria *(mandatory)*
 
 ### Measurable Outcomes
 
-- **SC-001**: An administrator can add and fully configure an Actor Collection callout (contributor types, role-filtering flag, default display mode, map focus, zoom) without assistance in under 3 minutes.
+- **SC-001**: An administrator can add and fully configure an Actor Collection callout (contributor selection, default display mode, map focus, zoom, and who may edit the settings) without assistance in under 3 minutes.
 - **SC-002**: A callout configured for a community displays 100% of that community's eligible contributors (per the selected contributor types) as cards.
 - **SC-003**: In map display, 100% of contributors with usable location data appear on the map, and 100% of those without appear in the labelled list beneath the map.
-- **SC-004**: The contributor-type metric counts beneath the map match the actual number of each contributor type in the total eligible set, with zero discrepancy, and remain stable while a viewer searches or filters.
+- **SC-004**: The contributor-type metric counts beneath the map match the actual number of each contributor type in the total eligible set, with zero discrepancy, and remain stable while a viewer searches.
 - **SC-005**: Searching within a community of at least 500 contributors returns the filtered result in under 1 second as perceived by the viewer.
 - **SC-006**: The default display mode shown to every viewer matches the callout setting in 100% of loads, independent of any individual viewer.
-- **SC-007**: The Actor Collection callout can replace the existing community-page contributor block with no loss of the contributors previously shown there.
-- **SC-008**: 100% of L0 spaces (existing and newly created) have an Actor Collection callout present at the top of their community page after rollout, without per-space manual action.
+- **SC-007**: The contributors callout can replace the existing community-page contributor block, and the spaces callout the existing subspaces display, with no loss of the contributors/subspaces previously shown there.
+- **SC-008**: 100% of L0 spaces (existing and newly created) have a contributors callout on their community tab and a spaces callout on their subspaces tab after rollout, without per-space manual action.
+- **SC-009**: A spaces callout displays 100% of the space's authorized subspaces as space cards, and offers no map display.
+- **SC-010**: The default L0 callouts cannot be deleted, reordered, moved to another tab, or switched to the other actor kind: 100% of attempts to do so are prevented, while their editable settings remain editable.
+- **SC-011**: After rollout, the only user-perceived difference on the community and subspaces tabs is that the previously hard-coded blocks are now callouts in the same position — no content is lost and nothing moves.
+- **SC-012**: 100% of L0 spaces created from any L0 template end up with both default callouts (community-tab contributors, subspaces-tab spaces) — verified to hold even when the source template omits one (server enforcement adds it).
+- **SC-013**: The client renders the community contributor display and the subspaces display entirely from these callouts, with no remaining hard-coded contributor/subspaces components for L0 spaces.
+- **SC-014**: For a public space whose callout is set to organizations-only, zero member users are returned, plotted, counted, or surfaced by search to any viewer (including anonymous/public visitors) — verified at the API level, not only in the UI.
+- **SC-015**: For a public space with user-information visibility set to members-only, zero member users are readable by non-members/anonymous viewers (in the contributors callout or via the API), while members still read them and organizations/virtual contributors remain visible to all — verified at the API level.
+- **SC-016**: The set of supported base maps is defined once, server-side and platform-wide; exactly one is supported in this version, and adding a second requires no change to callout or space data (the model already accommodates multiple).
 
 ## Assumptions
 
-- The source set of contributors is the membership of the community/space (its role set) that the callout belongs to, mirroring the community-page block it replaces. Administrator-curated source sets are a future enhancement (FR-019), not part of this version.
-- "Contributors" refers to the platform's existing actor types: users, organizations, and virtual contributors, all displayed and counted as first-class types. The broader "actor" framing anticipates future kinds such as spaces but those are out of scope for this version.
+- A callout displays one actor kind, fixed at creation: a contributors callout sources from community/space membership (its role set), a spaces callout from the space's subspaces. Administrator-curated source sets are a future enhancement (FR-019), not part of this version.
+- "Contributors" refers to the platform's existing actor types: users, organizations, and virtual contributors, all displayed and counted as first-class types. "Spaces" refers to the subspaces of the callout's space. Both kinds are in scope; they are separate sets, each rendered with its existing client card (contributor card / subspace card) unchanged, and are never combined in one callout.
 - Location data and its validity are derived from contributors' existing profile geo-coordinate information; no new location capture or geocoding is introduced by this feature. A contributor with only city/country and no valid coordinates is treated as having no location data.
 - Search matches against contributor display name, is case-insensitive, and is evaluated server-side across the full eligible membership.
-- The combined role/type filter draws membership roles from the existing role definitions of the community/space and contributor types from the platform's actor types, mirroring the existing community-block control.
-- The map display is plotting-only for v1; no clustering behavior, routing, or contributor-to-contributor connections are in scope.
+- Viewers narrow the displayed list only by name search; there is no viewer-side role/type filter control. The administrator's contributor-type selection defines the displayed set.
+- The map display is plotting-only for v1: no routing or contributor-to-contributor connections, and no on-map type toggling. Overlapping pins are grouped automatically for legibility (FR-013a); hovering a pin reveals additional info and clicking through opens the contributor's page in a new tab (FR-013b).
+- The base map uses OpenStreetMap data via the MapLibre GL renderer with tiles from an open, OSM-based hosted provider that aligns with public-interest-tech values; proprietary tracking providers (Google/Mapbox) are excluded. Self-hosting tiles is a later fallback if the hosted provider proves unsuitable.
+- The supported base maps are defined server-side and platform-wide (FR-012b); this version supports exactly one, with the model built to accommodate several later. The base map is not a per-callout or per-space choice in this version.
 - Default display mode is a callout-level setting and is not stored as a per-user override; a viewer may still switch views during a session, but the stored default is administrator-controlled.
-- Standard authorization applies: who can view the callout and who can configure it follows existing callout/community permission rules; this feature does not introduce new permission semantics.
-- Existing callout placement, ordering, and lifecycle mechanics are reused; this feature adds a new type rather than a new container.
-- Guaranteed presence applies to L0 (top-level) spaces' community pages in this version; the equivalent for the subspaces tab depends on space-actor support (out of scope here). The default-provisioned callout uses default settings and remains administrator-editable/removable thereafter.
+- Standard authorization applies: who can view the callout follows existing callout/community/subspace read rules; who can configure it follows the per-callout edit-access setting (FR-027). This feature does not introduce new read-visibility semantics.
+- Existing callout placement, ordering, and lifecycle mechanics are reused for normal (non-default) callouts; this feature adds a new type rather than a new container. The default L0 callouts are an exception: their presence and position are fixed (FR-020a).
+- Guaranteed presence applies to L0 (top-level) spaces in this version, on both the community tab (contributors callout) and the subspaces tab (spaces callout). These default callouts use default settings, are not deletable or movable, and keep their fixed actor kind; their other settings remain administrator-editable.
+- Migration is deliberately minimal: the default callouts replace the hard-coded blocks in place, so the only user-visible change is that those blocks are now callouts (FR-020a, SC-011).
+- Guaranteed presence is delivered by two complementary mechanisms: updating L0 templates to include both callouts (FR-020b) and enforcing both on L0 space creation server-side regardless of template (FR-020c). The server enforcement is authoritative; templates keep the callouts visible/editable in the expected place.
+- These callouts are intended to replace the client's hard-coded contributor and subspaces components, advancing the epic goal of fully callout-driven L0 pages.
+
+## Future Considerations
+
+- **Creation flow for this callout type (separate story).** The intent is to fold creating an Actor Collection / Contributors callout into the standard callout/post create flow. However, that flow's option set is already heavy, so simply adding another type risks overloading it. A likely direction — to be specified separately — is enriching the Space setting "Allow members to create posts" into something more granular than a yes/no (e.g., controlling which callout types members may create). Out of scope for this version; flagged so the UI direction is considered before creation is built.
+- **Role-based contributor selection (depends on custom roles).** Extend the administrator's contributor selection from "by type" to also "by role" (FR-026). The settings model and selection UI are shaped now to accommodate it (FR-003a).
+- **Curated source sets.** Source actors from an administrator-curated set rather than only community membership / subspaces (FR-019). Additional actor kinds beyond contributors and spaces could follow the same concrete-option pattern (FR-005).
+- **User-created, movable instances of this callout type.** This version only provisions fixed default callouts on L0 spaces (FR-020a). Letting administrators freely add, position, or remove their own actor-collection callouts (and at lower space levels) is a later step, gated on the creation-flow story above.
+- **Multiple base maps + selection.** The server-side, platform-wide supported-base-maps model (FR-012b) ships supporting one base map but is designed to hold several; later steps would add more supported base maps and then expose a choice (platform-wide, or per space/callout) beyond the single base map of this version.
+- **Fully callout-driven L0 pages (epic direction).** This feature replaces two hard-coded components with callouts; the broader epic goal is for *all* L0 space page content to be callout-driven rather than hard-coded. Subsequent stories would migrate the remaining hard-coded components the same way (server-provisioned, position-locked callouts replacing blocks in place).
 
 ## Out of Scope
 
-- Displaying actor kinds other than contributors (e.g., spaces) — anticipated as a future expansion, not part of this version.
-- Any contributor-to-contributor connectivity, relationships, routing, or interactivity on the map beyond plotting.
+- Actor kinds other than contributors and spaces.
+- Any change to the existing contributor or subspace card designs — the callouts reuse the current client cards unchanged (FR-007a).
+- A map display for the spaces kind (spaces are always cards); changing a callout's actor kind after creation.
+- Administrator-created, freely positioned, or deletable instances of this callout type; this version provisions only the fixed default callouts on L0 spaces (the creation flow is a separate future story).
+- Any contributor-to-contributor connectivity, relationships, or routing on the map (pin hover info and click-through to a contributor's page are allowed per FR-013b; on-map contributor-type toggling is not included).
+- Viewer-side role/type filtering of the contributor list (viewers narrow only by name search; type membership is set by the administrator).
 - Per-user persisted preferences for display mode, map, or zoom.
 - New location capture or geocoding capabilities for contributors.
 
 ## Dependencies
 
 - Reuses the existing callout framework (callout creation, settings persistence, and page placement).
-- Depends on the existing community/space membership model to source contributors.
-- Depends on existing contributor profile and location/geo data to drive the map display.
+- Depends on the existing community/space membership model to source contributors, and on the subspaces model to source spaces.
+- Depends on existing contributor profile and location/geo data to drive the map display (contributors kind only).
+- Depends on a mechanism to provision fixed, non-deletable, non-movable default callouts on L0 community and subspaces tabs (migration + position-locking).
+- Depends on the L0 space template definitions (which MUST be updated to include both callouts, FR-020b) and on the server-side L0 space creation logic (which MUST enforce both callouts regardless of template, FR-020c).
+- Depends on the client replacing its hard-coded contributor block and subspaces display with rendering driven by these callouts.
+- Depends on an external, open, OSM-based map tile provider (rendered via MapLibre GL) for the base map; the specific provider must be vetted for public-interest-tech alignment (ToS, privacy, rate limits) before adoption.
