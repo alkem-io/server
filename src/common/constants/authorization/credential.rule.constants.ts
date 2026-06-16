@@ -9,6 +9,8 @@ export const CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE =
 export const CREDENTIAL_RULE_SPACE_ADMINS = 'credentialRule-spaceAdmins';
 export const CREDENTIAL_RULE_SPACE_MEMBERS_READ =
   'credentialRule-spaceMembersRead';
+export const CREDENTIAL_RULE_SPACE_STORAGE_MEMBER_FILE_UPLOAD =
+  'credentialRule-spaceStorageMemberFileUpload';
 export const CREDENTIAL_RULE_SPACE_MEMBERS_READ_ABOUT_SUBSPACES =
   'credentialRule-spaceMembersReadAboutSubspaces';
 export const CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN =

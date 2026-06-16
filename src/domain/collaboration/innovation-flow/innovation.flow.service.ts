@@ -189,6 +189,9 @@ export class InnovationFlowService {
         }
       );
     }
+    // Reject comma-containing names on rename (commas are reserved separators)
+    this.validateStateDisplayNames([stateUpdatedData.displayName]);
+
     const renamedState =
       updatedState.displayName !== stateUpdatedData.displayName
         ? { old: updatedState.displayName, new: stateUpdatedData.displayName }
@@ -241,6 +244,10 @@ export class InnovationFlowService {
     innovationFlow: IInnovationFlow,
     newStates: CreateInnovationFlowStateInput[]
   ) {
+    // Reject comma-containing names before rebuilding the states
+    // (commas are reserved separators in the database)
+    this.validateStateDisplayNames(newStates.map(state => state.displayName));
+
     // Get the name of the currently selected as current state
     const selectedStateName = innovationFlow.currentStateID
       ? (await this.getCurrentState(innovationFlow.currentStateID))?.displayName
@@ -338,6 +345,10 @@ export class InnovationFlowService {
     innovationFlow: IInnovationFlow,
     stateData: CreateInnovationFlowStateInput
   ): Promise<IInnovationFlowState> {
+    // Reject comma-containing names before adding the state
+    // (commas are reserved separators in the database)
+    this.validateStateDisplayNames([stateData.displayName]);
+
     const maximumNumberOfStates = innovationFlow.settings.maximumNumberOfStates;
     if (!innovationFlow.states) {
       throw new RelationshipNotFoundException(
@@ -513,9 +524,22 @@ export class InnovationFlowService {
         LogContext.INNOVATION_FLOW
       );
     }
-    // Avoid commas in state names, because they are used to separate states in the database
-    // This validation is also performed on the client: domain/collaboration/InnovationFlow/InnovationFlowDragNDropEditor/InnovationFlowStateForm.tsx
-    // Keep them in sync consistently
+    this.validateStateDisplayNames(stateNames);
+  }
+
+  /**
+   * Rejects flow state display names that contain a comma.
+   *
+   * Commas are reserved as the separator for flow state names in the database,
+   * so any name containing one would corrupt that encoding. This must be
+   * enforced on every path that persists a state name — creation *and* every
+   * edit path (rebuild, add, rename) — otherwise invalid data can be saved on
+   * edit and only surface later (e.g. when saving a space as a template).
+   *
+   * This validation is also performed on the client: domain/collaboration/InnovationFlow/InnovationFlowDragNDropEditor/InnovationFlowStateForm.tsx
+   * Keep them in sync consistently.
+   */
+  public validateStateDisplayNames(stateNames: string[]) {
     if (stateNames.some(name => name.includes(','))) {
       throw new ValidationException(
         `Invalid characters found on flow state: ${stateNames}`,

@@ -1,5 +1,4 @@
 import { ActorContextModule } from '@core/actor-context/actor.context.module';
-import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { MemoModule } from '@domain/common/memo';
 import { Module } from '@nestjs/common';
@@ -11,7 +10,6 @@ import { CollaborativeDocumentIntegrationService } from './collaborative-documen
 @Module({
   imports: [
     AuthorizationModule,
-    AuthenticationModule,
     ActorContextModule,
     MemoModule,
     ContributionReporterModule,
