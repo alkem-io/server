@@ -8,4 +8,11 @@ export class CreateInnovationFlowStateSettingsInput {
     description: 'The flag to set.',
   })
   allowNewCallouts!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.',
+  })
+  visible?: boolean;
 }
