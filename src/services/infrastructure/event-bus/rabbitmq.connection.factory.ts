@@ -17,6 +17,13 @@ export class RabbitMQConnectionFactory {
     exchangeType: string
   ): Promise<void> {
     const connection = await this.connect(uri);
+
+    // Guard the (short-lived) connection itself: a broker drop while asserting
+    // the exchange would otherwise emit an UNHANDLED 'error' on the connection
+    // and crash the process (same class as the subscription-factory crash).
+    // The connection is closed in the finally below regardless.
+    connection.on('error', () => {});
+
     let channel: Channel = await connection.createChannel();
 
     // Important: errors are emitted to the channel and the channel is closed
