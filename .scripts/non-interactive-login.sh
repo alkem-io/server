@@ -1,12 +1,20 @@
 #!/bin/bash
-# Authenticates against Ory Kratos using the native/API login flow
-# and stores the session token for the GQL pipeline.
+# Authenticates the GQL pipeline service account and stores a Bearer token.
+#
+# Post-Oathkeeper (OIDC rework): the server's GraphQL endpoints reject a raw
+# Kratos session_token (ERR_JWS_INVALID) and require a Hydra-issued JWT. This
+# script runs the full OAuth2 Authorization Code + PKCE flow (Kratos browser
+# login → oidc-service login/consent → Hydra token exchange) and stores the
+# resulting access-token JWT. The token is actor-bound (carries
+# `alkemio_actor_id`) and is accepted on both the interactive and
+# non-interactive GraphQL endpoints. It expires (~1h); re-run to refresh.
 
 set -euo pipefail
 
 PROJECT_DIR="${CLAUDE_PROJECT_DIR:-.}"
 PIPELINE_DIR="$PROJECT_DIR/.claude/pipeline"
 TOKEN_FILE="$PIPELINE_DIR/.session-token"
+COOKIE_JAR="$PIPELINE_DIR/.kratos-cookies"
 
 # Load config from the pipeline directory
 ENV_FILE="$PIPELINE_DIR/.env"
@@ -25,16 +33,16 @@ if [ ${#MISSING_VARS[@]} -gt 0 ]; then
   fail "Required variables not set: ${MISSING_VARS[*]}. Add them to $ENV_FILE"
 fi
 
-# ─── Login & verify ──────────────────────────────────────────
-echo "Authenticating with Kratos..." >&2
+# ─── Login & exchange for a JWT ───────────────────────────────
+echo "Authenticating (OAuth2 + PKCE → Hydra JWT)..." >&2
 
-kratos_login "$PIPELINE_USER" "$PIPELINE_PASSWORD"
-kratos_verify_session
+oidc_login_jwt "$PIPELINE_USER" "$PIPELINE_PASSWORD" "$COOKIE_JAR"
 
 echo "Authenticated as identity: $IDENTITY_ID" >&2
 
 # ─── Store token ──────────────────────────────────────────────
-echo "$SESSION_TOKEN" > "$TOKEN_FILE"
+echo "$ACCESS_TOKEN" > "$TOKEN_FILE"
 chmod 600 "$TOKEN_FILE"
+rm -f "$COOKIE_JAR"
 
-echo "Session token stored at $TOKEN_FILE" >&2
+echo "Bearer JWT stored at $TOKEN_FILE" >&2
