@@ -213,9 +213,12 @@ export class UpdateWhiteboardContentTool implements McpTool {
       // Best-effort: omit the link if it cannot be resolved rather than failing.
       let url: string | undefined;
       try {
+        // NOTE: use the PRE-loaded whiteboard's nameID — the shared
+        // updateWhiteboardContent() returns an entity selected without nameID,
+        // which yielded ".../undefined" URLs.
         url = await this.urlGeneratorService.getWhiteboardUrlPath(
           updated.id,
-          updated.nameID
+          whiteboard.nameID
         );
       } catch (urlError) {
         this.logger.verbose?.(
@@ -226,7 +229,7 @@ export class UpdateWhiteboardContentTool implements McpTool {
       const result = {
         updated: true,
         whiteboardId: updated.id,
-        nameID: updated.nameID,
+        nameID: whiteboard.nameID,
         url,
       };
       return {
