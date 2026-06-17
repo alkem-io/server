@@ -154,7 +154,13 @@ export class AssistantBudgetResourceProvider implements McpResourceProvider {
     const entitlement = account?.license?.entitlements?.find(
       e => e.type === LicenseEntitlementType.ACCOUNT_AI_ASSISTANT_TOKENS_MONTH
     );
-    if (!entitlement) {
+    // A DISABLED entitlement means "not granted to this account" — e.g. the
+    // limit-0/disabled row the migration backfills onto every account, or any
+    // free/non-plus account that no credential rule grants this entitlement.
+    // Resolve that to `null` so the consumer applies its free-tier default
+    // (ASSISTANT_TOKENS_PER_MONTH_DEFAULT). Only an ENABLED entitlement carries a
+    // real ceiling (plus → 10M); an enabled limit of 0 is an explicit hard block.
+    if (!entitlement || !entitlement.enabled) {
       return null;
     }
     return entitlement.limit;
