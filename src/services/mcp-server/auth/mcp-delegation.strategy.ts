@@ -10,6 +10,7 @@ import { AlkemioConfig } from '@src/types';
 import { IncomingMessage } from 'http';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Strategy } from 'passport-custom';
+import { McpApiKeyScope } from '../dto/mcp.types';
 import { McpApiKeyService } from './mcp-api-key.service';
 
 export const AUTH_STRATEGY_MCP_DELEGATION = 'mcp-delegation';
@@ -131,6 +132,14 @@ export class McpDelegationStrategy extends PassportStrategy(
       assistantActorId: assistantActor.id,
       onBehalfOfUserId: userContext.actorID,
     };
+
+    // Propagate the assistant key's scopes onto the request, exactly as
+    // McpApiKeyStrategy does for non-delegated calls. Without this, downstream
+    // per-operation scope checks read `undefined` and would treat a delegated
+    // call as unrestricted — bypassing the assistant key's read/tools limits.
+    (
+      request as IncomingMessage & { mcpApiKeyScopes?: McpApiKeyScope[] }
+    ).mcpApiKeyScopes = validatedKey.scopes;
 
     this.logger.verbose?.(
       `MCP delegation authenticated: assistant=${assistantActor.id} onBehalfOf=${userContext.actorID}`,

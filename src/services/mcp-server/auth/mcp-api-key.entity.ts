@@ -1,8 +1,4 @@
-import {
-  MID_TEXT_LENGTH,
-  SMALL_TEXT_LENGTH,
-  UUID_LENGTH,
-} from '@common/constants';
+import { MID_TEXT_LENGTH, SMALL_TEXT_LENGTH } from '@common/constants';
 import { BaseAlkemioEntity } from '@domain/common/entity/base-entity';
 import { Column, Entity, Index } from 'typeorm';
 import { McpApiKeyScope } from '../dto/mcp.types';
@@ -52,7 +48,10 @@ export class McpApiKey extends BaseAlkemioEntity {
   @Column('timestamp', { nullable: true })
   lastUsedAt?: Date;
 
-  @Column('varchar', { length: UUID_LENGTH, nullable: true })
+  // 45 chars holds the longest textual IP literal: an IPv4-mapped IPv6 address
+  // (e.g. `0000:0000:0000:0000:0000:ffff:255.255.255.255`). `extractClientIp()`
+  // can return full IPv6 literals, which would not fit a UUID-sized column.
+  @Column('varchar', { length: 45, nullable: true })
   lastUsedFromIp?: string;
 
   @Column('boolean')

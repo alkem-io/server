@@ -26,6 +26,8 @@ export class UserSettingsAssistant1780483789229 implements MigrationInterface {
       { capability: 'community_activity_summary', enabled: true },
       { capability: 'navigate_templates', enabled: true },
       { capability: 'create_whiteboard', enabled: false },
+      { capability: 'create_whiteboard_in_space', enabled: false },
+      { capability: 'edit_whiteboard_elements', enabled: false },
       { capability: 'update_whiteboard_content', enabled: false },
     ],
   };

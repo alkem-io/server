@@ -8,6 +8,8 @@ import { PaginatedOrganization } from '@core/pagination/paginated.organization';
 import { PaginatedUsers } from '@core/pagination/paginated.user';
 import { PaginationArgs } from '@core/pagination/pagination.args';
 import { ContributorQueryArgs } from '@domain/actor/actor/dto/actor.query.args';
+import { IVirtualAssistant } from '@domain/community/virtual-assistant/virtual.assistant.interface';
+import { VirtualAssistantService } from '@domain/community/virtual-assistant/virtual.assistant.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { IInnovationHub } from '@domain/innovation-hub/innovation.hub.interface';
 import { IAccount } from '@domain/space/account/account.interface';
@@ -28,7 +30,8 @@ export class PlatformAdminResolverFields {
   constructor(
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private authorizationService: AuthorizationService,
-    private platformAdminService: PlatformAdminService
+    private platformAdminService: PlatformAdminService,
+    private virtualAssistantService: VirtualAssistantService
   ) {}
 
   @ResolveField(() => [IAccount], {
@@ -178,6 +181,26 @@ export class PlatformAdminResolverFields {
     );
 
     return this.platformAdminService.getAllVirtualContributors(args);
+  }
+
+  @ResolveField(() => IVirtualAssistant, {
+    nullable: false,
+    description:
+      'The singleton virtual-assistant actor, including its current admin capability grant and ID. This is only available to Platform Admins, and is the discovery path for updateAssistantActorCapabilities.',
+  })
+  async virtualAssistant(
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<IVirtualAssistant> {
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      'platformAdmin VirtualAssistant'
+    );
+
+    return this.virtualAssistantService.getSingletonOrFail({
+      relations: { profile: true },
+    });
   }
 
   @ResolveField(() => PlatformAdminCommunicationQueryResults, {

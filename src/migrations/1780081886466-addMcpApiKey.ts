@@ -17,7 +17,7 @@ export class AddMcpApiKey1780081886466 implements MigrationInterface {
         "scopes" jsonb NOT NULL,
         "expiresAt" TIMESTAMP,
         "lastUsedAt" TIMESTAMP,
-        "lastUsedFromIp" character varying(36),
+        "lastUsedFromIp" character varying(45),
         "isActive" boolean NOT NULL,
         CONSTRAINT "PK_mcp_api_key_id" PRIMARY KEY ("id")
       )`

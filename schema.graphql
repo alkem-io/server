@@ -4586,6 +4586,10 @@ type PlatformAdminQueryResults {
     withTags: Boolean
   ): PaginatedUsers!
   """
+  The singleton virtual-assistant actor, including its current admin capability grant and ID. This is only available to Platform Admins, and is the discovery path for updateAssistantActorCapabilities.
+  """
+  virtualAssistant: VirtualAssistant!
+  """
   Retrieve all Virtual Contributors on the Platform. This is only available to Platform Admins.
   """
   virtualContributors(

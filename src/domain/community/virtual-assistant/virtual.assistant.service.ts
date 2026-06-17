@@ -28,11 +28,11 @@ export class VirtualAssistantService {
    * Resolve the singleton `virtual-assistant` actor (by its stable nameID).
    */
   public async getSingletonOrFail(
-    options?: FindOneOptions<VirtualAssistant>
+    options?: Omit<FindOneOptions<VirtualAssistant>, 'where'>
   ): Promise<IVirtualAssistant | never> {
     const virtualAssistant = await this.virtualAssistantRepository.findOne({
-      where: { nameID: ASSISTANT_ACTOR_NAMEID },
       ...options,
+      where: { nameID: ASSISTANT_ACTOR_NAMEID },
     });
     if (!virtualAssistant) {
       throw new EntityNotFoundException(
@@ -46,11 +46,11 @@ export class VirtualAssistantService {
 
   public async getVirtualAssistantOrFail(
     virtualAssistantID: string,
-    options?: FindOneOptions<VirtualAssistant>
+    options?: Omit<FindOneOptions<VirtualAssistant>, 'where'>
   ): Promise<IVirtualAssistant | never> {
     const virtualAssistant = await this.virtualAssistantRepository.findOne({
-      where: { id: virtualAssistantID },
       ...options,
+      where: { id: virtualAssistantID },
     });
     if (!virtualAssistant) {
       throw new EntityNotFoundException(

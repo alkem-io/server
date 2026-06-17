@@ -114,7 +114,12 @@ export class McpApiKeyStrategy extends PassportStrategy(
   }
 
   /**
-   * Extract API key from request headers or query parameters
+   * Extract the MCP API key from request headers ONLY.
+   *
+   * Query-parameter extraction is deliberately NOT supported: long-lived
+   * secrets in the URL leak through access logs, proxy telemetry, caches and
+   * browser history, so the key is accepted from the `X-MCP-API-Key` header or
+   * an `Authorization: Bearer mcp_…` header only.
    */
   private extractApiKey(request: IncomingMessage): string | undefined {
     // Check X-MCP-API-Key header
@@ -127,20 +132,6 @@ export class McpApiKeyStrategy extends PassportStrategy(
     const authHeader = request.headers.authorization;
     if (authHeader && authHeader.startsWith('Bearer mcp_')) {
       return authHeader.slice(7); // Remove 'Bearer ' prefix
-    }
-
-    // Check query parameter
-    const url = request.url;
-    if (url) {
-      try {
-        const urlObj = new URL(url, 'http://localhost');
-        const queryKey = urlObj.searchParams.get('apiKey');
-        if (queryKey && queryKey.startsWith('mcp_')) {
-          return queryKey;
-        }
-      } catch {
-        // URL parsing failed, ignore
-      }
     }
 
     return undefined;

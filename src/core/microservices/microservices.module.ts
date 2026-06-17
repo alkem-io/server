@@ -76,9 +76,7 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     },
     {
       provide: WHITEBOARD_COLLABORATION_SERVICE,
-      useFactory: clientProxyFactory(
-        MessagingQueue.WHITEBOARD_COLLABORATION
-      ),
+      useFactory: clientProxyFactory(MessagingQueue.WHITEBOARD_COLLABORATION),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {

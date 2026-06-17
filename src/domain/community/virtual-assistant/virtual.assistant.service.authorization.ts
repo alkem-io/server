@@ -61,14 +61,13 @@ export class VirtualAssistantAuthorizationService {
       );
     newRules.push(adminManage);
 
-    // All registered users (and anonymous) may READ the assistant actor.
+    // All registered users may READ the assistant actor (per the slice
+    // contract — so it can be displayed as the attribution author of assistant
+    // actions, FR-016). Anonymous access is deliberately NOT granted.
     const registeredRead =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.READ],
-        [
-          AuthorizationCredential.GLOBAL_REGISTERED,
-          AuthorizationCredential.GLOBAL_ANONYMOUS,
-        ],
+        [AuthorizationCredential.GLOBAL_REGISTERED],
         CREDENTIAL_RULE_TYPES_VIRTUAL_ASSISTANT_READ
       );
     newRules.push(registeredRead);

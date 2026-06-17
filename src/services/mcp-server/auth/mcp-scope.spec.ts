@@ -2,9 +2,13 @@ import { McpApiKeyScope } from '../dto/mcp.types';
 import { scopeViolation } from './mcp-scope';
 
 describe('scopeViolation', () => {
-  it('allows when there are no scopes (non-key auth; ACL governs)', () => {
+  it('allows when scopes are undefined (non-key auth; ACL governs)', () => {
     expect(scopeViolation(undefined, 'tools')).toBeUndefined();
-    expect(scopeViolation([], 'read')).toBeUndefined();
+  });
+
+  it('fails closed on an explicit empty scope array (authenticated key, no granted operations)', () => {
+    expect(scopeViolation([], 'read')).toMatch(/no granted operations/);
+    expect(scopeViolation([], 'tools')).toMatch(/no granted operations/);
   });
 
   it('allows when the required operation is present', () => {

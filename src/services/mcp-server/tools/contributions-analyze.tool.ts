@@ -289,32 +289,52 @@ export class ContributionsAnalyzeTool implements McpTool {
       }
     }
 
-    // Order by most recent
-    queryBuilder.orderBy('contribution.updatedDate', 'DESC');
+    // Order by most recent. A stable secondary key on `id` keeps paging
+    // deterministic when many rows share an `updatedDate`.
+    queryBuilder
+      .orderBy('contribution.updatedDate', 'DESC')
+      .addOrderBy('contribution.id', 'DESC');
 
-    // Fetch more than limit to account for authorization filtering
-    const fetchLimit = limit * 3;
-    queryBuilder.take(fetchLimit);
-
-    const allContributions = await queryBuilder.getMany();
-
-    // Filter by authorization
+    // Authorization is applied AFTER the query, so a fixed prefetch (e.g.
+    // `limit * 3`) can undercount: if few of the first rows are readable we'd
+    // return far fewer than `limit` even though more authorized rows exist
+    // later. Page through the result set instead, collecting authorized rows
+    // until we have `limit` of them or the table is exhausted.
+    const pageSize = Math.max(limit * 3, 1);
     const authorizedContributions: CalloutContribution[] = [];
-    for (const contribution of allContributions) {
-      if (authorizedContributions.length >= limit) break;
+    let offset = 0;
 
-      if (!contribution.authorization) continue;
+    while (authorizedContributions.length < limit) {
+      const page = await queryBuilder
+        .clone()
+        .skip(offset)
+        .take(pageSize)
+        .getMany();
 
-      try {
-        const hasAccess = this.authorizationService.isAccessGranted(
-          agentInfo,
-          contribution.authorization,
-          AuthorizationPrivilege.READ
-        );
-        if (hasAccess) {
-          authorizedContributions.push(contribution);
-        }
-      } catch {}
+      if (page.length === 0) {
+        break; // No more rows to scan.
+      }
+      offset += page.length;
+
+      for (const contribution of page) {
+        if (authorizedContributions.length >= limit) break;
+        if (!contribution.authorization) continue;
+
+        try {
+          const hasAccess = this.authorizationService.isAccessGranted(
+            agentInfo,
+            contribution.authorization,
+            AuthorizationPrivilege.READ
+          );
+          if (hasAccess) {
+            authorizedContributions.push(contribution);
+          }
+        } catch {}
+      }
+
+      if (page.length < pageSize) {
+        break; // Last page reached.
+      }
     }
 
     return authorizedContributions;

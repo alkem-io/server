@@ -14,8 +14,20 @@ import {
   Post,
   Req,
   Res,
+  UnauthorizedException,
   UseGuards,
+  UsePipes,
+  ValidationPipe,
 } from '@nestjs/common';
+import {
+  IsArray,
+  IsInt,
+  IsNotEmpty,
+  IsOptional,
+  IsString,
+  Max,
+  Min,
+} from 'class-validator';
 import { Request, Response } from 'express';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
@@ -30,9 +42,22 @@ import { McpServerService } from './mcp-server.service';
  * DTO for creating an MCP API key
  */
 class CreateApiKeyDto {
+  @IsString()
+  @IsNotEmpty()
   name!: string;
+
+  @IsOptional()
+  @IsString()
   description?: string;
+
+  @IsOptional()
+  @IsArray()
   scopes?: McpApiKeyScope[];
+
+  @IsOptional()
+  @IsInt()
+  @Min(1)
+  @Max(365)
   expiresInDays?: number;
 }
 
@@ -114,11 +139,14 @@ export class McpServerController {
   @Post('api-keys')
   @HttpCode(201)
   @UseGuards(McpAuthGuard)
+  @UsePipes(new ValidationPipe({ whitelist: true, transform: true }))
   async createApiKey(@Req() req: Request, @Body() body: CreateApiKeyDto) {
     const agentInfo = (req as any).user as ActorContext | undefined;
     const userId = agentInfo?.actorID;
     if (!userId) {
-      return { error: 'User must be authenticated to create API keys' };
+      throw new UnauthorizedException(
+        'User must be authenticated to create API keys'
+      );
     }
 
     const input: CreateMcpApiKeyInput = {
@@ -156,7 +184,9 @@ export class McpServerController {
     const agentInfo = (req as any).user as ActorContext | undefined;
     const userId = agentInfo?.actorID;
     if (!userId) {
-      return { error: 'User must be authenticated to list API keys' };
+      throw new UnauthorizedException(
+        'User must be authenticated to list API keys'
+      );
     }
 
     const keys = await this.mcpApiKeyService.listApiKeysForUser(userId);
@@ -183,7 +213,9 @@ export class McpServerController {
     const agentInfo = (req as any).user as ActorContext | undefined;
     const userId = agentInfo?.actorID;
     if (!userId) {
-      return { error: 'User must be authenticated to revoke API keys' };
+      throw new UnauthorizedException(
+        'User must be authenticated to revoke API keys'
+      );
     }
 
     await this.mcpApiKeyService.revokeApiKey(keyId, userId);

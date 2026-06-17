@@ -22,11 +22,15 @@ export class ToolRegistry {
     for (const tool of tools) {
       const def = tool.getDefinition();
       if (this.tools.has(def.name)) {
-        this.logger.warn?.(
-          `Duplicate MCP tool name '${def.name}' — ignoring later registration`,
+        // Fail fast: silently keeping the first registration would make the
+        // exposed MCP surface depend on provider order and let a tool vanish
+        // while the registry still looks healthy.
+        this.logger.error?.(
+          `Duplicate MCP tool name '${def.name}'`,
+          undefined,
           LogContext.MCP_SERVER
         );
-        continue;
+        throw new Error(`Duplicate MCP tool name '${def.name}'`);
       }
       this.tools.set(def.name, tool);
       this.logger.verbose?.(

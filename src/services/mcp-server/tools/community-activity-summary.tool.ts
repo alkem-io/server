@@ -401,6 +401,15 @@ export class CommunityActivitySummaryTool implements McpTool {
           `Failed to fetch activities for space ${space.spaceId}: ${error instanceof Error ? error.message : 'Unknown'}`,
           LogContext.MCP_SERVER
         );
+        // Keep the (authorized) space in the response with an empty activity
+        // list so it still counts towards totalSpaces. Dropping it here would
+        // shrink totalSpaces and, if every fetch fails, collapse the whole
+        // response into the "not a member of any communities" path.
+        result.set(space.spaceId, {
+          spaceName: space.spaceName,
+          spaceId: space.spaceId,
+          activities: [],
+        });
       }
     }
 

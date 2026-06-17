@@ -152,7 +152,11 @@ export class McpServerService implements OnModuleInit {
 
       const tool = this.getTool(name);
       if (!tool) {
-        throw new Error(`Tool not found: ${name}`);
+        this.logger.warn?.(
+          { message: 'MCP tool not found', toolName: name },
+          LogContext.MCP_SERVER
+        );
+        throw new Error('Tool not found');
       }
 
       // Validate arguments against the tool's declared input schema before
@@ -348,7 +352,11 @@ export class McpServerService implements OnModuleInit {
   ): Promise<McpReadResourceResult> {
     const provider = this.getResourceProvider(uri);
     if (!provider) {
-      throw new Error(`Resource not found: ${uri}`);
+      this.logger.warn?.(
+        { message: 'MCP resource not found', uri },
+        LogContext.MCP_SERVER
+      );
+      throw new Error('Resource not found');
     }
 
     const authorizationPolicy = await provider.getAuthorizationPolicy(uri);
@@ -359,10 +367,14 @@ export class McpServerService implements OnModuleInit {
     );
     if (!accessGranted) {
       this.logger.warn?.(
-        `MCP resource read denied: ${uri}, user: ${actorContext.actorID || 'anonymous'}`,
+        {
+          message: 'MCP resource read denied',
+          uri,
+          actorID: actorContext.actorID || 'anonymous',
+        },
         LogContext.MCP_SERVER
       );
-      throw new Error(`Access denied: not authorized to read resource ${uri}`);
+      throw new Error('Access denied');
     }
 
     return provider.read(uri, actorContext);

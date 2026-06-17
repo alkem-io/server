@@ -169,9 +169,10 @@ export class AuditLogAnalyzeTool implements McpTool {
         error instanceof Error ? error.stack : undefined,
         LogContext.MCP_SERVER
       );
-      return this.errorResult(
-        `Failed to analyze audit log: ${error instanceof Error ? error.message : 'unknown error'}`
-      );
+      // Return a stable, non-dynamic message: the caught exception may carry
+      // SQL details or dynamic IDs/emails from lower layers, which must not
+      // leak to the MCP client. The raw error stays in the log above.
+      return this.errorResult('Failed to analyze audit log.');
     }
   }
 
