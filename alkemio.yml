@@ -262,7 +262,7 @@ identity:
         # The default below is empty so a production boot with enabled=true
         # would fail loudly. Mint via:
         #   node -e "console.log(require('crypto').randomBytes(32).toString('hex'))"
-        signing_key: ${NON_INTERACTIVE_LOGIN_SIGNING_KEY}:placeholder-non-interactive-login-signing-key-change-me
+        signing_key: ${NON_INTERACTIVE_LOGIN_SIGNING_KEY}
         # Minted JWT lifetime in seconds. 4 hours is enough for a full e2e
         # suite without mid-run remint; tests cache and reuse.
         token_ttl_s: ${NON_INTERACTIVE_LOGIN_TOKEN_TTL_S}:14400
