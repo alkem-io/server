@@ -19,6 +19,10 @@
 
 - Q: When should the default flip to `2`? → A: Now. The column default moves from `1` to `2` via a new migration. New users are created with `2`; **existing user rows are not modified** — they retain whatever value they currently have (whether default-applied `1`, explicit `1`, explicit `2`, or any other integer per FR-004). The `1` value remains valid and is rebranded as the legacy design generation; users can opt back to `1` (or any integer) via `updateUserSettings`. Phase 1 history (FR-002/003/009, SC-001/002, Story 1) is left intact as the historical record of the 2026-05-13 release.
 
+### Session 2026-06-17
+
+- Q: What about existing users still holding `designVersion = 1`? → A: Flip them to `2` now via a one-shot backfill migration (`UPDATE "user_settings" SET "designVersion" = 2 WHERE "designVersion" = 1`). The legacy generation (`1`) is on an imminent decommission path; the DTO descriptions are updated to flag it as deprecated. Users can still opt back into `1` via `updateUserSettings` until the deprecation completes — FR-004 still applies — but the persisted distribution is normalised onto the current default `2`. Rows holding any other integer (`0`, `-1`, `5`, `7`, …) are preserved verbatim. New inserts continue to default to `2` (unchanged from Phase 2). Full retirement of the `1` value (validator narrowing, breaking schema change, constant removal) is a separate, later PR. Phase 1 and Phase 2 wording elsewhere in this document is left intact as the historical record.
+
 ## User Scenarios & Testing _(mandatory)_
 
 ### User Story 1 - Every user has a recorded design version, defaulting to 1 (Priority: P1)
@@ -114,3 +118,4 @@ Whenever the client retrieves a user (e.g., the currently authenticated user) it
 - Existing user records get the default value (`1`) on first read after deployment, via either a column default or a backfill — the choice is left to the implementation plan, but the outward behavior must be that every user appears to have design version `1` until they change it.
 - The "new design" maps conceptually to `2` and is opt-in until a subsequent release flips the column default. The server does not enforce or assume the conceptual mapping; it is documentation only.
 - Phase 2 (2026-05-26) flipped the column default from `1` to `2` for new inserts only — no UPDATE was issued, so the existing user-row distribution is preserved. Phase 1 wording elsewhere in this document is left as the historical record of the 2026-05-13 release.
+- Phase 3 (2026-06-17) ran a one-shot `UPDATE "user_settings" SET "designVersion" = 2 WHERE "designVersion" = 1` that drained the legacy distribution, leaving non-`1` rows untouched. The legacy value `1` remains acceptable on the API (FR-004) but is flagged as deprecated in the DTO descriptions pending full retirement in a later PR.

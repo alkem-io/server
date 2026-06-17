@@ -27,7 +27,7 @@ type UserSettings {
 type UserSettings {
   authorization: Authorization
   communication: UserSettingsCommunication!
-  "The design version this User has selected (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations)."
+  "The design version this User has selected (1 = legacy design generation, deprecated and scheduled for removal; 2 = current default design generation; 3+ reserved for future generations)."
   designVersion: Int!
   homeSpace: UserSettingsHomeSpace!
   id: UUID!
@@ -58,7 +58,7 @@ input UpdateUserSettingsEntityInput {
 ```graphql
 input UpdateUserSettingsEntityInput {
   communication: UpdateUserSettingsCommunicationInput
-  "Update the user's design version. Any integer accepted (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations)."
+  "Update the user's design version. Any integer accepted (1 = legacy design generation, deprecated and scheduled for removal; 2 = current default design generation; 3+ reserved for future generations)."
   designVersion: Int
   homeSpace: UpdateUserSettingsHomeSpaceInput
   notification: UpdateUserSettingsNotificationInput
@@ -88,7 +88,7 @@ input CreateUserSettingsInput {
 ```graphql
 input CreateUserSettingsInput {
   communication: CreateUserSettingsCommunicationInput
-  "Initial design version for this User. Defaults to 2 (the current default design generation) when omitted. Pass 1 to opt into the legacy design."
+  "Initial design version for this User. Defaults to 2 (the current default design generation) when omitted. Pass 1 to opt into the legacy design (deprecated; scheduled for removal)."
   designVersion: Int
   homeSpace: CreateUserSettingsHomeSpaceInput
   notification: CreateUserSettingsNotificationInput
