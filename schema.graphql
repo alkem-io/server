@@ -426,6 +426,7 @@ enum LicenseEntitlementDataType {
 }
 
 enum LicenseEntitlementType {
+  ACCOUNT_AI_ASSISTANT_TOKENS_MONTH
   ACCOUNT_INNOVATION_HUB
   ACCOUNT_INNOVATION_PACK
   ACCOUNT_SPACE_FREE
