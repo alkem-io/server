@@ -15,7 +15,6 @@ import {
   InfoInputData,
   MemoContributionsInputData,
   SaveInputData,
-  WhoInputData,
 } from './inputs';
 import {
   FetchOutputData,
@@ -46,19 +45,6 @@ export class CollaborativeDocumentIntegrationController {
     );
     ack(context);
     return this.integrationService.info(data);
-  }
-
-  @MessagePattern(CollaborativeDocumentMessagePattern.WHO, Transport.RMQ)
-  public async who(
-    @Payload() data: WhoInputData,
-    @Ctx() context: RmqContext
-  ): Promise<string> {
-    this.logger.verbose?.(
-      'Received WHO request',
-      LogContext.COLLAB_DOCUMENT_INTEGRATION
-    );
-    ack(context);
-    return this.integrationService.who(data);
   }
 
   @MessagePattern(

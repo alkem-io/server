@@ -20,7 +20,6 @@ describe('WhiteboardIntegrationController', () => {
   beforeEach(() => {
     integrationService = {
       info: vi.fn(),
-      who: vi.fn(),
       contribution: vi.fn(),
       contentModified: vi.fn(),
       save: vi.fn(),
@@ -52,19 +51,6 @@ describe('WhiteboardIntegrationController', () => {
       expect(mockChannel.ack).toHaveBeenCalled();
       expect(integrationService.info).toHaveBeenCalledWith(payload);
       expect(result).toEqual(infoResult);
-    });
-  });
-
-  describe('who()', () => {
-    it('acknowledges the message and delegates to service', async () => {
-      integrationService.who.mockResolvedValue('user-abc');
-
-      const payload = { auth: { authorization: 'Bearer token' } };
-      const result = await controller.who(payload, rmqContext);
-
-      expect(mockChannel.ack).toHaveBeenCalled();
-      expect(integrationService.who).toHaveBeenCalledWith(payload);
-      expect(result).toBe('user-abc');
     });
   });
 

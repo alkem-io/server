@@ -263,6 +263,21 @@ const STATUS_METADATA: Record<AlkemioErrorStatus, ErrorMetadata> = {
     specificCode: 104,
     userMessage: 'userMessages.operations.roleSetRole',
   },
+  [AlkemioErrorStatus.ROLE_SET_OPEN_APPLICATION_EXISTS]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 114,
+    userMessage: 'userMessages.operations.roleSetOpenApplicationExists',
+  },
+  [AlkemioErrorStatus.ROLE_SET_OPEN_INVITATION_EXISTS]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 115,
+    userMessage: 'userMessages.operations.roleSetOpenInvitationExists',
+  },
+  [AlkemioErrorStatus.ROLE_SET_ALREADY_MEMBER]: {
+    category: ErrorCategory.OPERATIONS,
+    specificCode: 116,
+    userMessage: 'userMessages.operations.roleSetAlreadyMember',
+  },
   [AlkemioErrorStatus.ROLE_SET_INVITATION]: {
     category: ErrorCategory.OPERATIONS,
     specificCode: 105,

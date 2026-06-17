@@ -323,6 +323,30 @@ describe('InnovationFlowService', () => {
       expect(result).toBe(updatedState);
     });
 
+    it('should throw ValidationException when renamed state name contains a comma', async () => {
+      const states = [
+        { id: 's-1', displayName: 'State A', sortOrder: 10 },
+        { id: 's-2', displayName: 'State B', sortOrder: 20 },
+      ];
+      const flow = {
+        id: 'flow-1',
+        states,
+        currentStateID: 's-1',
+        flowStatesTagsetTemplate: undefined,
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(flow);
+
+      await expect(
+        service.updateInnovationFlowState('flow-1', {
+          innovationFlowStateID: 's-1',
+          displayName: 'State,A',
+        } as any)
+      ).rejects.toThrow(ValidationException);
+      // Must reject before the state is ever updated/persisted
+      expect(innovationFlowStateService.update).not.toHaveBeenCalled();
+    });
+
     it('should throw EntityNotFoundException when state is not found in flow', async () => {
       const flow = {
         id: 'flow-1',
@@ -464,6 +488,24 @@ describe('InnovationFlowService', () => {
           displayName: 'X',
         } as any)
       ).rejects.toThrow(RelationshipNotFoundException);
+    });
+
+    it('should throw ValidationException when the new state name contains a comma', async () => {
+      const flow = {
+        id: 'flow-1',
+        states: [{ id: 's-1', sortOrder: 5 }],
+        settings: { maximumNumberOfStates: 10 },
+      } as any;
+
+      await expect(
+        service.createStateOnInnovationFlow(flow, {
+          displayName: 'New,State',
+        } as any)
+      ).rejects.toThrow(ValidationException);
+      // Must reject before the state is ever created/persisted
+      expect(
+        innovationFlowStateService.createInnovationFlowState
+      ).not.toHaveBeenCalled();
     });
 
     it('should throw ValidationException when maximum number of states is reached', async () => {
@@ -791,6 +833,26 @@ describe('InnovationFlowService', () => {
         tagsetTemplateService.updateTagsetTemplateDefinition
       ).toHaveBeenCalled();
       expect(tagsetService.updateTagsetsSelectedValue).toHaveBeenCalled();
+    });
+
+    it('should throw ValidationException when a new state name contains a comma', async () => {
+      const flow = {
+        id: 'flow-1',
+        states: [{ id: 's-old-1', displayName: 'Old A', sortOrder: 10 }],
+        currentStateID: 's-old-1',
+      } as any;
+
+      await expect(
+        service.updateInnovationFlowStates(flow, [
+          { displayName: 'New A', sortOrder: 5 },
+          { displayName: 'New,B', sortOrder: 10 },
+        ] as any)
+      ).rejects.toThrow(ValidationException);
+      // Must reject before any existing state is deleted or rebuilt
+      expect(innovationFlowStateService.delete).not.toHaveBeenCalled();
+      expect(
+        innovationFlowStateService.createInnovationFlowState
+      ).not.toHaveBeenCalled();
     });
   });
 });

@@ -816,10 +816,12 @@ type AuthenticationProviderConfig {
 union AuthenticationProviderConfigUnion = OryConfig
 
 enum AuthenticationType {
+  CLEVERBASE
   EMAIL
   GITHUB
   LINKEDIN
   MICROSOFT
+  PASSKEY
   UNKNOWN
 }
 
@@ -2184,11 +2186,19 @@ input CreateInnovationFlowStateInput {
 type CreateInnovationFlowStateSettingsData {
   """The flag to set."""
   allowNewCallouts: Boolean!
+  """
+  Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
+  """
+  visible: Boolean
 }
 
 input CreateInnovationFlowStateSettingsInput {
   """The flag to set."""
   allowNewCallouts: Boolean!
+  """
+  Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
+  """
+  visible: Boolean
 }
 
 input CreateInnovationHubOnAccountInput {
@@ -3422,6 +3432,10 @@ type InnovationFlowState {
 type InnovationFlowStateSettings {
   """Whether new callouts can be added to this State."""
   allowNewCallouts: Boolean!
+  """
+  Whether this State/phase is shown in the member-facing navigation. Default true. UI-affordance only: it does NOT gate access to the phase content.
+  """
+  visible: Boolean!
 }
 
 type InnovationHub {
@@ -3621,19 +3635,62 @@ type Library {
   """The Innovation Packs in the platform Innovation Library."""
   innovationPacks(queryData: InnovationPacksInput): [InnovationPack!]!
   """
+  Paginated Innovation Packs in the platform Innovation Library (newest first).
+  """
+  innovationPacksPaginated(
+    """A pivot cursor after which items are selected"""
+    after: UUID
+    """A pivot cursor before which items are selected"""
+    before: UUID
+    """
+    Filter the Innovation Packs by a free-text term (title, description or tags).
+    """
+    filter: LibraryInnovationPacksFilterInput
+    """Amount of items after the cursor"""
+    first: Int
+    """Amount of items before the cursor"""
+    last: Int
+  ): PaginatedInnovationPacks!
+  """
   The Templates in the Innovation Library, together with information about the InnovationPack.
   """
   templates(
     """Only return Templates of particular TemplateTypes"""
     filter: LibraryTemplatesFilterInput
   ): [TemplateResult!]!
+  """
+  Paginated Templates in the Innovation Library, each with the InnovationPack that contributes it (newest first).
+  """
+  templatesPaginated(
+    """A pivot cursor after which items are selected"""
+    after: UUID
+    """A pivot cursor before which items are selected"""
+    before: UUID
+    """Only return Templates of particular TemplateTypes"""
+    filter: LibraryTemplatesFilterInput
+    """Amount of items after the cursor"""
+    first: Int
+    """Amount of items before the cursor"""
+    last: Int
+  ): PaginatedLibraryTemplateResults!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   """The VirtualContributors listed on this platform"""
   virtualContributors: [VirtualContributor!]!
 }
 
+input LibraryInnovationPacksFilterInput {
+  """
+  Return Innovation Packs whose title, description or tags contain this term (case-insensitive).
+  """
+  searchTerm: String
+}
+
 input LibraryTemplatesFilterInput {
+  """
+  Return Templates whose title, description or tags contain this term (case-insensitive).
+  """
+  searchTerm: String
   """
   Return Templates within the Library matching the specified Template Types.
   """
@@ -5153,6 +5210,18 @@ type PaginatedInAppNotifications {
   total: Float!
 }
 
+type PaginatedInnovationPacks {
+  innovationPacks: [InnovationPack!]!
+  pageInfo: PageInfo!
+  total: Float!
+}
+
+type PaginatedLibraryTemplateResults {
+  pageInfo: PageInfo!
+  templateResults: [TemplateResult!]!
+  total: Float!
+}
+
 type PaginatedOrganization {
   organization: [Organization!]!
   pageInfo: PageInfo!
@@ -6414,14 +6483,20 @@ type RoleSet {
 }
 
 type RoleSetInvitationResult {
+  """
+  The existing open application that blocks this invitation, when the result type is ALREADY_HAS_OPEN_APPLICATION.
+  """
+  application: Application
   invitation: Invitation
   platformInvitation: PlatformInvitation
   type: RoleSetInvitationResultType!
 }
 
 enum RoleSetInvitationResultType {
+  ALREADY_HAS_OPEN_APPLICATION
   ALREADY_INVITED_TO_PLATFORM_AND_ROLE_SET
   ALREADY_INVITED_TO_ROLE_SET
+  ALREADY_MEMBER_OF_ROLE_SET
   INVITATION_TO_PARENT_NOT_AUTHORIZED
   INVITED_TO_PLATFORM_AND_ROLE_SET
   INVITED_TO_ROLE_SET
@@ -7848,8 +7923,14 @@ input UpdateInnovationFlowStateInput {
 }
 
 input UpdateInnovationFlowStateSettingsInput {
-  """The flag to set."""
-  allowNewCallouts: Boolean!
+  """
+  Optional. Sets whether new callouts can be added to this State; omission leaves the stored value unchanged.
+  """
+  allowNewCallouts: Boolean
+  """
+  Optional. Sets whether the phase is shown in member-facing navigation; omission leaves the stored value unchanged.
+  """
+  visible: Boolean
 }
 
 input UpdateInnovationFlowStatesSortOrderInput {

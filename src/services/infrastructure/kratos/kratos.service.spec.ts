@@ -104,6 +104,17 @@ describe('KratosService', () => {
       expect(result).toEqual([AuthenticationType.GITHUB]);
     });
 
+    it('should return CLEVERBASE when oidc identifier starts with cleverbase', () => {
+      const identity = {
+        credentials: {
+          oidc: { identifiers: ['cleverbase:1572006587f483f6c1'] },
+        },
+      } as unknown as Identity;
+
+      const result = service.mapAuthenticationType(identity);
+      expect(result).toEqual([AuthenticationType.CLEVERBASE]);
+    });
+
     it('should return both MICROSOFT and EMAIL when both are present', () => {
       const identity = {
         credentials: {
@@ -115,6 +126,86 @@ describe('KratosService', () => {
       const result = service.mapAuthenticationType(identity);
       expect(result).toContain(AuthenticationType.MICROSOFT);
       expect(result).toContain(AuthenticationType.EMAIL);
+    });
+
+    it('should map EVERY linked oidc provider, not just the first (issue #9773)', () => {
+      // A single Kratos identity can carry several OIDC identifiers plus a
+      // password. Previously only identifiers[0] was inspected, so a user with
+      // cleverbase first + linkedin second + email collapsed to just EMAIL.
+      const identity = {
+        credentials: {
+          oidc: {
+            identifiers: [
+              'cleverbase:1572006587f483f6c1',
+              'linkedin:9NMK-3ClHo',
+            ],
+          },
+          password: { type: 'password' },
+        },
+      } as unknown as Identity;
+
+      const result = service.mapAuthenticationType(identity);
+      expect(result).toContain(AuthenticationType.CLEVERBASE);
+      expect(result).toContain(AuthenticationType.LINKEDIN);
+      expect(result).toContain(AuthenticationType.EMAIL);
+      expect(result).toHaveLength(3);
+    });
+
+    it('should return PASSKEY when identity has passkey credentials', () => {
+      const identity = {
+        credentials: {
+          passkey: { type: 'passkey', identifiers: ['UBs4UpEGrcXkdiXg'] },
+        },
+      } as unknown as Identity;
+
+      const result = service.mapAuthenticationType(identity);
+      expect(result).toEqual([AuthenticationType.PASSKEY]);
+    });
+
+    it('should return PASSKEY for legacy webauthn credentials', () => {
+      const identity = {
+        credentials: {
+          webauthn: { type: 'webauthn', identifiers: ['legacy-key'] },
+        },
+      } as unknown as Identity;
+
+      const result = service.mapAuthenticationType(identity);
+      expect(result).toEqual([AuthenticationType.PASSKEY]);
+    });
+
+    it('should include PASSKEY alongside oidc and password (issue #9773 follow-up)', () => {
+      // Real acc identity ev.dimitrovv@gmail.com: cleverbase + linkedin oidc,
+      // a password, AND a passkey — all four must be reported.
+      const identity = {
+        credentials: {
+          oidc: {
+            identifiers: [
+              'cleverbase:1572006587f483f6c1',
+              'linkedin:9NMK-3ClHo',
+            ],
+          },
+          password: { type: 'password' },
+          passkey: { type: 'passkey', identifiers: ['TQ6uViIgcdoMpYzh'] },
+        },
+      } as unknown as Identity;
+
+      const result = service.mapAuthenticationType(identity);
+      expect(result).toContain(AuthenticationType.CLEVERBASE);
+      expect(result).toContain(AuthenticationType.LINKEDIN);
+      expect(result).toContain(AuthenticationType.EMAIL);
+      expect(result).toContain(AuthenticationType.PASSKEY);
+      expect(result).toHaveLength(4);
+    });
+
+    it('should de-duplicate when multiple identifiers share a provider', () => {
+      const identity = {
+        credentials: {
+          oidc: { identifiers: ['linkedin:aaa', 'linkedin:bbb'] },
+        },
+      } as unknown as Identity;
+
+      const result = service.mapAuthenticationType(identity);
+      expect(result).toEqual([AuthenticationType.LINKEDIN]);
     });
 
     it('should return UNKNOWN when credentials exist but no oidc or password', () => {
@@ -348,73 +439,6 @@ describe('KratosService', () => {
 
       const result = await service.getBearerToken();
       expect(result).toBe('token-123');
-    });
-  });
-
-  describe('tryExtendSession', () => {
-    it('should succeed when extendSession returns 200', async () => {
-      vi.spyOn(service.kratosIdentityClient, 'extendSession').mockResolvedValue(
-        { status: 200 } as any
-      );
-
-      await expect(
-        service.tryExtendSession({ id: 'session-1' } as Session, 'token')
-      ).resolves.toBeUndefined();
-    });
-
-    it('should succeed when extendSession returns 204', async () => {
-      vi.spyOn(service.kratosIdentityClient, 'extendSession').mockResolvedValue(
-        { status: 204 } as any
-      );
-
-      await expect(
-        service.tryExtendSession({ id: 'session-1' } as Session, 'token')
-      ).resolves.toBeUndefined();
-    });
-
-    it('should throw SessionExtendException when status is unexpected', async () => {
-      vi.spyOn(service.kratosIdentityClient, 'extendSession').mockResolvedValue(
-        { status: 500 } as any
-      );
-
-      await expect(
-        service.tryExtendSession({ id: 'session-1' } as Session, 'token')
-      ).rejects.toThrow('Request to extend session');
-    });
-
-    it('should throw SessionExtendException when extendSession throws', async () => {
-      vi.spyOn(service.kratosIdentityClient, 'extendSession').mockRejectedValue(
-        new Error('Network error')
-      );
-
-      await expect(
-        service.tryExtendSession({ id: 'session-1' } as Session, 'token')
-      ).rejects.toThrow('Session extend');
-    });
-  });
-
-  describe('extendSession', () => {
-    it('should delegate to getBearerToken then tryExtendSession', async () => {
-      vi.spyOn(
-        service.kratosFrontEndClient,
-        'createNativeLoginFlow'
-      ).mockResolvedValue({ data: { id: 'flow-1' } } as any);
-      vi.spyOn(
-        service.kratosFrontEndClient,
-        'updateLoginFlow'
-      ).mockResolvedValue({
-        data: {
-          session_token: 'admin-token',
-          session: { id: 'admin-session' },
-        },
-      } as any);
-      vi.spyOn(service.kratosIdentityClient, 'extendSession').mockResolvedValue(
-        { status: 204 } as any
-      );
-
-      await expect(
-        service.extendSession({ id: 'session-1' } as Session)
-      ).resolves.toBeUndefined();
     });
   });
 

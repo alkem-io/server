@@ -4,7 +4,6 @@ import {
   BearerTokenNotFoundException,
   LoginFlowException,
   LoginFlowInitializeException,
-  SessionExtendException,
 } from '@common/exceptions/auth';
 import { UserIdentityNotFoundException } from '@common/exceptions/user/user.identity.not.found.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -28,7 +27,7 @@ import { SessionInvalidReason } from './types/session.invalid.enum';
 
 /**
  * The `KratosService` class provides methods to interact with the Ory Kratos identity management system.
- * It includes functionalities for session management, such as extending sessions, retrieving sessions,
+ * It includes functionalities for session management, such as retrieving and validating sessions,
  * and obtaining bearer tokens through login flows.
  *
  * @remarks
@@ -39,7 +38,6 @@ import { SessionInvalidReason } from './types/session.invalid.enum';
  * ```typescript
  * const kratosService = new KratosService(configService);
  * const session = await kratosService.getSession('authorization-token');
- * const extendedSession = await kratosService.extendSession(session);
  * ```
  *
  * @public
@@ -85,18 +83,6 @@ export class KratosService {
         basePath: this.kratosPublicUrlServer,
       })
     );
-  }
-
-  /**
-   * Extends the given session by obtaining an admin bearer token and attempting to extend the session.
-   *
-   * @param sessionToBeExtended - The session object that needs to be extended.
-   * @returns A promise that resolves when the session has been successfully extended.
-   */
-  public async extendSession(sessionToBeExtended: Session): Promise<void> {
-    const adminBearerToken = await this.getBearerToken();
-
-    return this.tryExtendSession(sessionToBeExtended, adminBearerToken);
   }
 
   /**
@@ -155,66 +141,22 @@ export class KratosService {
   }
 
   /**
-   * Attempts to extend a given session using the Kratos Identity Client.
-   *
-   * @param sessionToBeExtended - The session object that needs to be extended.
-   * @param adminBearerToken - The admin bearer token used for authorization.
-   * @returns A promise that resolves to void if the session is successfully extended.
-   * @throws {SessionExtendException} If the request to extend the session fails.
-   *
-   * @remarks
-   * This method calls the Kratos Identity Client's `extendSession` endpoint.
-   * The endpoint typically returns a 204 No Content response on success.
-   * Older Ory Network projects may return a 200 OK response with the session in the body.
-   * Returning the session as part of the response will be deprecated in the future and should not be relied upon.
-   * https://www.ory.sh/docs/guides/session-management/refresh-extend-sessions
-   *
-   * @see {@link https://www.ory.sh/docs/reference/api#tag/identity/operation/extendSession}
-   */
-  public async tryExtendSession(
-    sessionToBeExtended: Session,
-    adminBearerToken: string
-  ): Promise<void> {
-    try {
-      /**
-       * This endpoint returns per default a 204 No Content response on success.
-       * Older Ory Network projects may return a 200 OK response with the session in the body.
-       * **Returning the session as part of the response will be deprecated in the future and should not be relied upon.**
-       * Source https://www.ory.sh/docs/reference/api#tag/identity/operation/extendSession
-       */
-      const { status } = await this.kratosIdentityClient.extendSession(
-        { id: sessionToBeExtended.id },
-        { headers: { authorization: `Bearer ${adminBearerToken}` } }
-      );
-
-      if (![200, 204].includes(status)) {
-        throw new SessionExtendException(
-          `Request to extend session ${sessionToBeExtended.id} failed with status ${status}`
-        );
-      }
-    } catch (e) {
-      if (e instanceof SessionExtendException) {
-        throw e;
-      }
-      const message = (e as Error)?.message ?? e;
-      throw new SessionExtendException(
-        `Session extend for session ${sessionToBeExtended.id} failed with: ${message}`
-      );
-    }
-  }
-
-  /**
    * Maps the provided identity to an authentication type.
    *
    * @param identity - The identity object containing credentials.
    * @returns The corresponding authentication types based on the identity's credentials.
    *
-   * The function checks the following conditions in order:
-   * - If the identity has OIDC credentials, it examines the identifiers:
-   *   - If the identifier starts with 'microsoft', it adds `AuthenticationType.MICROSOFT`.
-   *   - If the identifier starts with 'linkedin', it adds `AuthenticationType.LINKEDIN`.
-   *   - If the identifier starts with 'github', it adds `AuthenticationType.GITHUB`.
+   * The function checks the following conditions:
+   * - For OIDC credentials it inspects EVERY linked identifier (a single Kratos
+   *   identity can have several — e.g. `['cleverbase:…', 'linkedin:…']`), mapping
+   *   each provider prefix to its `AuthenticationType`:
+   *   - `microsoft` -> `AuthenticationType.MICROSOFT`
+   *   - `linkedin`  -> `AuthenticationType.LINKEDIN`
+   *   - `github`    -> `AuthenticationType.GITHUB`
+   *   - `cleverbase` -> `AuthenticationType.CLEVERBASE`
    * - If the identity has password credentials, it adds `AuthenticationType.EMAIL`.
+   * - If the identity has passkey (or legacy webauthn) credentials, it adds
+   *   `AuthenticationType.PASSKEY`.
    * - If none of the above conditions are met, it adds `AuthenticationType.UNKNOWN`.
    */
   public mapAuthenticationType(identity: Identity): AuthenticationType[] {
@@ -222,24 +164,38 @@ export class KratosService {
       return [AuthenticationType.UNKNOWN];
     }
 
-    const authTypes: AuthenticationType[] = [];
-    const oidcIdentifiers = identity.credentials.oidc?.identifiers;
-    const identifier = oidcIdentifiers?.[0];
+    // Map each OIDC provider prefix to its AuthenticationType. Kratos stores the
+    // identifier as `<provider>:<subject>`, and one identity can carry several.
+    const oidcProviderMap: ReadonlyArray<[string, AuthenticationType]> = [
+      ['microsoft', AuthenticationType.MICROSOFT],
+      ['linkedin', AuthenticationType.LINKEDIN],
+      ['github', AuthenticationType.GITHUB],
+      ['cleverbase', AuthenticationType.CLEVERBASE],
+    ];
 
-    if (identifier) {
-      if (identifier.startsWith('microsoft'))
-        authTypes.push(AuthenticationType.MICROSOFT);
-      if (identifier.startsWith('linkedin'))
-        authTypes.push(AuthenticationType.LINKEDIN);
-      if (identifier.startsWith('github'))
-        authTypes.push(AuthenticationType.GITHUB);
+    const authTypes = new Set<AuthenticationType>();
+
+    const oidcIdentifiers = identity.credentials.oidc?.identifiers ?? [];
+    for (const identifier of oidcIdentifiers) {
+      for (const [prefix, type] of oidcProviderMap) {
+        if (identifier.startsWith(prefix)) {
+          authTypes.add(type);
+        }
+      }
     }
 
     if (identity.credentials.password) {
-      authTypes.push(AuthenticationType.EMAIL);
+      authTypes.add(AuthenticationType.EMAIL);
     }
 
-    return authTypes.length ? authTypes : [AuthenticationType.UNKNOWN];
+    // Passkeys are a separate Kratos credential type (`passkey`, with `webauthn`
+    // as the legacy key) — not OIDC and not password — so they must be detected
+    // explicitly or they never surface as an authentication method.
+    if (identity.credentials.passkey || identity.credentials.webauthn) {
+      authTypes.add(AuthenticationType.PASSKEY);
+    }
+
+    return authTypes.size ? [...authTypes] : [AuthenticationType.UNKNOWN];
   }
 
   /**

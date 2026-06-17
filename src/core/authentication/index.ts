@@ -1,1 +1,1 @@
-export * from './strategy.names';
+export * from './authentication.service';

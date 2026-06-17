@@ -241,6 +241,8 @@ describe('RoleSetResolverMutationsMembership', () => {
         new Map([['actor-1', 'user']])
       );
       (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
       (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue(
         mockInvitation
       );
@@ -293,6 +295,8 @@ describe('RoleSetResolverMutationsMembership', () => {
         existingUser
       );
       (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(false);
       (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue(
         mockInvitation
       );
@@ -359,6 +363,98 @@ describe('RoleSetResolverMutationsMembership', () => {
       expect(result[0].type).toBe(
         RoleSetInvitationResultType.ALREADY_INVITED_TO_ROLE_SET
       );
+    });
+
+    it('should return ALREADY_HAS_OPEN_APPLICATION when an open application exists', async () => {
+      const actorContext = { actorID: 'user-1' } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+        parentRoleSet: undefined,
+      } as any;
+      const existingApplication = { id: 'existing-app' } as any;
+
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['actor-1', 'user']])
+      );
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(
+        existingApplication
+      );
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(actorContext, {
+        roleSetID: 'rs-1',
+        invitedActorIDs: ['actor-1'],
+        invitedUserEmails: [],
+        extraRoles: [],
+      } as any);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe(
+        RoleSetInvitationResultType.ALREADY_HAS_OPEN_APPLICATION
+      );
+      expect(result[0].application).toBe(existingApplication);
+      // The blocked actor must not produce an invitation.
+      expect(
+        roleSetService.createInvitationExistingActor
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should return ALREADY_MEMBER_OF_ROLE_SET when the actor is already a member', async () => {
+      const actorContext = { actorID: 'user-1' } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+        parentRoleSet: undefined,
+      } as any;
+
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      (actorLookupService.validateActorsAndGetTypes as Mock).mockResolvedValue(
+        new Map([['actor-1', 'user']])
+      );
+      (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
+      (roleSetService.isMember as Mock).mockResolvedValue(true);
+      (invitationService.getInvitationsOrFail as Mock).mockResolvedValue([]);
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+      (authorizationPolicyService.saveAll as Mock).mockResolvedValue(undefined);
+      (
+        communityResolverService.getCommunityForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+
+      const result = await resolver.inviteForEntryRoleOnRoleSet(actorContext, {
+        roleSetID: 'rs-1',
+        invitedActorIDs: ['actor-1'],
+        invitedUserEmails: [],
+        extraRoles: [],
+      } as any);
+
+      expect(result).toHaveLength(1);
+      expect(result[0].type).toBe(
+        RoleSetInvitationResultType.ALREADY_MEMBER_OF_ROLE_SET
+      );
+      expect(
+        roleSetService.createInvitationExistingActor
+      ).not.toHaveBeenCalled();
     });
   });
 
@@ -488,6 +584,7 @@ describe('RoleSetResolverMutationsMembership', () => {
       // inviteActorsToEntryRole: actor is not member of parent
       (roleSetService.isMember as Mock).mockResolvedValue(false);
       (roleSetService.findOpenInvitation as Mock).mockResolvedValue(undefined);
+      (roleSetService.findOpenApplication as Mock).mockResolvedValue(undefined);
       (roleSetService.createInvitationExistingActor as Mock).mockResolvedValue(
         mockInvitation
       );

@@ -1,6 +1,8 @@
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
+import session from 'express-session';
 import helmet from 'helmet';
+import Redis from 'ioredis';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AppModule } from './app.module';
 import './config/aliases';
@@ -16,6 +18,12 @@ import { renderGraphiQL } from 'graphql-helix';
 import { graphqlUploadExpress } from 'graphql-upload';
 // biome-ignore lint/correctness/noUnusedImports: apmAgent import has side effects that initialize APM
 import { apmAgent } from './apm';
+import { NonInteractiveLoginConfig } from './core/auth/non-interactive-login/non-interactive-login.config';
+import { setSessionMiddlewares } from './core/auth/oidc/session-middleware.holder';
+import {
+  buildOidcSessionRedisStore,
+  buildSessionRenewalMiddleware,
+} from './core/auth/oidc/session-store.redis';
 import { BootstrapService } from './core/bootstrap/bootstrap.service';
 import { faviconMiddleware } from './core/middleware/favicon.middleware';
 
@@ -35,6 +43,12 @@ const bootstrap = async () => {
   const bootstrapService: BootstrapService = app.get(BootstrapService);
 
   app.useLogger(logger);
+
+  // Defense-in-depth boot guard for the non-interactive-login feature.
+  // Throws (and aborts startup) if NODE_ENV=production collides with
+  // identity.authentication.providers.non_interactive_login.enabled, or
+  // if the feature is enabled without a strong signing_key.
+  app.get(NonInteractiveLoginConfig).assertSafe();
   useContainer(app.select(AppModule), { fallbackOnErrors: true });
 
   await bootstrapService.bootstrap();
@@ -43,20 +57,83 @@ const bootstrap = async () => {
     { infer: true }
   );
   if (enabled) {
+    // `Access-Control-Allow-Origin: *` is incompatible with credentials, so
+    // when origin is the wildcard we reflect the request Origin instead.
+    const corsOrigin =
+      typeof origin === 'string' && origin.trim() === '*' ? true : origin;
     app.enableCors({
-      origin,
+      origin: corsOrigin,
       allowedHeaders: allowed_headers,
       methods,
+      // Required so the browser sends the alkemio_session cookie on
+      // cross-origin GraphQL requests from the SPA (and accepts Set-Cookie
+      // on the OIDC callback). Client must use credentials: 'include'.
+      credentials: true,
     });
   }
 
+  app.getHttpAdapter().getInstance().set('trust proxy', 1);
+
   app.use(faviconMiddleware);
-  app.use(cookieParser());
+  const cookieParserMiddleware = cookieParser();
+  app.use(cookieParserMiddleware);
   app.use(
     helmet({
       contentSecurityPolicy: false,
     })
   );
+
+  // T016 — express-session + connect-redis bootstrap. MUST run before any
+  // OIDC controller so the callback can regenerate() against a live store.
+  // Key layout: `alkemio:sid:<sid>`. The cookie carries the sid only — no
+  // tokens. Two clocks (FR-018 / FR-020a): a 14-day sliding idle window
+  // (cookie maxAge + Redis key TTL) and a 30-day fixed absolute ceiling
+  // (`absolute_expires_at` payload check). `rolling` is false and the idle
+  // window is renewed lazily by sessionRenewalMiddleware so we don't re-issue
+  // the cookie / re-write Redis on every request.
+  const oidcConfig = configService.get(
+    'identity.authentication.providers.oidc',
+    {
+      infer: true,
+    }
+  );
+  const redisConfig = configService.get('storage.redis', { infer: true });
+  const sessionRedis = new Redis({
+    host: redisConfig.host,
+    port: Number(redisConfig.port),
+  });
+  const idleTtlS = oidcConfig.cookie.idle_ttl_s;
+  const sessionStore = buildOidcSessionRedisStore(sessionRedis, idleTtlS);
+  const sessionMiddleware = session({
+    store: sessionStore,
+    secret: oidcConfig.session_signing_key,
+    name: oidcConfig.cookie.name,
+    resave: false,
+    saveUninitialized: false,
+    // Renewal is handled lazily by sessionRenewalMiddleware (Kratos-style
+    // back-half extend) — keep express-session from re-issuing the cookie on
+    // every request.
+    rolling: false,
+    cookie: {
+      httpOnly: true,
+      sameSite: 'lax',
+      path: '/',
+      secure: oidcConfig.cookie.secure,
+      domain: oidcConfig.cookie.domain || undefined,
+      maxAge: idleTtlS * 1000,
+    },
+  });
+  app.use(sessionMiddleware);
+  // FR-018 — lazily slide the idle window only when it crosses the half-life
+  // mark. MUST run after express-session has populated req.session.
+  app.use(buildSessionRenewalMiddleware(idleTtlS));
+
+  // FR-023 (WS addendum) — graphql-ws upgrades bypass the Express pipeline,
+  // so cookie-parser and express-session never run on the upgrade
+  // IncomingMessage and `req.sessionID`/`req.cookies` are undefined.
+  // Publish both instances so the GraphQL context callback can replay them
+  // against the upgrade request before CookieSessionStrategy reads them.
+  setSessionMiddlewares(cookieParserMiddleware, sessionMiddleware);
 
   app.use(
     graphqlUploadExpress({
@@ -95,6 +172,11 @@ const bootstrap = async () => {
   const heartbeat = process.env.NODE_ENV === 'production' ? 30 : 120;
   const amqpEndpoint = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=${heartbeat}`;
   connectMicroservice(app, amqpEndpoint, MessagingQueue.AUTH_RESET);
+  // Kratos events (e.g. USER_PASSWORD_CHANGED published by the Go kratos-webhooks
+  // service). Dedicated durable queue — do NOT also bind it via @golevelup
+  // @RabbitSubscribe; a competing consumer would steal messages (see the
+  // golevelup note below).
+  connectMicroservice(app, amqpEndpoint, MessagingQueue.KRATOS_EVENTS);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.WHITEBOARDS);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.FILES);
   connectMicroservice(app, amqpEndpoint, MessagingQueue.IN_APP_NOTIFICATIONS);

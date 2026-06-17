@@ -10,6 +10,9 @@ import { ITemplatesSet } from '../templates-set/templates.set.interface';
 
 @ObjectType('Template')
 export abstract class ITemplate extends INameable {
+  // Sequential cursor column for pagination (Paginationable); not exposed via GraphQL
+  rowId!: number;
+
   @Field(() => TemplateType, {
     nullable: false,
     description: 'The type for this Template.',
