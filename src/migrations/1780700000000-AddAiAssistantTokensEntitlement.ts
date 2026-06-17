@@ -14,10 +14,11 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
  *      created before this migration; the real limit is materialized from the
  *      credential rules above the next time `applyLicensePolicy` runs.
  *
- * ⚠️ The per-tier numbers below are PLACEHOLDER values — a BUSINESS DECISION that
- * is NOT YET SIGNED OFF. They MUST be confirmed (and likely tuned per real token
- * pricing / plan economics) before this ships to production. Access (who may use
- * the assistant) is governed separately by the `ACCESS_VIRTUAL_ASSISTANT`
+ * Per-tier monthly weighted-token allowances — SIGNED OFF 2026-06-17 (Valentin
+ * Yanakiev): free 1,000,000 / plus 10,000,000 / premium 50,000,000. The unit is
+ * weighted input-token-equivalents (`prompt + 0.1×cacheRead + 1.25×cacheCreation
+ * + 3×completion` — Mistral pricing; see contract §5). Access (who may use the
+ * assistant) is governed separately by the `ACCESS_VIRTUAL_ASSISTANT`
  * authorization privilege (Increment A) — this entitlement governs only the
  * monthly AMOUNT, never access.
  *
@@ -33,16 +34,23 @@ const ENTITLEMENT_DATA_TYPE = 'limit';
 const ACCOUNT_LICENSE_FREE = 'account-license-free';
 const ACCOUNT_LICENSE_PLUS = 'account-license-plus';
 
-// ⚠️ PLACEHOLDER monthly weighted-token allowances — pending business sign-off.
-// Accounts have two real tiers in the credential-based engine today: FREE
-// (baseline) and PLUS. A future PREMIUM account tier (placeholder ~50,000,000)
-// would add its own `account-license-premium` credential rule here.
-const PLACEHOLDER_TOKENS_FREE = 1_000_000;
-const PLACEHOLDER_TOKENS_PLUS = 10_000_000;
+// Monthly weighted-token allowances — SIGNED OFF 2026-06-17. Accounts have two
+// real tiers in the credential-based engine today: FREE (baseline) and PLUS. The
+// PREMIUM tier does not exist yet (no `account-license-premium` credential rule);
+// its grant below is therefore a harmless no-op on the current run — the up()
+// loop skips any tier absent from the policy. The 50,000,000 value is recorded
+// (confirmed) so that whenever the premium account tier IS introduced, its
+// creating migration grants this same amount. Do NOT fabricate the tier here.
+const ACCOUNT_LICENSE_PREMIUM = 'account-license-premium';
+const TOKENS_FREE = 1_000_000;
+const TOKENS_PLUS = 10_000_000;
+const TOKENS_PREMIUM = 50_000_000;
 
 const TIER_GRANTS: Array<{ credentialType: string; limit: number }> = [
-  { credentialType: ACCOUNT_LICENSE_FREE, limit: PLACEHOLDER_TOKENS_FREE },
-  { credentialType: ACCOUNT_LICENSE_PLUS, limit: PLACEHOLDER_TOKENS_PLUS },
+  { credentialType: ACCOUNT_LICENSE_FREE, limit: TOKENS_FREE },
+  { credentialType: ACCOUNT_LICENSE_PLUS, limit: TOKENS_PLUS },
+  // No-op until the premium account tier exists (see note above).
+  { credentialType: ACCOUNT_LICENSE_PREMIUM, limit: TOKENS_PREMIUM },
 ];
 
 interface GrantedEntitlement {
