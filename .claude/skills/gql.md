@@ -8,10 +8,10 @@ The GQL pipeline supports two auth flavors. Pick based on what the request actua
 
 | Flavor | Endpoint | Auth | Use when |
 |---|---|---|---|
-| **Non-interactive** (default) | `/api/private/non-interactive/graphql` | `Authorization: Bearer <session_token>` | Service-style ops where the request doesn't depend on resolved actor identity for privilege checks |
-| **Interactive** | `/api/private/graphql` | `Cookie: ory_kratos_session=<cookie>` | Anything user-bound: `collaboraEditorUrl` (WOPI), routes that hit `@CurrentActor` privilege checks, audit-logged actions, anything that needs the Oathkeeper session→JWT exchange |
+| **Bearer JWT** (default) | `/api/private/non-interactive/graphql` (or `/api/private/graphql`) | `Authorization: Bearer <Hydra JWT>` | Everything. Post-Oathkeeper the JWT is actor-bound (carries `alkemio_actor_id`), so it covers user-bound ops too: `collaboraEditorUrl` (WOPI), `@CurrentActor` privilege checks, audit-logged actions. |
+| **Interactive cookie** (legacy) | `/api/private/graphql` | `Cookie: ory_kratos_session=<cookie>` | ⚠️ No longer resolves an actor since Oathkeeper was retired (the cookie→JWT exchange edge is gone — a cookie now reads as anonymous). Kept only for reference; prefer the Bearer JWT. |
 
-If a non-interactive call mysteriously returns "user: null" from `me.user`, or an `Authorization: unable to grant 'read' privilege` error with `user: ` (anonymous), switch to the interactive flavor — the actor isn't resolving on the non-interactive path.
+Post-Oathkeeper (OIDC rework): the token produced by `/non-interactive-login` is now a **Hydra-issued JWT**, not a raw Kratos session token. A raw session token fails with `ERR_JWS_INVALID`. The JWT is actor-bound and accepted on both endpoints. If a call returns "user: null" from `me.user`, the token is missing/expired/anonymous — re-run `/non-interactive-login`.
 
 **Scripts involved:**
 - `.scripts/gql-request.sh` — non-interactive (Bearer) executor
@@ -23,7 +23,7 @@ If a non-interactive call mysteriously returns "user: null" from `me.user`, or a
 
 ### 1. Auth credential — one or both depending on the flavor
 
-**Non-interactive (Bearer):** session token at `.claude/pipeline/.session-token`.
+**Bearer JWT:** Hydra-issued JWT at `.claude/pipeline/.session-token` (filename kept for compatibility; contents are now a JWT, not a Kratos session token).
 ```bash
 test -f .claude/pipeline/.session-token && echo "OK" || echo "Missing — run /non-interactive-login"
 ```
@@ -262,9 +262,10 @@ query { __schema { mutationType { fields { name description } } } }
 | "No session token found" | Run `/non-interactive-login` first |
 | "No cookie jar found" | Run `/interactive-login` first |
 | "401 Unauthorized" or empty response | Credential expired — re-run `/non-interactive-login` or `/interactive-login` |
-| `me.user` is null even though you're authenticated | You're on the non-interactive path; switch to `gql-request-interactive.sh` |
-| `Authorization: unable to grant '<priv>' privilege ... user: ` (empty) | Same — actor isn't resolving on non-interactive; switch to interactive |
-| WOPI 401 from `collaboraEditorUrl` | Non-interactive Bearer doesn't carry actor identity through Oathkeeper; use `gql-request-interactive.sh` |
+| `me.user` is null even though you're authenticated | The Hydra JWT is missing/expired/anonymous — re-run `/non-interactive-login` to refresh it. (The legacy cookie/interactive path no longer resolves an actor post-Oathkeeper.) |
+| `Authorization: unable to grant '<priv>' privilege ... user: ` (empty) | Same — the JWT isn't carrying the actor; re-run `/non-interactive-login`. |
+| WOPI 401 from `collaboraEditorUrl` | Token missing/expired/anonymous. The Hydra JWT IS actor-bound — re-run `/non-interactive-login` to refresh it (the legacy cookie path no longer resolves an actor post-Oathkeeper). |
+| `ERR_JWS_INVALID` on any call | The stored token is a raw Kratos session token, not a Hydra JWT — re-run `/non-interactive-login` (the script now does the OAuth2+PKCE exchange). |
 | "SESSION_TOKEN is not set" / "COOKIE_JAR is not set" | Ensure the script reads the credential file or the corresponding `kratos_login*` was called |
 | GraphQL validation errors | Check query syntax; use introspection queries to discover the schema |
 | "Kratos not reachable" | Run `pnpm run start:services` |
