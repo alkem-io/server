@@ -207,6 +207,20 @@ http:
           - X-Alkemio-Actor-Id
         trustForwardHeader: true
 
+    # 004-web-ai-assistant (FR-027): the assistant edge's forwardAuth. Same
+    # identity resolution as alkemio-resolve, but the endpoint ALSO enforces the
+    # ACCESS_VIRTUAL_ASSISTANT privilege: it returns 403 (which traefik
+    # propagates) when the acting user lacks access, refusing the request BEFORE
+    # assistant-service is reached. Only the browser assistant edge uses this;
+    # the system path (/internal/invoke) does not traverse it, so it stays
+    # exempt.
+    alkemio-resolve-assistant:
+      forwardAuth:
+        address: 'http://host.docker.internal:4000/rest/internal/assistant-forward-auth'
+        authResponseHeaders:
+          - X-Alkemio-Actor-Id
+        trustForwardHeader: true
+
   routers:
     oidc-public:
       rule: 'PathPrefix(`/oidc`)'
@@ -331,8 +345,10 @@ http:
 
     # 004-web-ai-assistant: browser /api/private/rest/assistant/* → strip full
     # prefix → assistant-service on the host. Identity-at-gateway (OIDC):
-    # client X-Alkemio-* headers are zeroed, then alkemio-resolve forwardAuth
-    # resolves the alkemio_session cookie (or Hydra bearer) and injects
+    # client X-Alkemio-* headers are zeroed, then alkemio-resolve-assistant
+    # forwardAuth resolves the alkemio_session cookie (or Hydra bearer) AND
+    # enforces the ACCESS_VIRTUAL_ASSISTANT privilege (403 before
+    # assistant-service is reached for users without access), injecting
     # X-Alkemio-Actor-Id — the only identity assistant-service accepts.
     # more specific than 'api-private-rest'
     assistant-service:
@@ -340,7 +356,7 @@ http:
       service: 'assistant-service'
       middlewares:
         - strip-client-alkemio-headers
-        - alkemio-resolve
+        - alkemio-resolve-assistant
         - strip-api-private-rest-assistant
       entryPoints:
         - 'web'

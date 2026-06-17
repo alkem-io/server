@@ -92,6 +92,8 @@ export const CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK =
   'credentialRuleTypes-platformCreateInnovationPack';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE =
   'credentialRuleTypes-platformAccessGuidance';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_VIRTUAL_ASSISTANT =
+  'credentialRuleTypes-platformAccessVirtualAssistant';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_DASHBOARD =
   'credentialRuleTypes-platformAccessDashboard';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER =
