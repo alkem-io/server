@@ -262,8 +262,8 @@ query { __schema { mutationType { fields { name description } } } }
 | "No session token found" | Run `/non-interactive-login` first |
 | "No cookie jar found" | Run `/interactive-login` first |
 | "401 Unauthorized" or empty response | Credential expired — re-run `/non-interactive-login` or `/interactive-login` |
-| `me.user` is null even though you're authenticated | You're on the non-interactive path; switch to `gql-request-interactive.sh` |
-| `Authorization: unable to grant '<priv>' privilege ... user: ` (empty) | Same — actor isn't resolving on non-interactive; switch to interactive |
+| `me.user` is null even though you're authenticated | The Hydra JWT is missing/expired/anonymous — re-run `/non-interactive-login` to refresh it. (The legacy cookie/interactive path no longer resolves an actor post-Oathkeeper.) |
+| `Authorization: unable to grant '<priv>' privilege ... user: ` (empty) | Same — the JWT isn't carrying the actor; re-run `/non-interactive-login`. |
 | WOPI 401 from `collaboraEditorUrl` | Token missing/expired/anonymous. The Hydra JWT IS actor-bound — re-run `/non-interactive-login` to refresh it (the legacy cookie path no longer resolves an actor post-Oathkeeper). |
 | `ERR_JWS_INVALID` on any call | The stored token is a raw Kratos session token, not a Hydra JWT — re-run `/non-interactive-login` (the script now does the OAuth2+PKCE exchange). |
 | "SESSION_TOKEN is not set" / "COOKIE_JAR is not set" | Ensure the script reads the credential file or the corresponding `kratos_login*` was called |

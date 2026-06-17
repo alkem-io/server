@@ -34,6 +34,11 @@ if [ ${#MISSING_VARS[@]} -gt 0 ]; then
 fi
 
 # ─── Login & exchange for a JWT ───────────────────────────────
+# Always wipe the cookie jar (it holds an ory_kratos_session cookie), even if
+# the login fails partway through.
+cleanup() { rm -f "$COOKIE_JAR"; }
+trap cleanup EXIT
+
 echo "Authenticating (OAuth2 + PKCE → Hydra JWT)..." >&2
 
 oidc_login_jwt "$PIPELINE_USER" "$PIPELINE_PASSWORD" "$COOKIE_JAR"
@@ -43,6 +48,5 @@ echo "Authenticated as identity: $IDENTITY_ID" >&2
 # ─── Store token ──────────────────────────────────────────────
 echo "$ACCESS_TOKEN" > "$TOKEN_FILE"
 chmod 600 "$TOKEN_FILE"
-rm -f "$COOKIE_JAR"
 
 echo "Bearer JWT stored at $TOKEN_FILE" >&2

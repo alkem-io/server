@@ -177,16 +177,22 @@ oidc_login_jwt() {
   kratos_login_browser "$email" "$password" "$cookie_jar"
 
   # 2. PKCE pair (S256). verifier: 43 url-safe chars from 32 random bytes.
-  local verifier challenge
+  #    state/nonce are generated INDEPENDENTLY of the verifier — the verifier
+  #    is a back-channel secret and must never appear in front-channel params
+  #    (deriving state/nonce from it would leak it in the authorize URL and
+  #    redirect, defeating PKCE). state is validated against the callback below.
+  local verifier challenge state nonce
   verifier=$(openssl rand 32 | _b64url)
   challenge=$(printf '%s' "$verifier" | openssl dgst -binary -sha256 | _b64url)
+  state=$(openssl rand 16 | _b64url)
+  nonce=$(openssl rand 16 | _b64url)
 
   # 3. Drive the authorize endpoint, following redirects through the
   #    oidc-service login/consent hops until the callback redirect carries
   #    the authorization code. We deliberately do NOT follow into the
   #    callback itself — we intercept its `code` from the Location header.
-  local url code loc headers hop
-  url="${OIDC_AUTH_ENDPOINT}?client_id=$(_urlenc "$OIDC_CLIENT_ID")&redirect_uri=$(_urlenc "$OIDC_REDIRECT_URI")&response_type=code&scope=$(_urlenc "$OIDC_SCOPE")&audience=$(_urlenc "$OIDC_AUDIENCE")&state=st-$verifier&nonce=nc-$verifier&code_challenge=$challenge&code_challenge_method=S256"
+  local url code returned_state loc headers hop
+  url="${OIDC_AUTH_ENDPOINT}?client_id=$(_urlenc "$OIDC_CLIENT_ID")&redirect_uri=$(_urlenc "$OIDC_REDIRECT_URI")&response_type=code&scope=$(_urlenc "$OIDC_SCOPE")&audience=$(_urlenc "$OIDC_AUDIENCE")&state=$(_urlenc "$state")&nonce=$(_urlenc "$nonce")&code_challenge=$challenge&code_challenge_method=S256"
 
   for hop in $(seq 1 15); do
     headers=$(curl -sS --connect-timeout 5 --max-time 10 -D - -o /dev/null \
@@ -197,12 +203,15 @@ oidc_login_jwt() {
     case "$loc" in
       "$OIDC_REDIRECT_URI"*)
         code=$(printf '%s' "$loc" | sed -n 's/.*[?&]code=\([^&]*\).*/\1/p')
+        returned_state=$(printf '%s' "$loc" | sed -n 's/.*[?&]state=\([^&]*\).*/\1/p')
         break ;;
       /*) url="${OIDC_BASE_URL}$loc" ;;
       *)  url="$loc" ;;
     esac
   done
   [ -n "${code:-}" ] || fail "Did not obtain an authorization code from the OIDC flow"
+  # CSRF defense: the state echoed back must match what we sent.
+  [ "${returned_state:-}" = "$state" ] || fail "OIDC state mismatch (possible CSRF) — aborting"
 
   # 4. Exchange the code for the access-token JWT (public client → PKCE, no secret).
   local token_response
