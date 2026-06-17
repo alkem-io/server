@@ -13,6 +13,11 @@
  * - Phase 2 (clarification 2026-05-26): the column default was flipped to `2`
  *   (now exported as `DESIGN_VERSION_CURRENT_DEFAULT`) via a column-default DDL
  *   migration with no row UPDATE — existing rows preserve whatever they had.
+ * - Phase 3 (clarification 2026-06-17): a one-shot backfill flipped every row
+ *   still holding `1` onto `2`. The API still accepts `1` (FR-004 stands) so
+ *   `DESIGN_VERSION_LEGACY` remains exported; it now names a value on an
+ *   imminent decommission path and a future PR will narrow the validator and
+ *   drop the constant.
  *
  * Client coordination: the legacy `alkemio-crd-enabled` LocalStorage flag (a
  * boolean) should be retired in favour of a key that stores the integer value
