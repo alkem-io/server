@@ -208,7 +208,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
           infer: true,
         });
         return {
-          cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
+          cors: false, // avoids a duplicate CORS origin header when behind the Traefik edge reverse proxy
           uploads: false,
           autoSchemaFile: true,
           inheritResolversFromInterfaces: true,
