@@ -1,7 +1,10 @@
+import { LogContext } from '@common/enums';
 import {
   Controller,
   Get,
   HttpCode,
+  Inject,
+  LoggerService,
   NotFoundException,
   Param,
   Post,
@@ -9,6 +12,7 @@ import {
 import { SearchIngestService } from '@services/api/search/ingest/search.ingest.service';
 import { TaskService } from '@services/task';
 import { InAppNotificationAdminService } from '@src/platform-admin/in-app-notification/in.app.notification.admin.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IngestTriggerResultDto } from './dto/ingest.trigger.result.dto';
 import { PruneResultDto } from './dto/prune.result.dto';
 import { TaskStatusDto } from './dto/task.status.dto';
@@ -31,7 +35,9 @@ export class InternalAdminController {
   constructor(
     private readonly inAppNotificationAdminService: InAppNotificationAdminService,
     private readonly searchIngestService: SearchIngestService,
-    private readonly taskService: TaskService
+    private readonly taskService: TaskService,
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: LoggerService
   ) {}
 
   /**
@@ -55,8 +61,17 @@ export class InternalAdminController {
   @HttpCode(202)
   async triggerSearchIngest(): Promise<IngestTriggerResultDto> {
     const task = await this.taskService.create();
-    // start it asynchronously — do not await
-    this.searchIngestService.ingestFromScratch(task);
+    // start it asynchronously — do not await. ingestFromScratch records its own
+    // failures via taskService.completeWithError, but guard the detached promise
+    // so a rejection before/outside its internal try cannot become an
+    // unhandled-rejection.
+    this.searchIngestService.ingestFromScratch(task).catch(e => {
+      this.logger.error?.(
+        'Fire-and-forget search ingest rejected',
+        e?.stack,
+        LogContext.SEARCH_INGEST
+      );
+    });
     return { taskId: task.id };
   }
 
@@ -70,7 +85,10 @@ export class InternalAdminController {
     const task = await this.taskService.get(id);
 
     if (!task) {
-      throw new NotFoundException(`Task '${id}' not found`);
+      throw new NotFoundException({
+        message: 'Task not found',
+        details: { taskId: id },
+      });
     }
 
     return {

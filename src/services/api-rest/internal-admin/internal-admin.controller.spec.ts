@@ -3,6 +3,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { SearchIngestService } from '@services/api/search/ingest/search.ingest.service';
 import { TaskService } from '@services/task';
 import { InAppNotificationAdminService } from '@src/platform-admin/in-app-notification/in.app.notification.admin.service';
+import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { vi } from 'vitest';
 import { InternalAdminController } from './internal-admin.controller';
 
@@ -33,6 +34,14 @@ describe('InternalAdminController', () => {
           useValue: {
             create: vi.fn(),
             get: vi.fn(),
+          },
+        },
+        {
+          provide: WINSTON_MODULE_NEST_PROVIDER,
+          useValue: {
+            error: vi.fn(),
+            warn: vi.fn(),
+            verbose: vi.fn(),
           },
         },
       ],
