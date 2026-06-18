@@ -1,3 +1,4 @@
+import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
@@ -12,6 +13,11 @@ export abstract class IWhiteboard extends INameable {
     description: 'The visual content of the Whiteboard.',
   })
   content!: string;
+
+  // Internal metadata/index columns (FR-001) — not exposed on the GraphQL API.
+  contentPointer?: string;
+
+  blobStore?: BlobStoreKind;
 
   @Field(() => ContentUpdatePolicy, {
     description: 'The policy governing who can update the Whiteboard content.',

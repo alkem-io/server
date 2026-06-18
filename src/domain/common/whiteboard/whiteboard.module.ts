@@ -1,6 +1,7 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { PlatformRolesAccessModule } from '@domain/access/platform-roles-access/platform.roles.access.module';
 import { RoleSetModule } from '@domain/access/role-set/role.set.module';
+import { CollaborationMetadataModule } from '@domain/common/collaboration-metadata';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
@@ -32,6 +33,7 @@ import { WhiteboardAuthorizationService } from './whiteboard.service.authorizati
     StorageBucketModule,
     TypeOrmModule.forFeature([Whiteboard]),
     ProfileDocumentsModule,
+    CollaborationMetadataModule,
   ],
   providers: [
     WhiteboardService,

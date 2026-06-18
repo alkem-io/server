@@ -9,6 +9,11 @@ import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
 } from '@common/exceptions';
+import {
+  CollaborationLifecycleService,
+  CollaborationMetadata,
+  CollaborationMetadataUpdate,
+} from '@domain/common/collaboration-metadata';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -38,7 +43,8 @@ export class MemoService {
     private profileService: ProfileService,
     private profileDocumentsService: ProfileDocumentsService,
     private communityResolverService: CommunityResolverService,
-    private licenseService: LicenseService
+    private licenseService: LicenseService,
+    private collaborationLifecycleService: CollaborationLifecycleService
   ) {}
 
   async createMemo(
@@ -129,6 +135,13 @@ export class MemoService {
 
     const deletedMemo = await this.memoRepository.remove(memo as Memo);
     deletedMemo.id = memoID;
+
+    // Owner-driven lifecycle (FR-006/FR-023): the memo is the leaf every cascade
+    // path (callout framing / contribution / direct) passes through, so emitting
+    // here fires exactly once on a successful delete. Fire-and-forget; no event
+    // on a thrown delete above. `document.deleted` is idempotent downstream.
+    this.collaborationLifecycleService.emitDocumentDeleted(memoID);
+
     return deletedMemo;
   }
 
@@ -153,6 +166,82 @@ export class MemoService {
     memo.content = content;
 
     return this.save(memo);
+  }
+
+  /**
+   * Reads the unified collaboration metadata/index for a memo (FR-005). The
+   * blob never leaves the server on this path — only the index + the entity's
+   * own `authorizationPolicyId` (= `authorizationId`, the eager
+   * `authorization` relation's id) are returned.
+   * @throws {EntityNotFoundException} when the memo does not exist.
+   */
+  async getCollaborationMetadata(
+    memoId: string
+  ): Promise<CollaborationMetadata> {
+    const memo = (await this.getMemoOrFail(memoId, {
+      loadEagerRelations: false,
+      relations: { authorization: true },
+      select: {
+        id: true,
+        version: true,
+        contentPointer: true,
+        blobStore: true,
+        authorization: { id: true },
+      },
+    })) as Memo;
+
+    return {
+      version: memo.version ?? 0,
+      contentPointer: memo.contentPointer,
+      blobStore: memo.blobStore,
+      authorizationPolicyId: memo.authorization?.id,
+    };
+  }
+
+  /**
+   * Upserts the unified collaboration metadata/index for a memo (FR-003): the
+   * `contentPointer` + `blobStore` only. The version is bumped automatically by
+   * TypeORM's `@VersionColumn` on save. The inline blob (`content`) is NOT
+   * touched here — it never crosses the unified bus.
+   * @throws {EntityNotFoundException} when the memo does not exist.
+   */
+  async saveCollaborationMetadata(
+    memoId: string,
+    update: CollaborationMetadataUpdate
+  ): Promise<IMemo> {
+    // Ensure the memo exists (structured not-found upstream) before the
+    // index-only write.
+    await this.getMemoOrFail(memoId, {
+      loadEagerRelations: false,
+      select: { id: true },
+    });
+
+    // Index-only write: set the pointer + store and bump the `@VersionColumn`
+    // explicitly so fetch reflects a monotonic per-save version (FR-004). The
+    // inline blob (`content`) is never touched here — it does not cross the
+    // unified bus.
+    await this.memoRepository
+      .createQueryBuilder()
+      .update(Memo)
+      .set({
+        contentPointer: update.contentPointer,
+        blobStore: update.blobStore,
+        version: () => '"version" + 1',
+      })
+      .where('id = :id', { id: memoId })
+      .execute();
+
+    return this.getMemoOrFail(memoId, {
+      loadEagerRelations: false,
+      relations: { authorization: true },
+      select: {
+        id: true,
+        version: true,
+        contentPointer: true,
+        blobStore: true,
+        authorization: { id: true },
+      },
+    });
   }
 
   async updateMemo(
@@ -223,6 +312,23 @@ export class MemoService {
     memo.content = Buffer.from(binaryUpdateV2);
 
     return this.save(memo);
+  }
+
+  /**
+   * Idempotently purges the unified collaboration metadata/index for a memo
+   * (the collab-side `MetadataStore.Delete` port). v1 stores the index as
+   * columns on the entity, so this clears the pointer + store if the row still
+   * exists; an absent row is a no-op (idempotent — FR-006 / contract). It does
+   * NOT delete the memo entity itself: entity lifecycle is owner-driven
+   * (`deleteMemo`), and server emits `document.deleted` to the collab service.
+   */
+  async deleteCollaborationMetadata(memoId: string): Promise<void> {
+    await this.memoRepository
+      .createQueryBuilder()
+      .update(Memo)
+      .set({ contentPointer: null as any, blobStore: null as any })
+      .where('id = :id', { id: memoId })
+      .execute();
   }
 
   public async isMultiUser(memoId: string): Promise<boolean> {

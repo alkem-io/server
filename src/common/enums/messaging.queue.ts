@@ -32,4 +32,9 @@ export enum MessagingQueue {
   IN_APP_NOTIFICATIONS = 'alkemio-in-app-notifications',
   PUSH_NOTIFICATIONS = 'alkemio-push-notifications',
   COLLABORATION_DOCUMENT_SERVICE = 'collaboration-document-service',
+  // Unified collaboration-service queue (memo + whiteboard). Hosts the unified
+  // `collaboration-save`/`-fetch`/`-delete`/`-info`/`-contribution` handlers and
+  // carries the server -> collab lifecycle events (`document.deleted`, …). At
+  // cutover this replaces COLLABORATION_DOCUMENT_SERVICE + WHITEBOARDS.
+  COLLABORATION_SERVICE = 'alkemio-collaboration',
 }

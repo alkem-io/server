@@ -11,6 +11,11 @@ import {
   RelationshipNotFoundException,
 } from '@common/exceptions';
 import { ExcalidrawContent } from '@common/interfaces';
+import {
+  CollaborationLifecycleService,
+  CollaborationMetadata,
+  CollaborationMetadataUpdate,
+} from '@domain/common/collaboration-metadata';
 import { IProfile } from '@domain/common/profile';
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
@@ -39,7 +44,8 @@ export class WhiteboardService {
     private profileService: ProfileService,
     private profileDocumentsService: ProfileDocumentsService,
     private communityResolverService: CommunityResolverService,
-    private licenseService: LicenseService
+    private licenseService: LicenseService,
+    private collaborationLifecycleService: CollaborationLifecycleService
   ) {}
 
   async createWhiteboard(
@@ -185,6 +191,14 @@ export class WhiteboardService {
       whiteboard as Whiteboard
     );
     deletedWhiteboard.id = whiteboardID;
+
+    // Owner-driven lifecycle (FR-006/FR-023): the whiteboard is the leaf every
+    // cascade path (callout framing / contribution / direct) passes through, so
+    // emitting here fires exactly once on a successful delete. Fire-and-forget;
+    // no event on a thrown delete above. `document.deleted` is idempotent
+    // downstream.
+    this.collaborationLifecycleService.emitDocumentDeleted(whiteboardID);
+
     return deletedWhiteboard;
   }
 
@@ -260,6 +274,100 @@ export class WhiteboardService {
     whiteboard.content = JSON.stringify(newContentWithFiles);
 
     return this.save(whiteboard);
+  }
+
+  /**
+   * Reads the unified collaboration metadata/index for a whiteboard (FR-005).
+   * Only the index + the entity's own `authorizationPolicyId` (=
+   * `authorizationId`) are returned; the blob never leaves the server here.
+   * @throws {EntityNotFoundException} when the whiteboard does not exist.
+   */
+  async getCollaborationMetadata(
+    whiteboardId: string
+  ): Promise<CollaborationMetadata> {
+    const whiteboard = (await this.getWhiteboardOrFail(whiteboardId, {
+      loadEagerRelations: false,
+      relations: { authorization: true },
+      select: {
+        id: true,
+        version: true,
+        contentPointer: true,
+        blobStore: true,
+        authorization: { id: true },
+      },
+    })) as Whiteboard;
+
+    return {
+      version: whiteboard.version ?? 0,
+      contentPointer: whiteboard.contentPointer,
+      blobStore: whiteboard.blobStore,
+      authorizationPolicyId: whiteboard.authorization?.id,
+    };
+  }
+
+  /**
+   * Upserts the unified collaboration metadata/index for a whiteboard
+   * (FR-003): the `contentPointer` + `blobStore` only. The version is bumped
+   * automatically by TypeORM's `@VersionColumn` on save. The inline blob
+   * (`content`) is NOT touched here — it never crosses the unified bus.
+   * @throws {EntityNotFoundException} when the whiteboard does not exist.
+   */
+  async saveCollaborationMetadata(
+    whiteboardId: string,
+    update: CollaborationMetadataUpdate
+  ): Promise<IWhiteboard> {
+    // Ensure the whiteboard exists (structured not-found upstream) before the
+    // index-only write.
+    await this.getWhiteboardOrFail(whiteboardId, {
+      loadEagerRelations: false,
+      select: { id: true },
+    });
+
+    // Update only the index columns via the query builder so the
+    // content-bearing `@BeforeUpdate` compression hook (and the file-reupload
+    // work in the full save path) is NOT triggered for a metadata-only write.
+    // The `@VersionColumn` is bumped explicitly so fetch reflects a monotonic
+    // per-save version (FR-004).
+    await this.whiteboardRepository
+      .createQueryBuilder()
+      .update(Whiteboard)
+      .set({
+        contentPointer: update.contentPointer,
+        blobStore: update.blobStore,
+        version: () => '"version" + 1',
+      })
+      .where('id = :id', { id: whiteboardId })
+      .execute();
+
+    return this.getWhiteboardOrFail(whiteboardId, {
+      loadEagerRelations: false,
+      relations: { authorization: true },
+      select: {
+        id: true,
+        version: true,
+        contentPointer: true,
+        blobStore: true,
+        authorization: { id: true },
+      },
+    });
+  }
+
+  /**
+   * Idempotently purges the unified collaboration metadata/index for a
+   * whiteboard (the collab-side `MetadataStore.Delete` port). v1 stores the
+   * index as columns on the entity, so this clears the pointer + store if the
+   * row still exists; an absent row is a no-op (idempotent — FR-006 /
+   * contract). It does NOT delete the whiteboard entity itself: entity
+   * lifecycle is owner-driven (`deleteWhiteboard`), and server emits
+   * `document.deleted` to the collab service.
+   */
+  async deleteCollaborationMetadata(whiteboardId: string): Promise<void> {
+    await this.whiteboardRepository
+      .createQueryBuilder()
+      .update(Whiteboard)
+      .set({ contentPointer: null as any, blobStore: null as any })
+      .where('id = :id', { id: whiteboardId })
+      .execute();
   }
 
   public async isMultiUser(whiteboardId: string): Promise<boolean> {

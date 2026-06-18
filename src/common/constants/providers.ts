@@ -15,6 +15,10 @@ export const SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER =
 export const AUTH_RESET_SERVICE = 'alkemio-auth-reset';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const MATRIX_ADAPTER_SERVICE = 'alkemio-matrix-adapter';
+// Outbound client token for the unified collaboration-service (server -> collab
+// lifecycle events, e.g. `document.deleted`). The same queue hosts the inbound
+// unified `collaboration-*` @MessagePattern handlers.
+export const COLLABORATION_SERVICE = 'alkemio-collaboration';
 export const SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event';
 export const SUBSCRIPTION_CONVERSATION_EVENT =
   'alkemio-subscriptions-conversation-event';

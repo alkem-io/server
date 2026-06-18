@@ -64,6 +64,7 @@ import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.modul
 import { CalendarEventIcsModule } from '@services/api-rest/calendar-event-ics/calendar-event-ics.module';
 import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
+import { CollaborationIntegrationModule } from '@services/collaboration-integration';
 import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-document-integration';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { GeoLocationModule } from '@services/external/geo-location';
@@ -337,6 +338,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     EventBusModule,
     WhiteboardIntegrationModule,
     CollaborativeDocumentIntegrationModule,
+    CollaborationIntegrationModule,
     MatrixRoomCheckModule,
     DomainPlatformSettingsModule,
     PlatformRoleModule,

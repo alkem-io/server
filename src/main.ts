@@ -108,6 +108,10 @@ const bootstrap = async () => {
     amqpEndpoint,
     MessagingQueue.COLLABORATION_DOCUMENT_SERVICE
   );
+  // Unified collaboration-service queue: hosts the new unified
+  // `collaboration-*` @MessagePattern/@EventPattern handlers (replacing the two
+  // legacy dialects at cutover). Coexists with the legacy queues for now.
+  connectMicroservice(app, amqpEndpoint, MessagingQueue.COLLABORATION_SERVICE);
   // Note: Push notifications use @golevelup/nestjs-rabbitmq @RabbitSubscribe decorators
   // in PushDeliveryService. No NestJS microservice connection needed — a competing
   // Transport.RMQ consumer would steal messages from the golevelup handler.

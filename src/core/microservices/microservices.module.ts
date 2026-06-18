@@ -1,6 +1,7 @@
 import { APP_ID_PROVIDER } from '@common/app.id.provider';
 import {
   AUTH_RESET_SERVICE,
+  COLLABORATION_SERVICE,
   IS_SCHEMA_BOOTSTRAP,
   MATRIX_ADAPTER_SERVICE,
   NOTIFICATIONS_SERVICE,
@@ -74,6 +75,11 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
+      provide: COLLABORATION_SERVICE,
+      useFactory: clientProxyFactory(MessagingQueue.COLLABORATION_SERVICE),
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
       provide: IS_SCHEMA_BOOTSTRAP,
       useValue: false,
     },
@@ -84,6 +90,7 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     NOTIFICATIONS_SERVICE,
     MATRIX_ADAPTER_SERVICE,
     AUTH_RESET_SERVICE,
+    COLLABORATION_SERVICE,
     IS_SCHEMA_BOOTSTRAP,
   ],
 })

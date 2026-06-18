@@ -1,4 +1,5 @@
-import { ENUM_LENGTH } from '@common/constants';
+import { ENUM_LENGTH, MID_TEXT_LENGTH } from '@common/constants';
+import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { compressText, decompressText } from '@common/utils/compression.util';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
@@ -27,7 +28,10 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   @BeforeInsert()
   @BeforeUpdate()
   async compressValue() {
-    if (this.content !== '') {
+    // Guard against partial selects (e.g. the unified metadata index-only
+    // reads/writes) where `content` is not loaded: only (de)compress a
+    // non-empty string, never `undefined`/`null`.
+    if (typeof this.content === 'string' && this.content !== '') {
       try {
         this.content = await compressText(this.content);
       } catch {
@@ -41,7 +45,7 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
   @AfterUpdate()
   @AfterLoad()
   async decompressValue() {
-    if (this.content !== '') {
+    if (typeof this.content === 'string' && this.content !== '') {
       try {
         this.content = await decompressText(this.content);
       } catch (e: any) {
@@ -54,6 +58,24 @@ export class Whiteboard extends NameableEntity implements IWhiteboard {
 
   @Column('text', { nullable: false })
   content!: string;
+
+  /**
+   * Locator into the collaboration BlobStore that holds the encoded snapshot.
+   * For `blobStore = 'inline'` this is the whiteboard id (the snapshot stays in
+   * `content`); for an offloaded blob it is the file-service UUID / S3 key /
+   * local path. Part of the unified metadata/index (FR-001).
+   */
+  @Column('varchar', { length: MID_TEXT_LENGTH, nullable: true })
+  contentPointer?: string;
+
+  /**
+   * Which BlobStore backend holds the snapshot located by `contentPointer`.
+   * `inline` (default) keeps the blob in `content`; non-inline values mean the
+   * collaboration-service owns the blob and the server stores only the index
+   * (FR-001, FR-003).
+   */
+  @Column('varchar', { length: ENUM_LENGTH, nullable: true })
+  blobStore?: BlobStoreKind;
 
   @Column('uuid', { nullable: true })
   createdBy?: string;

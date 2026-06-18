@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { CollaborationMetadataModule } from '@domain/common/collaboration-metadata';
 import { VisualModule } from '@domain/common/visual/visual.module';
 import { UserModule } from '@domain/community/user/user.module';
 import { ProfileDocumentsModule } from '@domain/profile-documents/profile.documents.module';
@@ -27,6 +28,7 @@ import { MemoAuthorizationService } from './memo.service.authorization';
     StorageBucketModule,
     TypeOrmModule.forFeature([Memo]),
     ProfileDocumentsModule,
+    CollaborationMetadataModule,
   ],
   providers: [
     MemoService,
