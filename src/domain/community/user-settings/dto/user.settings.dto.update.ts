@@ -54,7 +54,7 @@ export class UpdateUserSettingsEntityInput {
   @Field(() => Int, {
     nullable: true,
     description:
-      "Update the user's design version. Any integer accepted (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).",
+      "Update the user's design version. Any integer accepted (1 = legacy design generation, deprecated and scheduled for removal; 2 = current default design generation; 3+ reserved for future generations).",
   })
   @IsOptional()
   @IsInt()
