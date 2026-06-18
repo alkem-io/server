@@ -211,6 +211,59 @@ export class ContributionReporterService {
     );
   }
 
+  /**
+   * Single-actor Collabora lifecycle events (created / uploaded / opened).
+   * Unlike {@link collaboraDocumentContribution} (the aggregate edited-window
+   * record), these mirror `calloutMemoCreated`: one per-user document carrying
+   * the acting user as `author` via the shared {@link createDocument} helper.
+   * The record `id` is the `CollaboraDocument.id`. See feature
+   * 003-collabora-doc-contributions (US4).
+   */
+  public calloutCollaboraDocumentCreated(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.COLLABORA_DOCUMENT_CREATED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
+  public calloutCollaboraDocumentUploaded(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.COLLABORA_DOCUMENT_UPLOADED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
+  public collaboraDocumentOpened(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.COLLABORA_DOCUMENT_OPENED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
   public calloutPostCommentCreated(
     contribution: ContributionDetails,
     actorContext: ContributionActorContext

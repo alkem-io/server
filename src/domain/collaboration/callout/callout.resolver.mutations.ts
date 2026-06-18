@@ -43,6 +43,7 @@ import { ICalloutContribution } from '../callout-contribution/callout.contributi
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
+import { ICollaboraDocument } from '../collabora-document/collabora.document.interface';
 import { ImportCollaboraDocumentInput } from '../collabora-document/dto/collabora.document.dto.import';
 import { CollaborationLicenseService } from '../collaboration/collaboration.service.license';
 import { ILink } from '../link/link.interface';
@@ -427,6 +428,21 @@ export class CalloutResolverMutations {
           );
         }
       }
+
+      if (
+        contributionData.collaboraDocument &&
+        contribution.collaboraDocument
+      ) {
+        if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
+          this.processActivityCollaboraDocumentCreated(
+            callout,
+            contribution,
+            contribution.collaboraDocument,
+            levelZeroSpaceID,
+            actorContext
+          );
+        }
+      }
     }
 
     return await this.calloutContributionService.getCalloutContributionOrFail(
@@ -522,6 +538,30 @@ export class CalloutResolverMutations {
         spaceSettings
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    // Lifecycle analytics (US4 / FR-013): record the upload as a single-actor
+    // COLLABORA_DOCUMENT_UPLOADED event for the uploading user. Resolve the
+    // level-zero space by the freshly-created CollaboraDocument the same way
+    // the open path does (via the community resolver), then report.
+    if (contribution.collaboraDocument) {
+      const collaboraDocument = contribution.collaboraDocument;
+      const community =
+        await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
+          collaboraDocument.id
+        );
+      const levelZeroSpaceID =
+        await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+          community.id
+        );
+      this.contributionReporter.calloutCollaboraDocumentUploaded(
+        {
+          id: collaboraDocument.id,
+          name: collaboraDocument.profile?.displayName ?? collaboraDocument.id,
+          space: levelZeroSpaceID,
+        },
+        actorContext
+      );
+    }
 
     return await this.calloutContributionService.getCalloutContributionOrFail(
       contribution.id
@@ -660,6 +700,34 @@ export class CalloutResolverMutations {
       {
         id: memo.id,
         name: memo.nameID,
+        space: levelZeroSpaceID,
+      },
+      actorContext
+    );
+  }
+
+  private async processActivityCollaboraDocumentCreated(
+    callout: ICallout,
+    contribution: ICalloutContribution,
+    collaboraDocument: ICollaboraDocument,
+    levelZeroSpaceID: string,
+    actorContext: ActorContext
+  ) {
+    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
+      {
+        contribution: contribution,
+        callout: callout,
+        contributionType: CalloutContributionType.COLLABORA_DOCUMENT,
+        triggeredBy: actorContext.actorID,
+      };
+    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
+      notificationInput
+    );
+
+    this.contributionReporter.calloutCollaboraDocumentCreated(
+      {
+        id: collaboraDocument.id,
+        name: collaboraDocument.profile?.displayName ?? collaboraDocument.id,
         space: levelZeroSpaceID,
       },
       actorContext
