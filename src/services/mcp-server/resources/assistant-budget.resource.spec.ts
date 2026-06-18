@@ -55,6 +55,10 @@ describe('AssistantBudgetResourceProvider', () => {
                 {
                   type: LicenseEntitlementType.ACCOUNT_AI_ASSISTANT_TOKENS_MONTH,
                   limit: entry.limit,
+                  // A granted (plus) entitlement is ENABLED — the resource resolves a
+                  // real ceiling only for enabled rows (a disabled/backfilled row → null,
+                  // free-tier default). Mirrors what applyLicensePolicy materializes.
+                  enabled: true,
                 },
               ];
         return { id: accountID, license: { entitlements } };
