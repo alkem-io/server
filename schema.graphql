@@ -102,6 +102,7 @@ enum AuthenticationType {
 
 enum AuthorizationCredential {
   ACCOUNT_ADMIN
+  ASSISTANT_ACCESS
   BETA_TESTER
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
@@ -195,6 +196,7 @@ enum AuthorizationPolicyType {
 
 enum AuthorizationPrivilege {
   ACCESS_INTERACTIVE_GUIDANCE
+  ACCESS_VIRTUAL_ASSISTANT
   ACCOUNT_LICENSE_MANAGE
   AUTHORIZATION_RESET
   COMMUNITY_ASSIGN_VC_FROM_ACCOUNT
@@ -346,6 +348,7 @@ enum ConversationEventType {
 enum CredentialType {
   ACCOUNT_ADMIN
   ACCOUNT_LICENSE_PLUS
+  ASSISTANT_ACCESS
   BETA_TESTER
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
@@ -423,6 +426,7 @@ enum LicenseEntitlementDataType {
 }
 
 enum LicenseEntitlementType {
+  ACCOUNT_AI_ASSISTANT_TOKENS_MONTH
   ACCOUNT_INNOVATION_HUB
   ACCOUNT_INNOVATION_PACK
   ACCOUNT_SPACE_FREE
@@ -715,6 +719,7 @@ enum RoleName {
   LEAD
   MEMBER
   OWNER
+  PLATFORM_ASSISTANT_ACCESS
   PLATFORM_BETA_TESTER
   PLATFORM_VC_CAMPAIGN
   REGISTERED
@@ -4493,6 +4498,10 @@ type Platform {
   templatesManager: TemplatesManager
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """
+  Whether the current user may use the web AI assistant (the ACCESS_VIRTUAL_ASSISTANT privilege, 004-web-ai-assistant). client-web reads this to gate every assistant UI cue.
+  """
+  virtualAssistantAccess: Boolean!
   """The mappings of well-known Virtual Contributors to their UUIDs."""
   wellKnownVirtualContributors: PlatformWellKnownVirtualContributors!
 }

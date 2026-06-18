@@ -12,6 +12,7 @@ import { WhiteboardModule } from '@domain/common/whiteboard/whiteboard.module';
 import { User } from '@domain/community/user/user.entity';
 import { PlatformAuditEntry } from '@domain/community/user-email-change/platform.audit.entry.entity';
 import { VirtualAssistantModule } from '@domain/community/virtual-assistant/virtual.assistant.module';
+import { AccountLookupModule } from '@domain/space/account.lookup/account.lookup.module';
 import { SpaceModule } from '@domain/space/space/space.module';
 import { SpaceLookupModule } from '@domain/space/space.lookup/space.lookup.module';
 import { TemplateModule } from '@domain/template/template/template.module';
@@ -39,6 +40,7 @@ import {
 } from './dto/mcp.types';
 import { McpServerController } from './mcp-server.controller';
 import { McpServerService } from './mcp-server.service';
+import { AssistantBudgetResourceProvider } from './resources/assistant-budget.resource';
 import { CalloutResourceProvider } from './resources/callout.resource';
 import { ResourceRegistry } from './resources/resource.registry';
 import { SpaceResourceProvider } from './resources/space.resource';
@@ -81,6 +83,7 @@ const RESOURCE_PROVIDERS = [
   WhiteboardResourceProvider,
   CalloutResourceProvider,
   SpaceResourceProvider,
+  AssistantBudgetResourceProvider,
 ];
 
 @Module({
@@ -108,6 +111,7 @@ const RESOURCE_PROVIDERS = [
     SpaceModule,
     CollaborationModule,
     SpaceLookupModule,
+    AccountLookupModule,
     ActivityModule,
     TemplateModule,
     SearchModule,
