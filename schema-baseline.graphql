@@ -8347,7 +8347,7 @@ input UpdateUserSettingsEntityInput {
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
   """
-  Update the user's design version. Any integer accepted (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).
+  Update the user's design version. Any integer accepted (1 = legacy design generation, deprecated and scheduled for removal; 2 = current default design generation; 3+ reserved for future generations).
   """
   designVersion: Int
   """Settings related to Home Space."""
@@ -8889,7 +8889,7 @@ type UserSettings {
   """The date at which the entity was created."""
   createdDate: DateTime!
   """
-  The design version this User has selected (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).
+  The design version this User has selected (1 = legacy design generation, deprecated and scheduled for removal; 2 = current default design generation; 3+ reserved for future generations).
   """
   designVersion: Int!
   """The home space settings for this User."""
