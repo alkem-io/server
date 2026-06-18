@@ -2405,6 +2405,10 @@ type CreateInnovationFlowStateData {
 type CreateInnovationFlowStateSettingsData {
   """The flag to set."""
   allowNewCallouts: Boolean!
+  """
+  Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
+  """
+  visible: Boolean
 }
 
 type CreateLinkData {
@@ -2952,6 +2956,10 @@ type InnovationFlowState {
 type InnovationFlowStateSettings {
   """Whether new callouts can be added to this State."""
   allowNewCallouts: Boolean!
+  """
+  Whether this State/phase is shown in the member-facing navigation. Default true. UI-affordance only: it does NOT gate access to the phase content.
+  """
+  visible: Boolean!
 }
 
 type InnovationHub {
@@ -6470,7 +6478,7 @@ type UserSettings {
   """The date at which the entity was created."""
   createdDate: DateTime!
   """
-  The design version this User has selected (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).
+  The design version this User has selected (1 = legacy design generation, deprecated and scheduled for removal; 2 = current default design generation; 3+ reserved for future generations).
   """
   designVersion: Int!
   """The home space settings for this User."""
@@ -7336,6 +7344,10 @@ input CreateInnovationFlowStateInput {
 input CreateInnovationFlowStateSettingsInput {
   """The flag to set."""
   allowNewCallouts: Boolean!
+  """
+  Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
+  """
+  visible: Boolean
 }
 
 input CreateInnovationHubOnAccountInput {
@@ -8652,8 +8664,14 @@ input UpdateInnovationFlowStateInput {
 }
 
 input UpdateInnovationFlowStateSettingsInput {
-  """The flag to set."""
-  allowNewCallouts: Boolean!
+  """
+  Optional. Sets whether new callouts can be added to this State; omission leaves the stored value unchanged.
+  """
+  allowNewCallouts: Boolean
+  """
+  Optional. Sets whether the phase is shown in member-facing navigation; omission leaves the stored value unchanged.
+  """
+  visible: Boolean
 }
 
 input UpdateInnovationFlowStatesSortOrderInput {
@@ -9070,7 +9088,7 @@ input UpdateUserSettingsEntityInput {
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
   """
-  Update the user's design version. Any integer accepted (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).
+  Update the user's design version. Any integer accepted (1 = legacy design generation, deprecated and scheduled for removal; 2 = current default design generation; 3+ reserved for future generations).
   """
   designVersion: Int
   """Settings related to Home Space."""
