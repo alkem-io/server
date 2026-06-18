@@ -371,6 +371,80 @@ describe('ContributionReporterService', () => {
     });
   });
 
+  describe('collaboraDocumentContribution', () => {
+    it('should index ONE aggregate COLLABORA_DOCUMENT_CONTRIBUTION document carrying both user arrays', async () => {
+      service.collaboraDocumentContribution({
+        id: 'doc-1',
+        name: 'My Document',
+        space: 'space-root',
+        writeUsers: [{ id: 'user-1' }, { id: 'user-2' }],
+        readonlyUsers: [{ id: 'user-3' }],
+      });
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockIndex).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: expect.objectContaining({
+            type: 'COLLABORA_DOCUMENT_CONTRIBUTION',
+            id: 'doc-1',
+            name: 'My Document',
+            space: 'space-root',
+            writeUsers: [{ id: 'user-1' }, { id: 'user-2' }],
+            readonlyUsers: [{ id: 'user-3' }],
+          }),
+        })
+      );
+    });
+
+    it('should not attach a per-user author shape to the aggregate document', async () => {
+      service.collaboraDocumentContribution({
+        id: 'doc-2',
+        name: 'Another Document',
+        space: 'space-root',
+        writeUsers: [{ id: 'user-1' }],
+        readonlyUsers: [],
+      });
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const indexedDocument = mockIndex.mock.calls[0][0].document;
+      expect(indexedDocument).not.toHaveProperty('author');
+      expect(indexedDocument).not.toHaveProperty('anonymous');
+      expect(indexedDocument).not.toHaveProperty('guest');
+      // resolve once, not per-user — actor lookup is never consulted
+      expect(mockActorService.getActorOrNull).not.toHaveBeenCalled();
+    });
+
+    it('should preserve an empty readonlyUsers array', async () => {
+      service.collaboraDocumentContribution({
+        id: 'doc-3',
+        name: 'Doc',
+        space: 'space-root',
+        writeUsers: [{ id: 'user-1' }],
+        readonlyUsers: [],
+      });
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockIndex).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: expect.objectContaining({
+            type: 'COLLABORA_DOCUMENT_CONTRIBUTION',
+            writeUsers: [{ id: 'user-1' }],
+            readonlyUsers: [],
+          }),
+        })
+      );
+    });
+  });
+
   describe('pollVoteContribution', () => {
     it('should index a POLL_VOTE_CONTRIBUTION document', async () => {
       mockActorService.getActorOrNull.mockResolvedValue({

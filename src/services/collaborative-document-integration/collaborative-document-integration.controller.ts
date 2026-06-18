@@ -11,6 +11,7 @@ import { ack } from '@services/util';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { CollaborativeDocumentIntegrationService } from './collaborative-document-integration.service';
 import {
+  CollaboraDocumentContributionsInputData,
   FetchInputData,
   InfoInputData,
   MemoContributionsInputData,
@@ -98,5 +99,21 @@ export class CollaborativeDocumentIntegrationController {
     );
     ack(context);
     return this.integrationService.memoContributions(data);
+  }
+
+  @MessagePattern(
+    CollaborativeDocumentEventPattern.COLLABORA_DOCUMENT_CONTRIBUTION,
+    Transport.RMQ
+  )
+  public collaboraDocumentContribution(
+    @Payload() data: CollaboraDocumentContributionsInputData,
+    @Ctx() context: RmqContext
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Received COLLABORA_DOCUMENT_CONTRIBUTION request for document: ${data.documentId}`,
+      LogContext.COLLAB_DOCUMENT_INTEGRATION
+    );
+    ack(context);
+    return this.integrationService.collaboraDocumentContributions(data);
   }
 }

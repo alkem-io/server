@@ -5,6 +5,7 @@ import { type Mock } from 'vitest';
 import { CollaborativeDocumentIntegrationController } from './collaborative-document-integration.controller';
 import { CollaborativeDocumentIntegrationService } from './collaborative-document-integration.service';
 import {
+  CollaboraDocumentContributionsInputData,
   FetchInputData,
   InfoInputData,
   MemoContributionsInputData,
@@ -25,6 +26,7 @@ describe('CollaborativeDocumentIntegrationController', () => {
     save: Mock;
     fetch: Mock;
     memoContributions: Mock;
+    collaboraDocumentContributions: Mock;
   };
 
   const mockRmqContext = {
@@ -127,6 +129,25 @@ describe('CollaborativeDocumentIntegrationController', () => {
       expect(integrationService.memoContributions).toHaveBeenCalledWith(
         payload
       );
+    });
+  });
+
+  describe('collaboraDocumentContribution', () => {
+    it('should delegate to integrationService.collaboraDocumentContributions', async () => {
+      const payload = {
+        documentId: 'doc-1',
+        writeUsers: [{ id: 'user-1' }],
+        readonlyUsers: [{ id: 'user-2' }],
+      } as CollaboraDocumentContributionsInputData;
+      integrationService.collaboraDocumentContributions.mockResolvedValue(
+        undefined
+      );
+
+      await controller.collaboraDocumentContribution(payload, mockRmqContext);
+
+      expect(
+        integrationService.collaboraDocumentContributions
+      ).toHaveBeenCalledWith(payload);
     });
   });
 });

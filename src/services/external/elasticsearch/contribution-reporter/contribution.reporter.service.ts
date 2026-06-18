@@ -13,6 +13,7 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseContribution } from '../events';
 import {
   CONTRIBUTION_TYPE,
+  CollaboraDocumentContributionDocument,
   ContributionDetails,
   ContributionDocument,
 } from '../types';
@@ -285,6 +286,29 @@ export class ContributionReporterService {
     );
   }
 
+  /**
+   * Indexes ONE aggregate `contribution` document per (Collabora document,
+   * window), carrying both `writeUsers` and `readonlyUsers` arrays — NOT one
+   * document per user. Resolve space/displayName once upstream and pass both
+   * arrays through verbatim. See feature 003-collabora-doc-contributions.
+   */
+  public collaboraDocumentContribution(contribution: {
+    id: string;
+    name: string;
+    space: string;
+    writeUsers: { id: string }[];
+    readonlyUsers: { id: string }[];
+  }): void {
+    void this.createAggregateDocument({
+      type: CONTRIBUTION_TYPE.COLLABORA_DOCUMENT_CONTRIBUTION,
+      id: contribution.id,
+      name: contribution.name,
+      space: contribution.space,
+      writeUsers: contribution.writeUsers,
+      readonlyUsers: contribution.readonlyUsers,
+    });
+  }
+
   public mediaGalleryContribution(
     contribution: ContributionDetails,
     actorContext: ContributionActorContext
@@ -463,6 +487,51 @@ export class ContributionReporterService {
       const document: ContributionDocument = {
         ...contribution,
         ...(await this.getAuthorDetails(actorContext)),
+        '@timestamp': new Date(),
+        environment: this.environment,
+      };
+
+      const result = await this.client.index({
+        index: this.activityIndexName,
+        document,
+      });
+
+      this.logger.verbose?.(
+        `Event '${contribution.type}' for object with id '(${contribution.id})' ingested to (${this.activityIndexName})`
+      );
+
+      return result;
+    } catch (e: unknown) {
+      const errorId = this.handleError(e);
+      this.logger.error(
+        `Event '${contribution.type}' for object with id '(${contribution.id})' FAILED to be ingested into (${this.activityIndexName})`,
+        { errorId },
+        LogContext.CONTRIBUTION_REPORTER
+      );
+    }
+
+    return undefined;
+  }
+
+  /**
+   * Indexes a single aggregate contribution document. Unlike
+   * {@link createDocument}, this does NOT attach per-user
+   * {@link ContributionAuthorDetails} (no `author`) — the aggregate carries its
+   * own user arrays instead. Used for COLLABORA_DOCUMENT_CONTRIBUTION.
+   */
+  private async createAggregateDocument(
+    contribution: Omit<
+      CollaboraDocumentContributionDocument,
+      '@timestamp' | 'environment'
+    >
+  ): Promise<WriteResponseBase | undefined> {
+    if (!this.client) {
+      return undefined;
+    }
+
+    try {
+      const document: CollaboraDocumentContributionDocument = {
+        ...contribution,
         '@timestamp': new Date(),
         environment: this.environment,
       };

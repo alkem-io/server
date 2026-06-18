@@ -1,3 +1,4 @@
+export * from './collabora.document.contribution.document';
 export * from './contribution.author.details';
 export * from './contribution.document';
 export * from './contribution.type';
