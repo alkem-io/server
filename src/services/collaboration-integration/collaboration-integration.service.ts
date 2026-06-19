@@ -217,7 +217,7 @@ export class CollaborationIntegrationService {
       return { read: false, update: false };
     } catch (e: any) {
       this.logger.error?.(
-        e?.message ?? 'Failed to resolve collaboration-info',
+        e?.message,
         e?.stack,
         LogContext.COLLABORATION_INTEGRATION
       );
@@ -231,19 +231,30 @@ export class CollaborationIntegrationService {
    * reporter (carried forward from the two legacy contribution events).
    */
   public async contribution(data: ContributionInputData): Promise<void> {
-    if (await this.tryGetMemoMetadata(data.id)) {
-      return this.reportMemoContribution(data);
+    // Fire-and-forget event handler: like save/fetch/delete/info, it must never
+    // throw on the bus. A metadata lookup or downstream reporter failure is
+    // logged and swallowed rather than failing RMQ message handling.
+    try {
+      if (await this.tryGetMemoMetadata(data.id)) {
+        return await this.reportMemoContribution(data);
+      }
+      if (await this.tryGetWhiteboardMetadata(data.id)) {
+        return await this.reportWhiteboardContribution(data);
+      }
+      this.logger.warn?.(
+        {
+          message: 'collaboration-contribution for unknown document',
+          id: data.id,
+        },
+        LogContext.COLLABORATION_INTEGRATION
+      );
+    } catch (e: any) {
+      this.logger.error?.(
+        e?.message,
+        e?.stack,
+        LogContext.COLLABORATION_INTEGRATION
+      );
     }
-    if (await this.tryGetWhiteboardMetadata(data.id)) {
-      return this.reportWhiteboardContribution(data);
-    }
-    this.logger.warn?.(
-      {
-        message: 'collaboration-contribution for unknown document',
-        id: data.id,
-      },
-      LogContext.COLLABORATION_INTEGRATION
-    );
   }
 
   private async infoForMemo(

@@ -622,5 +622,19 @@ describe('CollaborationIntegrationService', () => {
         contributionReporter.whiteboardContribution
       ).not.toHaveBeenCalled();
     });
+
+    it('swallows a downstream failure (never throws on the fire-and-forget bus)', async () => {
+      // A non-not-found lookup error (or a reporter failure) must not escape the
+      // event handler and fail RMQ message handling — like the other methods.
+      memoService.getCollaborationMetadata.mockRejectedValue(
+        new Error('DB down')
+      );
+
+      await expect(
+        service.contribution({ id: 'memo-1', users: [{ id: 'u1' }] })
+      ).resolves.toBeUndefined();
+
+      expect(contributionReporter.memoContribution).not.toHaveBeenCalled();
+    });
   });
 });
