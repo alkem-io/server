@@ -6,7 +6,7 @@ design decisions (**Decision · Rationale · Alternatives**). The workspace
 of truth for cross-repo decisions; this file records how the *server* realizes them
 and the server-only choices.
 
-All file paths are relative to `/Users/antst/work/alkemio/server` unless noted.
+All file paths are relative to the repo root unless noted.
 
 ---
 
@@ -115,7 +115,7 @@ default behavior (DEC-1, DEC-2).
 
 ### CS-4 — The authorization-evaluation-service is a SEPARATE repo
 
-- Located at `/Users/antst/work/alkemio/authorization-evaluation-service` (Go),
+- Located in the `authorization-evaluation-service` repo (Go),
   **not** inside server. Server hosts **no** `/internal/auth/evaluate` endpoint.
 - It evaluates by reading server's DB directly: `Engine.Evaluate(ctx, actorID,
   policyID uuid.UUID, privilege string)` (`internal/evaluator/engine.go:68`) calls
@@ -285,6 +285,6 @@ hand-reviewed, reversible migration with a back-fill (DEC-1).
 | Unified `save` (collab → server) | `{id, contentType, version, contentPointer, blobStore}` (+ inline v2 base64 when `blobStore='inline'`) |
 | Unified `fetch` reply (server → collab) | `{id, contentType, version, contentPointer, blobStore, authorizationPolicyId}` (+ inline v2 base64 when inline) |
 | Lifecycle (server → collab) | `document.deleted {id}` (+ optional `document.created {id, contentType, ownerRef}`, `document.access_changed {id}`) |
-| AuthZ (collab → auth-eval-service, separate repo) | `POST /internal/auth/evaluate {actorId, "read"|"update-content", authorizationPolicyId}` → `{allowed, reason}` |
+| AuthZ (collab → auth-eval-service, separate repo) | `POST /internal/auth/evaluate {actorId, "read"\|"update-content", authorizationPolicyId}` → `{allowed, reason}` |
 | Inline blob at rest (server DB) | memo: `bytea` (Yjs v2); whiteboard: gzip-compressed Excalidraw JSON `text` |
 | Migration read (server → migration job) | `{id, contentType, content (v2 base64 / decompressed JSON), authorizationPolicyId}` per row |

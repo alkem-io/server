@@ -4,7 +4,7 @@ Two layers: the **TypeORM entity/column changes** (the metadata/index, server-ow
 and the **unified message schemas** (the request/reply + lifecycle wire shapes). The
 epic `data-model.md` (`../agents-hq/specs/003-unify-collab-yjs/data-model.md`) is
 authoritative for the CRDT document conventions (inside the `Y.Doc`); this file is
-the **server storage view**. All paths relative to `/Users/antst/work/alkemio/server`.
+the **server storage view**. All paths relative to the repo root.
 
 ## Entity changes (TypeORM)
 

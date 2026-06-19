@@ -9,15 +9,16 @@ touched collaboration-persistence diff (DEC-7).
 > T001–T006). Each milestone task below carries the epic id it realizes. Task ids
 > here (S-T001…) are the fine-grained server breakdown.
 >
-> **⛔ BLOCKED — do not start implementation** until (a) OPEN-1 + OPEN-3 are
-> answered and (b) the collaboration-service Wave-2 `rabbitmq` adapter freezes the
-> unified wire contract (collab tasks.md T005.1). See spec.md ⚠️. T004 (authZ-eval
-> verification, read-only) and the OPEN grounding are the exceptions — already done
-> as investigation in this spec.
+> **✅ IMPLEMENTED — PR open for review.** The blocking gates (OPEN-1 + OPEN-3)
+> are resolved and the collaboration-service Wave-2 `rabbitmq` adapter has frozen
+> the unified wire contract (collab tasks.md T005.1), so the server slice is built:
+> metadata/index persistence, lifecycle emit, authZ routing, the migration read
+> path, migrations and tests all land in this PR. Task statuses below reflect the
+> delivered state.
 
 ## Format: `[ID] [P?] [Phase] (epic-task) Description`
 - **[P]**: parallelizable (different files, no ordering dependency).
-- Paths relative to `/Users/antst/work/alkemio/server`.
+- Paths relative to the repo root.
 
 ---
 
@@ -204,7 +205,7 @@ touched collaboration-persistence diff (DEC-7).
 | 1 (persistence) | T001, T002 | S-T001, S-T002 | 8 | ✅ Implemented (contract frozen) |
 | 2 (lifecycle + authZ) | T003, T004 | S-T003, S-T004 | 8 | ✅ Implemented (authZ parity = cross-repo test) |
 | 3 (migration + finalize) | T005, T006 | S-T005, S-T006 | 6 | ✅ Implemented (read service; runner = WS-E) |
-| **Total** | 6 | 6 | 22 | ✅ implemented; DRAFT PR open |
+| **Total** | 6 | 6 | 22 | ✅ Implemented — in review (PR open) |
 
 **Deferred to other owners / CI (not server code gaps):**
 - SC-003 migration up/down snapshot test → `migration:validate` harness needs a live

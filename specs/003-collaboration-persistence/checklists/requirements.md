@@ -83,10 +83,11 @@ Wave-2 contract freeze).
 
 ## Notes
 
-- This is a **spec/design-only** sub-spec: implementation is gated on (a) OPEN-1/3
-  answers and (b) the collaboration-service Wave-2 `rabbitmq` adapter freezing the
-  unified wire contract. The checklist validates the *spec's* readiness, not a
-  shipped implementation.
+- This checklist validated the **spec's** quality before code was written. The
+  prior gates — (a) OPEN-1/3 answers and (b) the collaboration-service Wave-2
+  `rabbitmq` adapter freezing the unified wire contract — are now resolved, and the
+  implementation has shipped in this PR. The checks below remain a record of that
+  pre-implementation spec-readiness review.
 - The single most valuable output is **OPEN-1's confirmation**: the collab
   `authzeval` adapter's `read`/`update-content` + policy-id-from-metadata assumption
   is **correct** against server's real authZ model — pin it and proceed. The only

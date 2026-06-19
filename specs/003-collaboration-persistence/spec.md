@@ -2,7 +2,7 @@
 
 **Feature Branch**: `feat/003-unify-collab-yjs`
 **Created**: 2026-06-18
-**Status**: Draft (spec/design only — implementation blocked, see Assumptions & Dependencies)
+**Status**: Implemented — in review (PR open; blocking gates resolved, see Assumptions & Dependencies)
 **Workspace epic**: `../agents-hq/specs/003-unify-collab-yjs/` (WS-E — persistence + lifecycle integration)
 **Backlog Story**: https://github.com/alkem-io/alkemio/issues/1909 (#1909)
 **Input**: The `server` slice of the epic — realize epic **US3** (persistence/lifecycle) and **US4** (migration) at the Alkemio `server`: own the metadata/index store for the unified collaboration-service, repoint the `save`/`fetch` persistence contract, emit the document delete-cascade lifecycle event, verify the authorization-evaluation path covers collaboration documents, and provide read access to legacy persisted content for the one-time migration.
@@ -23,22 +23,22 @@
 
 ---
 
-## ⚠️ Implementation status — SPEC/DESIGN ONLY
+## ✅ Implementation status — IMPLEMENTED (PR open)
 
-This sub-spec is authored ahead of implementation. **No code is changed by this
-spec.** Implementation MUST NOT start until both of the following are true:
+This sub-spec was authored ahead of implementation; the code has since landed in
+this PR. **Both prior blocking gates are resolved:**
 
-1. **The clarify answers below are resolved** — chiefly OPEN-1 (the
-   `authorizationPolicyId` source + read/collaborate privilege strings) and OPEN-3
-   (the unified RabbitMQ contract direction: server-as-consumer vs server-as-server).
-2. **The collaboration-service Wave-2 adapter finalizes the wire contract.** The
-   unified `collaboration-save`/`collaboration-fetch` index-only contract is being
-   built *right now* by the collab-service's Wave-2 `rabbitmq` metastore adapter
-   (its tasks.md T005.1). This server slice is the **other half** of that contract.
-   The two MUST be agreed before either ships. The collab side records this as its
-   **OPEN-3 cross-repo dependency**; this spec is the server-side resolution of it.
+1. **The clarify answers are resolved** — OPEN-1 (the `authorizationPolicyId`
+   source + read/collaborate privilege strings) and OPEN-3 (the unified RabbitMQ
+   contract direction: server is the **responder/server**) are settled and
+   reflected in the implementation.
+2. **The collaboration-service Wave-2 adapter finalized the wire contract.** The
+   unified `collaboration-save`/`collaboration-fetch` index-only contract (collab
+   tasks.md T005.1) is frozen; this server slice implements the **other half** of
+   that contract.
 
-Both gates are restated in **Assumptions & Dependencies** and the **OPEN** section.
+The historical gate detail is retained in **Assumptions & Dependencies** and the
+**OPEN** section for traceability.
 
 ---
 
@@ -403,11 +403,11 @@ jointly with the collab service's round-trip. Each traces to an epic SC.
   in-flight `rabbitmq` metastore adapter (its T005.1 / OPEN-3). Implementation MUST
   wait until that contract is frozen with the collab worker. This spec proposes the
   shape; the two repos must agree before either ships.
-- **BLOCKED on clarify answers** — OPEN-1 (authZ mapping, restated below — the
-  recommended answer is confirmed from code but needs antst's sign-off because it
-  pins the collab adapter) and OPEN-3 (the contract direction).
+- **Clarify answers resolved** — OPEN-1 (authZ mapping, restated below — confirmed
+  from code and implemented; antst's sign-off pins the collab adapter) and OPEN-3
+  (the contract direction: server is the responder/server) are settled.
 - **The authorization-evaluation-service is a separate repo**
-  (`/Users/antst/work/alkemio/authorization-evaluation-service`), not part of
+  (`authorization-evaluation-service`), not part of
   server. It reads server's `authorizationPolicy` + `credential` tables directly.
   Server's only obligation is the policy row's existence/currency (already
   guaranteed) — **server does not host `/internal/auth/evaluate`.** No new auth

@@ -1,8 +1,8 @@
 # Quickstart — Collaboration Persistence (server slice)
 
-How to build, run, and test the touched paths once the slice is implemented. The
-module is the Alkemio `server` (NestJS/TypeORM/GraphQL). **This is spec/design only —
-the commands below describe the intended workflow; no code exists yet.**
+How to build, run, and test the touched paths. The module is the Alkemio `server`
+(NestJS/TypeORM/GraphQL). **The slice is implemented in this PR — the commands below
+describe the workflow against the delivered code.**
 
 ## Build / lint / test
 
@@ -65,8 +65,7 @@ A unit test spies on the injected `COLLABORATION_SERVICE` `ClientProxy` and asse
 ## Verify the authZ-eval path (OPEN-1 confirmation)
 
 > The authorization-evaluation-service is a **separate** repo
-> (`/Users/antst/work/alkemio/authorization-evaluation-service`). Run it pointed at
-> server's DB.
+> (`authorization-evaluation-service`). Run it pointed at server's DB.
 
 ```bash
 # pick a memo with a known parent authorizationPolicyId P and an actor A

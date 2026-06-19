@@ -9,8 +9,8 @@
 > the delete-cascade lifecycle emitter, the authZ-eval verification, and the
 > migration read access — and how each maps onto server's existing NestJS modules.
 > The cross-repo architecture + frozen contracts live in the epic's `plan.md` and
-> `contracts/`. **Spec/design only — no code is produced; implementation is gated
-> (see spec.md ⚠️ Implementation status).**
+> `contracts/`. **Implemented — the code is delivered in this PR; the prior gates
+> are resolved (see spec.md ✅ Implementation status).**
 
 ## Summary
 
@@ -85,11 +85,13 @@ governs the collab-service / y-crdt).*
 | 9. Container & Deployment Determinism | PASS | No runtime `process.env` reads added outside config bootstrap; the new queue/client are config-driven via the existing rabbitmq config + `MessagingQueue` enum. |
 | 10. Simplicity & Incremental Hardening | PASS | v1 keeps the blob inline (no premature file-service offload from server); columns are additive + nullable; legacy retired only at cutover. No speculative abstraction. |
 | Architecture Standards (migrations idempotent + tested) | PASS | The `content_pointer`/`blob_store` migration is reversible, back-fills existing rows to `inline`, and is tested on a snapshot (SC-003). |
-| Engineering Workflow (PR states migration presence + reverse strategy) | PASS | The implementation PR (later) states the migration, its back-fill, and its down(). |
+| Engineering Workflow (PR states migration presence + reverse strategy) | PASS | The implementation PR states the migration, its back-fill, and its down(). |
 
-**No gate failures.** The one watch item is the **coverage philosophy tension**
-(§6 vs epic ≥95%) — surfaced for antst, defaulting to ≥95% on the touched
-collaboration-persistence code.
+**No gate failures.** On the **coverage philosophy tension** (§6 vs epic ≥95%):
+this slice targets **≥95% on the touched collaboration-persistence diff** (DEC-7),
+verified locally via the repo's `test:coverage` run. This is a slice-scoped target
+on the changed code, not a repo-wide CI threshold change — the repo's existing
+coverage configuration is left unmodified.
 
 ## Architecture
 
