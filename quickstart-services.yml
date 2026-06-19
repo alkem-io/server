@@ -534,6 +534,11 @@ services:
       - METADATA_STORE=rabbitmq
       - BLOB_STORE=file-service
       - AUTH_MODE=authzeval
+      # The Traefik `collaboration` router resolves identity at the gateway
+      # (alkemio-resolve forwardAuth) and forwards the actor id in this header;
+      # the WS handshake reads it from here instead of the bearer Authorization
+      # header. Must match the authResponseHeader alkemio-resolve injects.
+      - AUTH_TOKEN_HEADER=X-Alkemio-Actor-Id
       # --- redis fan-out (FANOUT_MODE=redis) ---
       - REDIS_URL=redis://redis:6379/0
       # --- RabbitMQ metadata bus (METADATA_STORE=rabbitmq) ---

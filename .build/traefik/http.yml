@@ -268,17 +268,21 @@ http:
     # The client's UnifiedCollabProvider (y-websocket) opens
     #   ws://localhost:3000/collab/<documentId>?type=memo|whiteboard
     # so the path reaches the service VERBATIM (no strip) at /collab/{documentId}.
-    # oathkeeper-auth-socket-io performs forwardAuth and injects the resolved
-    # identity into the `Authorization` header, which the collaboration-service
-    # consumes as the actor id at the handshake (AUTH_MODE=authzeval). This is the
-    # same forwardAuth the legacy whiteboard route used.
+    # alkemio-resolve performs forwardAuth and injects the resolved identity into
+    # the `X-Alkemio-Actor-Id` header, which the collaboration-service consumes as
+    # the actor id at the handshake (AUTH_TOKEN_HEADER=X-Alkemio-Actor-Id). The
+    # preceding strip-client-alkemio-headers prevents a client spoofing that header
+    # before the gateway resolves it — same identity-at-gateway pattern as the
+    # file-service router. (The legacy oathkeeper-auth-socket-io middleware was
+    # removed by the develop OIDC cutover.)
     # Replaces the legacy `whiteboard-collaboration` (/api/private/ws) and
     # `collaborative-document` (/api/private/hocuspocus) routers.
     collaboration:
       rule: 'PathPrefix(`/collab`)'
       service: 'collaboration'
       middlewares:
-        - oathkeeper-auth-socket-io
+        - strip-client-alkemio-headers
+        - alkemio-resolve
       entryPoints:
         - 'web'
       priority: 150
