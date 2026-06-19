@@ -290,7 +290,7 @@ export class WhiteboardService {
       relations: { authorization: true },
       select: {
         id: true,
-        version: true,
+        contentVersion: true,
         contentPointer: true,
         blobStore: true,
         authorization: { id: true },
@@ -298,7 +298,9 @@ export class WhiteboardService {
     })) as Whiteboard;
 
     return {
-      version: whiteboard.version ?? 0,
+      // Return the persisted contract version (`contentVersion`), NOT the
+      // TypeORM `@VersionColumn`, so a reloaded room sees the version it owns.
+      version: whiteboard.contentVersion ?? 0,
       contentPointer: whiteboard.contentPointer,
       blobStore: whiteboard.blobStore,
       authorizationPolicyId: whiteboard.authorization?.id,
@@ -307,9 +309,13 @@ export class WhiteboardService {
 
   /**
    * Upserts the unified collaboration metadata/index for a whiteboard
-   * (FR-003): the `contentPointer` + `blobStore` only. The version is bumped
-   * automatically by TypeORM's `@VersionColumn` on save. The inline blob
-   * (`content`) is NOT touched here — it never crosses the unified bus.
+   * (FR-003): the contract `version` + `contentPointer` + `blobStore`. The room
+   * owns the version (`contracts/persistence-ports.md`), so the value it sends
+   * is PERSISTED verbatim into `contentVersion` and round-tripped back on fetch
+   * — the server does NOT substitute its own counter. The inherited TypeORM
+   * `@VersionColumn` (`version`) keeps its independent optimistic-locking role
+   * and is left untouched. The inline blob (`content`) is NOT touched here — it
+   * never crosses the unified bus.
    * @throws {EntityNotFoundException} when the whiteboard does not exist.
    */
   async saveCollaborationMetadata(
@@ -326,15 +332,15 @@ export class WhiteboardService {
     // Update only the index columns via the query builder so the
     // content-bearing `@BeforeUpdate` compression hook (and the file-reupload
     // work in the full save path) is NOT triggered for a metadata-only write.
-    // The `@VersionColumn` is bumped explicitly so fetch reflects a monotonic
-    // per-save version (FR-004).
+    // The room-owned contract version is persisted verbatim into
+    // `contentVersion` (NOT the `@VersionColumn`) so fetch round-trips it.
     await this.whiteboardRepository
       .createQueryBuilder()
       .update(Whiteboard)
       .set({
+        contentVersion: update.version,
         contentPointer: update.contentPointer,
         blobStore: update.blobStore,
-        version: () => '"version" + 1',
       })
       .where('id = :id', { id: whiteboardId })
       .execute();
@@ -344,7 +350,7 @@ export class WhiteboardService {
       relations: { authorization: true },
       select: {
         id: true,
-        version: true,
+        contentVersion: true,
         contentPointer: true,
         blobStore: true,
         authorization: { id: true },

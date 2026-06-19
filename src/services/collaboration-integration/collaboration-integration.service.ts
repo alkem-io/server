@@ -68,7 +68,10 @@ export class CollaborationIntegrationService {
   /**
    * `collaboration-save` — upsert the index row (FR-003). The blob is held by
    * the collab service's BlobStore; the server records only where it lives
-   * (`contentPointer` + `blobStore`). The version is bumped per save (FR-004).
+   * (`contentPointer` + `blobStore`). The room OWNS the `version`
+   * (`contracts/persistence-ports.md`): the value it sends is persisted
+   * verbatim and round-tripped back on `collaboration-fetch` (FR-004) — the
+   * server does not substitute its own counter.
    */
   public async save(data: SaveInputData): Promise<SaveOutputData> {
     if (!this.isKnownBlobStore(data.blobStore)) {
@@ -83,6 +86,7 @@ export class CollaborationIntegrationService {
 
     try {
       const update = {
+        version: data.version,
         contentPointer: data.contentPointer,
         blobStore: data.blobStore,
       };

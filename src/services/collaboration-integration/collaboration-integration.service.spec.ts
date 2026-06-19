@@ -105,9 +105,14 @@ describe('CollaborationIntegrationService', () => {
       });
 
       expect(result).toEqual({ success: true });
+      // The room-owned contract version is forwarded verbatim (FR-004).
       expect(memoService.saveCollaborationMetadata).toHaveBeenCalledWith(
         'memo-1',
-        { contentPointer: 'memo-1', blobStore: BlobStoreKind.INLINE }
+        {
+          version: 5,
+          contentPointer: 'memo-1',
+          blobStore: BlobStoreKind.INLINE,
+        }
       );
       expect(
         whiteboardService.saveCollaborationMetadata
@@ -128,7 +133,11 @@ describe('CollaborationIntegrationService', () => {
       expect(result).toEqual({ success: true });
       expect(whiteboardService.saveCollaborationMetadata).toHaveBeenCalledWith(
         'wb-1',
-        { contentPointer: 's3://bucket/wb-1', blobStore: BlobStoreKind.S3 }
+        {
+          version: 2,
+          contentPointer: 's3://bucket/wb-1',
+          blobStore: BlobStoreKind.S3,
+        }
       );
     });
 
@@ -143,11 +152,15 @@ describe('CollaborationIntegrationService', () => {
         blobStore: BlobStoreKind.FILE_SERVICE,
       });
 
-      // The unified save never carries the blob — only the index update is
-      // forwarded to the domain service.
+      // The unified save never carries the blob — only the index update
+      // (version + pointer + store) is forwarded to the domain service.
       expect(whiteboardService.saveCollaborationMetadata).toHaveBeenCalledWith(
         'wb-1',
-        { contentPointer: 'file-uuid', blobStore: BlobStoreKind.FILE_SERVICE }
+        {
+          version: 3,
+          contentPointer: 'file-uuid',
+          blobStore: BlobStoreKind.FILE_SERVICE,
+        }
       );
     });
 
@@ -240,6 +253,82 @@ describe('CollaborationIntegrationService', () => {
 
       expect(result.found).toBe(false);
       expect(result.error).toBeDefined();
+    });
+  });
+
+  // Proves the contract version owned by the collab room round-trips through
+  // the server: the value sent on `collaboration-save` is the value returned on
+  // `collaboration-fetch` (FR-004) — the server never substitutes its own
+  // counter. The domain service is stubbed with an in-memory store keyed by the
+  // contract `version` (mirroring the real `contentVersion` column).
+  describe('version round-trip (FR-004)', () => {
+    it('memo: save version=N → fetch returns N', async () => {
+      const persisted = new Map<string, number>();
+      memoService.saveCollaborationMetadata.mockImplementation(
+        async (id: string, update: { version: number }) => {
+          persisted.set(id, update.version);
+        }
+      );
+      memoService.getCollaborationMetadata.mockImplementation(
+        async (id: string) => ({
+          version: persisted.get(id) ?? 0,
+          contentPointer: id,
+          blobStore: BlobStoreKind.INLINE,
+          authorizationPolicyId: 'policy-memo',
+        })
+      );
+
+      const N = 17;
+      const saveResult = await service.save({
+        id: 'memo-rt',
+        contentType: CollaborationContentType.MEMO,
+        version: N,
+        contentPointer: 'memo-rt',
+        blobStore: BlobStoreKind.INLINE,
+      });
+      expect(saveResult).toEqual({ success: true });
+
+      const fetchResult = await service.fetch({ id: 'memo-rt' });
+      expect(fetchResult.found).toBe(true);
+      expect(fetchResult.version).toBe(N);
+    });
+
+    it('whiteboard: two saves with increasing versions persist the latest', async () => {
+      const persisted = new Map<string, number>();
+      whiteboardService.saveCollaborationMetadata.mockImplementation(
+        async (id: string, update: { version: number }) => {
+          persisted.set(id, update.version);
+        }
+      );
+      // memo lookup misses so fetch falls through to the whiteboard.
+      memoService.getCollaborationMetadata.mockRejectedValue(notFound());
+      whiteboardService.getCollaborationMetadata.mockImplementation(
+        async (id: string) => ({
+          version: persisted.get(id) ?? 0,
+          contentPointer: id,
+          blobStore: BlobStoreKind.INLINE,
+          authorizationPolicyId: 'policy-wb',
+        })
+      );
+
+      await service.save({
+        id: 'wb-rt',
+        contentType: CollaborationContentType.WHITEBOARD,
+        version: 6,
+        contentPointer: 'wb-rt',
+        blobStore: BlobStoreKind.INLINE,
+      });
+      await service.save({
+        id: 'wb-rt',
+        contentType: CollaborationContentType.WHITEBOARD,
+        version: 9,
+        contentPointer: 'wb-rt',
+        blobStore: BlobStoreKind.INLINE,
+      });
+
+      const fetchResult = await service.fetch({ id: 'wb-rt' });
+      expect(fetchResult.found).toBe(true);
+      expect(fetchResult.version).toBe(9);
     });
   });
 

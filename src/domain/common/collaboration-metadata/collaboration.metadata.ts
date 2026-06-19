@@ -11,6 +11,12 @@ import { BlobStoreKind } from '@common/enums/blob.store.kind';
  * here.
  */
 export interface CollaborationMetadata {
+  /**
+   * The collaboration content version owned by the collab room (the contract
+   * `version`, FR-004). Read back from the persisted `contentVersion` column —
+   * NOT the inherited TypeORM `@VersionColumn`, which is a server-internal
+   * optimistic-locking counter and unrelated to this value.
+   */
   version: number;
   contentPointer?: string;
   blobStore?: BlobStoreKind;
@@ -20,9 +26,16 @@ export interface CollaborationMetadata {
 
 /**
  * The index fields written by a unified `collaboration-save`. The blob never
- * crosses the bus, so this carries only the pointer + store (FR-003).
+ * crosses the bus, so this carries only the version + pointer + store (FR-003).
  */
 export interface CollaborationMetadataUpdate {
+  /**
+   * The contract `version` the collab room sends on `collaboration-save`. The
+   * server PERSISTS this value verbatim into `contentVersion` so a later
+   * `collaboration-fetch` round-trips it back to the room (FR-004); the server
+   * does NOT substitute its own counter.
+   */
+  version: number;
   contentPointer: string;
   blobStore: BlobStoreKind;
 }

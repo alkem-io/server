@@ -183,7 +183,7 @@ export class MemoService {
       relations: { authorization: true },
       select: {
         id: true,
-        version: true,
+        contentVersion: true,
         contentPointer: true,
         blobStore: true,
         authorization: { id: true },
@@ -191,7 +191,9 @@ export class MemoService {
     })) as Memo;
 
     return {
-      version: memo.version ?? 0,
+      // Return the persisted contract version (`contentVersion`), NOT the
+      // TypeORM `@VersionColumn`, so a reloaded room sees the version it owns.
+      version: memo.contentVersion ?? 0,
       contentPointer: memo.contentPointer,
       blobStore: memo.blobStore,
       authorizationPolicyId: memo.authorization?.id,
@@ -200,9 +202,13 @@ export class MemoService {
 
   /**
    * Upserts the unified collaboration metadata/index for a memo (FR-003): the
-   * `contentPointer` + `blobStore` only. The version is bumped automatically by
-   * TypeORM's `@VersionColumn` on save. The inline blob (`content`) is NOT
-   * touched here — it never crosses the unified bus.
+   * contract `version` + `contentPointer` + `blobStore`. The room owns the
+   * version (`contracts/persistence-ports.md`), so the value it sends is
+   * PERSISTED verbatim into `contentVersion` and round-tripped back on fetch —
+   * the server does NOT substitute its own counter. The inherited TypeORM
+   * `@VersionColumn` (`version`) keeps its independent optimistic-locking role
+   * and is left untouched here. The inline blob (`content`) is NOT touched
+   * either — it never crosses the unified bus.
    * @throws {EntityNotFoundException} when the memo does not exist.
    */
   async saveCollaborationMetadata(
@@ -216,17 +222,17 @@ export class MemoService {
       select: { id: true },
     });
 
-    // Index-only write: set the pointer + store and bump the `@VersionColumn`
-    // explicitly so fetch reflects a monotonic per-save version (FR-004). The
-    // inline blob (`content`) is never touched here — it does not cross the
+    // Index-only write: persist the room-owned contract version verbatim into
+    // `contentVersion` (NOT the `@VersionColumn`), plus the pointer + store.
+    // The inline blob (`content`) is never touched here — it does not cross the
     // unified bus.
     await this.memoRepository
       .createQueryBuilder()
       .update(Memo)
       .set({
+        contentVersion: update.version,
         contentPointer: update.contentPointer,
         blobStore: update.blobStore,
-        version: () => '"version" + 1',
       })
       .where('id = :id', { id: memoId })
       .execute();
@@ -236,7 +242,7 @@ export class MemoService {
       relations: { authorization: true },
       select: {
         id: true,
-        version: true,
+        contentVersion: true,
         contentPointer: true,
         blobStore: true,
         authorization: { id: true },

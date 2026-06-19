@@ -30,6 +30,19 @@ export class Memo extends NameableEntity implements IMemo {
   @Column('varchar', { length: ENUM_LENGTH, nullable: true })
   blobStore?: BlobStoreKind;
 
+  /**
+   * The collaboration content version owned by the collaboration-service room
+   * (the contract `version`). The room bumps it per persisted snapshot, sends
+   * it on `collaboration-save`, and adopts the stored value back on
+   * `collaboration-fetch` when it rehydrates (FR-004, data-model.md §metadata).
+   *
+   * Distinct from the inherited TypeORM `@VersionColumn` (`version`), which is a
+   * server-internal optimistic-locking counter and MUST NOT be conflated with
+   * this contract value.
+   */
+  @Column('int', { nullable: true })
+  contentVersion?: number;
+
   @Column('uuid', { nullable: true })
   createdBy?: string;
 

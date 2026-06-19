@@ -19,6 +19,10 @@ export abstract class IWhiteboard extends INameable {
 
   blobStore?: BlobStoreKind;
 
+  // Collaboration content version owned by the collab room (contract `version`,
+  // FR-004) — distinct from the inherited TypeORM `@VersionColumn`. Internal.
+  contentVersion?: number;
+
   @Field(() => ContentUpdatePolicy, {
     description: 'The policy governing who can update the Whiteboard content.',
     nullable: false,

@@ -53,10 +53,13 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
   });
 
   describe('getCollaborationMetadata', () => {
-    it('returns the index + the entity policy id (FR-005)', async () => {
+    it('returns the persisted contract version (contentVersion) + the entity policy id (FR-004/FR-005)', async () => {
       memoRepo.findOne.mockResolvedValue({
         id: 'm1',
+        // The TypeORM @VersionColumn is unrelated to the contract version; it
+        // must NOT be returned here.
         version: 9,
+        contentVersion: 42,
         contentPointer: 'm1',
         blobStore: BlobStoreKind.INLINE,
         authorization: { id: 'policy-1' },
@@ -65,40 +68,119 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
       const meta = await service.getCollaborationMetadata('m1');
 
       expect(meta).toEqual({
-        version: 9,
+        version: 42,
         contentPointer: 'm1',
         blobStore: BlobStoreKind.INLINE,
         authorizationPolicyId: 'policy-1',
       });
     });
+
+    it('reads 0 when no contract version has been persisted yet (NULL contentVersion)', async () => {
+      memoRepo.findOne.mockResolvedValue({
+        id: 'm1',
+        version: 5,
+        contentVersion: null,
+        contentPointer: 'm1',
+        blobStore: BlobStoreKind.INLINE,
+        authorization: { id: 'policy-1' },
+      });
+
+      const meta = await service.getCollaborationMetadata('m1');
+
+      expect(meta.version).toBe(0);
+    });
   });
 
   describe('saveCollaborationMetadata', () => {
-    it('writes index columns and re-reads the row (index-only, FR-003)', async () => {
+    it('persists the room-owned contract version verbatim into contentVersion, never touching @VersionColumn (FR-004)', async () => {
       const qb = updateBuilder();
       memoRepo.createQueryBuilder.mockReturnValue(qb);
       memoRepo.findOne
         .mockResolvedValueOnce({ id: 'm1' }) // existence check
         .mockResolvedValueOnce({
           id: 'm1',
-          version: 2,
+          contentVersion: 7,
           contentPointer: 'ptr',
           blobStore: BlobStoreKind.S3,
           authorization: { id: 'p' },
         });
 
       await service.saveCollaborationMetadata('m1', {
+        version: 7,
         contentPointer: 'ptr',
         blobStore: BlobStoreKind.S3,
       });
 
-      expect(qb.set).toHaveBeenCalledWith(
-        expect.objectContaining({
-          contentPointer: 'ptr',
-          blobStore: BlobStoreKind.S3,
-        })
-      );
+      expect(qb.set).toHaveBeenCalledWith({
+        contentVersion: 7,
+        contentPointer: 'ptr',
+        blobStore: BlobStoreKind.S3,
+      });
+      // The contract version is NOT routed to the optimistic-locking column.
+      const setArg = qb.set.mock.calls[0][0];
+      expect(setArg).not.toHaveProperty('version');
       expect(qb.execute).toHaveBeenCalledTimes(1);
+    });
+
+    it('round-trips a saved version on the subsequent fetch (save N → fetch N)', async () => {
+      const qb = updateBuilder();
+      memoRepo.createQueryBuilder.mockReturnValue(qb);
+      // existence check, then the post-save re-read reflects the persisted value
+      memoRepo.findOne
+        .mockResolvedValueOnce({ id: 'm1' })
+        .mockResolvedValueOnce({
+          id: 'm1',
+          contentVersion: 11,
+          contentPointer: 'm1',
+          blobStore: BlobStoreKind.INLINE,
+          authorization: { id: 'policy-1' },
+        });
+
+      await service.saveCollaborationMetadata('m1', {
+        version: 11,
+        contentPointer: 'm1',
+        blobStore: BlobStoreKind.INLINE,
+      });
+
+      // Simulate the later fetch reading back the persisted row.
+      memoRepo.findOne.mockResolvedValueOnce({
+        id: 'm1',
+        version: 99, // @VersionColumn churned by unrelated writes — ignored
+        contentVersion: 11,
+        contentPointer: 'm1',
+        blobStore: BlobStoreKind.INLINE,
+        authorization: { id: 'policy-1' },
+      });
+
+      const meta = await service.getCollaborationMetadata('m1');
+      expect(meta.version).toBe(11);
+    });
+
+    it('persists the latest of two increasing saves', async () => {
+      const qb = updateBuilder();
+      memoRepo.createQueryBuilder.mockReturnValue(qb);
+      memoRepo.findOne.mockResolvedValue({
+        id: 'm1',
+        contentVersion: 0,
+        contentPointer: 'm1',
+        blobStore: BlobStoreKind.INLINE,
+        authorization: { id: 'policy-1' },
+      });
+
+      await service.saveCollaborationMetadata('m1', {
+        version: 3,
+        contentPointer: 'm1',
+        blobStore: BlobStoreKind.INLINE,
+      });
+      await service.saveCollaborationMetadata('m1', {
+        version: 4,
+        contentPointer: 'm1',
+        blobStore: BlobStoreKind.INLINE,
+      });
+
+      const versions = qb.set.mock.calls.map((c: any[]) => c[0].contentVersion);
+      expect(versions).toEqual([3, 4]);
+      expect(versions[versions.length - 1]).toBe(4);
     });
   });
 
