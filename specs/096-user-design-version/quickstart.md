@@ -34,13 +34,13 @@ This guide walks through verifying the feature end-to-end against a local Alkemi
 
 This validates **FR-002, FR-003, FR-008** and Story 1 acceptance for new users in the Phase-2 release.
 
-## Story 1 (continued) — Existing user keeps their current value *(Phase 2 invariant)*
+## Story 1 (continued) — Existing user after Phase 3 backfill
 
-1. Log in as a user that existed **before** the Phase-2 migration ran (any account from `restore-dbs` or a long-lived dev account that was on the column-default `1` from Phase 1, or a user that previously opted into `2` or any other integer).
+1. Log in as a user that existed **before** the Phase-3 migration ran.
 2. Run the same query as above.
-3. **Expected**: `me.user.settings.designVersion` returns **whatever value was persisted before the migration**. Phase-1 default-applied users still see `1`; Phase-1 opt-ins to `2` still see `2`; any other integer set via `updateUserSettings` is preserved verbatim. The Phase-2 migration is column-default DDL only — **no row was updated**.
+3. **Expected**: `me.user.settings.designVersion === 2`. Phase 3 ran `UPDATE "user_settings" SET "designVersion" = 2 WHERE "designVersion" = 1`, so every legacy-`1` row was flipped onto the current default. Rows that pre-Phase-3 held any other integer (`0`, `-1`, `5`, `7`, …) are still preserved verbatim — Phase 3 is a legacy-to-current-default flip, not a clamp.
 
-This validates the Phase-2 preserved-choice invariant (Session 2026-05-26 clarification) and supersedes the Phase-1 reading that the existing-user value is `1`. FR-009 itself still holds for the Phase-1 release window.
+This supersedes the Phase-2 preserved-choice reading for rows that held `1`. Phase-1 and Phase-2 narratives elsewhere in the spec remain accurate historical records of those releases.
 
 ## Phase 2 preserved-choice check (operator)
 
@@ -59,6 +59,35 @@ docker exec alkemio_dev_postgres psql -U synapse -d alkemio \
 ```
 
 Expected after Phase-2 migration: `2`.
+
+## Phase 3 backfill check (operator)
+
+Before running the Phase-3 migration, snapshot the row distribution:
+
+```bash
+docker exec alkemio_dev_postgres psql -U synapse -d alkemio \
+  -c 'SELECT "designVersion", COUNT(*) FROM user_settings GROUP BY "designVersion" ORDER BY "designVersion";'
+```
+
+Apply: `pnpm run migration:run`
+
+Re-query the distribution. Expected:
+
+- The `1`-bucket reports `0` rows.
+- The `2`-bucket count equals the pre-migration `(count at 1) + (count at 2)`.
+- All other buckets (`0`, `-1`, `5`, `7`, … if any existed) are unchanged.
+- Total row count is unchanged.
+
+Confirm the column default is still `2` (Phase 2 invariant — Phase 3 does not touch schema):
+
+```bash
+docker exec alkemio_dev_postgres psql -U synapse -d alkemio \
+  -c "SELECT column_default FROM information_schema.columns WHERE table_name='user_settings' AND column_name='designVersion';"
+```
+
+Expected: `2`.
+
+The Phase-3 `down()` is intentionally a no-op (we do not track which rows previously held `1`); `pnpm run migration:revert` reports the migration as reverted but leaves the row distribution unchanged. Operators who must restore the pre-Phase-3 distribution should restore a pre-migration database backup.
 
 ## Story 2 — Switch design version
 
@@ -153,7 +182,7 @@ To roll back during local testing:
 pnpm run migration:revert
 ```
 
-The most recent down migration (`FlipUserSettingsDesignVersionDefaultToNew`) resets the column default to `1`; reverting further drops the column entirely. Re-running `migration:run` re-creates it (default `1` from Phase 1) and then flips the default to `2` (Phase 2). Existing rows are not touched by either direction.
+The most recent down migration (`BackfillUserSettingsDesignVersionLegacyToCurrentDefault`) is a documented no-op — row distribution is left as-is. Reverting further: `FlipUserSettingsDesignVersionDefaultToNew` resets the column default to `1`; one more revert drops the column entirely. Re-running `migration:run` re-creates the column (default `1` from Phase 1), flips the default to `2` (Phase 2), and then re-applies the Phase-3 backfill (zero rows if already drained). Phase 1/2 down migrations leave existing rows untouched; Phase 3's no-op down() means a true revert of the backfill requires restoring a pre-migration database backup.
 
 ## Test plan summary
 

@@ -257,6 +257,8 @@ Key rules:
 - PostgreSQL 17.5 (no schema changes — read-only against `license` + `license_entitlement` rows already on Collaboration) (002-office-docs-gating)
 - TypeScript 5.3, Node.js 22 LTS (Volta-pinned 22.21.1) + Vitest 4.0.17, `@vitest/coverage-v8`, `@golevelup/ts-vitest`, NestJS testing utilities (100-fix-flaky-tests)
 - N/A (test-infrastructure work; no schema, no migrations) (100-fix-flaky-tests)
+- TypeScript 5.3 on Node.js 22 LTS (Volta-pinned 22.21.1) + NestJS 10, `@nestjs/graphql` (code-first), TypeORM 0.3 (custom fork `pkg.pr.new/antst/typeorm`), Apollo Server 4, GraphQL 16, class-validator / class-transformer (story/6138-persist-phase-tab-visibility)
+- PostgreSQL 17.5 — existing `innovation_flow_state.settings` JSONB column. **No DDL**; data backfill only. (story/6138-persist-phase-tab-visibility)
 
 ## Recent Changes
 - 028-migrate-biome-linting: Migrated from ESLint + Prettier to Biome for linting and formatting

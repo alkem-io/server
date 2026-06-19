@@ -6,15 +6,12 @@ import { JwtModule } from '@nestjs/jwt';
 import { PassportModule } from '@nestjs/passport';
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
 import { AuthenticationService } from './authentication.service';
-import { OryApiStrategy } from './ory.api.strategy';
-import { OryStrategy } from './ory.strategy';
-import { AUTH_STRATEGY_OATHKEEPER_JWT } from './strategy.names';
+
+// FR-025 — OryStrategy + OryApiStrategy retired. Auth strategies for both
+// GraphQL and REST live in OidcModule (cookie-session, hydra-bearer).
 @Module({
   imports: [
-    PassportModule.register({
-      session: false,
-      defaultStrategy: AUTH_STRATEGY_OATHKEEPER_JWT,
-    }),
+    PassportModule.register({ session: false }),
     ActorContextModule,
     KratosModule,
     CacheModule.register(),
@@ -26,7 +23,7 @@ import { AUTH_STRATEGY_OATHKEEPER_JWT } from './strategy.names';
       }),
     }),
   ],
-  providers: [AuthenticationService, OryStrategy, OryApiStrategy],
+  providers: [AuthenticationService],
   exports: [AuthenticationService],
 })
 export class AuthenticationModule {}

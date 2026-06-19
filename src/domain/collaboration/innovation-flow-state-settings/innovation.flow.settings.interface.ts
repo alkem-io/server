@@ -7,4 +7,11 @@ export abstract class IInnovationFlowStateSettings {
     description: 'Whether new callouts can be added to this State.',
   })
   allowNewCallouts!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Whether this State/phase is shown in the member-facing navigation. Default true. UI-affordance only: it does NOT gate access to the phase content.',
+  })
+  visible!: boolean;
 }

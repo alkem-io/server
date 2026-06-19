@@ -211,6 +211,19 @@ Product decision per [`spec.md` → Clarifications → Session 2026-05-26](./spe
 - **Phase 1 narrative left intact.** FR-002/003/009, SC-001/002, User Story 1 in `spec.md` describe what shipped on 2026-05-13 and remain accurate as historical record; phase-2 behavior is captured in the Session 2026-05-26 clarification and the Assumptions addendum.
 - **Verification**: `SELECT "designVersion", COUNT(*) FROM user_settings GROUP BY "designVersion"` before/after the migration must show identical distribution; the column default afterwards must report `2`. The `run_validate_migration.sh` CSV diff for `user_settings` should show identical row content with only `column_default 1 → 2` in the schema-metadata diff.
 
+### 2026-06-17 — Phase 3: legacy backfill — all `designVersion = 1` rows flipped to `2`
+
+Product decision per [`spec.md` → Clarifications → Session 2026-06-17](./spec.md#session-2026-06-17). The legacy generation is on an imminent decommission path; Phase 3 drains the persisted `1` distribution while leaving the API still permissive (FR-004) so users can opt back in until the deprecation lands.
+
+- **New migration** `src/migrations/1781800000000-BackfillUserSettingsDesignVersionLegacyToCurrentDefault.ts` does `UPDATE "user_settings" SET "designVersion" = 2 WHERE "designVersion" = 1`. Narrow `WHERE` so rows holding any other integer (`0`, `-1`, `5`, `7`, …) are preserved verbatim — FR-004 still applies; this is the legacy-to-current-default flip, not a clamp.
+- **Column default unchanged.** Phase 2 already set the column default to `2`; Phase 3 only touches data, never schema.
+- **No-op `down()`.** A symmetric `2 → 1` flip would clobber legitimately-on-`2` rows (which after Phase 3 is every user); we do not track which rows previously held `1`, so a correct revert isn't possible from DDL alone. Documented in the migration body. Revert path: restore a pre-migration database backup.
+- **DTO + interface descriptions updated** to flag `1` as "legacy design generation, deprecated and scheduled for removal" (`user.settings.dto.create.ts`, `user.settings.dto.update.ts`, `user.settings.interface.ts`). `schema.graphql` regenerated — only description-string changes on `CreateUserSettingsInput.designVersion`, `UpdateUserSettingsEntityInput.designVersion`, and `UserSettings.designVersion`. No additive, no breaking.
+- **No source-code changes** to constants/entity/service/spec/mock — Phase 2's rename + constant references are already future-proof. The constants file header gets a Phase 3 entry only.
+- **Phase 1 and Phase 2 narratives left intact.** They remain accurate historical records of what shipped on those dates; Phase 3 behavior is captured in the Session 2026-06-17 clarification and the Assumptions addendum.
+- **Verification**: `SELECT "designVersion", COUNT(*) FROM user_settings GROUP BY "designVersion"` immediately post-migration must report zero rows at `1`; the previous `1`-count must have moved into the `2`-bucket; non-`1` buckets unchanged. The `run_validate_migration.sh` CSV diff for `user_settings` should show every row that previously held `1` now holding `2`, no other column changes, no row count change.
+- **Out of scope (next PR, separate effort)**: full retirement of the `1` value — narrow the validator (`@Min(2)` or equivalent), remove `DESIGN_VERSION_LEGACY`, drop the legacy GraphQL description wording (breaking schema change requiring `BREAKING-APPROVED` from CODEOWNERS).
+
 ### Follow-up — Client coordination (next release)
 
 The legacy `alkemio-crd-enabled` LocalStorage flag (boolean) should be retired on the client side; its replacement is a LocalStorage entry that stores the integer value of `me.user.settings.designVersion`. The server is now the source of truth.

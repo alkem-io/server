@@ -36,6 +36,11 @@ export class InnovationFlowStateService {
     innovationFlowState.description = stateData.description || '';
     innovationFlowState.settings = {
       allowNewCallouts: true,
+      // FR-005: new phases default to visible. Honor an explicit create-time
+      // `visible: false`; the existing `allowNewCallouts: true` default is
+      // intentionally left untouched (consuming create-time allowNewCallouts is
+      // out of scope for story #6138).
+      visible: stateData.settings?.visible ?? true,
     };
     innovationFlowState.sortOrder = stateData.sortOrder ?? 0;
     innovationFlowState.authorization = new AuthorizationPolicy(
@@ -64,8 +69,23 @@ export class InnovationFlowStateService {
     innovationFlowState.displayName = updateData.displayName;
     innovationFlowState.description = updateData.description ?? '';
     if (updateData.settings) {
-      innovationFlowState.settings.allowNewCallouts =
-        updateData.settings.allowNewCallouts;
+      // Both flags are optional, non-destructive partial updates: an explicit
+      // value (including `false`) is honored; omission preserves the stored
+      // value.
+      if (updateData.settings.allowNewCallouts !== undefined) {
+        innovationFlowState.settings.allowNewCallouts =
+          updateData.settings.allowNewCallouts;
+      }
+      // FR-002/FR-009: `visible` is an optional, non-destructive partial update.
+      // An explicit value (including `false`) is honored; omission preserves the
+      // stored value. `visible` is independent of `allowNewCallouts`.
+      // FR-006/FR-007: this update path is already gated by the innovation-flow
+      // UPDATE privilege (see innovation.flow.resolver.mutations.ts); `visible`
+      // is a navigation hint only and is never read by authorization or content
+      // access logic.
+      if (updateData.settings.visible !== undefined) {
+        innovationFlowState.settings.visible = updateData.settings.visible;
+      }
     }
 
     return await this.save(innovationFlowState);
@@ -94,6 +114,17 @@ export class InnovationFlowStateService {
         `Unable to find InnovationFlowState with ID: ${innovationFlowStateID}`,
         LogContext.INNOVATION_FLOW
       );
+    // FR-001 / research Decision 2: `visible` is a non-nullable GraphQL field.
+    // The backfill migration guarantees every persisted row carries it, but
+    // coerce defensively here (treat absent as visible) so any un-backfilled
+    // row — or, in the worst case, a row with missing settings — still resolves
+    // to a boolean rather than null.
+    if (!innovationFlowState.settings) {
+      innovationFlowState.settings = { allowNewCallouts: true, visible: true };
+    } else {
+      innovationFlowState.settings.visible =
+        innovationFlowState.settings.visible ?? true;
+    }
     return innovationFlowState;
   }
 

@@ -623,6 +623,7 @@ describe('CalendarService', () => {
           expiry: undefined,
           guestName: undefined,
           isAnonymous: false,
+          isGuest: false,
         }
       );
     });

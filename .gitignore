@@ -46,6 +46,7 @@ subscriptions.log
 .claude/settings.local.json
 .claude/pipeline/.session-token
 .claude/pipeline/.cookie-jar
+.claude/pipeline/.kratos-cookies
 .claude/pipeline/.env
 .claude/pipeline/results/
 .claude/pipeline/live-results/
