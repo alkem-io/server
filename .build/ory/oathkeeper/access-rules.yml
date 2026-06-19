@@ -113,12 +113,35 @@
   mutators:
     - handler: id_token
 
+# Legacy memo (hocuspocus) + whiteboard (socket-io) rules above are superseded by
+# the unified /collab rule below (epic 003-unify-collab-yjs). Kept until the
+# whiteboard editor moves off the legacy socket.io client.
 - id: 'alkemio:api:private:ws:hocuspocus'
   upstream:
     preserve_host: true
     url: 'http://collaborative-document:4004'
   match:
     url: 'http://localhost:3000/hocuspocus'
+    methods:
+      - GET
+  authenticators:
+    - handler: cookie_session
+    - handler: noop
+  authorizer:
+    handler: allow
+  mutators:
+    - handler: id_token
+
+# Unified real-time collaboration (memo + whiteboard) — epic 003-unify-collab-yjs.
+# Browser opens ws://localhost:3000/collab/<documentId>?type=memo|whiteboard;
+# Traefik's `collaboration` router forwardAuths here, and the id_token mutator
+# injects the resolved identity into the Authorization header for the service.
+- id: 'alkemio:api:private:ws:collab'
+  upstream:
+    preserve_host: true
+    url: 'http://collaboration:4006'
+  match:
+    url: 'http://localhost:3000/collab<**>'
     methods:
       - GET
   authenticators:
