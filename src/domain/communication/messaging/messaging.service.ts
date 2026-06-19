@@ -1,6 +1,7 @@
 import { ActorType, LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { ConversationCreationType } from '@common/enums/conversation.creation.type';
+import { DirectMessageDeliveryStatus } from '@common/enums/direct.message.delivery.status';
 import { RoomType } from '@common/enums/room.type';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import {
@@ -24,10 +25,12 @@ import { isUUID } from 'class-validator';
 import { randomUUID } from 'crypto';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
+import { DirectMessageDeliveryResult } from '../communication/dto/direct.message.delivery.result';
 import { IConversation } from '../conversation/conversation.interface';
 import { ConversationService } from '../conversation/conversation.service';
 import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
+import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { Messaging } from './messaging.entity';
 import { IMessaging } from './messaging.interface';
 import { CheckResult } from './types/check.result';
@@ -59,6 +62,7 @@ export class MessagingService {
     private readonly subscriptionPublishService: SubscriptionPublishService,
     private readonly userLookupService: UserLookupService,
     private readonly actorLookupService: ActorLookupService,
+    private readonly roomLookupService: RoomLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -154,25 +158,69 @@ export class MessagingService {
         );
       }
 
-      const existing =
-        await this.conversationService.findConversationBetweenActors(
+      // FR-002 / SC-002: dedup-or-create MUST be atomic per actor pair. The
+      // dedup is query-based with no unique constraint, so two concurrent
+      // "message this person" actions could both pass the existence check and
+      // create two DIRECT conversations. Serialise concurrent creates for the
+      // SAME pair with a transaction-scoped PostgreSQL advisory lock keyed on
+      // the ordered actor pair (research Decision 2 — no DDL, no global
+      // contention). The lock is released only when this transaction commits,
+      // i.e. after the conversation + memberships are persisted, so a blocked
+      // concurrent caller observes the existing conversation and reuses it.
+      const targetActorId = normalizedMemberActorIds[0];
+      return await this.entityManager.transaction(async manager => {
+        const [first, second] = [
           conversationData.callerActorId,
-          normalizedMemberActorIds[0]
+          targetActorId,
+        ].sort();
+        await manager.query('SELECT pg_advisory_xact_lock(hashtext($1))', [
+          `${first}:${second}`,
+        ]);
+
+        const existing =
+          await this.conversationService.findConversationBetweenActors(
+            conversationData.callerActorId,
+            targetActorId
+          );
+        if (existing) {
+          return await this.conversationService.getConversationOrFail(
+            existing.id,
+            { relations: { authorization: true, room: true } }
+          );
+        }
+
+        return await this.persistNewConversation(
+          conversationData,
+          normalizedMemberActorIds,
+          roomType
         );
-      if (existing) {
-        return await this.conversationService.getConversationOrFail(
-          existing.id,
-          { relations: { authorization: true, room: true } }
-        );
-      }
-    } else if (normalizedMemberActorIds.length < 1) {
+      });
+    }
+
+    if (normalizedMemberActorIds.length < 1) {
       throw new ValidationException(
         'GROUP conversations require at least 1 memberID',
         LogContext.COMMUNICATION_CONVERSATION
       );
     }
 
-    // Create conversation, assign to platform messaging, apply auth, publish event
+    return await this.persistNewConversation(
+      conversationData,
+      normalizedMemberActorIds,
+      roomType
+    );
+  }
+
+  /**
+   * Create the conversation row + room + memberships, assign it to the platform
+   * messaging, apply authorization, and publish the conversationCreated event.
+   * Shared by the DIRECT (advisory-locked) and GROUP create paths.
+   */
+  private async persistNewConversation(
+    conversationData: CreateConversationData,
+    normalizedMemberActorIds: string[],
+    roomType: RoomType
+  ): Promise<IConversation> {
     const messaging = await this.getPlatformMessaging();
 
     const conversation = await this.conversationService.createConversation(
@@ -204,6 +252,75 @@ export class MessagingService {
     await this.publishConversationCreatedEvents(fullConversation, allMemberIds);
 
     return fullConversation;
+  }
+
+  /**
+   * Fan out a private (1:1) chat message to N users individually — never a
+   * group conversation (FR-004). Per recipient: apply the existing consent gate
+   * (allowOtherUsersToSendMessages) → dedup-or-create the DIRECT conversation
+   * (via the advisory-locked createConversation above, so FR-002 holds) → send
+   * the message into its room. Returns a per-recipient result; a single
+   * BLOCKED/FAILED recipient never aborts the rest (FR-013, SC-005). Powers
+   * "Share on Alkemio" (US2) and "Contact the leads" (US3).
+   */
+  public async sendDirectMessageToUsers(
+    senderActorId: string,
+    receiverActorIds: string[],
+    message: string
+  ): Promise<DirectMessageDeliveryResult[]> {
+    // Self is never a recipient (FR-012); collapse duplicate ids.
+    const recipientIds = [...new Set(receiverActorIds)].filter(
+      id => id !== senderActorId
+    );
+
+    const results: DirectMessageDeliveryResult[] = [];
+    for (const receiverID of recipientIds) {
+      try {
+        // evaluateMemberConsent treats unknown/settings-less ids as denying,
+        // so a non-consenting (or non-user) recipient is reported, not crashed.
+        const { consentingIds } = await this.evaluateMemberConsent([
+          receiverID,
+        ]);
+        if (consentingIds.length === 0) {
+          results.push({
+            receiverID,
+            status: DirectMessageDeliveryStatus.BLOCKED_NO_CONSENT,
+          });
+          continue;
+        }
+
+        const conversation = await this.createConversation({
+          type: ConversationCreationType.DIRECT,
+          callerActorId: senderActorId,
+          memberActorIds: [receiverID],
+        });
+
+        await this.roomLookupService.sendMessage(
+          conversation.room,
+          senderActorId,
+          { roomID: conversation.room.id, message }
+        );
+
+        results.push({
+          receiverID,
+          status: DirectMessageDeliveryStatus.SENT,
+          conversationID: conversation.id,
+        });
+      } catch (error: unknown) {
+        const err = error as Error;
+        this.logger.error(
+          'sendDirectMessageToUsers: failed to deliver to a recipient',
+          err?.stack,
+          LogContext.COMMUNICATION_CONVERSATION
+        );
+        results.push({
+          receiverID,
+          status: DirectMessageDeliveryStatus.FAILED,
+        });
+      }
+    }
+
+    return results;
   }
 
   public async save(messaging: IMessaging): Promise<IMessaging> {

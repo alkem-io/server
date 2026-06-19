@@ -21,6 +21,7 @@ import { IConversation } from '../conversation/conversation.interface';
 import { ConversationService } from '../conversation/conversation.service';
 import { ConversationAuthorizationService } from '../conversation/conversation.service.authorization';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
+import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { Messaging } from './messaging.entity';
 import { IMessaging } from './messaging.interface';
 import { MessagingService } from './messaging.service';
@@ -34,6 +35,7 @@ describe('MessagingService', () => {
   let subscriptionPublishService: Mocked<SubscriptionPublishService>;
   let userLookupService: Mocked<UserLookupService>;
   let actorLookupService: Mocked<ActorLookupService>;
+  let roomLookupService: Mocked<RoomLookupService>;
   let messagingRepo: Mocked<Repository<Messaging>>;
   let conversationMembershipRepo: Mocked<Repository<ConversationMembership>>;
   let entityManager: Mocked<EntityManager>;
@@ -67,6 +69,12 @@ describe('MessagingService', () => {
               }),
             }),
             find: vi.fn().mockResolvedValue([]),
+            // The DIRECT dedup-or-create path now runs inside a transaction
+            // that acquires a PostgreSQL advisory lock (FR-002 race guard).
+            // Invoke the callback with a manager exposing a no-op `query`.
+            transaction: vi.fn(async (cb: any) =>
+              cb({ query: vi.fn().mockResolvedValue(undefined) })
+            ),
           };
         }
         return defaultMockerFactory(token);
@@ -82,6 +90,7 @@ describe('MessagingService', () => {
     subscriptionPublishService = module.get(SubscriptionPublishService);
     userLookupService = module.get(UserLookupService);
     actorLookupService = module.get(ActorLookupService);
+    roomLookupService = module.get(RoomLookupService);
     messagingRepo = module.get(getRepositoryToken(Messaging));
     conversationMembershipRepo = module.get(
       getRepositoryToken(ConversationMembership)
@@ -260,6 +269,136 @@ describe('MessagingService', () => {
       ).toHaveBeenCalledWith('agent-caller', 'agent-invited');
       expect(result).toBe(existingConversation);
       expect(conversationService.createConversation).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('sendDirectMessageToUsers (fan-out)', () => {
+    const sender = 'sender-actor';
+    const consenting = 'recipient-yes';
+    const denying = 'recipient-no';
+
+    const stubPlatformMessagingForCreate = () => {
+      entityManager.getRepository.mockReturnValue({
+        createQueryBuilder: vi.fn().mockReturnValue({
+          leftJoinAndSelect: vi.fn().mockReturnThis(),
+          getOne: vi.fn().mockResolvedValue({
+            messaging: { id: 'platform-messaging' } as IMessaging,
+          }),
+        }),
+      } as any);
+    };
+
+    // evaluateMemberConsent loads each recipient via getUsersByIds; return the
+    // matching settings actor (or none → treated as denying).
+    const stubConsent = (consentById: Record<string, boolean>) => {
+      userLookupService.getUsersByIds.mockImplementation(
+        async (ids: string[]) =>
+          ids
+            .filter(id => id in consentById)
+            .map(
+              id =>
+                ({
+                  id,
+                  settings: {
+                    communication: {
+                      allowOtherUsersToSendMessages: consentById[id],
+                    },
+                  },
+                }) as any
+            )
+      );
+    };
+
+    const stubCreatedConversation = (id: string, roomId: string) => {
+      const conversation = {
+        id,
+        room: { id: roomId },
+      } as unknown as IConversation;
+      conversationService.findConversationBetweenActors.mockResolvedValue(null);
+      conversationService.createConversation.mockResolvedValue(conversation);
+      conversationService.save.mockResolvedValue(conversation);
+      conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      conversationService.getConversationOrFail.mockResolvedValue(conversation);
+      return conversation;
+    };
+
+    it('mixed batch: consenting → SENT (+ conversationID), chat-disabled → BLOCKED_NO_CONSENT; only the consenting recipient is messaged (FR-013, SC-005)', async () => {
+      stubPlatformMessagingForCreate();
+      stubConsent({ [consenting]: true, [denying]: false });
+      stubCreatedConversation('conv-1', 'room-1');
+
+      const results = await service.sendDirectMessageToUsers(
+        sender,
+        [consenting, denying],
+        'hello'
+      );
+
+      expect(results).toEqual([
+        {
+          receiverID: consenting,
+          status: 'SENT',
+          conversationID: 'conv-1',
+        },
+        { receiverID: denying, status: 'BLOCKED_NO_CONSENT' },
+      ]);
+      // No conversation created for the blocked recipient; message sent once.
+      expect(conversationService.createConversation).toHaveBeenCalledTimes(1);
+      expect(roomLookupService.sendMessage).toHaveBeenCalledTimes(1);
+      expect(roomLookupService.sendMessage).toHaveBeenCalledWith(
+        expect.objectContaining({ id: 'room-1' }),
+        sender,
+        { roomID: 'room-1', message: 'hello' }
+      );
+    });
+
+    it('excludes self and de-dups recipient ids (FR-012)', async () => {
+      stubPlatformMessagingForCreate();
+      stubConsent({ [consenting]: true });
+      stubCreatedConversation('conv-1', 'room-1');
+
+      const results = await service.sendDirectMessageToUsers(
+        sender,
+        [sender, consenting, consenting],
+        'hi'
+      );
+
+      expect(results).toEqual([
+        { receiverID: consenting, status: 'SENT', conversationID: 'conv-1' },
+      ]);
+    });
+
+    it('one failing recipient → FAILED, others still delivered (no blanket failure)', async () => {
+      stubPlatformMessagingForCreate();
+      stubConsent({ [consenting]: true, 'recipient-boom': true });
+      const ok = {
+        id: 'conv-ok',
+        room: { id: 'room-ok' },
+      } as unknown as IConversation;
+      conversationService.findConversationBetweenActors.mockResolvedValue(null);
+      conversationService.save.mockResolvedValue(ok);
+      conversationAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      conversationService.getConversationOrFail.mockResolvedValue(ok);
+      // First recipient creates fine; second throws inside create.
+      conversationService.createConversation
+        .mockResolvedValueOnce(ok)
+        .mockRejectedValueOnce(new Error('boom'));
+
+      const results = await service.sendDirectMessageToUsers(
+        sender,
+        [consenting, 'recipient-boom'],
+        'msg'
+      );
+
+      expect(results).toEqual([
+        { receiverID: consenting, status: 'SENT', conversationID: 'conv-ok' },
+        { receiverID: 'recipient-boom', status: 'FAILED' },
+      ]);
     });
   });
 

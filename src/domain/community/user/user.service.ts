@@ -278,6 +278,7 @@ export class UserService {
     const settings: CreateUserSettingsInput = {
       communication: {
         allowOtherUsersToSendMessages: true,
+        allowOtherUsersToContactViaEmail: false,
       },
       privacy: {
         // Note: not currently used but will be near term.

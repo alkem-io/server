@@ -18,9 +18,12 @@ import { CurrentActor } from '@src/common/decorators';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConversationService } from '../conversation/conversation.service';
+import { MessagingService } from '../messaging/messaging.service';
+import { SendDirectMessageToUsersInput } from './dto/communication.dto.send.direct.message.to.users';
 import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communication.dto.send.message.community.leads';
 import { CommunicationSendMessageToOrganizationInput } from './dto/communication.dto.send.message.organization';
 import { CommunicationSendMessageToUsersInput } from './dto/communication.dto.send.message.users';
+import { DirectMessageDeliveryResult } from './dto/direct.message.delivery.result';
 
 @InstrumentResolver()
 @Resolver()
@@ -33,9 +36,32 @@ export class CommunicationResolverMutations {
     private readonly notificationOrganizationAdapter: NotificationOrganizationAdapter,
     private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
     private readonly conversationService: ConversationService,
+    private readonly messagingService: MessagingService,
     private readonly userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  @Mutation(() => [DirectMessageDeliveryResult], {
+    description:
+      'Send a private (1:1) chat message to each of the given Users individually. Does NOT create a group conversation. Each recipient is processed independently and reported on; partial success is possible.',
+  })
+  async sendDirectMessageToUsers(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('messageData') messageData: SendDirectMessageToUsersInput
+  ): Promise<DirectMessageDeliveryResult[]> {
+    await this.authorizationService.grantAccessOrFail(
+      actorContext,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
+      `send direct chat message from: ${actorContext.actorID}`
+    );
+
+    return await this.messagingService.sendDirectMessageToUsers(
+      actorContext.actorID,
+      messageData.receiverIDs,
+      messageData.message
+    );
+  }
 
   @Mutation(() => Boolean, {
     description: 'Send message to multiple Users.',
