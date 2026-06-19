@@ -19,6 +19,10 @@ const queryBuilderMock = (pages: any[][]) => {
     select: vi.fn(() => qb),
     addSelect: vi.fn(() => qb),
     orderBy: vi.fn(() => qb),
+    // Keyset pagination uses `limit` + `where`; keep `skip`/`take` chainable too
+    // so the mock tolerates either pagination style.
+    limit: vi.fn(() => qb),
+    where: vi.fn(() => qb),
     skip: vi.fn(() => qb),
     take: vi.fn(() => qb),
     getRawMany: vi.fn(async () => pages[call++] ?? []),

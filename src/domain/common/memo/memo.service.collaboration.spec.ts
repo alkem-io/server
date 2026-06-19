@@ -191,8 +191,14 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
 
       await service.deleteCollaborationMetadata('m1');
 
+      // contentVersion is cleared too, so a post-delete fetch can't round-trip
+      // a stale non-zero version.
       expect(qb.set).toHaveBeenCalledWith(
-        expect.objectContaining({ contentPointer: null, blobStore: null })
+        expect.objectContaining({
+          contentVersion: null,
+          contentPointer: null,
+          blobStore: null,
+        })
       );
       expect(qb.execute).toHaveBeenCalledTimes(1);
     });

@@ -10,4 +10,5 @@ export enum CollaborationErrorCode {
   NOT_FOUND = 'not_found',
   INTERNAL_ERROR = 'internal_error',
   UNKNOWN_BLOB_STORE = 'unknown_blob_store',
+  UNKNOWN_CONTENT_TYPE = 'unknown_content_type',
 }

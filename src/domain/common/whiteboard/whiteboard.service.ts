@@ -301,8 +301,10 @@ export class WhiteboardService {
       // Return the persisted contract version (`contentVersion`), NOT the
       // TypeORM `@VersionColumn`, so a reloaded room sees the version it owns.
       version: whiteboard.contentVersion ?? 0,
-      contentPointer: whiteboard.contentPointer,
-      blobStore: whiteboard.blobStore,
+      // Coerce DB NULLs (e.g. after `deleteCollaborationMetadata`) to
+      // `undefined` so the contract reply shape stays `string | undefined`.
+      contentPointer: whiteboard.contentPointer ?? undefined,
+      blobStore: whiteboard.blobStore ?? undefined,
       authorizationPolicyId: whiteboard.authorization?.id,
     };
   }
@@ -321,7 +323,7 @@ export class WhiteboardService {
   async saveCollaborationMetadata(
     whiteboardId: string,
     update: CollaborationMetadataUpdate
-  ): Promise<IWhiteboard> {
+  ): Promise<CollaborationMetadata> {
     // Ensure the whiteboard exists (structured not-found upstream) before the
     // index-only write.
     await this.getWhiteboardOrFail(whiteboardId, {
@@ -345,7 +347,9 @@ export class WhiteboardService {
       .where('id = :id', { id: whiteboardId })
       .execute();
 
-    return this.getWhiteboardOrFail(whiteboardId, {
+    // Project the persisted index back into the contract shape rather than
+    // returning a partial `IWhiteboard` (only a subset of columns is selected).
+    const whiteboard = (await this.getWhiteboardOrFail(whiteboardId, {
       loadEagerRelations: false,
       relations: { authorization: true },
       select: {
@@ -355,7 +359,14 @@ export class WhiteboardService {
         blobStore: true,
         authorization: { id: true },
       },
-    });
+    })) as Whiteboard;
+
+    return {
+      version: whiteboard.contentVersion ?? 0,
+      contentPointer: whiteboard.contentPointer ?? undefined,
+      blobStore: whiteboard.blobStore ?? undefined,
+      authorizationPolicyId: whiteboard.authorization?.id,
+    };
   }
 
   /**
@@ -368,10 +379,17 @@ export class WhiteboardService {
    * `document.deleted` to the collab service.
    */
   async deleteCollaborationMetadata(whiteboardId: string): Promise<void> {
+    // Clear `contentVersion` alongside the pointer + store so a post-delete
+    // `getCollaborationMetadata` does not round-trip a stale non-zero version
+    // (it derives `version` from `contentVersion`).
     await this.whiteboardRepository
       .createQueryBuilder()
       .update(Whiteboard)
-      .set({ contentPointer: null as any, blobStore: null as any })
+      .set({
+        contentVersion: null as any,
+        contentPointer: null as any,
+        blobStore: null as any,
+      })
       .where('id = :id', { id: whiteboardId })
       .execute();
   }

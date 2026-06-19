@@ -74,17 +74,29 @@ export class CollaborationLifecycleService {
       );
       return;
     }
-    try {
-      this.collaborationClient.emit(pattern, payload);
-    } catch (e: any) {
-      // Fire-and-forget: a failed emit must never break the owning operation
-      // (e.g. a delete). The collab service is idempotent and lazily
-      // materializes/purges, so a dropped event is recoverable.
+    // `ClientProxy.emit` returns a hot Observable: connection/dispatch run
+    // inside the stream, so broker/publication failures surface ASYNCHRONOUSLY
+    // on the error channel — a bare try/catch would miss them. Subscribe with an
+    // error handler to capture those. The surrounding try/catch only guards the
+    // (unexpected) synchronous-throw path so the contract stays fire-and-forget.
+    //
+    // Fire-and-forget: a failed emit must never break the owning operation
+    // (e.g. a delete). The collab service is idempotent and lazily
+    // materializes/purges, so a dropped event is recoverable. The error message
+    // is kept generic (no `e?.message`) to avoid leaking broker internals.
+    const logFailure = (e: any): void => {
       this.logger.error?.(
         { message: 'Failed to emit collaboration lifecycle event', pattern },
         e?.stack,
         LogContext.COLLABORATION
       );
+    };
+    try {
+      this.collaborationClient.emit(pattern, payload).subscribe({
+        error: logFailure,
+      });
+    } catch (e: any) {
+      logFailure(e);
     }
   }
 }

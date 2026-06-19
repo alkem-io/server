@@ -175,8 +175,27 @@ describe('CollaborationIntegrationService', () => {
       });
 
       expect(result.success).toBe(false);
+      // The reply carries only the typed code — no dynamic blobStore / id leak.
       expect(result.error).toBe(CollaborationErrorCode.UNKNOWN_BLOB_STORE);
       expect(memoService.saveCollaborationMetadata).not.toHaveBeenCalled();
+    });
+
+    it('rejects an unknown contentType without routing to a write path', async () => {
+      const result = await service.save({
+        id: 'doc-1',
+        contentType: 'bogus' as CollaborationContentType,
+        version: 1,
+        contentPointer: 'doc-1',
+        blobStore: BlobStoreKind.INLINE,
+      });
+
+      expect(result.success).toBe(false);
+      // Typed code only — neither the dynamic contentType nor the id leaks.
+      expect(result.error).toBe(CollaborationErrorCode.UNKNOWN_CONTENT_TYPE);
+      expect(memoService.saveCollaborationMetadata).not.toHaveBeenCalled();
+      expect(
+        whiteboardService.saveCollaborationMetadata
+      ).not.toHaveBeenCalled();
     });
 
     it('returns a structured error (no leak) when the domain save throws', async () => {
@@ -351,15 +370,20 @@ describe('CollaborationIntegrationService', () => {
       ).toHaveBeenCalledWith('doc-1');
     });
 
-    it('treats a not-found as success (idempotent)', async () => {
-      memoService.deleteCollaborationMetadata.mockRejectedValue(notFound());
+    it('treats an absent document as success (idempotent)', async () => {
+      // The domain delete is an idempotent UPDATE: a missing row resolves
+      // without throwing, so deleting an absent document is success.
+      memoService.deleteCollaborationMetadata.mockResolvedValue(undefined);
+      whiteboardService.deleteCollaborationMetadata.mockResolvedValue(
+        undefined
+      );
 
       const result = await service.delete({ id: 'gone' });
 
       expect(result).toEqual({ success: true });
     });
 
-    it('returns a structured error on an unexpected failure', async () => {
+    it('returns a structured error (no leak) on an unexpected failure', async () => {
       memoService.deleteCollaborationMetadata.mockRejectedValue(
         new Error('boom')
       );
@@ -367,6 +391,7 @@ describe('CollaborationIntegrationService', () => {
       const result = await service.delete({ id: 'doc-1' });
 
       expect(result.success).toBe(false);
+      // The raw cause must not cross the bus — only the typed code.
       expect(result.error).toBe(CollaborationErrorCode.INTERNAL_ERROR);
     });
   });
@@ -524,6 +549,18 @@ describe('CollaborationIntegrationService', () => {
       const result = await service.info({ actorId: 'actor-1', id: 'wb-1' });
 
       expect(result.read).toBe(false);
+    });
+
+    it('normalizes an unexpected lookup failure into a deny (never throws on the bus)', async () => {
+      // A non-not-found error from the metadata lookup must not escape the
+      // responder: info degrades to a deny like save/fetch/delete.
+      memoService.getCollaborationMetadata.mockRejectedValue(
+        new Error('DB down')
+      );
+
+      const result = await service.info({ actorId: 'actor-1', id: 'memo-1' });
+
+      expect(result).toEqual({ read: false, update: false });
     });
   });
 

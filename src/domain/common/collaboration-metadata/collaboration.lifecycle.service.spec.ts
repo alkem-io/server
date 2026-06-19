@@ -3,6 +3,7 @@ import { CollaborationContentType } from '@common/enums/collaboration.content.ty
 import { ClientProxy } from '@nestjs/microservices';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
+import { EMPTY, throwError } from 'rxjs';
 import { type Mocked, vi } from 'vitest';
 import { CollaborationLifecycleEvent } from './collaboration.lifecycle.event.pattern';
 import { CollaborationLifecycleService } from './collaboration.lifecycle.service';
@@ -11,10 +12,12 @@ describe('CollaborationLifecycleService', () => {
   let service: CollaborationLifecycleService;
   let client: Mocked<ClientProxy>;
 
-  const clientMock = { emit: vi.fn() };
+  // `emit` returns a hot Observable in production; the service subscribes to it.
+  const clientMock = { emit: vi.fn(() => EMPTY) };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
+    clientMock.emit.mockReturnValue(EMPTY);
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -64,10 +67,21 @@ describe('CollaborationLifecycleService', () => {
     );
   });
 
-  it('never throws when the emit fails (fire-and-forget)', () => {
+  it('never throws when emit fails synchronously (fire-and-forget)', () => {
     clientMock.emit.mockImplementationOnce(() => {
       throw new Error('broker down');
     });
+
+    expect(() => service.emitDocumentDeleted('doc-1')).not.toThrow();
+  });
+
+  it('swallows async broker failures on the Observable error channel', () => {
+    // `ClientProxy.emit` surfaces broker/publication failures asynchronously
+    // through the returned Observable, not synchronously — the service must
+    // subscribe with an error handler so they never break the owning operation.
+    clientMock.emit.mockReturnValueOnce(
+      throwError(() => new Error('broker down'))
+    );
 
     expect(() => service.emitDocumentDeleted('doc-1')).not.toThrow();
   });

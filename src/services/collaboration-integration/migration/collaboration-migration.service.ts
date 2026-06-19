@@ -52,23 +52,29 @@ export class CollaborationMigrationService {
   public async *readMemos(
     batchSize = DEFAULT_BATCH_SIZE
   ): AsyncGenerator<LegacyContentRecord> {
-    let skip = 0;
+    // Keyset pagination over the immutable `id` PK rather than offset
+    // (`skip`/`take`): the latter can skip or duplicate rows if concurrent
+    // inserts/deletes shift offsets mid-run, which would violate the one-pass,
+    // no-drop migration guarantee (plan.md §Migration; spec Edge Cases).
+    let lastId: string | undefined;
     for (;;) {
       // Raw column read (bypasses entity hooks) — memo has no @AfterLoad, but
       // we read only the columns the migration needs.
-      const rows = await this.memoRepository
+      const qb = this.memoRepository
         .createQueryBuilder('memo')
         .select('memo.id', 'id')
         .addSelect('memo.content', 'content')
         .addSelect('memo.authorizationId', 'authorizationPolicyId')
         .orderBy('memo.id', 'ASC')
-        .skip(skip)
-        .take(batchSize)
-        .getRawMany<{
-          id: string;
-          content: Buffer | null;
-          authorizationPolicyId: string | null;
-        }>();
+        .limit(batchSize);
+      if (lastId !== undefined) {
+        qb.where('memo.id > :lastId', { lastId });
+      }
+      const rows = await qb.getRawMany<{
+        id: string;
+        content: Buffer | null;
+        authorizationPolicyId: string | null;
+      }>();
 
       if (rows.length === 0) {
         break;
@@ -85,7 +91,7 @@ export class CollaborationMigrationService {
         };
       }
 
-      skip += rows.length;
+      lastId = rows[rows.length - 1].id;
       if (rows.length < batchSize) {
         break;
       }
@@ -95,24 +101,28 @@ export class CollaborationMigrationService {
   public async *readWhiteboards(
     batchSize = DEFAULT_BATCH_SIZE
   ): AsyncGenerator<LegacyContentRecord> {
-    let skip = 0;
+    // Keyset pagination over the immutable `id` PK (see `readMemos`) — offset
+    // pagination is unsafe under concurrent inserts/deletes during the run.
+    let lastId: string | undefined;
     for (;;) {
       // Read the RAW (compressed) content via the query builder so the entity
       // `@AfterLoad` decompression hook does NOT throw on a corrupt blob and
       // abort the whole batch — we decompress per-row and flag failures.
-      const rows = await this.whiteboardRepository
+      const qb = this.whiteboardRepository
         .createQueryBuilder('whiteboard')
         .select('whiteboard.id', 'id')
         .addSelect('whiteboard.content', 'content')
         .addSelect('whiteboard.authorizationId', 'authorizationPolicyId')
         .orderBy('whiteboard.id', 'ASC')
-        .skip(skip)
-        .take(batchSize)
-        .getRawMany<{
-          id: string;
-          content: string | null;
-          authorizationPolicyId: string | null;
-        }>();
+        .limit(batchSize);
+      if (lastId !== undefined) {
+        qb.where('whiteboard.id > :lastId', { lastId });
+      }
+      const rows = await qb.getRawMany<{
+        id: string;
+        content: string | null;
+        authorizationPolicyId: string | null;
+      }>();
 
       if (rows.length === 0) {
         break;
@@ -122,7 +132,7 @@ export class CollaborationMigrationService {
         yield await this.toWhiteboardRecord(row);
       }
 
-      skip += rows.length;
+      lastId = rows[rows.length - 1].id;
       if (rows.length < batchSize) {
         break;
       }

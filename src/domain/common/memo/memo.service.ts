@@ -194,8 +194,10 @@ export class MemoService {
       // Return the persisted contract version (`contentVersion`), NOT the
       // TypeORM `@VersionColumn`, so a reloaded room sees the version it owns.
       version: memo.contentVersion ?? 0,
-      contentPointer: memo.contentPointer,
-      blobStore: memo.blobStore,
+      // Coerce DB NULLs (e.g. after `deleteCollaborationMetadata`) to
+      // `undefined` so the contract reply shape stays `string | undefined`.
+      contentPointer: memo.contentPointer ?? undefined,
+      blobStore: memo.blobStore ?? undefined,
       authorizationPolicyId: memo.authorization?.id,
     };
   }
@@ -214,7 +216,7 @@ export class MemoService {
   async saveCollaborationMetadata(
     memoId: string,
     update: CollaborationMetadataUpdate
-  ): Promise<IMemo> {
+  ): Promise<CollaborationMetadata> {
     // Ensure the memo exists (structured not-found upstream) before the
     // index-only write.
     await this.getMemoOrFail(memoId, {
@@ -237,7 +239,9 @@ export class MemoService {
       .where('id = :id', { id: memoId })
       .execute();
 
-    return this.getMemoOrFail(memoId, {
+    // Project the persisted index back into the contract shape rather than
+    // returning a partial `IMemo` (only a subset of columns is selected).
+    const memo = (await this.getMemoOrFail(memoId, {
       loadEagerRelations: false,
       relations: { authorization: true },
       select: {
@@ -247,7 +251,14 @@ export class MemoService {
         blobStore: true,
         authorization: { id: true },
       },
-    });
+    })) as Memo;
+
+    return {
+      version: memo.contentVersion ?? 0,
+      contentPointer: memo.contentPointer ?? undefined,
+      blobStore: memo.blobStore ?? undefined,
+      authorizationPolicyId: memo.authorization?.id,
+    };
   }
 
   async updateMemo(
@@ -329,10 +340,17 @@ export class MemoService {
    * (`deleteMemo`), and server emits `document.deleted` to the collab service.
    */
   async deleteCollaborationMetadata(memoId: string): Promise<void> {
+    // Clear `contentVersion` alongside the pointer + store so a post-delete
+    // `getCollaborationMetadata` does not round-trip a stale non-zero version
+    // (it derives `version` from `contentVersion`).
     await this.memoRepository
       .createQueryBuilder()
       .update(Memo)
-      .set({ contentPointer: null as any, blobStore: null as any })
+      .set({
+        contentVersion: null as any,
+        contentPointer: null as any,
+        blobStore: null as any,
+      })
       .where('id = :id', { id: memoId })
       .execute();
   }

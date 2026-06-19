@@ -75,9 +75,29 @@ export class CollaborationIntegrationService {
    * server does not substitute its own counter.
    */
   public async save(data: SaveInputData): Promise<SaveOutputData> {
+    if (!this.isKnownContentType(data.contentType)) {
+      // Reject unknown/missing contentType deterministically rather than
+      // routing it to the whiteboard write path. Identifiers stay in the
+      // structured log; the reply carries only a typed error code.
+      this.logger.error?.(
+        {
+          message: 'Unknown contentType',
+          contentType: data.contentType,
+          id: data.id,
+        },
+        undefined,
+        LogContext.COLLABORATION_INTEGRATION
+      );
+      return saveError(CollaborationErrorCode.UNKNOWN_CONTENT_TYPE);
+    }
+
     if (!this.isKnownBlobStore(data.blobStore)) {
       this.logger.error?.(
-        { message: 'Unknown blobStore', blobStore: data.blobStore, id: data.id },
+        {
+          message: 'Unknown blobStore',
+          blobStore: data.blobStore,
+          id: data.id,
+        },
         undefined,
         LogContext.COLLABORATION_INTEGRATION
       );
@@ -97,6 +117,8 @@ export class CollaborationIntegrationService {
       }
       return saveSuccess();
     } catch (e: any) {
+      // Log the raw cause server-side; reply with only a typed error code so
+      // DB/stack details never cross the bus.
       this.logger.error?.(
         e?.message,
         e?.stack,
@@ -161,15 +183,14 @@ export class CollaborationIntegrationService {
       await this.whiteboardService.deleteCollaborationMetadata(data.id);
       return deleteSuccess();
     } catch (e: any) {
+      // The domain delete uses an idempotent UPDATE that does not throw on a
+      // missing row, so a not-found never reaches here — any error is a real
+      // failure. Log the cause server-side; reply with only a typed error code.
       this.logger.error?.(
         e?.message,
         e?.stack,
         LogContext.COLLABORATION_INTEGRATION
       );
-      // Idempotent: a not-found is still success.
-      if (e instanceof EntityNotFoundException) {
-        return deleteSuccess();
-      }
       return deleteError(CollaborationErrorCode.INTERNAL_ERROR);
     }
   }
@@ -181,16 +202,27 @@ export class CollaborationIntegrationService {
    * the entity's own authorization policy (OPEN-1).
    */
   public async info(data: InfoInputData): Promise<InfoOutputData> {
-    const memo = await this.tryGetMemoMetadata(data.id);
-    if (memo) {
-      return this.infoForMemo(data.actorId, data.id);
+    // Like save/fetch/delete, the responder must never throw on the bus: a
+    // metadata-lookup or service failure normalizes to a deny.
+    try {
+      const memo = await this.tryGetMemoMetadata(data.id);
+      if (memo) {
+        return this.infoForMemo(data.actorId, data.id);
+      }
+      const whiteboard = await this.tryGetWhiteboardMetadata(data.id);
+      if (whiteboard) {
+        return this.infoForWhiteboard(data.actorId, data.id);
+      }
+      // Unknown document — deny.
+      return { read: false, update: false };
+    } catch (e: any) {
+      this.logger.error?.(
+        e?.message ?? 'Failed to resolve collaboration-info',
+        e?.stack,
+        LogContext.COLLABORATION_INTEGRATION
+      );
+      return { read: false, update: false };
     }
-    const whiteboard = await this.tryGetWhiteboardMetadata(data.id);
-    if (whiteboard) {
-      return this.infoForWhiteboard(data.actorId, data.id);
-    }
-    // Unknown document — deny.
-    return { read: false, update: false };
   }
 
   /**
@@ -206,7 +238,10 @@ export class CollaborationIntegrationService {
       return this.reportWhiteboardContribution(data);
     }
     this.logger.warn?.(
-      { message: 'collaboration-contribution for unknown document', id: data.id },
+      {
+        message: 'collaboration-contribution for unknown document',
+        id: data.id,
+      },
       LogContext.COLLABORATION_INTEGRATION
     );
   }
@@ -362,6 +397,15 @@ export class CollaborationIntegrationService {
       }
       throw e;
     }
+  }
+
+  private isKnownContentType(
+    value: unknown
+  ): value is CollaborationContentType {
+    return (
+      value === CollaborationContentType.MEMO ||
+      value === CollaborationContentType.WHITEBOARD
+    );
   }
 
   private isKnownBlobStore(value: string): value is BlobStoreKind {
