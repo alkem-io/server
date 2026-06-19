@@ -471,25 +471,78 @@ services:
     depends_on:
       - redis
 
-  whiteboard-collaboration:
-    container_name: alkemio_dev_whiteboard_collaboration
-    hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.10.1
+  # Unified real-time collaboration service (epic 003-unify-collab-yjs).
+  # Replaces the two legacy backends: whiteboard-collaboration-service (was 4002)
+  # and collaborative-document-service (was 4004). One Go service, one CRDT
+  # protocol (Yjs), serving BOTH whiteboards and memos over raw WebSocket at
+  # /collab/{documentId}. The browser reaches it through Traefik (see the
+  # `collaboration` router in .build/traefik/http.yml). Persistence rides the
+  # server's RabbitMQ bus (queue `alkemio-collaboration`); snapshot blobs are
+  # offloaded to file-service.
+  #
+  # Alkemio topology (mirrors collaboration-service deploy/k8s/base/configmap.yaml):
+  #   FANOUT_MODE=redis · METADATA_STORE=rabbitmq · BLOB_STORE=file-service ·
+  #   AUTH_MODE=authzeval. For a zero-dependency smoke test that isolates the WS
+  #   path from authZ, override AUTH_MODE=open + BLOB_STORE=inline + METADATA_STORE=inmemory
+  #   (see docs/local-collab-testing.md).
+  collaboration:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_collaboration
+    hostname: collaboration
+    # OPEN-1 PR image (waves 1-4 + the client-facing `reason` field on auth
+    # control messages). Tracks the latest push on collaboration-service PR #5;
+    # repin the digest once the PR settles.
+    image: ghcr.io/alkem-io/collaboration-service:pr-5
     depends_on:
       rabbitmq:
         condition: service_healthy
+      redis:
+        condition: service_started
+      file-service:
+        condition: service_started
+      authorization-evaluation:
+        condition: service_started
     environment:
-      - RABBITMQ_HOST
+      # --- service ---
+      - PORT=4006
+      # --- pluggable ports: Alkemio topology ---
+      - FANOUT_MODE=redis
+      - METADATA_STORE=rabbitmq
+      - BLOB_STORE=file-service
+      - AUTH_MODE=authzeval
+      # --- redis fan-out (FANOUT_MODE=redis) ---
+      - REDIS_URL=redis://redis:6379/0
+      # --- RabbitMQ metadata bus (METADATA_STORE=rabbitmq) ---
+      # Unified contract: collaboration-save/-fetch/-delete/-info/-contribution
+      # on the queue shared with the server (main.ts connects the same queue).
+      - RABBITMQ_HOST=rabbitmq
+      - RABBITMQ_PORT=5672
       - RABBITMQ_USER
       - RABBITMQ_PASSWORD
-      - LOGGING_CONSOLE_ENABLED
-      - LOGGING_LEVEL_CONSOLE
-      - ENVIRONMENT=dev
+      - RABBITMQ_QUEUE=alkemio-collaboration
+      # --- file-service blob offload (BLOB_STORE=file-service) ---
+      - FILE_SERVICE_URL=http://file-service:4003
+      - MAX_UPLOAD_SIZE=33554432
+      # Environment-scoped UUIDs naming rows provisioned in THIS dev DB's seed
+      # (the platform direct storage bucket + its authorization policy). They are
+      # random per seed run, so they must be filled in from .env.docker AFTER the
+      # DB is seeded — see docs/local-collab-testing.md for the extraction SQL.
+      # These are NOT secrets; they are pure references.
+      - FILE_SERVICE_STORAGE_BUCKET_ID=${COLLAB_FILE_SERVICE_STORAGE_BUCKET_ID}
+      - FILE_SERVICE_AUTHORIZATION_ID=${COLLAB_FILE_SERVICE_AUTHORIZATION_ID}
+      # --- authZ via authorization-evaluation-service (AUTH_MODE=authzeval) ---
+      # Dev hostname is `authorization-evaluation` (the configmap default
+      # `authorization-evaluation-service` is the k8s service name).
+      - AUTH_SERVICE_URL=http://authorization-evaluation:6060
+      - AUTH_BREAKER_FAILURE_THRESHOLD=3
+      - AUTH_BREAKER_TIMEOUT_SECONDS=15
+      - AUTH_BREAKER_HALF_OPEN_MAX_REQUESTS=2
     restart: always
     networks:
       - alkemio_dev_net
     ports:
-      - 4002
+      - 4006
 
   file-service:
     extra_hosts:
@@ -551,25 +604,10 @@ services:
     ports:
       - 8080
 
-  collaborative-document:
-    container_name: alkemio_dev_collaborative-document
-    hostname: collaborative-document
-    image: alkemio/collaborative-document-service:v0.3.0
-    depends_on:
-      rabbitmq:
-        condition: service_healthy
-    environment:
-      - RABBITMQ_HOST
-      - RABBITMQ_USER
-      - RABBITMQ_PASSWORD
-      - LOGGING_CONSOLE_ENABLED
-      - LOGGING_LEVEL_CONSOLE
-      - ENVIRONMENT=dev
-    restart: always
-    networks:
-      - alkemio_dev_net
-    ports:
-      - 4004
+  # NOTE: collaborative-document-service (legacy memo backend, was port 4004)
+  # and whiteboard-collaboration-service (legacy whiteboard backend, was 4002)
+  # are removed — both are superseded by the unified `collaboration` service
+  # above (epic 003-unify-collab-yjs).
 
   authorization-evaluation:
     extra_hosts:

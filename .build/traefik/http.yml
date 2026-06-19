@@ -81,15 +81,14 @@ http:
         servers:
           - url: 'http://synapse-admin:80/'
 
-    whiteboard-collaboration:
+    # Unified real-time collaboration service (epic 003-unify-collab-yjs).
+    # Replaces the legacy whiteboard-collaboration (4002) + collaborative-document
+    # (4004) backends. Serves both whiteboards and memos over raw WebSocket at
+    # /collab/{documentId}.
+    collaboration:
       loadBalancer:
         servers:
-          - url: 'http://whiteboard-collaboration:4002/'
-
-    collaborative-document:
-      loadBalancer:
-        servers:
-          - url: 'http://collaborative-document:4004/'
+          - url: 'http://collaboration:4006/'
 
     authorization-evaluation:
       loadBalancer:
@@ -250,22 +249,24 @@ http:
       entryPoints:
         - 'web'
 
-    whiteboard-collaboration:
-      rule: 'PathPrefix(`/api/private/ws`)'
-      service: 'whiteboard-collaboration'
+    # Unified collaboration WebSocket (epic 003-unify-collab-yjs).
+    # The client's UnifiedCollabProvider (y-websocket) opens
+    #   ws://localhost:3000/collab/<documentId>?type=memo|whiteboard
+    # so the path reaches the service VERBATIM (no strip) at /collab/{documentId}.
+    # oathkeeper-auth-socket-io performs forwardAuth and injects the resolved
+    # identity into the `Authorization` header, which the collaboration-service
+    # consumes as the actor id at the handshake (AUTH_MODE=authzeval). This is the
+    # same forwardAuth the legacy whiteboard route used.
+    # Replaces the legacy `whiteboard-collaboration` (/api/private/ws) and
+    # `collaborative-document` (/api/private/hocuspocus) routers.
+    collaboration:
+      rule: 'PathPrefix(`/collab`)'
+      service: 'collaboration'
       middlewares:
-        - strip-api-private-prefix-socket-io
         - oathkeeper-auth-socket-io
       entryPoints:
         - 'web'
-
-    collaborative-document:
-      rule: 'PathPrefix(`/api/private/hocuspocus`)'
-      service: 'oathkeeper-proxy'
-      middlewares:
-        - strip-api-private-prefix
-      entryPoints:
-        - 'web'
+      priority: 150
 
     # more specific than 'api-private-rest'
     file-service:
