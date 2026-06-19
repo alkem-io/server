@@ -148,7 +148,7 @@ export class CollaborationMigrationService {
       return { ...base, content: await decompressText(row.content) };
     } catch (e: any) {
       this.logger.warn?.(
-        `Migration: failed to decompress whiteboard ${row.id}: ${e?.message}`,
+        { message: 'Migration: failed to decompress whiteboard', id: row.id },
         LogContext.COLLABORATION_INTEGRATION
       );
       return {

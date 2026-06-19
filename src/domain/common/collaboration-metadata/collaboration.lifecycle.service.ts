@@ -69,7 +69,7 @@ export class CollaborationLifecycleService {
   ): void {
     if (!this.collaborationClient) {
       this.logger.warn?.(
-        `Collaboration lifecycle client unavailable; skipped '${pattern}'`,
+        { message: 'Collaboration lifecycle client unavailable', pattern },
         LogContext.COLLABORATION
       );
       return;
@@ -81,7 +81,7 @@ export class CollaborationLifecycleService {
       // (e.g. a delete). The collab service is idempotent and lazily
       // materializes/purges, so a dropped event is recoverable.
       this.logger.error?.(
-        `Failed to emit collaboration lifecycle event '${pattern}': ${e?.message}`,
+        { message: 'Failed to emit collaboration lifecycle event', pattern },
         e?.stack,
         LogContext.COLLABORATION
       );

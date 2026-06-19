@@ -1,4 +1,5 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -29,7 +30,7 @@ import {
   saveError,
   saveSuccess,
 } from './outputs';
-import { CollaborationContentType } from './types';
+import { CollaborationContentType, CollaborationErrorCode } from './types';
 
 /**
  * Unified collaboration persistence/lifecycle consumer (server is the
@@ -75,13 +76,12 @@ export class CollaborationIntegrationService {
    */
   public async save(data: SaveInputData): Promise<SaveOutputData> {
     if (!this.isKnownBlobStore(data.blobStore)) {
-      const message = `Unknown blobStore '${data.blobStore}' for document ${data.id}`;
       this.logger.error?.(
-        message,
+        { message: 'Unknown blobStore', blobStore: data.blobStore, id: data.id },
         undefined,
         LogContext.COLLABORATION_INTEGRATION
       );
-      return saveError(message);
+      return saveError(CollaborationErrorCode.UNKNOWN_BLOB_STORE);
     }
 
     try {
@@ -97,13 +97,12 @@ export class CollaborationIntegrationService {
       }
       return saveSuccess();
     } catch (e: any) {
-      const message = e?.message ?? JSON.stringify(e);
       this.logger.error?.(
-        message,
+        e?.message,
         e?.stack,
         LogContext.COLLABORATION_INTEGRATION
       );
-      return saveError(message);
+      return saveError(CollaborationErrorCode.INTERNAL_ERROR);
     }
   }
 
@@ -147,7 +146,7 @@ export class CollaborationIntegrationService {
         e?.stack,
         LogContext.COLLABORATION_INTEGRATION
       );
-      return fetchError('An error occurred while fetching the document index.');
+      return fetchError(CollaborationErrorCode.INTERNAL_ERROR);
     }
   }
 
@@ -162,9 +161,8 @@ export class CollaborationIntegrationService {
       await this.whiteboardService.deleteCollaborationMetadata(data.id);
       return deleteSuccess();
     } catch (e: any) {
-      const message = e?.message ?? JSON.stringify(e);
       this.logger.error?.(
-        message,
+        e?.message,
         e?.stack,
         LogContext.COLLABORATION_INTEGRATION
       );
@@ -172,7 +170,7 @@ export class CollaborationIntegrationService {
       if (e instanceof EntityNotFoundException) {
         return deleteSuccess();
       }
-      return deleteError(message);
+      return deleteError(CollaborationErrorCode.INTERNAL_ERROR);
     }
   }
 
@@ -208,7 +206,7 @@ export class CollaborationIntegrationService {
       return this.reportWhiteboardContribution(data);
     }
     this.logger.warn?.(
-      `collaboration-contribution for unknown document: ${data.id}`,
+      { message: 'collaboration-contribution for unknown document', id: data.id },
       LogContext.COLLABORATION_INTEGRATION
     );
   }
@@ -366,12 +364,7 @@ export class CollaborationIntegrationService {
     }
   }
 
-  private isKnownBlobStore(value: string): boolean {
-    return (
-      value === 'inline' ||
-      value === 'file-service' ||
-      value === 's3' ||
-      value === 'local'
-    );
+  private isKnownBlobStore(value: string): value is BlobStoreKind {
+    return (Object.values(BlobStoreKind) as string[]).includes(value);
   }
 }

@@ -14,6 +14,7 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock, vi } from 'vitest';
 import { CollaborationIntegrationService } from './collaboration-integration.service';
+import { CollaborationErrorCode } from './types';
 
 const memoMeta = {
   version: 4,
@@ -174,7 +175,7 @@ describe('CollaborationIntegrationService', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toContain('bogus');
+      expect(result.error).toBe(CollaborationErrorCode.UNKNOWN_BLOB_STORE);
       expect(memoService.saveCollaborationMetadata).not.toHaveBeenCalled();
     });
 
@@ -190,7 +191,7 @@ describe('CollaborationIntegrationService', () => {
       });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
+      expect(result.error).toBe(CollaborationErrorCode.INTERNAL_ERROR);
     });
   });
 
@@ -240,7 +241,7 @@ describe('CollaborationIntegrationService', () => {
       const result = await service.fetch({ id: 'memo-1' });
 
       expect(result.found).toBe(false);
-      expect(result.error).toBeDefined();
+      expect(result.error).toBe(CollaborationErrorCode.INTERNAL_ERROR);
     });
 
     it('returns a structured error when the whiteboard lookup throws a non-not-found error', async () => {
@@ -252,7 +253,7 @@ describe('CollaborationIntegrationService', () => {
       const result = await service.fetch({ id: 'wb-1' });
 
       expect(result.found).toBe(false);
-      expect(result.error).toBeDefined();
+      expect(result.error).toBe(CollaborationErrorCode.INTERNAL_ERROR);
     });
   });
 
@@ -366,7 +367,7 @@ describe('CollaborationIntegrationService', () => {
       const result = await service.delete({ id: 'doc-1' });
 
       expect(result.success).toBe(false);
-      expect(result.error).toBeDefined();
+      expect(result.error).toBe(CollaborationErrorCode.INTERNAL_ERROR);
     });
   });
 
