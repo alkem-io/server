@@ -146,6 +146,9 @@ export class CollaborationIntegrationService {
           contentPointer: memo.contentPointer,
           blobStore: memo.blobStore,
           authorizationPolicyId: memo.authorizationPolicyId,
+          // The memo's OWN storage bucket — collab persists this doc's snapshot
+          // there, not into a single flat platform bucket.
+          storageBucketId: memo.storageBucketId,
         };
       }
 
@@ -158,6 +161,8 @@ export class CollaborationIntegrationService {
           contentPointer: whiteboard.contentPointer,
           blobStore: whiteboard.blobStore,
           authorizationPolicyId: whiteboard.authorizationPolicyId,
+          // The whiteboard's OWN storage bucket (see memo note above).
+          storageBucketId: whiteboard.storageBucketId,
         };
       }
 

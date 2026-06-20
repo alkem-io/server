@@ -56,7 +56,7 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
   });
 
   describe('getCollaborationMetadata', () => {
-    it('returns the persisted contract version (contentVersion) + the entity policy id (FR-004/FR-005)', async () => {
+    it("returns the persisted contract version (contentVersion) + the entity policy id + the doc's own storage bucket id (FR-004/FR-005)", async () => {
       whiteboardRepo.findOne.mockResolvedValue({
         id: 'w1',
         // The TypeORM @VersionColumn is unrelated to the contract version; it
@@ -66,6 +66,9 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
         contentPointer: 'w1',
         blobStore: BlobStoreKind.INLINE,
         authorization: { id: 'policy-w' },
+        // The whiteboard's OWN bucket via its profile — where this doc's
+        // snapshots go.
+        profile: { id: 'profile-w', storageBucket: { id: 'bucket-w' } },
       });
 
       const meta = await service.getCollaborationMetadata('w1');
@@ -75,7 +78,24 @@ describe('WhiteboardService — collaboration metadata + lifecycle', () => {
         contentPointer: 'w1',
         blobStore: BlobStoreKind.INLINE,
         authorizationPolicyId: 'policy-w',
+        storageBucketId: 'bucket-w',
       });
+    });
+
+    it('leaves storageBucketId undefined when the whiteboard has no profile storage bucket', async () => {
+      whiteboardRepo.findOne.mockResolvedValue({
+        id: 'w1',
+        version: 3,
+        contentVersion: 21,
+        contentPointer: 'w1',
+        blobStore: BlobStoreKind.INLINE,
+        authorization: { id: 'policy-w' },
+        profile: { id: 'profile-w', storageBucket: undefined },
+      });
+
+      const meta = await service.getCollaborationMetadata('w1');
+
+      expect(meta.storageBucketId).toBeUndefined();
     });
 
     it('reads 0 when no contract version has been persisted yet (NULL contentVersion)', async () => {

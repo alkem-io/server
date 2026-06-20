@@ -17,6 +17,13 @@ export interface FetchOutputData {
   blobStore?: BlobStoreKind;
   /** OPEN-1 / FR-005 — the entity's own AuthorizationPolicy.id. */
   authorizationPolicyId?: string;
+  /**
+   * The document's own `profile.storageBucket.id` — where snapshots/blobs for
+   * THIS document must be stored. Lets the collaboration-service persist each
+   * Yjs snapshot into the document's own storage bucket rather than a single
+   * flat platform bucket.
+   */
+  storageBucketId?: string;
   ownerRef?: string;
   error?: string;
 }

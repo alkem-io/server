@@ -287,13 +287,17 @@ export class WhiteboardService {
   ): Promise<CollaborationMetadata> {
     const whiteboard = (await this.getWhiteboardOrFail(whiteboardId, {
       loadEagerRelations: false,
-      relations: { authorization: true },
+      relations: {
+        authorization: true,
+        profile: { storageBucket: true },
+      },
       select: {
         id: true,
         contentVersion: true,
         contentPointer: true,
         blobStore: true,
         authorization: { id: true },
+        profile: { id: true, storageBucket: { id: true } },
       },
     })) as Whiteboard;
 
@@ -306,6 +310,9 @@ export class WhiteboardService {
       contentPointer: whiteboard.contentPointer ?? undefined,
       blobStore: whiteboard.blobStore ?? undefined,
       authorizationPolicyId: whiteboard.authorization?.id,
+      // The whiteboard's OWN storage bucket (via its profile) — the collab
+      // service persists this doc's snapshot into this bucket, not a flat one.
+      storageBucketId: whiteboard.profile?.storageBucket?.id,
     };
   }
 

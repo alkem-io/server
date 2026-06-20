@@ -22,6 +22,11 @@ export interface CollaborationMetadata {
   blobStore?: BlobStoreKind;
   /** the entity's own AuthorizationPolicy.id (= `authorizationId`), FR-005. */
   authorizationPolicyId?: string;
+  /**
+   * The document's own `profile.storageBucket.id` — where snapshots/blobs for
+   * this doc must be stored (its own bucket, not a flat platform bucket).
+   */
+  storageBucketId?: string;
 }
 
 /**

@@ -21,12 +21,14 @@ const memoMeta = {
   contentPointer: 'memo-1',
   blobStore: BlobStoreKind.INLINE,
   authorizationPolicyId: 'policy-memo',
+  storageBucketId: 'bucket-memo',
 };
 const whiteboardMeta = {
   version: 7,
   contentPointer: 'wb-1',
   blobStore: BlobStoreKind.INLINE,
   authorizationPolicyId: 'policy-wb',
+  storageBucketId: 'bucket-wb',
 };
 
 describe('CollaborationIntegrationService', () => {
@@ -215,7 +217,7 @@ describe('CollaborationIntegrationService', () => {
   });
 
   describe('fetch', () => {
-    it('returns the memo index incl. authorizationPolicyId (FR-005)', async () => {
+    it('returns the memo index incl. authorizationPolicyId + per-document storageBucketId (FR-005)', async () => {
       memoService.getCollaborationMetadata.mockResolvedValue(memoMeta);
 
       const result = await service.fetch({ id: 'memo-1' });
@@ -227,10 +229,13 @@ describe('CollaborationIntegrationService', () => {
         contentPointer: 'memo-1',
         blobStore: BlobStoreKind.INLINE,
         authorizationPolicyId: 'policy-memo',
+        // The memo's OWN bucket flows through the reply so the collab service
+        // persists this doc's snapshot there, not into a flat platform bucket.
+        storageBucketId: 'bucket-memo',
       });
     });
 
-    it('falls through to whiteboard when the id is not a memo', async () => {
+    it('falls through to whiteboard when the id is not a memo (incl. its own storageBucketId)', async () => {
       memoService.getCollaborationMetadata.mockRejectedValue(notFound());
       whiteboardService.getCollaborationMetadata.mockResolvedValue(
         whiteboardMeta
@@ -241,6 +246,8 @@ describe('CollaborationIntegrationService', () => {
       expect(result.found).toBe(true);
       expect(result.contentType).toBe(CollaborationContentType.WHITEBOARD);
       expect(result.authorizationPolicyId).toBe('policy-wb');
+      // The whiteboard carries its OWN storage bucket, distinct from the memo's.
+      expect(result.storageBucketId).toBe('bucket-wb');
     });
 
     it('returns a structured not-found for an absent id (FR-004)', async () => {

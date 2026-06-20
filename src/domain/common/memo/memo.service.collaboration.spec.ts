@@ -53,7 +53,7 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
   });
 
   describe('getCollaborationMetadata', () => {
-    it('returns the persisted contract version (contentVersion) + the entity policy id (FR-004/FR-005)', async () => {
+    it("returns the persisted contract version (contentVersion) + the entity policy id + the doc's own storage bucket id (FR-004/FR-005)", async () => {
       memoRepo.findOne.mockResolvedValue({
         id: 'm1',
         // The TypeORM @VersionColumn is unrelated to the contract version; it
@@ -63,6 +63,8 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
         contentPointer: 'm1',
         blobStore: BlobStoreKind.INLINE,
         authorization: { id: 'policy-1' },
+        // The memo's OWN bucket via its profile — where this doc's snapshots go.
+        profile: { id: 'profile-1', storageBucket: { id: 'bucket-1' } },
       });
 
       const meta = await service.getCollaborationMetadata('m1');
@@ -72,7 +74,24 @@ describe('MemoService — collaboration metadata + lifecycle', () => {
         contentPointer: 'm1',
         blobStore: BlobStoreKind.INLINE,
         authorizationPolicyId: 'policy-1',
+        storageBucketId: 'bucket-1',
       });
+    });
+
+    it('leaves storageBucketId undefined when the memo has no profile storage bucket', async () => {
+      memoRepo.findOne.mockResolvedValue({
+        id: 'm1',
+        version: 9,
+        contentVersion: 42,
+        contentPointer: 'm1',
+        blobStore: BlobStoreKind.INLINE,
+        authorization: { id: 'policy-1' },
+        profile: { id: 'profile-1', storageBucket: undefined },
+      });
+
+      const meta = await service.getCollaborationMetadata('m1');
+
+      expect(meta.storageBucketId).toBeUndefined();
     });
 
     it('reads 0 when no contract version has been persisted yet (NULL contentVersion)', async () => {

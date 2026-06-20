@@ -180,13 +180,17 @@ export class MemoService {
   ): Promise<CollaborationMetadata> {
     const memo = (await this.getMemoOrFail(memoId, {
       loadEagerRelations: false,
-      relations: { authorization: true },
+      relations: {
+        authorization: true,
+        profile: { storageBucket: true },
+      },
       select: {
         id: true,
         contentVersion: true,
         contentPointer: true,
         blobStore: true,
         authorization: { id: true },
+        profile: { id: true, storageBucket: { id: true } },
       },
     })) as Memo;
 
@@ -199,6 +203,9 @@ export class MemoService {
       contentPointer: memo.contentPointer ?? undefined,
       blobStore: memo.blobStore ?? undefined,
       authorizationPolicyId: memo.authorization?.id,
+      // The memo's OWN storage bucket (via its profile) — the collab service
+      // persists this doc's snapshot into this bucket, not a flat platform one.
+      storageBucketId: memo.profile?.storageBucket?.id,
     };
   }
 
