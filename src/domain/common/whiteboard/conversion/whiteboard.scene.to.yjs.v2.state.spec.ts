@@ -1,6 +1,9 @@
 import * as Y from 'yjs';
 import { EMPTY_WHITEBOARD_CONTENT } from '../empty.whiteboard.content';
-import { whiteboardSceneToYjsV2State } from './whiteboard.scene.to.yjs.v2.state';
+import {
+  whiteboardSceneToYjsV2State,
+  whiteboardYjsV2StateToScene,
+} from './whiteboard.scene.to.yjs.v2.state';
 
 /**
  * Applies a V2 snapshot into a fresh server-side `Y.Doc` (the same `yjs` instance
@@ -230,5 +233,82 @@ describe('whiteboardSceneToYjsV2State', () => {
     expect(
       decode(whiteboardSceneToYjsV2State('{"foo":"bar"}')).elementIds
     ).toHaveLength(0);
+  });
+});
+
+/**
+ * Parity guard: the conversion must round-trip a scene through the binding
+ * (scene → V2 bytes → scene) lossless on elements / appState / files, so the
+ * server and the editor (client-web) share ONE encoding — no drift. The sample
+ * is shaped so the round-trip is canonical: every element already carries a
+ * fractional `index` (no re-seed), no reconciliation metadata
+ * (`version`/`versionNonce`/`updated`, which the binding deliberately drops),
+ * and only allow-listed appState keys — so equality is exact, not "modulo the
+ * binding's documented transforms".
+ */
+describe('whiteboardYjsV2StateToScene (binding round-trip parity)', () => {
+  it('round-trips a sample scene scene→bytes→scene lossless on elements/appState/files', () => {
+    const scene = {
+      type: 'excalidraw',
+      version: 2,
+      source: '',
+      elements: [
+        {
+          id: 'rect',
+          type: 'rectangle',
+          x: 0,
+          y: 0,
+          width: 100,
+          height: 50,
+          index: 'a0',
+          points: [
+            [0, 0],
+            [10, 10],
+          ],
+          boundElements: [{ id: 'arrow-1', type: 'arrow' }],
+        },
+        {
+          id: 'ellipse',
+          type: 'ellipse',
+          x: 5,
+          y: 5,
+          width: 20,
+          height: 20,
+          index: 'a1',
+        },
+      ],
+      appState: { viewBackgroundColor: '#abcdef', name: 'sample' },
+      files: {
+        'file-1': { id: 'file-1', mimeType: 'image/png', dataURL: 'data:...' },
+      },
+    } as const;
+
+    const roundTripped = JSON.parse(
+      whiteboardYjsV2StateToScene(
+        whiteboardSceneToYjsV2State(JSON.stringify(scene))
+      )
+    );
+
+    expect(roundTripped.elements).toEqual(scene.elements);
+    expect(roundTripped.appState).toEqual(scene.appState);
+    expect(roundTripped.files).toEqual(scene.files);
+  });
+
+  it('returns the canonical empty scene for an undecodable snapshot', () => {
+    const scene = JSON.parse(
+      whiteboardYjsV2StateToScene(new Uint8Array([1, 2, 3, 4]))
+    );
+    expect(scene.elements).toHaveLength(0);
+    expect(scene.appState).toEqual({});
+    expect(scene.files).toEqual({});
+  });
+
+  it('returns an empty-element scene when round-tripping empty content', () => {
+    const scene = JSON.parse(
+      whiteboardYjsV2StateToScene(
+        whiteboardSceneToYjsV2State(EMPTY_WHITEBOARD_CONTENT)
+      )
+    );
+    expect(scene.elements).toHaveLength(0);
   });
 });
