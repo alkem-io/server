@@ -7,6 +7,7 @@ import {
 import { ProfileDocumentsService } from '@domain/profile-documents/profile.documents.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -26,6 +27,7 @@ describe('MemoService', () => {
   let authorizationPolicyService: AuthorizationPolicyService;
   let profileService: ProfileService;
   let profileDocumentsService: ProfileDocumentsService;
+  let fileServiceAdapter: FileServiceAdapter;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -53,6 +55,7 @@ describe('MemoService', () => {
     authorizationPolicyService = module.get(AuthorizationPolicyService);
     profileService = module.get(ProfileService);
     profileDocumentsService = module.get(ProfileDocumentsService);
+    fileServiceAdapter = module.get(FileServiceAdapter);
   });
 
   describe('getMemoOrFail', () => {
@@ -205,11 +208,11 @@ describe('MemoService', () => {
       ).rejects.toThrow(EntityNotInitializedException);
     });
 
-    it('should reupload documents and save updated content', async () => {
+    it('reuploads embedded media then writes the snapshot to the bucket + sets the pointer', async () => {
       const memo = {
         id: 'memo-1',
         profile: { id: 'p1', storageBucket: { id: 'sb-1' } },
-        content: undefined,
+        contentPointer: undefined,
       } as unknown as IMemo;
 
       memoRepository.findOne!.mockResolvedValue(memo);
@@ -217,6 +220,13 @@ describe('MemoService', () => {
       (
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket as Mock
       ).mockResolvedValue('reuploaded content');
+      (fileServiceAdapter.createSnapshotInBucket as Mock).mockResolvedValue({
+        id: 'snap-new',
+        externalID: 'ext',
+        mimeType: 'application/octet-stream',
+        size: 10,
+        reused: false,
+      });
 
       const result = await service.updateMemoContent(
         'memo-1',
@@ -226,7 +236,13 @@ describe('MemoService', () => {
       expect(
         profileDocumentsService.reuploadDocumentsInMarkdownToStorageBucket
       ).toHaveBeenCalled();
-      expect(result.content).toBeDefined();
+      // Content is written to the document's bucket as a Yjs-V2 snapshot, not the
+      // dropped inline column; the pointer is recorded on the entity.
+      expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        'sb-1'
+      );
+      expect(result.contentPointer).toBe('snap-new');
     });
   });
 

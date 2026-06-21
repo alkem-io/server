@@ -6,6 +6,7 @@ import { WhiteboardModule } from '@domain/common/whiteboard';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
+import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CollaborationIntegrationController } from './collaboration-integration.controller';
@@ -26,6 +27,7 @@ import { CollaborationMigrationService } from './migration';
     WhiteboardModule,
     ContributionReporterModule,
     EntityResolverModule,
+    FileServiceAdapterModule,
     // Direct repo access for the one-pass migration read (FR-009).
     TypeOrmModule.forFeature([Memo, Whiteboard]),
   ],

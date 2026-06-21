@@ -7,6 +7,7 @@ import { MemoService } from '@domain/common/memo';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { AlkemioConfig } from '@src/types';
@@ -54,7 +55,8 @@ export class CollaborationIntegrationService {
     private readonly whiteboardService: WhiteboardService,
     private readonly contributionReporter: ContributionReporterService,
     private readonly communityResolver: CommunityResolverService,
-    private readonly configService: ConfigService<AlkemioConfig, true>
+    private readonly configService: ConfigService<AlkemioConfig, true>,
+    private readonly fileServiceAdapter: FileServiceAdapter
   ) {
     this.memoMaxCollaboratorsInRoom = this.configService.get(
       'collaboration.memo.max_collaborators_in_room',
@@ -149,6 +151,9 @@ export class CollaborationIntegrationService {
           // The memo's OWN storage bucket — collab persists this doc's snapshot
           // there, not into a single flat platform bucket.
           storageBucketId: memo.storageBucketId,
+          // First-open seed (R4/FR-003): the stored snapshot so a freshly created
+          // memo materializes with its creation content if no live snapshot exists.
+          content: await this.readSeedContent(memo.contentPointer),
         };
       }
 
@@ -163,6 +168,8 @@ export class CollaborationIntegrationService {
           authorizationPolicyId: whiteboard.authorizationPolicyId,
           // The whiteboard's OWN storage bucket (see memo note above).
           storageBucketId: whiteboard.storageBucketId,
+          // First-open seed (R4/FR-003) — see memo note above.
+          content: await this.readSeedContent(whiteboard.contentPointer),
         };
       }
 
@@ -391,6 +398,38 @@ export class CollaborationIntegrationService {
         { actorID: id }
       )
     );
+  }
+
+  /**
+   * Reads the document's stored Yjs-V2 snapshot from file-service for the
+   * first-open seed (R4/FR-003), returning it base64-encoded for the
+   * `collaboration-fetch` reply (`FetchReply.Content` → `Metadata.SeedContent`).
+   * No pointer (empty-on-create) → `undefined` so the room stays empty + editable
+   * (FR-010). A read failure also yields `undefined` (the bus must not throw): the
+   * collab service then materializes empty rather than failing the open; a live
+   * snapshot, once written, supersedes the seed anyway.
+   */
+  private async readSeedContent(
+    contentPointer?: string
+  ): Promise<string | undefined> {
+    if (!contentPointer) {
+      return undefined;
+    }
+    try {
+      const blob =
+        await this.fileServiceAdapter.getDocumentContent(contentPointer);
+      return blob.toString('base64');
+    } catch (e: any) {
+      this.logger.warn?.(
+        {
+          message: 'collaboration-fetch: failed to read seed content',
+          contentPointer,
+          error: e?.message,
+        },
+        LogContext.COLLABORATION_INTEGRATION
+      );
+      return undefined;
+    }
   }
 
   private async tryGetMemoMetadata(id: string) {

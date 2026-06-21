@@ -3,16 +3,15 @@ import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { INameable } from '../entity/nameable-entity/nameable.interface';
-import { WhiteboardContent } from '../scalars/scalar.whiteboard.content';
 import { IWhiteboardPreviewSettings } from './whiteboard.preview.settings.interface';
 
 @ObjectType('Whiteboard')
 export abstract class IWhiteboard extends INameable {
-  @Field(() => WhiteboardContent, {
-    nullable: false,
-    description: 'The visual content of the Whiteboard.',
-  })
-  content!: string;
+  // The GraphQL `content` field (Excalidraw JSON String) is REMOVED
+  // (006-collab-content-unification — breaking, coupled to client-web at cutover):
+  // whiteboard content is no longer a server-held JSON string. It lives ONLY as a
+  // Yjs-V2 snapshot in the document's own storage bucket and is read/written via
+  // the unified collaboration session (the client's editor Y.Doc), not the API.
 
   // Internal metadata/index columns (FR-001) — not exposed on the GraphQL API.
   contentPointer?: string;

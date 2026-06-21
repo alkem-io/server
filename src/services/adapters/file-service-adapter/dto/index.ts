@@ -1,3 +1,7 @@
+export {
+  ContentBatchItemResult,
+  ContentBatchResponse,
+} from './content.batch.result';
 export { CopyDocumentInput } from './copy.document.input';
 export { CreateDocumentMetadata } from './create.document.metadata';
 export { CreateDocumentResult } from './create.document.result';

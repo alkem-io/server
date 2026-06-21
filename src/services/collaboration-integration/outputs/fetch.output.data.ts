@@ -24,6 +24,17 @@ export interface FetchOutputData {
    * flat platform bucket.
    */
   storageBucketId?: string;
+  /**
+   * The document's stored content for the FIRST-OPEN SEED (R4 / FR-003): the
+   * Yjs-V2 snapshot bytes, base64-encoded, matching the collaboration-service
+   * `FetchReply.Content` → `Metadata.SeedContent` wire contract. A freshly created
+   * document whose content the server persisted but which has no LIVE collab
+   * snapshot yet materializes from this on first open instead of opening empty.
+   * Omitted (undefined) when the document has no stored content (empty-on-create)
+   * so an empty document stays empty + editable (FR-010). A live snapshot is
+   * authoritative — the collab service ignores this seed once one exists.
+   */
+  content?: string;
   ownerRef?: string;
   error?: string;
 }

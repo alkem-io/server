@@ -4,6 +4,7 @@ import { Memo } from '@domain/common/memo/memo.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { vi } from 'vitest';
 import { CollaborationMigrationService } from './collaboration-migration.service';
@@ -56,6 +57,15 @@ describe('CollaborationMigrationService', () => {
         MockWinstonProvider,
         { provide: getRepositoryToken(Memo), useValue: memoRepo },
         { provide: getRepositoryToken(Whiteboard), useValue: whiteboardRepo },
+        {
+          provide: FileServiceAdapter,
+          useValue: {
+            createSnapshotInBucket: vi.fn(),
+            getContentBatch: vi.fn(),
+            deleteDocument: vi.fn(),
+            getDocumentContent: vi.fn(),
+          },
+        },
       ],
     }).compile();
 

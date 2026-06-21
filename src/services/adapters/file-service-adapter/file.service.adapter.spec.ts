@@ -271,6 +271,129 @@ describe('FileServiceAdapter', () => {
     });
   });
 
+  describe('createSnapshotInBucket', () => {
+    it('POSTs multipart to /internal/file WITHOUT an authorizationId (NULL authz)', async () => {
+      const responseData = {
+        id: 'snap-1',
+        externalID: 'hash-snap',
+        mimeType: 'application/octet-stream',
+        size: 42,
+        reused: false,
+      };
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(responseData, 201))
+      );
+
+      const result = await adapter.createSnapshotInBucket(
+        Buffer.from([1, 2, 3]),
+        'bucket-1'
+      );
+
+      expect(result).toEqual(responseData);
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.method).toBe('post');
+      expect(callArgs.url).toBe('http://file-service:4003/internal/file');
+
+      const serialized = callArgs.data.getBuffer().toString('utf8');
+      expect(serialized).toContain('name="storageBucketId"');
+      expect(serialized).toMatch(/name="storageBucketId"\r\n\r\nbucket-1/);
+      expect(serialized).toContain('name="displayName"');
+      expect(serialized).toMatch(
+        /name="displayName"\r\n\r\ncollaboration-snapshot/
+      );
+      expect(serialized).toContain('filename="snapshot.ybin"');
+      // The snapshot is a NULL-authz internal blob — no authorizationId field.
+      expect(serialized).not.toContain('name="authorizationId"');
+    });
+
+    it('throws when the adapter is disabled', async () => {
+      const disabledModule = await Test.createTestingModule({
+        providers: [
+          FileServiceAdapter,
+          {
+            provide: HttpService,
+            useValue: { request: vi.fn(), get: vi.fn() },
+          },
+          {
+            provide: ConfigService,
+            useValue: {
+              get: vi.fn((key: string) =>
+                key === 'storage.file_service.enabled'
+                  ? false
+                  : mockConfigValues[key]
+              ),
+            },
+          },
+          { provide: WINSTON_MODULE_NEST_PROVIDER, useValue: mockLogger },
+        ],
+      }).compile();
+      const disabledAdapter =
+        disabledModule.get<FileServiceAdapter>(FileServiceAdapter);
+
+      await expect(
+        disabledAdapter.createSnapshotInBucket(Buffer.from([1]), 'bucket-1')
+      ).rejects.toThrow(StorageServiceUnavailableException);
+    });
+  });
+
+  describe('getContentBatch', () => {
+    it('POSTs { ids } to /internal/file/content-batch and returns items in order', async () => {
+      const items = [
+        {
+          id: 'a',
+          found: true,
+          mimeType: 'application/octet-stream',
+          contentBase64: 'AQID',
+        },
+        { id: 'b', found: false, error: 'document not found' },
+      ];
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse({ items }))
+      );
+
+      const result = await adapter.getContentBatch(['a', 'b']);
+
+      expect(result).toEqual(items);
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.method).toBe('post');
+      expect(callArgs.url).toBe(
+        'http://file-service:4003/internal/file/content-batch'
+      );
+      expect(callArgs.data).toEqual({ ids: ['a', 'b'] });
+    });
+
+    it('short-circuits an empty id list without a round trip (file-service 400s on empty)', async () => {
+      const result = await adapter.getContentBatch([]);
+
+      expect(result).toEqual([]);
+      expect(httpService.request).not.toHaveBeenCalled();
+    });
+
+    it('returns [] when the response omits items', async () => {
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse({} as { items?: unknown[] }))
+      );
+
+      const result = await adapter.getContentBatch(['x']);
+      expect(result).toEqual([]);
+    });
+
+    it('preserves duplicate ids at their positions', async () => {
+      const items = [
+        { id: 'a', found: true, contentBase64: 'AA==' },
+        { id: 'a', found: true, contentBase64: 'AA==' },
+      ];
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse({ items }))
+      );
+
+      const result = await adapter.getContentBatch(['a', 'a']);
+      expect(result).toHaveLength(2);
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.data).toEqual({ ids: ['a', 'a'] });
+    });
+  });
+
   describe('copyDocument', () => {
     it('POSTs JSON body to /internal/file/copy', async () => {
       const responseData = {

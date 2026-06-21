@@ -3,7 +3,6 @@ import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpaceVisibility } from '@common/enums/space.visibility';
-import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { isDefined } from '@common/utils';
 import { asyncMap } from '@common/utils/async.map';
 import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
@@ -22,6 +21,7 @@ import {
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { ElasticResponseError } from '@services/external/elasticsearch/types';
 import { TaskService } from '@services/task';
 import { Task } from '@services/task/task.interface';
@@ -112,7 +112,8 @@ export class SearchIngestService {
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>,
-    private taskService: TaskService
+    private taskService: TaskService,
+    private fileServiceAdapter: FileServiceAdapter
   ) {
     this.indexPattern = getIndexPattern(this.configService);
 
@@ -974,7 +975,6 @@ export class SearchIngestService {
                   id: true,
                   whiteboard: {
                     id: true,
-                    content: true,
                     profile: profileSelectOptions,
                   },
                 },
@@ -982,7 +982,6 @@ export class SearchIngestService {
                   id: true,
                   whiteboard: {
                     id: true,
-                    content: true,
                     profile: profileSelectOptions,
                   },
                 },
@@ -1005,20 +1004,15 @@ export class SearchIngestService {
           return callouts
             ?.flatMap(callout => {
               // a callout can have whiteboard in the framing
-              // AND whiteboards in the contributions
+              // AND whiteboards in the contributions.
+              // NOTE (006-collab-content-unification): the whiteboard scene is no
+              // longer a JSON column — content lives only as a Yjs-V2 snapshot in
+              // the document's bucket — so the scene-text body is no longer indexed.
+              // Whiteboards are indexed by their profile (name/description/tags).
               const wbs = [];
               if (callout.framing.whiteboard) {
-                const content = extractTextFromWhiteboardContent(
-                  callout.framing.whiteboard.content
-                );
-                // only whiteboards with content are ingested
-                if (!content) {
-                  return;
-                }
-
                 wbs.push({
                   ...callout.framing.whiteboard,
-                  content,
                   type: SearchResultType.WHITEBOARD,
                   license: {
                     visibility: space?.visibility ?? EMPTY_VALUE,
@@ -1044,17 +1038,8 @@ export class SearchIngestService {
                   return;
                 }
 
-                const content = extractTextFromWhiteboardContent(
-                  contribution.whiteboard.content
-                );
-                // only whiteboards with content are ingested
-                if (!content) {
-                  return;
-                }
-
                 wbs.push({
                   ...contribution.whiteboard,
-                  content,
                   type: SearchResultType.WHITEBOARD,
                   license: {
                     visibility: space?.visibility ?? EMPTY_VALUE,
@@ -1134,7 +1119,7 @@ export class SearchIngestService {
                 id: true,
                 memo: {
                   id: true,
-                  content: true,
+                  contentPointer: true,
                   profile: profileSelectOptions,
                 },
               },
@@ -1142,7 +1127,7 @@ export class SearchIngestService {
                 id: true,
                 memo: {
                   id: true,
-                  content: true,
+                  contentPointer: true,
                   profile: profileSelectOptions,
                 },
               },
@@ -1160,8 +1145,16 @@ export class SearchIngestService {
       take: limit,
     });
 
+    // Memo content lives only as a Yjs-V2 snapshot in the document's bucket
+    // (006-collab-content-unification): derive the searchable markdown (FR-006)
+    // from those snapshots in ONE batched file-service read for the whole page,
+    // keyed by `contentPointer`, instead of the dropped inline column.
+    const markdownByPointer = await this.fetchMemoMarkdownByPointer(spaces);
+
     const memoForIngestion = (memo: Memo, callout: Callout, space: Space) => {
-      const markdown = extractMarkdownFromMemoContent(memo.content);
+      const markdown = memo.contentPointer
+        ? markdownByPointer.get(memo.contentPointer)
+        : undefined;
       // only memos with content are ingested
       if (!markdown) {
         return;
@@ -1169,7 +1162,7 @@ export class SearchIngestService {
 
       return {
         ...memo,
-        content: undefined,
+        contentPointer: undefined,
         markdown,
         type: SearchResultType.MEMO,
         license: {
@@ -1212,6 +1205,63 @@ export class SearchIngestService {
         })
         .filter(isDefined);
     });
+  }
+
+  /**
+   * Batched derivation of memo `markdown` from the stored Yjs-V2 snapshots for a
+   * page of spaces (006-collab-content-unification, T008): gathers every memo
+   * `contentPointer` (framing + contributions), reads them in ONE file-service
+   * `content-batch` call, and decodes each to markdown — replacing the per-memo
+   * inline-column read. Returns a `pointer → markdown` map; un-decodable / missing
+   * snapshots are omitted (the memo is then skipped from ingestion).
+   */
+  private async fetchMemoMarkdownByPointer(
+    spaces: Space[]
+  ): Promise<Map<string, string>> {
+    const pointers = new Set<string>();
+    for (const space of spaces) {
+      const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
+      for (const callout of callouts) {
+        if (callout.framing.memo?.contentPointer) {
+          pointers.add(callout.framing.memo.contentPointer);
+        }
+        for (const contribution of callout.contributions ?? []) {
+          if (contribution.memo?.contentPointer) {
+            pointers.add(contribution.memo.contentPointer);
+          }
+        }
+      }
+    }
+
+    const result = new Map<string, string>();
+    if (pointers.size === 0) {
+      return result;
+    }
+
+    const items = await this.fileServiceAdapter.getContentBatch([...pointers]);
+    for (const item of items) {
+      if (!item.found || !item.contentBase64) {
+        continue;
+      }
+      try {
+        const markdown = yjsStateToMarkdown(
+          Buffer.from(item.contentBase64, 'base64')
+        );
+        if (markdown) {
+          result.set(item.id, markdown);
+        }
+      } catch (error) {
+        this.logger.warn?.(
+          {
+            message: 'Search ingest: failed to decode memo snapshot',
+            pointer: item.id,
+            error: String(error),
+          },
+          LogContext.SEARCH_INGEST
+        );
+      }
+    }
+    return result;
   }
 
   private fetchPostsCount() {
@@ -1317,30 +1367,4 @@ export class SearchIngestService {
 
 const processTagsets = (tagsets: Tagset[] | undefined) => {
   return tagsets?.flatMap(tagset => tagset.tags).join(' ');
-};
-
-const extractTextFromWhiteboardContent = (content: string): string => {
-  if (!content) {
-    return '';
-  }
-
-  try {
-    const { elements }: ExcalidrawContent = JSON.parse(content);
-    return elements
-      .filter(isExcalidrawTextElement)
-      .map(x => x.originalText)
-      .join(' ');
-  } catch (_error: any) {
-    return '';
-  }
-};
-
-const extractMarkdownFromMemoContent = (
-  content?: Buffer
-): string | undefined => {
-  if (!content) {
-    return undefined;
-  }
-
-  return yjsStateToMarkdown(content);
 };

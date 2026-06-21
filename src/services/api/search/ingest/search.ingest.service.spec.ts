@@ -750,11 +750,11 @@ describe('SearchIngestService', () => {
     });
 
     describe('fetchWhiteboard', () => {
-      it('should transform framing whiteboards with extracted text', async () => {
-        const excalidrawContent = JSON.stringify({
-          elements: [{ type: 'text', originalText: 'Hello World' }],
-        });
-
+      it('should ingest framing whiteboards by profile (no scene text)', async () => {
+        // NOTE (006-collab-content-unification): the scene is no longer a JSON
+        // column — it lives only as a Yjs-V2 snapshot in the doc's bucket — so
+        // the scene-text body is no longer indexed; whiteboards are indexed by
+        // their profile (name/description/tags) and `content` is not selected.
         const space = {
           id: 'space-1',
           visibility: 'active',
@@ -768,7 +768,6 @@ describe('SearchIngestService', () => {
                   framing: {
                     whiteboard: {
                       id: 'wb-1',
-                      content: excalidrawContent,
                       profile: {
                         displayName: 'WB',
                         tagsets: [],
@@ -787,10 +786,16 @@ describe('SearchIngestService', () => {
 
         expect(result).toHaveLength(1);
         expect(result[0].type).toBe('whiteboard');
-        expect(result[0].content).toBe('Hello World');
+        expect(result[0].id).toBe('wb-1');
+        expect(result[0].calloutID).toBe('callout-1');
+        // Scene text is no longer indexed.
+        expect(result[0].content).toBeUndefined();
+        expect(result[0].profile.displayName).toBe('WB');
       });
 
-      it('should skip whiteboards with no content', async () => {
+      it('should ingest whiteboards regardless of scene content', async () => {
+        // The old "skip whiteboards with no content" behavior is gone: a
+        // whiteboard is now always ingested by its profile, even with no scene.
         const space = {
           id: 'space-1',
           visibility: 'active',
@@ -804,7 +809,6 @@ describe('SearchIngestService', () => {
                   framing: {
                     whiteboard: {
                       id: 'wb-1',
-                      content: '',
                       profile: { displayName: 'WB', tagsets: [] },
                     },
                   },
@@ -818,15 +822,12 @@ describe('SearchIngestService', () => {
 
         const result = await (service as any).fetchWhiteboard(0, 100);
 
-        // Empty content means no whiteboard ingested
-        expect(result).toHaveLength(0);
+        expect(result).toHaveLength(1);
+        expect(result[0].type).toBe('whiteboard');
+        expect(result[0].id).toBe('wb-1');
       });
 
       it('should include contribution whiteboards', async () => {
-        const excalidrawContent = JSON.stringify({
-          elements: [{ type: 'text', originalText: 'Contribution text' }],
-        });
-
         const space = {
           id: 'space-1',
           visibility: 'active',
@@ -842,7 +843,6 @@ describe('SearchIngestService', () => {
                     {
                       whiteboard: {
                         id: 'wb-2',
-                        content: excalidrawContent,
                         profile: { displayName: 'WB2', tagsets: [] },
                       },
                     },
@@ -857,7 +857,9 @@ describe('SearchIngestService', () => {
         const result = await (service as any).fetchWhiteboard(0, 100);
 
         expect(result).toHaveLength(1);
-        expect(result[0].content).toBe('Contribution text');
+        expect(result[0].id).toBe('wb-2');
+        expect(result[0].content).toBeUndefined();
+        expect(result[0].profile.displayName).toBe('WB2');
       });
     });
 

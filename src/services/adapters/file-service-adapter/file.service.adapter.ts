@@ -11,6 +11,8 @@ import { isAxiosError } from 'axios';
 import FormData from 'form-data';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import type {
+  ContentBatchItemResult,
+  ContentBatchResponse,
   CopyDocumentInput,
   CreateDocumentMetadata,
   CreateDocumentResult,
@@ -25,6 +27,12 @@ import {
 
 const LOG_PREFIX = '[FileService]';
 const FILE_PATH_PREFIX = '/internal/file';
+
+// Snapshot uploads mirror the collaboration-service BlobStore (store.go): a fixed
+// display name + a `.ybin` filename, so create-time and collab-saved snapshots are
+// indistinguishable in the bucket.
+const SNAPSHOT_FILENAME = 'snapshot.ybin';
+const SNAPSHOT_DISPLAY_NAME = 'collaboration-snapshot';
 
 @Injectable()
 export class FileServiceAdapter extends HttpClientBase {
@@ -108,6 +116,79 @@ export class FileServiceAdapter extends HttpClientBase {
       form,
       form.getHeaders()
     );
+  }
+
+  /**
+   * Upload a collaboration content SNAPSHOT (a Yjs-V2 state blob) into a
+   * document's own storage bucket and return the file-service id, which becomes
+   * the document's `contentPointer` (R2/R4, FR-005).
+   *
+   * This deliberately mirrors the collaboration-service's file-service BlobStore
+   * `Put` (Go `internal/adapter/outbound/blobstore/fileservice/store.go`) rather
+   * than the server's `createDocument` path: the snapshot is an INTERNAL infra
+   * blob whose access is governed by the owning document's own authorization, so
+   * `authorizationId` is OMITTED — file-service then writes a NULL authz column
+   * (its `UNIQUE(authorizationId)` permits any number of NULLs). The snapshot is
+   * therefore pointer-compatible with the ones the collaboration-service writes
+   * on every later save (latest-only: the room deletes the previous pointer's
+   * file on its first save), and it is NOT tracked as a server-side `Document`
+   * entity (no auth-policy / tagset rows). It still counts toward the space's
+   * storage quota because it lives in the document's own bucket under the space's
+   * storage aggregator.
+   */
+  async createSnapshotInBucket(
+    snapshot: Buffer,
+    storageBucketId: string
+  ): Promise<CreateDocumentResult> {
+    this.checkEnabledAndCircuit('createSnapshotInBucket');
+
+    const form = new FormData();
+    form.append('file', snapshot, {
+      filename: SNAPSHOT_FILENAME,
+      contentType: 'application/octet-stream',
+    });
+    form.append('displayName', SNAPSHOT_DISPLAY_NAME);
+    form.append('storageBucketId', storageBucketId);
+    // authorizationId intentionally omitted — see method doc (NULL authz).
+
+    return this.sendRequest<CreateDocumentResult>(
+      'createSnapshotInBucket',
+      'post',
+      FILE_PATH_PREFIX,
+      form,
+      form.getHeaders()
+    );
+  }
+
+  /**
+   * Batched internal content read (file-service `POST /internal/file/content-batch`,
+   * file-service #52): N document ids → N content blobs, ORDER PRESERVED (incl.
+   * duplicates), per-id misses reported non-fatally. Backs the server's
+   * derived-text resolvers (memo `markdown` derived from the stored Yjs snapshot)
+   * so a list of snapshot pointers is read in ONE round trip instead of an N+1 of
+   * single `getDocumentContent` calls. No per-file authorization (these are the
+   * internal NULL-authz snapshot blobs).
+   *
+   * Returns the raw items in request order; a missing/failed id has
+   * `found: false`. Callers map by position (not by id) because the endpoint
+   * preserves order and honours duplicates.
+   */
+  async getContentBatch(ids: string[]): Promise<ContentBatchItemResult[]> {
+    this.checkEnabledAndCircuit('getContentBatch');
+
+    // file-service returns 400 for an empty body; short-circuit the empty case
+    // so a resolver with no pointers does not make a doomed round trip.
+    if (ids.length === 0) {
+      return [];
+    }
+
+    const response = await this.sendRequest<ContentBatchResponse>(
+      'getContentBatch',
+      'post',
+      `${FILE_PATH_PREFIX}/content-batch`,
+      { ids }
+    );
+    return response.items ?? [];
   }
 
   /**

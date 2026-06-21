@@ -1,5 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -19,6 +20,7 @@ import { ProfileDocumentsService } from '@domain/profile-documents/profile.docum
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
@@ -44,7 +46,8 @@ export class MemoService {
     private profileDocumentsService: ProfileDocumentsService,
     private communityResolverService: CommunityResolverService,
     private licenseService: LicenseService,
-    private collaborationLifecycleService: CollaborationLifecycleService
+    private collaborationLifecycleService: CollaborationLifecycleService,
+    private fileServiceAdapter: FileServiceAdapter
   ) {}
 
   async createMemo(
@@ -53,12 +56,11 @@ export class MemoService {
     userID?: string,
     visualTypes: VisualType[] = [VisualType.CARD]
   ): Promise<IMemo> {
-    // Phase 1: build entity tree in memory (no file-service-go calls).
-    const binaryUpdateV2 = this.markdownToStateUpdate(markdown);
-    const content = binaryUpdateV2 ? Buffer.from(binaryUpdateV2) : undefined;
+    // Phase 1: build entity tree in memory (no file-service-go calls). Content is
+    // NO LONGER stored inline — the initial Yjs-V2 snapshot is written to the
+    // memo's own bucket below (R2/FR-005), once its storageBucket id is persisted.
     const memo: IMemo = Memo.create({
       ...restOfMemoData,
-      content,
     });
     memo.authorization = new AuthorizationPolicy(AuthorizationPolicyType.MEMO);
     memo.createdBy = userID;
@@ -88,7 +90,66 @@ export class MemoService {
         visualTypes,
         () => this.deleteMemo(saved.id)
       );
+
+    // Phase 3: write the creation content as a Yjs-V2 snapshot into the memo's
+    // OWN storage bucket and record the pointer (R2/R4 — first-open seed +
+    // quota-correct storage). The bucket id is persisted only after Phase 2.
+    // Empty creation content leaves the pointer unset: the room materializes
+    // empty + editable (FR-010) and the first save promotes a real snapshot.
+    const binaryUpdateV2 = this.markdownToStateUpdate(markdown);
+    if (binaryUpdateV2) {
+      await this.writeInitialSnapshot(saved, Buffer.from(binaryUpdateV2));
+    }
     return saved;
+  }
+
+  /**
+   * Writes the creation-time Yjs-V2 snapshot into the document's own storage
+   * bucket (NULL per-file authz, mirroring the collaboration-service BlobStore)
+   * and records `contentPointer` / `blobStore` / `contentVersion` on the entity
+   * (R2/R4, FR-005). Shared by memo + whiteboard create. On a snapshot-write
+   * failure the whole create is rolled back so a half-created document is never
+   * returned.
+   */
+  private async writeInitialSnapshot(
+    memo: IMemo,
+    snapshot: Buffer
+  ): Promise<void> {
+    const storageBucketId = memo.profile?.storageBucket?.id;
+    if (!storageBucketId) {
+      throw new EntityNotInitializedException(
+        'Memo storage bucket not initialized when writing initial snapshot',
+        LogContext.MEMOS,
+        { memoId: memo.id }
+      );
+    }
+    try {
+      const result = await this.fileServiceAdapter.createSnapshotInBucket(
+        snapshot,
+        storageBucketId
+      );
+      memo.contentPointer = result.id;
+      memo.blobStore = BlobStoreKind.FILE_SERVICE;
+      // The room owns the version once it persists; seed at 0 so the first
+      // collaboration-save's room-owned version is adopted verbatim.
+      memo.contentVersion = 0;
+      await this.save(memo);
+    } catch (error) {
+      await this.deleteMemo(memo.id).catch(rollbackError => {
+        const stack =
+          rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
+        this.logger.error?.(
+          {
+            message: 'Rollback after memo snapshot write failure also failed',
+            memoId: memo.id,
+            rollbackError: String(rollbackError),
+          },
+          stack,
+          LogContext.MEMOS
+        );
+      });
+      throw error;
+    }
   }
 
   async getMemoOrFail(
@@ -161,11 +222,49 @@ export class MemoService {
     return markdown ? markdownToYjsV2State(markdown) : null;
   }
 
-  async saveContent(memoId: string, content: Buffer): Promise<IMemo> {
-    const memo = await this.getMemoOrFail(memoId);
-    memo.content = content;
+  /**
+   * Replaces the document's stored Yjs-V2 snapshot in its own bucket with a new
+   * one and repoints `contentPointer`, deleting the superseded snapshot file
+   * (latest-only, mirroring the collaboration-service BlobStore). Used by the
+   * server-side content-set paths that do NOT go through a live collab session
+   * (template/framing content edits — `updateMemoContent`). Best-effort cleanup:
+   * a failed delete of the old file does not fail the save (the new snapshot is
+   * already durable + recorded; the orphan is reclaimable).
+   */
+  private async replaceSnapshot(memo: IMemo, snapshot: Buffer): Promise<IMemo> {
+    const storageBucketId = memo.profile?.storageBucket?.id;
+    if (!storageBucketId) {
+      throw new EntityNotInitializedException(
+        'Memo storage bucket not initialized when replacing snapshot',
+        LogContext.MEMOS,
+        { memoId: memo.id }
+      );
+    }
+    const previousPointer = memo.contentPointer;
+    const result = await this.fileServiceAdapter.createSnapshotInBucket(
+      snapshot,
+      storageBucketId
+    );
+    memo.contentPointer = result.id;
+    memo.blobStore = BlobStoreKind.FILE_SERVICE;
+    const saved = await this.save(memo);
 
-    return this.save(memo);
+    if (previousPointer && previousPointer !== result.id) {
+      await this.fileServiceAdapter
+        .deleteDocument(previousPointer)
+        .catch(error => {
+          this.logger.warn?.(
+            {
+              message: 'Failed to delete superseded memo snapshot',
+              memoId: memo.id,
+              previousPointer,
+              error: String(error),
+            },
+            LogContext.MEMOS
+          );
+        });
+    }
+    return saved;
   }
 
   /**
@@ -293,6 +392,14 @@ export class MemoService {
     return memo;
   }
 
+  /**
+   * Server-side memo content set (template / framing-content edit — NOT a live
+   * collab session). Re-homes embedded media into the memo's bucket, encodes the
+   * markdown to a Yjs-V2 snapshot, and replaces the stored snapshot in the bucket
+   * (R2/FR-005) — the inline `content` column is gone. The content originates
+   * server-side here (e.g. a callout-template framing edit), so it is persisted
+   * directly rather than through the room; the next open seeds from this snapshot.
+   */
   async updateMemoContent(
     memoInputId: string,
     newContent: string
@@ -303,6 +410,12 @@ export class MemoService {
         profile: {
           storageBucket: true,
         },
+      },
+      select: {
+        id: true,
+        contentPointer: true,
+        blobStore: true,
+        profile: { id: true, storageBucket: { id: true } },
       },
     });
     if (!memo?.profile) {
@@ -333,9 +446,7 @@ export class MemoService {
       return memo;
     }
 
-    memo.content = Buffer.from(binaryUpdateV2);
-
-    return this.save(memo);
+    return this.replaceSnapshot(memo, Buffer.from(binaryUpdateV2));
   }
 
   /**

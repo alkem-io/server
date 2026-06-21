@@ -8,6 +8,7 @@ import { MemoService } from '@domain/common/memo';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -60,6 +61,7 @@ describe('CollaborationIntegrationService', () => {
     getCommunityFromWhiteboardOrFail: Mock;
     getLevelZeroSpaceIdForCommunity: Mock;
   };
+  let fileServiceAdapter: { getDocumentContent: Mock };
 
   const configServiceMock = {
     get: vi.fn((key: string) => {
@@ -93,6 +95,7 @@ describe('CollaborationIntegrationService', () => {
     actorContextService = module.get(ActorContextService) as any;
     contributionReporter = module.get(ContributionReporterService) as any;
     communityResolver = module.get(CommunityResolverService) as any;
+    fileServiceAdapter = module.get(FileServiceAdapter) as any;
   });
 
   describe('save', () => {
@@ -219,6 +222,10 @@ describe('CollaborationIntegrationService', () => {
   describe('fetch', () => {
     it('returns the memo index incl. authorizationPolicyId + per-document storageBucketId (FR-005)', async () => {
       memoService.getCollaborationMetadata.mockResolvedValue(memoMeta);
+      // The memo has a contentPointer, so fetch reads the stored snapshot as the
+      // first-open seed (R4/FR-003) and returns it base64-encoded as `content`.
+      const seed = Buffer.from('yjs-v2-seed-bytes');
+      fileServiceAdapter.getDocumentContent.mockResolvedValue(seed);
 
       const result = await service.fetch({ id: 'memo-1' });
 
@@ -232,7 +239,12 @@ describe('CollaborationIntegrationService', () => {
         // The memo's OWN bucket flows through the reply so the collab service
         // persists this doc's snapshot there, not into a flat platform bucket.
         storageBucketId: 'bucket-memo',
+        // First-open seed: the stored snapshot, base64-encoded.
+        content: seed.toString('base64'),
       });
+      expect(fileServiceAdapter.getDocumentContent).toHaveBeenCalledWith(
+        'memo-1'
+      );
     });
 
     it('falls through to whiteboard when the id is not a memo (incl. its own storageBucketId)', async () => {

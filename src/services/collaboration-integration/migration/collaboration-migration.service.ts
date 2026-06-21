@@ -1,14 +1,45 @@
 import { CollaborationContentType, LogContext } from '@common/enums';
+import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { decompressText } from '@common/utils/compression.util';
 import { Memo } from '@domain/common/memo/memo.entity';
+import { whiteboardSceneToYjsV2State } from '@domain/common/whiteboard/conversion';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { LegacyContentRecord } from './legacy.content.record';
 
 const DEFAULT_BATCH_SIZE = 200;
+
+/**
+ * Outcome of one `migrateAll` run (US6/FR-007). Counters let an operator confirm
+ * a clean migration: every legacy document either got a snapshot pointer or was
+ * skipped (already migrated / empty) or flagged (un-decodable, surfaced for
+ * review — NEVER silently dropped).
+ */
+export interface MigrationSummary {
+  total: number;
+  migrated: number;
+  /** Already had a `contentPointer` (idempotent re-run) or had no content. */
+  skipped: number;
+  /** Un-decodable legacy content surfaced for manual review (not migrated). */
+  flagged: number;
+  /** A snapshot write / pointer update failed for these (re-runnable). */
+  failed: number;
+  /** The flagged document ids + reasons, for operator follow-up. */
+  flaggedDocuments: { id: string; reason: string }[];
+  /** True when no snapshot was written / pointer mutated (preview only). */
+  dryRun: boolean;
+}
+
+/** `migrateAll` options. */
+export interface MigrationOptions {
+  /** When true, compute the plan + counters but write nothing (preview). */
+  dryRun?: boolean;
+  batchSize?: number;
+}
 
 /**
  * Dedicated one-pass read path for the one-time legacy-content migration
@@ -35,8 +66,166 @@ export class CollaborationMigrationService {
     @InjectRepository(Memo)
     private readonly memoRepository: Repository<Memo>,
     @InjectRepository(Whiteboard)
-    private readonly whiteboardRepository: Repository<Whiteboard>
+    private readonly whiteboardRepository: Repository<Whiteboard>,
+    private readonly fileServiceAdapter: FileServiceAdapter
   ) {}
+
+  /**
+   * Runnable, idempotent, resumable up-front batch migration (US6/DEC-6/FR-007):
+   * streams every legacy memo + whiteboard, encodes each document's content to a
+   * Yjs-V2 snapshot (memo: the inline bytes are already a v2 state; whiteboard:
+   * the Excalidraw JSON converted via the binding-compatible
+   * `whiteboardSceneToYjsV2State`), writes it into the document's OWN storage
+   * bucket (NULL authz), and records the `contentPointer`. Runs BEFORE the column
+   * drop.
+   *
+   * - Idempotent + resumable: a document that already has a `contentPointer` is
+   *   skipped, so a re-run after an interruption only processes the remainder.
+   * - Empty content → skipped (the room materializes empty; FR-010).
+   * - Un-decodable content → flagged + surfaced in the summary, NEVER dropped.
+   * - `dryRun` computes the plan + counters but writes nothing.
+   */
+  public async migrateAll(
+    options: MigrationOptions = {}
+  ): Promise<MigrationSummary> {
+    const { dryRun = false, batchSize = DEFAULT_BATCH_SIZE } = options;
+    const summary: MigrationSummary = {
+      total: 0,
+      migrated: 0,
+      skipped: 0,
+      flagged: 0,
+      failed: 0,
+      flaggedDocuments: [],
+      dryRun,
+    };
+
+    for await (const record of this.readAll(batchSize)) {
+      summary.total++;
+
+      if (record.flagged) {
+        summary.flagged++;
+        summary.flaggedDocuments.push({
+          id: record.id,
+          reason: record.flagReason ?? 'undecodable',
+        });
+        continue;
+      }
+
+      try {
+        const outcome = await this.migrateRecord(record, dryRun);
+        summary[outcome]++;
+      } catch (error) {
+        summary.failed++;
+        this.logger.error?.(
+          {
+            message: 'Collaboration migration: failed to migrate document',
+            id: record.id,
+            contentType: record.contentType,
+            error: String(error),
+          },
+          error instanceof Error ? error.stack : undefined,
+          LogContext.COLLABORATION_INTEGRATION
+        );
+      }
+    }
+
+    this.logger.verbose?.(
+      {
+        message: 'Collaboration migration complete',
+        ...summary,
+        flaggedDocuments: undefined,
+      },
+      LogContext.COLLABORATION_INTEGRATION
+    );
+    return summary;
+  }
+
+  /**
+   * Migrates one legacy record: skips an empty doc or one already pointing at a
+   * snapshot (idempotent); otherwise encodes → uploads to the doc's bucket → sets
+   * the pointer. Returns the summary counter to increment.
+   */
+  private async migrateRecord(
+    record: LegacyContentRecord,
+    dryRun: boolean
+  ): Promise<'migrated' | 'skipped'> {
+    const isMemo = record.contentType === CollaborationContentType.MEMO;
+    const repository = (
+      isMemo ? this.memoRepository : this.whiteboardRepository
+    ) as Repository<Memo | Whiteboard>;
+
+    // Resolve the document's current pointer + own bucket id. Already-pointed
+    // documents are skipped (idempotent / resumable).
+    const meta = await repository
+      .createQueryBuilder('doc')
+      .leftJoin('doc.profile', 'profile')
+      .leftJoin('profile.storageBucket', 'storageBucket')
+      .select('doc.id', 'id')
+      .addSelect('doc.contentPointer', 'contentPointer')
+      .addSelect('storageBucket.id', 'storageBucketId')
+      .where('doc.id = :id', { id: record.id })
+      .getRawOne<{
+        id: string;
+        contentPointer: string | null;
+        storageBucketId: string | null;
+      }>();
+
+    if (!meta || meta.contentPointer) {
+      return 'skipped';
+    }
+
+    const snapshot = this.encodeSnapshot(record);
+    if (!snapshot) {
+      // Empty content (never-edited memo / empty whiteboard): nothing to seed.
+      return 'skipped';
+    }
+
+    if (!meta.storageBucketId) {
+      throw new Error(
+        `Document ${record.id} has no storage bucket; cannot write snapshot`
+      );
+    }
+
+    if (dryRun) {
+      return 'migrated';
+    }
+
+    const result = await this.fileServiceAdapter.createSnapshotInBucket(
+      snapshot,
+      meta.storageBucketId
+    );
+    await repository
+      .createQueryBuilder()
+      .update()
+      .set({
+        contentPointer: result.id,
+        blobStore: BlobStoreKind.FILE_SERVICE,
+        contentVersion: 0,
+      })
+      .where('id = :id', { id: record.id })
+      .execute();
+    return 'migrated';
+  }
+
+  /**
+   * Encodes a legacy record's content into a Yjs-V2 snapshot. Memo content is
+   * already a v2 state (base64 of the inline bytes) — decoded straight through.
+   * Whiteboard content is Excalidraw JSON converted via the binding-compatible
+   * encoder. Returns `undefined` for empty content (nothing to write).
+   */
+  private encodeSnapshot(record: LegacyContentRecord): Buffer | undefined {
+    if (record.contentType === CollaborationContentType.MEMO) {
+      if (!record.content) {
+        return undefined;
+      }
+      return Buffer.from(record.content, 'base64');
+    }
+    // Whiteboard: empty / absent scene → nothing to seed.
+    if (!record.content || record.content === '') {
+      return undefined;
+    }
+    return Buffer.from(whiteboardSceneToYjsV2State(record.content));
+  }
 
   /**
    * Streams every legacy memo + whiteboard record for the migration. Batched so

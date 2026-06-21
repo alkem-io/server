@@ -1,63 +1,21 @@
 import { ENUM_LENGTH, MID_TEXT_LENGTH } from '@common/constants';
 import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
-import { compressText, decompressText } from '@common/utils/compression.util';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
-import {
-  AfterInsert,
-  AfterLoad,
-  AfterUpdate,
-  BeforeInsert,
-  BeforeUpdate,
-  Column,
-  Entity,
-  OneToOne,
-} from 'typeorm';
+import { Column, Entity, OneToOne } from 'typeorm';
 import { NameableEntity } from '../entity/nameable-entity/nameable.entity';
 import { IWhiteboard } from './whiteboard.interface';
 import { IWhiteboardPreviewSettings } from './whiteboard.preview.settings.interface';
 
 @Entity()
 export class Whiteboard extends NameableEntity implements IWhiteboard {
-  constructor(content?: string) {
-    super();
-    this.content = content || '';
-  }
-
-  @BeforeInsert()
-  @BeforeUpdate()
-  async compressValue() {
-    // Guard against partial selects (e.g. the unified metadata index-only
-    // reads/writes) where `content` is not loaded: only (de)compress a
-    // non-empty string, never `undefined`/`null`.
-    if (typeof this.content === 'string' && this.content !== '') {
-      try {
-        this.content = await compressText(this.content);
-      } catch {
-        this.content = '';
-        // rethrow to be caught higher, does not crash the server
-        throw new Error('Failed to compress content');
-      }
-    }
-  }
-  @AfterInsert()
-  @AfterUpdate()
-  @AfterLoad()
-  async decompressValue() {
-    if (typeof this.content === 'string' && this.content !== '') {
-      try {
-        this.content = await decompressText(this.content);
-      } catch (e: any) {
-        this.content = '';
-        // rethrow to be caught higher, does not crash the server
-        throw new Error(`Failed to decompress content: ${e?.message}`);
-      }
-    }
-  }
-
-  @Column('text', { nullable: false })
-  content!: string;
+  // The inline `content` column (Excalidraw JSON, gzip-compressed) and its
+  // `@BeforeInsert/@BeforeUpdate/@AfterLoad` (de)compression hooks are DROPPED
+  // (006-collab-content-unification, R2/FR-005): whiteboard content is stored ONLY
+  // as a Yjs-V2 snapshot in the document's own storage bucket, located by
+  // `contentPointer`. The scene is converted server-side at create via the
+  // binding-compatible `whiteboardSceneToYjsV2State` and written to the bucket.
 
   /**
    * Locator into the collaboration BlobStore that holds the encoded snapshot.

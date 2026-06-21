@@ -69,14 +69,12 @@ import { IdentityResolveModule } from '@services/api-rest/identity-resolve/ident
 import { InternalAdminModule } from '@services/api-rest/internal-admin/internal-admin.module';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { CollaborationIntegrationModule } from '@services/collaboration-integration';
-import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-document-integration';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { KratosEventsModule } from '@services/external/kratos-events/kratos.events.module';
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
-import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { AppController } from '@src/app.controller';
 import { WinstonConfigService } from '@src/config/winston.config';
 
@@ -355,8 +353,6 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     PushSubscriptionModule,
     ActivityFeedModule,
     EventBusModule,
-    WhiteboardIntegrationModule,
-    CollaborativeDocumentIntegrationModule,
     CollaborationIntegrationModule,
     MatrixRoomCheckModule,
     DomainPlatformSettingsModule,

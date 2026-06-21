@@ -423,8 +423,14 @@ export class TemplateService {
       template.whiteboard &&
       templateData.whiteboardContent
     ) {
-      // If we don't update the content here, the whiteboard will is overwritten with the old content
-      template.whiteboard.content = templateData.whiteboardContent;
+      // Whiteboard content is stored as a Yjs-V2 snapshot in the whiteboard's
+      // bucket, not an inline column (006-collab-content-unification): route the
+      // new scene through the snapshot-write path so the stored snapshot (and the
+      // first-open seed) reflect the template update.
+      await this.whiteboardService.updateWhiteboardContent(
+        template.whiteboard.id,
+        templateData.whiteboardContent
+      );
     }
 
     return await this.templateRepository.save(template);

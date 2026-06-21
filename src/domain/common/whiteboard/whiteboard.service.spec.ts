@@ -1,5 +1,6 @@
 import { ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -16,6 +17,7 @@ import { ProfileDocumentsService } from '@domain/profile-documents/profile.docum
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -38,6 +40,7 @@ describe('WhiteboardService', () => {
   let communityResolverService: CommunityResolverService;
   let licenseService: LicenseService;
   let profileDocumentsService: ProfileDocumentsService;
+  let fileServiceAdapter: FileServiceAdapter;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -67,6 +70,7 @@ describe('WhiteboardService', () => {
     communityResolverService = module.get(CommunityResolverService);
     licenseService = module.get(LicenseService);
     profileDocumentsService = module.get(ProfileDocumentsService);
+    fileServiceAdapter = module.get(FileServiceAdapter);
   });
 
   describe('createWhiteboard', () => {
@@ -74,7 +78,11 @@ describe('WhiteboardService', () => {
     const mockProfile = {
       id: 'profile-1',
       displayName: 'Whiteboard',
-    } as IProfile;
+      // The whiteboard's own bucket — Phase 3 of createWhiteboard writes the
+      // initial scene's Yjs-V2 snapshot here when creation content is non-empty
+      // (006-collab-content-unification).
+      storageBucket: { id: 'sb-1' },
+    } as unknown as IProfile;
 
     beforeEach(() => {
       vi.mocked(profileService.createProfile).mockResolvedValue(mockProfile);
@@ -87,6 +95,15 @@ describe('WhiteboardService', () => {
       vi.mocked(
         profileService.materializeProfileContentAndVisualsOrRollback
       ).mockImplementation(async profile => profile);
+      // Creation content is converted to a Yjs-V2 snapshot and written to the
+      // whiteboard's bucket; the returned id becomes the contentPointer.
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
+        id: 'snap-1',
+        externalID: 'ext-1',
+        mimeType: 'application/octet-stream',
+        size: 1,
+        reused: false,
+      });
     });
 
     it('should create whiteboard with profile, visuals, tagset, and authorization', async () => {
@@ -473,11 +490,10 @@ describe('WhiteboardService', () => {
   });
 
   describe('updateWhiteboardContent', () => {
-    it('should parse content, reupload documents, and save', async () => {
+    it('should encode a snapshot, reupload documents, and save', async () => {
       const whiteboard = {
         id: 'wb-1',
-        content: '{}',
-        profile: { id: 'profile-1' },
+        profile: { id: 'profile-1', storageBucket: { id: 'sb-1' } },
       } as unknown as Whiteboard;
       whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
       whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
@@ -487,12 +503,26 @@ describe('WhiteboardService', () => {
         id: 'profile-1',
         storageBucket: { id: 'sb-1', documents: [] },
       } as any);
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
+        id: 'snap-1',
+        externalID: 'ext-1',
+        mimeType: 'application/octet-stream',
+        size: 1,
+        reused: false,
+      });
 
       const newContent = JSON.stringify({ elements: [], files: {} });
 
       const result = await service.updateWhiteboardContent('wb-1', newContent);
 
-      expect(result.content).toBeDefined();
+      // The scene is converted to a Yjs-V2 snapshot and written to the bucket;
+      // the returned id becomes the contentPointer (the inline column is gone).
+      expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        'sb-1'
+      );
+      expect(result.contentPointer).toBe('snap-1');
+      expect(result.blobStore).toBe(BlobStoreKind.FILE_SERVICE);
       expect(whiteboardRepository.save).toHaveBeenCalled();
     });
 
@@ -508,11 +538,10 @@ describe('WhiteboardService', () => {
       ).rejects.toThrow(EntityNotInitializedException);
     });
 
-    it('should return content unchanged when no files in whiteboard content', async () => {
+    it('should still write a snapshot when no files in whiteboard content', async () => {
       const whiteboard = {
         id: 'wb-1',
-        content: '{}',
-        profile: { id: 'profile-1' },
+        profile: { id: 'profile-1', storageBucket: { id: 'sb-1' } },
       } as unknown as Whiteboard;
       whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
       whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
@@ -521,18 +550,25 @@ describe('WhiteboardService', () => {
         id: 'profile-1',
         storageBucket: { id: 'sb-1', documents: [] },
       } as any);
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
+        id: 'snap-1',
+        externalID: 'ext-1',
+        mimeType: 'application/octet-stream',
+        size: 1,
+        reused: false,
+      });
 
       const newContent = JSON.stringify({ elements: [] });
       const result = await service.updateWhiteboardContent('wb-1', newContent);
 
-      expect(result).toBeDefined();
+      expect(result.contentPointer).toBe('snap-1');
+      expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalled();
     });
 
     it('should handle file reupload errors gracefully', async () => {
       const whiteboard = {
         id: 'wb-1',
-        content: '{}',
-        profile: { id: 'profile-1' },
+        profile: { id: 'profile-1', storageBucket: { id: 'sb-1' } },
       } as unknown as Whiteboard;
       whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
       whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
@@ -541,6 +577,13 @@ describe('WhiteboardService', () => {
         id: 'profile-1',
         storageBucket: { id: 'sb-1', documents: [] },
       } as any);
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
+        id: 'snap-1',
+        externalID: 'ext-1',
+        mimeType: 'application/octet-stream',
+        size: 1,
+        reused: false,
+      });
 
       vi.mocked(
         profileDocumentsService.reuploadFileOnStorageBucket
@@ -560,15 +603,14 @@ describe('WhiteboardService', () => {
         contentWithFiles
       );
 
-      // Should not throw, should handle gracefully
-      expect(result).toBeDefined();
+      // Should not throw, should handle gracefully and still persist a snapshot
+      expect(result.contentPointer).toBe('snap-1');
     });
 
-    it('should update file url when reupload returns new url', async () => {
+    it('should reupload referenced files before encoding the snapshot', async () => {
       const whiteboard = {
         id: 'wb-1',
-        content: '{}',
-        profile: { id: 'profile-1' },
+        profile: { id: 'profile-1', storageBucket: { id: 'sb-1' } },
       } as unknown as Whiteboard;
       whiteboardRepository.findOne!.mockResolvedValue(whiteboard);
       whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
@@ -577,6 +619,13 @@ describe('WhiteboardService', () => {
         id: 'profile-1',
         storageBucket: { id: 'sb-1', documents: [] },
       } as any);
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
+        id: 'snap-1',
+        externalID: 'ext-1',
+        mimeType: 'application/octet-stream',
+        size: 1,
+        reused: false,
+      });
 
       vi.mocked(
         profileDocumentsService.reuploadFileOnStorageBucket
@@ -594,8 +643,20 @@ describe('WhiteboardService', () => {
         contentWithFiles
       );
 
-      const parsedContent = JSON.parse(result.content!);
-      expect(parsedContent.files['file-1'].url).toBe('http://new.url/file.png');
+      // The embedded media is re-homed into the WB's bucket, then the scene is
+      // encoded to a Yjs-V2 snapshot and stored (content is no longer inline).
+      expect(
+        profileDocumentsService.reuploadFileOnStorageBucket
+      ).toHaveBeenCalledWith(
+        'http://old.url/file.png',
+        expect.objectContaining({ id: 'sb-1' }),
+        true
+      );
+      expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        'sb-1'
+      );
+      expect(result.contentPointer).toBe('snap-1');
     });
 
     it('should throw EntityNotInitializedException when storageBucket not found', async () => {

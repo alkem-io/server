@@ -6815,8 +6815,6 @@ type VisualConstraints {
 type Whiteboard {
   """The authorization rules for the entity"""
   authorization: Authorization
-  """The visual content of the Whiteboard."""
-  content: WhiteboardContent!
   """The policy governing who can update the Whiteboard content."""
   contentUpdatePolicy: ContentUpdatePolicy!
   """The user that created this Whiteboard"""

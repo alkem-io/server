@@ -457,18 +457,24 @@ describe('TemplateService', () => {
         id: 'tpl-1',
         type: TemplateType.WHITEBOARD,
         profile: { id: 'p-1' },
-        whiteboard: { id: 'wb-1', content: 'old content' },
+        whiteboard: { id: 'wb-1' },
       } as unknown as Template;
 
       templateRepository.find.mockResolvedValue([template]);
       templateRepository.save.mockImplementation(async (entity: any) => entity);
+      whiteboardService.updateWhiteboardContent.mockResolvedValue({} as any);
 
-      const result = await service.updateTemplate(
+      await service.updateTemplate(
         { id: 'tpl-1', type: TemplateType.WHITEBOARD } as ITemplate,
         { ID: 'tpl-1', whiteboardContent: 'new content' } as any
       );
 
-      expect(result.whiteboard?.content).toBe('new content');
+      // Whiteboard content is no longer an inline column: the new scene is routed
+      // through the snapshot-write path (006-collab-content-unification).
+      expect(whiteboardService.updateWhiteboardContent).toHaveBeenCalledWith(
+        'wb-1',
+        'new content'
+      );
     });
 
     it('should not update postDefaultDescription when template type is not POST', async () => {

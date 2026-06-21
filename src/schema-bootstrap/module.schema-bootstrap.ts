@@ -49,12 +49,10 @@ import { SearchModule } from '@services/api/search/search.module';
 import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.module';
 import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
-import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-document-integration';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
 import { GeoLocationModule } from '@services/external/geo-location';
 import { WingbackManagerModule } from '@services/external/wingback';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
-import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { PlatformAdminModule } from '@src/platform-admin/admin/platform.admin.module';
@@ -231,8 +229,6 @@ class SchemaBootstrapStubModule {}
     MeModule,
     TaskGraphqlModule,
     ActivityFeedModule,
-    WhiteboardIntegrationModule,
-    CollaborativeDocumentIntegrationModule,
     DomainPlatformSettingsModule,
     PlatformRoleModule,
     TemplateApplierModule,

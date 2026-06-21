@@ -1,5 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { BlobStoreKind } from '@common/enums/blob.store.kind';
 import { ContentUpdatePolicy } from '@common/enums/content.update.policy';
 import { LicenseEntitlementType } from '@common/enums/license.entitlement.type';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
@@ -21,6 +22,7 @@ import { ProfileDocumentsService } from '@domain/profile-documents/profile.docum
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
@@ -28,6 +30,7 @@ import { AuthorizationPolicy } from '../authorization-policy/authorization.polic
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { LicenseService } from '../license/license.service';
 import { ProfileService } from '../profile/profile.service';
+import { whiteboardSceneToYjsV2State } from './conversion';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { Whiteboard } from './whiteboard.entity';
@@ -45,7 +48,8 @@ export class WhiteboardService {
     private profileDocumentsService: ProfileDocumentsService,
     private communityResolverService: CommunityResolverService,
     private licenseService: LicenseService,
-    private collaborationLifecycleService: CollaborationLifecycleService
+    private collaborationLifecycleService: CollaborationLifecycleService,
+    private fileServiceAdapter: FileServiceAdapter
   ) {}
 
   async createWhiteboard(
@@ -53,9 +57,15 @@ export class WhiteboardService {
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<IWhiteboard> {
+    // The initial scene (Excalidraw JSON) arrives server-side (client create,
+    // from-template, duplicate). It is NO LONGER stored inline — it is converted
+    // to a Yjs-V2 snapshot and written to the whiteboard's own bucket below
+    // (R1/R2/FR-005). Hold it aside; `Whiteboard.create` no longer carries it.
+    const { content: initialScene, ...entityData } = whiteboardData;
+
     // Phase 1: build entity tree in memory (no file-service-go calls).
     const whiteboard: IWhiteboard = Whiteboard.create({
-      ...whiteboardData,
+      ...entityData,
     });
     whiteboard.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.WHITEBOARD
@@ -84,10 +94,6 @@ export class WhiteboardService {
     // work and rolls back the saved entity on failure so callers receive a
     // fully-materialized whiteboard or a thrown error, never a half-state.
     const saved = await this.whiteboardRepository.save(whiteboard);
-    // The helper mutates the profile in place AND saves it; the saved
-    // whiteboard's `.profile` reference is the same instance, so no
-    // explicit reassignment is required (TypeORM Profile entity type
-    // wouldn't accept the IProfile return shape anyway).
     await this.profileService.materializeProfileContentAndVisualsOrRollback(
       saved.profile,
       whiteboardData.profile?.visuals,
@@ -95,33 +101,45 @@ export class WhiteboardService {
       () => this.deleteWhiteboard(saved.id)
     );
 
-    // Phase 3: re-home the WB content's embedded file references into
-    // the new whiteboard's bucket. Without this, cloned WBs (template
-    // creation, space-from-template, callout-from-template, etc.)
-    // permanently reference the source's bucket — which becomes
-    // dangling the moment the source is deleted, and silently
-    // gets MOVED out of the source on the first user save. Doing it
-    // eagerly at clone time gives the new WB its own copies of
-    // referenced docs (the helper now uses COPY semantics, leaving
-    // the source intact).
-    if (saved.content) {
+    // Phase 3: re-home the scene's embedded file references into the new
+    // whiteboard's bucket (cloned WBs — template/space/callout-from-template —
+    // must own their referenced docs, not point at the source's bucket), THEN
+    // convert the scene to a Yjs-V2 snapshot and write it to the bucket, recording
+    // the pointer (R1/R2/R4). Empty creation content leaves the pointer unset: the
+    // room materializes empty + editable (FR-010).
+    if (initialScene) {
       try {
+        const storageBucketId = saved.profile.storageBucket?.id;
+        if (!storageBucketId) {
+          throw new EntityNotInitializedException(
+            'Whiteboard storage bucket not initialized when writing initial snapshot',
+            LogContext.WHITEBOARDS,
+            { whiteboardId: saved.id }
+          );
+        }
         const reuploaded = await this.reuploadDocumentsIfNotInBucket(
-          this.parseWhiteboardContent(saved.content),
+          this.parseWhiteboardContent(initialScene),
           saved.profile.id
         );
-        const reuploadedJson = JSON.stringify(reuploaded);
-        if (reuploadedJson !== saved.content) {
-          saved.content = reuploadedJson;
-          await this.whiteboardRepository.save(saved);
-        }
+        const snapshot = Buffer.from(
+          whiteboardSceneToYjsV2State(JSON.stringify(reuploaded))
+        );
+        const result = await this.fileServiceAdapter.createSnapshotInBucket(
+          snapshot,
+          storageBucketId
+        );
+        saved.contentPointer = result.id;
+        saved.blobStore = BlobStoreKind.FILE_SERVICE;
+        saved.contentVersion = 0;
+        await this.whiteboardRepository.save(saved);
       } catch (error) {
         await this.deleteWhiteboard(saved.id).catch(rollbackError => {
           const stack =
             rollbackError instanceof Error ? (rollbackError.stack ?? '') : '';
           this.logger.error?.(
             {
-              message: 'Rollback after WB content reupload failure also failed',
+              message:
+                'Rollback after WB snapshot write / reupload failure also failed',
               whiteboardId: saved.id,
               rollbackError: String(rollbackError),
             },
@@ -239,6 +257,14 @@ export class WhiteboardService {
     return whiteboard;
   }
 
+  /**
+   * Server-side whiteboard content set (template / framing-content edit — NOT a
+   * live collab session). Re-homes embedded media into the whiteboard's bucket,
+   * converts the scene to a Yjs-V2 snapshot, and replaces the stored snapshot in
+   * the bucket (R1/R2/FR-005) — the inline `content` column is gone. The content
+   * originates server-side here, so it is persisted directly; the next open seeds
+   * from this snapshot. The superseded snapshot file is deleted (latest-only).
+   */
   async updateWhiteboardContent(
     whiteboardInputId: string,
     updateWhiteboardContent: string
@@ -246,20 +272,23 @@ export class WhiteboardService {
     const whiteboard = await this.getWhiteboardOrFail(whiteboardInputId, {
       loadEagerRelations: false,
       relations: {
-        profile: true,
+        profile: { storageBucket: true },
       },
       select: {
         id: true,
+        contentPointer: true,
+        blobStore: true,
         profile: {
           id: true,
+          storageBucket: { id: true },
         },
       },
     });
     const newWhiteboardContent = JSON.parse(updateWhiteboardContent);
 
-    if (!whiteboard?.profile) {
+    if (!whiteboard?.profile?.storageBucket) {
       throw new EntityNotInitializedException(
-        `Profile not initialized on whiteboard: '${whiteboard.id}'`,
+        `Profile / storage bucket not initialized on whiteboard: '${whiteboard.id}'`,
         LogContext.COLLABORATION
       );
     }
@@ -268,12 +297,37 @@ export class WhiteboardService {
     // whiteboard content save. Plus I think it is an inherent risk.
     const newContentWithFiles = await this.reuploadDocumentsIfNotInBucket(
       newWhiteboardContent,
-      whiteboard?.profile.id
+      whiteboard.profile.id
     );
 
-    whiteboard.content = JSON.stringify(newContentWithFiles);
+    const snapshot = Buffer.from(
+      whiteboardSceneToYjsV2State(JSON.stringify(newContentWithFiles))
+    );
+    const previousPointer = whiteboard.contentPointer;
+    const result = await this.fileServiceAdapter.createSnapshotInBucket(
+      snapshot,
+      whiteboard.profile.storageBucket.id
+    );
+    whiteboard.contentPointer = result.id;
+    whiteboard.blobStore = BlobStoreKind.FILE_SERVICE;
+    const saved = await this.save(whiteboard);
 
-    return this.save(whiteboard);
+    if (previousPointer && previousPointer !== result.id) {
+      await this.fileServiceAdapter
+        .deleteDocument(previousPointer)
+        .catch(error => {
+          this.logger.warn?.(
+            {
+              message: 'Failed to delete superseded whiteboard snapshot',
+              whiteboardId: whiteboard.id,
+              previousPointer,
+              error: String(error),
+            },
+            LogContext.WHITEBOARDS
+          );
+        });
+    }
+    return saved;
   }
 
   /**
