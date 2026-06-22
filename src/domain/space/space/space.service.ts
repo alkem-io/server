@@ -39,6 +39,13 @@ import { ICredentialDefinition } from '@domain/actor/credential/credential.defin
 import { ICalloutsSet } from '@domain/collaboration/callouts-set/callouts.set.interface';
 import { CollaborationService } from '@domain/collaboration/collaboration/collaboration.service';
 import { CreateCollaborationInput } from '@domain/collaboration/collaboration/dto/collaboration.dto.create';
+import {
+  L0_FIXED_INNOVATION_FLOW_STATES,
+  L0_MAX_INNOVATION_FLOW_STATES,
+  L0_MIN_INNOVATION_FLOW_STATES,
+  SUBSPACE_MAX_INNOVATION_FLOW_STATES,
+  SUBSPACE_MIN_INNOVATION_FLOW_STATES,
+} from '@domain/collaboration/innovation-flow/innovation.flow.constants';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ILicense } from '@domain/common/license/license.interface';
@@ -1275,14 +1282,25 @@ export class SpaceService {
         LogContext.SPACES
       );
     }
-    if (templateContentSpace.collaboration.innovationFlow.states.length < 4) {
+    if (
+      templateContentSpace.collaboration.innovationFlow.states.length <
+      L0_FIXED_INNOVATION_FLOW_STATES
+    ) {
       throw new ValidationException(
-        `Template content space innovation flow states must have at least 4 states: ${templateContentSpaceID}`,
-        LogContext.SPACES
+        'Template content space innovation flow states must satisfy the required minimum',
+        LogContext.SPACES,
+        {
+          templateContentSpaceID,
+          minimumRequiredStates: L0_FIXED_INNOVATION_FLOW_STATES,
+        }
       );
     }
-    templateContentSpace.collaboration.innovationFlow.settings.minimumNumberOfStates = 4;
-    templateContentSpace.collaboration.innovationFlow.settings.maximumNumberOfStates = 4;
+    // Story #6177: keep the L0 minimum at the fixed-phase count, but raise the
+    // maximum to the subspace allowance so admins can add tabs beyond the fixed 4.
+    templateContentSpace.collaboration.innovationFlow.settings.minimumNumberOfStates =
+      L0_MIN_INNOVATION_FLOW_STATES;
+    templateContentSpace.collaboration.innovationFlow.settings.maximumNumberOfStates =
+      L0_MAX_INNOVATION_FLOW_STATES;
 
     return await this.createSpace(
       spaceData,
@@ -1370,8 +1388,10 @@ export class SpaceService {
         LogContext.TEMPLATES
       );
     }
-    templateContentSubspace.collaboration.innovationFlow.settings.maximumNumberOfStates = 8;
-    templateContentSubspace.collaboration.innovationFlow.settings.minimumNumberOfStates = 1;
+    templateContentSubspace.collaboration.innovationFlow.settings.maximumNumberOfStates =
+      SUBSPACE_MAX_INNOVATION_FLOW_STATES;
+    templateContentSubspace.collaboration.innovationFlow.settings.minimumNumberOfStates =
+      SUBSPACE_MIN_INNOVATION_FLOW_STATES;
 
     let subspace = await this.createSpace(
       subspaceData,
