@@ -11,10 +11,10 @@ import { ack } from '@services/util';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { CollaborativeDocumentIntegrationService } from './collaborative-document-integration.service';
 import {
-  CollaboraDocumentContributionsInputData,
   FetchInputData,
   InfoInputData,
   MemoContributionsInputData,
+  OfficeDocumentContributionsInputData,
   SaveInputData,
 } from './inputs';
 import {
@@ -102,18 +102,34 @@ export class CollaborativeDocumentIntegrationController {
   }
 
   @MessagePattern(
-    CollaborativeDocumentEventPattern.COLLABORA_DOCUMENT_CONTRIBUTION,
+    CollaborativeDocumentEventPattern.OFFICE_DOCUMENT_CONTRIBUTION,
     Transport.RMQ
   )
-  public collaboraDocumentContribution(
-    @Payload() data: CollaboraDocumentContributionsInputData,
+  public officeDocumentContribution(
+    @Payload() data: OfficeDocumentContributionsInputData,
     @Ctx() context: RmqContext
   ): Promise<void> {
     this.logger.verbose?.(
-      `Received COLLABORA_DOCUMENT_CONTRIBUTION request for document: ${data.documentId}`,
+      `Received OFFICE_DOCUMENT_CONTRIBUTION request for document: ${data.documentId}`,
       LogContext.COLLAB_DOCUMENT_INTEGRATION
     );
     ack(context);
-    return this.integrationService.collaboraDocumentContributions(data);
+    return this.integrationService.officeDocumentContributions(data);
+  }
+
+  @MessagePattern(
+    CollaborativeDocumentEventPattern.OFFICE_DOCUMENT_VIEW,
+    Transport.RMQ
+  )
+  public officeDocumentView(
+    @Payload() data: OfficeDocumentContributionsInputData,
+    @Ctx() context: RmqContext
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Received OFFICE_DOCUMENT_VIEW request for document: ${data.documentId}`,
+      LogContext.COLLAB_DOCUMENT_INTEGRATION
+    );
+    ack(context);
+    return this.integrationService.officeDocumentViews(data);
   }
 }

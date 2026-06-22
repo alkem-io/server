@@ -13,9 +13,10 @@ import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { BaseContribution } from '../events';
 import {
   CONTRIBUTION_TYPE,
-  CollaboraDocumentContributionDocument,
   ContributionDetails,
   ContributionDocument,
+  ContributionType,
+  OfficeDocumentContributionDocument,
 } from '../types';
 import { ContributionAuthorDetails } from '../types/contribution.author.details';
 import { isElasticError, isElasticResponseError } from '../utils';
@@ -213,7 +214,7 @@ export class ContributionReporterService {
 
   /**
    * Single-actor Collabora lifecycle events (created / uploaded / opened).
-   * Unlike {@link collaboraDocumentContribution} (the aggregate edited-window
+   * Unlike {@link officeDocumentContribution} (the aggregate edited-window
    * record), these mirror `calloutMemoCreated`: one per-user document carrying
    * the acting user as `author` via the shared {@link createDocument} helper.
    * The record `id` is the `CollaboraDocument.id`. See feature
@@ -341,19 +342,63 @@ export class ContributionReporterService {
 
   /**
    * Indexes ONE aggregate `contribution` document per (Collabora document,
-   * window), carrying both `writeUsers` and `readonlyUsers` arrays — NOT one
-   * document per user. Resolve space/displayName once upstream and pass both
-   * arrays through verbatim. See feature 003-collabora-doc-contributions.
+   * window) for a window in which the document was genuinely **edited**,
+   * carrying both `writeUsers` and `readonlyUsers` arrays — NOT one document per
+   * user. Resolve space/displayName once upstream and pass both arrays through
+   * verbatim. See feature 003-collabora-doc-contributions.
    */
-  public collaboraDocumentContribution(contribution: {
+  public officeDocumentContribution(contribution: {
     id: string;
     name: string;
     space: string;
     writeUsers: { id: string }[];
     readonlyUsers: { id: string }[];
   }): void {
+    this.officeDocumentAggregate(
+      CONTRIBUTION_TYPE.OFFICE_DOCUMENT_CONTRIBUTION,
+      contribution
+    );
+  }
+
+  /**
+   * Companion of {@link officeDocumentContribution}: indexes ONE aggregate
+   * `contribution` document per (Collabora document, window) for a window in
+   * which the document was **active but not edited** (viewed). Same aggregate
+   * shape — both `writeUsers` and `readonlyUsers` arrays — differing ONLY by the
+   * `OFFICE_DOCUMENT_VIEW` type. See feature 003-collabora-doc-contributions
+   * (FR-012). Mutually exclusive with the contribution record per window.
+   */
+  public officeDocumentView(contribution: {
+    id: string;
+    name: string;
+    space: string;
+    writeUsers: { id: string }[];
+    readonlyUsers: { id: string }[];
+  }): void {
+    this.officeDocumentAggregate(
+      CONTRIBUTION_TYPE.OFFICE_DOCUMENT_VIEW,
+      contribution
+    );
+  }
+
+  /**
+   * Shared aggregate-index path for the two Collabora window record types
+   * (CONTRIBUTION = edited, VIEW = active-but-not-edited). Both indexed records
+   * are byte-for-byte identical save for `type`, so the public methods differ
+   * only in the type they pass here.
+   */
+  private officeDocumentAggregate(
+    type: ContributionType,
+    contribution: {
+      id: string;
+      name: string;
+      space: string;
+      writeUsers: { id: string }[];
+      readonlyUsers: { id: string }[];
+    }
+  ): void {
     void this.createAggregateDocument({
-      type: CONTRIBUTION_TYPE.COLLABORA_DOCUMENT_CONTRIBUTION,
+      type,
       id: contribution.id,
       name: contribution.name,
       space: contribution.space,
@@ -570,11 +615,11 @@ export class ContributionReporterService {
    * Indexes a single aggregate contribution document. Unlike
    * {@link createDocument}, this does NOT attach per-user
    * {@link ContributionAuthorDetails} (no `author`) — the aggregate carries its
-   * own user arrays instead. Used for COLLABORA_DOCUMENT_CONTRIBUTION.
+   * own user arrays instead. Used for OFFICE_DOCUMENT_CONTRIBUTION.
    */
   private async createAggregateDocument(
     contribution: Omit<
-      CollaboraDocumentContributionDocument,
+      OfficeDocumentContributionDocument,
       '@timestamp' | 'environment'
     >
   ): Promise<WriteResponseBase | undefined> {
@@ -583,7 +628,7 @@ export class ContributionReporterService {
     }
 
     try {
-      const document: CollaboraDocumentContributionDocument = {
+      const document: OfficeDocumentContributionDocument = {
         ...contribution,
         '@timestamp': new Date(),
         environment: this.environment,

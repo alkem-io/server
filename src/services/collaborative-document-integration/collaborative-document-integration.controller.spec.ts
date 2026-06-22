@@ -5,10 +5,10 @@ import { type Mock } from 'vitest';
 import { CollaborativeDocumentIntegrationController } from './collaborative-document-integration.controller';
 import { CollaborativeDocumentIntegrationService } from './collaborative-document-integration.service';
 import {
-  CollaboraDocumentContributionsInputData,
   FetchInputData,
   InfoInputData,
   MemoContributionsInputData,
+  OfficeDocumentContributionsInputData,
   SaveInputData,
 } from './inputs';
 import { HealthCheckOutputData } from './outputs';
@@ -26,7 +26,8 @@ describe('CollaborativeDocumentIntegrationController', () => {
     save: Mock;
     fetch: Mock;
     memoContributions: Mock;
-    collaboraDocumentContributions: Mock;
+    officeDocumentContributions: Mock;
+    officeDocumentViews: Mock;
   };
 
   const mockRmqContext = {
@@ -132,22 +133,39 @@ describe('CollaborativeDocumentIntegrationController', () => {
     });
   });
 
-  describe('collaboraDocumentContribution', () => {
-    it('should delegate to integrationService.collaboraDocumentContributions', async () => {
+  describe('officeDocumentContribution', () => {
+    it('should delegate to integrationService.officeDocumentContributions', async () => {
       const payload = {
         documentId: 'doc-1',
         writeUsers: [{ id: 'user-1' }],
         readonlyUsers: [{ id: 'user-2' }],
-      } as CollaboraDocumentContributionsInputData;
-      integrationService.collaboraDocumentContributions.mockResolvedValue(
+      } as OfficeDocumentContributionsInputData;
+      integrationService.officeDocumentContributions.mockResolvedValue(
         undefined
       );
 
-      await controller.collaboraDocumentContribution(payload, mockRmqContext);
+      await controller.officeDocumentContribution(payload, mockRmqContext);
 
       expect(
-        integrationService.collaboraDocumentContributions
+        integrationService.officeDocumentContributions
       ).toHaveBeenCalledWith(payload);
+    });
+  });
+
+  describe('officeDocumentView', () => {
+    it('should delegate to integrationService.officeDocumentViews', async () => {
+      const payload = {
+        documentId: 'doc-1',
+        writeUsers: [{ id: 'user-1' }],
+        readonlyUsers: [{ id: 'user-2' }],
+      } as OfficeDocumentContributionsInputData;
+      integrationService.officeDocumentViews.mockResolvedValue(undefined);
+
+      await controller.officeDocumentView(payload, mockRmqContext);
+
+      expect(integrationService.officeDocumentViews).toHaveBeenCalledWith(
+        payload
+      );
     });
   });
 });
