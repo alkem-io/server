@@ -35,11 +35,13 @@ export type OfficeDocumentContributionDocument = {
    */
   space: string;
   /**
-   * Distinct write-capable users active in the edited window.
+   * Distinct write-capable users active in the edited window — bare actor-id
+   * strings (Elasticsearch indexes a string array as a multi-valued field,
+   * shown comma-joined and individually filterable in Kibana).
    */
-  writeUsers: { id: string }[];
+  writeUsers: string[];
   /**
-   * Distinct read-only users active in the edited window.
+   * Distinct read-only users active in the edited window — bare actor-id strings.
    */
-  readonlyUsers: { id: string }[];
+  readonlyUsers: string[];
 };

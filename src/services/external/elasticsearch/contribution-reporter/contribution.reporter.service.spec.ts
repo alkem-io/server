@@ -377,8 +377,8 @@ describe('ContributionReporterService', () => {
         id: 'doc-1',
         name: 'My Document',
         space: 'space-root',
-        writeUsers: [{ id: 'user-1' }, { id: 'user-2' }],
-        readonlyUsers: [{ id: 'user-3' }],
+        writeUsers: ['user-1', 'user-2'],
+        readonlyUsers: ['user-3'],
       });
 
       await vi.waitFor(() => {
@@ -392,8 +392,8 @@ describe('ContributionReporterService', () => {
             id: 'doc-1',
             name: 'My Document',
             space: 'space-root',
-            writeUsers: [{ id: 'user-1' }, { id: 'user-2' }],
-            readonlyUsers: [{ id: 'user-3' }],
+            writeUsers: ['user-1', 'user-2'],
+            readonlyUsers: ['user-3'],
           }),
         })
       );
@@ -404,7 +404,7 @@ describe('ContributionReporterService', () => {
         id: 'doc-2',
         name: 'Another Document',
         space: 'space-root',
-        writeUsers: [{ id: 'user-1' }],
+        writeUsers: ['user-1'],
         readonlyUsers: [],
       });
 
@@ -425,7 +425,7 @@ describe('ContributionReporterService', () => {
         id: 'doc-3',
         name: 'Doc',
         space: 'space-root',
-        writeUsers: [{ id: 'user-1' }],
+        writeUsers: ['user-1'],
         readonlyUsers: [],
       });
 
@@ -437,7 +437,7 @@ describe('ContributionReporterService', () => {
         expect.objectContaining({
           document: expect.objectContaining({
             type: 'OFFICE_DOCUMENT_CONTRIBUTION',
-            writeUsers: [{ id: 'user-1' }],
+            writeUsers: ['user-1'],
             readonlyUsers: [],
           }),
         })
@@ -451,8 +451,8 @@ describe('ContributionReporterService', () => {
         id: 'doc-1',
         name: 'My Document',
         space: 'space-root',
-        writeUsers: [{ id: 'user-1' }, { id: 'user-2' }],
-        readonlyUsers: [{ id: 'user-3' }],
+        writeUsers: ['user-1', 'user-2'],
+        readonlyUsers: ['user-3'],
       });
 
       await vi.waitFor(() => {
@@ -466,8 +466,8 @@ describe('ContributionReporterService', () => {
             id: 'doc-1',
             name: 'My Document',
             space: 'space-root',
-            writeUsers: [{ id: 'user-1' }, { id: 'user-2' }],
-            readonlyUsers: [{ id: 'user-3' }],
+            writeUsers: ['user-1', 'user-2'],
+            readonlyUsers: ['user-3'],
           }),
         })
       );
@@ -478,7 +478,7 @@ describe('ContributionReporterService', () => {
         id: 'doc-2',
         name: 'Another Document',
         space: 'space-root',
-        writeUsers: [{ id: 'user-1' }],
+        writeUsers: ['user-1'],
         readonlyUsers: [],
       });
 
@@ -499,7 +499,7 @@ describe('ContributionReporterService', () => {
         id: 'doc-3',
         name: 'Doc',
         space: 'space-root',
-        writeUsers: [{ id: 'user-1' }],
+        writeUsers: ['user-1'],
         readonlyUsers: [],
       });
 
@@ -511,7 +511,7 @@ describe('ContributionReporterService', () => {
         expect.objectContaining({
           document: expect.objectContaining({
             type: 'OFFICE_DOCUMENT_VIEW',
-            writeUsers: [{ id: 'user-1' }],
+            writeUsers: ['user-1'],
             readonlyUsers: [],
           }),
         })

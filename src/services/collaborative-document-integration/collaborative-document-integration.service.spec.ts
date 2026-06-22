@@ -79,7 +79,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
   describe('accessGranted', () => {
     it('should return true when user has the requested privilege', async () => {
-      const memo = { id: 'memo-1', authorization: { id: 'auth-1' } };
+      const memo = { id: 'memo-1', authorization: 'auth-1' };
       const actorContext = { credentials: [] };
       memoService.getMemoOrFail.mockResolvedValue(memo);
       actorContextService.resolveActorContext.mockResolvedValue(actorContext);
@@ -132,7 +132,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
     });
 
     it('should return correct info with maxCollaborators based on isMultiUser', async () => {
-      const memo = { authorization: { id: 'auth-1' } };
+      const memo = { authorization: 'auth-1' };
       memoService.getMemoOrFail.mockResolvedValue(memo);
       actorContextService.resolveActorContext.mockResolvedValue({});
       // First call: READ -> true, Second call: UPDATE_CONTENT -> true
@@ -312,7 +312,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
         }
       );
       communityResolver.getCommunityForCollaboraDocumentOrFail.mockResolvedValue(
-        { id: 'community-1' }
+        'community-1'
       );
       communityResolver.getLevelZeroSpaceIdForCommunity.mockResolvedValue(
         'space-root'
@@ -330,8 +330,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
       await service.officeDocumentContributions({
         documentId: STORAGE_DOCUMENT_ID,
-        writeUsers: [{ id: 'user-1' }, { id: 'user-2' }],
-        readonlyUsers: [{ id: 'user-3' }],
+        writeUsers: ['user-1', 'user-2'],
+        readonlyUsers: ['user-3'],
       } as any);
 
       // reverse-resolved by the STORAGE document id
@@ -366,8 +366,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
         id: COLLABORA_DOCUMENT_ID,
         name: 'My Document',
         space: 'space-root',
-        writeUsers: [{ id: 'user-1' }, { id: 'user-2' }],
-        readonlyUsers: [{ id: 'user-3' }],
+        writeUsers: ['user-1', 'user-2'],
+        readonlyUsers: ['user-3'],
       });
 
       // explicitly: the storage id is never used as the record id
@@ -379,8 +379,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
     // T014: both arrays pass through verbatim (no fan-out, no dropping readonlyUsers)
     it('should pass writeUsers and readonlyUsers through verbatim', async () => {
       arrange();
-      const writeUsers = [{ id: 'w1' }, { id: 'w2' }];
-      const readonlyUsers = [{ id: 'r1' }];
+      const writeUsers = ['w1', 'w2'];
+      const readonlyUsers = ['r1'];
 
       await service.officeDocumentContributions({
         documentId: STORAGE_DOCUMENT_ID,
@@ -399,14 +399,14 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
       await service.officeDocumentContributions({
         documentId: STORAGE_DOCUMENT_ID,
-        writeUsers: [{ id: 'user-1' }],
+        writeUsers: ['user-1'],
         readonlyUsers: [],
       } as any);
 
       const arg =
         contributionReporter.officeDocumentContribution.mock.calls[0][0];
       expect(arg.readonlyUsers).toEqual([]);
-      expect(arg.writeUsers).toEqual([{ id: 'user-1' }]);
+      expect(arg.writeUsers).toEqual(['user-1']);
     });
 
     // T013 + FR-008: no CollaboraDocument backs the storage document id → discard without throwing
@@ -418,7 +418,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
       await expect(
         service.officeDocumentContributions({
           documentId: 'unknown-storage-doc',
-          writeUsers: [{ id: 'user-1' }],
+          writeUsers: ['user-1'],
           readonlyUsers: [],
         } as any)
       ).resolves.toBeUndefined();
@@ -447,7 +447,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
       await expect(
         service.officeDocumentContributions({
           documentId: STORAGE_DOCUMENT_ID,
-          writeUsers: [{ id: 'user-1' }],
+          writeUsers: ['user-1'],
           readonlyUsers: [],
         } as any)
       ).resolves.toBeUndefined();
@@ -472,7 +472,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
         }
       );
       communityResolver.getCommunityForCollaboraDocumentOrFail.mockResolvedValue(
-        { id: 'community-1' }
+        'community-1'
       );
       communityResolver.getLevelZeroSpaceIdForCommunity.mockResolvedValue(
         'space-root'
@@ -488,8 +488,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
       await service.officeDocumentViews({
         documentId: STORAGE_DOCUMENT_ID,
-        writeUsers: [{ id: 'user-1' }, { id: 'user-2' }],
-        readonlyUsers: [{ id: 'user-3' }],
+        writeUsers: ['user-1', 'user-2'],
+        readonlyUsers: ['user-3'],
       } as any);
 
       expect(
@@ -514,8 +514,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
         id: COLLABORA_DOCUMENT_ID,
         name: 'My Document',
         space: 'space-root',
-        writeUsers: [{ id: 'user-1' }, { id: 'user-2' }],
-        readonlyUsers: [{ id: 'user-3' }],
+        writeUsers: ['user-1', 'user-2'],
+        readonlyUsers: ['user-3'],
       });
 
       // the storage id is never used as the record id
@@ -525,8 +525,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
     it('should pass writeUsers and readonlyUsers through verbatim', async () => {
       arrange();
-      const writeUsers = [{ id: 'w1' }, { id: 'w2' }];
-      const readonlyUsers = [{ id: 'r1' }];
+      const writeUsers = ['w1', 'w2'];
+      const readonlyUsers = ['r1'];
 
       await service.officeDocumentViews({
         documentId: STORAGE_DOCUMENT_ID,
@@ -548,7 +548,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
       await expect(
         service.officeDocumentViews({
           documentId: 'unknown-storage-doc',
-          writeUsers: [{ id: 'user-1' }],
+          writeUsers: ['user-1'],
           readonlyUsers: [],
         } as any)
       ).resolves.toBeUndefined();
@@ -574,7 +574,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
       await expect(
         service.officeDocumentViews({
           documentId: STORAGE_DOCUMENT_ID,
-          writeUsers: [{ id: 'user-1' }],
+          writeUsers: ['user-1'],
           readonlyUsers: [],
         } as any)
       ).resolves.toBeUndefined();

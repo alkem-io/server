@@ -251,8 +251,8 @@ export class CollaborativeDocumentIntegrationService {
       id: string;
       name: string;
       space: string;
-      writeUsers: { id: string }[];
-      readonlyUsers: { id: string }[];
+      writeUsers: string[];
+      readonlyUsers: string[];
     }) => void
   ): Promise<void> {
     try {

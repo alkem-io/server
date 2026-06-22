@@ -351,8 +351,8 @@ export class ContributionReporterService {
     id: string;
     name: string;
     space: string;
-    writeUsers: { id: string }[];
-    readonlyUsers: { id: string }[];
+    writeUsers: string[];
+    readonlyUsers: string[];
   }): void {
     this.officeDocumentAggregate(
       CONTRIBUTION_TYPE.OFFICE_DOCUMENT_CONTRIBUTION,
@@ -372,8 +372,8 @@ export class ContributionReporterService {
     id: string;
     name: string;
     space: string;
-    writeUsers: { id: string }[];
-    readonlyUsers: { id: string }[];
+    writeUsers: string[];
+    readonlyUsers: string[];
   }): void {
     this.officeDocumentAggregate(
       CONTRIBUTION_TYPE.OFFICE_DOCUMENT_VIEW,
@@ -393,8 +393,8 @@ export class ContributionReporterService {
       id: string;
       name: string;
       space: string;
-      writeUsers: { id: string }[];
-      readonlyUsers: { id: string }[];
+      writeUsers: string[];
+      readonlyUsers: string[];
     }
   ): void {
     void this.createAggregateDocument({
