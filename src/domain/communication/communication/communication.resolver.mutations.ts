@@ -88,10 +88,15 @@ export class CommunicationResolverMutations {
         }
       );
 
-      // Check if the user is willing to receive messages
-      if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {
+      // `sendMessageToUsers` is the email-contact transport (chat goes through
+      // createConversation / sendDirectMessageToUsers), so it gates on the email
+      // consent flag — NOT the chat flag. A user with chat off but email contact
+      // on (the whole point of the setting) must be reachable here.
+      if (
+        !receivingUser.settings.communication.allowOtherUsersToContactViaEmail
+      ) {
         throw new MessagingNotEnabledException(
-          'User is not open to receiving messages',
+          'User is not open to being contacted via email',
           LogContext.USER,
           {
             userId: receivingUser.id,
