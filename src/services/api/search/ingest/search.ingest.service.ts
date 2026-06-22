@@ -924,9 +924,6 @@ export class SearchIngestService {
             buildFlowStateNameToIdMap(
               space.collaboration?.innovationFlow?.states
             );
-          const calloutsSetID =
-            space?.collaboration?.calloutsSet?.id ?? EMPTY_VALUE;
-
           return space.collaboration?.calloutsSet?.callouts?.map(callout => ({
             ...callout,
             framing: undefined,
@@ -940,7 +937,6 @@ export class SearchIngestService {
               space.parentSpace?.id ??
               space.id,
             collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-            calloutsSetID,
             flowStateID: resolveCalloutFlowStateID(
               callout.classification?.tagsets,
               flowStateNameToId,
@@ -1073,8 +1069,6 @@ export class SearchIngestService {
             buildFlowStateNameToIdMap(
               space.collaboration?.innovationFlow?.states
             );
-          const calloutsSetID =
-            space?.collaboration?.calloutsSet?.id ?? EMPTY_VALUE;
           const callouts = space.collaboration?.calloutsSet?.callouts;
           return callouts
             ?.flatMap(callout => {
@@ -1111,7 +1105,6 @@ export class SearchIngestService {
                     space.id,
                   calloutID: callout.id,
                   collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-                  calloutsSetID,
                   flowStateID,
                   profile: {
                     ...callout.framing.whiteboard.profile,
@@ -1149,7 +1142,6 @@ export class SearchIngestService {
                     space.id,
                   calloutID: callout.id,
                   collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-                  calloutsSetID,
                   flowStateID,
                   profile: {
                     ...contribution.whiteboard.profile,
@@ -1271,7 +1263,6 @@ export class SearchIngestService {
       memo: Memo,
       callout: Callout,
       space: Space,
-      calloutsSetID: string,
       flowStateID: string | undefined
     ) => {
       const markdown = extractMarkdownFromMemoContent(memo.content);
@@ -1294,7 +1285,6 @@ export class SearchIngestService {
           space.id,
         calloutID: callout.id,
         collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-        calloutsSetID,
         flowStateID,
         profile: {
           ...memo.profile,
@@ -1307,8 +1297,6 @@ export class SearchIngestService {
     return spaces.flatMap(space => {
       const { map: flowStateNameToId, ambiguousNames } =
         buildFlowStateNameToIdMap(space.collaboration?.innovationFlow?.states);
-      const calloutsSetID =
-        space?.collaboration?.calloutsSet?.id ?? EMPTY_VALUE;
       const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
       return callouts
         .flatMap(callout => {
@@ -1329,7 +1317,6 @@ export class SearchIngestService {
                 callout.framing.memo,
                 callout,
                 space,
-                calloutsSetID,
                 flowStateID
               )
             );
@@ -1340,9 +1327,7 @@ export class SearchIngestService {
               return;
             }
 
-            memos.push(
-              memoForIngestion(memo, callout, space, calloutsSetID, flowStateID)
-            );
+            memos.push(memoForIngestion(memo, callout, space, flowStateID));
           });
 
           return memos;
@@ -1443,8 +1428,6 @@ export class SearchIngestService {
             buildFlowStateNameToIdMap(
               space.collaboration?.innovationFlow?.states
             );
-          const calloutsSetID =
-            space?.collaboration?.calloutsSet?.id ?? EMPTY_VALUE;
           const callouts = space?.collaboration?.calloutsSet?.callouts;
           callouts?.forEach(callout => {
             // children inherit the parent callout's scope fields
@@ -1472,7 +1455,6 @@ export class SearchIngestService {
                   space.id,
                 calloutID: callout.id,
                 collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
-                calloutsSetID,
                 flowStateID,
                 profile: {
                   ...contribution.post.profile,

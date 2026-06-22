@@ -61,21 +61,6 @@ describe('buildSearchQuery', () => {
     expect(query.bool?.filter).toBeUndefined();
   });
 
-  it('should build a "field-absent OR field-equals" filter for calloutsSetIdFilter', () => {
-    const query = buildSearchQuery('test', {
-      calloutsSetIdFilter: 'cs-123',
-    });
-
-    const filter = query.bool?.filter as any;
-    expect(filter.bool.must).toHaveLength(1);
-    const innerBool = filter.bool.must[0].bool;
-    expect(innerBool.minimum_should_match).toBe(1);
-    expect(innerBool.should[0].bool.must_not.exists.field).toBe(
-      'calloutsSetID'
-    );
-    expect(innerBool.should[1].term.calloutsSetID).toBe('cs-123');
-  });
-
   it('should build a "field-absent OR field-equals" filter for flowStateIdFilter', () => {
     const query = buildSearchQuery('test', {
       flowStateIdFilter: 'fs-456',
@@ -89,9 +74,10 @@ describe('buildSearchQuery', () => {
     expect(innerBool.should[1].term.flowStateID).toBe('fs-456');
   });
 
-  it('should combine calloutsSet + flowState scope filters (both required for zero leakage, SC-003)', () => {
+  it('should combine space + flowState scope filters together', () => {
+    // flowState UUID alone scopes; spaceID is the only other scope filter
     const query = buildSearchQuery('test', {
-      calloutsSetIdFilter: 'cs-123',
+      spaceIdFilter: 'space-1',
       flowStateIdFilter: 'fs-456',
     });
 
@@ -103,26 +89,15 @@ describe('buildSearchQuery', () => {
     );
     expect(fields).toEqual(
       expect.arrayContaining([
-        { calloutsSetID: 'cs-123' },
+        { spaceID: 'space-1' },
         { flowStateID: 'fs-456' },
       ])
     );
   });
 
-  it('should combine space + calloutsSet + flowState scope filters together', () => {
+  it('should not add a scope filter when space/flowState filters are undefined', () => {
     const query = buildSearchQuery('test', {
-      spaceIdFilter: 'space-1',
-      calloutsSetIdFilter: 'cs-123',
-      flowStateIdFilter: 'fs-456',
-    });
-
-    const filter = query.bool?.filter as any;
-    expect(filter.bool.must).toHaveLength(3);
-  });
-
-  it('should not add a scope filter when calloutsSet/flowState filters are undefined', () => {
-    const query = buildSearchQuery('test', {
-      calloutsSetIdFilter: undefined,
+      spaceIdFilter: undefined,
       flowStateIdFilter: undefined,
     });
 

@@ -186,13 +186,8 @@ export class SearchExtractService {
       throw new Error('Elasticsearch client not initialized');
     }
 
-    const {
-      terms,
-      searchInSpaceFilter,
-      searchInCalloutsSetFilter,
-      searchInFlowStateFilter,
-      filters,
-    } = searchData;
+    const { terms, searchInSpaceFilter, searchInFlowStateFilter, filters } =
+      searchData;
     const indicesToSearchOn = this.getIndices(onlyPublicResults, filters);
 
     if (indicesToSearchOn.length === 0) {
@@ -202,7 +197,6 @@ export class SearchExtractService {
     // execute search per category
     const result = await this.executeMultiSearch(indicesToSearchOn, terms, {
       searchInSpaceFilter,
-      searchInCalloutsSetFilter,
       searchInFlowStateFilter,
       filters,
       sizeMultiplier: SIZE_MULTIPLIER,
@@ -275,7 +269,6 @@ export class SearchExtractService {
     terms: string[],
     options?: {
       searchInSpaceFilter?: string;
-      searchInCalloutsSetFilter?: string;
       searchInFlowStateFilter?: string;
       filters?: SearchFilterInput[];
       sizeMultiplier: number;
@@ -291,7 +284,6 @@ export class SearchExtractService {
 
     const {
       searchInSpaceFilter,
-      searchInCalloutsSetFilter,
       searchInFlowStateFilter,
       filters,
       sizeMultiplier,
@@ -301,7 +293,6 @@ export class SearchExtractService {
     // the main search query built using query DSL
     const query = buildSearchQuery(term, {
       spaceIdFilter: searchInSpaceFilter,
-      calloutsSetIdFilter: searchInCalloutsSetFilter,
       flowStateIdFilter: searchInFlowStateFilter,
     });
 

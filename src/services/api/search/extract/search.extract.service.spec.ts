@@ -185,16 +185,16 @@ describe('SearchExtractService', () => {
       expect(result[0].result.id).toBe('N/A');
     });
 
-    // T011: scope wiring — proves the calloutsSet + flowState scope reaches the
-    // ES query as "field-absent OR field-equals" term filters (the mechanism
-    // that guarantees zero cross-scope leakage, SC-003). Full end-to-end leakage
-    // verification needs a live Elasticsearch index (see integration note).
-    it('wires calloutsSet + flowState scope into the msearch query as term filters', async () => {
+    // T011: scope wiring — proves the flow-state scope reaches the ES query as a
+    // "field-absent OR field-equals" term filter (the mechanism that guarantees
+    // zero cross-scope leakage, SC-003). The flow-state UUID is globally unique
+    // and transitively pins the collaboration, so it is the sole scope filter.
+    // Full end-to-end leakage verification needs a live Elasticsearch index.
+    it('wires flowState scope into the msearch query as a term filter', async () => {
       mockClient.msearch.mockResolvedValue({ responses: [] });
 
       await service.search({
         terms: ['governance'],
-        searchInCalloutsSetFilter: 'cs-uuid',
         searchInFlowStateFilter: 'fs-uuid',
         filters: [{ category: SearchCategory.COLLABORATION_TOOLS, size: 10 }],
       } as any);
@@ -206,10 +206,7 @@ describe('SearchExtractService', () => {
       const must = body.query.bool.filter.bool.must;
       const termFields = must.map((c: any) => c.bool.should[1].term);
       expect(termFields).toEqual(
-        expect.arrayContaining([
-          { calloutsSetID: 'cs-uuid' },
-          { flowStateID: 'fs-uuid' },
-        ])
+        expect.arrayContaining([{ flowStateID: 'fs-uuid' }])
       );
     });
 
@@ -220,7 +217,6 @@ describe('SearchExtractService', () => {
 
       await service.search({
         terms: ['governance'],
-        searchInCalloutsSetFilter: 'cs-uuid',
         searchInFlowStateFilter: 'fs-uuid',
         filters: [
           {

@@ -4,12 +4,10 @@ export const buildSearchQuery = (
   terms: string,
   options?: {
     spaceIdFilter?: string;
-    calloutsSetIdFilter?: string;
     flowStateIdFilter?: string;
   }
 ): QueryDslQueryContainer => {
-  const { spaceIdFilter, calloutsSetIdFilter, flowStateIdFilter } =
-    options ?? {};
+  const { spaceIdFilter, flowStateIdFilter } = options ?? {};
   return {
     bool: {
       must: [
@@ -26,7 +24,6 @@ export const buildSearchQuery = (
       // apply some filters on the results
       filter: buildFilter({
         spaceIdFilter,
-        calloutsSetIdFilter,
         flowStateIdFilter,
       }),
     },
@@ -72,19 +69,14 @@ const buildScopeShouldClause = (
 
 const buildFilter = (opts?: {
   spaceIdFilter?: string;
-  calloutsSetIdFilter?: string;
   flowStateIdFilter?: string;
 }): QueryDslQueryContainer | undefined => {
-  const { spaceIdFilter, calloutsSetIdFilter, flowStateIdFilter } = opts ?? {};
+  const { spaceIdFilter, flowStateIdFilter } = opts ?? {};
 
   const filters: QueryDslQueryContainer[] = [];
 
   if (spaceIdFilter) {
     filters.push(buildScopeShouldClause('spaceID', spaceIdFilter));
-  }
-
-  if (calloutsSetIdFilter) {
-    filters.push(buildScopeShouldClause('calloutsSetID', calloutsSetIdFilter));
   }
 
   if (flowStateIdFilter) {

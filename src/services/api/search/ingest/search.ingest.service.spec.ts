@@ -749,7 +749,7 @@ describe('SearchIngestService', () => {
       });
 
       // T007: scope stamping + flow-state value->UUID resolution (the principal risk)
-      it('stamps calloutsSetID and resolves flowStateID from the flow-state tagset value', async () => {
+      it('resolves flowStateID from the flow-state tagset value', async () => {
         const space = {
           id: 'space-1',
           visibility: 'active',
@@ -784,8 +784,9 @@ describe('SearchIngestService', () => {
 
         const result = await (service as any).fetchCallout(0, 100);
 
-        expect(result[0].calloutsSetID).toBe('callouts-set-1');
         expect(result[0].flowStateID).toBe('state-uuid-A');
+        // calloutsSetID is no longer stamped (scope is the flow-state UUID alone)
+        expect(result[0].calloutsSetID).toBeUndefined();
         // classification must not leak into the indexed document
         expect(result[0].classification).toBeUndefined();
       });
@@ -819,8 +820,8 @@ describe('SearchIngestService', () => {
 
         const result = await (service as any).fetchCallout(0, 100);
 
-        // calloutsSetID still stamped; flowStateID stays unset (no leakage into wrong scope)
-        expect(result[0].calloutsSetID).toBe('callouts-set-1');
+        // flowStateID stays unset (no leakage into wrong scope); calloutsSetID not stamped
+        expect(result[0].calloutsSetID).toBeUndefined();
         expect(result[0].flowStateID).toBeUndefined();
       });
 
@@ -886,7 +887,7 @@ describe('SearchIngestService', () => {
 
         const result = await (service as any).fetchCallout(0, 100);
 
-        expect(result[0].calloutsSetID).toBe('callouts-set-1');
+        expect(result[0].calloutsSetID).toBeUndefined();
         expect(result[0].flowStateID).toBeUndefined();
       });
     });
@@ -1068,7 +1069,7 @@ describe('SearchIngestService', () => {
       });
 
       // T007: child posts inherit the parent callout's scope fields
-      it('inherits calloutsSetID and resolved flowStateID from the parent callout onto posts', async () => {
+      it('inherits the resolved flowStateID from the parent callout onto posts', async () => {
         const space = {
           id: 'space-1',
           visibility: 'active',
@@ -1106,7 +1107,7 @@ describe('SearchIngestService', () => {
         const result = await (service as any).fetchPosts(0, 100);
 
         expect(result).toHaveLength(1);
-        expect(result[0].calloutsSetID).toBe('callouts-set-1');
+        expect(result[0].calloutsSetID).toBeUndefined();
         expect(result[0].flowStateID).toBe('state-uuid-A');
       });
     });

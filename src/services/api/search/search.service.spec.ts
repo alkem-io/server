@@ -204,7 +204,6 @@ describe('SearchService', () => {
       const searchData = {
         terms: ['test'],
         filters: [{ category: SearchCategory.COLLABORATION_TOOLS, size: 10 }],
-        searchInCalloutsSetFilter: 'cs-1',
         searchInFlowStateFilter: 'fs-1',
       } as any;
 
