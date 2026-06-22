@@ -24,6 +24,20 @@ export class SearchInput {
   })
   searchInSpaceFilter?: string;
 
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      "Restrict the search to a single Collaboration's CalloutsSet, identified by its UUID. Default is all CalloutsSets.",
+  })
+  searchInCalloutsSetFilter?: string;
+
+  @Field(() => UUID, {
+    nullable: true,
+    description:
+      'Restrict the search to a single flow state within a CalloutsSet, identified by the InnovationFlowState UUID. Default is all flow states.',
+  })
+  searchInFlowStateFilter?: string;
+
   @Field(() => [SearchFilterInput], {
     nullable: true,
     description: 'Return results that satisfy these conditions.',

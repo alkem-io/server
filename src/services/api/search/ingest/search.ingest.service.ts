@@ -3,6 +3,7 @@ import { ELASTICSEARCH_CLIENT_PROVIDER } from '@common/constants';
 import { LogContext } from '@common/enums';
 import { SpaceLevel } from '@common/enums/space.level';
 import { SpaceVisibility } from '@common/enums/space.visibility';
+import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { isDefined } from '@common/utils';
 import { asyncMap } from '@common/utils/async.map';
@@ -863,10 +864,16 @@ export class SearchIngestService {
             parentSpace: true,
           },
           collaboration: {
+            innovationFlow: {
+              states: true,
+            },
             calloutsSet: {
               callouts: {
                 framing: {
                   profile: profileRelationOptions,
+                },
+                classification: {
+                  tagsets: true,
                 },
               },
             },
@@ -878,6 +885,13 @@ export class SearchIngestService {
           parentSpace: { id: true, parentSpace: { id: true } },
           collaboration: {
             id: true,
+            innovationFlow: {
+              id: true,
+              states: {
+                id: true,
+                displayName: true,
+              },
+            },
             calloutsSet: {
               id: true,
               callouts: {
@@ -889,6 +903,14 @@ export class SearchIngestService {
                   id: true,
                   profile: profileSelectOptions,
                 },
+                classification: {
+                  id: true,
+                  tagsets: {
+                    id: true,
+                    name: true,
+                    tags: true,
+                  },
+                },
               },
             },
           },
@@ -897,10 +919,18 @@ export class SearchIngestService {
         take: limit,
       })
       .then(spaces =>
-        spaces.flatMap(space =>
-          space.collaboration?.calloutsSet?.callouts?.map(callout => ({
+        spaces.flatMap(space => {
+          const { map: flowStateNameToId, ambiguousNames } =
+            buildFlowStateNameToIdMap(
+              space.collaboration?.innovationFlow?.states
+            );
+          const calloutsSetID =
+            space?.collaboration?.calloutsSet?.id ?? EMPTY_VALUE;
+
+          return space.collaboration?.calloutsSet?.callouts?.map(callout => ({
             ...callout,
             framing: undefined,
+            classification: undefined,
             type: SearchResultType.CALLOUT,
             license: {
               visibility: space?.visibility ?? EMPTY_VALUE,
@@ -910,14 +940,31 @@ export class SearchIngestService {
               space.parentSpace?.id ??
               space.id,
             collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+            calloutsSetID,
+            flowStateID: resolveCalloutFlowStateID(
+              callout.classification?.tagsets,
+              flowStateNameToId,
+              ambiguousNames,
+              this.logUnresolvedFlowState.bind(this),
+              callout.id
+            ),
             profile: {
               ...callout.framing.profile,
               tags: processTagsets(callout.framing?.profile?.tagsets),
               tagsets: undefined,
             },
-          }))
-        )
+          }));
+        })
       );
+  }
+
+  /**
+   * Logs an unresolved/ambiguous flow-state mapping at warning level so data
+   * issues are visible without failing the ingest. Affected callouts simply
+   * remain out of any flow-state-scoped search (SC-003: zero leakage).
+   */
+  private logUnresolvedFlowState(message: string): void {
+    this.logger.warn?.(message, LogContext.SEARCH_INGEST);
   }
 
   private fetchWhiteboardCount() {
@@ -939,6 +986,9 @@ export class SearchIngestService {
         },
         relations: {
           collaboration: {
+            innovationFlow: {
+              states: true,
+            },
             calloutsSet: {
               callouts: {
                 framing: {
@@ -950,6 +1000,9 @@ export class SearchIngestService {
                   whiteboard: {
                     profile: profileRelationOptions,
                   },
+                },
+                classification: {
+                  tagsets: true,
                 },
               },
             },
@@ -963,6 +1016,13 @@ export class SearchIngestService {
           visibility: true,
           collaboration: {
             id: true,
+            innovationFlow: {
+              id: true,
+              states: {
+                id: true,
+                displayName: true,
+              },
+            },
             calloutsSet: {
               id: true,
               callouts: {
@@ -986,6 +1046,14 @@ export class SearchIngestService {
                     profile: profileSelectOptions,
                   },
                 },
+                classification: {
+                  id: true,
+                  tagsets: {
+                    id: true,
+                    name: true,
+                    tags: true,
+                  },
+                },
               },
             },
           },
@@ -1001,9 +1069,23 @@ export class SearchIngestService {
       })
       .then(spaces => {
         return spaces.flatMap(space => {
+          const { map: flowStateNameToId, ambiguousNames } =
+            buildFlowStateNameToIdMap(
+              space.collaboration?.innovationFlow?.states
+            );
+          const calloutsSetID =
+            space?.collaboration?.calloutsSet?.id ?? EMPTY_VALUE;
           const callouts = space.collaboration?.calloutsSet?.callouts;
           return callouts
             ?.flatMap(callout => {
+              // children inherit the parent callout's scope fields
+              const flowStateID = resolveCalloutFlowStateID(
+                callout.classification?.tagsets,
+                flowStateNameToId,
+                ambiguousNames,
+                this.logUnresolvedFlowState.bind(this),
+                callout.id
+              );
               // a callout can have whiteboard in the framing
               // AND whiteboards in the contributions
               const wbs = [];
@@ -1029,6 +1111,8 @@ export class SearchIngestService {
                     space.id,
                   calloutID: callout.id,
                   collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+                  calloutsSetID,
+                  flowStateID,
                   profile: {
                     ...callout.framing.whiteboard.profile,
                     tags: processTagsets(
@@ -1065,6 +1149,8 @@ export class SearchIngestService {
                     space.id,
                   calloutID: callout.id,
                   collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+                  calloutsSetID,
+                  flowStateID,
                   profile: {
                     ...contribution.whiteboard.profile,
                     tags: processTagsets(
@@ -1099,6 +1185,9 @@ export class SearchIngestService {
       },
       relations: {
         collaboration: {
+          innovationFlow: {
+            states: true,
+          },
           calloutsSet: {
             callouts: {
               framing: {
@@ -1110,6 +1199,9 @@ export class SearchIngestService {
                 memo: {
                   profile: profileRelationOptions,
                 },
+              },
+              classification: {
+                tagsets: true,
               },
             },
           },
@@ -1123,6 +1215,13 @@ export class SearchIngestService {
         visibility: true,
         collaboration: {
           id: true,
+          innovationFlow: {
+            id: true,
+            states: {
+              id: true,
+              displayName: true,
+            },
+          },
           calloutsSet: {
             id: true,
             callouts: {
@@ -1146,6 +1245,14 @@ export class SearchIngestService {
                   profile: profileSelectOptions,
                 },
               },
+              classification: {
+                id: true,
+                tagsets: {
+                  id: true,
+                  name: true,
+                  tags: true,
+                },
+              },
             },
           },
         },
@@ -1160,7 +1267,13 @@ export class SearchIngestService {
       take: limit,
     });
 
-    const memoForIngestion = (memo: Memo, callout: Callout, space: Space) => {
+    const memoForIngestion = (
+      memo: Memo,
+      callout: Callout,
+      space: Space,
+      calloutsSetID: string,
+      flowStateID: string | undefined
+    ) => {
       const markdown = extractMarkdownFromMemoContent(memo.content);
       // only memos with content are ingested
       if (!markdown) {
@@ -1181,6 +1294,8 @@ export class SearchIngestService {
           space.id,
         calloutID: callout.id,
         collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+        calloutsSetID,
+        flowStateID,
         profile: {
           ...memo.profile,
           tags: processTagsets(memo?.profile?.tagsets),
@@ -1190,14 +1305,34 @@ export class SearchIngestService {
     };
 
     return spaces.flatMap(space => {
+      const { map: flowStateNameToId, ambiguousNames } =
+        buildFlowStateNameToIdMap(space.collaboration?.innovationFlow?.states);
+      const calloutsSetID =
+        space?.collaboration?.calloutsSet?.id ?? EMPTY_VALUE;
       const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
       return callouts
         .flatMap(callout => {
+          // children inherit the parent callout's scope fields
+          const flowStateID = resolveCalloutFlowStateID(
+            callout.classification?.tagsets,
+            flowStateNameToId,
+            ambiguousNames,
+            this.logUnresolvedFlowState.bind(this),
+            callout.id
+          );
           // a callout can have memo in the framing
           // AND memos in the contributions
           const memos: (Record<string, unknown> | undefined)[] = [];
           if (callout.framing.memo) {
-            memos.push(memoForIngestion(callout.framing.memo, callout, space));
+            memos.push(
+              memoForIngestion(
+                callout.framing.memo,
+                callout,
+                space,
+                calloutsSetID,
+                flowStateID
+              )
+            );
           }
 
           callout?.contributions?.forEach(({ memo }) => {
@@ -1205,7 +1340,9 @@ export class SearchIngestService {
               return;
             }
 
-            memos.push(memoForIngestion(memo, callout, space));
+            memos.push(
+              memoForIngestion(memo, callout, space, calloutsSetID, flowStateID)
+            );
           });
 
           return memos;
@@ -1232,12 +1369,18 @@ export class SearchIngestService {
         },
         relations: {
           collaboration: {
+            innovationFlow: {
+              states: true,
+            },
             calloutsSet: {
               callouts: {
                 contributions: {
                   post: {
                     profile: profileRelationOptions,
                   },
+                },
+                classification: {
+                  tagsets: true,
                 },
               },
             },
@@ -1251,6 +1394,13 @@ export class SearchIngestService {
           visibility: true,
           collaboration: {
             id: true,
+            innovationFlow: {
+              id: true,
+              states: {
+                id: true,
+                displayName: true,
+              },
+            },
             calloutsSet: {
               id: true,
               callouts: {
@@ -1263,6 +1413,14 @@ export class SearchIngestService {
                     createdDate: true,
                     nameID: true,
                     profile: profileSelectOptions,
+                  },
+                },
+                classification: {
+                  id: true,
+                  tagsets: {
+                    id: true,
+                    name: true,
+                    tags: true,
                   },
                 },
               },
@@ -1281,8 +1439,22 @@ export class SearchIngestService {
       .then(spaces => {
         const posts: any[] = [];
         spaces.forEach(space => {
+          const { map: flowStateNameToId, ambiguousNames } =
+            buildFlowStateNameToIdMap(
+              space.collaboration?.innovationFlow?.states
+            );
+          const calloutsSetID =
+            space?.collaboration?.calloutsSet?.id ?? EMPTY_VALUE;
           const callouts = space?.collaboration?.calloutsSet?.callouts;
           callouts?.forEach(callout => {
+            // children inherit the parent callout's scope fields
+            const flowStateID = resolveCalloutFlowStateID(
+              callout.classification?.tagsets,
+              flowStateNameToId,
+              ambiguousNames,
+              this.logUnresolvedFlowState.bind(this),
+              callout.id
+            );
             const contributions = callout?.contributions;
             contributions?.forEach(contribution => {
               if (!contribution.post) {
@@ -1300,6 +1472,8 @@ export class SearchIngestService {
                   space.id,
                 calloutID: callout.id,
                 collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+                calloutsSetID,
+                flowStateID,
                 profile: {
                   ...contribution.post.profile,
                   tags: processTagsets(contribution.post?.profile?.tagsets),
@@ -1317,6 +1491,92 @@ export class SearchIngestService {
 
 const processTagsets = (tagsets: Tagset[] | undefined) => {
   return tagsets?.flatMap(tagset => tagset.tags).join(' ');
+};
+
+/**
+ * Builds a lookup from a flow-state display name to its InnovationFlowState UUID,
+ * scoped to a single Collaboration's InnovationFlow.
+ *
+ * The flow state lives on a Callout only as a `flow-state` classification tagset
+ * VALUE (the state's name string) — there is no FK. To scope a search by the
+ * InnovationFlowState UUID (FR-008) we must resolve that name to the matching
+ * state's id within this Collaboration only.
+ *
+ * Uniqueness is asserted per-Collaboration: if two states in the same flow share
+ * a display name, the name is ambiguous and is excluded from the map (logged by
+ * the caller via the returned `ambiguousNames` set), so affected callouts are
+ * left unstamped rather than mis-scoped (SC-003 = zero leakage).
+ */
+const buildFlowStateNameToIdMap = (
+  states: { id: string; displayName: string }[] | undefined
+): { map: Map<string, string>; ambiguousNames: Set<string> } => {
+  const map = new Map<string, string>();
+  const ambiguousNames = new Set<string>();
+
+  for (const state of states ?? []) {
+    if (!state?.displayName || !state?.id) {
+      continue;
+    }
+    if (map.has(state.displayName)) {
+      ambiguousNames.add(state.displayName);
+      // remove the ambiguous entry so it can never resolve to a single id
+      map.delete(state.displayName);
+      continue;
+    }
+    if (ambiguousNames.has(state.displayName)) {
+      continue;
+    }
+    map.set(state.displayName, state.id);
+  }
+
+  return { map, ambiguousNames };
+};
+
+/**
+ * Reads a Callout's `flow-state` classification tagset value and resolves it to
+ * the InnovationFlowState UUID via the per-Collaboration name->id map.
+ *
+ * Returns `undefined` (skip-stamp) when there is no flow-state value, no match,
+ * or an ambiguous match — in all of these cases the callout simply stays out of
+ * any flow-state-scoped search until the data is corrected, rather than leaking
+ * into the wrong scope.
+ */
+const resolveCalloutFlowStateID = (
+  classificationTagsets: { name: string; tags: string[] }[] | undefined,
+  flowStateNameToId: Map<string, string>,
+  ambiguousNames: Set<string>,
+  onUnresolved: (reason: string, flowStateName?: string) => void,
+  calloutId: string
+): string | undefined => {
+  const flowStateTagset = classificationTagsets?.find(
+    tagset => tagset.name === TagsetReservedName.FLOW_STATE
+  );
+  const flowStateName = flowStateTagset?.tags?.[0];
+
+  if (!flowStateName) {
+    // no flow-state classification on this callout; nothing to resolve
+    return undefined;
+  }
+
+  if (ambiguousNames.has(flowStateName)) {
+    onUnresolved(
+      `Ambiguous flow-state name '${flowStateName}' for Callout '${calloutId}' — duplicate InnovationFlowState displayNames in the Collaboration; skipping flowStateID stamp`,
+      flowStateName
+    );
+    return undefined;
+  }
+
+  const flowStateID = flowStateNameToId.get(flowStateName);
+
+  if (!flowStateID) {
+    onUnresolved(
+      `Unable to resolve flow-state name '${flowStateName}' to an InnovationFlowState for Callout '${calloutId}'; skipping flowStateID stamp`,
+      flowStateName
+    );
+    return undefined;
+  }
+
+  return flowStateID;
 };
 
 const extractTextFromWhiteboardContent = (content: string): string => {

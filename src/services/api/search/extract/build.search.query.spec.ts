@@ -60,4 +60,72 @@ describe('buildSearchQuery', () => {
 
     expect(query.bool?.filter).toBeUndefined();
   });
+
+  it('should build a "field-absent OR field-equals" filter for calloutsSetIdFilter', () => {
+    const query = buildSearchQuery('test', {
+      calloutsSetIdFilter: 'cs-123',
+    });
+
+    const filter = query.bool?.filter as any;
+    expect(filter.bool.must).toHaveLength(1);
+    const innerBool = filter.bool.must[0].bool;
+    expect(innerBool.minimum_should_match).toBe(1);
+    expect(innerBool.should[0].bool.must_not.exists.field).toBe(
+      'calloutsSetID'
+    );
+    expect(innerBool.should[1].term.calloutsSetID).toBe('cs-123');
+  });
+
+  it('should build a "field-absent OR field-equals" filter for flowStateIdFilter', () => {
+    const query = buildSearchQuery('test', {
+      flowStateIdFilter: 'fs-456',
+    });
+
+    const filter = query.bool?.filter as any;
+    expect(filter.bool.must).toHaveLength(1);
+    const innerBool = filter.bool.must[0].bool;
+    expect(innerBool.minimum_should_match).toBe(1);
+    expect(innerBool.should[0].bool.must_not.exists.field).toBe('flowStateID');
+    expect(innerBool.should[1].term.flowStateID).toBe('fs-456');
+  });
+
+  it('should combine calloutsSet + flowState scope filters (both required for zero leakage, SC-003)', () => {
+    const query = buildSearchQuery('test', {
+      calloutsSetIdFilter: 'cs-123',
+      flowStateIdFilter: 'fs-456',
+    });
+
+    const filter = query.bool?.filter as any;
+    // both scope clauses present, each as an independent should-block
+    expect(filter.bool.must).toHaveLength(2);
+    const fields = filter.bool.must.map(
+      (clause: any) => clause.bool.should[1].term
+    );
+    expect(fields).toEqual(
+      expect.arrayContaining([
+        { calloutsSetID: 'cs-123' },
+        { flowStateID: 'fs-456' },
+      ])
+    );
+  });
+
+  it('should combine space + calloutsSet + flowState scope filters together', () => {
+    const query = buildSearchQuery('test', {
+      spaceIdFilter: 'space-1',
+      calloutsSetIdFilter: 'cs-123',
+      flowStateIdFilter: 'fs-456',
+    });
+
+    const filter = query.bool?.filter as any;
+    expect(filter.bool.must).toHaveLength(3);
+  });
+
+  it('should not add a scope filter when calloutsSet/flowState filters are undefined', () => {
+    const query = buildSearchQuery('test', {
+      calloutsSetIdFilter: undefined,
+      flowStateIdFilter: undefined,
+    });
+
+    expect(query.bool?.filter).toBeUndefined();
+  });
 });

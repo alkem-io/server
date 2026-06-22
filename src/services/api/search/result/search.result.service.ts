@@ -82,12 +82,16 @@ export class SearchResultService {
    * @param actorContext The agent info of the user making the search request.
    * @param filters Used to filter the end results.
    * @param spaceId The space ID to filter the search results by.
+   * @param options.foldToCallouts When true (a flow-state scoped search),
+   *   matching posts/whiteboards/memos are folded up to their containing callout
+   *   and merged into `calloutResults`, deduped by callout id (FR-017).
    */
   public async resolveSearchResults(
     rawSearchResults: ISearchResult[],
     actorContext: ActorContext,
     filters: SearchFilterInput[],
-    spaceId?: string
+    spaceId?: string,
+    options?: { foldToCallouts?: boolean }
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type') as Record<
       Partial<SearchResultType>,
@@ -150,10 +154,15 @@ export class SearchResultService {
       spaces,
       subspaces
     );
-    const calloutResults = buildResults(
-      filtersByCategory['collaboration-tools']?.[0],
-      callouts
-    );
+    const calloutResults = options?.foldToCallouts
+      ? buildFoldedCalloutResults(
+          filtersByCategory['collaboration-tools']?.[0],
+          callouts,
+          posts,
+          whiteboards,
+          memos
+        )
+      : buildResults(filtersByCategory['collaboration-tools']?.[0], callouts);
 
     return {
       actorResults,
@@ -567,6 +576,8 @@ export class SearchResultService {
       select: {
         id: true,
         nameID: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
         framing: {
           id: true,
           type: true,
@@ -748,6 +759,8 @@ export class SearchResultService {
       },
       select: {
         id: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
         settings: {
           visibility: true,
         },
@@ -905,6 +918,8 @@ export class SearchResultService {
       },
       select: {
         id: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
         settings: {
           visibility: true,
         },
@@ -1094,6 +1109,8 @@ export class SearchResultService {
       },
       select: {
         id: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
         settings: {
           visibility: true,
         },
@@ -1294,6 +1311,83 @@ const buildResults = (
   );
   // limit the results to the top N
   // more results are expected as an attempt to ensure the requested size after authorization
+  const rankedAndLimited = resultsRanked.slice(0, filter?.size);
+
+  const cursor = calculateSearchCursor(rankedAndLimited);
+
+  return { results: rankedAndLimited, cursor, total };
+};
+
+// search results that carry a containing callout (and its space): the direct
+// callout hits plus the post/whiteboard/memo hits that fold up to a callout.
+type FoldableSearchResult = ISearchResult & {
+  callout: ISearchResultCallout['callout'];
+  space: ISearchResultCallout['space'];
+};
+
+/**
+ * Folds matching callouts and the containing callouts of matching
+ * posts/whiteboards/memos into a single callout-level list, deduped by callout
+ * id (FR-017). Each callout appears at most once regardless of how many of its
+ * children matched; the representative keeps the highest score among its
+ * matches. Ordered by relevance (score desc), then callout `createdDate` desc as
+ * the tiebreak (FR-019). The returned results carry the callout id as their
+ * `result.id` so the keyset cursor (`score::calloutId`) pages correctly.
+ */
+const buildFoldedCalloutResults = (
+  filter: SearchFilterInput | undefined,
+  callouts: ISearchResultCallout[],
+  posts: ISearchResultPost[],
+  whiteboards: ISearchResultWhiteboard[],
+  memos: ISearchResultMemo[]
+): { results: ISearchResult[]; cursor?: string; total: number } => {
+  // todo: total - https://github.com/alkem-io/server/issues/3700
+  const total = -1;
+
+  const foldable: FoldableSearchResult[] = [
+    ...callouts,
+    ...posts,
+    ...whiteboards,
+    ...memos,
+  ];
+
+  if (foldable.length === 0) {
+    return { results: [], cursor: undefined, total };
+  }
+
+  // dedupe by callout id, keeping the highest-scored representative
+  const byCalloutId = new Map<string, ISearchResultCallout>();
+
+  for (const hit of foldable) {
+    const callout = hit.callout;
+    if (!callout?.id) {
+      continue;
+    }
+    const existing = byCalloutId.get(callout.id);
+    if (existing && existing.score >= hit.score) {
+      continue;
+    }
+    // re-key the result to the containing callout so the cursor pages on callout id
+    byCalloutId.set(callout.id, {
+      id: callout.id,
+      score: hit.score,
+      terms: hit.terms,
+      type: SearchResultType.CALLOUT,
+      result: { id: callout.id },
+      callout,
+      space: hit.space,
+    });
+  }
+
+  const foldedResults = Array.from(byCalloutId.values());
+
+  // relevance first, then recency (newest createdDate) as the tiebreak (FR-019)
+  const resultsRanked = orderBy(
+    foldedResults,
+    ['score', callout => callout.callout?.createdDate?.getTime?.() ?? 0],
+    ['desc', 'desc']
+  );
+
   const rankedAndLimited = resultsRanked.slice(0, filter?.size);
 
   const cursor = calculateSearchCursor(rankedAndLimited);

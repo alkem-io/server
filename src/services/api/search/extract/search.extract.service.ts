@@ -186,7 +186,13 @@ export class SearchExtractService {
       throw new Error('Elasticsearch client not initialized');
     }
 
-    const { terms, searchInSpaceFilter, filters } = searchData;
+    const {
+      terms,
+      searchInSpaceFilter,
+      searchInCalloutsSetFilter,
+      searchInFlowStateFilter,
+      filters,
+    } = searchData;
     const indicesToSearchOn = this.getIndices(onlyPublicResults, filters);
 
     if (indicesToSearchOn.length === 0) {
@@ -196,6 +202,8 @@ export class SearchExtractService {
     // execute search per category
     const result = await this.executeMultiSearch(indicesToSearchOn, terms, {
       searchInSpaceFilter,
+      searchInCalloutsSetFilter,
+      searchInFlowStateFilter,
       filters,
       sizeMultiplier: SIZE_MULTIPLIER,
     });
@@ -267,6 +275,8 @@ export class SearchExtractService {
     terms: string[],
     options?: {
       searchInSpaceFilter?: string;
+      searchInCalloutsSetFilter?: string;
+      searchInFlowStateFilter?: string;
       filters?: SearchFilterInput[];
       sizeMultiplier: number;
     }
@@ -279,12 +289,20 @@ export class SearchExtractService {
       throw new Error('No indices to search on');
     }
 
-    const { searchInSpaceFilter, filters, sizeMultiplier } = options ?? {};
+    const {
+      searchInSpaceFilter,
+      searchInCalloutsSetFilter,
+      searchInFlowStateFilter,
+      filters,
+      sizeMultiplier,
+    } = options ?? {};
 
     const term = terms.join(' ');
     // the main search query built using query DSL
     const query = buildSearchQuery(term, {
       spaceIdFilter: searchInSpaceFilter,
+      calloutsSetIdFilter: searchInCalloutsSetFilter,
+      flowStateIdFilter: searchInFlowStateFilter,
     });
 
     const categoriesRequested = filters?.length ?? 0;

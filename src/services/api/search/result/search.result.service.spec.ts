@@ -771,6 +771,188 @@ describe('SearchResultService', () => {
     });
   });
 
+  describe('callout folding (foldToCallouts) - FR-017/FR-019', () => {
+    const collaborationToolsFilter = [
+      { category: SearchCategory.COLLABORATION_TOOLS, size: 10 },
+    ] as any[];
+
+    const olderDate = new Date('2026-01-01T00:00:00Z');
+    const newerDate = new Date('2026-06-01T00:00:00Z');
+
+    it('folds a callout with multiple matching children to a single deduped result', async () => {
+      // two posts in the SAME callout both match; the callout must appear once
+      const calloutA = { id: 'callout-A', createdDate: olderDate } as any;
+      const spaceA = { id: 'space-A' } as any;
+
+      vi.spyOn(service, 'getCalloutSearchResult' as any).mockResolvedValue([]);
+      vi.spyOn(service, 'getPostSearchResults').mockResolvedValue([
+        {
+          id: 'post-1',
+          score: 5,
+          terms: [],
+          type: SearchResultType.POST,
+          result: { id: 'post-1' },
+          callout: calloutA,
+          space: spaceA,
+          post: { id: 'post-1' },
+        } as any,
+        {
+          id: 'post-2',
+          score: 8,
+          terms: [],
+          type: SearchResultType.POST,
+          result: { id: 'post-2' },
+          callout: calloutA,
+          space: spaceA,
+          post: { id: 'post-2' },
+        } as any,
+      ]);
+      vi.spyOn(service as any, 'getWhiteboardSearchResults').mockResolvedValue(
+        []
+      );
+      vi.spyOn(service as any, 'getMemoSearchResults').mockResolvedValue([]);
+
+      const rawResults = [
+        {
+          id: 'post-1',
+          score: 5,
+          type: SearchResultType.POST,
+          terms: [],
+          result: { id: 'post-1' },
+        },
+        {
+          id: 'post-2',
+          score: 8,
+          type: SearchResultType.POST,
+          terms: [],
+          result: { id: 'post-2' },
+        },
+      ] as any[];
+
+      const result = await service.resolveSearchResults(
+        rawResults,
+        actorContext,
+        collaborationToolsFilter,
+        undefined,
+        { foldToCallouts: true }
+      );
+
+      // the callout appears exactly once
+      expect(result.calloutResults.results).toHaveLength(1);
+      const folded = result.calloutResults.results[0] as any;
+      expect(folded.type).toBe(SearchResultType.CALLOUT);
+      expect(folded.callout.id).toBe('callout-A');
+      // result id is re-keyed to the callout (so the cursor pages on callout id)
+      expect(folded.result.id).toBe('callout-A');
+      // the highest child score wins
+      expect(folded.score).toBe(8);
+    });
+
+    it('orders folded callouts by relevance, then createdDate desc as tiebreak', async () => {
+      // two callouts with EQUAL score -> newer createdDate must come first
+      const calloutOld = { id: 'callout-old', createdDate: olderDate } as any;
+      const calloutNew = { id: 'callout-new', createdDate: newerDate } as any;
+      const space = { id: 'space-1' } as any;
+
+      vi.spyOn(service, 'getCalloutSearchResult' as any).mockResolvedValue([
+        {
+          id: 'callout-old',
+          score: 5,
+          terms: [],
+          type: SearchResultType.CALLOUT,
+          result: { id: 'callout-old' },
+          callout: calloutOld,
+          space,
+        },
+        {
+          id: 'callout-new',
+          score: 5,
+          terms: [],
+          type: SearchResultType.CALLOUT,
+          result: { id: 'callout-new' },
+          callout: calloutNew,
+          space,
+        },
+      ]);
+      vi.spyOn(service, 'getPostSearchResults').mockResolvedValue([]);
+      vi.spyOn(service as any, 'getWhiteboardSearchResults').mockResolvedValue(
+        []
+      );
+      vi.spyOn(service as any, 'getMemoSearchResults').mockResolvedValue([]);
+
+      const rawResults = [
+        {
+          id: 'callout-old',
+          score: 5,
+          type: SearchResultType.CALLOUT,
+          terms: [],
+          result: { id: 'callout-old' },
+        },
+        {
+          id: 'callout-new',
+          score: 5,
+          type: SearchResultType.CALLOUT,
+          terms: [],
+          result: { id: 'callout-new' },
+        },
+      ] as any[];
+
+      const result = await service.resolveSearchResults(
+        rawResults,
+        actorContext,
+        collaborationToolsFilter,
+        undefined,
+        { foldToCallouts: true }
+      );
+
+      expect(result.calloutResults.results).toHaveLength(2);
+      const ids = result.calloutResults.results.map((r: any) => r.callout.id);
+      // equal score -> newer createdDate first
+      expect(ids).toEqual(['callout-new', 'callout-old']);
+    });
+
+    it('exposes a cursor keyed on score::calloutId for the last folded result', async () => {
+      const callout = { id: 'callout-Z', createdDate: olderDate } as any;
+      const space = { id: 'space-1' } as any;
+
+      vi.spyOn(service, 'getCalloutSearchResult' as any).mockResolvedValue([
+        {
+          id: 'callout-Z',
+          score: 7,
+          terms: [],
+          type: SearchResultType.CALLOUT,
+          result: { id: 'callout-Z' },
+          callout,
+          space,
+        },
+      ]);
+      vi.spyOn(service, 'getPostSearchResults').mockResolvedValue([]);
+      vi.spyOn(service as any, 'getWhiteboardSearchResults').mockResolvedValue(
+        []
+      );
+      vi.spyOn(service as any, 'getMemoSearchResults').mockResolvedValue([]);
+
+      const result = await service.resolveSearchResults(
+        [
+          {
+            id: 'callout-Z',
+            score: 7,
+            type: SearchResultType.CALLOUT,
+            terms: [],
+            result: { id: 'callout-Z' },
+          },
+        ] as any[],
+        actorContext,
+        collaborationToolsFilter,
+        undefined,
+        { foldToCallouts: true }
+      );
+
+      expect(result.calloutResults.cursor).toBe('7::callout-Z');
+      expect(result.calloutResults.total).toBe(-1);
+    });
+  });
+
   describe('getMemoSearchResults (private)', () => {
     it('should return empty for empty input', async () => {
       const result = await (service as any).getMemoSearchResults(

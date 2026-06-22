@@ -185,6 +185,73 @@ describe('SearchExtractService', () => {
       expect(result[0].result.id).toBe('N/A');
     });
 
+    // T011: scope wiring — proves the calloutsSet + flowState scope reaches the
+    // ES query as "field-absent OR field-equals" term filters (the mechanism
+    // that guarantees zero cross-scope leakage, SC-003). Full end-to-end leakage
+    // verification needs a live Elasticsearch index (see integration note).
+    it('wires calloutsSet + flowState scope into the msearch query as term filters', async () => {
+      mockClient.msearch.mockResolvedValue({ responses: [] });
+
+      await service.search({
+        terms: ['governance'],
+        searchInCalloutsSetFilter: 'cs-uuid',
+        searchInFlowStateFilter: 'fs-uuid',
+        filters: [{ category: SearchCategory.COLLABORATION_TOOLS, size: 10 }],
+      } as any);
+
+      expect(mockClient.msearch).toHaveBeenCalledTimes(1);
+      const searches = mockClient.msearch.mock.calls[0][0].searches as any[];
+      // body is the second item (header, body, header, body, ...)
+      const body = searches[1];
+      const must = body.query.bool.filter.bool.must;
+      const termFields = must.map((c: any) => c.bool.should[1].term);
+      expect(termFields).toEqual(
+        expect.arrayContaining([
+          { calloutsSetID: 'cs-uuid' },
+          { flowStateID: 'fs-uuid' },
+        ])
+      );
+    });
+
+    // T015: pagination wiring — proves the keyset cursor reaches ES as
+    // search_after and the requested page size is honored.
+    it('passes the keyset cursor as search_after and honors the page size', async () => {
+      mockClient.msearch.mockResolvedValue({ responses: [] });
+
+      await service.search({
+        terms: ['governance'],
+        searchInCalloutsSetFilter: 'cs-uuid',
+        searchInFlowStateFilter: 'fs-uuid',
+        filters: [
+          {
+            category: SearchCategory.COLLABORATION_TOOLS,
+            size: 10,
+            cursor: '4.2::callout-9',
+          },
+        ],
+      } as any);
+
+      const searches = mockClient.msearch.mock.calls[0][0].searches as any[];
+      const body = searches[1];
+      // cursor "score::id" -> search_after [score, id]
+      expect(body.search_after).toEqual([4.2, 'callout-9']);
+      // sort is the keyset sort the cursor pages on
+      expect(body.sort).toEqual({ _score: 'desc', id: 'desc' });
+    });
+
+    it('omits the scope filter entirely when no scope is provided (backward compatible global search)', async () => {
+      mockClient.msearch.mockResolvedValue({ responses: [] });
+
+      await service.search({
+        terms: ['governance'],
+        filters: [{ category: SearchCategory.COLLABORATION_TOOLS, size: 10 }],
+      } as any);
+
+      const searches = mockClient.msearch.mock.calls[0][0].searches as any[];
+      const body = searches[1];
+      expect(body.query.bool.filter).toBeUndefined();
+    });
+
     it('should handle search results with _ignored fields', async () => {
       mockClient.msearch.mockResolvedValue({
         responses: [
