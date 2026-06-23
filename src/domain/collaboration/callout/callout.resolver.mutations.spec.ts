@@ -5,6 +5,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
+import { streamToBuffer } from '@common/utils/file.util';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -32,6 +33,11 @@ describe('CalloutResolverMutations', () => {
 
   beforeEach(async () => {
     vi.restoreAllMocks();
+
+    // restoreAllMocks() above resets the factory mock for file.util, which would
+    // let the real streamToBuffer run against the fake upload stream. Re-establish
+    // the resolved buffer so importCollaboraDocument never touches a real stream.
+    vi.mocked(streamToBuffer).mockResolvedValue(Buffer.from('test'));
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
