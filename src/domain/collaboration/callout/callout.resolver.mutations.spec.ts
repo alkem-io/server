@@ -5,6 +5,7 @@ import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { RelationshipNotFoundException } from '@common/exceptions';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
+import { streamToBuffer } from '@common/utils/file.util';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -17,6 +18,10 @@ import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
 
+vi.mock('@common/utils/file.util', () => ({
+  streamToBuffer: vi.fn().mockResolvedValue(Buffer.from('test')),
+}));
+
 describe('CalloutResolverMutations', () => {
   let resolver: CalloutResolverMutations;
   let calloutService: CalloutService;
@@ -28,6 +33,11 @@ describe('CalloutResolverMutations', () => {
 
   beforeEach(async () => {
     vi.restoreAllMocks();
+
+    // restoreAllMocks() above resets the factory mock for file.util, which would
+    // let the real streamToBuffer run against the fake upload stream. Re-establish
+    // the resolved buffer so importCollaboraDocument never touches a real stream.
+    vi.mocked(streamToBuffer).mockResolvedValue(Buffer.from('test'));
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -304,6 +314,259 @@ describe('CalloutResolverMutations', () => {
           calloutID: 'callout-1',
         } as any)
       ).rejects.toThrow(CalloutClosedException);
+    });
+
+    const setupCollaboraCreateHappyPath = (visibility: CalloutVisibility) => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+        calloutsSet: { id: 'cs-1', type: CalloutsSetType.COLLABORATION },
+        settings: {
+          contribution: {
+            enabled: true,
+            canAddContributions: CalloutAllowedActors.MEMBERS,
+          },
+          visibility,
+        },
+      } as any;
+      const contribution = {
+        id: 'contrib-1',
+        collaboraDocument: {
+          id: 'collab-doc-1',
+          profile: { displayName: 'My Spreadsheet' },
+        },
+      } as any;
+
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+      vi.mocked(calloutService.createContributionOnCallout).mockResolvedValue(
+        contribution
+      );
+
+      const roomResolverService = (resolver as any).roomResolverService;
+      vi.mocked(
+        roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+      ).mockResolvedValue({
+        roleSet: { id: 'rs-1' },
+        platformRolesAccess: { roles: [] },
+        spaceSettings: {},
+      });
+
+      vi.mocked(_calloutContributionService.save).mockResolvedValue(
+        contribution
+      );
+      vi.mocked(
+        _calloutContributionService.materializeCalloutContributionContent
+      ).mockResolvedValue(undefined as any);
+      vi.mocked(
+        _calloutContributionService.getStorageBucketForContribution
+      ).mockResolvedValue({ id: 'bucket-1' } as any);
+      vi.mocked(
+        _contributionAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      vi.mocked(
+        _calloutContributionService.getCalloutContributionOrFail
+      ).mockResolvedValue(contribution);
+
+      const communityResolverService = (resolver as any)
+        .communityResolverService;
+      vi.mocked(
+        communityResolverService.getLevelZeroSpaceIdForCalloutsSet
+      ).mockResolvedValue('space-root');
+
+      return { callout, contribution };
+    };
+
+    it('should report COLLABORA_DOCUMENT_CREATED when the callout is PUBLISHED', async () => {
+      setupCollaboraCreateHappyPath(CalloutVisibility.PUBLISHED);
+      const contributionReporter = (resolver as any).contributionReporter;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await resolver.createContributionOnCallout(actorContext, {
+        calloutID: 'callout-1',
+        type: 'collabora_document',
+        collaboraDocument: {},
+      } as any);
+
+      expect(
+        contributionReporter.calloutCollaboraDocumentCreated
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'collab-doc-1',
+          name: 'My Spreadsheet',
+          space: 'space-root',
+        }),
+        actorContext
+      );
+    });
+
+    it('should NOT report COLLABORA_DOCUMENT_CREATED when the callout is DRAFT', async () => {
+      setupCollaboraCreateHappyPath(CalloutVisibility.DRAFT);
+      const contributionReporter = (resolver as any).contributionReporter;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await resolver.createContributionOnCallout(actorContext, {
+        calloutID: 'callout-1',
+        type: 'collabora_document',
+        collaboraDocument: {},
+      } as any);
+
+      expect(
+        contributionReporter.calloutCollaboraDocumentCreated
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('importCollaboraDocument', () => {
+    it('should report COLLABORA_DOCUMENT_UPLOADED for the uploading actor', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+        settings: {
+          contribution: {
+            enabled: true,
+            canAddContributions: CalloutAllowedActors.MEMBERS,
+          },
+        },
+      } as any;
+      const contribution = {
+        id: 'contrib-1',
+        collaboraDocument: {
+          id: 'collab-doc-1',
+          profile: { displayName: 'Imported.docx' },
+        },
+      } as any;
+
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+      vi.mocked(
+        calloutService.importCollaboraDocumentToCallout
+      ).mockResolvedValue(contribution);
+
+      const configService = (resolver as any).configService;
+      vi.mocked(configService.get).mockReturnValue(1000);
+
+      const roomResolverService = (resolver as any).roomResolverService;
+      vi.mocked(
+        roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+      ).mockResolvedValue({
+        roleSet: { id: 'rs-1' },
+        platformRolesAccess: { roles: [] },
+        spaceSettings: {},
+      });
+
+      vi.mocked(_calloutContributionService.save).mockResolvedValue(
+        contribution
+      );
+      vi.mocked(
+        _contributionAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      vi.mocked(
+        _calloutContributionService.getCalloutContributionOrFail
+      ).mockResolvedValue(contribution);
+
+      const communityResolverService = (resolver as any)
+        .communityResolverService;
+      vi.mocked(
+        communityResolverService.getCommunityForCollaboraDocumentOrFail
+      ).mockResolvedValue({ id: 'community-1' } as any);
+      vi.mocked(
+        communityResolverService.getLevelZeroSpaceIdForCommunity
+      ).mockResolvedValue('space-root');
+
+      const contributionReporter = (resolver as any).contributionReporter;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await resolver.importCollaboraDocument(
+        actorContext,
+        { calloutID: 'callout-1' } as any,
+        {
+          createReadStream: () => ({}) as any,
+          filename: 'Imported.docx',
+          mimetype: 'application/octet-stream',
+        } as any
+      );
+
+      expect(
+        contributionReporter.calloutCollaboraDocumentUploaded
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'collab-doc-1',
+          name: 'Imported.docx',
+          space: 'space-root',
+        }),
+        actorContext
+      );
+    });
+
+    it('should still return the persisted contribution when analytics reporting fails', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+        settings: {
+          contribution: {
+            enabled: true,
+            canAddContributions: CalloutAllowedActors.MEMBERS,
+          },
+        },
+      } as any;
+      const contribution = {
+        id: 'contrib-1',
+        collaboraDocument: {
+          id: 'collab-doc-1',
+          profile: { displayName: 'Imported.docx' },
+        },
+      } as any;
+
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+      vi.mocked(
+        calloutService.importCollaboraDocumentToCallout
+      ).mockResolvedValue(contribution);
+
+      const configService = (resolver as any).configService;
+      vi.mocked(configService.get).mockReturnValue(1000);
+
+      const roomResolverService = (resolver as any).roomResolverService;
+      vi.mocked(
+        roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+      ).mockResolvedValue({
+        roleSet: { id: 'rs-1' },
+        platformRolesAccess: { roles: [] },
+        spaceSettings: {},
+      });
+
+      vi.mocked(_calloutContributionService.save).mockResolvedValue(
+        contribution
+      );
+      vi.mocked(
+        _contributionAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      vi.mocked(
+        _calloutContributionService.getCalloutContributionOrFail
+      ).mockResolvedValue(contribution);
+
+      // analytics resolution blows up after the contribution is persisted
+      const communityResolverService = (resolver as any)
+        .communityResolverService;
+      vi.mocked(
+        communityResolverService.getCommunityForCollaboraDocumentOrFail
+      ).mockRejectedValue(new Error('community resolution failed'));
+
+      const actorContext = { actorID: 'user-1' } as any;
+
+      const result = await resolver.importCollaboraDocument(
+        actorContext,
+        { calloutID: 'callout-1' } as any,
+        {
+          createReadStream: () => ({}) as any,
+          filename: 'Imported.docx',
+          mimetype: 'application/octet-stream',
+        } as any
+      );
+
+      // the persisted contribution is returned; analytics failure is swallowed
+      expect(result).toBe(contribution);
     });
   });
 

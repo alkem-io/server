@@ -660,6 +660,8 @@ services:
       - 8080
 
   collabora:
+    extra_hosts:
+      - 'wopi-service:host-gateway'
     container_name: alkemio_dev_collabora
     hostname: collabora
     image: collabora/code:24.04.12.2.1

@@ -111,9 +111,32 @@ http:
           - url: 'h2c://authorization-evaluation:6060/'
 
     wopi-service:
+      failover:
+        service: wopi-service-local
+        fallback: wopi-service-compose
+
+    wopi-service-compose:
       loadBalancer:
         servers:
           - url: 'http://wopi-service:8080/'
+        healthCheck:
+          path: /health
+          port: 8080
+          interval: 10s
+          timeout: 3s
+          scheme: http
+
+    wopi-service-local:
+      loadBalancer:
+        servers:
+          - url: 'http://host.docker.internal:8080/'
+        healthCheck:
+          path: /health
+          port: 8080
+          interval: 10s
+          timeout: 3s
+          scheme: http
+
 
     collabora:
       loadBalancer:
