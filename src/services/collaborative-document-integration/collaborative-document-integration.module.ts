@@ -1,5 +1,6 @@
 import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { CollaboraDocumentModule } from '@domain/collaboration/collabora-document/collabora.document.module';
 import { MemoModule } from '@domain/common/memo';
 import { Module } from '@nestjs/common';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
@@ -12,6 +13,7 @@ import { CollaborativeDocumentIntegrationService } from './collaborative-documen
     AuthorizationModule,
     ActorContextModule,
     MemoModule,
+    CollaboraDocumentModule,
     ContributionReporterModule,
     EntityResolverModule,
   ],
