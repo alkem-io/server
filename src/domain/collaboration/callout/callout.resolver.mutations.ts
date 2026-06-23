@@ -39,10 +39,12 @@ import { CurrentActor } from '@src/common/decorators';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
+import { ICollaboraDocument } from '../collabora-document/collabora.document.interface';
 import { ImportCollaboraDocumentInput } from '../collabora-document/dto/collabora.document.dto.import';
 import { CollaborationLicenseService } from '../collaboration/collaboration.service.license';
 import { ILink } from '../link/link.interface';
@@ -57,6 +59,8 @@ import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibilit
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: WinstonLogger,
     private readonly communityResolverService: CommunityResolverService,
     private readonly contributionReporter: ContributionReporterService,
     private readonly activityAdapter: ActivityAdapter,
@@ -427,6 +431,21 @@ export class CalloutResolverMutations {
           );
         }
       }
+
+      if (
+        contributionData.collaboraDocument &&
+        contribution.collaboraDocument
+      ) {
+        if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
+          this.processActivityCollaboraDocumentCreated(
+            callout,
+            contribution,
+            contribution.collaboraDocument,
+            levelZeroSpaceID,
+            actorContext
+          );
+        }
+      }
     }
 
     return await this.calloutContributionService.getCalloutContributionOrFail(
@@ -522,6 +541,42 @@ export class CalloutResolverMutations {
         spaceSettings
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    // Lifecycle analytics (US4 / FR-013): record the upload as a single-actor
+    // COLLABORA_DOCUMENT_UPLOADED event for the uploading user. Resolve the
+    // level-zero space by the freshly-created CollaboraDocument the same way
+    // the open path does (via the community resolver), then report.
+    // Best-effort (FR-008): the contribution is already persisted above, so a
+    // failure here must NOT fail the import — that would prompt a client retry
+    // and a duplicate document. Catch and log; never re-throw.
+    if (contribution.collaboraDocument) {
+      try {
+        const collaboraDocument = contribution.collaboraDocument;
+        const community =
+          await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
+            collaboraDocument.id
+          );
+        const levelZeroSpaceID =
+          await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+            community.id
+          );
+        this.contributionReporter.calloutCollaboraDocumentUploaded(
+          {
+            id: collaboraDocument.id,
+            name:
+              collaboraDocument.profile?.displayName ?? collaboraDocument.id,
+            space: levelZeroSpaceID,
+          },
+          actorContext
+        );
+      } catch (e: any) {
+        this.logger.error(
+          `Failed to report COLLABORA_DOCUMENT_UPLOADED analytics for contribution ${contribution.id}: ${e?.message}`,
+          e?.stack,
+          LogContext.COLLABORATION
+        );
+      }
+    }
 
     return await this.calloutContributionService.getCalloutContributionOrFail(
       contribution.id
@@ -660,6 +715,34 @@ export class CalloutResolverMutations {
       {
         id: memo.id,
         name: memo.nameID,
+        space: levelZeroSpaceID,
+      },
+      actorContext
+    );
+  }
+
+  private async processActivityCollaboraDocumentCreated(
+    callout: ICallout,
+    contribution: ICalloutContribution,
+    collaboraDocument: ICollaboraDocument,
+    levelZeroSpaceID: string,
+    actorContext: ActorContext
+  ) {
+    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
+      {
+        contribution: contribution,
+        callout: callout,
+        contributionType: CalloutContributionType.COLLABORA_DOCUMENT,
+        triggeredBy: actorContext.actorID,
+      };
+    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
+      notificationInput
+    );
+
+    this.contributionReporter.calloutCollaboraDocumentCreated(
+      {
+        id: collaboraDocument.id,
+        name: collaboraDocument.profile?.displayName ?? collaboraDocument.id,
         space: levelZeroSpaceID,
       },
       actorContext
