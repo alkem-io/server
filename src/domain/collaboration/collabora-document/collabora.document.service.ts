@@ -254,8 +254,10 @@ export class CollaboraDocumentService {
     options?: FindOneOptions<CollaboraDocument>
   ): Promise<ICollaboraDocument | null> {
     return this.collaboraDocumentRepository.findOne({
-      where: { document: { id: storageDocumentID } },
       ...options,
+      // `where` last so a caller-supplied `options` cannot override the
+      // storage-document filter this method's contract guarantees.
+      where: { document: { id: storageDocumentID } },
     });
   }
 

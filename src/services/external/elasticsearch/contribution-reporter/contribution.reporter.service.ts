@@ -615,7 +615,8 @@ export class ContributionReporterService {
    * Indexes a single aggregate contribution document. Unlike
    * {@link createDocument}, this does NOT attach per-user
    * {@link ContributionAuthorDetails} (no `author`) — the aggregate carries its
-   * own user arrays instead. Used for OFFICE_DOCUMENT_CONTRIBUTION.
+   * own user arrays instead. Used for OFFICE_DOCUMENT_CONTRIBUTION and
+   * OFFICE_DOCUMENT_VIEW.
    */
   private async createAggregateDocument(
     contribution: Omit<

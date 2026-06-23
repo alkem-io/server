@@ -492,6 +492,76 @@ describe('CalloutResolverMutations', () => {
         actorContext
       );
     });
+
+    it('should still return the persisted contribution when analytics reporting fails', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+        settings: {
+          contribution: {
+            enabled: true,
+            canAddContributions: CalloutAllowedActors.MEMBERS,
+          },
+        },
+      } as any;
+      const contribution = {
+        id: 'contrib-1',
+        collaboraDocument: {
+          id: 'collab-doc-1',
+          profile: { displayName: 'Imported.docx' },
+        },
+      } as any;
+
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+      vi.mocked(
+        calloutService.importCollaboraDocumentToCallout
+      ).mockResolvedValue(contribution);
+
+      const configService = (resolver as any).configService;
+      vi.mocked(configService.get).mockReturnValue(1000);
+
+      const roomResolverService = (resolver as any).roomResolverService;
+      vi.mocked(
+        roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+      ).mockResolvedValue({
+        roleSet: { id: 'rs-1' },
+        platformRolesAccess: { roles: [] },
+        spaceSettings: {},
+      });
+
+      vi.mocked(_calloutContributionService.save).mockResolvedValue(
+        contribution
+      );
+      vi.mocked(
+        _contributionAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      vi.mocked(
+        _calloutContributionService.getCalloutContributionOrFail
+      ).mockResolvedValue(contribution);
+
+      // analytics resolution blows up after the contribution is persisted
+      const communityResolverService = (resolver as any)
+        .communityResolverService;
+      vi.mocked(
+        communityResolverService.getCommunityForCollaboraDocumentOrFail
+      ).mockRejectedValue(new Error('community resolution failed'));
+
+      const actorContext = { actorID: 'user-1' } as any;
+
+      const result = await resolver.importCollaboraDocument(
+        actorContext,
+        { calloutID: 'callout-1' } as any,
+        {
+          createReadStream: () => ({}) as any,
+          filename: 'Imported.docx',
+          mimetype: 'application/octet-stream',
+        } as any
+      );
+
+      // the persisted contribution is returned; analytics failure is swallowed
+      expect(result).toBe(contribution);
+    });
   });
 
   describe('updateContributionsSortOrder', () => {

@@ -312,7 +312,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
         }
       );
       communityResolver.getCommunityForCollaboraDocumentOrFail.mockResolvedValue(
-        'community-1'
+        { id: 'community-1' } as any
       );
       communityResolver.getLevelZeroSpaceIdForCommunity.mockResolvedValue(
         'space-root'
@@ -355,6 +355,10 @@ describe('CollaborativeDocumentIntegrationService', () => {
       expect(
         communityResolver.getLevelZeroSpaceIdForCommunity
       ).toHaveBeenCalledTimes(1);
+      // the resolved community's id is threaded through to the space lookup
+      expect(
+        communityResolver.getLevelZeroSpaceIdForCommunity
+      ).toHaveBeenCalledWith('community-1');
 
       // T015: ONE aggregate record, id = resolved CollaboraDocument.id (NOT the storage id)
       expect(
@@ -472,7 +476,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
         }
       );
       communityResolver.getCommunityForCollaboraDocumentOrFail.mockResolvedValue(
-        'community-1'
+        { id: 'community-1' } as any
       );
       communityResolver.getLevelZeroSpaceIdForCommunity.mockResolvedValue(
         'space-root'

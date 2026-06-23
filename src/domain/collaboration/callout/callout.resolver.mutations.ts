@@ -39,6 +39,7 @@ import { CurrentActor } from '@src/common/decorators';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
@@ -58,6 +59,8 @@ import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibilit
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: WinstonLogger,
     private readonly communityResolverService: CommunityResolverService,
     private readonly contributionReporter: ContributionReporterService,
     private readonly activityAdapter: ActivityAdapter,
@@ -543,24 +546,36 @@ export class CalloutResolverMutations {
     // COLLABORA_DOCUMENT_UPLOADED event for the uploading user. Resolve the
     // level-zero space by the freshly-created CollaboraDocument the same way
     // the open path does (via the community resolver), then report.
+    // Best-effort (FR-008): the contribution is already persisted above, so a
+    // failure here must NOT fail the import — that would prompt a client retry
+    // and a duplicate document. Catch and log; never re-throw.
     if (contribution.collaboraDocument) {
-      const collaboraDocument = contribution.collaboraDocument;
-      const community =
-        await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
-          collaboraDocument.id
+      try {
+        const collaboraDocument = contribution.collaboraDocument;
+        const community =
+          await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
+            collaboraDocument.id
+          );
+        const levelZeroSpaceID =
+          await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+            community.id
+          );
+        this.contributionReporter.calloutCollaboraDocumentUploaded(
+          {
+            id: collaboraDocument.id,
+            name:
+              collaboraDocument.profile?.displayName ?? collaboraDocument.id,
+            space: levelZeroSpaceID,
+          },
+          actorContext
         );
-      const levelZeroSpaceID =
-        await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
-          community.id
+      } catch (e: any) {
+        this.logger.error(
+          `Failed to report COLLABORA_DOCUMENT_UPLOADED analytics for contribution ${contribution.id}: ${e?.message}`,
+          e?.stack,
+          LogContext.COLLABORATION
         );
-      this.contributionReporter.calloutCollaboraDocumentUploaded(
-        {
-          id: collaboraDocument.id,
-          name: collaboraDocument.profile?.displayName ?? collaboraDocument.id,
-          space: levelZeroSpaceID,
-        },
-        actorContext
-      );
+      }
     }
 
     return await this.calloutContributionService.getCalloutContributionOrFail(
