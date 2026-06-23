@@ -1,14 +1,10 @@
-import { NonInteractiveLoginStrategy } from '@core/auth/non-interactive-login/non-interactive-login.strategy';
-import { AuthenticationService } from '@core/authentication/authentication.service';
-import { Controller, Get, Inject, Query, Req, Res } from '@nestjs/common';
-import { ConfigService } from '@nestjs/config';
-import { AlkemioConfig } from '@src/types';
-import { randomUUID } from 'crypto';
+import { Controller, Get, Query, Req, Res } from '@nestjs/common';
 import type { Request, Response } from 'express';
 import { ANONYMOUS_ACTOR_ID, HEADER_ACTOR_ID } from './constants';
-import type { SessionStoreHandle } from './session-store.redis';
-import { SESSION_STORE_HANDLE } from './strategies/cookie-session.errors';
-import { HydraBearerValidator } from './strategies/hydra-bearer.validator';
+import {
+  ForwardAuthResolverService,
+  SessionStoreUnavailableError,
+} from './forward-auth.resolver.service';
 
 /**
   Traefik ForwardAuth decision endpoint. Single source-of-truth for
@@ -22,12 +18,9 @@ import { HydraBearerValidator } from './strategies/hydra-bearer.validator';
 
   Identity sources tried in order:
     1. session cookie               — browsers/SPA (BFF Redis-backed session).
-                                      Cookie name comes from
-                                      `identity.authentication.providers.oidc.cookie.name`
-                                      (env-suffixed per environment: `alkemio_session`,
-                                      `alkemio_session_sandbox`, …).
     2. `Authorization: Bearer <jwt>` — API/M2M (Hydra-issued, JWKS-validated)
     3. `?guestName=` query param    — anonymous guest with display name
+  …all resolved by the shared `ForwardAuthResolverService`.
 
   Semantics: ALWAYS returns 200 AND ALWAYS stamps `X-Alkemio-Actor-Id`.
   Authenticated users get their canonical actor id; guests get the synthetic
@@ -47,21 +40,9 @@ import { HydraBearerValidator } from './strategies/hydra-bearer.validator';
  */
 @Controller('rest/internal')
 export class ForwardAuthController {
-  private readonly sessionCookieName: string;
-
   constructor(
-    private readonly authenticationService: AuthenticationService,
-    @Inject(SESSION_STORE_HANDLE)
-    private readonly sessionStore: SessionStoreHandle,
-    private readonly hydraBearerValidator: HydraBearerValidator,
-    private readonly nonInteractiveLoginStrategy: NonInteractiveLoginStrategy,
-    configService: ConfigService<AlkemioConfig, true>
-  ) {
-    this.sessionCookieName = configService.get(
-      'identity.authentication.providers.oidc.cookie.name',
-      { infer: true }
-    );
-  }
+    private readonly forwardAuthResolverService: ForwardAuthResolverService
+  ) {}
 
   @Get('forward-auth')
   async resolve(
@@ -74,90 +55,21 @@ export class ForwardAuthController {
     const guestName =
       typeof guestNameRaw === 'string' ? guestNameRaw : undefined;
 
-    // 1. Cookie path — browsers/SPA. Bare sid post express-session signature
-    //    verification (matches Redis key suffix). Only honour it when the
-    //    request actually carried the session cookie — express-session
-    //    auto-generates a sid for every request, so without this guard the
-    //    endpoint would attempt a BFF Redis lookup for unauthenticated traffic.
-    //    The cookie name is per-env
-    const sid = req.cookies?.[this.sessionCookieName]
-      ? typeof req.sessionID === 'string' && req.sessionID.length > 0
-        ? req.sessionID
-        : undefined
-      : undefined;
-
-    let cookiePayload = null;
-    if (sid) {
-      try {
-        cookiePayload = await this.sessionStore.get(sid);
-      } catch {
+    let ctx;
+    try {
+      ctx = await this.forwardAuthResolverService.resolveActorContext(
+        req,
+        guestName
+      );
+    } catch (err) {
+      if (err instanceof SessionStoreUnavailableError) {
         // Store unreachable — surface 503 so Traefik returns the same to caller.
         res.status(503).end();
         return;
       }
+      throw err;
     }
 
-    if (cookiePayload) {
-      const ctx =
-        await this.authenticationService.getActorContextFromBffPayload(
-          cookiePayload,
-          guestName
-        );
-      res.setHeader(
-        HEADER_ACTOR_ID,
-        ctx.actorID && ctx.actorID.length > 0 ? ctx.actorID : ANONYMOUS_ACTOR_ID
-      );
-      res.status(200).end();
-      return;
-    }
-
-    // 2. Bearer path — API/M2M. JWKS-validated Hydra access token (RS256).
-    //    Validator throws BearerValidationError on any failure; forwardAuth
-    //    semantics require us to swallow that and fall through to anonymous
-    //    rather than 401 the caller.
-    const auth = req.headers['authorization'];
-    if (typeof auth === 'string') {
-      const correlationId = randomUUID();
-      try {
-        const result =
-          await this.hydraBearerValidator.validateAuthorizationHeader(
-            auth,
-            correlationId,
-            correlationId
-          );
-        if (result.actorContext.actorID) {
-          res.setHeader(HEADER_ACTOR_ID, result.actorContext.actorID);
-        }
-        res.status(200).end();
-        return;
-      } catch {
-        // Bearer invalid as Hydra RS256 → try the HS256 non-interactive-login
-        // path below before giving up.
-      }
-
-      // 2b. Non-interactive-login bearer path — HS256 self-signed tokens
-      //     minted by `/api/auth/non-interactive-login`. Mirrors the GraphQL
-      //     Passport chain (Hydra → non-interactive-login fall-through) so
-      //     forwardAuth-protected REST routes (file-service,
-      //     collaborative-document) accept the same test bearers GraphQL does.
-      //     Strategy.validate returns null when the feature is disabled or the
-      //     token is not an HS256 non-interactive-login JWT, so this is inert
-      //     in production.
-      const niCtx = await this.nonInteractiveLoginStrategy.validate(req);
-      if (niCtx?.actorID) {
-        res.setHeader(HEADER_ACTOR_ID, niCtx.actorID);
-        res.status(200).end();
-        return;
-      }
-    }
-
-    // 3. Guest/anonymous fall-through. getActorContextFromBffPayload(null,
-    //    guestName) reproduces the prior behaviour: guest with display name
-    //    if provided, anonymous otherwise.
-    const ctx = await this.authenticationService.getActorContextFromBffPayload(
-      null,
-      guestName
-    );
     // Always stamp the actor header. Authenticated/guest contexts carry their
     // own actorID; anonymous contexts get the nil-UUID sentinel that
     // auth-evaluation-service recognises as GLOBAL_ANONYMOUS. Downstream
