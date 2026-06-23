@@ -137,8 +137,8 @@ describe('CollaborativeDocumentIntegrationController', () => {
     it('should delegate to integrationService.officeDocumentContributions', async () => {
       const payload = {
         documentId: 'doc-1',
-        writeUsers: ['user-1'],
-        readonlyUsers: ['user-2'],
+        writeActors: ['user-1'],
+        readonlyActors: ['user-2'],
       } as OfficeDocumentContributionsInputData;
       integrationService.officeDocumentContributions.mockResolvedValue(
         undefined
@@ -156,8 +156,8 @@ describe('CollaborativeDocumentIntegrationController', () => {
     it('should delegate to integrationService.officeDocumentViews', async () => {
       const payload = {
         documentId: 'doc-1',
-        writeUsers: ['user-1'],
-        readonlyUsers: ['user-2'],
+        writeActors: ['user-1'],
+        readonlyActors: ['user-2'],
       } as OfficeDocumentContributionsInputData;
       integrationService.officeDocumentViews.mockResolvedValue(undefined);
 

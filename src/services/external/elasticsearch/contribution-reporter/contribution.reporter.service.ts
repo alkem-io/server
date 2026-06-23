@@ -343,7 +343,7 @@ export class ContributionReporterService {
   /**
    * Indexes ONE aggregate `contribution` document per (Collabora document,
    * window) for a window in which the document was genuinely **edited**,
-   * carrying both `writeUsers` and `readonlyUsers` arrays — NOT one document per
+   * carrying both `writeActors` and `readonlyActors` arrays — NOT one document per
    * user. Resolve space/displayName once upstream and pass both arrays through
    * verbatim. See feature 003-collabora-doc-contributions.
    */
@@ -351,8 +351,8 @@ export class ContributionReporterService {
     id: string;
     name: string;
     space: string;
-    writeUsers: string[];
-    readonlyUsers: string[];
+    writeActors: string[];
+    readonlyActors: string[];
   }): void {
     this.officeDocumentAggregate(
       CONTRIBUTION_TYPE.OFFICE_DOCUMENT_CONTRIBUTION,
@@ -364,7 +364,7 @@ export class ContributionReporterService {
    * Companion of {@link officeDocumentContribution}: indexes ONE aggregate
    * `contribution` document per (Collabora document, window) for a window in
    * which the document was **active but not edited** (viewed). Same aggregate
-   * shape — both `writeUsers` and `readonlyUsers` arrays — differing ONLY by the
+   * shape — both `writeActors` and `readonlyActors` arrays — differing ONLY by the
    * `OFFICE_DOCUMENT_VIEW` type. See feature 003-collabora-doc-contributions
    * (FR-012). Mutually exclusive with the contribution record per window.
    */
@@ -372,8 +372,8 @@ export class ContributionReporterService {
     id: string;
     name: string;
     space: string;
-    writeUsers: string[];
-    readonlyUsers: string[];
+    writeActors: string[];
+    readonlyActors: string[];
   }): void {
     this.officeDocumentAggregate(
       CONTRIBUTION_TYPE.OFFICE_DOCUMENT_VIEW,
@@ -393,8 +393,8 @@ export class ContributionReporterService {
       id: string;
       name: string;
       space: string;
-      writeUsers: string[];
-      readonlyUsers: string[];
+      writeActors: string[];
+      readonlyActors: string[];
     }
   ): void {
     void this.createAggregateDocument({
@@ -402,8 +402,8 @@ export class ContributionReporterService {
       id: contribution.id,
       name: contribution.name,
       space: contribution.space,
-      writeUsers: contribution.writeUsers,
-      readonlyUsers: contribution.readonlyUsers,
+      writeActors: contribution.writeActors,
+      readonlyActors: contribution.readonlyActors,
     });
   }
 

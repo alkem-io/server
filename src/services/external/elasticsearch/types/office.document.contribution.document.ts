@@ -5,7 +5,7 @@ import { ContributionType } from './contribution.type';
  * edited within a window. Unlike the per-user contribution documents (which
  * carry a single `author` via {@link ContributionAuthorDetails}), this is ONE
  * aggregate document per (document, window) carrying two user arrays:
- * `writeUsers` (write-capable active users) and `readonlyUsers` (read-only
+ * `writeActors` (write-capable active users) and `readonlyActors` (read-only
  * active users). See feature 003-collabora-doc-contributions.
  */
 export type OfficeDocumentContributionDocument = {
@@ -39,9 +39,9 @@ export type OfficeDocumentContributionDocument = {
    * strings (Elasticsearch indexes a string array as a multi-valued field,
    * shown comma-joined and individually filterable in Kibana).
    */
-  writeUsers: string[];
+  writeActors: string[];
   /**
    * Distinct read-only users active in the edited window — bare actor-id strings.
    */
-  readonlyUsers: string[];
+  readonlyActors: string[];
 };

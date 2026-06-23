@@ -377,8 +377,8 @@ describe('ContributionReporterService', () => {
         id: 'doc-1',
         name: 'My Document',
         space: 'space-root',
-        writeUsers: ['user-1', 'user-2'],
-        readonlyUsers: ['user-3'],
+        writeActors: ['user-1', 'user-2'],
+        readonlyActors: ['user-3'],
       });
 
       await vi.waitFor(() => {
@@ -392,8 +392,8 @@ describe('ContributionReporterService', () => {
             id: 'doc-1',
             name: 'My Document',
             space: 'space-root',
-            writeUsers: ['user-1', 'user-2'],
-            readonlyUsers: ['user-3'],
+            writeActors: ['user-1', 'user-2'],
+            readonlyActors: ['user-3'],
           }),
         })
       );
@@ -404,8 +404,8 @@ describe('ContributionReporterService', () => {
         id: 'doc-2',
         name: 'Another Document',
         space: 'space-root',
-        writeUsers: ['user-1'],
-        readonlyUsers: [],
+        writeActors: ['user-1'],
+        readonlyActors: [],
       });
 
       await vi.waitFor(() => {
@@ -420,13 +420,13 @@ describe('ContributionReporterService', () => {
       expect(mockActorService.getActorOrNull).not.toHaveBeenCalled();
     });
 
-    it('should preserve an empty readonlyUsers array', async () => {
+    it('should preserve an empty readonlyActors array', async () => {
       service.officeDocumentContribution({
         id: 'doc-3',
         name: 'Doc',
         space: 'space-root',
-        writeUsers: ['user-1'],
-        readonlyUsers: [],
+        writeActors: ['user-1'],
+        readonlyActors: [],
       });
 
       await vi.waitFor(() => {
@@ -437,8 +437,8 @@ describe('ContributionReporterService', () => {
         expect.objectContaining({
           document: expect.objectContaining({
             type: 'OFFICE_DOCUMENT_CONTRIBUTION',
-            writeUsers: ['user-1'],
-            readonlyUsers: [],
+            writeActors: ['user-1'],
+            readonlyActors: [],
           }),
         })
       );
@@ -451,8 +451,8 @@ describe('ContributionReporterService', () => {
         id: 'doc-1',
         name: 'My Document',
         space: 'space-root',
-        writeUsers: ['user-1', 'user-2'],
-        readonlyUsers: ['user-3'],
+        writeActors: ['user-1', 'user-2'],
+        readonlyActors: ['user-3'],
       });
 
       await vi.waitFor(() => {
@@ -466,8 +466,8 @@ describe('ContributionReporterService', () => {
             id: 'doc-1',
             name: 'My Document',
             space: 'space-root',
-            writeUsers: ['user-1', 'user-2'],
-            readonlyUsers: ['user-3'],
+            writeActors: ['user-1', 'user-2'],
+            readonlyActors: ['user-3'],
           }),
         })
       );
@@ -478,8 +478,8 @@ describe('ContributionReporterService', () => {
         id: 'doc-2',
         name: 'Another Document',
         space: 'space-root',
-        writeUsers: ['user-1'],
-        readonlyUsers: [],
+        writeActors: ['user-1'],
+        readonlyActors: [],
       });
 
       await vi.waitFor(() => {
@@ -494,13 +494,13 @@ describe('ContributionReporterService', () => {
       expect(mockActorService.getActorOrNull).not.toHaveBeenCalled();
     });
 
-    it('should preserve an empty readonlyUsers array', async () => {
+    it('should preserve an empty readonlyActors array', async () => {
       service.officeDocumentView({
         id: 'doc-3',
         name: 'Doc',
         space: 'space-root',
-        writeUsers: ['user-1'],
-        readonlyUsers: [],
+        writeActors: ['user-1'],
+        readonlyActors: [],
       });
 
       await vi.waitFor(() => {
@@ -511,8 +511,8 @@ describe('ContributionReporterService', () => {
         expect.objectContaining({
           document: expect.objectContaining({
             type: 'OFFICE_DOCUMENT_VIEW',
-            writeUsers: ['user-1'],
-            readonlyUsers: [],
+            writeActors: ['user-1'],
+            readonlyActors: [],
           }),
         })
       );

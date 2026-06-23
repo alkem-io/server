@@ -243,16 +243,16 @@ export class CollaborativeDocumentIntegrationService {
   private async reportOfficeDocumentWindow(
     {
       documentId,
-      writeUsers,
-      readonlyUsers,
+      writeActors,
+      readonlyActors,
     }: OfficeDocumentContributionsInputData,
     kind: 'contribution' | 'view',
     report: (contribution: {
       id: string;
       name: string;
       space: string;
-      writeUsers: string[];
-      readonlyUsers: string[];
+      writeActors: string[];
+      readonlyActors: string[];
     }) => void
   ): Promise<void> {
     try {
@@ -288,8 +288,8 @@ export class CollaborativeDocumentIntegrationService {
         id: collaboraDocument.id,
         name: displayName,
         space: levelZeroSpaceID,
-        writeUsers,
-        readonlyUsers,
+        writeActors,
+        readonlyActors,
       });
     } catch (e: any) {
       this.logger.warn?.(

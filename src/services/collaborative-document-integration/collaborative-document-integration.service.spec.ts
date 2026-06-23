@@ -330,8 +330,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
       await service.officeDocumentContributions({
         documentId: STORAGE_DOCUMENT_ID,
-        writeUsers: ['user-1', 'user-2'],
-        readonlyUsers: ['user-3'],
+        writeActors: ['user-1', 'user-2'],
+        readonlyActors: ['user-3'],
       } as any);
 
       // reverse-resolved by the STORAGE document id
@@ -370,8 +370,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
         id: COLLABORA_DOCUMENT_ID,
         name: 'My Document',
         space: 'space-root',
-        writeUsers: ['user-1', 'user-2'],
-        readonlyUsers: ['user-3'],
+        writeActors: ['user-1', 'user-2'],
+        readonlyActors: ['user-3'],
       });
 
       // explicitly: the storage id is never used as the record id
@@ -380,37 +380,37 @@ describe('CollaborativeDocumentIntegrationService', () => {
       expect(arg.id).not.toBe(STORAGE_DOCUMENT_ID);
     });
 
-    // T014: both arrays pass through verbatim (no fan-out, no dropping readonlyUsers)
-    it('should pass writeUsers and readonlyUsers through verbatim', async () => {
+    // T014: both arrays pass through verbatim (no fan-out, no dropping readonlyActors)
+    it('should pass writeActors and readonlyActors through verbatim', async () => {
       arrange();
-      const writeUsers = ['w1', 'w2'];
-      const readonlyUsers = ['r1'];
+      const writeActors = ['w1', 'w2'];
+      const readonlyActors = ['r1'];
 
       await service.officeDocumentContributions({
         documentId: STORAGE_DOCUMENT_ID,
-        writeUsers,
-        readonlyUsers,
+        writeActors,
+        readonlyActors,
       } as any);
 
       const arg =
         contributionReporter.officeDocumentContribution.mock.calls[0][0];
-      expect(arg.writeUsers).toEqual(writeUsers);
-      expect(arg.readonlyUsers).toEqual(readonlyUsers);
+      expect(arg.writeActors).toEqual(writeActors);
+      expect(arg.readonlyActors).toEqual(readonlyActors);
     });
 
-    it('should index a record with an empty readonlyUsers array when none are read-only', async () => {
+    it('should index a record with an empty readonlyActors array when none are read-only', async () => {
       arrange();
 
       await service.officeDocumentContributions({
         documentId: STORAGE_DOCUMENT_ID,
-        writeUsers: ['user-1'],
-        readonlyUsers: [],
+        writeActors: ['user-1'],
+        readonlyActors: [],
       } as any);
 
       const arg =
         contributionReporter.officeDocumentContribution.mock.calls[0][0];
-      expect(arg.readonlyUsers).toEqual([]);
-      expect(arg.writeUsers).toEqual(['user-1']);
+      expect(arg.readonlyActors).toEqual([]);
+      expect(arg.writeActors).toEqual(['user-1']);
     });
 
     // T013 + FR-008: no CollaboraDocument backs the storage document id → discard without throwing
@@ -422,8 +422,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
       await expect(
         service.officeDocumentContributions({
           documentId: 'unknown-storage-doc',
-          writeUsers: ['user-1'],
-          readonlyUsers: [],
+          writeActors: ['user-1'],
+          readonlyActors: [],
         } as any)
       ).resolves.toBeUndefined();
 
@@ -451,8 +451,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
       await expect(
         service.officeDocumentContributions({
           documentId: STORAGE_DOCUMENT_ID,
-          writeUsers: ['user-1'],
-          readonlyUsers: [],
+          writeActors: ['user-1'],
+          readonlyActors: [],
         } as any)
       ).resolves.toBeUndefined();
 
@@ -492,8 +492,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
 
       await service.officeDocumentViews({
         documentId: STORAGE_DOCUMENT_ID,
-        writeUsers: ['user-1', 'user-2'],
-        readonlyUsers: ['user-3'],
+        writeActors: ['user-1', 'user-2'],
+        readonlyActors: ['user-3'],
       } as any);
 
       expect(
@@ -518,8 +518,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
         id: COLLABORA_DOCUMENT_ID,
         name: 'My Document',
         space: 'space-root',
-        writeUsers: ['user-1', 'user-2'],
-        readonlyUsers: ['user-3'],
+        writeActors: ['user-1', 'user-2'],
+        readonlyActors: ['user-3'],
       });
 
       // the storage id is never used as the record id
@@ -527,20 +527,20 @@ describe('CollaborativeDocumentIntegrationService', () => {
       expect(arg.id).not.toBe(STORAGE_DOCUMENT_ID);
     });
 
-    it('should pass writeUsers and readonlyUsers through verbatim', async () => {
+    it('should pass writeActors and readonlyActors through verbatim', async () => {
       arrange();
-      const writeUsers = ['w1', 'w2'];
-      const readonlyUsers = ['r1'];
+      const writeActors = ['w1', 'w2'];
+      const readonlyActors = ['r1'];
 
       await service.officeDocumentViews({
         documentId: STORAGE_DOCUMENT_ID,
-        writeUsers,
-        readonlyUsers,
+        writeActors,
+        readonlyActors,
       } as any);
 
       const arg = contributionReporter.officeDocumentView.mock.calls[0][0];
-      expect(arg.writeUsers).toEqual(writeUsers);
-      expect(arg.readonlyUsers).toEqual(readonlyUsers);
+      expect(arg.writeActors).toEqual(writeActors);
+      expect(arg.readonlyActors).toEqual(readonlyActors);
     });
 
     // FR-008: no CollaboraDocument backs the storage document id → discard without throwing
@@ -552,8 +552,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
       await expect(
         service.officeDocumentViews({
           documentId: 'unknown-storage-doc',
-          writeUsers: ['user-1'],
-          readonlyUsers: [],
+          writeActors: ['user-1'],
+          readonlyActors: [],
         } as any)
       ).resolves.toBeUndefined();
 
@@ -578,8 +578,8 @@ describe('CollaborativeDocumentIntegrationService', () => {
       await expect(
         service.officeDocumentViews({
           documentId: STORAGE_DOCUMENT_ID,
-          writeUsers: ['user-1'],
-          readonlyUsers: [],
+          writeActors: ['user-1'],
+          readonlyActors: [],
         } as any)
       ).resolves.toBeUndefined();
 
