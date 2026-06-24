@@ -18,9 +18,12 @@ import { CurrentActor } from '@src/common/decorators';
 import { PlatformAuthorizationPolicyService } from '@src/platform/authorization/platform.authorization.policy.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { ConversationService } from '../conversation/conversation.service';
+import { MessagingService } from '../messaging/messaging.service';
+import { SendDirectMessageToUsersInput } from './dto/communication.dto.send.direct.message.to.users';
 import { CommunicationSendMessageToCommunityLeadsInput } from './dto/communication.dto.send.message.community.leads';
 import { CommunicationSendMessageToOrganizationInput } from './dto/communication.dto.send.message.organization';
 import { CommunicationSendMessageToUsersInput } from './dto/communication.dto.send.message.users';
+import { DirectMessageDeliveryResult } from './dto/direct.message.delivery.result';
 
 @InstrumentResolver()
 @Resolver()
@@ -33,9 +36,34 @@ export class CommunicationResolverMutations {
     private readonly notificationOrganizationAdapter: NotificationOrganizationAdapter,
     private readonly platformAuthorizationService: PlatformAuthorizationPolicyService,
     private readonly conversationService: ConversationService,
+    private readonly messagingService: MessagingService,
     private readonly userService: UserService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
+
+  @Mutation(() => [DirectMessageDeliveryResult], {
+    description:
+      'Send a private (1:1) chat message to each of the given Users individually. Does NOT create a group conversation. Each recipient is processed independently and reported on; partial success is possible.',
+  })
+  async sendDirectMessageToUsers(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('messageData') messageData: SendDirectMessageToUsersInput
+  ): Promise<DirectMessageDeliveryResult[]> {
+    await this.authorizationService.grantAccessOrFail(
+      actorContext,
+      await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
+      AuthorizationPrivilege.READ_USERS,
+      // Static reason — no dynamic data in exception messages (coding standard);
+      // grantAccessOrFail already records the acting user id in its error/log.
+      'send direct chat message'
+    );
+
+    return await this.messagingService.sendDirectMessageToUsers(
+      actorContext.actorID,
+      messageData.receiverIDs,
+      messageData.message
+    );
+  }
 
   @Mutation(() => Boolean, {
     description: 'Send message to multiple Users.',
@@ -62,10 +90,15 @@ export class CommunicationResolverMutations {
         }
       );
 
-      // Check if the user is willing to receive messages
-      if (!receivingUser.settings.communication.allowOtherUsersToSendMessages) {
+      // `sendMessageToUsers` is the email-contact transport (chat goes through
+      // createConversation / sendDirectMessageToUsers), so it gates on the email
+      // consent flag — NOT the chat flag. A user with chat off but email contact
+      // on (the whole point of the setting) must be reachable here.
+      if (
+        !receivingUser.settings.communication.allowOtherUsersToContactViaEmail
+      ) {
         throw new MessagingNotEnabledException(
-          'User is not open to receiving messages',
+          'User is not open to being contacted via email',
           LogContext.USER,
           {
             userId: receivingUser.id,
