@@ -20,7 +20,7 @@ export const bootstrapTemplateSpaceContentSpaceL0: CreateTemplateContentSpaceInp
           displayName: 'Space Innovation Flow',
         },
         settings: {
-          maximumNumberOfStates: 5,
+          maximumNumberOfStates: 8,
           minimumNumberOfStates: 4,
         },
         states: [

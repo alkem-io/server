@@ -2,6 +2,7 @@ import { AuthorizationPrivilege } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
 import { MemoService } from '@domain/common/memo';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -29,9 +30,18 @@ describe('CollaborativeDocumentIntegrationService', () => {
     isMultiUser: Mock;
     getProfile: Mock;
   };
-  let contributionReporter: { memoContribution: Mock };
+  let collaboraDocumentService: {
+    getCollaboraDocumentOrFail: Mock;
+    getCollaboraDocumentByStorageDocumentId: Mock;
+  };
+  let contributionReporter: {
+    memoContribution: Mock;
+    officeDocumentContribution: Mock;
+    officeDocumentView: Mock;
+  };
   let communityResolver: {
     getCommunityForMemoOrFail: Mock;
+    getCommunityForCollaboraDocumentOrFail: Mock;
     getLevelZeroSpaceIdForCommunity: Mock;
   };
 
@@ -62,13 +72,14 @@ describe('CollaborativeDocumentIntegrationService', () => {
     authorizationService = module.get(AuthorizationService) as any;
     actorContextService = module.get(ActorContextService) as any;
     memoService = module.get(MemoService) as any;
+    collaboraDocumentService = module.get(CollaboraDocumentService) as any;
     contributionReporter = module.get(ContributionReporterService) as any;
     communityResolver = module.get(CommunityResolverService) as any;
   });
 
   describe('accessGranted', () => {
     it('should return true when user has the requested privilege', async () => {
-      const memo = { id: 'memo-1', authorization: { id: 'auth-1' } };
+      const memo = { id: 'memo-1', authorization: 'auth-1' };
       const actorContext = { credentials: [] };
       memoService.getMemoOrFail.mockResolvedValue(memo);
       actorContextService.resolveActorContext.mockResolvedValue(actorContext);
@@ -121,7 +132,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
     });
 
     it('should return correct info with maxCollaborators based on isMultiUser', async () => {
-      const memo = { authorization: { id: 'auth-1' } };
+      const memo = { authorization: 'auth-1' };
       memoService.getMemoOrFail.mockResolvedValue(memo);
       actorContextService.resolveActorContext.mockResolvedValue({});
       // First call: READ -> true, Second call: UPDATE_CONTENT -> true
@@ -283,6 +294,296 @@ describe('CollaborativeDocumentIntegrationService', () => {
         { id: 'memo-1', name: 'My Memo', space: 'space-root' },
         { actorID: 'user-2' }
       );
+    });
+  });
+
+  describe('officeDocumentContributions', () => {
+    // The event carries the STORAGE Document id (= collaboraDocument.document.id),
+    // NOT the CollaboraDocument id. The service reverse-resolves the
+    // CollaboraDocument by its document.id, then indexes under CollaboraDocument.id.
+    const STORAGE_DOCUMENT_ID = 'storage-doc-1';
+    const COLLABORA_DOCUMENT_ID = 'collabora-doc-1';
+
+    const arrange = () => {
+      collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
+        {
+          id: COLLABORA_DOCUMENT_ID,
+          profile: { displayName: 'My Document' },
+        }
+      );
+      communityResolver.getCommunityForCollaboraDocumentOrFail.mockResolvedValue(
+        { id: 'community-1' } as any
+      );
+      communityResolver.getLevelZeroSpaceIdForCommunity.mockResolvedValue(
+        'space-root'
+      );
+      contributionReporter.officeDocumentContribution.mockReturnValue(
+        undefined
+      );
+    };
+
+    // T012: a storage documentId comes in → CollaboraDocument is reverse-resolved
+    // by document.id → ONE aggregate record indexed under the resolved
+    // CollaboraDocument.id, carrying both arrays.
+    it('should reverse-resolve by storage document id and index ONE aggregate record under CollaboraDocument.id', async () => {
+      arrange();
+
+      await service.officeDocumentContributions({
+        documentId: STORAGE_DOCUMENT_ID,
+        writeActors: ['user-1', 'user-2'],
+        readonlyActors: ['user-3'],
+      } as any);
+
+      // reverse-resolved by the STORAGE document id
+      expect(
+        collaboraDocumentService.getCollaboraDocumentByStorageDocumentId
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        collaboraDocumentService.getCollaboraDocumentByStorageDocumentId
+      ).toHaveBeenCalledWith(STORAGE_DOCUMENT_ID, {
+        relations: { profile: true },
+      });
+
+      // community resolution is keyed off the resolved CollaboraDocument id,
+      // NOT the incoming storage id
+      expect(
+        communityResolver.getCommunityForCollaboraDocumentOrFail
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        communityResolver.getCommunityForCollaboraDocumentOrFail
+      ).toHaveBeenCalledWith(COLLABORA_DOCUMENT_ID);
+      expect(
+        communityResolver.getLevelZeroSpaceIdForCommunity
+      ).toHaveBeenCalledTimes(1);
+      // the resolved community's id is threaded through to the space lookup
+      expect(
+        communityResolver.getLevelZeroSpaceIdForCommunity
+      ).toHaveBeenCalledWith('community-1');
+
+      // T015: ONE aggregate record, id = resolved CollaboraDocument.id (NOT the storage id)
+      expect(
+        contributionReporter.officeDocumentContribution
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        contributionReporter.officeDocumentContribution
+      ).toHaveBeenCalledWith({
+        id: COLLABORA_DOCUMENT_ID,
+        name: 'My Document',
+        space: 'space-root',
+        writeActors: ['user-1', 'user-2'],
+        readonlyActors: ['user-3'],
+      });
+
+      // explicitly: the storage id is never used as the record id
+      const arg =
+        contributionReporter.officeDocumentContribution.mock.calls[0][0];
+      expect(arg.id).not.toBe(STORAGE_DOCUMENT_ID);
+    });
+
+    // T014: both arrays pass through verbatim (no fan-out, no dropping readonlyActors)
+    it('should pass writeActors and readonlyActors through verbatim', async () => {
+      arrange();
+      const writeActors = ['w1', 'w2'];
+      const readonlyActors = ['r1'];
+
+      await service.officeDocumentContributions({
+        documentId: STORAGE_DOCUMENT_ID,
+        writeActors,
+        readonlyActors,
+      } as any);
+
+      const arg =
+        contributionReporter.officeDocumentContribution.mock.calls[0][0];
+      expect(arg.writeActors).toEqual(writeActors);
+      expect(arg.readonlyActors).toEqual(readonlyActors);
+    });
+
+    it('should index a record with an empty readonlyActors array when none are read-only', async () => {
+      arrange();
+
+      await service.officeDocumentContributions({
+        documentId: STORAGE_DOCUMENT_ID,
+        writeActors: ['user-1'],
+        readonlyActors: [],
+      } as any);
+
+      const arg =
+        contributionReporter.officeDocumentContribution.mock.calls[0][0];
+      expect(arg.readonlyActors).toEqual([]);
+      expect(arg.writeActors).toEqual(['user-1']);
+    });
+
+    // T013 + FR-008: no CollaboraDocument backs the storage document id → discard without throwing
+    it('should discard the event without throwing when no CollaboraDocument resolves for the storage document id', async () => {
+      collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
+        null
+      );
+
+      await expect(
+        service.officeDocumentContributions({
+          documentId: 'unknown-storage-doc',
+          writeActors: ['user-1'],
+          readonlyActors: [],
+        } as any)
+      ).resolves.toBeUndefined();
+
+      // never proceeds to community resolution or reporting
+      expect(
+        communityResolver.getCommunityForCollaboraDocumentOrFail
+      ).not.toHaveBeenCalled();
+      expect(
+        contributionReporter.officeDocumentContribution
+      ).not.toHaveBeenCalled();
+    });
+
+    // FR-008: a downstream resolution failure is also discarded without throwing
+    it('should discard the event without throwing when the community cannot be resolved', async () => {
+      collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
+        { id: COLLABORA_DOCUMENT_ID, profile: { displayName: 'My Document' } }
+      );
+      communityResolver.getCommunityForCollaboraDocumentOrFail.mockRejectedValue(
+        new EntityNotFoundException(
+          'Unable to find Space for CollaboraDocument',
+          'COMMUNITY' as any
+        )
+      );
+
+      await expect(
+        service.officeDocumentContributions({
+          documentId: STORAGE_DOCUMENT_ID,
+          writeActors: ['user-1'],
+          readonlyActors: [],
+        } as any)
+      ).resolves.toBeUndefined();
+
+      expect(
+        contributionReporter.officeDocumentContribution
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  // FR-012: companion VIEW consumer — same reverse-resolution path as the
+  // contribution consumer, differing ONLY in the reporter method invoked.
+  describe('officeDocumentViews', () => {
+    const STORAGE_DOCUMENT_ID = 'storage-doc-1';
+    const COLLABORA_DOCUMENT_ID = 'collabora-doc-1';
+
+    const arrange = () => {
+      collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
+        {
+          id: COLLABORA_DOCUMENT_ID,
+          profile: { displayName: 'My Document' },
+        }
+      );
+      communityResolver.getCommunityForCollaboraDocumentOrFail.mockResolvedValue(
+        { id: 'community-1' } as any
+      );
+      communityResolver.getLevelZeroSpaceIdForCommunity.mockResolvedValue(
+        'space-root'
+      );
+      contributionReporter.officeDocumentView.mockReturnValue(undefined);
+    };
+
+    // T030: a storage documentId comes in → CollaboraDocument is reverse-resolved
+    // by document.id → ONE aggregate VIEW record indexed under the resolved
+    // CollaboraDocument.id, carrying both arrays.
+    it('should reverse-resolve by storage document id and index ONE aggregate VIEW record under CollaboraDocument.id', async () => {
+      arrange();
+
+      await service.officeDocumentViews({
+        documentId: STORAGE_DOCUMENT_ID,
+        writeActors: ['user-1', 'user-2'],
+        readonlyActors: ['user-3'],
+      } as any);
+
+      expect(
+        collaboraDocumentService.getCollaboraDocumentByStorageDocumentId
+      ).toHaveBeenCalledTimes(1);
+      expect(
+        collaboraDocumentService.getCollaboraDocumentByStorageDocumentId
+      ).toHaveBeenCalledWith(STORAGE_DOCUMENT_ID, {
+        relations: { profile: true },
+      });
+
+      expect(
+        communityResolver.getCommunityForCollaboraDocumentOrFail
+      ).toHaveBeenCalledWith(COLLABORA_DOCUMENT_ID);
+
+      // dispatched to the VIEW reporter, NOT the contribution reporter
+      expect(contributionReporter.officeDocumentView).toHaveBeenCalledTimes(1);
+      expect(
+        contributionReporter.officeDocumentContribution
+      ).not.toHaveBeenCalled();
+      expect(contributionReporter.officeDocumentView).toHaveBeenCalledWith({
+        id: COLLABORA_DOCUMENT_ID,
+        name: 'My Document',
+        space: 'space-root',
+        writeActors: ['user-1', 'user-2'],
+        readonlyActors: ['user-3'],
+      });
+
+      // the storage id is never used as the record id
+      const arg = contributionReporter.officeDocumentView.mock.calls[0][0];
+      expect(arg.id).not.toBe(STORAGE_DOCUMENT_ID);
+    });
+
+    it('should pass writeActors and readonlyActors through verbatim', async () => {
+      arrange();
+      const writeActors = ['w1', 'w2'];
+      const readonlyActors = ['r1'];
+
+      await service.officeDocumentViews({
+        documentId: STORAGE_DOCUMENT_ID,
+        writeActors,
+        readonlyActors,
+      } as any);
+
+      const arg = contributionReporter.officeDocumentView.mock.calls[0][0];
+      expect(arg.writeActors).toEqual(writeActors);
+      expect(arg.readonlyActors).toEqual(readonlyActors);
+    });
+
+    // FR-008: no CollaboraDocument backs the storage document id → discard without throwing
+    it('should discard the event without throwing when no CollaboraDocument resolves for the storage document id', async () => {
+      collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
+        null
+      );
+
+      await expect(
+        service.officeDocumentViews({
+          documentId: 'unknown-storage-doc',
+          writeActors: ['user-1'],
+          readonlyActors: [],
+        } as any)
+      ).resolves.toBeUndefined();
+
+      expect(
+        communityResolver.getCommunityForCollaboraDocumentOrFail
+      ).not.toHaveBeenCalled();
+      expect(contributionReporter.officeDocumentView).not.toHaveBeenCalled();
+    });
+
+    // FR-008: a downstream resolution failure is also discarded without throwing
+    it('should discard the event without throwing when the community cannot be resolved', async () => {
+      collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
+        { id: COLLABORA_DOCUMENT_ID, profile: { displayName: 'My Document' } }
+      );
+      communityResolver.getCommunityForCollaboraDocumentOrFail.mockRejectedValue(
+        new EntityNotFoundException(
+          'Unable to find Space for CollaboraDocument',
+          'COMMUNITY' as any
+        )
+      );
+
+      await expect(
+        service.officeDocumentViews({
+          documentId: STORAGE_DOCUMENT_ID,
+          writeActors: ['user-1'],
+          readonlyActors: [],
+        } as any)
+      ).resolves.toBeUndefined();
+
+      expect(contributionReporter.officeDocumentView).not.toHaveBeenCalled();
     });
   });
 });

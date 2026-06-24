@@ -11,6 +11,7 @@ export const userSettingsData: { userSettings: IUserSettings } = {
     },
     communication: {
       allowOtherUsersToSendMessages: true,
+      allowOtherUsersToContactViaEmail: false,
     },
     notification: {
       space: {
@@ -186,6 +187,9 @@ export const userSettingsData: { userSettings: IUserSettings } = {
     homeSpace: {
       spaceID: null,
       autoRedirect: false,
+    },
+    assistant: {
+      enabledCapabilities: [],
     },
     designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
   },

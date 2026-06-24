@@ -71,7 +71,7 @@ describe('CommunicationResolverMutations', () => {
       userService.getUserByIdOrFail.mockResolvedValue({
         id: 'receiver-1',
         settings: {
-          communication: { allowOtherUsersToSendMessages: true },
+          communication: { allowOtherUsersToContactViaEmail: true },
         },
       } as any);
 
@@ -90,11 +90,11 @@ describe('CommunicationResolverMutations', () => {
       });
     });
 
-    it('should throw MessagingNotEnabledException when user does not allow messages', async () => {
+    it('should throw MessagingNotEnabledException when user does not allow email contact', async () => {
       userService.getUserByIdOrFail.mockResolvedValue({
         id: 'receiver-1',
         settings: {
-          communication: { allowOtherUsersToSendMessages: false },
+          communication: { allowOtherUsersToContactViaEmail: false },
         },
       } as any);
 
@@ -106,11 +106,54 @@ describe('CommunicationResolverMutations', () => {
       ).rejects.toThrow(MessagingNotEnabledException);
     });
 
+    it('gates on the email flag, not the chat flag — chat on but email off still throws', async () => {
+      // The email transport must reject a recipient who allows chat but not
+      // email contact, even though the chat flag is true (FR-011).
+      userService.getUserByIdOrFail.mockResolvedValue({
+        id: 'receiver-1',
+        settings: {
+          communication: {
+            allowOtherUsersToSendMessages: true,
+            allowOtherUsersToContactViaEmail: false,
+          },
+        },
+      } as any);
+
+      await expect(
+        resolver.sendMessageToUsers(actorContext, {
+          receiverIds: ['receiver-1'],
+          message: 'Hello!',
+        } as any)
+      ).rejects.toThrow(MessagingNotEnabledException);
+    });
+
+    it('sends when chat is off but email contact is on (the email-contact case)', async () => {
+      userService.getUserByIdOrFail.mockResolvedValue({
+        id: 'receiver-1',
+        settings: {
+          communication: {
+            allowOtherUsersToSendMessages: false,
+            allowOtherUsersToContactViaEmail: true,
+          },
+        },
+      } as any);
+
+      const result = await resolver.sendMessageToUsers(actorContext, {
+        receiverIds: ['receiver-1'],
+        message: 'Hello!',
+      } as any);
+
+      expect(result).toBe(true);
+      expect(
+        notificationUserAdapter.userToUserMessageDirect
+      ).toHaveBeenCalled();
+    });
+
     it('should send messages to multiple receivers', async () => {
       userService.getUserByIdOrFail.mockResolvedValue({
         id: 'receiver-1',
         settings: {
-          communication: { allowOtherUsersToSendMessages: true },
+          communication: { allowOtherUsersToContactViaEmail: true },
         },
       } as any);
 

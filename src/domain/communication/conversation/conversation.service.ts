@@ -24,7 +24,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
-import { FindOneOptions, In, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
 import { Conversation } from './conversation.entity';
@@ -552,9 +552,18 @@ export class ConversationService {
    */
   async findConversationBetweenActors(
     actorId1: string,
-    actorId2: string
+    actorId2: string,
+    entityManager?: EntityManager
   ): Promise<IConversation | null> {
-    const result = await this.conversationMembershipRepository
+    // When invoked inside the DIRECT dedup transaction (see
+    // MessagingService.createConversation), run the existence check on that
+    // transaction's manager so the probe is provably scoped by the advisory
+    // lock held on the same connection. Outside that path, use the default
+    // injected repository.
+    const membershipRepository = entityManager
+      ? entityManager.getRepository(ConversationMembership)
+      : this.conversationMembershipRepository;
+    const result = await membershipRepository
       .createQueryBuilder('m1')
       .innerJoin(
         'conversation_membership',

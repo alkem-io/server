@@ -1,5 +1,6 @@
 import { LogContext, ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { SpaceLevel } from '@common/enums/space.level';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { VisualType } from '@common/enums/visual.type';
 import {
@@ -15,6 +16,7 @@ import { TagsetService } from '@domain/common/tagset/tagset.service';
 import { UpdateTagsetTemplateDefinitionInput } from '@domain/common/tagset-template';
 import { ITagsetTemplate } from '@domain/common/tagset-template/tagset.template.interface';
 import { TagsetTemplateService } from '@domain/common/tagset-template/tagset.template.service';
+import { Space } from '@domain/space/space/space.entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -34,6 +36,7 @@ import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.stat
 import { UpdateInnovationFlowCurrentStateInput } from './dto/innovation.flow.dto.state.select';
 import { UpdateInnovationFlowInput } from './dto/innovation.flow.dto.update';
 import { UpdateInnovationFlowStatesSortOrderInput } from './dto/innovation.flow.dto.update.states.sort.order';
+import { L0_FIXED_INNOVATION_FLOW_STATES } from './innovation.flow.constants';
 import { InnovationFlow } from './innovation.flow.entity';
 import { IInnovationFlow } from './innovation.flow.interface';
 
@@ -240,6 +243,105 @@ export class InnovationFlowService {
    * @param newStates
    * @returns
    */
+  /**
+   * Applies a set of template states to an InnovationFlow when a Space Template
+   * is applied (story #6177).
+   *
+   * For an L0 (root) space the first {@link L0_FIXED_INNOVATION_FLOW_STATES}
+   * "fixed phases" MUST NOT be overridden (FR-008): they are preserved by
+   * identity and leading order, and only the template's *additional* states
+   * (those not duplicating a fixed-phase name) are appended, capped at the
+   * flow's `maximumNumberOfStates`. If the combined unique set would exceed the
+   * maximum the apply is rejected atomically (FR-009) before any mutation.
+   *
+   * For subspaces (L1/L2) behavior is unchanged: a wholesale replacement via
+   * {@link updateInnovationFlowStates} (FR-011).
+   */
+  public async updateInnovationFlowStatesFromTemplate(
+    innovationFlow: IInnovationFlow,
+    templateStates: CreateInnovationFlowStateInput[]
+  ) {
+    const isLevelZero = await this.isLevelZeroInnovationFlow(innovationFlow.id);
+    if (!isLevelZero) {
+      // Subspace (or non-space) behavior is unchanged: replace all states.
+      return this.updateInnovationFlowStates(innovationFlow, templateStates);
+    }
+
+    if (!innovationFlow.states) {
+      throw new RelationshipNotFoundException(
+        'Unable to find states on InnovationFlow',
+        LogContext.INNOVATION_FLOW,
+        { innovationFlowId: innovationFlow.id }
+      );
+    }
+
+    // Preserve the leading fixed phases (by sort order) of the L0 space.
+    const fixedStates = [...innovationFlow.states]
+      .sort(sortBySortOrder)
+      .slice(0, L0_FIXED_INNOVATION_FLOW_STATES);
+    const fixedStateNames = new Set(
+      fixedStates.map(state => state.displayName)
+    );
+
+    const fixedStateInputs: CreateInnovationFlowStateInput[] = fixedStates.map(
+      state => ({
+        displayName: state.displayName,
+        description: state.description,
+        settings: state.settings,
+        sortOrder: state.sortOrder,
+      })
+    );
+
+    // Append only the template states that do not duplicate a fixed phase name,
+    // re-basing their sort order to come after the fixed phases.
+    const additionalStateInputs: CreateInnovationFlowStateInput[] = [
+      ...templateStates,
+    ]
+      .sort(sortBySortOrder)
+      .filter(state => !fixedStateNames.has(state.displayName))
+      .map((state, index) => ({
+        ...state,
+        sortOrder: L0_FIXED_INNOVATION_FLOW_STATES + index + 1,
+      }));
+
+    const combinedStates = [...fixedStateInputs, ...additionalStateInputs];
+
+    const maximumNumberOfStates = innovationFlow.settings.maximumNumberOfStates;
+    if (combinedStates.length > maximumNumberOfStates) {
+      throw new ValidationException(
+        'Applying this template would exceed the maximum number of states for this Space',
+        LogContext.INNOVATION_FLOW,
+        {
+          innovationFlowId: innovationFlow.id,
+          maximumNumberOfStates,
+          resultingStateCount: combinedStates.length,
+        }
+      );
+    }
+
+    return this.updateInnovationFlowStates(innovationFlow, combinedStates);
+  }
+
+  /**
+   * An InnovationFlow belongs to an L0 (root) space iff its owning Space has
+   * `level === 0`. Resolved via the entity manager (no module coupling), mirroring
+   * {@link getCollaborationByInnovationFlowId}. A flow with no owning Space row
+   * (e.g. a template content space) is treated as non-L0.
+   */
+  private async isLevelZeroInnovationFlow(
+    innovationFlowId: string
+  ): Promise<boolean> {
+    const spaceRepository =
+      this.innovationFlowRepository.manager.getRepository(Space);
+    const space = await spaceRepository.findOne({
+      where: {
+        collaboration: { innovationFlow: { id: innovationFlowId } },
+      },
+      select: { id: true, level: true },
+    });
+    return space?.level === SpaceLevel.L0;
+  }
+
   public async updateInnovationFlowStates(
     innovationFlow: IInnovationFlow,
     newStates: CreateInnovationFlowStateInput[]
