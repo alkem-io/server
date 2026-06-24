@@ -632,6 +632,7 @@ enum ActorType {
   ORGANIZATION
   SPACE
   USER
+  VIRTUAL_ASSISTANT
   VIRTUAL_CONTRIBUTOR
 }
 
@@ -795,6 +796,20 @@ input AssignUserGroupMemberInput {
   userID: UUID!
 }
 
+type AssistantCapabilityToggle {
+  """The capability (MCP tool name) this toggle controls."""
+  capability: String!
+  """Whether the capability is enabled."""
+  enabled: Boolean!
+}
+
+input AssistantCapabilityToggleInput {
+  """The capability (MCP tool name) this toggle controls."""
+  capability: String!
+  """Whether the capability is enabled."""
+  enabled: Boolean!
+}
+
 type AuthenticationConfig {
   """Alkemio Authentication Providers Config."""
   providers: [AuthenticationProviderConfig!]!
@@ -854,6 +869,7 @@ type Authorization {
 
 enum AuthorizationCredential {
   ACCOUNT_ADMIN
+  ASSISTANT_ACCESS
   BETA_TESTER
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
@@ -952,6 +968,7 @@ enum AuthorizationPolicyType {
   USER
   USER_GROUP
   USER_SETTINGS
+  VIRTUAL_ASSISTANT
   VIRTUAL_CONTRIBUTOR
   VISUAL
   WHITEBOARD
@@ -959,6 +976,7 @@ enum AuthorizationPolicyType {
 
 enum AuthorizationPrivilege {
   ACCESS_INTERACTIVE_GUIDANCE
+  ACCESS_VIRTUAL_ASSISTANT
   ACCOUNT_LICENSE_MANAGE
   AUTHORIZATION_RESET
   COMMUNITY_ASSIGN_VC_FROM_ACCOUNT
@@ -2691,6 +2709,7 @@ type CredentialDefinition {
 enum CredentialType {
   ACCOUNT_ADMIN
   ACCOUNT_LICENSE_PLUS
+  ASSISTANT_ACCESS
   BETA_TESTER
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
@@ -2849,6 +2868,26 @@ input DeleteVisualFromMediaGalleryInput {
 
 input DeleteWhiteboardInput {
   ID: UUID!
+}
+
+type DirectMessageDeliveryResult {
+  """
+  Set when status = SENT — the (existing or newly created) 1:1 conversation the message was delivered to.
+  """
+  conversationID: UUID
+  """The intended recipient."""
+  receiverID: UUID!
+  """The per-recipient delivery outcome."""
+  status: DirectMessageDeliveryStatus!
+}
+
+"""
+Per-recipient outcome of sendDirectMessageToUsers. SENT: delivered (a conversation id is returned). BLOCKED_NO_CONSENT: the recipient disabled direct messages. FAILED: an unexpected per-recipient error (other recipients are still processed).
+"""
+enum DirectMessageDeliveryStatus {
+  BLOCKED_NO_CONSENT
+  FAILED
+  SENT
 }
 
 type Discussion {
@@ -3081,6 +3120,15 @@ type GeoLocation {
   The Longitude for this Location, derived from (City, Country) if those are set.
   """
   longitude: Float
+}
+
+input GrantAssistantActorCapabilitiesInput {
+  """
+  Per-capability enable/disable toggles governing what the assistant may do system-invoked (default read-only).
+  """
+  enabledCapabilities: [AssistantCapabilityToggleInput!]!
+  """The VirtualAssistant actor whose admin grant is being set."""
+  virtualAssistantID: UUID!
 }
 
 input GrantAuthorizationCredentialInput {
@@ -3743,6 +3791,7 @@ enum LicenseEntitlementDataType {
 }
 
 enum LicenseEntitlementType {
+  ACCOUNT_AI_ASSISTANT_TOKENS_MONTH
   ACCOUNT_INNOVATION_HUB
   ACCOUNT_INNOVATION_PACK
   ACCOUNT_SPACE_FREE
@@ -4706,6 +4755,10 @@ type Mutation {
   revokeLicensePlanFromAccount(planData: RevokeLicensePlanFromAccount!): Account!
   """Revokes the specified LicensePlan on a Space."""
   revokeLicensePlanFromSpace(planData: RevokeLicensePlanFromSpace!): Space!
+  """
+  Send a private (1:1) chat message to each of the given Users individually. Does NOT create a group conversation. Each recipient is processed independently and reported on; partial success is possible.
+  """
+  sendDirectMessageToUsers(messageData: SendDirectMessageToUsersInput!): [DirectMessageDeliveryResult!]!
   """Sends a reply to a message from the specified Room."""
   sendMessageReplyToRoom(messageData: RoomSendMessageReplyInput!): Message!
   """Send message to Community Leads."""
@@ -4744,6 +4797,10 @@ type Mutation {
   unsubscribeFromPushNotifications(subscriptionData: UnsubscribeFromPushNotificationsInput!): PushSubscription!
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
+  """
+  Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires platform-admin.
+  """
+  updateAssistantActorCapabilities(grantData: GrantAssistantActorCapabilitiesInput!): VirtualAssistant!
   """Update the baseline License Plan on the specified Account."""
   updateBaselineLicensePlanOnAccount(updateData: UpdateBaselineLicensePlanOnAccount!): Account!
   """Updates the specified CalendarEvent."""
@@ -5287,6 +5344,10 @@ type Platform {
   templatesManager: TemplatesManager
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """
+  Whether the current user may use the web AI assistant (the ACCESS_VIRTUAL_ASSISTANT privilege, 004-web-ai-assistant). client-web reads this to gate every assistant UI cue.
+  """
+  virtualAssistantAccess: Boolean!
   """The mappings of well-known Virtual Contributors to their UUIDs."""
   wellKnownVirtualContributors: PlatformWellKnownVirtualContributors!
 }
@@ -5379,6 +5440,10 @@ type PlatformAdminQueryResults {
     """Return only users with tags"""
     withTags: Boolean
   ): PaginatedUsers!
+  """
+  The singleton virtual-assistant actor, including its current admin capability grant and ID. This is only available to Platform Admins, and is the discovery path for updateAssistantActorCapabilities.
+  """
+  virtualAssistant: VirtualAssistant!
   """
   Retrieve all Virtual Contributors on the Platform. This is only available to Platform Admins.
   """
@@ -6358,6 +6423,7 @@ enum RoleName {
   LEAD
   MEMBER
   OWNER
+  PLATFORM_ASSISTANT_ACCESS
   PLATFORM_BETA_TESTER
   PLATFORM_VC_CAMPAIGN
   REGISTERED
@@ -6920,6 +6986,15 @@ enum SearchVisibility {
   ACCOUNT
   HIDDEN
   PUBLIC
+}
+
+input SendDirectMessageToUsersInput {
+  """The message being sent to each recipient."""
+  message: String!
+  """
+  The Users (1..N) the message is sent to, each as an individual 1:1 chat. No group conversation is created.
+  """
+  receiverIDs: [UUID!]!
 }
 
 type Sentry {
@@ -8338,12 +8413,25 @@ input UpdateUserPlatformSettingsInput {
   userID: String!
 }
 
+input UpdateUserSettingsAssistantInput {
+  """
+  Per-capability enable/disable toggles bounding what the assistant may do on behalf of this user.
+  """
+  enabledCapabilities: [AssistantCapabilityToggleInput!]
+}
+
 input UpdateUserSettingsCommunicationInput {
+  """
+  Allow other Users to be offered an email contact route to this User (using the account email; the address is never exposed).
+  """
+  allowOtherUsersToContactViaEmail: Boolean
   """Allow Users to send messages to this User."""
   allowOtherUsersToSendMessages: Boolean
 }
 
 input UpdateUserSettingsEntityInput {
+  """Settings related to the AI assistant authority for this User."""
+  assistant: UpdateUserSettingsAssistantInput
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
   """
@@ -8730,6 +8818,10 @@ type User implements ActorFull {
   id: UUID!
   """Can a message be sent to this User."""
   isContactable: Boolean!
+  """
+  Whether this User can be offered an email contact route (they enabled email contact). Exposes only the consent flag, never the email address.
+  """
+  isContactableViaEmail: Boolean!
   lastName: String!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
@@ -8882,6 +8974,10 @@ type UserProfileSummary {
 }
 
 type UserSettings {
+  """
+  The AI assistant authority settings for this User (per-capability toggles).
+  """
+  assistant: UserSettingsAssistant!
   """The authorization rules for the entity"""
   authorization: Authorization
   """The communication settings for this User."""
@@ -8904,7 +9000,18 @@ type UserSettings {
   updatedDate: DateTime!
 }
 
+type UserSettingsAssistant {
+  """
+  Per-capability enable/disable toggles bounding what the assistant may do on behalf of this user (read-only by default).
+  """
+  enabledCapabilities: [AssistantCapabilityToggle!]!
+}
+
 type UserSettingsCommunication {
+  """
+  Allow other Users to be offered an email contact route to this User (using the account email; the address is never exposed). Default false.
+  """
+  allowOtherUsersToContactViaEmail: Boolean!
   """Allow Users to send messages to this User."""
   allowOtherUsersToSendMessages: Boolean!
 }
@@ -9072,6 +9179,29 @@ type VcInteraction {
   threadID: MessageID!
   """The actor ID (agent.id) of the Virtual Contributor"""
   virtualContributorID: String!
+}
+
+type VirtualAssistant implements ActorFull {
+  """The authorization rules for the Actor"""
+  authorization: Authorization
+  """
+  The admin per-capability grant governing system-invoked authority for this Virtual Assistant (default read-only).
+  """
+  capabilityGrant: [AssistantCapabilityToggle!]!
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The credentials held by this Actor"""
+  credentials: [Credential!]
+  """The ID of the Actor"""
+  id: UUID!
+  """A name identifier of the entity, unique within a given scope."""
+  nameID: NameID!
+  """The profile for this Actor."""
+  profile: Profile
+  """The type of Actor"""
+  type: ActorType!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
 }
 
 type VirtualContributor implements ActorFull {
