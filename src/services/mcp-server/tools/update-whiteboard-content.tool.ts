@@ -194,6 +194,12 @@ export class UpdateWhiteboardContentTool implements McpTool {
       // method — emitting there would echo on every autosave. A broker hiccup
       // must never break the tool result, so failures are swallowed.
       try {
+        // No element delta: this tool OVERWRITES the whole scene, so there is no
+        // safe per-element delta to merge. We intentionally send only the
+        // whiteboardId — the collaboration service then takes its SAFE full-scene
+        // reconcile path (applies the write where it out-versions live state,
+        // never clobbering a concurrent in-flight edit). edit_whiteboard_elements
+        // is the delta-carrying path for incremental edits.
         this.whiteboardCollaborationClient.emit(
           WhiteboardIntegrationEventPattern.CONTENT_UPDATED_EXTERNALLY,
           { whiteboardId: updated.id }

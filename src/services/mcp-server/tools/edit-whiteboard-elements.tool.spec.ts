@@ -266,9 +266,15 @@ describe('EditWhiteboardElementsTool', () => {
       ctx
     );
     expect(res.isError).toBeFalsy();
-    expect(emit).toHaveBeenCalledWith(expect.anything(), {
-      whiteboardId: WB_ID,
-    });
+    expect(emit).toHaveBeenCalledWith(
+      expect.anything(),
+      expect.objectContaining({ whiteboardId: WB_ID })
+    );
+    // The event now carries the element delta (the added text) so the
+    // collaboration service can merge it as a collaborator update.
+    const [, payload] = emit.mock.calls[0];
+    expect(Array.isArray(payload.elements)).toBe(true);
+    expect(payload.elements.length).toBeGreaterThan(0);
 
     const throwing = buildTool();
     throwing.emit.mockImplementation(() => {
@@ -279,6 +285,27 @@ describe('EditWhiteboardElementsTool', () => {
       ctx
     );
     expect(res2.isError).toBeFalsy();
+  });
+
+  it('emits an isDeleted tombstone in the delta for a removed element', async () => {
+    const shape = {
+      id: 's',
+      type: 'rectangle',
+      version: 3,
+      isDeleted: false,
+      boundElements: [],
+    };
+    const { tool, emit } = buildTool({ content: sceneWith([shape]) });
+    await tool.execute(
+      { whiteboardId: WB_ID, operations: [{ op: 'remove', elementId: 's' }] },
+      ctx
+    );
+    const [, payload] = emit.mock.calls[0];
+    const tombstone = payload.elements.find((e: any) => e.id === 's');
+    // The delete must propagate via a tombstone — omission would let a live
+    // session that still holds the element re-add it on reconcile.
+    expect(tombstone).toBeDefined();
+    expect(tombstone.isDeleted).toBe(true);
   });
 
   it('rejects an empty operations array and unknown ops', async () => {
