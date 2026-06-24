@@ -79,6 +79,12 @@ export class UserSettingsService {
         settings.communication.allowOtherUsersToSendMessages =
           updateData.communication.allowOtherUsersToSendMessages;
       }
+      if (
+        updateData.communication.allowOtherUsersToContactViaEmail !== undefined
+      ) {
+        settings.communication.allowOtherUsersToContactViaEmail =
+          updateData.communication.allowOtherUsersToContactViaEmail;
+      }
     }
 
     // Assistant authority (FR-018): when enabledCapabilities is provided it
