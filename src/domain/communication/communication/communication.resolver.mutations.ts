@@ -53,7 +53,9 @@ export class CommunicationResolverMutations {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `send direct chat message from: ${actorContext.actorID}`
+      // Static reason — no dynamic data in exception messages (coding standard);
+      // grantAccessOrFail already records the acting user id in its error/log.
+      'send direct chat message'
     );
 
     return await this.messagingService.sendDirectMessageToUsers(

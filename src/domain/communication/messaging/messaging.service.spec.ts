@@ -40,9 +40,14 @@ describe('MessagingService', () => {
   let conversationMembershipRepo: Mocked<Repository<ConversationMembership>>;
   let entityManager: Mocked<EntityManager>;
   let configService: { get: ReturnType<typeof vi.fn> };
+  // Captures the `manager.query(...)` calls made inside the DIRECT dedup
+  // transaction so tests can assert the advisory lock is actually acquired.
+  let advisoryLockQuery: ReturnType<typeof vi.fn>;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
+
+    advisoryLockQuery = vi.fn().mockResolvedValue(undefined);
 
     configService = {
       get: vi.fn(),
@@ -71,9 +76,14 @@ describe('MessagingService', () => {
             find: vi.fn().mockResolvedValue([]),
             // The DIRECT dedup-or-create path now runs inside a transaction
             // that acquires a PostgreSQL advisory lock (FR-002 race guard).
-            // Invoke the callback with a manager exposing a no-op `query`.
+            // Invoke the callback with a manager exposing the captured `query`
+            // (so tests can assert the advisory lock is taken) and a
+            // `getRepository` passthrough for the manager-scoped dedup probe.
             transaction: vi.fn(async (cb: any) =>
-              cb({ query: vi.fn().mockResolvedValue(undefined) })
+              cb({
+                query: advisoryLockQuery,
+                getRepository: vi.fn(),
+              })
             ),
           };
         }
@@ -266,9 +276,49 @@ describe('MessagingService', () => {
 
       expect(
         conversationService.findConversationBetweenActors
-      ).toHaveBeenCalledWith('agent-caller', 'agent-invited');
+      ).toHaveBeenCalledWith(
+        'agent-caller',
+        'agent-invited',
+        expect.objectContaining({ query: advisoryLockQuery })
+      );
       expect(result).toBe(existingConversation);
       expect(conversationService.createConversation).not.toHaveBeenCalled();
+    });
+
+    it('acquires the per-pair advisory lock (ordered key) before probing for an existing DIRECT conversation (FR-002 race guard)', async () => {
+      const existingConversation = { id: 'conv-1' } as unknown as IConversation;
+      conversationService.findConversationBetweenActors.mockResolvedValue(
+        existingConversation
+      );
+      conversationService.getConversationOrFail.mockResolvedValue(
+        existingConversation
+      );
+
+      // Initiator is the lexicographically-greater id to prove the key is
+      // sorted (so {A,B} and {B,A} serialise on the SAME lock).
+      await service.createConversation({
+        type: 'direct' as any,
+        callerActorId: 'b-actor',
+        memberActorIds: ['a-actor'],
+      });
+
+      expect(advisoryLockQuery).toHaveBeenCalledWith(
+        'SELECT pg_advisory_xact_lock(hashtext($1))',
+        ['a-actor:b-actor']
+      );
+      // Lock is acquired before the dedup probe runs...
+      expect(advisoryLockQuery.mock.invocationCallOrder[0]).toBeLessThan(
+        conversationService.findConversationBetweenActors.mock
+          .invocationCallOrder[0]
+      );
+      // ...and the probe runs on the lock-scoped transaction manager.
+      expect(
+        conversationService.findConversationBetweenActors
+      ).toHaveBeenCalledWith(
+        'b-actor',
+        'a-actor',
+        expect.objectContaining({ query: advisoryLockQuery })
+      );
     });
   });
 

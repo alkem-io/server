@@ -187,7 +187,7 @@ export class UserResolverFields {
   ): Promise<boolean> {
     const userSettings = await loader.load(user.id);
 
-    return userSettings.communication.allowOtherUsersToContactViaEmail ?? false;
+    return userSettings.communication.allowOtherUsersToContactViaEmail;
   }
 
   @ResolveField('storageAggregator', () => IStorageAggregator, {

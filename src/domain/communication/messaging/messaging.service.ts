@@ -164,9 +164,24 @@ export class MessagingService {
       // create two DIRECT conversations. Serialise concurrent creates for the
       // SAME pair with a transaction-scoped PostgreSQL advisory lock keyed on
       // the ordered actor pair (research Decision 2 — no DDL, no global
-      // contention). The lock is released only when this transaction commits,
-      // i.e. after the conversation + memberships are persisted, so a blocked
-      // concurrent caller observes the existing conversation and reuses it.
+      // contention).
+      //
+      // Connection/commit semantics (why this is race-safe):
+      // - The advisory lock is held on `manager`'s connection until this
+      //   transaction commits — across the whole find-or-create below — so a
+      //   second caller for the SAME pair blocks on the lock acquisition until
+      //   the first finishes.
+      // - The existence check runs on `manager` (passed through), so the dedup
+      //   probe is provably inside the lock's transaction.
+      // - persistNewConversation's writes intentionally run as autonomous
+      //   (auto-committed) operations on the default connection — NOT on
+      //   `manager` — because the authorization step reads the conversation
+      //   back by id (applyAuthorizationPolicy → getConversationOrFail), which
+      //   requires the row to be committed and visible. Those writes commit
+      //   before this transaction commits and releases the lock, so the next
+      //   lock-holder's probe observes the conversation and reuses it. Threading
+      //   `manager` into the writes would hide the row from that read-back and
+      //   break creation.
       const targetActorId = normalizedMemberActorIds[0];
       return await this.entityManager.transaction(async manager => {
         const [first, second] = [
@@ -180,7 +195,8 @@ export class MessagingService {
         const existing =
           await this.conversationService.findConversationBetweenActors(
             conversationData.callerActorId,
-            targetActorId
+            targetActorId,
+            manager
           );
         if (existing) {
           return await this.conversationService.getConversationOrFail(
