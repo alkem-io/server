@@ -18,6 +18,7 @@ import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/ca
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
+import { VirtualAssistantModule } from '@domain/community/virtual-assistant/virtual.assistant.module';
 import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 // Domain/API modules that define GraphQL types (initial pass; extend incrementally if parity test reveals gaps)
@@ -225,6 +226,7 @@ class SchemaBootstrapStubModule {}
     ConversionModule,
     LibraryModule,
     VirtualActorModule,
+    VirtualAssistantModule,
     InputCreatorModule,
     LookupModule,
     LookupByNameModule,

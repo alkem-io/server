@@ -8,6 +8,7 @@ import {
   FetchInputData,
   InfoInputData,
   MemoContributionsInputData,
+  OfficeDocumentContributionsInputData,
   SaveInputData,
 } from './inputs';
 import { HealthCheckOutputData } from './outputs';
@@ -25,6 +26,8 @@ describe('CollaborativeDocumentIntegrationController', () => {
     save: Mock;
     fetch: Mock;
     memoContributions: Mock;
+    officeDocumentContributions: Mock;
+    officeDocumentViews: Mock;
   };
 
   const mockRmqContext = {
@@ -125,6 +128,42 @@ describe('CollaborativeDocumentIntegrationController', () => {
       await controller.memoContribution(payload, mockRmqContext);
 
       expect(integrationService.memoContributions).toHaveBeenCalledWith(
+        payload
+      );
+    });
+  });
+
+  describe('officeDocumentContribution', () => {
+    it('should delegate to integrationService.officeDocumentContributions', async () => {
+      const payload = {
+        documentId: 'doc-1',
+        writeActors: ['user-1'],
+        readonlyActors: ['user-2'],
+      } as OfficeDocumentContributionsInputData;
+      integrationService.officeDocumentContributions.mockResolvedValue(
+        undefined
+      );
+
+      await controller.officeDocumentContribution(payload, mockRmqContext);
+
+      expect(
+        integrationService.officeDocumentContributions
+      ).toHaveBeenCalledWith(payload);
+    });
+  });
+
+  describe('officeDocumentView', () => {
+    it('should delegate to integrationService.officeDocumentViews', async () => {
+      const payload = {
+        documentId: 'doc-1',
+        writeActors: ['user-1'],
+        readonlyActors: ['user-2'],
+      } as OfficeDocumentContributionsInputData;
+      integrationService.officeDocumentViews.mockResolvedValue(undefined);
+
+      await controller.officeDocumentView(payload, mockRmqContext);
+
+      expect(integrationService.officeDocumentViews).toHaveBeenCalledWith(
         payload
       );
     });

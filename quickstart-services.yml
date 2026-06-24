@@ -323,6 +323,13 @@ services:
       - POSTGRES_INITDB_ARGS=--encoding=UTF8 --lc-collate=C --lc-ctype=C
       - POSTGRES_MULTIPLE_DATABASES
     entrypoint: ['bash', '/usr/local/bin/entrypoint-wrapper.sh']
+    # Forwarded by entrypoint-wrapper.sh to docker-entrypoint.sh as the postgres
+    # args. Raise max_connections from the default 100 — this single dev Postgres
+    # is shared by server + hydra + kratos + oidc-service + synapse + collab +
+    # assistant-service + wopi, and transient bursts exhausted the 100-cap pool
+    # (FATAL: sorry, too many clients already / SQLSTATE 53300), which surfaced as
+    # a misleading Hydra `invalid_client` ("client does not exist") at OIDC login.
+    command: ['postgres', '-c', 'max_connections=200']
     restart: always
     ports:
       - 5432
@@ -653,6 +660,8 @@ services:
       - 8080
 
   collabora:
+    extra_hosts:
+      - 'wopi-service:host-gateway'
     container_name: alkemio_dev_collabora
     hostname: collabora
     image: collabora/code:24.04.12.2.1

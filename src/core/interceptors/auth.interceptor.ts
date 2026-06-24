@@ -38,6 +38,14 @@ export class AuthInterceptor implements NestInterceptor {
     if (!req) {
       return next.handle();
     }
+    // If a guard has already authenticated the actor (e.g., MCP auth guard),
+    // don't overwrite with a different authentication strategy
+    const existingActor = req.user as ActorContext | undefined;
+    if (existingActor?.actorID && !existingActor?.isAnonymous) {
+      // Actor already authenticated by a guard - preserve that authentication
+      return next.handle();
+    }
+
     // FR-024b — three states:
     //   (a) no creds → strategy returns null → interceptor swaps in anonymous
     //   (b) invalid creds → strategy throws → interceptor maps to 401
