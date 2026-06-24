@@ -33,7 +33,6 @@ import { IReference } from '@domain/common/reference/reference.interface';
 import { CreateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.create';
 import { ITagset } from '@domain/common/tagset/tagset.interface';
 import { IVisual } from '@domain/common/visual';
-import { whiteboardYjsV2StateToScene } from '@domain/common/whiteboard/conversion';
 import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.dto.create';
 import { IWhiteboard } from '@domain/common/whiteboard/whiteboard.interface';
 import { ICommunityGuidelines } from '@domain/community/community-guidelines/community.guidelines.interface';
@@ -444,13 +443,14 @@ export class InputCreatorService {
     whiteboard?: IWhiteboard
   ): Promise<CreateWhiteboardInput | undefined> {
     if (!whiteboard) return undefined;
-    // Content is the stored Yjs-V2 snapshot in the whiteboard's bucket; decode it
-    // back to the scene JSON the create input carries so a duplicated/templated
-    // whiteboard seeds with the source's scene (006-collab-content-unification).
+    // Content is the stored Yjs-V2 snapshot in the whiteboard's bucket. A duplicate
+    // carries the SAME CRDT bytes (base64) verbatim — no Excalidraw scene/JSON round
+    // trip; create re-homes the snapshot's embedded media into the new bucket
+    // (006-collab-content-unification).
     const snapshot = await this.fetchSnapshot(whiteboard.contentPointer);
     return {
       profile: this.buildCreateProfileInputFromProfile(whiteboard.profile),
-      content: snapshot ? whiteboardYjsV2StateToScene(snapshot) : undefined,
+      content: snapshot ? Buffer.from(snapshot).toString('base64') : undefined,
       nameID: whiteboard.nameID,
       previewSettings: whiteboard.previewSettings,
     };

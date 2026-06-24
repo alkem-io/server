@@ -149,6 +149,9 @@ importers:
       form-data:
         specifier: ^4.0.5
         version: 4.0.5
+      fractional-indexing:
+        specifier: ^3.2.0
+        version: 3.2.0
       graphql:
         specifier: ^16.9.0
         version: 16.11.0

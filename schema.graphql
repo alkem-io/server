@@ -31,7 +31,9 @@ scalar Upload
 """A uuid identifier. Length 36 characters."""
 scalar UUID
 
-"""Content of a Whiteboard, as JSON."""
+"""
+Content of a Whiteboard as a base64-encoded Yjs-V2 document snapshot (CRDT state, not an Excalidraw scene).
+"""
 scalar WhiteboardContent
 
 enum AccountType {
@@ -2491,6 +2493,10 @@ type CreateWhiteboardData {
   """The preview settings for the whiteboard."""
   previewSettings: CreateWhiteboardPreviewSettingsData
   profile: CreateProfileData
+  """
+  Seed the new Whiteboard from the stored content of an existing Whiteboard (server-side copy). Takes precedence over `content` when set and resolvable.
+  """
+  sourceWhiteboardID: UUID
 }
 
 type CreateWhiteboardPreviewSettingsData {
@@ -7715,6 +7721,10 @@ input CreateWhiteboardInput {
   """The preview settings for the whiteboard."""
   previewSettings: CreateWhiteboardPreviewSettingsInput
   profile: CreateProfileInput
+  """
+  Seed the new Whiteboard from the stored content of an existing Whiteboard (server-side copy). Takes precedence over `content` when set and resolvable.
+  """
+  sourceWhiteboardID: UUID
 }
 
 input CreateWhiteboardPreviewSettingsInput {

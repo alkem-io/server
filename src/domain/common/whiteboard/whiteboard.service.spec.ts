@@ -25,12 +25,30 @@ import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { MockType } from '@test/utils/mock.type';
 import { repositoryProviderMockFactory } from '@test/utils/repository.provider.mock.factory';
 import { Repository } from 'typeorm';
+import * as Y from 'yjs';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { LicenseService } from '../license/license.service';
 import { ProfileService } from '../profile/profile.service';
 import { Whiteboard } from './whiteboard.entity';
 import { IWhiteboard } from './whiteboard.interface';
 import { WhiteboardService } from './whiteboard.service';
+
+/**
+ * Build a base64-encoded Yjs-V2 whiteboard snapshot (the single content
+ * representation since 006-collab-content-unification — never Excalidraw JSON).
+ * Mirrors the wire schema `rehomeSnapshotMedia` operates on: a `files` Y.Map
+ * keyed by file id. Pass `files` to exercise the embedded-media re-home path.
+ */
+const buildSnapshotBase64 = (files: Record<string, unknown> = {}): string => {
+  const doc = new Y.Doc();
+  const filesMap = doc.getMap<unknown>('files');
+  for (const [key, value] of Object.entries(files)) {
+    filesMap.set(key, value);
+  }
+  const snapshot = Buffer.from(Y.encodeStateAsUpdateV2(doc));
+  doc.destroy();
+  return snapshot.toString('base64');
+};
 
 describe('WhiteboardService', () => {
   let service: WhiteboardService;
@@ -84,6 +102,14 @@ describe('WhiteboardService', () => {
       storageBucket: { id: 'sb-1' },
     } as unknown as IProfile;
 
+    // Create content is a base64 Yjs-V2 snapshot (006-collab-content-unification —
+    // no Excalidraw JSON). An empty `Y.Doc` is the smallest valid, openable
+    // snapshot (Phase 3 applies it via `applyUpdateV2`); a non-base64 string like
+    // '{}' would fail to decode.
+    const validEmptyContent = Buffer.from(
+      Y.encodeStateAsUpdateV2(new Y.Doc())
+    ).toString('base64');
+
     beforeEach(() => {
       vi.mocked(profileService.createProfile).mockResolvedValue(mockProfile);
       vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
@@ -108,7 +134,7 @@ describe('WhiteboardService', () => {
 
     it('should create whiteboard with profile, visuals, tagset, and authorization', async () => {
       const result = await service.createWhiteboard(
-        { content: '{}' },
+        { content: validEmptyContent },
         mockStorageAggregator
       );
 
@@ -144,7 +170,7 @@ describe('WhiteboardService', () => {
 
     it('should set createdBy when userID is provided', async () => {
       const result = await service.createWhiteboard(
-        { content: '{}' },
+        { content: validEmptyContent },
         mockStorageAggregator,
         'user-42'
       );
@@ -154,7 +180,7 @@ describe('WhiteboardService', () => {
 
     it('should leave createdBy undefined when userID is not provided', async () => {
       const result = await service.createWhiteboard(
-        { content: '{}' },
+        { content: validEmptyContent },
         mockStorageAggregator
       );
 
@@ -163,7 +189,7 @@ describe('WhiteboardService', () => {
 
     it('should use default preview coordinates as null when not provided', async () => {
       const result = await service.createWhiteboard(
-        { content: '{}' },
+        { content: validEmptyContent },
         mockStorageAggregator
       );
 
@@ -177,7 +203,7 @@ describe('WhiteboardService', () => {
       const coordinates = { x: 10, y: 20, width: 100, height: 200 };
       const result = await service.createWhiteboard(
         {
-          content: '{}',
+          content: validEmptyContent,
           previewSettings: {
             mode: WhiteboardPreviewMode.CUSTOM,
             coordinates,
@@ -199,7 +225,7 @@ describe('WhiteboardService', () => {
       };
 
       await service.createWhiteboard(
-        { content: '{}', profile: customProfile },
+        { content: validEmptyContent, profile: customProfile },
         mockStorageAggregator
       );
 
@@ -511,12 +537,12 @@ describe('WhiteboardService', () => {
         reused: false,
       });
 
-      const newContent = JSON.stringify({ elements: [], files: {} });
+      const newContent = buildSnapshotBase64();
 
       const result = await service.updateWhiteboardContent('wb-1', newContent);
 
-      // The scene is converted to a Yjs-V2 snapshot and written to the bucket;
-      // the returned id becomes the contentPointer (the inline column is gone).
+      // The snapshot is re-homed and written verbatim to the bucket; the returned
+      // id becomes the contentPointer (the inline column is gone).
       expect(fileServiceAdapter.createSnapshotInBucket).toHaveBeenCalledWith(
         expect.any(Buffer),
         'sb-1'
@@ -558,7 +584,7 @@ describe('WhiteboardService', () => {
         reused: false,
       });
 
-      const newContent = JSON.stringify({ elements: [] });
+      const newContent = buildSnapshotBase64();
       const result = await service.updateWhiteboardContent('wb-1', newContent);
 
       expect(result.contentPointer).toBe('snap-1');
@@ -591,11 +617,8 @@ describe('WhiteboardService', () => {
         new EntityNotFoundException('File not found', 'test' as any)
       );
 
-      const contentWithFiles = JSON.stringify({
-        elements: [],
-        files: {
-          'file-1': { id: 'file-1', url: 'http://old.url/file.png' },
-        },
+      const contentWithFiles = buildSnapshotBase64({
+        'file-1': { id: 'file-1', url: 'http://old.url/file.png' },
       });
 
       const result = await service.updateWhiteboardContent(
@@ -631,11 +654,8 @@ describe('WhiteboardService', () => {
         profileDocumentsService.reuploadFileOnStorageBucket
       ).mockResolvedValue('http://new.url/file.png');
 
-      const contentWithFiles = JSON.stringify({
-        elements: [],
-        files: {
-          'file-1': { id: 'file-1', url: 'http://old.url/file.png' },
-        },
+      const contentWithFiles = buildSnapshotBase64({
+        'file-1': { id: 'file-1', url: 'http://old.url/file.png' },
       });
 
       const result = await service.updateWhiteboardContent(
@@ -672,16 +692,187 @@ describe('WhiteboardService', () => {
         storageBucket: undefined,
       } as any);
 
-      const contentWithFiles = JSON.stringify({
-        elements: [],
-        files: {
-          'file-1': { id: 'file-1', url: 'http://old.url/file.png' },
-        },
+      const contentWithFiles = buildSnapshotBase64({
+        'file-1': { id: 'file-1', url: 'http://old.url/file.png' },
       });
 
       await expect(
         service.updateWhiteboardContent('wb-1', contentWithFiles)
       ).rejects.toThrow(EntityNotInitializedException);
+    });
+  });
+
+  describe('getWhiteboardContent', () => {
+    it('returns the stored snapshot as base64 read from the bucket by contentPointer', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue({
+        id: 'wb-1',
+        contentPointer: 'snap-ptr',
+      } as unknown as Whiteboard);
+      const contentBase64 = Buffer.from('yjs-v2-bytes').toString('base64');
+      vi.mocked(fileServiceAdapter.getContentBatch).mockResolvedValue([
+        { id: 'snap-ptr', found: true, contentBase64 },
+      ]);
+
+      const result = await service.getWhiteboardContent('wb-1');
+
+      // Returned verbatim — the content stays an opaque base64 Yjs-V2 snapshot.
+      expect(result).toBe(contentBase64);
+      expect(fileServiceAdapter.getContentBatch).toHaveBeenCalledWith([
+        'snap-ptr',
+      ]);
+    });
+
+    it('returns "" when the whiteboard was never edited (no contentPointer) without reading file-service', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue({
+        id: 'wb-1',
+        contentPointer: undefined,
+      } as unknown as Whiteboard);
+
+      const result = await service.getWhiteboardContent('wb-1');
+
+      expect(result).toBe('');
+      expect(fileServiceAdapter.getContentBatch).not.toHaveBeenCalled();
+    });
+
+    it('returns "" when the snapshot pointer resolves to a missing blob', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue({
+        id: 'wb-1',
+        contentPointer: 'snap-ptr',
+      } as unknown as Whiteboard);
+      vi.mocked(fileServiceAdapter.getContentBatch).mockResolvedValue([
+        { id: 'snap-ptr', found: false, error: 'not found' },
+      ]);
+
+      const result = await service.getWhiteboardContent('wb-1');
+
+      expect(result).toBe('');
+    });
+
+    it('throws EntityNotFoundException when the whiteboard does not exist', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue(null);
+
+      await expect(service.getWhiteboardContent('missing')).rejects.toThrow(
+        EntityNotFoundException
+      );
+    });
+  });
+
+  describe('createWhiteboard — server-side copy from sourceWhiteboardID (#29)', () => {
+    const mockStorageAggregator = {} as IStorageAggregator;
+    const mockProfile = {
+      id: 'profile-new',
+      displayName: 'Whiteboard Template',
+      storageBucket: { id: 'sb-new' },
+    } as unknown as IProfile;
+
+    // A real, openable empty Yjs-V2 snapshot (no embedded media → rehome is a
+    // verbatim pass-through, so no profile-document mocks are needed). Stands in
+    // for the SOURCE whiteboard's content ("content X").
+    const sourceSnapshotBase64 = Buffer.from(
+      Y.encodeStateAsUpdateV2(new Y.Doc())
+    ).toString('base64');
+
+    beforeEach(() => {
+      vi.mocked(profileService.createProfile).mockResolvedValue(mockProfile);
+      vi.mocked(profileService.addOrUpdateTagsetOnProfile).mockResolvedValue(
+        {} as any
+      );
+      whiteboardRepository.save!.mockImplementation(async (wb: any) => wb);
+      vi.mocked(
+        profileService.materializeProfileContentAndVisualsOrRollback
+      ).mockImplementation(async profile => profile);
+      vi.mocked(fileServiceAdapter.createSnapshotInBucket).mockResolvedValue({
+        id: 'snap-new',
+        externalID: 'ext-new',
+        mimeType: 'application/octet-stream',
+        size: 1,
+        reused: false,
+      });
+    });
+
+    it("copies the source whiteboard's content (X) into the new whiteboard, overriding the empty client placeholder", async () => {
+      // The SOURCE whiteboard the template is captured from — its content lives in
+      // its own bucket and is read via getWhiteboardContent → file-service batch.
+      whiteboardRepository.findOne!.mockResolvedValue({
+        id: 'source-wb',
+        contentPointer: 'source-ptr',
+      } as unknown as Whiteboard);
+      vi.mocked(fileServiceAdapter.getContentBatch).mockResolvedValue([
+        { id: 'source-ptr', found: true, contentBase64: sourceSnapshotBase64 },
+      ]);
+
+      const result = await service.createWhiteboard(
+        {
+          // The client now sends an EMPTY placeholder here for the
+          // Save-as-Template flow; the source copy must win.
+          content: Buffer.from('EMPTY-PLACEHOLDER').toString('base64'),
+          sourceWhiteboardID: 'source-wb',
+          profile: { displayName: 'Whiteboard Template' },
+        },
+        mockStorageAggregator
+      );
+
+      // The new whiteboard's bucket is seeded from the SOURCE snapshot bytes, NOT
+      // the empty placeholder — the snapshot written is byte-equal to the source's
+      // (an empty Y.Doc has no embedded media, so rehome is a verbatim pass).
+      expect(fileServiceAdapter.getContentBatch).toHaveBeenCalledWith([
+        'source-ptr',
+      ]);
+      const [writtenSnapshot, bucketId] = vi.mocked(
+        fileServiceAdapter.createSnapshotInBucket
+      ).mock.calls[0];
+      expect(bucketId).toBe('sb-new');
+      expect(Buffer.from(writtenSnapshot).toString('base64')).toBe(
+        sourceSnapshotBase64
+      );
+      expect(result.contentPointer).toBe('snap-new');
+      expect(result.blobStore).toBe(BlobStoreKind.FILE_SERVICE);
+    });
+
+    it('falls back to the client `content` when the source whiteboard has no stored content (never edited)', async () => {
+      whiteboardRepository.findOne!.mockResolvedValue({
+        id: 'source-wb',
+        contentPointer: undefined,
+      } as unknown as Whiteboard);
+      vi.mocked(profileService.getProfileOrFail).mockResolvedValue({
+        id: 'profile-new',
+        storageBucket: { id: 'sb-new', documents: [] },
+      } as any);
+
+      const fallbackContent = Buffer.from(
+        Y.encodeStateAsUpdateV2(new Y.Doc())
+      ).toString('base64');
+
+      const result = await service.createWhiteboard(
+        {
+          content: fallbackContent,
+          sourceWhiteboardID: 'source-wb',
+          profile: { displayName: 'Whiteboard Template' },
+        },
+        mockStorageAggregator
+      );
+
+      // Source returned "" → the create content is used instead.
+      const [writtenSnapshot] = vi.mocked(
+        fileServiceAdapter.createSnapshotInBucket
+      ).mock.calls[0];
+      expect(Buffer.from(writtenSnapshot).toString('base64')).toBe(
+        fallbackContent
+      );
+      expect(result.contentPointer).toBe('snap-new');
+    });
+
+    it('does not read a source when sourceWhiteboardID is absent', async () => {
+      const result = await service.createWhiteboard(
+        {
+          content: sourceSnapshotBase64,
+          profile: { displayName: 'Whiteboard Template' },
+        },
+        mockStorageAggregator
+      );
+
+      expect(fileServiceAdapter.getContentBatch).not.toHaveBeenCalled();
+      expect(result.contentPointer).toBe('snap-new');
     });
   });
 });

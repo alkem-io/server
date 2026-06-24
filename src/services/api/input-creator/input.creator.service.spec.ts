@@ -210,8 +210,8 @@ describe('InputCreatorService', () => {
 
     it('should return create input with profile, content, nameID, and previewSettings', async () => {
       // Content is no longer an inline column — the builder reads the stored
-      // Yjs-V2 snapshot by contentPointer and decodes it back to scene JSON
-      // (006-collab-content-unification).
+      // Yjs-V2 snapshot by contentPointer and carries it through verbatim as an
+      // opaque base64 CRDT blob (no scene/JSON round trip — 006).
       const scene = JSON.stringify({
         type: 'excalidraw',
         version: 2,
@@ -244,9 +244,9 @@ describe('InputCreatorService', () => {
       expect(fileServiceAdapter.getContentBatch).toHaveBeenCalledWith([
         'wb-pointer',
       ]);
-      // The decoded content is the scene JSON the create input seeds with.
-      expect(result!.content).toBeDefined();
-      expect(JSON.parse(result!.content!).type).toBe('excalidraw');
+      // The create input seeds with the SAME base64 Yjs-V2 snapshot read from the
+      // source whiteboard's bucket — opaque, byte-for-byte.
+      expect(result!.content).toBe(contentBase64);
       expect(result!.nameID).toBe('my-board');
       expect(result!.previewSettings).toEqual({ zoom: 1 });
     });

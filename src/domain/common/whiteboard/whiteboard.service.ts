@@ -26,11 +26,11 @@ import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import * as Y from 'yjs';
 import { AuthorizationPolicy } from '../authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { LicenseService } from '../license/license.service';
 import { ProfileService } from '../profile/profile.service';
-import { whiteboardSceneToYjsV2State } from './conversion';
 import { CreateWhiteboardInput } from './dto/whiteboard.dto.create';
 import { UpdateWhiteboardInput } from './dto/whiteboard.dto.update';
 import { Whiteboard } from './whiteboard.entity';
@@ -57,11 +57,26 @@ export class WhiteboardService {
     storageAggregator: IStorageAggregator,
     userID?: string
   ): Promise<IWhiteboard> {
-    // The initial scene (Excalidraw JSON) arrives server-side (client create,
-    // from-template, duplicate). It is NO LONGER stored inline — it is converted
-    // to a Yjs-V2 snapshot and written to the whiteboard's own bucket below
-    // (R1/R2/FR-005). Hold it aside; `Whiteboard.create` no longer carries it.
-    const { content: initialScene, ...entityData } = whiteboardData;
+    // The initial content arrives server-side as a base64 Yjs-V2 snapshot (the
+    // single CRDT representation — never an Excalidraw scene/JSON) on client
+    // create, from-template, and duplicate. It is NO LONGER stored inline — it is
+    // written to the whiteboard's own bucket below (R1/R2/FR-005). Hold it aside;
+    // `Whiteboard.create` no longer carries it, nor the source-copy pointer.
+    const { content, sourceWhiteboardID, ...entityData } = whiteboardData;
+
+    // #29 server-side copy: when the create references a source whiteboard, read
+    // its stored snapshot and seed the new whiteboard with it. The client can no
+    // longer read a live whiteboard's content (it is WS-only since 006), so the
+    // "Save as Template" flow relies on this. A resolved, non-empty source wins
+    // over `content` (the client sends an empty placeholder there); an
+    // unresolvable / never-edited source (returns `''`) falls back to `content`.
+    let initialScene = content;
+    if (sourceWhiteboardID) {
+      const sourceContent = await this.getWhiteboardContent(sourceWhiteboardID);
+      if (sourceContent) {
+        initialScene = sourceContent;
+      }
+    }
 
     // Phase 1: build entity tree in memory (no file-service-go calls).
     const whiteboard: IWhiteboard = Whiteboard.create({
@@ -101,12 +116,12 @@ export class WhiteboardService {
       () => this.deleteWhiteboard(saved.id)
     );
 
-    // Phase 3: re-home the scene's embedded file references into the new
-    // whiteboard's bucket (cloned WBs — template/space/callout-from-template —
-    // must own their referenced docs, not point at the source's bucket), THEN
-    // convert the scene to a Yjs-V2 snapshot and write it to the bucket, recording
-    // the pointer (R1/R2/R4). Empty creation content leaves the pointer unset: the
-    // room materializes empty + editable (FR-010).
+    // Phase 3: persist the editor's Yjs-V2 snapshot verbatim into the new
+    // whiteboard's own bucket. `initialScene` is base64-encoded Yjs CRDT state (the
+    // single representation everywhere — never an Excalidraw scene/JSON). Embedded
+    // media is re-homed into this bucket by operating on the snapshot's own `files`
+    // Y.Map, not a reconstructed scene. Empty creation content leaves the pointer
+    // unset: the room materializes empty + editable (FR-010).
     if (initialScene) {
       try {
         const storageBucketId = saved.profile.storageBucket?.id;
@@ -117,12 +132,9 @@ export class WhiteboardService {
             { whiteboardId: saved.id }
           );
         }
-        const reuploaded = await this.reuploadDocumentsIfNotInBucket(
-          this.parseWhiteboardContent(initialScene),
+        const snapshot = await this.rehomeSnapshotMedia(
+          Buffer.from(initialScene, 'base64'),
           saved.profile.id
-        );
-        const snapshot = Buffer.from(
-          whiteboardSceneToYjsV2State(JSON.stringify(reuploaded))
         );
         const result = await this.fileServiceAdapter.createSnapshotInBucket(
           snapshot,
@@ -153,13 +165,41 @@ export class WhiteboardService {
     return saved;
   }
 
-  private parseWhiteboardContent(raw: string): ExcalidrawContent {
+  /**
+   * Re-home a Yjs-V2 whiteboard snapshot's embedded media into `profileId`'s
+   * bucket, operating on the snapshot's own `files` Y.Map — there is no Excalidraw
+   * scene anywhere on this path (the CRDT bytes are the single representation).
+   * Media already in the bucket is untouched; cloned/templated media (referencing
+   * another bucket) is re-uploaded and its `files` entry rewritten in place, then
+   * the snapshot is re-encoded. A snapshot with no media is returned verbatim.
+   */
+  private async rehomeSnapshotMedia(
+    snapshot: Uint8Array,
+    profileId: string
+  ): Promise<Buffer> {
+    const doc = new Y.Doc();
     try {
-      return JSON.parse(raw) as ExcalidrawContent;
-    } catch {
-      // Empty / non-JSON content (legacy or fresh WB) — return a shape
-      // the reupload walker treats as a no-op (no `files` map).
-      return { elements: [], files: {} } as unknown as ExcalidrawContent;
+      Y.applyUpdateV2(doc, snapshot);
+      const filesMap = doc.getMap<unknown>('files');
+      if (filesMap.size === 0) {
+        return Buffer.from(snapshot);
+      }
+      const files: Record<string, unknown> = {};
+      filesMap.forEach((value, key) => {
+        files[key] = value;
+      });
+      const rehomed = await this.reuploadDocumentsIfNotInBucket(
+        { elements: [], files } as unknown as ExcalidrawContent,
+        profileId
+      );
+      doc.transact(() => {
+        for (const [key, value] of Object.entries(rehomed.files ?? {})) {
+          filesMap.set(key, value);
+        }
+      });
+      return Buffer.from(Y.encodeStateAsUpdateV2(doc));
+    } finally {
+      doc.destroy();
     }
   }
 
@@ -284,8 +324,6 @@ export class WhiteboardService {
         },
       },
     });
-    const newWhiteboardContent = JSON.parse(updateWhiteboardContent);
-
     if (!whiteboard?.profile?.storageBucket) {
       throw new EntityNotInitializedException(
         `Profile / storage bucket not initialized on whiteboard: '${whiteboard.id}'`,
@@ -293,15 +331,12 @@ export class WhiteboardService {
       );
     }
 
-    // TODO: is this still needed? It is a lot of work to be doing on every
-    // whiteboard content save. Plus I think it is an inherent risk.
-    const newContentWithFiles = await this.reuploadDocumentsIfNotInBucket(
-      newWhiteboardContent,
+    // `updateWhiteboardContent` is a base64-encoded Yjs-V2 snapshot (the single CRDT
+    // representation — no Excalidraw scene/JSON). Re-home embedded media via the
+    // snapshot's own `files` Y.Map, then replace the stored snapshot verbatim.
+    const snapshot = await this.rehomeSnapshotMedia(
+      Buffer.from(updateWhiteboardContent, 'base64'),
       whiteboard.profile.id
-    );
-
-    const snapshot = Buffer.from(
-      whiteboardSceneToYjsV2State(JSON.stringify(newContentWithFiles))
     );
     const previousPointer = whiteboard.contentPointer;
     const result = await this.fileServiceAdapter.createSnapshotInBucket(
@@ -328,6 +363,46 @@ export class WhiteboardService {
         });
     }
     return saved;
+  }
+
+  /**
+   * Reads a whiteboard's stored content as a base64-encoded Yjs-V2 snapshot — the
+   * single CRDT representation, kept opaque (no Excalidraw scene/JSON, no
+   * decode/re-encode). The snapshot lives in the whiteboard's own file-service
+   * bucket and is located by `contentPointer`; this re-reads it the same way the
+   * memo-content loader / input-creator builders do (file-service
+   * `content-batch`), NOT the inline column (gone — 006-collab-content-unification).
+   *
+   * Server-side copy path (#29): the "Save as Template" flow can no longer read a
+   * live whiteboard's content on the client, so the server reads the source
+   * whiteboard's snapshot here and seeds the new template whiteboard with it.
+   *
+   * A whiteboard that was never edited (no `contentPointer`) — or whose snapshot is
+   * missing — returns `''`, matching the empty/unset-pointer convention: a new
+   * whiteboard seeded with `''` materializes empty + editable (FR-010), exactly as
+   * a fresh whiteboard created with no content.
+   *
+   * @throws {EntityNotFoundException} when the whiteboard does not exist.
+   */
+  async getWhiteboardContent(whiteboardId: string): Promise<string> {
+    const whiteboard = await this.getWhiteboardOrFail(whiteboardId, {
+      loadEagerRelations: false,
+      select: {
+        id: true,
+        contentPointer: true,
+      },
+    });
+    if (!whiteboard.contentPointer) {
+      return '';
+    }
+    const [item] = await this.fileServiceAdapter.getContentBatch([
+      whiteboard.contentPointer,
+    ]);
+    if (!item?.found || !item.contentBase64) {
+      return '';
+    }
+    // Already base64 from the content-batch endpoint — returned verbatim.
+    return item.contentBase64;
   }
 
   /**
