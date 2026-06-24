@@ -11,6 +11,7 @@ export const userSettingsData: { userSettings: IUserSettings } = {
     },
     communication: {
       allowOtherUsersToSendMessages: true,
+      allowOtherUsersToContactViaEmail: false,
     },
     notification: {
       space: {
