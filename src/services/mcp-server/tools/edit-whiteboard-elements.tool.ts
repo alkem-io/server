@@ -272,9 +272,12 @@ export class EditWhiteboardElementsTool implements McpTool {
       );
 
       try {
+        // Carry the element delta so the collaboration service merges it as a
+        // normal collaborator update (preserving live edits) instead of falling
+        // back to a full-scene reconcile. See WhiteboardCollaborationController.
         this.whiteboardCollaborationClient.emit(
           WhiteboardIntegrationEventPattern.CONTENT_UPDATED_EXTERNALLY,
-          { whiteboardId: updated.id }
+          { whiteboardId: updated.id, elements: applied.delta }
         );
       } catch (emitError) {
         this.logger.warn?.(
@@ -327,9 +330,16 @@ export class EditWhiteboardElementsTool implements McpTool {
   private applyOperations(
     elements: SceneElement[],
     operations: EditOp[]
-  ): { added: string[]; summary: string[] } | { error: string } {
+  ):
+    | { added: string[]; summary: string[]; delta: SceneElement[] }
+    | { error: string } {
     const byId = new Map<string, SceneElement>(
       elements.map(e => [e.id, e] as const)
+    );
+    // Snapshot the pre-edit serialized state so the DELTA can be derived after the
+    // ops run, with no per-op bookkeeping: identical JSON afterwards == untouched.
+    const before = new Map<string, string>(
+      elements.map(e => [e.id, JSON.stringify(e)] as const)
     );
     // One cursor for the whole call, anchored below the PRE-CALL content, so all
     // additions flow into the same empty block and never overlap.
@@ -547,7 +557,29 @@ export class EditWhiteboardElementsTool implements McpTool {
       }
     }
 
-    return { added, summary };
+    // Derive the delta the collaboration service merges into any OPEN room: every
+    // element that is new or whose serialized form changed (e.g. a `connect`
+    // mutates its endpoints' bindings), plus an isDeleted tombstone — reconstructed
+    // from the pre-edit snapshot — for each element the ops removed. Omitting a
+    // removed element would not propagate the delete (reconciliation keeps an
+    // element a live session still holds); a tombstone does. The collaboration
+    // service re-stamps these to win, so a live editor sees the assistant's edits
+    // and deletes without losing in-flight edits to untouched elements.
+    const delta: SceneElement[] = [];
+    const survivingIds = new Set<string>();
+    for (const e of elements) {
+      survivingIds.add(e.id);
+      if (before.get(e.id) !== JSON.stringify(e)) {
+        delta.push(e);
+      }
+    }
+    for (const [id, serialized] of before) {
+      if (!survivingIds.has(id)) {
+        delta.push({ ...JSON.parse(serialized), isDeleted: true });
+      }
+    }
+
+    return { added, summary, delta };
   }
 
   private errorResult(message: string): McpToolResult {
