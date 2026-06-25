@@ -31,7 +31,7 @@ import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { InputCreatorService } from '@services/api/input-creator/input.creator.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { randomUUID } from 'crypto';
-import { merge } from 'lodash';
+import { cloneDeep, merge } from 'lodash';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { ITemplateContentSpace } from '../template-content-space/template.content.space.interface';
@@ -623,9 +623,17 @@ export class TemplateService {
       storageAggregator
     );
 
+    // The space-level user-information visibility setting MUST NOT travel into
+    // the template — a space created from this template starts at the default
+    // (follows space visibility) and an admin re-applies "members only" per
+    // space (FR-021). Strip it from the snapshot before merging.
+    const sourceSettings = cloneDeep(space.settings);
+    if (sourceSettings?.privacy) {
+      delete sourceSettings.privacy.userInformationVisibility;
+    }
     templateContentSpace.settings = merge(
       templateContentSpace.settings,
-      space.settings
+      sourceSettings
     );
 
     // Need to save before applying authorization policy to get the callout ids

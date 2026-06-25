@@ -76,6 +76,25 @@ export class CalloutsSetResolverMutations {
       `create callout on callouts Set: ${calloutsSet.id}`
     );
 
+    // CONTRIBUTORS framing is admin-only and collaboration-only (FR-004a/FR-004f, R5):
+    //  - require CREATE (space admin) on the CalloutsSet even when
+    //    allowMembersToCreateCallouts maps CREATE_CALLOUT to CONTRIBUTE.
+    //  - reject on non-COLLABORATION CalloutsSets (e.g. VC knowledge bases).
+    if (calloutData.framing?.type === CalloutFramingType.CONTRIBUTORS) {
+      if (calloutsSet.type !== CalloutsSetType.COLLABORATION) {
+        throw new ValidationException(
+          'CONTRIBUTORS framing is only available on COLLABORATION callouts sets.',
+          LogContext.COLLABORATION
+        );
+      }
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        calloutsSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        `create CONTRIBUTORS callout (admin-only) on callouts Set: ${calloutsSet.id}`
+      );
+    }
+
     // Office Docs entitlement gate (FR-001/FR-004/FR-009): block introduction of a
     // Collabora Document — in framing form, contribution-allowed form, or via attached
     // contributions — when the owning Collaboration lacks SPACE_FLAG_OFFICE_DOCUMENTS.
@@ -182,7 +201,12 @@ export class CalloutsSetResolverMutations {
 
     if (calloutsSet.type === CalloutsSetType.COLLABORATION) {
       if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
-        if (calloutData.sendNotification) {
+        // A CONTRIBUTORS callout is a passive display that accepts no
+        // contributions and never emits a callout-published notification
+        // (FR-004e), regardless of any sendNotification flag.
+        const isContributorsFraming =
+          callout.framing?.type === CalloutFramingType.CONTRIBUTORS;
+        if (calloutData.sendNotification && !isContributorsFraming) {
           const notificationInput: NotificationInputCalloutPublished = {
             triggeredBy: actorContext.actorID,
             callout: callout,

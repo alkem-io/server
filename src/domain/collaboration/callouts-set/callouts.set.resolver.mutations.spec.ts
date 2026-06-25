@@ -403,4 +403,76 @@ describe('CalloutsSetResolverMutations', () => {
       expect(result).toHaveLength(1);
     });
   });
+
+  // US6 admin-only / collaboration-only guards for CONTRIBUTORS framing
+  // (FR-004a / FR-004f). T027.
+  describe('CONTRIBUTORS framing guards', () => {
+    const setupBaseMocks = (calloutsSet: any) => {
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+    };
+
+    it('rejects CONTRIBUTORS on a non-COLLABORATION (knowledge base) callouts set', async () => {
+      const calloutsSet = {
+        id: 'cs-kb',
+        type: CalloutsSetType.KNOWLEDGE_BASE,
+        authorization: { id: 'auth-kb' },
+      } as any;
+      setupBaseMocks(calloutsSet);
+      // CREATE_CALLOUT passes; the type check rejects before any CREATE check.
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actorContext, {
+          calloutsSetID: 'cs-kb',
+          framing: { type: CalloutFramingType.CONTRIBUTORS },
+        } as any)
+      ).rejects.toThrow(ValidationException);
+
+      expect(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).not.toHaveBeenCalled();
+    });
+
+    it('requires the CREATE (admin) privilege for CONTRIBUTORS even with member create-callout rights', async () => {
+      const calloutsSet = {
+        id: 'cs-collab',
+        type: CalloutsSetType.COLLABORATION,
+        authorization: { id: 'auth-collab' },
+      } as any;
+      setupBaseMocks(calloutsSet);
+
+      // First call (CREATE_CALLOUT) succeeds, second call (CREATE admin) throws.
+      vi.mocked(authorizationService.grantAccessOrFail)
+        .mockImplementationOnce(() => undefined as any)
+        .mockImplementationOnce(() => {
+          throw new ValidationException('forbidden', 'collaboration' as any);
+        });
+
+      const actorContext = { actorID: 'member-1' } as any;
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actorContext, {
+          calloutsSetID: 'cs-collab',
+          framing: { type: CalloutFramingType.CONTRIBUTORS },
+        } as any)
+      ).rejects.toThrow();
+
+      // The second authorization assertion was for the admin CREATE privilege.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        calloutsSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        expect.any(String)
+      );
+      expect(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).not.toHaveBeenCalled();
+    });
+  });
 });
