@@ -475,6 +475,7 @@ enum MimeType {
   GIF
   HEIC
   HEIF
+  ICS
   JPEG
   JPG
   ODG
