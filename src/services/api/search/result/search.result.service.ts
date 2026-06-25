@@ -82,9 +82,10 @@ export class SearchResultService {
    * @param actorContext The agent info of the user making the search request.
    * @param filters Used to filter the end results.
    * @param spaceId The space ID to filter the search results by.
-   * @param options.foldToCallouts When true (a flow-state scoped search),
-   *   matching posts/whiteboards/memos are folded up to their containing callout
-   *   and merged into `calloutResults`, deduped by callout id (FR-017).
+   * @param options.foldToCallouts When true — set by a flow-state scoped search
+   *   or by the `foldCalloutResources` opt-in — matching posts/whiteboards/memos
+   *   are folded up to their containing callout and merged into `calloutResults`,
+   *   deduped by callout id (FR-017).
    */
   public async resolveSearchResults(
     rawSearchResults: ISearchResult[],
@@ -146,7 +147,7 @@ export class SearchResultService {
           whiteboards.filter(whiteboard => !whiteboard.isContribution),
           memos.filter(memo => !memo.isContribution)
         )
-      : EMPTY_RESULT_SET;
+      : emptyResultSet();
     // contributions include posts, whiteboards, and memos. Same guard as framings.
     const contributionResults = filtersByCategory.contributions?.[0]
       ? buildResults(
@@ -155,7 +156,7 @@ export class SearchResultService {
           whiteboards.filter(whiteboard => whiteboard.isContribution),
           memos.filter(memo => memo.isContribution)
         )
-      : EMPTY_RESULT_SET;
+      : emptyResultSet();
     const spaceResults = buildResults(
       filtersByCategory.spaces?.[0],
       spaces,
@@ -1300,12 +1301,14 @@ export class SearchResultService {
   }
 }
 
-// an empty, well-formed result set for categories that were not requested
-const EMPTY_RESULT_SET: {
+// a fresh, well-formed empty result set for categories that were not requested.
+// Returns a new object (and new results array) each call so buckets stay
+// independent and no downstream mutation can leak across them.
+const emptyResultSet = (): {
   results: ISearchResult[];
   cursor?: string;
   total: number;
-} = { results: [], cursor: undefined, total: -1 };
+} => ({ results: [], cursor: undefined, total: -1 });
 
 const buildResults = (
   filter?: SearchFilterInput,

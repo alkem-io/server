@@ -357,7 +357,17 @@ export class SearchExtractService {
       flowStateIdFilter: searchInFlowStateFilter,
     });
 
-    const categoriesRequested = filters?.length ?? 0;
+    // Budget the default per-category size off the categories actually being
+    // queried, not just the explicit filters: foldCalloutResources appends the
+    // CONTRIBUTIONS/FRAMINGS indices on top of the requested COLLABORATION_TOOLS
+    // filter, and those folded categories would otherwise each take the full
+    // default size and overfetch. For non-folding searches this equals
+    // filters.length, so behaviour is unchanged.
+    const categoriesQueried = new Set(
+      indicesToSearchOn.map(index => index.category)
+    ).size;
+    const categoriesRequested =
+      categoriesQueried || (filters?.length ?? 0) || 1;
     const searchRequests = buildMultiSearchRequestItems(
       indicesToSearchOn,
       query,
