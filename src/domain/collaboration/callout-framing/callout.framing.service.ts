@@ -1,6 +1,8 @@
 import { ProfileType } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { ContributorCollectionView } from '@common/enums/contributor.collection.view';
+import { ContributorType } from '@common/enums/contributor.type';
 import { LogContext } from '@common/enums/logging.context';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
@@ -10,6 +12,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exception';
+import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
 import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
 import { CreateLinkInput } from '@domain/collaboration/link/dto/link.dto.create';
@@ -41,6 +44,7 @@ import {
   FindOptionsRelations,
   Repository,
 } from 'typeorm';
+import { ICalloutSettingsFraming } from '../callout-settings/callout.settings.framing.interface';
 import { ILink } from '../link/link.interface';
 import { CalloutFraming } from './callout.framing.entity';
 import { ICalloutFraming } from './callout.framing.interface';
@@ -672,6 +676,77 @@ export class CalloutFramingService {
     return await this.calloutFramingRepository.save(calloutFraming);
   }
 
+  /**
+   * Validate + normalize the contributors settings against the framing type
+   * (FR-004b/FR-006a/FR-006b/FR-006c). Mutates and returns the framing settings
+   * object so the caller can persist the auto-healed result.
+   *
+   * Rules:
+   * - `contributors` present iff `framingType === CONTRIBUTORS` (FR-004b).
+   * - `contributorTypes` non-empty (FR-006a).
+   * - `defaultContributorType` ∈ `contributorTypes`; auto-heal to the first
+   *   selected type when unset or its type was deselected (FR-006b).
+   * - `defaultView = MAP` only when a locatable type (USER/ORGANIZATION) is
+   *   selected; auto-heal to LIST when the selection becomes VC-only (FR-006c).
+   */
+  public validateAndNormalizeContributorsSettings(
+    framingType: CalloutFramingType,
+    framingSettings: ICalloutSettingsFraming
+  ): ICalloutSettingsFraming {
+    const isContributors = framingType === CalloutFramingType.CONTRIBUTORS;
+    const contributors = framingSettings.contributors;
+
+    if (!isContributors) {
+      if (contributors) {
+        throw new ValidationException(
+          'Contributors settings can only be set when framing.type = CONTRIBUTORS.',
+          LogContext.COLLABORATION
+        );
+      }
+      return framingSettings;
+    }
+
+    if (!contributors) {
+      throw new ValidationException(
+        'Callout Framing of type CONTRIBUTORS requires contributors settings.',
+        LogContext.COLLABORATION
+      );
+    }
+
+    const contributorTypes = contributors.contributorTypes ?? [];
+    if (contributorTypes.length === 0) {
+      throw new ValidationException(
+        'At least one contributor type must be selected.',
+        LogContext.COLLABORATION
+      );
+    }
+
+    // Auto-heal defaultContributorType to the first selected type when unset
+    // or no longer part of the selection.
+    if (
+      !contributors.defaultContributorType ||
+      !contributorTypes.includes(contributors.defaultContributorType)
+    ) {
+      contributors.defaultContributorType = contributorTypes[0];
+    }
+
+    // Auto-heal defaultView to LIST when the selection is VC-only (no
+    // locatable type remains), otherwise default an unset view to LIST.
+    const hasLocatableType = contributorTypes.some(
+      type =>
+        type === ContributorType.USER || type === ContributorType.ORGANIZATION
+    );
+    if (
+      !contributors.defaultView ||
+      (contributors.defaultView === ContributorCollectionView.MAP &&
+        !hasLocatableType)
+    ) {
+      contributors.defaultView = ContributorCollectionView.LIST;
+    }
+
+    return framingSettings;
+  }
+
   public async getCalloutFramingOrFail(
     calloutFramingID: string,
     options?: FindOneOptions<CalloutFraming>
@@ -688,6 +763,23 @@ export class CalloutFramingService {
         { calloutFramingID }
       );
     return calloutFraming;
+  }
+
+  /**
+   * Load the parent Callout for a framing (the callout owns the JSON settings
+   * that carry the contributors config). Returns null if the framing is not
+   * attached to a callout (e.g. a standalone template framing).
+   */
+  public async getParentCallout(
+    calloutFramingInput: ICalloutFraming
+  ): Promise<ICallout | null> {
+    const calloutFraming = (await this.getCalloutFramingOrFail(
+      calloutFramingInput.id,
+      {
+        relations: { callout: true } as FindOptionsRelations<CalloutFraming>,
+      }
+    )) as CalloutFraming;
+    return calloutFraming.callout ?? null;
   }
 
   public async getProfile(

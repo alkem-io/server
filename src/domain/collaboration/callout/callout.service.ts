@@ -106,6 +106,15 @@ export class CalloutService {
 
     callout.settings = this.createCalloutSettings(calloutData.settings);
 
+    // Validate + auto-heal the contributors framing settings against the
+    // framing type (present iff CONTRIBUTORS; defaultContributorType/defaultView
+    // normalization). FR-004b/FR-006a/FR-006b/FR-006c.
+    callout.settings.framing =
+      this.calloutFramingService.validateAndNormalizeContributorsSettings(
+        callout.framing.type,
+        callout.settings.framing
+      );
+
     if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
       callout.publishedDate = new Date();
       callout.publishedBy = userID;
@@ -440,6 +449,16 @@ export class CalloutService {
     if (calloutUpdateData.settings) {
       callout.settings = merge(callout.settings, calloutUpdateData.settings);
     }
+
+    // Re-validate + auto-heal contributors settings after any framing-type or
+    // settings change (FR-004b/FR-006a/FR-006b/FR-006c). Runs even when only
+    // the framing type changed so a stale contributors block is rejected and a
+    // type/view that became invalid is healed.
+    callout.settings.framing =
+      this.calloutFramingService.validateAndNormalizeContributorsSettings(
+        callout.framing.type,
+        callout.settings.framing
+      );
 
     if (calloutUpdateData.classification) {
       callout.classification = this.classificationService.updateClassification(
