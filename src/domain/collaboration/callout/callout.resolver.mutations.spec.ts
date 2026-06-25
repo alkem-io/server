@@ -482,11 +482,7 @@ describe('CalloutResolverMutations', () => {
         actorContext,
         { calloutID: 'callout-1' } as any,
         {
-          // A real Readable, not a bare object: under this repo's `isolate: false`
-          // thread pool the module-level `vi.mock` of file.util can be bypassed
-          // when another spec loads the real `streamToBuffer` first, so the test
-          // must survive the real implementation running (which needs `.on`/`end`).
-          createReadStream: () => Readable.from([Buffer.from('test')]),
+          createReadStream: () => Readable.from(Buffer.from('test')),
           filename: 'Imported.docx',
           mimetype: 'application/octet-stream',
         } as any
@@ -564,11 +560,7 @@ describe('CalloutResolverMutations', () => {
         actorContext,
         { calloutID: 'callout-1' } as any,
         {
-          // A real Readable, not a bare object: under this repo's `isolate: false`
-          // thread pool the module-level `vi.mock` of file.util can be bypassed
-          // when another spec loads the real `streamToBuffer` first, so the test
-          // must survive the real implementation running (which needs `.on`/`end`).
-          createReadStream: () => Readable.from([Buffer.from('test')]),
+          createReadStream: () => Readable.from(Buffer.from('test')),
           filename: 'Imported.docx',
           mimetype: 'application/octet-stream',
         } as any
