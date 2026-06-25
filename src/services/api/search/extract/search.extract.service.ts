@@ -68,6 +68,11 @@ const getIndexStore = (
       type: SearchResultType.WHITEBOARD,
       category: SearchCategory.FRAMINGS,
     },
+    {
+      name: `${indexPattern}collaboradocuments`,
+      type: SearchResultType.COLLABORA_DOCUMENT,
+      category: SearchCategory.FRAMINGS,
+    },
   ],
   [SearchCategory.CONTRIBUTIONS]: [
     {
@@ -83,6 +88,11 @@ const getIndexStore = (
     {
       name: `${indexPattern}whiteboards`,
       type: SearchResultType.WHITEBOARD,
+      category: SearchCategory.CONTRIBUTIONS,
+    },
+    {
+      name: `${indexPattern}collaboradocuments`,
+      type: SearchResultType.COLLABORA_DOCUMENT,
       category: SearchCategory.CONTRIBUTIONS,
     },
   ],
@@ -113,6 +123,11 @@ const getPublicIndexStore = (
       type: SearchResultType.WHITEBOARD,
       category: SearchCategory.FRAMINGS,
     },
+    {
+      name: `${indexPattern}collaboradocuments`,
+      type: SearchResultType.COLLABORA_DOCUMENT,
+      category: SearchCategory.FRAMINGS,
+    },
   ],
   [SearchCategory.CONTRIBUTIONS]: [
     {
@@ -130,6 +145,11 @@ const getPublicIndexStore = (
       type: SearchResultType.WHITEBOARD,
       category: SearchCategory.CONTRIBUTIONS,
     },
+    {
+      name: `${indexPattern}collaboradocuments`,
+      type: SearchResultType.COLLABORA_DOCUMENT,
+      category: SearchCategory.CONTRIBUTIONS,
+    },
   ],
 });
 
@@ -143,11 +163,13 @@ const allowedTypesPerCategory: Record<SearchCategory, SearchResultType[]> = {
   [SearchCategory.FRAMINGS]: [
     SearchResultType.MEMO,
     SearchResultType.WHITEBOARD,
+    SearchResultType.COLLABORA_DOCUMENT,
   ],
   [SearchCategory.CONTRIBUTIONS]: [
     SearchResultType.POST,
     SearchResultType.WHITEBOARD,
     SearchResultType.MEMO,
+    SearchResultType.COLLABORA_DOCUMENT,
   ],
 };
 

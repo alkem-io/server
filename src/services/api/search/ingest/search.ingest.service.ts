@@ -9,6 +9,7 @@ import { isDefined } from '@common/utils';
 import { asyncMap } from '@common/utils/async.map';
 import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { CollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.entity';
 import { yjsStateToMarkdown } from '@domain/common/memo/conversion';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Tagset } from '@domain/common/tagset';
@@ -29,6 +30,10 @@ import { Task } from '@services/task/task.interface';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, FindManyOptions } from 'typeorm';
+import {
+  CollaboraExtractSkipReason,
+  CollaboraTextExtractService,
+} from '../extract/collabora.text.extract.service';
 import { SearchResultType } from '../search.result.type';
 import { getIndexPattern } from './get.index.pattern';
 
@@ -102,6 +107,9 @@ const getIndexAliases = (indexPattern: string) => [
   `${indexPattern}callouts`,
   `${indexPattern}whiteboards`,
   `${indexPattern}memos`,
+  // MUST match the reporting-orchestration template index_patterns
+  // `alkemio-data-*collaboradocuments-*` (workspace#009-office-doc-search).
+  `${indexPattern}collaboradocuments`,
 ];
 
 @Injectable()
@@ -113,7 +121,8 @@ export class SearchIngestService {
     @InjectEntityManager() private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private configService: ConfigService<AlkemioConfig, true>,
-    private taskService: TaskService
+    private taskService: TaskService,
+    private collaboraTextExtractService: CollaboraTextExtractService
   ) {
     this.indexPattern = getIndexPattern(this.configService);
 
@@ -499,6 +508,15 @@ export class SearchIngestService {
         fetchFn: this.fetchMemo.bind(this),
         countFn: this.fetchMemoCount.bind(this),
         batchSize: 30,
+      },
+      {
+        index: `${this.indexPattern}collaboradocuments-${suffix}`,
+        // bind the active Task so per-document extraction skips/failures are
+        // recorded as durable task results (FR-019).
+        fetchFn: (start: number, limit: number) =>
+          this.fetchCollaboraDocument(start, limit, task),
+        countFn: this.fetchCollaboraDocumentCount.bind(this),
+        batchSize: 15,
       },
     ];
 
@@ -1334,6 +1352,248 @@ export class SearchIngestService {
         })
         .filter(isDefined);
     });
+  }
+
+  private fetchCollaboraDocumentCount() {
+    // todo: count through CollaboraDocument directly; consider framing + contributions
+    return this.entityManager.count<Space>(Space, {
+      loadEagerRelations: false,
+      where: {
+        visibility: SpaceVisibility.ACTIVE,
+      },
+    });
+  }
+
+  /**
+   * Loads Collabora office documents from both a Callout's framing and its
+   * contributions, extracts + cleans their text content in-process (FR-001/002,
+   * FR-017), and builds one index doc per document (data-model §1). A document
+   * that yields no usable text / is skipped (no-text, parse-error, over-cap) is
+   * STILL pushed — with empty `content` — so it stays findable by its
+   * profile.displayName/tags (FR-014, research §9). Extraction is lazy: it runs
+   * only here, during a reindex of the owning entity (FR-010).
+   */
+  private async fetchCollaboraDocument(
+    start: number,
+    limit: number,
+    task: Task
+  ) {
+    const spaces = await this.entityManager.find<Space>(Space, {
+      loadEagerRelations: false,
+      where: {
+        visibility: SpaceVisibility.ACTIVE,
+      },
+      relations: {
+        collaboration: {
+          innovationFlow: {
+            states: true,
+          },
+          calloutsSet: {
+            callouts: {
+              framing: {
+                collaboraDocument: {
+                  profile: profileRelationOptions,
+                  document: true,
+                },
+              },
+              contributions: {
+                collaboraDocument: {
+                  profile: profileRelationOptions,
+                  document: true,
+                },
+              },
+              classification: {
+                tagsets: true,
+              },
+            },
+          },
+        },
+        parentSpace: {
+          parentSpace: true,
+        },
+      },
+      select: {
+        id: true,
+        visibility: true,
+        collaboration: {
+          id: true,
+          innovationFlow: {
+            id: true,
+            states: {
+              id: true,
+              displayName: true,
+            },
+          },
+          calloutsSet: {
+            id: true,
+            callouts: {
+              id: true,
+              createdBy: true,
+              createdDate: true,
+              nameID: true,
+              framing: {
+                id: true,
+                collaboraDocument: {
+                  id: true,
+                  createdBy: true,
+                  createdDate: true,
+                  document: {
+                    id: true,
+                    size: true,
+                  },
+                  profile: profileSelectOptions,
+                },
+              },
+              contributions: {
+                id: true,
+                collaboraDocument: {
+                  id: true,
+                  createdBy: true,
+                  createdDate: true,
+                  document: {
+                    id: true,
+                    size: true,
+                  },
+                  profile: profileSelectOptions,
+                },
+              },
+              classification: {
+                id: true,
+                tagsets: {
+                  id: true,
+                  name: true,
+                  tags: true,
+                },
+              },
+            },
+          },
+        },
+        parentSpace: {
+          id: true,
+          parentSpace: {
+            id: true,
+          },
+        },
+      },
+      skip: start,
+      take: limit,
+    });
+
+    // (collaboraDocument, callout, space, flowStateID, isContribution) tuples
+    const docsToIndex: {
+      collaboraDocument: CollaboraDocument;
+      callout: Callout;
+      space: Space;
+      flowStateID: string | undefined;
+      isContribution: boolean;
+    }[] = [];
+
+    for (const space of spaces) {
+      const { map: flowStateNameToId, ambiguousNames } =
+        buildFlowStateNameToIdMap(space.collaboration?.innovationFlow?.states);
+      const callouts = space.collaboration?.calloutsSet?.callouts ?? [];
+      for (const callout of callouts) {
+        const flowStateID = resolveCalloutFlowStateID(
+          callout.classification?.tagsets,
+          flowStateNameToId,
+          ambiguousNames,
+          this.logUnresolvedFlowState.bind(this),
+          callout.id
+        );
+        // a callout can have a collabora document in the framing
+        // AND collabora documents in the contributions
+        if (callout.framing?.collaboraDocument) {
+          docsToIndex.push({
+            collaboraDocument: callout.framing.collaboraDocument,
+            callout,
+            space,
+            flowStateID,
+            isContribution: false,
+          });
+        }
+        for (const contribution of callout.contributions ?? []) {
+          if (!contribution?.collaboraDocument) {
+            continue;
+          }
+          docsToIndex.push({
+            collaboraDocument: contribution.collaboraDocument,
+            callout,
+            space,
+            flowStateID,
+            isContribution: true,
+          });
+        }
+      }
+    }
+
+    // extract + build index docs (await per document; extraction is off the
+    // request path — runs during async reindex ingestion, SC-005)
+    return asyncMap(docsToIndex, async entry => {
+      const { collaboraDocument, callout, space, flowStateID, isContribution } =
+        entry;
+
+      const { content, skipReason } =
+        await this.collaboraTextExtractService.extract(collaboraDocument);
+
+      if (skipReason) {
+        // FR-019 channel 2: durable, queryable task record per skip/failure.
+        await this.recordCollaboraExtractSkip(
+          task,
+          collaboraDocument.id,
+          skipReason
+        );
+      }
+
+      return {
+        ...collaboraDocument,
+        document: undefined,
+        // empty `content` is intentional for a skipped document — it stays
+        // findable by its profile fields (FR-014).
+        content: content ?? '',
+        isContribution,
+        type: SearchResultType.COLLABORA_DOCUMENT,
+        license: {
+          visibility: space?.visibility ?? EMPTY_VALUE,
+        },
+        spaceID:
+          space?.parentSpace?.parentSpace?.id ??
+          space?.parentSpace?.id ??
+          space.id,
+        calloutID: callout.id,
+        collaborationID: space?.collaboration?.id ?? EMPTY_VALUE,
+        flowStateID,
+        profile: {
+          ...collaboraDocument.profile,
+          tags: processTagsets(collaboraDocument.profile?.tagsets),
+          tagsets: undefined,
+        },
+      };
+    });
+  }
+
+  /**
+   * Appends a reason-tagged Collabora extraction skip/failure to the active
+   * reindex task so it is a durable, queryable record (FR-019, SC-008). Does not
+   * advance the task item counter — these are sub-document notes, not units of
+   * work. Never throws (observability must not break ingestion).
+   */
+  private async recordCollaboraExtractSkip(
+    task: Task,
+    collaboraDocumentId: string,
+    reason: CollaboraExtractSkipReason
+  ): Promise<void> {
+    try {
+      await this.taskService.updateTaskResults(
+        task.id,
+        `[collaboradocuments] - extraction skipped (${reason}) for document ${collaboraDocumentId}`,
+        false
+      );
+    } catch (e: any) {
+      this.logger.warn?.(
+        `Failed to record Collabora extraction skip on task: ${e?.message}`,
+        LogContext.SEARCH_INGEST
+      );
+    }
   }
 
   private fetchPostsCount() {

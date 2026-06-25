@@ -13,6 +13,7 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { CollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.entity';
 import { Post } from '@domain/collaboration/post';
 import { Memo } from '@domain/common/memo/memo.entity';
 import { Whiteboard } from '@domain/common/whiteboard/whiteboard.entity';
@@ -32,6 +33,7 @@ import { EntityManager, In } from 'typeorm';
 import {
   ISearchResult,
   ISearchResultCallout,
+  ISearchResultCollaboraDocument,
   ISearchResultMemo,
   ISearchResultOrganization,
   ISearchResultPost,
@@ -57,6 +59,13 @@ type MemoParents = {
 
 type WhiteboardParents = {
   whiteboard: Whiteboard;
+  isContribution: boolean;
+  callout: Callout;
+  space: Space;
+};
+
+type CollaboraDocumentParents = {
+  collaboraDocument: CollaboraDocument;
   isContribution: boolean;
   callout: Callout;
   space: Space;
@@ -107,6 +116,7 @@ export class SearchResultService {
       posts,
       whiteboards,
       memos,
+      collaboraDocuments,
     ] = await Promise.all([
       this.getSpaceSearchResults(groupedResults.space ?? [], spaceId),
       this.getSubspaceSearchResults(
@@ -126,6 +136,10 @@ export class SearchResultService {
         actorContext
       ),
       this.getMemoSearchResults(groupedResults.memo ?? [], actorContext),
+      this.getCollaboraDocumentSearchResults(
+        groupedResults.collabora_document ?? [],
+        actorContext
+      ),
     ]);
     const filtersByCategory = groupBy(filters, 'category') as Record<
       SearchCategory,
@@ -140,14 +154,16 @@ export class SearchResultService {
     const framingResults = buildResults(
       filtersByCategory.framings?.[0],
       whiteboards.filter(whiteboard => !whiteboard.isContribution),
-      memos.filter(memo => !memo.isContribution)
+      memos.filter(memo => !memo.isContribution),
+      collaboraDocuments.filter(doc => !doc.isContribution)
     );
-    // contributions include posts, whiteboards, and memos
+    // contributions include posts, whiteboards, memos, and collabora documents
     const contributionResults = buildResults(
       filtersByCategory.contributions?.[0],
       posts,
       whiteboards.filter(whiteboard => whiteboard.isContribution),
-      memos.filter(memo => memo.isContribution)
+      memos.filter(memo => memo.isContribution),
+      collaboraDocuments.filter(doc => doc.isContribution)
     );
     const spaceResults = buildResults(
       filtersByCategory.spaces?.[0],
@@ -160,7 +176,8 @@ export class SearchResultService {
           callouts,
           posts,
           whiteboards,
-          memos
+          memos,
+          collaboraDocuments
         )
       : buildResults(filtersByCategory['collaboration-tools']?.[0], callouts);
 
@@ -543,6 +560,66 @@ export class SearchResultService {
           callout: memoParent.callout,
           space: memoParent.space,
           memo: memoParent.memo,
+        };
+      })
+      .filter(isDefined);
+  }
+
+  private async getCollaboraDocumentSearchResults(
+    rawSearchResults: ISearchResult[],
+    actorContext: ActorContext
+  ): Promise<ISearchResultCollaboraDocument[]> {
+    if (rawSearchResults.length === 0) {
+      return [];
+    }
+
+    const collaboraDocumentIds = rawSearchResults.map(hit => hit.result.id);
+
+    const collaboraDocuments = await this.entityManager.findBy(
+      CollaboraDocument,
+      {
+        id: In(collaboraDocumentIds),
+      }
+    );
+
+    // Authorize query-time (FR-009, SC-004): never bake permission into the
+    // index. Filter first, then resolve parents for the authorized set only.
+    const authorizedCollaboraDocuments = collaboraDocuments.filter(doc =>
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        doc.authorization,
+        AuthorizationPrivilege.READ
+      )
+    );
+
+    const collaboraDocumentParents = await this.getCollaboraDocumentParents(
+      authorizedCollaboraDocuments
+    );
+
+    return collaboraDocumentParents
+      .map<ISearchResultCollaboraDocument | undefined>(parent => {
+        const rawSearchResult = rawSearchResults.find(
+          hit => hit.result.id === parent.collaboraDocument.id
+        );
+
+        if (!rawSearchResult) {
+          this.logger.error(
+            {
+              message: 'Unable to find raw search result for CollaboraDocument',
+              collaboraDocumentId: parent.collaboraDocument.id,
+            },
+            undefined,
+            LogContext.SEARCH
+          );
+          return undefined;
+        }
+
+        return {
+          ...rawSearchResult,
+          isContribution: parent.isContribution,
+          callout: parent.callout,
+          space: parent.space,
+          collaboraDocument: parent.collaboraDocument,
         };
       })
       .filter(isDefined);
@@ -1070,6 +1147,199 @@ export class SearchResultService {
       );
   }
 
+  private async getCollaboraDocumentParents(
+    collaboraDocuments: CollaboraDocument[]
+  ): Promise<CollaboraDocumentParents[]> {
+    if (!collaboraDocuments.length) {
+      return [];
+    }
+
+    const collaboraDocumentIds = collaboraDocuments.map(doc => doc.id);
+
+    const callouts = await this.entityManager.find(Callout, {
+      where: [
+        {
+          contributions: {
+            collaboraDocument: {
+              id: In(collaboraDocumentIds),
+            },
+          },
+          calloutsSet: { type: CalloutsSetType.COLLABORATION },
+        },
+        {
+          framing: {
+            collaboraDocument: {
+              id: In(collaboraDocumentIds),
+            },
+          },
+          calloutsSet: { type: CalloutsSetType.COLLABORATION },
+        },
+      ],
+      relations: {
+        framing: {
+          collaboraDocument: true,
+        },
+        contributions: {
+          collaboraDocument: true,
+        },
+        calloutsSet: true,
+      },
+      select: {
+        id: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
+        settings: {
+          visibility: true,
+        },
+        framing: {
+          id: true,
+          collaboraDocument: {
+            id: true,
+          },
+        },
+        contributions: {
+          id: true,
+          collaboraDocument: {
+            id: true,
+          },
+        },
+        calloutsSet: {
+          id: true,
+          type: true,
+        },
+      },
+    });
+    const calloutIds = callouts.map(callout => callout.id);
+
+    const spaces = await this.entityManager.find(Space, {
+      where: {
+        collaboration: {
+          calloutsSet: {
+            callouts: {
+              id: In(calloutIds),
+            },
+          },
+        },
+      },
+      relations: {
+        collaboration: {
+          calloutsSet: {
+            callouts: {
+              framing: {
+                collaboraDocument: true,
+              },
+              contributions: {
+                collaboraDocument: true,
+              },
+            },
+          },
+        },
+      },
+      select: {
+        id: true,
+        level: true,
+        settings: {
+          collaboration: {
+            allowEventsFromSubspaces: true,
+            allowMembersToCreateCallouts: true,
+            allowMembersToCreateSubspaces: true,
+            inheritMembershipRights: true,
+            allowMembersToVideoCall: true,
+            allowGuestContributions: true,
+          },
+          membership: {
+            allowSubspaceAdminsToInviteMembers: true,
+            policy: true,
+          },
+          privacy: { allowPlatformSupportAsAdmin: true, mode: true },
+        },
+        visibility: true,
+        collaboration: {
+          id: true,
+          calloutsSet: {
+            id: true,
+            callouts: {
+              id: true,
+              framing: {
+                id: true,
+                collaboraDocument: {
+                  id: true,
+                },
+              },
+              contributions: {
+                id: true,
+                collaboraDocument: {
+                  id: true,
+                },
+              },
+            },
+          },
+        },
+      },
+    });
+
+    return collaboraDocuments
+      .map(collaboraDocument => {
+        let isContribution = false;
+        let callout = callouts.find(
+          callout =>
+            callout?.framing?.collaboraDocument?.id === collaboraDocument.id
+        );
+
+        if (!callout) {
+          isContribution = true;
+          callout = callouts.find(callout =>
+            callout?.contributions?.some(
+              contribution =>
+                contribution?.collaboraDocument?.id === collaboraDocument.id
+            )
+          );
+        }
+
+        if (!callout) {
+          this.logger.error(
+            {
+              message: 'Unable to find Callout parent for CollaboraDocument',
+              collaboraDocumentId: collaboraDocument.id,
+            },
+            undefined,
+            LogContext.SEARCH_EXTRACT
+          );
+          return undefined;
+        }
+
+        const space = spaces.find(space =>
+          space?.collaboration?.calloutsSet?.callouts?.some(
+            spaceCallout => spaceCallout.id === callout?.id
+          )
+        );
+
+        if (!space) {
+          this.logger.error(
+            {
+              message: 'Unable to find Space parent for CollaboraDocument',
+              collaboraDocumentId: collaboraDocument.id,
+            },
+            undefined,
+            LogContext.SEARCH_EXTRACT
+          );
+          return undefined;
+        }
+
+        return {
+          collaboraDocument,
+          isContribution,
+          callout,
+          space,
+        };
+      })
+      .filter((x): x is CollaboraDocumentParents => !!x)
+      .filter(
+        parent =>
+          parent.callout?.settings?.visibility !== CalloutVisibility.DRAFT
+      );
+  }
+
   private async getWhiteboardParents(
     whiteboards: Whiteboard[]
   ): Promise<WhiteboardParents[]> {
@@ -1339,7 +1609,8 @@ const buildFoldedCalloutResults = (
   callouts: ISearchResultCallout[],
   posts: ISearchResultPost[],
   whiteboards: ISearchResultWhiteboard[],
-  memos: ISearchResultMemo[]
+  memos: ISearchResultMemo[],
+  collaboraDocuments: ISearchResultCollaboraDocument[]
 ): { results: ISearchResult[]; cursor?: string; total: number } => {
   // todo: total - https://github.com/alkem-io/server/issues/3700
   const total = -1;
@@ -1349,6 +1620,7 @@ const buildFoldedCalloutResults = (
     ...posts,
     ...whiteboards,
     ...memos,
+    ...collaboraDocuments,
   ];
 
   if (foldable.length === 0) {

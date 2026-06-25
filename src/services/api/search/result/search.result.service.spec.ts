@@ -1090,4 +1090,205 @@ describe('SearchResultService', () => {
       expect(result[0].isContribution).toBe(true);
     });
   });
+
+  // workspace#009-office-doc-search
+  describe('getCollaboraDocumentSearchResults (private) - SC-002/SC-004/FR-012', () => {
+    const rawCollaboraResult = (id = 'cd-1') =>
+      [
+        {
+          id: 'sr-1',
+          score: 5,
+          type: SearchResultType.COLLABORA_DOCUMENT,
+          result: { id },
+        },
+      ] as any[];
+
+    it('should return empty for empty input', async () => {
+      const result = await (service as any).getCollaboraDocumentSearchResults(
+        [],
+        actorContext
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('does NOT leak a document the actor cannot READ (FR-009, SC-004)', async () => {
+      entityManager.findBy.mockResolvedValue([
+        { id: 'cd-1', authorization: { id: 'auth-1' } },
+      ]);
+      authorizationService.isAccessGranted.mockReturnValue(false);
+
+      const result = await (service as any).getCollaboraDocumentSearchResults(
+        rawCollaboraResult(),
+        actorContext
+      );
+
+      expect(result).toHaveLength(0);
+    });
+
+    it('returns a FRAMING document with isContribution=false (SC-002)', async () => {
+      entityManager.findBy.mockResolvedValue([
+        { id: 'cd-1', authorization: { id: 'auth-1' } },
+      ]);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+
+      entityManager.find
+        .mockResolvedValueOnce([
+          {
+            id: 'callout-1',
+            settings: { visibility: 'published' },
+            framing: { collaboraDocument: { id: 'cd-1' } },
+            contributions: [],
+            calloutsSet: { id: 'cs-1', type: 'collaboration' },
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            id: 'space-1',
+            level: 0,
+            collaboration: {
+              calloutsSet: {
+                callouts: [
+                  {
+                    id: 'callout-1',
+                    framing: { collaboraDocument: { id: 'cd-1' } },
+                    contributions: [],
+                  },
+                ],
+              },
+            },
+          },
+        ]);
+
+      const result = await (service as any).getCollaboraDocumentSearchResults(
+        rawCollaboraResult(),
+        actorContext
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].collaboraDocument.id).toBe('cd-1');
+      expect(result[0].isContribution).toBe(false);
+    });
+
+    it('returns a CONTRIBUTION document with isContribution=true (SC-002)', async () => {
+      entityManager.findBy.mockResolvedValue([
+        { id: 'cd-1', authorization: { id: 'auth-1' } },
+      ]);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+
+      entityManager.find
+        .mockResolvedValueOnce([
+          {
+            id: 'callout-1',
+            settings: { visibility: 'published' },
+            framing: { collaboraDocument: null },
+            contributions: [{ collaboraDocument: { id: 'cd-1' } }],
+            calloutsSet: { id: 'cs-1', type: 'collaboration' },
+          },
+        ])
+        .mockResolvedValueOnce([
+          {
+            id: 'space-1',
+            level: 0,
+            collaboration: {
+              calloutsSet: {
+                callouts: [
+                  {
+                    id: 'callout-1',
+                    framing: { collaboraDocument: null },
+                    contributions: [{ collaboraDocument: { id: 'cd-1' } }],
+                  },
+                ],
+              },
+            },
+          },
+        ]);
+
+      const result = await (service as any).getCollaboraDocumentSearchResults(
+        rawCollaboraResult(),
+        actorContext
+      );
+
+      expect(result).toHaveLength(1);
+      expect(result[0].isContribution).toBe(true);
+    });
+  });
+
+  // workspace#009-office-doc-search — FR-006/007 routing + FR-015 interleaving
+  describe('resolveSearchResults — collabora documents (FR-006/007/012/015)', () => {
+    it('routes framing/contribution docs correctly and interleaves purely by score', async () => {
+      vi.spyOn(service as any, 'getSpaceSearchResults').mockResolvedValue([]);
+      vi.spyOn(service as any, 'getSubspaceSearchResults').mockResolvedValue(
+        []
+      );
+      vi.spyOn(service as any, 'getUserSearchResults').mockResolvedValue([]);
+      vi.spyOn(
+        service as any,
+        'getOrganizationSearchResults'
+      ).mockResolvedValue([]);
+      vi.spyOn(service as any, 'getCalloutSearchResult').mockResolvedValue([]);
+      vi.spyOn(service as any, 'getPostSearchResults').mockResolvedValue([
+        {
+          id: 'post-sr',
+          score: 4,
+          type: SearchResultType.POST,
+          result: { id: 'post-1' },
+        },
+      ]);
+      vi.spyOn(service as any, 'getWhiteboardSearchResults').mockResolvedValue([
+        {
+          id: 'wb-sr',
+          score: 3,
+          type: SearchResultType.WHITEBOARD,
+          isContribution: false,
+          result: { id: 'wb-1' },
+        },
+      ]);
+      vi.spyOn(service as any, 'getMemoSearchResults').mockResolvedValue([]);
+      vi.spyOn(
+        service as any,
+        'getCollaboraDocumentSearchResults'
+      ).mockResolvedValue([
+        {
+          id: 'cd-framing-sr',
+          score: 9,
+          type: SearchResultType.COLLABORA_DOCUMENT,
+          isContribution: false,
+          result: { id: 'cd-framing' },
+        },
+        {
+          id: 'cd-contrib-sr',
+          score: 7,
+          type: SearchResultType.COLLABORA_DOCUMENT,
+          isContribution: true,
+          result: { id: 'cd-contrib' },
+        },
+      ]);
+
+      const result = await service.resolveSearchResults(
+        [],
+        actorContext,
+        [
+          { category: SearchCategory.FRAMINGS } as any,
+          { category: SearchCategory.CONTRIBUTIONS } as any,
+        ],
+        undefined
+      );
+
+      // FR-006: framing collabora doc in framingResults, ranked first by score
+      const framingIds = result.framingResults.results.map(r => r.result.id);
+      expect(framingIds).toContain('cd-framing');
+      expect(framingIds[0]).toBe('cd-framing'); // score 9 > whiteboard 3 (FR-015)
+
+      // FR-007: contribution collabora doc in contributionResults, ranked by score
+      const contributionIds = result.contributionResults.results.map(
+        r => r.result.id
+      );
+      expect(contributionIds).toContain('cd-contrib');
+      expect(contributionIds[0]).toBe('cd-contrib'); // score 7 > post 4 (FR-015)
+
+      // routing fidelity: no cross-contamination (SC-002)
+      expect(framingIds).not.toContain('cd-contrib');
+      expect(contributionIds).not.toContain('cd-framing');
+    });
+  });
 });
