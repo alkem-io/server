@@ -63,11 +63,14 @@ export class SearchService {
       searchData,
       onlyPublicResults
     );
-    // When a flow-state scoped search is requested, callout-level folding is
-    // applied: a matching post/whiteboard/memo folds up to its containing
-    // callout, deduped, in calloutResults (FR-017). Folding is keyed on the
-    // presence of the flow-state scope, which is the surface this feature adds.
-    const foldToCallouts = Boolean(searchData.searchInFlowStateFilter);
+    // Callout-level folding: a matching post/whiteboard/memo folds up to its
+    // containing callout, deduped, in calloutResults (FR-017). Triggered either
+    // by a flow-state scoped search, or by an explicit foldCalloutResources opt-in
+    // that widens a Callout search to match in its framing resources and
+    // contributions.
+    const foldToCallouts =
+      Boolean(searchData.searchInFlowStateFilter) ||
+      Boolean(searchData.foldCalloutResources);
 
     return this.searchResultService.resolveSearchResults(
       searchResults,
