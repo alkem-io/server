@@ -248,6 +248,68 @@ describe('SearchExtractService', () => {
       expect(body.query.bool.filter).toBeUndefined();
     });
 
+    it('keeps Callout search scoped to the callouts index when foldCalloutResources is off', async () => {
+      mockClient.msearch.mockResolvedValue({ responses: [] });
+
+      await service.search({
+        terms: ['governance'],
+        filters: [{ category: SearchCategory.COLLABORATION_TOOLS, size: 10 }],
+      } as any);
+
+      const searches = mockClient.msearch.mock.calls[0][0].searches as any[];
+      // headers are the even items; collect every index targeted
+      const indices = searches
+        .filter((_item, i) => i % 2 === 0)
+        .flatMap(header => header.index);
+      expect(indices).toEqual(['test-callouts']);
+    });
+
+    it('widens a Callout search to post/whiteboard/memo indices when foldCalloutResources is on', async () => {
+      mockClient.msearch.mockResolvedValue({ responses: [] });
+
+      await service.search({
+        terms: ['governance'],
+        foldCalloutResources: true,
+        filters: [{ category: SearchCategory.COLLABORATION_TOOLS, size: 10 }],
+      } as any);
+
+      const searches = mockClient.msearch.mock.calls[0][0].searches as any[];
+      const indices = searches
+        .filter((_item, i) => i % 2 === 0)
+        .flatMap(header => header.index);
+      // callouts plus the fold-up resource indices, each at most once
+      expect(indices).toEqual(
+        expect.arrayContaining([
+          'test-callouts',
+          'test-posts',
+          'test-whiteboards',
+          'test-memos',
+        ])
+      );
+      // single whiteboards/memos index covers both framing and contributions
+      expect(indices.filter(name => name === 'test-whiteboards')).toHaveLength(
+        1
+      );
+      expect(indices.filter(name => name === 'test-memos')).toHaveLength(1);
+    });
+
+    it('does not widen non-Callout searches even when foldCalloutResources is on', async () => {
+      mockClient.msearch.mockResolvedValue({ responses: [] });
+
+      await service.search({
+        terms: ['governance'],
+        foldCalloutResources: true,
+        filters: [{ category: SearchCategory.SPACES, size: 10 }],
+      } as any);
+
+      const searches = mockClient.msearch.mock.calls[0][0].searches as any[];
+      const indices = searches
+        .filter((_item, i) => i % 2 === 0)
+        .flatMap(header => header.index);
+      expect(indices).not.toContain('test-posts');
+      expect(indices).not.toContain('test-callouts');
+    });
+
     it('should handle search results with _ignored fields', async () => {
       mockClient.msearch.mockResolvedValue({
         responses: [

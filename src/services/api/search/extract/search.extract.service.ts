@@ -186,9 +186,18 @@ export class SearchExtractService {
       throw new Error('Elasticsearch client not initialized');
     }
 
-    const { terms, searchInSpaceFilter, searchInFlowStateFilter, filters } =
-      searchData;
-    const indicesToSearchOn = this.getIndices(onlyPublicResults, filters);
+    const {
+      terms,
+      searchInSpaceFilter,
+      searchInFlowStateFilter,
+      filters,
+      foldCalloutResources,
+    } = searchData;
+    const indicesToSearchOn = this.getIndices(
+      onlyPublicResults,
+      filters,
+      foldCalloutResources
+    );
 
     if (indicesToSearchOn.length === 0) {
       return [];
@@ -207,7 +216,8 @@ export class SearchExtractService {
 
   private getIndices(
     onlyPublicResults = false,
-    filters?: SearchFilterInput[]
+    filters?: SearchFilterInput[],
+    foldCalloutResources = false
   ): SearchIndex[] {
     const categories = filters
       ?.map(filter => filter.category)
@@ -237,19 +247,70 @@ export class SearchExtractService {
           )
         : filteredIndicesByCategory;
 
+    // foldCalloutResources widens a Callout search so framing resources and
+    // contributions (post/whiteboard/memo) are matched too and fold up to their
+    // containing callout. We must therefore also query those indices even though
+    // they belong to other categories; the type filter above would otherwise
+    // strip them. Bypasses it by appending here, deduped by index name.
+    const indicesToSearchOn = foldCalloutResources
+      ? this.withCalloutResourceIndices(
+          filteredIndicesByCategoryAndType,
+          categories
+        )
+      : filteredIndicesByCategoryAndType;
+
     if (onlyPublicResults) {
       const publicIndices = Object.values(
         getPublicIndexStore(this.indexPattern)
       ).flat();
       // if we want only public results - filter the public indices with the user defined filter
       return intersectionWith(
-        filteredIndicesByCategoryAndType,
+        indicesToSearchOn,
         publicIndices,
         (a, b) => a.name === b.name
       );
     }
     // these indices may include private data
-    return filteredIndicesByCategoryAndType;
+    return indicesToSearchOn;
+  }
+
+  /**
+   * Appends the post/whiteboard/memo indices so a Callout search (the
+   * COLLABORATION_TOOLS category) also matches in the framing resources and
+   * contributions that fold up to a callout. The single whiteboards/memos
+   * indices hold both framing- and contribution-level instances, so each index
+   * is needed at most once. No-op unless Callouts are in scope (collaboration
+   * tools requested, or no category filter — meaning all categories). Deduped by
+   * index name to avoid searching an already-included index twice.
+   */
+  private withCalloutResourceIndices(
+    indices: SearchIndex[],
+    categories?: SearchCategory[]
+  ): SearchIndex[] {
+    const calloutsInScope =
+      !categories ||
+      categories.length === 0 ||
+      categories.includes(SearchCategory.COLLABORATION_TOOLS);
+    if (!calloutsInScope) {
+      return indices;
+    }
+
+    const indexStore = getIndexStore(this.indexPattern);
+    const resourceIndices = [
+      ...indexStore[SearchCategory.CONTRIBUTIONS],
+      ...indexStore[SearchCategory.FRAMINGS],
+    ];
+
+    const existingNames = new Set(indices.map(index => index.name));
+    const additions = resourceIndices.filter(index => {
+      if (existingNames.has(index.name)) {
+        return false;
+      }
+      existingNames.add(index.name);
+      return true;
+    });
+
+    return [...indices, ...additions];
   }
 
   /***
@@ -296,7 +357,17 @@ export class SearchExtractService {
       flowStateIdFilter: searchInFlowStateFilter,
     });
 
-    const categoriesRequested = filters?.length ?? 0;
+    // Budget the default per-category size off the categories actually being
+    // queried, not just the explicit filters: foldCalloutResources appends the
+    // CONTRIBUTIONS/FRAMINGS indices on top of the requested COLLABORATION_TOOLS
+    // filter, and those folded categories would otherwise each take the full
+    // default size and overfetch. For non-folding searches this equals
+    // filters.length, so behaviour is unchanged.
+    const categoriesQueried = new Set(
+      indicesToSearchOn.map(index => index.category)
+    ).size;
+    const categoriesRequested =
+      categoriesQueried || (filters?.length ?? 0) || 1;
     const searchRequests = buildMultiSearchRequestItems(
       indicesToSearchOn,
       query,
