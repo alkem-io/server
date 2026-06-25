@@ -8320,6 +8320,10 @@ input SearchInput {
   """Return results that satisfy these conditions."""
   filters: [SearchFilterInput!]
   """
+  Restrict the search to a single flow state, identified by the InnovationFlowState UUID. The state UUID is globally unique and transitively identifies its Collaboration, so no separate CalloutsSet filter is needed. Default is all flow states.
+  """
+  searchInFlowStateFilter: UUID
+  """
   Restrict the search to only the specified Space. Default is all Spaces.
   """
   searchInSpaceFilter: UUID

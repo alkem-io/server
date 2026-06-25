@@ -60,4 +60,47 @@ describe('buildSearchQuery', () => {
 
     expect(query.bool?.filter).toBeUndefined();
   });
+
+  it('should build a "field-absent OR field-equals" filter for flowStateIdFilter', () => {
+    const query = buildSearchQuery('test', {
+      flowStateIdFilter: 'fs-456',
+    });
+
+    const filter = query.bool?.filter as any;
+    expect(filter.bool.must).toHaveLength(1);
+    const innerBool = filter.bool.must[0].bool;
+    expect(innerBool.minimum_should_match).toBe(1);
+    expect(innerBool.should[0].bool.must_not.exists.field).toBe('flowStateID');
+    expect(innerBool.should[1].term.flowStateID).toBe('fs-456');
+  });
+
+  it('should combine space + flowState scope filters together', () => {
+    // flowState UUID alone scopes; spaceID is the only other scope filter
+    const query = buildSearchQuery('test', {
+      spaceIdFilter: 'space-1',
+      flowStateIdFilter: 'fs-456',
+    });
+
+    const filter = query.bool?.filter as any;
+    // both scope clauses present, each as an independent should-block
+    expect(filter.bool.must).toHaveLength(2);
+    const fields = filter.bool.must.map(
+      (clause: any) => clause.bool.should[1].term
+    );
+    expect(fields).toEqual(
+      expect.arrayContaining([
+        { spaceID: 'space-1' },
+        { flowStateID: 'fs-456' },
+      ])
+    );
+  });
+
+  it('should not add a scope filter when space/flowState filters are undefined', () => {
+    const query = buildSearchQuery('test', {
+      spaceIdFilter: undefined,
+      flowStateIdFilter: undefined,
+    });
+
+    expect(query.bool?.filter).toBeUndefined();
+  });
 });
