@@ -147,7 +147,8 @@ describe('SearchService', () => {
         mockResults,
         actorContext,
         searchData.filters,
-        undefined
+        undefined,
+        { foldToCallouts: false }
       );
     });
 
@@ -194,7 +195,26 @@ describe('SearchService', () => {
         expect.anything(),
         actorContext,
         searchData.filters,
-        'space-1'
+        'space-1',
+        { foldToCallouts: false }
+      );
+    });
+
+    it('enables callout folding when a flow-state scope is provided', async () => {
+      const searchData = {
+        terms: ['test'],
+        filters: [{ category: SearchCategory.COLLABORATION_TOOLS, size: 10 }],
+        searchInFlowStateFilter: 'fs-1',
+      } as any;
+
+      await service.search(searchData, actorContext);
+
+      expect(searchResultService.resolveSearchResults).toHaveBeenCalledWith(
+        expect.anything(),
+        actorContext,
+        searchData.filters,
+        undefined,
+        { foldToCallouts: true }
       );
     });
   });
