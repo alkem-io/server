@@ -136,19 +136,26 @@ export class SearchResultService {
       users,
       organizations
     );
-    // callout framings:
-    const framingResults = buildResults(
-      filtersByCategory.framings?.[0],
-      whiteboards.filter(whiteboard => !whiteboard.isContribution),
-      memos.filter(memo => !memo.isContribution)
-    );
-    // contributions include posts, whiteboards, and memos
-    const contributionResults = buildResults(
-      filtersByCategory.contributions?.[0],
-      posts,
-      whiteboards.filter(whiteboard => whiteboard.isContribution),
-      memos.filter(memo => memo.isContribution)
-    );
+    // callout framings. When foldToCallouts widened the search to pull these
+    // indices purely to fold them into callouts, the framings category is not in
+    // the requested filters; in that case this bucket stays empty so the hits
+    // surface only as folded callouts (and aren't dumped here unbounded).
+    const framingResults = filtersByCategory.framings?.[0]
+      ? buildResults(
+          filtersByCategory.framings[0],
+          whiteboards.filter(whiteboard => !whiteboard.isContribution),
+          memos.filter(memo => !memo.isContribution)
+        )
+      : EMPTY_RESULT_SET;
+    // contributions include posts, whiteboards, and memos. Same guard as framings.
+    const contributionResults = filtersByCategory.contributions?.[0]
+      ? buildResults(
+          filtersByCategory.contributions[0],
+          posts,
+          whiteboards.filter(whiteboard => whiteboard.isContribution),
+          memos.filter(memo => memo.isContribution)
+        )
+      : EMPTY_RESULT_SET;
     const spaceResults = buildResults(
       filtersByCategory.spaces?.[0],
       spaces,
@@ -1292,6 +1299,13 @@ export class SearchResultService {
     return [...memberIds, ...adminIds, ...leadIds];
   }
 }
+
+// an empty, well-formed result set for categories that were not requested
+const EMPTY_RESULT_SET: {
+  results: ISearchResult[];
+  cursor?: string;
+  total: number;
+} = { results: [], cursor: undefined, total: -1 };
 
 const buildResults = (
   filter?: SearchFilterInput,

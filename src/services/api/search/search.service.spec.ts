@@ -217,5 +217,23 @@ describe('SearchService', () => {
         { foldToCallouts: true }
       );
     });
+
+    it('enables callout folding when foldCalloutResources opt-in is set', async () => {
+      const searchData = {
+        terms: ['test'],
+        filters: [{ category: SearchCategory.COLLABORATION_TOOLS, size: 10 }],
+        foldCalloutResources: true,
+      } as any;
+
+      await service.search(searchData, actorContext);
+
+      expect(searchResultService.resolveSearchResults).toHaveBeenCalledWith(
+        expect.anything(),
+        actorContext,
+        searchData.filters,
+        undefined,
+        { foldToCallouts: true }
+      );
+    });
   });
 });

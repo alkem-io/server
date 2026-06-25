@@ -36,4 +36,12 @@ export class SearchInput {
     description: 'Return results that satisfy these conditions.',
   })
   filters?: SearchFilterInput[];
+
+  @Field(() => Boolean, {
+    nullable: true,
+    defaultValue: false,
+    description:
+      'When searching Callouts (COLLABORATION_TOOLS / CALLOUT), also match in the Callout framing resources (whiteboard, memo) and its contributions (post, whiteboard, memo). Any match folds up to the containing Callout, deduped, in calloutResults.',
+  })
+  foldCalloutResources?: boolean;
 }
