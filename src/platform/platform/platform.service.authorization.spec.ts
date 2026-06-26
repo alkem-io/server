@@ -1,3 +1,5 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { RoleSetAuthorizationService } from '@domain/access/role-set/role.set.service.authorization';
@@ -20,6 +22,7 @@ describe('PlatformAuthorizationService', () => {
   let service: PlatformAuthorizationService;
   let platformService: Mocked<PlatformService>;
   let messagingAuthorizationService: Mocked<MessagingAuthorizationService>;
+  let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
 
   const mockPlatform: IPlatform = {
     id: 'platform-1',
@@ -50,7 +53,10 @@ describe('PlatformAuthorizationService', () => {
       createCredentialRuleUsingTypesOnly: vi.fn(() => ({
         cascade: false,
       })),
-      createCredentialRule: vi.fn(() => ({
+      createCredentialRule: vi.fn((grantedPrivileges, criterias, name) => ({
+        grantedPrivileges,
+        criterias,
+        name,
         cascade: false,
       })),
     };
@@ -142,6 +148,7 @@ describe('PlatformAuthorizationService', () => {
     );
     platformService = module.get(PlatformService);
     messagingAuthorizationService = module.get(MessagingAuthorizationService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
   });
 
   it('should be defined', () => {
@@ -207,6 +214,38 @@ describe('PlatformAuthorizationService', () => {
       ).toHaveBeenCalled();
       expect(result).toBeDefined();
       expect(Array.isArray(result)).toBe(true);
+    });
+  });
+
+  // 004-web-ai-assistant (FR-027): the ACCESS_VIRTUAL_ASSISTANT credential rule.
+  describe('ACCESS_VIRTUAL_ASSISTANT credential rule', () => {
+    it('grants ACCESS_VIRTUAL_ASSISTANT to GLOBAL_ADMIN OR ASSISTANT_ACCESS, never GLOBAL_REGISTERED', async () => {
+      platformService.getPlatformOrFail.mockResolvedValue(mockPlatform);
+      messagingAuthorizationService.applyAuthorizationPolicy.mockResolvedValue(
+        []
+      );
+
+      await service.applyAuthorizationPolicy();
+
+      const assistantRuleCall =
+        authorizationPolicyService.createCredentialRule.mock.calls.find(call =>
+          (call[0] as AuthorizationPrivilege[]).includes(
+            AuthorizationPrivilege.ACCESS_VIRTUAL_ASSISTANT
+          )
+        );
+
+      expect(assistantRuleCall).toBeDefined();
+      const criteriaTypes = (
+        assistantRuleCall![1] as { type: AuthorizationCredential }[]
+      ).map(c => c.type);
+
+      // Anchored to platform admin + the admin-assignable access credential.
+      expect(criteriaTypes).toContain(AuthorizationCredential.GLOBAL_ADMIN);
+      expect(criteriaTypes).toContain(AuthorizationCredential.ASSISTANT_ACCESS);
+      // Out of the box NOT every registered user.
+      expect(criteriaTypes).not.toContain(
+        AuthorizationCredential.GLOBAL_REGISTERED
+      );
     });
   });
 });

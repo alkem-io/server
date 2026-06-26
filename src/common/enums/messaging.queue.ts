@@ -28,6 +28,11 @@ export enum MessagingQueue {
   SUBSCRIPTION_POLL_OPTIONS_CHANGED = 'alkemio-subscriptions-poll-options-changed',
   //
   WHITEBOARDS = 'alkemio-whiteboards',
+  // Server -> collaboration service: external content-update notifications so an
+  // open Excalidraw room reloads from the DB after a direct (e.g. MCP) write.
+  // Dedicated queue consumed ONLY by the collaboration service — must NOT reuse
+  // WHITEBOARDS (the server itself consumes that one).
+  WHITEBOARD_COLLABORATION = 'alkemio-whiteboard-collaboration',
   FILES = 'alkemio-files',
   IN_APP_NOTIFICATIONS = 'alkemio-in-app-notifications',
   PUSH_NOTIFICATIONS = 'alkemio-push-notifications',

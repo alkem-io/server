@@ -32,6 +32,7 @@ export enum AuthorizationCredential {
   // Roles to allow easier management of users
   BETA_TESTER = 'beta-tester',
   VC_CAMPAIGN = 'vc-campaign',
+  ASSISTANT_ACCESS = 'assistant-access', // grants ACCESS_VIRTUAL_ASSISTANT (004-web-ai-assistant, FR-027)
 }
 
 registerEnumType(AuthorizationCredential, {

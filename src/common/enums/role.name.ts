@@ -15,6 +15,7 @@ export enum RoleName {
   GLOBAL_SUPPORT_MANAGER = 'global-support-manager',
   PLATFORM_BETA_TESTER = 'platform-beta-tester',
   PLATFORM_VC_CAMPAIGN = 'platform-vc-campaign',
+  PLATFORM_ASSISTANT_ACCESS = 'platform-assistant-access',
   REGISTERED = 'registered',
   GUEST = 'guest',
   ANONYMOUS = 'anonymous',
