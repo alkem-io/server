@@ -1,3 +1,4 @@
+import { MimeTypeDocument } from '@common/enums/mime.file.type.document';
 import { ConfigService } from '@nestjs/config';
 import { Test } from '@nestjs/testing';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
@@ -54,11 +55,17 @@ const buildService = (
   }).compile();
 
 // helper: a CollaboraDocument-shaped fixture with a backing document.
-// `extract()` only reads `id` + `document.{id,size}`, so a partial is sufficient.
-const docEntity = (size = 1000, id = 'cd-1') =>
+// `extract()` reads `id` + `document.{id,size,mimeType}` — the mimeType drives
+// the officeparser `fileType` hint (we never sniff the buffer), so it must be
+// present and match the fixture bytes.
+const docEntity = (
+  size = 1000,
+  id = 'cd-1',
+  mimeType: string = MimeTypeDocument.DOCX
+) =>
   ({
     id,
-    document: { id: 'file-1', size },
+    document: { id: 'file-1', size, mimeType },
   }) as any;
 
 describe('CollaboraTextExtractService', () => {
@@ -160,7 +167,9 @@ describe('CollaboraTextExtractService', () => {
       });
       const service = moduleRef.get(CollaboraTextExtractService);
 
-      const { content, skipReason } = await service.extract(docEntity());
+      const { content, skipReason } = await service.extract(
+        docEntity(1000, 'cd-1', MimeTypeDocument.XLSX)
+      );
       if (content !== null) {
         // when the environment parses it (plain Node), the data is correct
         expect(content).toContain('Quarterly Budget');
@@ -177,7 +186,9 @@ describe('CollaboraTextExtractService', () => {
       });
       const service = moduleRef.get(CollaboraTextExtractService);
 
-      const { content } = await service.extract(docEntity());
+      const { content } = await service.extract(
+        docEntity(1000, 'cd-1', MimeTypeDocument.PPTX)
+      );
       expect(content).toContain('quantum widget roadmap');
       // speaker notes — dropped by toText(), recovered via AST walk
       expect(content).toContain('migration cutover plan secret note');
@@ -192,6 +203,26 @@ describe('CollaboraTextExtractService', () => {
       const { content, skipReason } = await service.extract(docEntity());
       expect(content).toBeNull();
       expect(skipReason).toBe(CollaboraExtractSkipReason.NO_TEXT);
+    });
+
+    it('skips NO_TEXT for a mimeType officeparser cannot handle — never fetches', async () => {
+      let fetched = false;
+      const moduleRef = await buildService({
+        getDocumentContent: async () => {
+          fetched = true;
+          return bufferFor('docx');
+        },
+      });
+      const service = moduleRef.get(CollaboraTextExtractService);
+
+      // legacy binary .doc has no officeparser fileType mapping
+      const { content, skipReason } = await service.extract(
+        docEntity(1000, 'cd-1', MimeTypeDocument.DOC)
+      );
+      expect(content).toBeNull();
+      expect(skipReason).toBe(CollaboraExtractSkipReason.NO_TEXT);
+      // unsupported type resolved from mimeType — no pointless byte fetch
+      expect(fetched).toBe(false);
     });
 
     it('skips OVER_CAP before fetch/parse (FR-018) — never calls the file service', async () => {
@@ -215,6 +246,18 @@ describe('CollaboraTextExtractService', () => {
       expect(fetched).toBe(false); // guard ran BEFORE the fetch
     });
 
+    it('returns NO_TEXT (not PARSE_ERROR) when the file-service body is empty', async () => {
+      const moduleRef = await buildService({
+        getDocumentContent: async () => Buffer.alloc(0),
+      });
+      const service = moduleRef.get(CollaboraTextExtractService);
+
+      const { content, skipReason } = await service.extract(docEntity());
+      expect(content).toBeNull();
+      // an empty body is a no-text condition — never handed to the parser
+      expect(skipReason).toBe(CollaboraExtractSkipReason.NO_TEXT);
+    });
+
     it('returns PARSE_ERROR when the bytes are not a valid office file', async () => {
       const moduleRef = await buildService({
         getDocumentContent: async () =>
@@ -227,7 +270,7 @@ describe('CollaboraTextExtractService', () => {
       expect(skipReason).toBe(CollaboraExtractSkipReason.PARSE_ERROR);
     });
 
-    it('returns PARSE_ERROR when the file-service fetch throws', async () => {
+    it('returns FETCH_ERROR when the file-service fetch throws', async () => {
       const moduleRef = await buildService({
         getDocumentContent: async () => {
           throw new Error('storage unavailable');
@@ -237,7 +280,8 @@ describe('CollaboraTextExtractService', () => {
 
       const { content, skipReason } = await service.extract(docEntity());
       expect(content).toBeNull();
-      expect(skipReason).toBe(CollaboraExtractSkipReason.PARSE_ERROR);
+      // a fetch failure is distinct from a parse failure (FETCH_ERROR, not PARSE_ERROR)
+      expect(skipReason).toBe(CollaboraExtractSkipReason.FETCH_ERROR);
     });
 
     it('truncates cleaned text to the field-size limit (FR-016)', async () => {

@@ -1,4 +1,5 @@
 import { LogContext } from '@common/enums';
+import { MimeTypeDocument } from '@common/enums/mime.file.type.document';
 import { ICollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -6,7 +7,33 @@ import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file
 import { apmAgent } from '@src/apm';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { parseOffice } from 'officeparser';
+import { parseOffice, type SupportedFileType } from 'officeparser';
+
+/**
+ * Maps a Document `mimeType` to the officeparser `fileType` hint. We pass this
+ * explicitly so the parser NEVER falls back to buffer magic-byte auto-detection
+ * — that sniffer (the `file-type` lib) fails on some Node versions and on
+ * container formats, surfacing as `parse-error`. We always know the type from
+ * the stored `mimeType`, so detection is unnecessary. Formats officeparser
+ * cannot handle (legacy binary .doc/.xls/.ppt, macro variants, .odg) are absent
+ * → the document is indexed by name only (NO_TEXT), not parsed.
+ */
+const OFFICE_FILE_TYPE_BY_MIME: Partial<Record<string, SupportedFileType>> = {
+  [MimeTypeDocument.DOCX]: 'docx',
+  [MimeTypeDocument.ODT]: 'odt',
+  [MimeTypeDocument.RTF]: 'rtf',
+  [MimeTypeDocument.XLSX]: 'xlsx',
+  [MimeTypeDocument.ODS]: 'ods',
+  [MimeTypeDocument.CSV]: 'csv',
+  [MimeTypeDocument.PDF]: 'pdf',
+  [MimeTypeDocument.PPTX]: 'pptx',
+  [MimeTypeDocument.ODP]: 'odp',
+};
+
+const officeFileTypeForMime = (
+  mime: string | undefined
+): SupportedFileType | undefined =>
+  mime ? OFFICE_FILE_TYPE_BY_MIME[mime] : undefined;
 
 /**
  * Reason a Collabora office document's content was skipped during extraction.
@@ -21,6 +48,8 @@ export enum CollaboraExtractSkipReason {
   NO_TEXT = 'no-text',
   /** Parser threw (corrupt / unsupported file). */
   PARSE_ERROR = 'parse-error',
+  /** Error when fetching the document */
+  FETCH_ERROR = 'fetch-error',
 }
 
 /**
@@ -105,26 +134,52 @@ export class CollaboraTextExtractService {
       );
     }
 
+    // Resolve the officeparser type hint from the known mimeType — never let
+    // the parser sniff the buffer (that auto-detection fails on some Node
+    // versions, surfacing as parse-error). An unmapped type is one officeparser
+    // cannot handle: skip parsing, keep the document findable by name.
+    const fileType = officeFileTypeForMime(document.mimeType);
+    if (!fileType) {
+      return this.skip(
+        CollaboraExtractSkipReason.NO_TEXT,
+        collaboraDocument.id,
+        `unsupported mimeType: ${document.mimeType}`
+      );
+    }
+
     let buffer: Buffer;
     try {
       // FR-017: bytes via the file-service layer, never object storage directly.
       buffer = await this.fileServiceAdapter.getDocumentContent(document.id);
     } catch (error) {
       return this.skip(
-        CollaboraExtractSkipReason.PARSE_ERROR,
+        CollaboraExtractSkipReason.FETCH_ERROR,
         collaboraDocument.id,
         `fetch failed: ${(error as Error)?.message}`
       );
     }
 
+    // An empty body is a no-text condition, NOT a parse failure: the file-service
+    // returned 0 bytes (e.g. a Collabora document whose content has not been
+    // materialized to storage). Guard before parsing — officeparser throws
+    // "invalid zip data" on an empty buffer. The document stays findable by name
+    // (FR-014).
+    if (buffer.length === 0) {
+      return this.skip(
+        CollaboraExtractSkipReason.NO_TEXT,
+        collaboraDocument.id,
+        'empty file content (0 bytes from file-service)'
+      );
+    }
+
     let rawText: string;
     try {
-      rawText = await this.parse(buffer);
+      rawText = await this.parse(buffer, fileType);
     } catch (error) {
       return this.skip(
         CollaboraExtractSkipReason.PARSE_ERROR,
         collaboraDocument.id,
-        (error as Error)?.message
+        `${(error as Error)?.message} (bytes=${buffer.length})`
       );
     }
 
@@ -152,8 +207,15 @@ export class CollaboraTextExtractService {
    * text + titles + speaker notes. Formulas, styling and metadata are excluded
    * (officeparser surfaces only rendered text values, not formulas/styles).
    */
-  private async parse(buffer: Buffer): Promise<string> {
+  private async parse(
+    buffer: Buffer,
+    fileType: SupportedFileType
+  ): Promise<string> {
     const ast = await parseOffice(buffer, {
+      // Explicit type hint from the Document mimeType — bypasses officeparser's
+      // buffer magic-byte auto-detection, which fails on some Node versions and
+      // container formats (the cause of the parse-error skips).
+      fileType,
       // Do NOT enable OCR — image-only docs should yield no text, not spin up
       // Tesseract (slow / can hang). officeparser defaults OCR off; explicit.
       ocr: false,
