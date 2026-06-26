@@ -82,12 +82,17 @@ export class SearchResultService {
    * @param actorContext The agent info of the user making the search request.
    * @param filters Used to filter the end results.
    * @param spaceId The space ID to filter the search results by.
+   * @param options.foldToCallouts When true — set by a flow-state scoped search
+   *   or by the `foldCalloutResources` opt-in — matching posts/whiteboards/memos
+   *   are folded up to their containing callout and merged into `calloutResults`,
+   *   deduped by callout id (FR-017).
    */
   public async resolveSearchResults(
     rawSearchResults: ISearchResult[],
     actorContext: ActorContext,
     filters: SearchFilterInput[],
-    spaceId?: string
+    spaceId?: string,
+    options?: { foldToCallouts?: boolean }
   ): Promise<ISearchResults> {
     const groupedResults = groupBy(rawSearchResults, 'type') as Record<
       Partial<SearchResultType>,
@@ -132,28 +137,40 @@ export class SearchResultService {
       users,
       organizations
     );
-    // callout framings:
-    const framingResults = buildResults(
-      filtersByCategory.framings?.[0],
-      whiteboards.filter(whiteboard => !whiteboard.isContribution),
-      memos.filter(memo => !memo.isContribution)
-    );
-    // contributions include posts, whiteboards, and memos
-    const contributionResults = buildResults(
-      filtersByCategory.contributions?.[0],
-      posts,
-      whiteboards.filter(whiteboard => whiteboard.isContribution),
-      memos.filter(memo => memo.isContribution)
-    );
+    // callout framings. When foldToCallouts widened the search to pull these
+    // indices purely to fold them into callouts, the framings category is not in
+    // the requested filters; in that case this bucket stays empty so the hits
+    // surface only as folded callouts (and aren't dumped here unbounded).
+    const framingResults = filtersByCategory.framings?.[0]
+      ? buildResults(
+          filtersByCategory.framings[0],
+          whiteboards.filter(whiteboard => !whiteboard.isContribution),
+          memos.filter(memo => !memo.isContribution)
+        )
+      : emptyResultSet();
+    // contributions include posts, whiteboards, and memos. Same guard as framings.
+    const contributionResults = filtersByCategory.contributions?.[0]
+      ? buildResults(
+          filtersByCategory.contributions[0],
+          posts,
+          whiteboards.filter(whiteboard => whiteboard.isContribution),
+          memos.filter(memo => memo.isContribution)
+        )
+      : emptyResultSet();
     const spaceResults = buildResults(
       filtersByCategory.spaces?.[0],
       spaces,
       subspaces
     );
-    const calloutResults = buildResults(
-      filtersByCategory['collaboration-tools']?.[0],
-      callouts
-    );
+    const calloutResults = options?.foldToCallouts
+      ? buildFoldedCalloutResults(
+          filtersByCategory['collaboration-tools']?.[0],
+          callouts,
+          posts,
+          whiteboards,
+          memos
+        )
+      : buildResults(filtersByCategory['collaboration-tools']?.[0], callouts);
 
     return {
       actorResults,
@@ -567,6 +584,8 @@ export class SearchResultService {
       select: {
         id: true,
         nameID: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
         framing: {
           id: true,
           type: true,
@@ -748,6 +767,8 @@ export class SearchResultService {
       },
       select: {
         id: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
         settings: {
           visibility: true,
         },
@@ -905,6 +926,8 @@ export class SearchResultService {
       },
       select: {
         id: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
         settings: {
           visibility: true,
         },
@@ -1094,6 +1117,8 @@ export class SearchResultService {
       },
       select: {
         id: true,
+        // createdDate is the relevance tiebreak when folding results (FR-019)
+        createdDate: true,
         settings: {
           visibility: true,
         },
@@ -1276,6 +1301,15 @@ export class SearchResultService {
   }
 }
 
+// a fresh, well-formed empty result set for categories that were not requested.
+// Returns a new object (and new results array) each call so buckets stay
+// independent and no downstream mutation can leak across them.
+const emptyResultSet = (): {
+  results: ISearchResult[];
+  cursor?: string;
+  total: number;
+} => ({ results: [], cursor: undefined, total: -1 });
+
 const buildResults = (
   filter?: SearchFilterInput,
   ...results: ISearchResult[][] | ISearchResult[]
@@ -1297,6 +1331,98 @@ const buildResults = (
   const rankedAndLimited = resultsRanked.slice(0, filter?.size);
 
   const cursor = calculateSearchCursor(rankedAndLimited);
+
+  return { results: rankedAndLimited, cursor, total };
+};
+
+// search results that carry a containing callout (and its space): the direct
+// callout hits plus the post/whiteboard/memo hits that fold up to a callout.
+type FoldableSearchResult = ISearchResult & {
+  callout: ISearchResultCallout['callout'];
+  space: ISearchResultCallout['space'];
+};
+
+/**
+ * Folds matching callouts and the containing callouts of matching
+ * posts/whiteboards/memos into a single callout-level list, deduped by callout
+ * id (FR-017). Each callout appears at most once regardless of how many of its
+ * children matched; the representative keeps the highest score among its
+ * matches. Ordered by relevance (score desc), then callout `createdDate` desc as
+ * the tiebreak (FR-019). The returned results carry the callout id as their
+ * `result.id` so the keyset cursor (`score::calloutId`) pages correctly.
+ */
+const buildFoldedCalloutResults = (
+  filter: SearchFilterInput | undefined,
+  callouts: ISearchResultCallout[],
+  posts: ISearchResultPost[],
+  whiteboards: ISearchResultWhiteboard[],
+  memos: ISearchResultMemo[]
+): { results: ISearchResult[]; cursor?: string; total: number } => {
+  // todo: total - https://github.com/alkem-io/server/issues/3700
+  const total = -1;
+
+  const foldable: FoldableSearchResult[] = [
+    ...callouts,
+    ...posts,
+    ...whiteboards,
+    ...memos,
+  ];
+
+  if (foldable.length === 0) {
+    return { results: [], cursor: undefined, total };
+  }
+
+  // dedupe by callout id, keeping the highest-scored representative
+  const byCalloutId = new Map<string, ISearchResultCallout>();
+  // remember the ES sort id (`id` field) of the document that actually matched
+  // for each callout's representative. Elasticsearch paginates the msearch on
+  // `[_score desc, id desc]` using each document's own id, so the keyset cursor
+  // MUST resume on that same id — NOT the callout id. When a child
+  // (post/whiteboard/memo) is the match, its id differs from the callout id;
+  // using the callout id makes `search_after` fail to exclude the child, which
+  // re-returns the same hit forever (endless client scroll).
+  const cursorIdByCalloutId = new Map<string, string>();
+
+  for (const hit of foldable) {
+    const callout = hit.callout;
+    if (!callout?.id) {
+      continue;
+    }
+    const existing = byCalloutId.get(callout.id);
+    if (existing && existing.score >= hit.score) {
+      continue;
+    }
+    // re-key the result to the containing callout for the response/dedupe...
+    byCalloutId.set(callout.id, {
+      id: callout.id,
+      score: hit.score,
+      terms: hit.terms,
+      type: SearchResultType.CALLOUT,
+      result: { id: callout.id },
+      callout,
+      space: hit.space,
+    });
+    // ...but keep the matched document's own id for the keyset cursor.
+    cursorIdByCalloutId.set(callout.id, hit.result.id);
+  }
+
+  const foldedResults = Array.from(byCalloutId.values());
+
+  // relevance first, then recency (newest createdDate) as the tiebreak (FR-019)
+  const resultsRanked = orderBy(
+    foldedResults,
+    ['score', callout => callout.callout?.createdDate?.getTime?.() ?? 0],
+    ['desc', 'desc']
+  );
+
+  const rankedAndLimited = resultsRanked.slice(0, filter?.size);
+
+  // build the cursor from the score + the matched document's ES sort id so
+  // `search_after` resumes at a real Elasticsearch sort position.
+  const last = rankedAndLimited.at(-1);
+  const cursor = last
+    ? `${last.score}::${cursorIdByCalloutId.get(last.callout.id)}`
+    : undefined;
 
   return { results: rankedAndLimited, cursor, total };
 };
