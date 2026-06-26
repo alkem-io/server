@@ -58,7 +58,7 @@ No new setup — the feature reuses existing surfaces (`BootstrapService`, `McpA
 
 ## Deferred (cross-repo follow-up — not in PR #6203)
 
-- [ ] **T011** [P] Deploy-runbook note in the **workspace** repo (agents-hq)
+- [X] **T011** [P] Deploy-runbook note in the **workspace** repo (agents-hq, commit 6e86462)
   `specs/004-web-ai-assistant/contracts/config-and-secrets.md`: "set a real `ASSISTANT_MCP_API_KEY`
   per cluster; the server bootstraps the matching `mcp_api_key` row." Maps to **issue #1937
   acceptance criterion #4** (the runbook item). Tracked separately because it lives in another repo.
