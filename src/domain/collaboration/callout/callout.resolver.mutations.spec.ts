@@ -12,6 +12,7 @@ import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { Readable } from 'stream';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { CalloutResolverMutations } from './callout.resolver.mutations';
@@ -481,7 +482,7 @@ describe('CalloutResolverMutations', () => {
         actorContext,
         { calloutID: 'callout-1' } as any,
         {
-          createReadStream: () => ({}) as any,
+          createReadStream: () => Readable.from([Buffer.from('test')]),
           filename: 'Imported.docx',
           mimetype: 'application/octet-stream',
         } as any
@@ -559,7 +560,7 @@ describe('CalloutResolverMutations', () => {
         actorContext,
         { calloutID: 'callout-1' } as any,
         {
-          createReadStream: () => ({}) as any,
+          createReadStream: () => Readable.from([Buffer.from('test')]),
           filename: 'Imported.docx',
           mimetype: 'application/octet-stream',
         } as any
