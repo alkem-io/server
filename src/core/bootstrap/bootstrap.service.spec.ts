@@ -1,4 +1,5 @@
-import { AuthorizationCredential } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { VirtualAssistantService } from '@domain/community/virtual-assistant/virtual.assistant.service';
 import { Account } from '@domain/space/account/account.entity';
@@ -328,6 +329,9 @@ describe('BootstrapService', () => {
       keyMock = module.get(McpApiKeyService);
       vaMock = module.get(VirtualAssistantService);
       keyMock.ensureActorKeyFromPlaintext = vi.fn().mockResolvedValue({});
+      vaMock.getSingletonOrFail = vi
+        .fn()
+        .mockResolvedValue({ id: 'va-default' });
     });
     afterEach(() => {
       if (saved === undefined) delete process.env[ENV_KEY];
@@ -336,22 +340,35 @@ describe('BootstrapService', () => {
 
     const ensure = () => (service as any).ensureAssistantMcpApiKey();
 
-    it('skips (no key write) when ASSISTANT_MCP_API_KEY is unset (FR-006)', async () => {
+    it('skips before resolving the actor when ASSISTANT_MCP_API_KEY is unset (FR-006)', async () => {
       delete process.env[ENV_KEY];
+
+      await ensure();
+
+      expect(vaMock.getSingletonOrFail).not.toHaveBeenCalled();
+      expect(keyMock.ensureActorKeyFromPlaintext).not.toHaveBeenCalled();
+    });
+
+    it('skips on the expected not-found (actor absent) without writing a key (FR-006)', async () => {
+      process.env[ENV_KEY] = 'mcp_test';
+      vaMock.getSingletonOrFail = vi
+        .fn()
+        .mockRejectedValue(
+          new EntityNotFoundException('absent', LogContext.COMMUNITY)
+        );
 
       await ensure();
 
       expect(keyMock.ensureActorKeyFromPlaintext).not.toHaveBeenCalled();
     });
 
-    it('skips when the virtual-assistant actor is absent (FR-006)', async () => {
+    it('rethrows an unexpected (transient/DB) error instead of masking it as "actor absent"', async () => {
       process.env[ENV_KEY] = 'mcp_test';
       vaMock.getSingletonOrFail = vi
         .fn()
-        .mockRejectedValue(new Error('not found'));
+        .mockRejectedValue(new Error('db connection lost'));
 
-      await ensure();
-
+      await expect(ensure()).rejects.toThrow('db connection lost');
       expect(keyMock.ensureActorKeyFromPlaintext).not.toHaveBeenCalled();
     });
 

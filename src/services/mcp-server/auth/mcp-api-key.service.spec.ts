@@ -75,6 +75,29 @@ describe('McpApiKeyService.ensureActorKeyFromPlaintext (issue #1937)', () => {
     expect(repo.save.mock.calls[0][0].isActive).toBe(true);
   });
 
+  it('clears userId when re-asserting on a user-bound matching-hash row (FR-002 XOR)', async () => {
+    const { service, repo } = build();
+    // A pre-existing row with the SAME hash but bound to a user (not the actor) —
+    // re-asserting must move it to actor-binding AND clear userId, never leave both set.
+    const existing = {
+      id: 'k1',
+      userId: 'some-user',
+      actorId: ACTOR,
+      keyHash: sha256('mcp_secret'),
+      isActive: true,
+    };
+    repo.find.mockResolvedValue([]);
+    repo.findOne.mockResolvedValue(existing);
+
+    await service.ensureActorKeyFromPlaintext(ACTOR, 'mcp_secret', SCOPES);
+
+    expect(repo.save).toHaveBeenCalledTimes(1);
+    const saved = repo.save.mock.calls[0][0];
+    expect(saved.actorId).toBe(ACTOR);
+    expect(saved.userId == null).toBe(true); // null/undefined — XOR holds
+    expect(saved.isActive).toBe(true);
+  });
+
   it('rotation: deactivates a stale active key and creates the new one', async () => {
     const { service, repo } = build();
     const stale = {

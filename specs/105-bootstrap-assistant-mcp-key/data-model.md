@@ -43,7 +43,7 @@ bootstrap **only** to compute `SHA-256` — it is never persisted in plaintext.
 
 ## State transitions (the bootstrap ensure)
 
-```
+```text
 ASSISTANT_MCP_API_KEY (env)
    │  h = SHA-256(plaintext)
    ▼
@@ -52,6 +52,6 @@ ASSISTANT_MCP_API_KEY (env)
    ▼
 findOne(keyHash = h):
    ├─ found, active, actor-bound   → no-op
-   ├─ found, inactive/mis-bound    → isActive = true, actorId = virtual-assistant
+   ├─ found, inactive/mis-bound    → isActive = true, actorId = virtual-assistant, userId = null
    └─ not found                    → INSERT { keyHash: h, actorId, scopes:[{operations:[read,tools]}], isActive }
 ```

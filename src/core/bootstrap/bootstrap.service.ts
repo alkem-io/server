@@ -15,6 +15,7 @@ import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.con
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { EntityNotFoundException } from '@common/exceptions';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
@@ -28,6 +29,7 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { IVirtualAssistant } from '@domain/community/virtual-assistant/virtual.assistant.interface';
 import { VirtualAssistantService } from '@domain/community/virtual-assistant/virtual.assistant.service';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
@@ -180,15 +182,21 @@ export class BootstrapService {
       return;
     }
 
-    const virtualAssistant = await this.virtualAssistantService
-      .getSingletonOrFail()
-      .catch(() => undefined);
-    if (!virtualAssistant) {
-      this.logger.warn?.(
-        'virtual-assistant actor not found — skipping MCP key bootstrap (the actor is created by migration; ensure migrations have run)',
-        LogContext.BOOTSTRAP
-      );
-      return;
+    let virtualAssistant: IVirtualAssistant;
+    try {
+      virtualAssistant =
+        await this.virtualAssistantService.getSingletonOrFail();
+    } catch (error) {
+      if (error instanceof EntityNotFoundException) {
+        this.logger.warn?.(
+          'virtual-assistant actor not found — skipping MCP key bootstrap (the actor is created by migration; ensure migrations have run)',
+          LogContext.BOOTSTRAP
+        );
+        return;
+      }
+      // A transient/DB error must NOT masquerade as "actor absent" and silently
+      // disable delegated MCP — surface it to bootstrap's error handler.
+      throw error;
     }
 
     await this.mcpApiKeyService.ensureActorKeyFromPlaintext(

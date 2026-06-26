@@ -122,10 +122,17 @@ export class McpApiKeyService {
       where: { keyHash },
     });
     if (existing) {
-      // Idempotent: re-assert active + actor-bound; otherwise no-op.
-      if (!existing.isActive || existing.actorId !== actorId) {
+      // Idempotent: re-assert it is active and ACTOR-bound — and clear any
+      // `userId` so the userId/actorId XOR (trust-anchor invariant) holds even if
+      // the matching-hash row was previously a user-bound key. Otherwise no-op.
+      if (
+        !existing.isActive ||
+        existing.actorId !== actorId ||
+        existing.userId
+      ) {
         existing.isActive = true;
         existing.actorId = actorId;
+        existing.userId = null as unknown as undefined; // NULL the column (TypeORM skips `undefined`)
         return this.mcpApiKeyRepository.save(existing);
       }
       return existing;
