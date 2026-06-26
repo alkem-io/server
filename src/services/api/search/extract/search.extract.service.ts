@@ -69,7 +69,7 @@ const getIndexStore = (
       category: SearchCategory.FRAMINGS,
     },
     {
-      name: `${indexPattern}collaboradocuments`,
+      name: `${indexPattern}office-document`,
       type: SearchResultType.COLLABORA_DOCUMENT,
       category: SearchCategory.FRAMINGS,
     },
@@ -91,7 +91,7 @@ const getIndexStore = (
       category: SearchCategory.CONTRIBUTIONS,
     },
     {
-      name: `${indexPattern}collaboradocuments`,
+      name: `${indexPattern}office-document`,
       type: SearchResultType.COLLABORA_DOCUMENT,
       category: SearchCategory.CONTRIBUTIONS,
     },
@@ -124,7 +124,7 @@ const getPublicIndexStore = (
       category: SearchCategory.FRAMINGS,
     },
     {
-      name: `${indexPattern}collaboradocuments`,
+      name: `${indexPattern}office-document`,
       type: SearchResultType.COLLABORA_DOCUMENT,
       category: SearchCategory.FRAMINGS,
     },
@@ -146,7 +146,7 @@ const getPublicIndexStore = (
       category: SearchCategory.CONTRIBUTIONS,
     },
     {
-      name: `${indexPattern}collaboradocuments`,
+      name: `${indexPattern}office-document`,
       type: SearchResultType.COLLABORA_DOCUMENT,
       category: SearchCategory.CONTRIBUTIONS,
     },

@@ -160,7 +160,7 @@ describe('SearchIngestService', () => {
 
       expect(result.acknowledged).toBe(true);
       // 9 aliases: spaces, subspaces, organizations, users, posts, callouts,
-      // whiteboards, memos, collaboradocuments
+      // whiteboards, memos, office-document
       expect(mockElasticClient.indices.create).toHaveBeenCalledTimes(9);
     });
 

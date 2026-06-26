@@ -36,7 +36,7 @@ export type CollaboraExtractResult = {
 
 /**
  * Maximum length (characters) of the cleaned `content` indexed into the
- * `collaboradocuments` ES `text` field (FR-016). Leading text is kept, overflow
+ * `office-document` ES `text` field (FR-016). Leading text is kept, overflow
  * is dropped silently — the document remains partially searchable. Sits well
  * within Elasticsearch's default `index.highlight.max_analyzed_offset`
  * (1,000,000) and analysis bounds.

@@ -108,8 +108,8 @@ const getIndexAliases = (indexPattern: string) => [
   `${indexPattern}whiteboards`,
   `${indexPattern}memos`,
   // MUST match the reporting-orchestration template index_patterns
-  // `alkemio-data-*collaboradocuments-*` (workspace#009-office-doc-search).
-  `${indexPattern}collaboradocuments`,
+  // `alkemio-data-*office-document-*` (workspace#009-office-doc-search).
+  `${indexPattern}office-document`,
 ];
 
 @Injectable()
@@ -495,22 +495,22 @@ export class SearchIngestService {
         index: `${this.indexPattern}posts-${suffix}`,
         fetchFn: this.fetchPosts.bind(this),
         countFn: this.fetchPostsCount.bind(this),
-        batchSize: 30,
+        batchSize: 50,
       },
       {
         index: `${this.indexPattern}whiteboards-${suffix}`,
         fetchFn: this.fetchWhiteboard.bind(this),
         countFn: this.fetchWhiteboardCount.bind(this),
-        batchSize: 30,
+        batchSize: 50,
       },
       {
         index: `${this.indexPattern}memos-${suffix}`,
         fetchFn: this.fetchMemo.bind(this),
         countFn: this.fetchMemoCount.bind(this),
-        batchSize: 30,
+        batchSize: 50,
       },
       {
-        index: `${this.indexPattern}collaboradocuments-${suffix}`,
+        index: `${this.indexPattern}office-document-${suffix}`,
         // bind the active Task so per-document extraction skips/failures are
         // recorded as durable task results (FR-019).
         fetchFn: (start: number, limit: number) =>
@@ -1585,7 +1585,7 @@ export class SearchIngestService {
     try {
       await this.taskService.updateTaskResults(
         task.id,
-        `[collaboradocuments] - extraction skipped (${reason}) for document ${collaboraDocumentId}`,
+        `[office-document] - extraction skipped (${reason}) for document ${collaboraDocumentId}`,
         false
       );
     } catch (e: any) {
