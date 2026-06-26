@@ -16,16 +16,29 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * notification / activity / publish adapters, so it emits no notifications,
  * activity-log entries, or emails (FR-028).
  *
+ * ⚠️ REQUIRED POST-STEP (rollout runbook): the inserted callouts carry EMPTY
+ * authorization policies (credentialRules '[]'). They are therefore unreadable —
+ * and invisible in the Community tab — until an authorization reset recomputes
+ * them. After running this migration you MUST run the platform authorization
+ * reset (GraphQL `mutation { authorizationPolicyResetAll }` as a global admin,
+ * or the equivalent per-space reset) so the engine grants the standard
+ * space/collaboration read rules. Without this step the backfill appears to have
+ * done nothing. Sequence: migrate → authorizationPolicyResetAll → (then the
+ * client widget-removal release, FR-026).
+ *
  * Per target space it inserts the minimal valid graph the running app resolves
  * without throwing:
- *   authorization_policy x6 (callout, callout_framing, profile, storage_bucket,
- *     classification, tagset) — empty rule arrays; the authorization-reset cycle
- *     repopulates them on the next pass.
+ *   authorization_policy x7 (callout, callout_framing, profile, storage_bucket,
+ *     classification, flow-state tagset, default tagset) — empty rule arrays;
+ *     the authorization reset (post-step above) repopulates them.
  *   storage_bucket (REQUIRED: CalloutService.getStorageBucket throws if absent),
  *     bound to the space's storage aggregator.
- *   location, profile (type 'callout-framing').
+ *   location, profile (type 'callout-framing') + its DEFAULT freeform tagset
+ *     (REQUIRED: ProfileResolverFields.tagset throws ENTITY_NOT_FOUND without it).
  *   callout_framing (type 'contributors').
- *   classification + flow-state tagset (tags 'Community', type 'select-one').
+ *   classification + flow-state tagset (tags 'Community', type 'select-one'),
+ *     linked to the calloutsSet's flow-state tagsetTemplate (REQUIRED:
+ *     classification.flowState.allowedValues throws without it).
  *   callout_contribution_defaults (kept for the update/delete paths).
  *   callout (PUBLISHED; settings mirror DefaultCalloutSettings + the default
  *     contributors block: all three types, defaultContributorType USER,
@@ -33,11 +46,14 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * No comments Room is created: the framing is a passive display, every
  * read/auth path tolerates a null commentsId, and a SQL-inserted room would
  * have no Matrix backing.
+ *
+ * Validate with `.scripts/migrations/run_validate_migration.sh` against a DB copy
+ * before release.
  */
-export class BackfillContributorsCalloutL0Community1782400000000
+export class BackfillContributorsCalloutL0Community1782467322859
   implements MigrationInterface
 {
-  name = 'BackfillContributorsCalloutL0Community1782400000000';
+  name = 'BackfillContributorsCalloutL0Community1782467322859';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
@@ -57,6 +73,9 @@ export class BackfillContributorsCalloutL0Community1782400000000
         new_classification_auth_id uuid;
         new_tagset_id uuid;
         new_tagset_auth_id uuid;
+        new_default_tagset_id uuid;
+        new_default_tagset_auth_id uuid;
+        flow_state_template_id uuid;
         new_contrib_defaults_id uuid;
         new_name_id varchar(36);
         next_sort_order int;
@@ -116,6 +135,8 @@ export class BackfillContributorsCalloutL0Community1782400000000
           new_classification_auth_id := gen_random_uuid();
           new_tagset_id           := gen_random_uuid();
           new_tagset_auth_id      := gen_random_uuid();
+          new_default_tagset_id      := gen_random_uuid();
+          new_default_tagset_auth_id := gen_random_uuid();
           new_contrib_defaults_id := gen_random_uuid();
           new_name_id := 'contributors-' || left(replace(gen_random_uuid()::text, '-', ''), 8);
 
@@ -124,13 +145,33 @@ export class BackfillContributorsCalloutL0Community1782400000000
             FROM callout co
             WHERE co."calloutsSetId" = rec.callouts_set_id;
 
+          -- The Community-tab flow-state tagset MUST reference the space's
+          -- flow-state tagsetTemplate (one per calloutsSet) so the client can
+          -- resolve classification.flowState.allowedValues. Reuse the template
+          -- already used by this calloutsSet's other callouts.
+          SELECT ts."tagsetTemplateId" INTO flow_state_template_id
+            FROM callout co2
+            JOIN callout_framing cf2 ON cf2.id = co2."framingId"
+            JOIN classification cl2 ON cl2.id = co2."classificationId"
+            JOIN tagset ts ON ts."classificationId" = cl2.id
+            WHERE co2."calloutsSetId" = rec.callouts_set_id
+              AND ts.name = 'flow-state'
+              AND ts."tagsetTemplateId" IS NOT NULL
+            LIMIT 1;
+          -- Without the flow-state template we cannot place a tab; skip
+          -- (does not happen for L0 spaces, which always have flow-tab callouts).
+          IF flow_state_template_id IS NULL THEN
+            CONTINUE;
+          END IF;
+
           INSERT INTO authorization_policy (id,"createdDate","updatedDate",version,"credentialRules","privilegeRules",type) VALUES
             (new_callout_auth_id,        NOW(),NOW(),1,'[]'::jsonb,'[]'::jsonb,'callout'),
             (new_framing_auth_id,        NOW(),NOW(),1,'[]'::jsonb,'[]'::jsonb,'callout-framing'),
             (new_profile_auth_id,        NOW(),NOW(),1,'[]'::jsonb,'[]'::jsonb,'profile'),
             (new_bucket_auth_id,         NOW(),NOW(),1,'[]'::jsonb,'[]'::jsonb,'storage-bucket'),
             (new_classification_auth_id, NOW(),NOW(),1,'[]'::jsonb,'[]'::jsonb,'classification'),
-            (new_tagset_auth_id,         NOW(),NOW(),1,'[]'::jsonb,'[]'::jsonb,'tagset');
+            (new_tagset_auth_id,         NOW(),NOW(),1,'[]'::jsonb,'[]'::jsonb,'tagset'),
+            (new_default_tagset_auth_id, NOW(),NOW(),1,'[]'::jsonb,'[]'::jsonb,'tagset');
 
           INSERT INTO storage_bucket (id,"createdDate","updatedDate",version,"allowedMimeTypes","maxFileSize","authorizationId","storageAggregatorId")
           VALUES (new_bucket_id,NOW(),NOW(),1,default_mime_types,default_max_file_size,new_bucket_auth_id,rec.storage_aggregator_id);
@@ -144,11 +185,18 @@ export class BackfillContributorsCalloutL0Community1782400000000
           INSERT INTO callout_framing (id,"createdDate","updatedDate",version,type,"authorizationId","profileId")
           VALUES (new_framing_id,NOW(),NOW(),1,'contributors',new_framing_auth_id,new_profile_id);
 
+          -- DEFAULT freeform tagset on the framing profile. Every callout profile
+          -- has one; ProfileResolverFields.tagset throws ENTITY_NOT_FOUND without it.
+          INSERT INTO tagset (id,"createdDate","updatedDate",version,name,type,tags,"authorizationId","profileId")
+          VALUES (new_default_tagset_id,NOW(),NOW(),1,'default','freeform','',new_default_tagset_auth_id,new_profile_id);
+
           INSERT INTO classification (id,"createdDate","updatedDate",version,"authorizationId")
           VALUES (new_classification_id,NOW(),NOW(),1,new_classification_auth_id);
 
-          INSERT INTO tagset (id,"createdDate","updatedDate",version,name,type,tags,"authorizationId","classificationId")
-          VALUES (new_tagset_id,NOW(),NOW(),1,'flow-state','select-one','Community',new_tagset_auth_id,new_classification_id);
+          -- Flow-state classification tagset, linked to the calloutsSet's
+          -- flow-state tagsetTemplate so classification.flowState.allowedValues resolves.
+          INSERT INTO tagset (id,"createdDate","updatedDate",version,name,type,tags,"authorizationId","classificationId","tagsetTemplateId")
+          VALUES (new_tagset_id,NOW(),NOW(),1,'flow-state','select-one','Community',new_tagset_auth_id,new_classification_id,flow_state_template_id);
 
           INSERT INTO callout_contribution_defaults (id,"createdDate","updatedDate",version)
           VALUES (new_contrib_defaults_id,NOW(),NOW(),1);
@@ -168,8 +216,9 @@ export class BackfillContributorsCalloutL0Community1782400000000
     // Targeted reversal: remove only the PUBLISHED CONTRIBUTORS callouts in the
     // Community tab of L0 spaces that still carry the exact default shape this
     // migration produced (generated nameID, published, no comments room).
-    // Children are deleted explicitly because each callout->child FK is
-    // ON DELETE SET NULL; deleting the classification cascades its tagset.
+    // Children are deleted explicitly; deleting the classification cascades its
+    // flow-state tagset, and the profile's DEFAULT tagset is removed before the
+    // profile (tagset.profileId FK).
     await queryRunner.query(`
       DO $$
       DECLARE
@@ -189,6 +238,8 @@ export class BackfillContributorsCalloutL0Community1782400000000
             cl.id AS classification_id,
             cl."authorizationId" AS classification_auth_id,
             t."authorizationId" AS tagset_auth_id,
+            dt.id AS default_tagset_id,
+            dt."authorizationId" AS default_tagset_auth_id,
             cd.id AS contrib_defaults_id
           FROM space s
           JOIN collaboration c ON c.id = s."collaborationId"
@@ -199,6 +250,7 @@ export class BackfillContributorsCalloutL0Community1782400000000
           LEFT JOIN storage_bucket sb ON sb.id = p."storageBucketId"
           JOIN classification cl ON cl.id = co."classificationId"
           JOIN tagset t ON t."classificationId" = cl.id
+          LEFT JOIN tagset dt ON dt."profileId" = p.id AND dt.name = 'default'
           LEFT JOIN callout_contribution_defaults cd ON cd.id = co."contributionDefaultsId"
           WHERE s.level = 0
             AND cf.type = 'contributors'
@@ -210,14 +262,17 @@ export class BackfillContributorsCalloutL0Community1782400000000
         LOOP
           DELETE FROM callout WHERE id = rec.callout_id;
           DELETE FROM callout_framing WHERE id = rec.framing_id;
+          -- Delete the profile's DEFAULT tagset before the profile (tagset.profileId FK).
+          IF rec.default_tagset_id IS NOT NULL THEN DELETE FROM tagset WHERE id = rec.default_tagset_id; END IF;
           DELETE FROM profile WHERE id = rec.profile_id;
           IF rec.bucket_id IS NOT NULL THEN DELETE FROM storage_bucket WHERE id = rec.bucket_id; END IF;
           IF rec.location_id IS NOT NULL THEN DELETE FROM location WHERE id = rec.location_id; END IF;
-          DELETE FROM classification WHERE id = rec.classification_id; -- cascades its tagset
+          DELETE FROM classification WHERE id = rec.classification_id; -- cascades its flow-state tagset
           IF rec.contrib_defaults_id IS NOT NULL THEN DELETE FROM callout_contribution_defaults WHERE id = rec.contrib_defaults_id; END IF;
           DELETE FROM authorization_policy WHERE id IN (
             rec.callout_auth_id, rec.framing_auth_id, rec.profile_auth_id,
-            rec.bucket_auth_id, rec.classification_auth_id, rec.tagset_auth_id
+            rec.bucket_auth_id, rec.classification_auth_id, rec.tagset_auth_id,
+            rec.default_tagset_auth_id
           );
         END LOOP;
       END $$;
