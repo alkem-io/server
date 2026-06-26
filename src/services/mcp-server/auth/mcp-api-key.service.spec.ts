@@ -32,6 +32,9 @@ describe('McpApiKeyService.ensureActorKeyFromPlaintext (issue #1937)', () => {
     expect(saved.isActive).toBe(true);
     expect(saved.keyHash).toBe(sha256('mcp_secret')); // stores the HASH, not the secret
     expect(saved.keyHash).toHaveLength(64);
+    // FR-003: the plaintext is never persisted (no plaintext field, hash ≠ secret)
+    expect(saved.keyHash).not.toBe('mcp_secret');
+    expect((saved as any).apiKey).toBeUndefined();
   });
 
   it('is idempotent — no write when an active, correctly-bound key already exists', async () => {

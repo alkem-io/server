@@ -19,6 +19,30 @@ no plaintext is written back, no manifest/secret is added.
   (`src/domain/community/virtual-assistant`), the shared `ASSISTANT_MCP_API_KEY` secret.
 - **No new**: table/migration, GraphQL type, queue, env var, or k8s manifest change.
 
+## Constitution Check
+
+- **Emit events / no direct repo writes from resolvers**: N/A — this is a startup bootstrap step, not
+  a resolver; it legitimately uses the `mcp_api_key` repository via `McpApiKeyService` (the same
+  service the MCP host uses).
+- **Schema contract**: no GraphQL change → no `schema.graphql` regeneration, no breaking-change gate.
+- **Secrets governance**: no committed production secret; the server only reads the
+  externally-provided `ASSISTANT_MCP_API_KEY` and stores its hash. ✅ passes.
+
+## Project Structure (this feature)
+
+```
+specs/105-bootstrap-assistant-mcp-key/
+├── spec.md          # what & why (user stories, FRs, success criteria)
+├── plan.md          # this file — technical design
+├── research.md      # Phase 0 — decisions & alternatives
+├── data-model.md    # Phase 1 — entities (no schema change)
+├── contracts/       # Phase 1 — the shared-secret ↔ ensured-key agreement
+│   ├── README.md
+│   └── secret-and-key-contract.md
+├── quickstart.md    # Phase 1 — validation scenarios (A fresh / B idempotent / C rotation / D fail-soft)
+└── tasks.md         # Phase 2 — dependency-ordered tasks (retrofit: [X] complete)
+```
+
 ## Wiring (the load-bearing fact)
 
 The server deployment already does `envFrom: secretRef: alkemio-secrets`, and `ASSISTANT_MCP_API_KEY`
@@ -76,4 +100,4 @@ sends Authorization: Bearer <plaintext>  ───────────▶  B
 
 Deploy-runbook line in the workspace `specs/004-web-ai-assistant/contracts/config-and-secrets.md`:
 "set a real `ASSISTANT_MCP_API_KEY` per cluster; the server bootstraps the matching `mcp_api_key` row."
-(Spec acceptance item AC-4 / SC docs.)
+(Maps to **issue #1937 acceptance criterion #4** — the runbook item; tracked as tasks.md T011.)
