@@ -332,13 +332,6 @@ enum ContributorCollectionView {
   MAP
 }
 
-"""The type of a contributor in a contributor-collection callout framing."""
-enum ContributorType {
-  ORGANIZATION
-  USER
-  VIRTUAL_CONTRIBUTOR
-}
-
 """
 The type of conversation to create. Maps to room type: DIRECT → DM room, GROUP → group room.
 """
@@ -1871,11 +1864,11 @@ type CalloutContributorsSettings {
   """
   The contributor types included in this contributor-collection callout. At least one.
   """
-  contributorTypes: [ContributorType!]!
+  contributorTypes: [ActorType!]!
   """
   The contributor type shown first (the segmented switch opens on it). One of contributorTypes.
   """
-  defaultContributorType: ContributorType!
+  defaultContributorType: ActorType!
   """The default display mode (list or map)."""
   defaultView: ContributorCollectionView!
 }
@@ -1894,7 +1887,7 @@ type CalloutFraming {
   """
   The full authorized set of contributors of the given type for a CONTRIBUTORS framing, ordered leads/admins first then alphabetically. No server-side pagination or search: the client paginates (list) and name-searches client-side over this set. Empty for non-CONTRIBUTORS framings or deselected types.
   """
-  contributors(type: ContributorType!): [ContributorCollectionItem!]!
+  contributors(type: ActorType!): [ContributorCollectionItem!]!
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
@@ -2274,7 +2267,7 @@ type ContributorCollectionItem {
   location: ContributorLocation
   """The role label for this contributor (lead/admin/member)."""
   roleLabel: String
-  type: ContributorType!
+  type: ActorType!
   url: String
 }
 
@@ -2420,11 +2413,11 @@ type CreateCalloutContributionDefaultsData {
 
 type CreateCalloutContributorsSettingsData {
   """The contributor types to include. At least one type is required."""
-  contributorTypes: [ContributorType!]!
+  contributorTypes: [ActorType!]!
   """
   The default contributor type (one of contributorTypes). Defaults to the first selected type.
   """
-  defaultContributorType: ContributorType
+  defaultContributorType: ActorType
   """
   The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
   """
@@ -7400,11 +7393,11 @@ input CreateCalloutContributionInput {
 
 input CreateCalloutContributorsSettingsInput {
   """The contributor types to include. At least one type is required."""
-  contributorTypes: [ContributorType!]!
+  contributorTypes: [ActorType!]!
   """
   The default contributor type (one of contributorTypes). Defaults to the first selected type.
   """
-  defaultContributorType: ContributorType
+  defaultContributorType: ActorType
   """
   The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
   """
@@ -8729,11 +8722,11 @@ input UpdateCalloutContributionDefaultsInput {
 
 input UpdateCalloutContributorsSettingsInput {
   """When provided, replaces the selected contributor types (at least one)."""
-  contributorTypes: [ContributorType!]
+  contributorTypes: [ActorType!]
   """
   The default contributor type (one of contributorTypes). Defaults to the first selected type.
   """
-  defaultContributorType: ContributorType
+  defaultContributorType: ActorType
   """
   The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
   """

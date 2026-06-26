@@ -1,5 +1,5 @@
+import { ActorType } from '@common/enums/actor.type';
 import { ContributorCollectionView } from '@common/enums/contributor.collection.view';
-import { ContributorType } from '@common/enums/contributor.type';
 import { Field, InputType } from '@nestjs/graphql';
 import { ArrayMinSize, IsEnum, IsOptional } from 'class-validator';
 
@@ -10,7 +10,7 @@ import { ArrayMinSize, IsEnum, IsOptional } from 'class-validator';
 // create-time counterpart is CreateCalloutContributorsSettingsInput.
 @InputType()
 export class UpdateCalloutContributorsSettingsInput {
-  @Field(() => [ContributorType], {
+  @Field(() => [ActorType], {
     nullable: true,
     description:
       'When provided, replaces the selected contributor types (at least one).',
@@ -19,17 +19,17 @@ export class UpdateCalloutContributorsSettingsInput {
   @ArrayMinSize(1, {
     message: 'At least one contributor type must be selected.',
   })
-  @IsEnum(ContributorType, { each: true })
-  contributorTypes?: ContributorType[];
+  @IsEnum(ActorType, { each: true })
+  contributorTypes?: ActorType[];
 
-  @Field(() => ContributorType, {
+  @Field(() => ActorType, {
     nullable: true,
     description:
       'The default contributor type (one of contributorTypes). Defaults to the first selected type.',
   })
   @IsOptional()
-  @IsEnum(ContributorType)
-  defaultContributorType?: ContributorType;
+  @IsEnum(ActorType)
+  defaultContributorType?: ActorType;
 
   @Field(() => ContributorCollectionView, {
     nullable: true,

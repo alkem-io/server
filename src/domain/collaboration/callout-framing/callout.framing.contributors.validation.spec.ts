@@ -1,6 +1,6 @@
+import { ActorType } from '@common/enums/actor.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { ContributorCollectionView } from '@common/enums/contributor.collection.view';
-import { ContributorType } from '@common/enums/contributor.type';
 import { ValidationException } from '@common/exceptions';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
@@ -41,8 +41,8 @@ describe('CalloutFramingService.validateAndNormalizeContributorsSettings', () =>
       service.validateAndNormalizeContributorsSettings(
         CalloutFramingType.NONE,
         framing({
-          contributorTypes: [ContributorType.USER],
-          defaultContributorType: ContributorType.USER,
+          contributorTypes: [ActorType.USER],
+          defaultContributorType: ActorType.USER,
           defaultView: ContributorCollectionView.LIST,
         })
       )
@@ -64,7 +64,7 @@ describe('CalloutFramingService.validateAndNormalizeContributorsSettings', () =>
         CalloutFramingType.CONTRIBUTORS,
         framing({
           contributorTypes: [],
-          defaultContributorType: ContributorType.USER,
+          defaultContributorType: ActorType.USER,
           defaultView: ContributorCollectionView.LIST,
         })
       )
@@ -75,13 +75,13 @@ describe('CalloutFramingService.validateAndNormalizeContributorsSettings', () =>
     const result = service.validateAndNormalizeContributorsSettings(
       CalloutFramingType.CONTRIBUTORS,
       framing({
-        contributorTypes: [ContributorType.ORGANIZATION, ContributorType.USER],
-        defaultContributorType: undefined as unknown as ContributorType,
+        contributorTypes: [ActorType.ORGANIZATION, ActorType.USER],
+        defaultContributorType: undefined as unknown as ActorType,
         defaultView: ContributorCollectionView.LIST,
       })
     );
     expect(result.contributors?.defaultContributorType).toBe(
-      ContributorType.ORGANIZATION
+      ActorType.ORGANIZATION
     );
   });
 
@@ -89,22 +89,20 @@ describe('CalloutFramingService.validateAndNormalizeContributorsSettings', () =>
     const result = service.validateAndNormalizeContributorsSettings(
       CalloutFramingType.CONTRIBUTORS,
       framing({
-        contributorTypes: [ContributorType.USER],
-        defaultContributorType: ContributorType.ORGANIZATION,
+        contributorTypes: [ActorType.USER],
+        defaultContributorType: ActorType.ORGANIZATION,
         defaultView: ContributorCollectionView.LIST,
       })
     );
-    expect(result.contributors?.defaultContributorType).toBe(
-      ContributorType.USER
-    );
+    expect(result.contributors?.defaultContributorType).toBe(ActorType.USER);
   });
 
   it('auto-heals defaultView to LIST when the selection becomes VC-only (FR-006c)', () => {
     const result = service.validateAndNormalizeContributorsSettings(
       CalloutFramingType.CONTRIBUTORS,
       framing({
-        contributorTypes: [ContributorType.VIRTUAL_CONTRIBUTOR],
-        defaultContributorType: ContributorType.VIRTUAL_CONTRIBUTOR,
+        contributorTypes: [ActorType.VIRTUAL_CONTRIBUTOR],
+        defaultContributorType: ActorType.VIRTUAL_CONTRIBUTOR,
         defaultView: ContributorCollectionView.MAP,
       })
     );
@@ -117,11 +115,8 @@ describe('CalloutFramingService.validateAndNormalizeContributorsSettings', () =>
     const result = service.validateAndNormalizeContributorsSettings(
       CalloutFramingType.CONTRIBUTORS,
       framing({
-        contributorTypes: [
-          ContributorType.USER,
-          ContributorType.VIRTUAL_CONTRIBUTOR,
-        ],
-        defaultContributorType: ContributorType.USER,
+        contributorTypes: [ActorType.USER, ActorType.VIRTUAL_CONTRIBUTOR],
+        defaultContributorType: ActorType.USER,
         defaultView: ContributorCollectionView.MAP,
       })
     );
@@ -134,8 +129,8 @@ describe('CalloutFramingService.validateAndNormalizeContributorsSettings', () =>
     const result = service.validateAndNormalizeContributorsSettings(
       CalloutFramingType.CONTRIBUTORS,
       framing({
-        contributorTypes: [ContributorType.USER],
-        defaultContributorType: ContributorType.USER,
+        contributorTypes: [ActorType.USER],
+        defaultContributorType: ActorType.USER,
         defaultView: undefined as unknown as ContributorCollectionView,
       })
     );

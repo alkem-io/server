@@ -1,4 +1,4 @@
-import { ContributorType } from '@common/enums/contributor.type';
+import { ActorType } from '@common/enums/actor.type';
 import { UserInformationVisibility } from '@common/enums/user.information.visibility';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
@@ -21,7 +21,7 @@ describe('ContributorCollectionService', () => {
   const roleSet = { id: 'role-set-1' } as any;
   const community = { id: 'community-1' } as any;
 
-  const calloutWith = (contributorTypes: ContributorType[]): ICallout =>
+  const calloutWith = (contributorTypes: ActorType[]): ICallout =>
     ({
       id: 'callout-1',
       settings: {
@@ -109,7 +109,7 @@ describe('ContributorCollectionService', () => {
       const anon = new ActorContext(); // actorID === '' (anonymous)
 
       const counts = await service.getContributorCounts(
-        calloutWith([ContributorType.ORGANIZATION]),
+        calloutWith([ActorType.ORGANIZATION]),
         anon
       );
 
@@ -123,8 +123,8 @@ describe('ContributorCollectionService', () => {
       const anon = new ActorContext();
 
       const users = await service.getContributors(
-        calloutWith([ContributorType.ORGANIZATION]),
-        ContributorType.USER,
+        calloutWith([ActorType.ORGANIZATION]),
+        ActorType.USER,
         anon
       );
 
@@ -140,7 +140,7 @@ describe('ContributorCollectionService', () => {
       viewer.actorID = 'non-member';
 
       const counts = await service.getContributorCounts(
-        calloutWith([ContributorType.USER, ContributorType.ORGANIZATION]),
+        calloutWith([ActorType.USER, ActorType.ORGANIZATION]),
         viewer
       );
 
@@ -149,8 +149,8 @@ describe('ContributorCollectionService', () => {
       expect(counts.organizations).toBe(1);
 
       const users = await service.getContributors(
-        calloutWith([ContributorType.USER]),
-        ContributorType.USER,
+        calloutWith([ActorType.USER]),
+        ActorType.USER,
         viewer
       );
       expect(users).toEqual([]);
@@ -162,7 +162,7 @@ describe('ContributorCollectionService', () => {
       const anon = new ActorContext();
 
       const counts = await service.getContributorCounts(
-        calloutWith([ContributorType.USER]),
+        calloutWith([ActorType.USER]),
         anon
       );
 
@@ -178,7 +178,7 @@ describe('ContributorCollectionService', () => {
       member.actorID = 'a-member';
 
       const counts = await service.getContributorCounts(
-        calloutWith([ContributorType.USER]),
+        calloutWith([ActorType.USER]),
         member
       );
 

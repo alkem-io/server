@@ -1,8 +1,12 @@
 import { ProfileType } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import {
+  CONTRIBUTOR_ACTOR_TYPES,
+  isContributorActorType,
+} from '@common/enums/contributor.actor.types';
 import { ContributorCollectionView } from '@common/enums/contributor.collection.view';
-import { ContributorType } from '@common/enums/contributor.type';
 import { LogContext } from '@common/enums/logging.context';
 import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { TagsetType } from '@common/enums/tagset.type';
@@ -721,6 +725,19 @@ export class CalloutFramingService {
       );
     }
 
+    // Only the community-contributor ActorType subtypes are valid here; reject
+    // SPACE / ACCOUNT / VIRTUAL_ASSISTANT (the schema exposes the full ActorType
+    // since the platform unified Contributor → Actor in #5856).
+    const invalidType = contributorTypes.find(
+      type => !isContributorActorType(type)
+    );
+    if (invalidType) {
+      throw new ValidationException(
+        `Invalid contributor type: ${invalidType}. Allowed: ${CONTRIBUTOR_ACTOR_TYPES.join(', ')}.`,
+        LogContext.COLLABORATION
+      );
+    }
+
     // Auto-heal defaultContributorType to the first selected type when unset
     // or no longer part of the selection.
     if (
@@ -733,8 +750,7 @@ export class CalloutFramingService {
     // Auto-heal defaultView to LIST when the selection is VC-only (no
     // locatable type remains), otherwise default an unset view to LIST.
     const hasLocatableType = contributorTypes.some(
-      type =>
-        type === ContributorType.USER || type === ContributorType.ORGANIZATION
+      type => type === ActorType.USER || type === ActorType.ORGANIZATION
     );
     if (
       !contributors.defaultView ||

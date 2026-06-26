@@ -1,4 +1,4 @@
-import { ContributorType } from '@common/enums/contributor.type';
+import { ActorType } from '@common/enums/actor.type';
 import { RoleName } from '@common/enums/role.name';
 import { UserInformationVisibility } from '@common/enums/user.information.visibility';
 import { VisualType } from '@common/enums/visual.type';
@@ -129,7 +129,7 @@ export class ContributorCollectionService {
    */
   private async getRankedIdsForType(
     roleSet: IRoleSet,
-    type: ContributorType
+    type: ActorType
   ): Promise<RankedContributorId[]> {
     // Rank: ADMIN (3) > LEAD (2) > MEMBER (1). The role label uses the most
     // senior role the contributor holds.
@@ -154,28 +154,32 @@ export class ContributorCollectionService {
 
   private async getContributorIdsInRole(
     roleSet: IRoleSet,
-    type: ContributorType,
+    type: ActorType,
     role: RoleName
   ): Promise<string[]> {
     switch (type) {
-      case ContributorType.USER: {
+      case ActorType.USER: {
         const users = await this.roleSetService.getUsersWithRole(roleSet, role);
         return users.map(u => u.id);
       }
-      case ContributorType.ORGANIZATION: {
+      case ActorType.ORGANIZATION: {
         const orgs = await this.roleSetService.getOrganizationsWithRole(
           roleSet,
           role
         );
         return orgs.map(o => o.id);
       }
-      case ContributorType.VIRTUAL_CONTRIBUTOR: {
+      case ActorType.VIRTUAL_CONTRIBUTOR: {
         const vcs = await this.roleSetService.getVirtualContributorsWithRole(
           roleSet,
           role
         );
         return vcs.map(v => v.id);
       }
+      // ActorType also has SPACE / ACCOUNT / VIRTUAL_ASSISTANT, which are not
+      // community contributors (CONTRIBUTOR_ACTOR_TYPES) — never returned here.
+      default:
+        return [];
     }
   }
 
@@ -215,11 +219,11 @@ export class ContributorCollectionService {
   }
 
   private buildLocation(
-    type: ContributorType,
+    type: ActorType,
     profile?: IProfile
   ): IContributorLocation | undefined {
     // VCs have no location (FR-010); the client hides the map control for them.
-    if (type === ContributorType.VIRTUAL_CONTRIBUTOR) {
+    if (type === ActorType.VIRTUAL_CONTRIBUTOR) {
       return undefined;
     }
     const location = profile?.location;
@@ -249,7 +253,7 @@ export class ContributorCollectionService {
    */
   public async getContributors(
     callout: ICallout,
-    type: ContributorType,
+    type: ActorType,
     actorContext: ActorContext
   ): Promise<IContributorCollectionItem[]> {
     const settings = this.getSettings(callout);
@@ -262,7 +266,7 @@ export class ContributorCollectionService {
     }
     const { roleSet, space } = context;
 
-    if (type === ContributorType.USER) {
+    if (type === ActorType.USER) {
       const hide = await this.shouldHideMemberUsers(
         space,
         roleSet,
@@ -310,12 +314,12 @@ export class ContributorCollectionService {
   }
 
   private async safeGenerateUrl(
-    type: ContributorType,
+    type: ActorType,
     profile: IProfile,
     nameID?: string
   ): Promise<string | undefined> {
     try {
-      if (type === ContributorType.VIRTUAL_CONTRIBUTOR && nameID) {
+      if (type === ActorType.VIRTUAL_CONTRIBUTOR && nameID) {
         return this.urlGeneratorService.generateUrlForVC(nameID);
       }
       return await this.urlGeneratorService.generateUrlForProfile(profile);
@@ -348,33 +352,28 @@ export class ContributorCollectionService {
     }
     const { roleSet, space } = context;
 
-    if (settings.contributorTypes.includes(ContributorType.USER)) {
+    if (settings.contributorTypes.includes(ActorType.USER)) {
       const hide = await this.shouldHideMemberUsers(
         space,
         roleSet,
         actorContext
       );
       if (!hide) {
-        const ranked = await this.getRankedIdsForType(
-          roleSet,
-          ContributorType.USER
-        );
+        const ranked = await this.getRankedIdsForType(roleSet, ActorType.USER);
         counts.users = ranked.length;
       }
     }
-    if (settings.contributorTypes.includes(ContributorType.ORGANIZATION)) {
+    if (settings.contributorTypes.includes(ActorType.ORGANIZATION)) {
       const ranked = await this.getRankedIdsForType(
         roleSet,
-        ContributorType.ORGANIZATION
+        ActorType.ORGANIZATION
       );
       counts.organizations = ranked.length;
     }
-    if (
-      settings.contributorTypes.includes(ContributorType.VIRTUAL_CONTRIBUTOR)
-    ) {
+    if (settings.contributorTypes.includes(ActorType.VIRTUAL_CONTRIBUTOR)) {
       const ranked = await this.getRankedIdsForType(
         roleSet,
-        ContributorType.VIRTUAL_CONTRIBUTOR
+        ActorType.VIRTUAL_CONTRIBUTOR
       );
       counts.virtualContributors = ranked.length;
     }

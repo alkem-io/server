@@ -1,4 +1,4 @@
-import { ContributorType } from '@common/enums/contributor.type';
+import { ActorType } from '@common/enums/actor.type';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, ObjectType } from '@nestjs/graphql';
 import { IContributorLocation } from './contributor.location';
@@ -8,8 +8,8 @@ export abstract class IContributorCollectionItem {
   @Field(() => UUID, { nullable: false })
   id!: string;
 
-  @Field(() => ContributorType, { nullable: false })
-  type!: ContributorType;
+  @Field(() => ActorType, { nullable: false })
+  type!: ActorType;
 
   @Field(() => String, { nullable: false })
   displayName!: string;

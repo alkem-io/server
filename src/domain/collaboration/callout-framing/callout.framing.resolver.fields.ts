@@ -1,4 +1,4 @@
-import { ContributorType } from '@common/enums/contributor.type';
+import { ActorType } from '@common/enums/actor.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
@@ -102,7 +102,7 @@ export class CalloutFramingResolverFields {
   async contributors(
     @CurrentActor() actorContext: ActorContext,
     @Parent() calloutFraming: ICalloutFraming,
-    @Args('type', { type: () => ContributorType }) type: ContributorType
+    @Args('type', { type: () => ActorType }) type: ActorType
   ): Promise<IContributorCollectionItem[]> {
     const callout =
       await this.calloutFramingService.getParentCallout(calloutFraming);
