@@ -747,6 +747,149 @@ describe('SearchIngestService', () => {
 
         expect(result[0].spaceID).toBe('l0-space');
       });
+
+      // T007: scope stamping + flow-state value->UUID resolution (the principal risk)
+      it('resolves flowStateID from the flow-state tagset value', async () => {
+        const space = {
+          id: 'space-1',
+          visibility: 'active',
+          parentSpace: undefined,
+          collaboration: {
+            id: 'collab-1',
+            innovationFlow: {
+              id: 'flow-1',
+              states: [
+                { id: 'state-uuid-A', displayName: 'In progress' },
+                { id: 'state-uuid-B', displayName: 'Done' },
+              ],
+            },
+            calloutsSet: {
+              id: 'callouts-set-1',
+              callouts: [
+                {
+                  id: 'callout-1',
+                  framing: { profile: { tagsets: [] } },
+                  classification: {
+                    tagsets: [
+                      { name: 'flow-state', tags: ['In progress'] },
+                      { name: 'default', tags: ['keep-out'] },
+                    ],
+                  },
+                },
+              ],
+            },
+          },
+        };
+        mockEntityManager.find.mockResolvedValue([space]);
+
+        const result = await (service as any).fetchCallout(0, 100);
+
+        expect(result[0].flowStateID).toBe('state-uuid-A');
+        // calloutsSetID is no longer stamped (scope is the flow-state UUID alone)
+        expect(result[0].calloutsSetID).toBeUndefined();
+        // classification must not leak into the indexed document
+        expect(result[0].classification).toBeUndefined();
+      });
+
+      it('leaves flowStateID unset when the flow-state value matches no state (skip-stamp)', async () => {
+        const space = {
+          id: 'space-1',
+          visibility: 'active',
+          parentSpace: undefined,
+          collaboration: {
+            id: 'collab-1',
+            innovationFlow: {
+              id: 'flow-1',
+              states: [{ id: 'state-uuid-A', displayName: 'In progress' }],
+            },
+            calloutsSet: {
+              id: 'callouts-set-1',
+              callouts: [
+                {
+                  id: 'callout-1',
+                  framing: { profile: { tagsets: [] } },
+                  classification: {
+                    tagsets: [{ name: 'flow-state', tags: ['Renamed state'] }],
+                  },
+                },
+              ],
+            },
+          },
+        };
+        mockEntityManager.find.mockResolvedValue([space]);
+
+        const result = await (service as any).fetchCallout(0, 100);
+
+        // flowStateID stays unset (no leakage into wrong scope); calloutsSetID not stamped
+        expect(result[0].calloutsSetID).toBeUndefined();
+        expect(result[0].flowStateID).toBeUndefined();
+      });
+
+      it('leaves flowStateID unset on ambiguous duplicate displayNames within the collaboration', async () => {
+        const space = {
+          id: 'space-1',
+          visibility: 'active',
+          parentSpace: undefined,
+          collaboration: {
+            id: 'collab-1',
+            innovationFlow: {
+              id: 'flow-1',
+              states: [
+                { id: 'state-uuid-A', displayName: 'Duplicate' },
+                { id: 'state-uuid-B', displayName: 'Duplicate' },
+              ],
+            },
+            calloutsSet: {
+              id: 'callouts-set-1',
+              callouts: [
+                {
+                  id: 'callout-1',
+                  framing: { profile: { tagsets: [] } },
+                  classification: {
+                    tagsets: [{ name: 'flow-state', tags: ['Duplicate'] }],
+                  },
+                },
+              ],
+            },
+          },
+        };
+        mockEntityManager.find.mockResolvedValue([space]);
+
+        const result = await (service as any).fetchCallout(0, 100);
+
+        expect(result[0].flowStateID).toBeUndefined();
+      });
+
+      it('leaves flowStateID unset when the callout carries no flow-state tagset', async () => {
+        const space = {
+          id: 'space-1',
+          visibility: 'active',
+          parentSpace: undefined,
+          collaboration: {
+            id: 'collab-1',
+            innovationFlow: {
+              id: 'flow-1',
+              states: [{ id: 'state-uuid-A', displayName: 'In progress' }],
+            },
+            calloutsSet: {
+              id: 'callouts-set-1',
+              callouts: [
+                {
+                  id: 'callout-1',
+                  framing: { profile: { tagsets: [] } },
+                  classification: { tagsets: [] },
+                },
+              ],
+            },
+          },
+        };
+        mockEntityManager.find.mockResolvedValue([space]);
+
+        const result = await (service as any).fetchCallout(0, 100);
+
+        expect(result[0].calloutsSetID).toBeUndefined();
+        expect(result[0].flowStateID).toBeUndefined();
+      });
     });
 
     describe('fetchWhiteboard', () => {
@@ -923,6 +1066,49 @@ describe('SearchIngestService', () => {
         const result = await (service as any).fetchPosts(0, 100);
 
         expect(result).toHaveLength(0);
+      });
+
+      // T007: child posts inherit the parent callout's scope fields
+      it('inherits the resolved flowStateID from the parent callout onto posts', async () => {
+        const space = {
+          id: 'space-1',
+          visibility: 'active',
+          parentSpace: undefined,
+          collaboration: {
+            id: 'collab-1',
+            innovationFlow: {
+              id: 'flow-1',
+              states: [{ id: 'state-uuid-A', displayName: 'In progress' }],
+            },
+            calloutsSet: {
+              id: 'callouts-set-1',
+              callouts: [
+                {
+                  id: 'callout-1',
+                  classification: {
+                    tagsets: [{ name: 'flow-state', tags: ['In progress'] }],
+                  },
+                  contributions: [
+                    {
+                      post: {
+                        id: 'post-1',
+                        nameID: 'post-name',
+                        profile: { displayName: 'Post', tagsets: [] },
+                      },
+                    },
+                  ],
+                },
+              ],
+            },
+          },
+        };
+        mockEntityManager.find.mockResolvedValue([space]);
+
+        const result = await (service as any).fetchPosts(0, 100);
+
+        expect(result).toHaveLength(1);
+        expect(result[0].calloutsSetID).toBeUndefined();
+        expect(result[0].flowStateID).toBe('state-uuid-A');
       });
     });
 

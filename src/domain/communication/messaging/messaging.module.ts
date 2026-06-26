@@ -7,6 +7,7 @@ import { TypeOrmModule } from '@nestjs/typeorm';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { ConversationModule } from '../conversation/conversation.module';
 import { ConversationMembershipModule } from '../conversation-membership/conversation.membership.module';
+import { RoomLookupModule } from '../room-lookup/room.lookup.module';
 import { Messaging } from './messaging.entity';
 import { MessagingResolverMutations } from './messaging.resolver.mutations';
 import { MessagingService } from './messaging.service';
@@ -20,6 +21,7 @@ import { MessagingAuthorizationService } from './messaging.service.authorization
     UserLookupModule,
     ActorLookupModule,
     ConversationMembershipModule,
+    RoomLookupModule,
     SubscriptionServiceModule,
     TypeOrmModule.forFeature([Messaging]),
   ],

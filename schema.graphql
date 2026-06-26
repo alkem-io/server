@@ -368,6 +368,15 @@ enum CredentialType {
   VC_CAMPAIGN
 }
 
+"""
+Per-recipient outcome of sendDirectMessageToUsers. SENT: delivered (a conversation id is returned). BLOCKED_NO_CONSENT: the recipient disabled direct messages. FAILED: an unexpected per-recipient error (other recipients are still processed).
+"""
+enum DirectMessageDeliveryStatus {
+  BLOCKED_NO_CONSENT
+  FAILED
+  SENT
+}
+
 enum DiscussionsOrderBy {
   DISCUSSIONS_CREATEDATE_ASC
   DISCUSSIONS_CREATEDATE_DESC
@@ -466,6 +475,7 @@ enum MimeType {
   GIF
   HEIC
   HEIF
+  ICS
   JPEG
   JPG
   ODG
@@ -2522,6 +2532,17 @@ type CredentialDefinition {
   type: String!
 }
 
+type DirectMessageDeliveryResult {
+  """
+  Set when status = SENT — the (existing or newly created) 1:1 conversation the message was delivered to.
+  """
+  conversationID: UUID
+  """The intended recipient."""
+  receiverID: UUID!
+  """The per-recipient delivery outcome."""
+  status: DirectMessageDeliveryStatus!
+}
+
 type Discussion {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -4056,6 +4077,10 @@ type Mutation {
   revokeLicensePlanFromAccount(planData: RevokeLicensePlanFromAccount!): Account!
   """Revokes the specified LicensePlan on a Space."""
   revokeLicensePlanFromSpace(planData: RevokeLicensePlanFromSpace!): Space!
+  """
+  Send a private (1:1) chat message to each of the given Users individually. Does NOT create a group conversation. Each recipient is processed independently and reported on; partial success is possible.
+  """
+  sendDirectMessageToUsers(messageData: SendDirectMessageToUsersInput!): [DirectMessageDeliveryResult!]!
   """Sends a reply to a message from the specified Room."""
   sendMessageReplyToRoom(messageData: RoomSendMessageReplyInput!): Message!
   """Send message to Community Leads."""
@@ -6355,6 +6380,10 @@ type User implements ActorFull {
   id: UUID!
   """Can a message be sent to this User."""
   isContactable: Boolean!
+  """
+  Whether this User can be offered an email contact route (they enabled email contact). Exposes only the consent flag, never the email address.
+  """
+  isContactableViaEmail: Boolean!
   lastName: String!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
@@ -6494,6 +6523,10 @@ type UserSettings {
 }
 
 type UserSettingsCommunication {
+  """
+  Allow other Users to be offered an email contact route to this User (using the account email; the address is never exposed). Default false.
+  """
+  allowOtherUsersToContactViaEmail: Boolean!
   """Allow Users to send messages to this User."""
   allowOtherUsersToSendMessages: Boolean!
 }
@@ -8287,6 +8320,14 @@ input SearchInput {
   """Return results that satisfy these conditions."""
   filters: [SearchFilterInput!]
   """
+  When searching Callouts (COLLABORATION_TOOLS / CALLOUT), also match in the Callout framing resources (whiteboard, memo) and its contributions (post, whiteboard, memo). Any match folds up to the containing Callout, deduped, in calloutResults.
+  """
+  foldCalloutResources: Boolean = false
+  """
+  Restrict the search to a single flow state, identified by the InnovationFlowState UUID. The state UUID is globally unique and transitively identifies its Collaboration, so no separate CalloutsSet filter is needed. Default is all flow states.
+  """
+  searchInFlowStateFilter: UUID
+  """
   Restrict the search to only the specified Space. Default is all Spaces.
   """
   searchInSpaceFilter: UUID
@@ -8294,6 +8335,15 @@ input SearchInput {
   tagsetNames: [String!]
   """The terms to be searched for within this Space. Max 5."""
   terms: [String!]!
+}
+
+input SendDirectMessageToUsersInput {
+  """The message being sent to each recipient."""
+  message: String!
+  """
+  The Users (1..N) the message is sent to, each as an individual 1:1 chat. No group conversation is created.
+  """
+  receiverIDs: [UUID!]!
 }
 
 input SetDefaultCalloutTemplateOnInnovationFlowStateInput {
@@ -9080,6 +9130,10 @@ input UpdateUserPlatformSettingsInput {
 }
 
 input UpdateUserSettingsCommunicationInput {
+  """
+  Allow other Users to be offered an email contact route to this User (using the account email; the address is never exposed).
+  """
+  allowOtherUsersToContactViaEmail: Boolean
   """Allow Users to send messages to this User."""
   allowOtherUsersToSendMessages: Boolean
 }
