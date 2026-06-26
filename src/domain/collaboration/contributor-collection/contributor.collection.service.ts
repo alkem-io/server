@@ -7,8 +7,8 @@ import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
+import { Community } from '@domain/community/community/community.entity';
 import { ICommunity } from '@domain/community/community/community.interface';
-import { CommunityService } from '@domain/community/community/community.service';
 import { Space } from '@domain/space/space/space.entity';
 import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
@@ -32,7 +32,6 @@ type RankedContributorId = {
 export class ContributorCollectionService {
   constructor(
     private readonly roleSetService: RoleSetService,
-    private readonly communityService: CommunityService,
     private readonly communityResolverService: CommunityResolverService,
     private readonly urlGeneratorService: UrlGeneratorService,
     @InjectEntityManager() private readonly entityManager: EntityManager
@@ -69,7 +68,16 @@ export class ContributorCollectionService {
       return undefined;
     }
 
-    const roleSet = await this.communityService.getRoleSet(community);
+    // Load the community's RoleSet directly (avoids importing CommunityModule,
+    // which would close a module cycle — see contributor.collection.module.ts).
+    const communityWithRoleSet = await this.entityManager.findOne(Community, {
+      where: { id: community.id },
+      relations: { roleSet: true },
+    });
+    const roleSet = communityWithRoleSet?.roleSet;
+    if (!roleSet) {
+      return undefined;
+    }
     const space = await this.entityManager.findOne(Space, {
       where: { community: { id: community.id } },
     });

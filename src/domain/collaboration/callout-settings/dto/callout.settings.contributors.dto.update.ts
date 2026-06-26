@@ -1,9 +1,13 @@
 import { ContributorCollectionView } from '@common/enums/contributor.collection.view';
 import { ContributorType } from '@common/enums/contributor.type';
-import { Field, InputType } from '@nestjs/graphql';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { ArrayMinSize, IsEnum, IsOptional } from 'class-validator';
 
+// Dual-decorated so it can nest inside the dual InputType/ObjectType
+// `CreateCalloutSettingsFramingData` (the create-settings DTO is reused as an
+// output type). All fields are enums — valid as both input and output.
 @InputType()
+@ObjectType('CalloutContributorsSettingsData')
 export class UpdateCalloutContributorsSettingsInput {
   @Field(() => [ContributorType], {
     nullable: false,

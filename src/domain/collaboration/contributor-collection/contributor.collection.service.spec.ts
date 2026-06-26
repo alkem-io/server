@@ -3,7 +3,7 @@ import { UserInformationVisibility } from '@common/enums/user.information.visibi
 import { ActorContext } from '@core/actor-context/actor.context';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
-import { CommunityService } from '@domain/community/community/community.service';
+import { Community } from '@domain/community/community/community.entity';
 import { Test, TestingModule } from '@nestjs/testing';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
@@ -15,7 +15,6 @@ import { ContributorCollectionService } from './contributor.collection.service';
 describe('ContributorCollectionService', () => {
   let service: ContributorCollectionService;
   let roleSetService: RoleSetService;
-  let communityService: CommunityService;
   let communityResolver: CommunityResolverService;
   let entityManager: EntityManager;
 
@@ -44,6 +43,15 @@ describe('ContributorCollectionService', () => {
     settings: { privacy: { userInformationVisibility: visibility } },
   });
 
+  // The service calls entityManager.findOne twice: first for Community (to load
+  // its RoleSet), then for Space. Return the community-with-roleSet for the
+  // former and the given space for the latter.
+  const mockFindOne = (space: any) =>
+    vi
+      .spyOn(entityManager, 'findOne')
+      .mockImplementation((async (entity: any) =>
+        entity === Community ? { id: 'community-1', roleSet } : space) as any);
+
   beforeEach(async () => {
     vi.restoreAllMocks();
     const module: TestingModule = await Test.createTestingModule({
@@ -57,10 +65,6 @@ describe('ContributorCollectionService', () => {
             getVirtualContributorsWithRole: vi.fn(),
             isMember: vi.fn(),
           },
-        },
-        {
-          provide: CommunityService,
-          useValue: { getRoleSet: vi.fn() },
         },
         {
           provide: CommunityResolverService,
@@ -79,7 +83,6 @@ describe('ContributorCollectionService', () => {
 
     service = module.get(ContributorCollectionService);
     roleSetService = module.get(RoleSetService);
-    communityService = module.get(CommunityService);
     communityResolver = module.get(CommunityResolverService);
     entityManager = module.get(EntityManager);
 
@@ -87,7 +90,6 @@ describe('ContributorCollectionService', () => {
       communityResolver,
       'getCommunityFromCollaborationCalloutOrFail'
     ).mockResolvedValue(community);
-    vi.spyOn(communityService, 'getRoleSet').mockResolvedValue(roleSet);
     // Role lookups return one member each by default.
     vi.spyOn(roleSetService, 'getUsersWithRole').mockImplementation(
       async (_rs, role) => (role === 'member' ? ([{ id: 'u1' }] as any) : [])
@@ -103,9 +105,7 @@ describe('ContributorCollectionService', () => {
 
   describe('contributorCounts type-selection filter (FR-007)', () => {
     it('returns 0 users for an organizations-only callout, even for anonymous', async () => {
-      vi.spyOn(entityManager, 'findOne').mockResolvedValue(
-        spaceWithVisibility()
-      );
+      mockFindOne(spaceWithVisibility());
       const anon = new ActorContext(); // actorID === '' (anonymous)
 
       const counts = await service.getContributorCounts(
@@ -119,9 +119,7 @@ describe('ContributorCollectionService', () => {
     });
 
     it('returns an empty set when querying a deselected type', async () => {
-      vi.spyOn(entityManager, 'findOne').mockResolvedValue(
-        spaceWithVisibility()
-      );
+      mockFindOne(spaceWithVisibility());
       const anon = new ActorContext();
 
       const users = await service.getContributors(
@@ -136,9 +134,7 @@ describe('ContributorCollectionService', () => {
 
   describe('members-only user-information visibility (FR-015/FR-017)', () => {
     it('hides member USERS from a non-member when members-only', async () => {
-      vi.spyOn(entityManager, 'findOne').mockResolvedValue(
-        spaceWithVisibility(UserInformationVisibility.MEMBERS_ONLY)
-      );
+      mockFindOne(spaceWithVisibility(UserInformationVisibility.MEMBERS_ONLY));
       vi.spyOn(roleSetService, 'isMember').mockResolvedValue(false);
       const viewer = new ActorContext();
       viewer.actorID = 'non-member';
@@ -161,9 +157,7 @@ describe('ContributorCollectionService', () => {
     });
 
     it('hides member USERS from anonymous viewers when members-only', async () => {
-      vi.spyOn(entityManager, 'findOne').mockResolvedValue(
-        spaceWithVisibility(UserInformationVisibility.MEMBERS_ONLY)
-      );
+      mockFindOne(spaceWithVisibility(UserInformationVisibility.MEMBERS_ONLY));
       const isMemberSpy = vi.spyOn(roleSetService, 'isMember');
       const anon = new ActorContext();
 
@@ -178,9 +172,7 @@ describe('ContributorCollectionService', () => {
     });
 
     it('shows member USERS to a member when members-only', async () => {
-      vi.spyOn(entityManager, 'findOne').mockResolvedValue(
-        spaceWithVisibility(UserInformationVisibility.MEMBERS_ONLY)
-      );
+      mockFindOne(spaceWithVisibility(UserInformationVisibility.MEMBERS_ONLY));
       vi.spyOn(roleSetService, 'isMember').mockResolvedValue(true);
       const member = new ActorContext();
       member.actorID = 'a-member';
