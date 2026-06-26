@@ -21,6 +21,7 @@ import { SearchCategory } from '../search.category';
 import { SearchResultType } from '../search.result.type';
 import { buildMultiSearchRequestItems } from './build.multi.search.request.items';
 import { buildSearchQuery } from './build.search.query';
+import { decodeTermNames, tokenizeQuery } from './matched.terms.util';
 import { SearchIndex } from './search.index';
 
 const getIndexStore = (
@@ -153,6 +154,22 @@ const allowedTypesPerCategory: Record<SearchCategory, SearchResultType[]> = {
 
 const SIZE_MULTIPLIER = 2;
 
+/**
+ * `hit.matched_queries` is `string[]` by default, or a `{ name: score }` map when
+ * `include_named_queries_score` is requested (it is not, here). Normalize both
+ * shapes to the list of matched clause names so decoding is shape-agnostic.
+ */
+const normalizeMatchedQueries = (
+  matchedQueries: string[] | Record<string, number> | undefined
+): string[] | undefined => {
+  if (!matchedQueries) {
+    return undefined;
+  }
+  return Array.isArray(matchedQueries)
+    ? matchedQueries
+    : Object.keys(matchedQueries);
+};
+
 @Injectable()
 export class SearchExtractService {
   private readonly indexPattern: string;
@@ -194,15 +211,21 @@ export class SearchExtractService {
       return [];
     }
 
+    // the ordered query tokens used both to name the attribution clauses
+    // (encode) and to decode hit.matched_queries back into terms. Computed once
+    // per search and reused across every hit (FR-001 / FR-005 / FR-011).
+    const orderedTokens = tokenizeQuery(terms.join(' '));
+
     // execute search per category
     const result = await this.executeMultiSearch(indicesToSearchOn, terms, {
       searchInSpaceFilter,
       searchInFlowStateFilter,
       filters,
       sizeMultiplier: SIZE_MULTIPLIER,
+      attributionTokens: orderedTokens,
     });
 
-    return this.processMultiSearchResponses(result.responses);
+    return this.processMultiSearchResponses(result.responses, orderedTokens);
   }
 
   private getIndices(
@@ -272,6 +295,8 @@ export class SearchExtractService {
       searchInFlowStateFilter?: string;
       filters?: SearchFilterInput[];
       sizeMultiplier: number;
+      /** ordered query tokens for matched-terms attribution (ADR 0001) */
+      attributionTokens?: string[];
     }
   ): Promise<MsearchResponse<BaseSearchHit>> {
     if (!this.client) {
@@ -287,6 +312,7 @@ export class SearchExtractService {
       searchInFlowStateFilter,
       filters,
       sizeMultiplier,
+      attributionTokens,
     } = options ?? {};
 
     const term = terms.join(' ');
@@ -294,6 +320,7 @@ export class SearchExtractService {
     const query = buildSearchQuery(term, {
       spaceIdFilter: searchInSpaceFilter,
       flowStateIdFilter: searchInFlowStateFilter,
+      attributionTokens,
     });
 
     const categoriesRequested = filters?.length ?? 0;
@@ -317,7 +344,8 @@ export class SearchExtractService {
   }
 
   private processMultiSearchResponses(
-    responses: MsearchResponseItem<BaseSearchHit>[]
+    responses: MsearchResponseItem<BaseSearchHit>[],
+    orderedTokens: string[]
   ): ISearchResult[] {
     const results = responses.flatMap(
       (response: MsearchMultiSearchItem<BaseSearchHit> | ErrorResponseBase) => {
@@ -326,7 +354,7 @@ export class SearchExtractService {
           return undefined;
         }
 
-        return this.processMultiSearchItem(response);
+        return this.processMultiSearchItem(response, orderedTokens);
       }
     );
     // filter the undefined produced by processing errors
@@ -334,7 +362,8 @@ export class SearchExtractService {
   }
 
   private processMultiSearchItem(
-    item: MsearchMultiSearchItem<BaseSearchHit>
+    item: MsearchMultiSearchItem<BaseSearchHit>,
+    orderedTokens: string[]
   ): ISearchResult[] {
     return item.hits.hits.map<ISearchResult>(hit => {
       const entityId = hit.fields?.id?.[0];
@@ -361,7 +390,13 @@ export class SearchExtractService {
         id: hit._id ?? 'N/A',
         score: hit._score ?? -1,
         type,
-        terms: [], // todo - https://github.com/alkem-io/server/issues/3702
+        // matched-terms attribution: decode the named clauses that matched
+        // (hit.matched_queries) back into the original query tokens, in query
+        // order, de-duplicated (ADR 0001 / FR-001 / FR-005 / FR-008)
+        terms: decodeTermNames(
+          normalizeMatchedQueries(hit.matched_queries),
+          orderedTokens
+        ),
         result: {
           id: entityId ?? 'N/A',
         },

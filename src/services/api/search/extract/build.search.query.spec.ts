@@ -103,4 +103,67 @@ describe('buildSearchQuery', () => {
 
     expect(query.bool?.filter).toBeUndefined();
   });
+
+  describe('matched-terms attribution (feature 010 / ADR 0001)', () => {
+    it('leaves the scoring bool.must multi_match untouched when attribution tokens are added (ranking invariance, SC-004 / FR-009)', () => {
+      const withoutAttribution = buildSearchQuery('hello world');
+      const withAttribution = buildSearchQuery('hello world', {
+        attributionTokens: ['hello', 'world'],
+      });
+
+      // the scoring clause is byte-identical with and without attribution
+      expect(withAttribution.bool?.must).toEqual(withoutAttribution.bool?.must);
+      expect(withAttribution.bool?.must).toEqual([
+        {
+          multi_match: {
+            query: 'hello world',
+            type: 'most_fields',
+            fields: ['*'],
+          },
+        },
+      ]);
+    });
+
+    it('adds one named boost:0 should clause per attribution token (so _score cannot change)', () => {
+      const query = buildSearchQuery('hello world', {
+        attributionTokens: ['hello', 'world'],
+      });
+
+      const should = query.bool?.should as any[];
+      expect(should).toHaveLength(2);
+      should.forEach((clause: any) => {
+        // every attribution clause contributes nothing to the score
+        expect(clause.multi_match.boost).toBe(0);
+        // named, so it surfaces in hit.matched_queries
+        expect(typeof clause.multi_match._name).toBe('string');
+        // attributes across ALL fields incl. deep body content (US2 / FR-002)
+        expect(clause.multi_match.fields).toEqual(['*']);
+      });
+      // distinct, collision-safe names per token
+      const names = should.map((c: any) => c.multi_match._name);
+      expect(new Set(names).size).toBe(names.length);
+    });
+
+    it('does not add a should clause when no attribution tokens are provided', () => {
+      const query = buildSearchQuery('hello world');
+      expect(query.bool?.should).toBeUndefined();
+    });
+
+    it('does not add a should clause for an empty attribution token list', () => {
+      const query = buildSearchQuery('hello world', { attributionTokens: [] });
+      expect(query.bool?.should).toBeUndefined();
+    });
+
+    it('caps the number of named attribution clauses defensively', () => {
+      const manyTokens = Array.from({ length: 60 }, (_, i) => `t${i}`);
+      const query = buildSearchQuery(manyTokens.join(' '), {
+        attributionTokens: manyTokens,
+      });
+
+      const should = query.bool?.should as any[];
+      // capped well below the input length
+      expect(should.length).toBeLessThan(manyTokens.length);
+      expect(should.length).toBeLessThanOrEqual(25);
+    });
+  });
 });

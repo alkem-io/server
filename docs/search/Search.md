@@ -61,6 +61,64 @@ There is a max result amount you can receive and the sum of all sizes for all ca
 
 - You can further filter the results by defining which specific `types` you want to receive.
 
+## Matched terms attribution
+
+Every search result carries `ISearchResult.terms: [String!]!` — the **query
+word(s)** that caused that result to match (e.g. for the query `open governance`,
+a Space matched only by `governance` returns `terms: ["governance"]`). This powers
+the "why did this match?" chips on each result card.
+
+### Mechanism — Elasticsearch named queries (`matched_queries`)
+
+We use [named queries](https://www.elastic.co/guide/en/elasticsearch/reference/current/query-dsl-bool-query.html#named-queries),
+**not** highlighting (see ADR 0001 in the workspace spec `010-search-matched-terms`):
+
+1. The query string is tokenized into ordered, case-insensitively de-duplicated
+   tokens (`matched.terms.util.ts` → `tokenizeQuery`).
+2. For each token, `buildSearchQuery` adds a **named** `multi_match`
+   (`type: most_fields`, `fields: ['*']`, `_name: term_<index>`) to `bool.should`
+   with **`boost: 0`**.
+3. The existing scoring `multi_match` in `bool.must` is left **untouched** — it
+   remains the sole driver of `_score` and ranking.
+4. Elasticsearch returns, per hit, `matched_queries` — the names of the clauses
+   that matched. `decodeTermNames` maps those names back to the original query
+   tokens, in **query order**, de-duplicated, and populates `terms`.
+
+### Ranking invariance (guaranteed, not just tested)
+
+Because the attribution clauses live in `bool.should` with `boost: 0`, they
+contribute **nothing** to `_score`. Result order and scores are byte-identical to
+a query built without them. A regression test
+(`build.search.query.spec.ts`) asserts the scoring `bool.must` clause is unchanged
+when attribution tokens are added. There is **no extra Elasticsearch round trip** —
+attribution rides the same single `msearch` request as scoring.
+
+### No reindex required
+
+Named queries operate purely at query time over the already-indexed `text`
+fields. They need no `term_vector` / `offsets` / `store` mapping changes, so the
+`reporting-orchestration` index/component templates are **not** modified and **no
+reindex** of existing content is required. The attribution covers **all** fields
+(`fields: ['*']`), including deep body content (memo `markdown`, whiteboard
+`content`), so a word matched only in a body is still surfaced as a term.
+
+### Eligibility, dedupe, ordering, and bounds
+
+- A token the search analyzer discards (stop-word) never matches, so it never
+  appears in `matched_queries` — no separate stop-word filter is maintained.
+- `terms` is de-duplicated case-insensitively (single normalized form) and
+  ordered by appearance in the user's query.
+- Empty / absent `matched_queries` yields `terms: []` — never an error.
+- The number of named clauses is capped defensively at `MAX_NAMED_TERMS` (25) per
+  search; tokens beyond the cap still participate in scoring (via `bool.must`)
+  but are not individually attributed.
+
+### Global vs flow-state parity
+
+Global search and flow-state-scoped search (`searchInFlowStateFilter`) share the
+same `buildSearchQuery` + `processMultiSearchItem` path, so matched-terms
+attribution is identical across both with no scope-specific code.
+
 ## Cursor implementation
 - **represents a position in a sorted list of results**.
 - implemented according to [this article](https://www.elastic.co/guide/en/elasticsearch/reference/current/paginate-search-results.html#search-after).
