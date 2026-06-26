@@ -951,6 +951,55 @@ describe('SearchResultService', () => {
       expect(result.calloutResults.cursor).toBe('7::callout-Z');
       expect(result.calloutResults.total).toBe(-1);
     });
+
+    it('keys the cursor on the matched child id when a child folds into a callout', async () => {
+      // regression: a whiteboard/post/memo match must keep its OWN id in the
+      // cursor (the ES sort id), not the containing callout id. Using the
+      // callout id makes `search_after` fail to exclude the child, re-returning
+      // the same hit forever (endless client scroll).
+      const callout = { id: 'callout-Z', createdDate: olderDate } as any;
+      const space = { id: 'space-1' } as any;
+
+      vi.spyOn(service, 'getCalloutSearchResult' as any).mockResolvedValue([]);
+      vi.spyOn(service, 'getPostSearchResults').mockResolvedValue([]);
+      vi.spyOn(service as any, 'getWhiteboardSearchResults').mockResolvedValue([
+        {
+          id: 'whiteboard-1',
+          score: 8.945082,
+          terms: [],
+          type: SearchResultType.WHITEBOARD,
+          result: { id: 'whiteboard-1' },
+          isContribution: true,
+          callout,
+          space,
+        },
+      ]);
+      vi.spyOn(service as any, 'getMemoSearchResults').mockResolvedValue([]);
+
+      const result = await service.resolveSearchResults(
+        [
+          {
+            id: 'whiteboard-1',
+            score: 8.945082,
+            type: SearchResultType.WHITEBOARD,
+            terms: [],
+            result: { id: 'whiteboard-1' },
+          },
+        ] as any[],
+        actorContext,
+        collaborationToolsFilter,
+        undefined,
+        { foldToCallouts: true }
+      );
+
+      // response result is re-keyed to the callout...
+      expect(result.calloutResults.results).toHaveLength(1);
+      expect((result.calloutResults.results[0] as any).callout.id).toBe(
+        'callout-Z'
+      );
+      // ...but the cursor carries the matched whiteboard id, not the callout id.
+      expect(result.calloutResults.cursor).toBe('8.945082::whiteboard-1');
+    });
   });
 
   describe('getMemoSearchResults (private)', () => {

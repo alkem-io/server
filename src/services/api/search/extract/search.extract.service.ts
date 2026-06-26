@@ -324,13 +324,30 @@ export class SearchExtractService {
     ];
 
     const existingNames = new Set(indices.map(index => index.name));
-    const additions = resourceIndices.filter(index => {
-      if (existingNames.has(index.name)) {
-        return false;
-      }
-      existingNames.add(index.name);
-      return true;
-    });
+    const additions = resourceIndices
+      .filter(index => {
+        if (existingNames.has(index.name)) {
+          return false;
+        }
+        existingNames.add(index.name);
+        return true;
+      })
+      // Re-tag the appended indices to COLLABORATION_TOOLS so msearch folds them
+      // into the SAME sub-query as the callouts index. msearch groups indices by
+      // `category` into independent sub-queries, each with its OWN `search_after`.
+      // The fold returns a single callout-level cursor (carried by the client
+      // under the collaboration-tools filter). If these stayed under
+      // CONTRIBUTIONS/FRAMINGS they would be separate sub-queries whose
+      // `search_after` is never populated (those buckets are folded away, so no
+      // cursor is sent) — they restart at hit 0 every page and re-return the same
+      // folded hits forever (endless client scroll on contributions). Merging
+      // them gives one global `[_score desc, id desc]` sort that the single
+      // cursor paginates correctly. Result grouping is by `type`, not `category`,
+      // so folding on the result side is unaffected.
+      .map(index => ({
+        ...index,
+        category: SearchCategory.COLLABORATION_TOOLS,
+      }));
 
     return [...indices, ...additions];
   }

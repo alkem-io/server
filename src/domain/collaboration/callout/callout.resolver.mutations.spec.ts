@@ -482,7 +482,7 @@ describe('CalloutResolverMutations', () => {
         actorContext,
         { calloutID: 'callout-1' } as any,
         {
-          createReadStream: () => Readable.from(Buffer.from('test')),
+          createReadStream: () => Readable.from([Buffer.from('test')]),
           filename: 'Imported.docx',
           mimetype: 'application/octet-stream',
         } as any
@@ -560,7 +560,7 @@ describe('CalloutResolverMutations', () => {
         actorContext,
         { calloutID: 'callout-1' } as any,
         {
-          createReadStream: () => Readable.from(Buffer.from('test')),
+          createReadStream: () => Readable.from([Buffer.from('test')]),
           filename: 'Imported.docx',
           mimetype: 'application/octet-stream',
         } as any

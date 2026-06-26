@@ -648,7 +648,10 @@ services:
       - FILE_SERVICE_URL=http://file-service:4003
       - WOPI_COLLABORA_URL=http://collabora:9980
       - WOPI_BASE_URL=http://localhost:3000
-      - WOPI_CALLBACK_URL=http://wopi-service:8080
+      # WOPISrc handed to Collabora routes via Traefik's /wopi route so it rides
+      # the wopi-service failover (local primary → container fallback), instead
+      # of hitting a single instance directly.
+      - WOPI_CALLBACK_URL=http://traefik
       - WOPI_TOKEN_SECRET=dev-wopi-token-secret-change-in-production
       - WOPI_SERVER_PORT=8080
       - WOPI_PROOF_VALIDATION=false
@@ -666,7 +669,11 @@ services:
     hostname: collabora
     image: collabora/code:24.04.12.2.1
     environment:
-      - aliasgroup1=http://wopi-service:8080
+      # Reach wopi through Traefik (not a direct port), so callbacks ride the
+      # wopi-service failover. A `wopi-service:host-gateway` extra_host here
+      # would shadow the container's Docker DNS name and pin Collabora to the
+      # host — exactly what we must avoid.
+      - aliasgroup1=http://traefik
       - username=admin
       - password=admin
       - extra_params=--o:ssl.enable=false --o:net.proto=IPv4 --o:security.seccomp=false --o:security.capabilities=false

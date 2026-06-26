@@ -293,6 +293,37 @@ describe('SearchExtractService', () => {
       expect(indices.filter(name => name === 'test-memos')).toHaveLength(1);
     });
 
+    it('folds the resource indices into a single collaboration-tools sub-query so one cursor paginates them', async () => {
+      // msearch groups indices by category into independent sub-queries, each
+      // with its OWN search_after. The fold exposes a single callout-level
+      // cursor; if the resource indices formed separate sub-queries their
+      // search_after would never be populated and they would restart at hit 0
+      // every page (endless client scroll on contributions). All fold indices
+      // must therefore land in ONE search request (one header).
+      mockClient.msearch.mockResolvedValue({ responses: [] });
+
+      await service.search({
+        terms: ['governance'],
+        foldCalloutResources: true,
+        filters: [{ category: SearchCategory.COLLABORATION_TOOLS, size: 10 }],
+      } as any);
+
+      const searches = mockClient.msearch.mock.calls[0][0].searches as any[];
+      const headers = searches.filter((_item, i) => i % 2 === 0);
+      // exactly one sub-query (one header + one body)
+      expect(headers).toHaveLength(1);
+      expect(searches).toHaveLength(2);
+      // that single sub-query targets every fold index
+      expect(headers[0].index).toEqual(
+        expect.arrayContaining([
+          'test-callouts',
+          'test-posts',
+          'test-whiteboards',
+          'test-memos',
+        ])
+      );
+    });
+
     it('does not widen non-Callout searches even when foldCalloutResources is on', async () => {
       mockClient.msearch.mockResolvedValue({ responses: [] });
 

@@ -1647,6 +1647,14 @@ const buildFoldedCalloutResults = (
 
   // dedupe by callout id, keeping the highest-scored representative
   const byCalloutId = new Map<string, ISearchResultCallout>();
+  // remember the ES sort id (`id` field) of the document that actually matched
+  // for each callout's representative. Elasticsearch paginates the msearch on
+  // `[_score desc, id desc]` using each document's own id, so the keyset cursor
+  // MUST resume on that same id — NOT the callout id. When a child
+  // (post/whiteboard/memo) is the match, its id differs from the callout id;
+  // using the callout id makes `search_after` fail to exclude the child, which
+  // re-returns the same hit forever (endless client scroll).
+  const cursorIdByCalloutId = new Map<string, string>();
 
   for (const hit of foldable) {
     const callout = hit.callout;
@@ -1657,7 +1665,7 @@ const buildFoldedCalloutResults = (
     if (existing && existing.score >= hit.score) {
       continue;
     }
-    // re-key the result to the containing callout so the cursor pages on callout id
+    // re-key the result to the containing callout for the response/dedupe...
     byCalloutId.set(callout.id, {
       id: callout.id,
       score: hit.score,
@@ -1667,6 +1675,8 @@ const buildFoldedCalloutResults = (
       callout,
       space: hit.space,
     });
+    // ...but keep the matched document's own id for the keyset cursor.
+    cursorIdByCalloutId.set(callout.id, hit.result.id);
   }
 
   const foldedResults = Array.from(byCalloutId.values());
@@ -1680,7 +1690,12 @@ const buildFoldedCalloutResults = (
 
   const rankedAndLimited = resultsRanked.slice(0, filter?.size);
 
-  const cursor = calculateSearchCursor(rankedAndLimited);
+  // build the cursor from the score + the matched document's ES sort id so
+  // `search_after` resumes at a real Elasticsearch sort position.
+  const last = rankedAndLimited.at(-1);
+  const cursor = last
+    ? `${last.score}::${cursorIdByCalloutId.get(last.callout.id)}`
+    : undefined;
 
   return { results: rankedAndLimited, cursor, total };
 };
