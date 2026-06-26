@@ -122,20 +122,7 @@ export class McpApiKeyService {
       where: { keyHash },
     });
     if (existing) {
-      // Idempotent: re-assert it is active and ACTOR-bound — and clear any
-      // `userId` so the userId/actorId XOR (trust-anchor invariant) holds even if
-      // the matching-hash row was previously a user-bound key. Otherwise no-op.
-      if (
-        !existing.isActive ||
-        existing.actorId !== actorId ||
-        existing.userId
-      ) {
-        existing.isActive = true;
-        existing.actorId = actorId;
-        existing.userId = null as unknown as undefined; // NULL the column (TypeORM skips `undefined`)
-        return this.mcpApiKeyRepository.save(existing);
-      }
-      return existing;
+      return this.reassertActorKey(existing, actorId, scopes);
     }
 
     const apiKey = new McpApiKey();
@@ -144,13 +131,63 @@ export class McpApiKeyService {
     apiKey.keyHash = keyHash;
     apiKey.scopes = scopes;
     apiKey.isActive = true;
-    const saved = await this.mcpApiKeyRepository.save(apiKey);
+    try {
+      const saved = await this.mcpApiKeyRepository.save(apiKey);
+      this.logger.verbose?.(
+        `Ensured actor-bound MCP API key ${saved.id} for actor ${actorId}`,
+        LogContext.MCP_SERVER
+      );
+      return saved;
+    } catch (error) {
+      // A concurrent bootstrap (another replica) may have inserted the same
+      // unique `keyHash` between our find and save — re-read and re-assert rather
+      // than aborting startup on the duplicate-key error.
+      if (this.isUniqueViolation(error)) {
+        const raced = await this.mcpApiKeyRepository.findOne({
+          where: { keyHash },
+        });
+        if (raced) {
+          return this.reassertActorKey(raced, actorId, scopes);
+        }
+      }
+      throw error;
+    }
+  }
 
-    this.logger.verbose?.(
-      `Ensured actor-bound MCP API key ${saved.id} for actor ${actorId}`,
-      LogContext.MCP_SERVER
-    );
-    return saved;
+  /**
+   * Re-assert an existing row as the active, ACTOR-bound key with the given
+   * scopes. Clears any `userId` (XOR trust-anchor invariant) and **refreshes
+   * `scopes`** so a reactivated key never returns with stale permissions. A true
+   * no-op (no write) when the row already matches on all four.
+   */
+  private async reassertActorKey(
+    existing: McpApiKey,
+    actorId: string,
+    scopes: McpApiKeyScope[]
+  ): Promise<McpApiKey> {
+    const scopesMatch =
+      JSON.stringify(existing.scopes) === JSON.stringify(scopes);
+    if (
+      !existing.isActive ||
+      existing.actorId !== actorId ||
+      existing.userId ||
+      !scopesMatch
+    ) {
+      existing.isActive = true;
+      existing.actorId = actorId;
+      existing.userId = null as unknown as undefined; // NULL the column (TypeORM skips `undefined`)
+      existing.scopes = scopes;
+      return this.mcpApiKeyRepository.save(existing);
+    }
+    return existing;
+  }
+
+  /** Postgres `unique_violation` (23505), surfaced via TypeORM's QueryFailedError. */
+  private isUniqueViolation(error: unknown): boolean {
+    const code =
+      (error as { code?: string; driverError?: { code?: string } })?.code ??
+      (error as { driverError?: { code?: string } })?.driverError?.code;
+    return code === '23505';
   }
 
   /**

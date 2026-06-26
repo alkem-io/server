@@ -88,8 +88,13 @@ secret value; assert the old row is deactivated and a new active row (the new ha
   throw. (In practice the actor is created by migration `1780483789227/228`, which run before
   bootstrap.)
 - **Pre-existing key bound to a *user*** with the same hash (shouldn't happen): the ensure re-asserts
-  actor-binding so the trust-anchor invariant holds.
+  actor-binding (clearing `userId`) so the trust-anchor invariant holds.
+- **Stale scopes on a reactivated key**: reactivation refreshes the row's `scopes` to the requested
+  set, so a re-enabled key never returns with outdated permissions.
 - **Multiple active keys for the actor** after a rotation: all whose hash ≠ current are deactivated.
+- **Concurrent bootstraps (multi-replica)**: `keyHash` is unique, so two replicas racing to INSERT
+  could collide. The duplicate-key error is caught and the row re-read + re-asserted — bootstrap
+  never aborts on the race.
 
 ## Requirements *(mandatory)*
 
@@ -106,7 +111,9 @@ secret value; assert the old row is deactivated and a new active row (the new ha
   MUST **never** write a plaintext credential back to any store. The server only ever reads the
   secret to compute its hash.
 - **FR-004**: The step MUST be **idempotent** — re-running bootstrap performs no write when the row
-  already matches; a matching-but-inactive row is reactivated rather than duplicated.
+  already matches (binding, active, **and scopes**); a matching-but-inactive or stale-scoped row is
+  reactivated/refreshed rather than duplicated; and a concurrent-insert race on the unique `keyHash`
+  MUST be caught and re-asserted rather than aborting bootstrap.
 - **FR-005**: On **secret rotation** (the configured value changes), the step MUST deactivate any
   other active key bound to the `virtual-assistant` actor, so a superseded secret stops
   authenticating.

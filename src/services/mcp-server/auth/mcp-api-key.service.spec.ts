@@ -44,6 +44,7 @@ describe('McpApiKeyService.ensureActorKeyFromPlaintext (issue #1937)', () => {
       actorId: ACTOR,
       keyHash: sha256('mcp_secret'),
       isActive: true,
+      scopes: SCOPES,
     };
     repo.find.mockResolvedValue([existing]); // active for actor, same hash → not stale
     repo.findOne.mockResolvedValue(existing);
@@ -58,13 +59,14 @@ describe('McpApiKeyService.ensureActorKeyFromPlaintext (issue #1937)', () => {
     expect(repo.save).not.toHaveBeenCalled();
   });
 
-  it('reactivates a matching but deactivated key', async () => {
+  it('reactivates a deactivated key AND refreshes stale scopes', async () => {
     const { service, repo } = build();
     const existing = {
       id: 'k1',
       actorId: ACTOR,
       keyHash: sha256('mcp_secret'),
       isActive: false,
+      scopes: [{ operations: ['read'] }], // stale — missing 'tools'
     };
     repo.find.mockResolvedValue([]); // no ACTIVE keys for the actor
     repo.findOne.mockResolvedValue(existing);
@@ -72,7 +74,9 @@ describe('McpApiKeyService.ensureActorKeyFromPlaintext (issue #1937)', () => {
     await service.ensureActorKeyFromPlaintext(ACTOR, 'mcp_secret', SCOPES);
 
     expect(repo.save).toHaveBeenCalledTimes(1);
-    expect(repo.save.mock.calls[0][0].isActive).toBe(true);
+    const saved = repo.save.mock.calls[0][0];
+    expect(saved.isActive).toBe(true);
+    expect(saved.scopes).toEqual(SCOPES); // refreshed, not stale
   });
 
   it('clears userId when re-asserting on a user-bound matching-hash row (FR-002 XOR)', async () => {
@@ -85,6 +89,7 @@ describe('McpApiKeyService.ensureActorKeyFromPlaintext (issue #1937)', () => {
       actorId: ACTOR,
       keyHash: sha256('mcp_secret'),
       isActive: true,
+      scopes: SCOPES,
     };
     repo.find.mockResolvedValue([]);
     repo.findOne.mockResolvedValue(existing);
@@ -118,5 +123,29 @@ describe('McpApiKeyService.ensureActorKeyFromPlaintext (issue #1937)', () => {
     expect(created.actorId).toBe(ACTOR);
     expect(created.keyHash).toBe(sha256('mcp_rotated'));
     expect(created.isActive).toBe(true);
+  });
+
+  it('survives a concurrent insert race — re-reads on a unique violation, no throw', async () => {
+    const { service, repo } = build();
+    // A racing replica inserted the same hash between our find and save.
+    const raced = {
+      id: 'raced',
+      actorId: ACTOR,
+      keyHash: sha256('mcp_secret'),
+      isActive: true,
+      scopes: SCOPES,
+    };
+    repo.findOne
+      .mockResolvedValueOnce(null) // initial find: absent
+      .mockResolvedValueOnce(raced); // re-read after the duplicate-key error
+    repo.save.mockRejectedValueOnce({ code: '23505' }); // our INSERT loses the race
+
+    const res = await service.ensureActorKeyFromPlaintext(
+      ACTOR,
+      'mcp_secret',
+      SCOPES
+    );
+
+    expect(res).toBe(raced); // re-read row returned; startup not aborted
   });
 });

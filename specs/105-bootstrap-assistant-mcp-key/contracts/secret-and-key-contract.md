@@ -32,9 +32,13 @@ After bootstrap, the `mcp_api_key` table MUST contain exactly one **active** row
   `McpApiKey`.
 - **Idempotent**: the keyHash lookup makes a steady-state run a **no-op** (no insert/update).
 - **Reactivate**: a matching-but-inactive (or mis-bound) row is reactivated and re-bound to the
-  **actor** — any `userId` is cleared so the userId/actorId XOR holds — never duplicated.
+  **actor** — any `userId` is cleared so the userId/actorId XOR holds, and its **`scopes` are
+  refreshed** to the requested set (no stale permissions) — never duplicated.
 - **Rotation**: any *other* active key bound to the same actor (different hash) is deactivated, so a
   superseded secret stops authenticating.
+- **Concurrent insert**: `keyHash` is unique; if a racing replica inserts the same hash between the
+  find and the save, the duplicate-key error is caught, the row is **re-read and re-asserted**
+  (never aborting startup).
 - **Never** generates a key, **never** writes a plaintext back to any store.
 
 ## Failure modes (best-effort within bootstrap)

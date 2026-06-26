@@ -51,7 +51,8 @@ ASSISTANT_MCP_API_KEY (env)
    │
    ▼
 findOne(keyHash = h):
-   ├─ found, active, actor-bound   → no-op
-   ├─ found, inactive/mis-bound    → isActive = true, actorId = virtual-assistant, userId = null
-   └─ not found                    → INSERT { keyHash: h, actorId, scopes:[{operations:[read,tools]}], isActive }
+   ├─ found, active, actor-bound, scopes match  → no-op
+   ├─ found, inactive/mis-bound/stale scopes    → isActive = true, actorId = virtual-assistant, userId = null, scopes = requested
+   └─ not found                                 → INSERT { keyHash: h, actorId, scopes:[{operations:[read,tools]}], isActive }
+                                                  (on unique-violation race → re-read + re-assert)
 ```
