@@ -124,18 +124,22 @@ export class ContributorCollectionService {
 
   /**
    * Build the ranked, deduplicated set of contributor IDs for a given type,
-   * leads/admins first (FR-009). The same id appearing under multiple roles
-   * keeps its highest rank / most senior role label.
+   * leads first (FR-009). The same id appearing under multiple roles keeps its
+   * highest rank / most senior role label.
    */
   private async getRankedIdsForType(
     roleSet: IRoleSet,
     type: ActorType
   ): Promise<RankedContributorId[]> {
-    // Rank: ADMIN (3) > LEAD (2) > MEMBER (1). The role label uses the most
-    // senior role the contributor holds.
+    // Only LEAD and MEMBER are surfaced as display roles: a contributor holding
+    // the LEAD role is shown (and sorted) as a lead; everyone else — including
+    // admins who are NOT leads — is a plain member. ADMIN is still fetched so an
+    // admin who isn't separately in the member role is still included, but it
+    // never yields an "admin" label and never outranks LEAD (so a lead who is
+    // also an admin stays a lead, not a member).
     const roleRanks: { role: RoleName; rank: number; label: string }[] = [
-      { role: RoleName.ADMIN, rank: 3, label: 'admin' },
       { role: RoleName.LEAD, rank: 2, label: 'lead' },
+      { role: RoleName.ADMIN, rank: 1, label: 'member' },
       { role: RoleName.MEMBER, rank: 1, label: 'member' },
     ];
 

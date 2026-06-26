@@ -34,7 +34,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { cloneDeep, keyBy, merge } from 'lodash';
+import { cloneDeep, keyBy, merge, mergeWith } from 'lodash';
 import {
   DeepPartial,
   FindManyOptions,
@@ -447,7 +447,16 @@ export class CalloutService {
     }
 
     if (calloutUpdateData.settings) {
-      callout.settings = merge(callout.settings, calloutUpdateData.settings);
+      // Replace arrays wholesale instead of deep-merging them element-by-index:
+      // a default `merge` keeps the longer stored array's tail, so EXCLUDING a
+      // contributor type (sending a shorter `contributorTypes`) would silently
+      // not persist. Arrays in settings are config lists, not positional patches.
+      callout.settings = mergeWith(
+        callout.settings,
+        calloutUpdateData.settings,
+        (_existing, incoming) =>
+          Array.isArray(incoming) ? incoming : undefined
+      );
     }
 
     // Re-validate + auto-heal contributors settings after any framing-type or
