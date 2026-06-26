@@ -1880,19 +1880,6 @@ type CalloutContributorsSettings {
   defaultView: ContributorCollectionView!
 }
 
-type CalloutContributorsSettingsData {
-  """The contributor types to include. At least one type is required."""
-  contributorTypes: [ContributorType!]!
-  """
-  The default contributor type (one of contributorTypes). Defaults to the first selected type.
-  """
-  defaultContributorType: ContributorType
-  """
-  The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
-  """
-  defaultView: ContributorCollectionView
-}
-
 type CalloutFraming {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -2431,6 +2418,19 @@ type CreateCalloutContributionDefaultsData {
   whiteboardContent: WhiteboardContent
 }
 
+type CreateCalloutContributorsSettingsData {
+  """The contributor types to include. At least one type is required."""
+  contributorTypes: [ContributorType!]!
+  """
+  The default contributor type (one of contributorTypes). Defaults to the first selected type.
+  """
+  defaultContributorType: ContributorType
+  """
+  The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
+  """
+  defaultView: ContributorCollectionView
+}
+
 type CreateCalloutData {
   classification: CreateClassificationData
   contributionDefaults: CreateCalloutContributionDefaultsData
@@ -2492,7 +2492,7 @@ type CreateCalloutSettingsFramingData {
   """
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
-  contributors: CalloutContributorsSettingsData
+  contributors: CreateCalloutContributorsSettingsData
 }
 
 type CreateCalloutsSetData {
@@ -7398,6 +7398,19 @@ input CreateCalloutContributionInput {
   whiteboard: CreateWhiteboardInput
 }
 
+input CreateCalloutContributorsSettingsInput {
+  """The contributor types to include. At least one type is required."""
+  contributorTypes: [ContributorType!]!
+  """
+  The default contributor type (one of contributorTypes). Defaults to the first selected type.
+  """
+  defaultContributorType: ContributorType
+  """
+  The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
+  """
+  defaultView: ContributorCollectionView
+}
+
 input CreateCalloutFramingInput {
   """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
   collaboraDocument: CreateCollaboraDocumentInput
@@ -7470,7 +7483,7 @@ input CreateCalloutSettingsFramingInput {
   """
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
-  contributors: UpdateCalloutContributorsSettingsInput
+  contributors: CreateCalloutContributorsSettingsInput
 }
 
 input CreateCalloutSettingsInput {
@@ -8715,8 +8728,8 @@ input UpdateCalloutContributionDefaultsInput {
 }
 
 input UpdateCalloutContributorsSettingsInput {
-  """The contributor types to include. At least one type is required."""
-  contributorTypes: [ContributorType!]!
+  """When provided, replaces the selected contributor types (at least one)."""
+  contributorTypes: [ContributorType!]
   """
   The default contributor type (one of contributorTypes). Defaults to the first selected type.
   """

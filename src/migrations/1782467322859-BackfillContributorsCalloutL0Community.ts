@@ -215,7 +215,8 @@ export class BackfillContributorsCalloutL0Community1782467322859
   public async down(queryRunner: QueryRunner): Promise<void> {
     // Targeted reversal: remove only the PUBLISHED CONTRIBUTORS callouts in the
     // Community tab of L0 spaces that still carry the exact default shape this
-    // migration produced (generated nameID, published, no comments room).
+    // migration produced (generated nameID, published but no publisher, no
+    // comments room) — so user-created contributors callouts are never deleted.
     // Children are deleted explicitly; deleting the classification cascades its
     // flow-state tagset, and the profile's DEFAULT tagset is removed before the
     // profile (tagset.profileId FK).
@@ -259,6 +260,11 @@ export class BackfillContributorsCalloutL0Community1782467322859
             AND co."nameID" LIKE 'contributors-%'
             AND co.settings->>'visibility' = 'published'
             AND co."commentsId" IS NULL
+            -- A user-published callout always records a publisher; this migration
+            -- leaves publishedBy NULL on a PUBLISHED callout (an anomaly only it
+            -- creates). This guard prevents deleting legitimate user-created
+            -- contributors callouts that otherwise match the default shape.
+            AND co."publishedBy" IS NULL
         LOOP
           DELETE FROM callout WHERE id = rec.callout_id;
           DELETE FROM callout_framing WHERE id = rec.framing_id;

@@ -1,7 +1,7 @@
 import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsOptional, ValidateNested } from 'class-validator';
-import { UpdateCalloutContributorsSettingsInput } from './callout.settings.contributors.dto.update';
+import { CreateCalloutContributorsSettingsInput } from './callout.settings.contributors.dto.create';
 
 @InputType()
 @ObjectType('CreateCalloutSettingsFramingData')
@@ -12,13 +12,13 @@ export class CreateCalloutSettingsFramingInput {
   })
   commentsEnabled?: boolean;
 
-  @Field(() => UpdateCalloutContributorsSettingsInput, {
+  @Field(() => CreateCalloutContributorsSettingsInput, {
     nullable: true,
     description:
       'Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.',
   })
   @IsOptional()
   @ValidateNested()
-  @Type(() => UpdateCalloutContributorsSettingsInput)
-  contributors?: UpdateCalloutContributorsSettingsInput;
+  @Type(() => CreateCalloutContributorsSettingsInput)
+  contributors?: CreateCalloutContributorsSettingsInput;
 }

@@ -631,6 +631,12 @@ export class TemplateService {
     if (sourceSettings?.privacy) {
       delete sourceSettings.privacy.userInformationVisibility;
     }
+    // `merge` only overwrites keys present in the source, so removing the key
+    // from the source is not enough — also clear any pre-existing value on the
+    // target, otherwise the template could retain a stale value (FR-021).
+    if (templateContentSpace.settings?.privacy) {
+      delete templateContentSpace.settings.privacy.userInformationVisibility;
+    }
     templateContentSpace.settings = merge(
       templateContentSpace.settings,
       sourceSettings

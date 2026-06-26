@@ -2,9 +2,11 @@ import { ContributorType } from '@common/enums/contributor.type';
 import { RoleName } from '@common/enums/role.name';
 import { UserInformationVisibility } from '@common/enums/user.information.visibility';
 import { VisualType } from '@common/enums/visual.type';
+import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { IRoleSet } from '@domain/access/role-set/role.set.interface';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
+import { Actor } from '@domain/actor/actor/actor.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { Community } from '@domain/community/community/community.entity';
@@ -14,7 +16,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
-import { EntityManager } from 'typeorm';
+import { EntityManager, In } from 'typeorm';
 import { ICalloutContributorsSettings } from '../callout-settings/callout.settings.contributors.interface';
 import { IContributorCollectionCounts } from './dto/contributor.collection.counts';
 import { IContributorCollectionItem } from './dto/contributor.collection.item';
@@ -64,8 +66,14 @@ export class ContributorCollectionService {
         await this.communityResolverService.getCommunityFromCollaborationCalloutOrFail(
           callout.id
         );
-    } catch {
-      return undefined;
+    } catch (error) {
+      // Only the "callout is not attached to a space" case is expected here
+      // (template / knowledge-base callouts) → treat as "no collection".
+      // Re-throw everything else so real resolver/DB failures surface.
+      if (error instanceof EntityNotFoundException) {
+        return undefined;
+      }
+      throw error;
     }
 
     // Load the community's RoleSet directly (avoids importing CommunityModule,
@@ -183,37 +191,21 @@ export class ContributorCollectionService {
     if (ids.length === 0) {
       return result;
     }
-    const actors = await this.entityManager
-      .createQueryBuilder()
-      .select('actor')
-      .from('actor', 'actor')
-      .leftJoinAndMapOne(
-        'actor.profile',
-        'profile',
-        'profile',
-        'profile.id = actor.profileId'
-      )
-      .leftJoinAndMapOne(
-        'profile.location',
-        'location',
-        'location',
-        'location.id = profile.locationId'
-      )
-      .leftJoinAndMapMany(
-        'profile.visuals',
-        'visual',
-        'visual',
-        'visual.profileId = profile.id'
-      )
-      .where('actor.id IN (:...ids)', { ids })
-      .getMany();
+    // Read from the `actor` (CTI) entity so all three contributor types are
+    // covered in one query. Use the entity class + `relations` (not a raw
+    // string-table query builder) so TypeORM hydrates the profile graph
+    // reliably — `getMany()` over a string-table root does not populate the
+    // mapped joins. `profile` is a real @OneToOne on NameableEntity.
+    const actors = await this.entityManager.find(Actor, {
+      where: { id: In(ids) },
+      relations: { profile: { location: true, visuals: true } },
+    });
 
-    for (const actor of actors as unknown as {
-      id: string;
-      nameID: string;
-      profile?: IProfile;
-    }[]) {
-      result.set(actor.id, { nameID: actor.nameID, profile: actor.profile });
+    for (const actor of actors) {
+      result.set(actor.id, {
+        nameID: actor.nameID,
+        profile: actor.profile as unknown as IProfile,
+      });
     }
     return result;
   }

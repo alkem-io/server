@@ -1,26 +1,27 @@
 import { ContributorCollectionView } from '@common/enums/contributor.collection.view';
 import { ContributorType } from '@common/enums/contributor.type';
-import { Field, InputType } from '@nestjs/graphql';
+import { Field, InputType, ObjectType } from '@nestjs/graphql';
 import { ArrayMinSize, IsEnum, IsOptional } from 'class-validator';
 
-// Partial-update input: every field is OPTIONAL so a caller can update just one
-// (e.g. defaultView) without resending the whole block — the server merges into
-// the existing config and re-validates the result (≥1 type still enforced by
-// CalloutFramingService.validateAndNormalizeContributorsSettings). The required
-// create-time counterpart is CreateCalloutContributorsSettingsInput.
+// CREATE-specific contributor settings: `contributorTypes` is REQUIRED on create
+// (a CONTRIBUTORS callout must declare at least one type). The partial-update
+// counterpart (UpdateCalloutContributorsSettingsInput) keeps it nullable.
+//
+// Dual-decorated (@InputType + @ObjectType) so it can nest inside the dual
+// CreateCalloutSettingsFramingData. All fields are enums — valid both ways.
 @InputType()
-export class UpdateCalloutContributorsSettingsInput {
+@ObjectType('CreateCalloutContributorsSettingsData')
+export class CreateCalloutContributorsSettingsInput {
   @Field(() => [ContributorType], {
-    nullable: true,
+    nullable: false,
     description:
-      'When provided, replaces the selected contributor types (at least one).',
+      'The contributor types to include. At least one type is required.',
   })
-  @IsOptional()
   @ArrayMinSize(1, {
     message: 'At least one contributor type must be selected.',
   })
   @IsEnum(ContributorType, { each: true })
-  contributorTypes?: ContributorType[];
+  contributorTypes!: ContributorType[];
 
   @Field(() => ContributorType, {
     nullable: true,
