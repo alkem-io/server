@@ -23,6 +23,10 @@ description: "Task list for Optimize Space Authorization Reset"
 >
 > **Three design errors corrected in research.md/data-model.md** (all found by reading real code): (a) `callout.contributionDefaults` used by init guard — do NOT drop; (b) storage `documents.tagset` consumed downstream — out of scope; (c) Space `license.authorization` consumed by license service — do NOT trim.
 >
+> **Equivalence VERIFIED against a real DB** (2026-06-27): ran the actual reset on a live space via `src/tools/auth-reset/run-space-auth-reset.ts`, serialized all 46 computed policies before/after the trims, and diffed → **zero diff** (byte-identical credential + privilege rules). This surfaced and fixed one real issue: the TemplatesSet `select` dropped the authorization `type` column (now selected explicitly). **How to run this test: see `quickstart.md` → "Runbook: equivalence + data-load test".**
+>
+> **Data-load measurement** (`--measure` flag): on the near-empty Default Space, ~4% fewer field-cells loaded, same query/row count (floor — that space has no callouts/contributions/documents/templates). Run against a content-rich space for a representative number (feeds T029).
+>
 > **Still pending (need seeded-DB equivalence safety net T004–T006 first):** the `select`-requiring callout trims (`contributions`/`classification` → id-only) and the large-space perf measurement (T018/T023).
 
 **Organization**: Tasks grouped by user story. The core change is one body of work (trim the relation loads in each authorization service); the user stories are the validation lenses that prove it (US1 = completes on large spaces, US2 = access unchanged, US3 = scales with entity count).
