@@ -30,8 +30,12 @@ export class TemplatesSetAuthorizationService {
         },
         select: {
           id: true,
-          authorization:
-            this.authorizationPolicyService.authorizationSelectOptions,
+          // Include `type` so the recomputed policy is byte-identical to the previous
+          // (eager) load; authorizationSelectOptions intentionally omits it.
+          authorization: {
+            ...this.authorizationPolicyService.authorizationSelectOptions,
+            type: true,
+          },
           templates: {
             id: true,
           },
