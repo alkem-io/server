@@ -243,6 +243,61 @@ export class ActorLookupService {
   }
 
   /**
+   * Tolerant batch type lookup: resolve the {@link ActorType} for each of the
+   * given ids, returning a map of ONLY the resolvable ids. Unlike
+   * {@link validateActorsAndGetTypes}, this NEVER throws — non-UUID ids are
+   * silently skipped and ids with no matching `Actor` are simply absent from
+   * the returned map. Callers bucket any absent id under a reserved `unknown`
+   * key (FR-005/009). Reuses the same cache-then-DB path as
+   * {@link validateActorsAndGetTypes}: a single
+   * `Actor.find({ where: { id: In(uncachedIds) } })` for the cache misses.
+   * Used by the Collabora analytics consumer to group recorded actor ids by
+   * type. See feature 012-collabora-actor-type.
+   */
+  async getActorTypesByIds(ids: string[]): Promise<Map<string, ActorType>> {
+    if (ids.length === 0) {
+      return new Map();
+    }
+
+    // Silently drop invalid UUIDs (tolerant — never throws).
+    const validIds = ids.filter(id => isUUID(id));
+    if (validIds.length === 0) {
+      return new Map();
+    }
+
+    // Check cache for all valid IDs
+    const cachedTypes =
+      await this.actorTypeCacheService.getActorTypes(validIds);
+
+    // Find IDs not in cache
+    const uncachedIds = validIds.filter(id => !cachedTypes.has(id));
+
+    // If all IDs are cached, return immediately
+    if (uncachedIds.length === 0) {
+      return cachedTypes;
+    }
+
+    // Query DB only for uncached IDs — missing ids are simply not returned
+    // (no throw on a partial result, unlike validateActorsAndGetTypes).
+    const actors = await this.entityManager.find(Actor, {
+      where: { id: In(uncachedIds) },
+      select: { id: true, type: true },
+      loadEagerRelations: false,
+    });
+
+    // Cache and merge whatever was found; unresolved ids stay absent.
+    const newTypes = new Map(actors.map(a => [a.id, a.type]));
+    if (newTypes.size > 0) {
+      await this.actorTypeCacheService.setActorTypes(newTypes);
+      for (const [id, type] of newTypes) {
+        cachedTypes.set(id, type);
+      }
+    }
+
+    return cachedTypes;
+  }
+
+  /**
    * Get authorization policy for any actor without loading the full entity.
    * Works for User, Organization, VirtualContributor, Space, Account.
    * Use when you only need the authorization policy.

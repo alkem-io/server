@@ -19,6 +19,7 @@ import {
   OfficeDocumentContributionDocument,
 } from '../types';
 import { ContributionAuthorDetails } from '../types/contribution.author.details';
+import { TypedActorSet, UNKNOWN_ACTOR_TYPE } from '../types/typed.actor.set';
 import { isElasticError, isElasticResponseError } from '../utils';
 
 const isFromAlkemioTeam = (email: string) => /.*@alkem\.io/.test(email);
@@ -343,16 +344,18 @@ export class ContributionReporterService {
   /**
    * Indexes ONE aggregate `contribution` document per (Collabora document,
    * window) for a window in which the document was genuinely **edited**,
-   * carrying both `writeActors` and `readonlyActors` arrays — NOT one document per
-   * user. Resolve space/displayName once upstream and pass both arrays through
-   * verbatim. See feature 003-collabora-doc-contributions.
+   * carrying both `writeActors` and `readonlyActors` type-keyed sets — NOT one
+   * document per user. The consumer resolves space/displayName once upstream
+   * and groups each actor set by `ActorType`; both maps pass through verbatim
+   * (this reporter does no resolution and writes only the typed shape). See
+   * features 003-collabora-doc-contributions and 012-collabora-actor-type.
    */
   public officeDocumentContribution(contribution: {
     id: string;
     name: string;
     space: string;
-    writeActors: string[];
-    readonlyActors: string[];
+    writeActors: TypedActorSet;
+    readonlyActors: TypedActorSet;
   }): void {
     this.officeDocumentAggregate(
       CONTRIBUTION_TYPE.OFFICE_DOCUMENT_CONTRIBUTION,
@@ -364,16 +367,17 @@ export class ContributionReporterService {
    * Companion of {@link officeDocumentContribution}: indexes ONE aggregate
    * `contribution` document per (Collabora document, window) for a window in
    * which the document was **active but not edited** (viewed). Same aggregate
-   * shape — both `writeActors` and `readonlyActors` arrays — differing ONLY by the
-   * `OFFICE_DOCUMENT_VIEW` type. See feature 003-collabora-doc-contributions
-   * (FR-012). Mutually exclusive with the contribution record per window.
+   * shape — both `writeActors` and `readonlyActors` type-keyed sets — differing
+   * ONLY by the `OFFICE_DOCUMENT_VIEW` type. See feature
+   * 003-collabora-doc-contributions (FR-012). Mutually exclusive with the
+   * contribution record per window.
    */
   public officeDocumentView(contribution: {
     id: string;
     name: string;
     space: string;
-    writeActors: string[];
-    readonlyActors: string[];
+    writeActors: TypedActorSet;
+    readonlyActors: TypedActorSet;
   }): void {
     this.officeDocumentAggregate(
       CONTRIBUTION_TYPE.OFFICE_DOCUMENT_VIEW,
@@ -393,8 +397,8 @@ export class ContributionReporterService {
       id: string;
       name: string;
       space: string;
-      writeActors: string[];
-      readonlyActors: string[];
+      writeActors: TypedActorSet;
+      readonlyActors: TypedActorSet;
     }
   ): void {
     void this.createAggregateDocument({
@@ -482,6 +486,8 @@ export class ContributionReporterService {
             anonymous: false,
             alkemio: isFromAlkemioTeam(user.email),
             guest: false,
+            // 012: the acting actor's resolved ActorType.
+            authorType: actor.type,
           };
         } catch (e) {
           this.logger.error(
@@ -499,6 +505,7 @@ export class ContributionReporterService {
             anonymous: false,
             alkemio: false,
             guest: false,
+            authorType: actor.type,
           };
         }
       }
@@ -509,6 +516,7 @@ export class ContributionReporterService {
         anonymous: false,
         guest: true,
         guestName: actorContext.guestName,
+        authorType: UNKNOWN_ACTOR_TYPE,
       };
     }
     if (actorContext.isAnonymous) {
@@ -516,6 +524,7 @@ export class ContributionReporterService {
         alkemio: false,
         anonymous: true,
         guest: false,
+        authorType: UNKNOWN_ACTOR_TYPE,
       };
     }
 
@@ -531,6 +540,7 @@ export class ContributionReporterService {
       alkemio: false,
       anonymous: true,
       guest: false,
+      authorType: UNKNOWN_ACTOR_TYPE,
     };
   }
 
