@@ -115,11 +115,6 @@ import { WorkerEventBusModule } from './worker.event-bus.module';
     WinstonModule.forRootAsync({
       useClass: WinstonConfigService,
     }),
-    // Client proxies (publishers, lazy). Its GraphQL-subscription PubSub engines
-    // would normally open a RabbitMQ connection+consumer each, but main.worker.ts
-    // sets ALKEMIO_DISABLE_SUBSCRIPTIONS=true so subscriptionFactory returns
-    // in-memory PubSub — the worker opens NO subscription connections.
-    MicroservicesModule,
     // In-process CQRS EventBus only (no AI event-bus RabbitMQ connection). The
     // full EventBusModule is deliberately NOT in this graph.
     WorkerEventBusModule,

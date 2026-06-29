@@ -42,9 +42,37 @@ describe('subscriptionFactory', () => {
 
     expect(result).toBeInstanceOf(PubSub);
     expect(logger.log).toHaveBeenCalledWith(
-      'Skipping RabbitMQ connection for schema bootstrap',
+      'Skipping RabbitMQ subscription connection (in-memory PubSub)',
       LogContext.SUBSCRIPTIONS
     );
+  });
+
+  it('should return an in-memory PubSub when ALKEMIO_DISABLE_SUBSCRIPTIONS=true (auth-reset worker)', async () => {
+    const prev = process.env.ALKEMIO_DISABLE_SUBSCRIPTIONS;
+    process.env.ALKEMIO_DISABLE_SUBSCRIPTIONS = 'true';
+    try {
+      // isBootstrap=false, but the env flag must still short-circuit to an
+      // in-memory PubSub so the worker opens no RabbitMQ subscription consumers.
+      const result = await subscriptionFactory(
+        logger,
+        configService as any,
+        'exchange',
+        'queue',
+        false
+      );
+
+      expect(result).toBeInstanceOf(PubSub);
+      expect(logger.log).toHaveBeenCalledWith(
+        'Skipping RabbitMQ subscription connection (in-memory PubSub)',
+        LogContext.SUBSCRIPTIONS
+      );
+    } finally {
+      if (prev === undefined) {
+        delete process.env.ALKEMIO_DISABLE_SUBSCRIPTIONS;
+      } else {
+        process.env.ALKEMIO_DISABLE_SUBSCRIPTIONS = prev;
+      }
+    }
   });
 
   it('should return undefined when amqp connection fails', async () => {
