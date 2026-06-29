@@ -23,7 +23,7 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { actorDefaults } from '@domain/actor/actor/actor.defaults';
 import { ActorService } from '@domain/actor/actor/actor.service';
-import { getMatrixDisplayName } from '@domain/actor/actor.matrix.display.name';
+import { getActorDisplayName } from '@domain/actor/actor.display.name';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -231,7 +231,7 @@ export class UserService {
 
     // Sync the user to the communication adapter
     // User.id (which is Actor.id) is used as the AlkemioActorID for all communication operations
-    const displayName = getMatrixDisplayName(user);
+    const displayName = getActorDisplayName(user);
 
     try {
       await this.communicationAdapter.syncActor(user.id, displayName);

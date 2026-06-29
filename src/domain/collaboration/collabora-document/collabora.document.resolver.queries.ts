@@ -2,7 +2,7 @@ import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { getMatrixDisplayName } from '@domain/actor/actor.matrix.display.name';
+import { getActorDisplayName } from '@domain/actor/actor.display.name';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Inject } from '@nestjs/common';
@@ -100,7 +100,7 @@ export class CollaboraDocumentResolverQueries {
    * Resolves the human-readable name to surface in the Collabora editor.
    * Guests carry their name on the ActorContext (no Actor row exists for the
    * synthetic guest id); authenticated users get the canonical, PII-safe
-   * `getMatrixDisplayName` (profile.displayName → nameID, never email).
+   * `getActorDisplayName` (profile.displayName → nameID, never email).
    * Returns undefined when no name can be resolved (e.g. anonymous), letting
    * the WOPI service apply its own fallback.
    */
@@ -113,6 +113,6 @@ export class CollaboraDocumentResolverQueries {
     const actor = await this.actorLookupService.getActorById(
       actorContext.actorID
     );
-    return actor ? getMatrixDisplayName(actor) : undefined;
+    return actor ? getActorDisplayName(actor) : undefined;
   }
 }
