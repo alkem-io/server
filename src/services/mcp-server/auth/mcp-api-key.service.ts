@@ -84,6 +84,113 @@ export class McpApiKeyService {
   }
 
   /**
+   * Ensure an ACTOR-bound MCP key exists for a KNOWN plaintext (idempotent).
+   *
+   * Unlike {@link createApiKey}, this does **not** generate a secret — the
+   * plaintext is the input (the asvc's `ASSISTANT_MCP_API_KEY`), so the server
+   * only ever stores its hash. Used by bootstrap to register the
+   * `virtual-assistant` trust-anchor key from the shared secret (issue #1937):
+   * create-if-absent, no-op if already present. Any OTHER active key bound to the
+   * same actor (an older/rotated secret) is deactivated, so the current secret
+   * cleanly supersedes it.
+   */
+  async ensureActorKeyFromPlaintext(
+    actorId: string,
+    plainTextKey: string,
+    scopes: McpApiKeyScope[],
+    name = 'virtual-assistant (bootstrap)'
+  ): Promise<McpApiKey> {
+    const keyHash = this.hashApiKey(plainTextKey);
+
+    // Rotation: retire any active key bound to this actor whose hash differs —
+    // the secret changed, so the old row must stop authenticating.
+    const activeForActor = await this.mcpApiKeyRepository.find({
+      where: { actorId, isActive: true },
+    });
+    for (const stale of activeForActor) {
+      if (stale.keyHash !== keyHash) {
+        stale.isActive = false;
+        await this.mcpApiKeyRepository.save(stale);
+        this.logger.verbose?.(
+          `Deactivated rotated MCP API key ${stale.id} for actor ${actorId}`,
+          LogContext.MCP_SERVER
+        );
+      }
+    }
+
+    const existing = await this.mcpApiKeyRepository.findOne({
+      where: { keyHash },
+    });
+    if (existing) {
+      return this.reassertActorKey(existing, actorId, scopes);
+    }
+
+    const apiKey = new McpApiKey();
+    apiKey.name = name;
+    apiKey.actorId = actorId;
+    apiKey.keyHash = keyHash;
+    apiKey.scopes = scopes;
+    apiKey.isActive = true;
+    try {
+      const saved = await this.mcpApiKeyRepository.save(apiKey);
+      this.logger.verbose?.(
+        `Ensured actor-bound MCP API key ${saved.id} for actor ${actorId}`,
+        LogContext.MCP_SERVER
+      );
+      return saved;
+    } catch (error) {
+      // A concurrent bootstrap (another replica) may have inserted the same
+      // unique `keyHash` between our find and save — re-read and re-assert rather
+      // than aborting startup on the duplicate-key error.
+      if (this.isUniqueViolation(error)) {
+        const raced = await this.mcpApiKeyRepository.findOne({
+          where: { keyHash },
+        });
+        if (raced) {
+          return this.reassertActorKey(raced, actorId, scopes);
+        }
+      }
+      throw error;
+    }
+  }
+
+  /**
+   * Re-assert an existing row as the active, ACTOR-bound key with the given
+   * scopes. Clears any `userId` (XOR trust-anchor invariant) and **refreshes
+   * `scopes`** so a reactivated key never returns with stale permissions. A true
+   * no-op (no write) when the row already matches on all four.
+   */
+  private async reassertActorKey(
+    existing: McpApiKey,
+    actorId: string,
+    scopes: McpApiKeyScope[]
+  ): Promise<McpApiKey> {
+    const scopesMatch =
+      JSON.stringify(existing.scopes) === JSON.stringify(scopes);
+    if (
+      !existing.isActive ||
+      existing.actorId !== actorId ||
+      existing.userId ||
+      !scopesMatch
+    ) {
+      existing.isActive = true;
+      existing.actorId = actorId;
+      existing.userId = null as unknown as undefined; // NULL the column (TypeORM skips `undefined`)
+      existing.scopes = scopes;
+      return this.mcpApiKeyRepository.save(existing);
+    }
+    return existing;
+  }
+
+  /** Postgres `unique_violation` (23505), surfaced via TypeORM's QueryFailedError. */
+  private isUniqueViolation(error: unknown): boolean {
+    const code =
+      (error as { code?: string; driverError?: { code?: string } })?.code ??
+      (error as { driverError?: { code?: string } })?.driverError?.code;
+    return code === '23505';
+  }
+
+  /**
    * Validate an API key and return the entity if valid
    */
   async validateApiKey(plainTextKey: string): Promise<McpApiKey | null> {
