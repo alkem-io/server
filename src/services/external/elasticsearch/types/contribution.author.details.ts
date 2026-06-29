@@ -7,7 +7,7 @@ export type ContributionAuthorDetails = {
    * The acting actor's ActorType (e.g. `"user"`), or `"unknown"` for
    * guest/anonymous/unresolvable contexts. Set on the shared author-details
    * path so it appears on all single-author contribution records. See feature
-   * 012-collabora-actor-type.
+   * 012-collabora-actor-type (in the agents-hq workspace repo).
    */
   authorType?: string;
   /**

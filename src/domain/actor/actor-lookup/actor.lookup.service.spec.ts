@@ -289,7 +289,7 @@ describe('ActorLookupService', () => {
     });
   });
 
-  // 012-collabora-actor-type: tolerant batch lookup used by the Collabora
+  // agents-hq workspace spec 012-collabora-actor-type: tolerant batch lookup used by the Collabora
   // analytics consumer — resolvable ids only, never throws (FR-005/009).
   describe('getActorTypesByIds', () => {
     it('should return empty map for empty input', async () => {

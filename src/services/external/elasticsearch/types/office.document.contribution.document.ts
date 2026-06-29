@@ -8,7 +8,7 @@ import { TypedActorSet } from './typed.actor.set';
  * aggregate document per (document, window) carrying two actor sets:
  * `writeActors` (write-capable active actors) and `readonlyActors` (read-only
  * active actors), each grouped by the actor's {@link ActorType}. See features
- * 003-collabora-doc-contributions and 012-collabora-actor-type.
+ * agents-hq workspace specs 003-collabora-doc-contributions and 012-collabora-actor-type.
  */
 export type OfficeDocumentContributionDocument = {
   /**

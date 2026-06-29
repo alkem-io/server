@@ -5,7 +5,7 @@ import { ActorType } from '@common/enums/actor.type';
  * cannot be resolved at index time (e.g. the actor was deleted between
  * emission and indexing, or the id is malformed). Not a member of the domain
  * `ActorType` enum — it exists only in the analytics record so counts never
- * silently shrink (FR-005). See feature 012-collabora-actor-type.
+ * silently shrink (FR-005). See the agents-hq workspace spec 012-collabora-actor-type.
  */
 export const UNKNOWN_ACTOR_TYPE = 'unknown';
 

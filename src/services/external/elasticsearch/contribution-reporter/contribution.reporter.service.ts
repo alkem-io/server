@@ -348,7 +348,7 @@ export class ContributionReporterService {
    * document per user. The consumer resolves space/displayName once upstream
    * and groups each actor set by `ActorType`; both maps pass through verbatim
    * (this reporter does no resolution and writes only the typed shape). See
-   * features 003-collabora-doc-contributions and 012-collabora-actor-type.
+   * agents-hq workspace specs 003-collabora-doc-contributions and 012-collabora-actor-type.
    */
   public officeDocumentContribution(contribution: {
     id: string;

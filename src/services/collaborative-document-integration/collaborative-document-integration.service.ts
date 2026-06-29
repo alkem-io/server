@@ -324,7 +324,7 @@ export class CollaborativeDocumentIntegrationService {
    * (FR-005). Only non-empty groups appear; an empty input yields `{}`
    * (FR-003). Ordering within a group is unspecified (FR-002) — this folds in
    * encounter order, but callers must not rely on it. See feature
-   * 012-collabora-actor-type.
+   * 012-collabora-actor-type (in the agents-hq workspace repo).
    */
   private groupActorsByType(
     ids: string[],

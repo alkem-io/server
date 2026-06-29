@@ -252,7 +252,7 @@ export class ActorLookupService {
    * {@link validateActorsAndGetTypes}: a single
    * `Actor.find({ where: { id: In(uncachedIds) } })` for the cache misses.
    * Used by the Collabora analytics consumer to group recorded actor ids by
-   * type. See feature 012-collabora-actor-type.
+   * type. See the agents-hq workspace spec 012-collabora-actor-type.
    */
   async getActorTypesByIds(ids: string[]): Promise<Map<string, ActorType>> {
     if (ids.length === 0) {
