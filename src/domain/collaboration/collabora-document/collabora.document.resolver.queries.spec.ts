@@ -105,6 +105,42 @@ describe('CollaboraDocumentResolverQueries', () => {
       );
     });
 
+    it('still returns the editor URL when actor-name resolution fails (best-effort, #6170)', async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'Quarterly Report' },
+      } as any);
+      vi.mocked(collaboraDocumentService.getEditorUrl).mockResolvedValue({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
+
+      const actorLookupService = (resolver as any).actorLookupService;
+      vi.mocked(actorLookupService.getActorById).mockRejectedValue(
+        new Error('db down')
+      );
+
+      const actorContext = { actorID: 'user-1', isGuest: false } as any;
+      const result = await resolver.collaboraEditorUrl(
+        actorContext,
+        'collab-doc-1'
+      );
+
+      // Lookup failure is swallowed: name omitted, document still opens.
+      expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
+        'collab-doc-1',
+        'user-1',
+        undefined
+      );
+      expect(result).toEqual({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
+    });
+
     it('uses the guest name from the ActorContext without an actor lookup (#6170)', async () => {
       vi.mocked(
         collaboraDocumentService.getCollaboraDocumentOrFail
