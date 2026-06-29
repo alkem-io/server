@@ -13,6 +13,8 @@ export const SUBSCRIPTION_IN_APP_NOTIFICATION_RECEIVED =
 export const SUBSCRIPTION_IN_APP_NOTIFICATION_COUNTER =
   'alkemio-subscriptions-notification-counter';
 export const AUTH_RESET_SERVICE = 'alkemio-auth-reset';
+export const WHITEBOARD_COLLABORATION_SERVICE =
+  'alkemio-whiteboard-collaboration';
 export const NOTIFICATIONS_SERVICE = 'alkemio-notifications';
 export const MATRIX_ADAPTER_SERVICE = 'alkemio-matrix-adapter';
 export const SUBSCRIPTION_ROOM_EVENT = 'alkemio-subscriptions-room-event';

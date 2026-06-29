@@ -6,6 +6,41 @@ import { connect as amqpConnect, ChannelModel, Connection } from 'amqplib';
 import { AMQPPubSub } from 'graphql-amqp-subscriptions';
 import { PubSub, PubSubEngine } from 'graphql-subscriptions';
 
+/**
+ * Attach resilience handlers to a RAW amqplib connection. Unlike the golevelup
+ * connections (covered by RabbitMQResilienceService via amqp-connection-manager),
+ * this long-lived ChannelModel is UNMANAGED: without an 'error' listener, an
+ * unexpected drop — an idle heartbeat timeout, a broker restart — emits an
+ * UNHANDLED 'error' on the connection, which Node turns into an uncaught
+ * exception that takes the whole server process down (observed: a midnight
+ * "Unexpected close" crash). Log it instead, mirroring RabbitMQResilienceService.
+ *
+ * NOTE: this raw connection does not auto-reconnect, so the PubSub bound to it
+ * goes inert until the next server start — still far better than crashing the
+ * entire server for a transient broker blip.
+ *
+ * Exported so it can be unit-tested directly, without mocking the AMQP layer.
+ */
+export function attachConnectionResilienceHandlers(
+  connection: ChannelModel,
+  queueName: string,
+  logger: LoggerService
+): void {
+  connection.on('error', (err: Error) => {
+    logger.error(
+      `RabbitMQ subscription connection error (queue ${queueName}): ${err.message}`,
+      err.stack,
+      LogContext.SUBSCRIPTIONS
+    );
+  });
+  connection.on('close', () => {
+    logger.warn(
+      `RabbitMQ subscription connection closed (queue ${queueName})`,
+      LogContext.SUBSCRIPTIONS
+    );
+  });
+}
+
 export async function subscriptionFactory(
   logger: LoggerService,
   configService: ConfigService<AlkemioConfig, true>,
@@ -29,6 +64,7 @@ export async function subscriptionFactory(
 
   try {
     const connection: ChannelModel = await amqpConnect(connectionString);
+    attachConnectionResilienceHandlers(connection, queueName, logger);
     const pubSub = new AMQPPubSub({
       connection: connection as unknown as Connection,
       exchange: {

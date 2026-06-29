@@ -15,6 +15,7 @@ import { VirtualContributorBodyOfKnowledgeType } from '@common/enums/virtual.con
 import { VirtualContributorDataAccessMode } from '@common/enums/virtual.contributor.data.access.mode';
 import { VirtualContributorInteractionMode } from '@common/enums/virtual.contributor.interaction.mode';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
+import { EntityNotFoundException } from '@common/exceptions';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
@@ -28,6 +29,8 @@ import { OrganizationLookupService } from '@domain/community/organization-lookup
 import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { IVirtualAssistant } from '@domain/community/virtual-assistant/virtual.assistant.interface';
+import { VirtualAssistantService } from '@domain/community/virtual-assistant/virtual.assistant.service';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
@@ -49,6 +52,7 @@ import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
+import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
 import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
@@ -93,7 +97,9 @@ export class BootstrapService {
     private licensePlanService: LicensePlanService,
     private readonly messagingService: MessagingService,
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
-    private roleSetService: RoleSetService
+    private roleSetService: RoleSetService,
+    private readonly virtualAssistantService: VirtualAssistantService,
+    private readonly mcpApiKeyService: McpApiKeyService
   ) {}
 
   async bootstrap() {
@@ -141,6 +147,10 @@ export class BootstrapService {
 
       await this.bootstrapLicensePlans();
       await this.ensureAuthorizationsPopulated();
+      // Register the virtual-assistant MCP trust-anchor key from the shared
+      // ASSISTANT_MCP_API_KEY secret so delegated MCP works on a fresh deploy
+      // with no manual DB surgery (issue #1937).
+      await this.ensureAssistantMcpApiKey();
       await this.ensureSpaceSingleton(anonymousActorContext);
       // reset auth as last in the actions
       // await this.ensureSpaceNamesInElastic();
@@ -152,6 +162,52 @@ export class BootstrapService {
       );
       throw new BootstrapException(error.message, { originalException: error });
     }
+  }
+
+  /**
+   * Ensure the `virtual-assistant` actor's MCP API key exists, derived from the
+   * shared `ASSISTANT_MCP_API_KEY` secret (issue #1937). The assistant-service
+   * sends this same plaintext as its delegation bearer; the server stores only
+   * its SHA-256 hash, bound to the virtual-assistant actor. Idempotent (a no-op
+   * once the row matches). Skipped — with a warning, never failing bootstrap —
+   * when the secret is unset or the actor is absent.
+   */
+  private async ensureAssistantMcpApiKey(): Promise<void> {
+    const plaintext = process.env.ASSISTANT_MCP_API_KEY?.trim();
+    if (!plaintext) {
+      this.logger.warn?.(
+        'ASSISTANT_MCP_API_KEY is not set — skipping virtual-assistant MCP key bootstrap; delegated MCP (the Web AI Assistant) is unavailable until it is provisioned',
+        LogContext.BOOTSTRAP
+      );
+      return;
+    }
+
+    let virtualAssistant: IVirtualAssistant;
+    try {
+      virtualAssistant =
+        await this.virtualAssistantService.getSingletonOrFail();
+    } catch (error) {
+      if (error instanceof EntityNotFoundException) {
+        this.logger.warn?.(
+          'virtual-assistant actor not found — skipping MCP key bootstrap (the actor is created by migration; ensure migrations have run)',
+          LogContext.BOOTSTRAP
+        );
+        return;
+      }
+      // A transient/DB error must NOT masquerade as "actor absent" and silently
+      // disable delegated MCP — surface it to bootstrap's error handler.
+      throw error;
+    }
+
+    await this.mcpApiKeyService.ensureActorKeyFromPlaintext(
+      virtualAssistant.id,
+      plaintext,
+      [{ operations: ['read', 'tools'] }]
+    );
+    this.logger.verbose?.(
+      `Ensured virtual-assistant MCP API key from ASSISTANT_MCP_API_KEY (actor ${virtualAssistant.id})`,
+      LogContext.BOOTSTRAP
+    );
   }
 
   /**

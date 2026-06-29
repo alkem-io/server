@@ -517,6 +517,29 @@ collaboration:
     enabled: ${MEMO_ENABLED}:true
     max_collaborators_in_room: ${MEMO_MAX_COLLABORATORS_IN_ROOM}:20
 
+## MCP Server ##
+# Model Context Protocol server for AI client integrations.
+# Provides read-only access to platform content for AI assistants.
+mcp:
+  # Enable/disable the MCP server endpoint
+  enabled: ${MCP_ENABLED}:false
+  # Enable dedicated MCP API keys (in addition to Ory tokens)
+  api_key_enabled: ${MCP_API_KEY_ENABLED}:true
+  # Server-Sent Events configuration
+  sse:
+    # Heartbeat interval in milliseconds
+    heartbeat_interval_ms: ${MCP_SSE_HEARTBEAT_MS}:30000
+    # Connection timeout in milliseconds
+    connection_timeout_ms: ${MCP_SSE_TIMEOUT_MS}:300000
+  # Rate limiting configuration
+  rate_limit:
+    # Maximum requests per minute per client
+    requests_per_minute: ${MCP_RATE_LIMIT_RPM}:100
+  # Resource configuration
+  resources:
+    # Maximum items returned in list responses
+    max_response_items: ${MCP_MAX_RESPONSE_ITEMS}:100
+
 ## Configuration of the legal / usability aspects of the platform
 platform:
   # Terms of usage that all users comply with

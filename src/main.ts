@@ -13,7 +13,7 @@ import { AlkemioConfig } from '@src/types';
 import { json } from 'body-parser';
 import { useContainer } from 'class-validator';
 import cookieParser from 'cookie-parser';
-import { Request, Response } from 'express';
+import { NextFunction, Request, Response } from 'express';
 import { renderGraphiQL } from 'graphql-helix';
 import { graphqlUploadExpress } from 'graphql-upload';
 // biome-ignore lint/correctness/noUnusedImports: apmAgent import has side effects that initialize APM
@@ -36,6 +36,8 @@ const bootstrap = async () => {
      * then the costume logger is applied as usual
      */
     logger: process.env.NODE_ENV === 'production' ? false : undefined,
+    // Disable default body parsers - we configure them manually below
+    bodyParser: false,
   });
   const configService: ConfigService<AlkemioConfig, true> =
     app.get(ConfigService);
@@ -146,11 +148,13 @@ const bootstrap = async () => {
   const { max_json_payload_size, port } = configService.get('hosting', {
     infer: true,
   });
-  app.use(
-    json({
-      limit: max_json_payload_size,
-    })
-  );
+  // JSON body parsing - skip for MCP routes (MCP SDK handles its own parsing)
+  app.use((req: Request, res: Response, next: NextFunction) => {
+    if (req.path.startsWith('/rest/mcp')) {
+      return next();
+    }
+    json({ limit: max_json_payload_size })(req, res, next);
+  });
 
   // Serve the GraphiQL interface at '/graphiql'
   app.use('/graphiql', (_req: Request, res: Response) => {
