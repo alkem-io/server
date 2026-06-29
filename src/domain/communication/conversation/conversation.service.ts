@@ -1,7 +1,9 @@
 import { LogContext } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CONVERSATION_MEDIA_ALLOWED_MIME_TYPES } from '@common/enums/mime.file.type';
 import { RoomType } from '@common/enums/room.type';
+import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { VirtualContributorWellKnown } from '@common/enums/virtual.contributor.well.known';
 import {
   EntityNotFoundException,
@@ -19,16 +21,21 @@ import { IUser } from '@domain/community/user/user.interface';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston/dist/winston.constants';
 import { EntityManager, FindOneOptions, In, Repository } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { IConversationMembership } from '../conversation-membership/conversation.membership.interface';
 import { Conversation } from './conversation.entity';
 import { IConversation } from './conversation.interface';
+import { CONVERSATION_MEDIA_MAX_FILE_SIZE } from './conversation.media.constants';
 
 /**
  * Extended membership type that includes actor type information.
@@ -49,14 +56,15 @@ export class ConversationService {
     private virtualActorLookupService: VirtualActorLookupService,
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
     private communicationAdapter: CommunicationAdapter,
+    private storageAggregatorService: StorageAggregatorService,
+    private storageBucketService: StorageBucketService,
+    private storageAggregatorResolverService: StorageAggregatorResolverService,
     @InjectRepository(Conversation)
     private conversationRepository: Repository<Conversation>,
     @InjectRepository(ConversationMembership)
     private conversationMembershipRepository: Repository<ConversationMembership>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
-
-  // TODO: do we support uploading content in a conversation? If so will need to pass in a storage aggregator
 
   /**
    * Create a conversation with N members.
@@ -93,6 +101,13 @@ export class ConversationService {
     conversation.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.COMMUNICATION_CONVERSATION
     );
+
+    // Eagerly create the per-conversation storage so message attachments
+    // (feature 013) have a membership-authorized home from the start. The
+    // bucket auth is mirrored from the conversation in
+    // ConversationAuthorizationService.applyAuthorizationPolicy.
+    conversation.storageAggregator =
+      await this.createConversationStorageAggregator();
 
     // Create room — either by asking the adapter to create the Matrix room
     // (normal flow) or with a pre-assigned UUID (Element room-check flow:
@@ -157,6 +172,57 @@ export class ConversationService {
       memberActorIDs,
       avatarUrl,
     });
+  }
+
+  /**
+   * Create the per-conversation StorageAggregator + bucket (feature 013),
+   * parented to the platform StorageAggregator. The directStorage bucket policy
+   * is curated for conversation media: a safe MIME set (images/audio/video/
+   * common docs; executables/scripts/unknown rejected) and a 50 MiB cap, so the
+   * limits are enforced server-side and forwarded to file-service on upload —
+   * not only on the client (FR-020, FR-022).
+   */
+  private async createConversationStorageAggregator(): Promise<IStorageAggregator> {
+    const platformStorageAggregator =
+      await this.storageAggregatorResolverService.getPlatformStorageAggregator();
+
+    const storageAggregator =
+      await this.storageAggregatorService.createStorageAggregator(
+        StorageAggregatorType.CONVERSATION,
+        platformStorageAggregator
+      );
+
+    // Tighten the directStorage bucket policy to the conversation media set.
+    const bucket = storageAggregator.directStorage;
+    if (bucket) {
+      bucket.allowedMimeTypes = CONVERSATION_MEDIA_ALLOWED_MIME_TYPES;
+      bucket.maxFileSize = CONVERSATION_MEDIA_MAX_FILE_SIZE;
+      storageAggregator.directStorage =
+        await this.storageBucketService.save(bucket);
+    }
+
+    return storageAggregator;
+  }
+
+  /**
+   * Resolve the storage bucket that conversation attachments live in. Returns
+   * the conversation's directStorage bucket id.
+   */
+  public async getConversationStorageBucketId(
+    conversationID: string
+  ): Promise<string> {
+    const conversation = await this.getConversationOrFail(conversationID, {
+      relations: { storageAggregator: { directStorage: true } },
+    });
+    const bucketId = conversation.storageAggregator?.directStorage?.id;
+    if (!bucketId) {
+      throw new EntityNotInitializedException(
+        'Conversation has no storage bucket',
+        LogContext.COMMUNICATION_CONVERSATION,
+        { conversationID }
+      );
+    }
+    return bucketId;
   }
 
   public async getConversationOrFail(
@@ -328,6 +394,7 @@ export class ConversationService {
       relations: {
         room: true,
         messaging: true,
+        storageAggregator: true,
       },
     });
 
@@ -359,10 +426,19 @@ export class ConversationService {
 
     await this.authorizationPolicyService.delete(conversation.authorization);
 
+    // Release the per-conversation storage (feature 013). The FK is
+    // onDelete:SET NULL, so removing the conversation would orphan the
+    // aggregator — delete it explicitly first.
+    const storageAggregatorId = conversation.storageAggregator?.id;
+
     const result = await this.conversationRepository.remove(
       conversation as Conversation
     );
     result.id = conversationID;
+
+    if (storageAggregatorId) {
+      await this.storageAggregatorService.delete(storageAggregatorId);
+    }
 
     return result;
   }

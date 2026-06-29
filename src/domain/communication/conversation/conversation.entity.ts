@@ -1,5 +1,6 @@
 import { AuthorizableEntity } from '@domain/common/entity/authorizable-entity/authorizable.entity';
 import { Room } from '@domain/communication/room/room.entity';
+import { StorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.entity';
 import { Entity, JoinColumn, ManyToOne, OneToMany, OneToOne } from 'typeorm';
 import { ConversationMembership } from '../conversation-membership/conversation.membership.entity';
 import { Messaging } from '../messaging/messaging.entity';
@@ -38,4 +39,16 @@ export class Conversation extends AuthorizableEntity implements IConversation {
   })
   @JoinColumn()
   room!: Room;
+
+  // Per-conversation storage for message attachments (feature 013). Created
+  // eagerly in ConversationService.createConversation; the bucket auth mirrors
+  // conversation membership. Optional so the relation isn't required to be
+  // loaded on every fetch.
+  @OneToOne(() => StorageAggregator, {
+    eager: false,
+    cascade: true,
+    onDelete: 'SET NULL',
+  })
+  @JoinColumn()
+  storageAggregator?: StorageAggregator;
 }

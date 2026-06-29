@@ -149,6 +149,9 @@ export type AlkemioConfig = {
     direct_message_rooms: {
       enabled: boolean;
     };
+    message_attachments: {
+      enabled: boolean;
+    };
   };
   storage: {
     enabled: boolean;
@@ -182,6 +185,7 @@ export type AlkemioConfig = {
       timeout: number;
       retries: number;
       enabled: boolean;
+      matrix_media_bucket_id: string;
     };
     collabora: {
       wopi_service_url: string;

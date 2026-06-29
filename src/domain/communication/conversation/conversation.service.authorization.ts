@@ -11,6 +11,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { StorageBucketAuthorizationService } from '@domain/storage/storage-bucket/storage.bucket.service.authorization';
 import { Injectable } from '@nestjs/common';
 import { ConversationService } from './conversation.service';
 
@@ -20,6 +21,7 @@ export class ConversationAuthorizationService {
     private conversationService: ConversationService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private roomAuthorizationService: RoomAuthorizationService,
+    private storageBucketAuthorizationService: StorageBucketAuthorizationService,
     private userLookupService: UserLookupService
   ) {}
 
@@ -32,6 +34,13 @@ export class ConversationAuthorizationService {
         relations: {
           authorization: true,
           room: true,
+          storageAggregator: {
+            authorization: true,
+            directStorage: {
+              authorization: true,
+              documents: true,
+            },
+          },
         },
       }
     );
@@ -91,6 +100,35 @@ export class ConversationAuthorizationService {
           roomAuthorization
         );
       updatedAuthorizations.push(roomAuthorization);
+    }
+
+    // Cascade to the per-conversation storage (feature 013). The bucket auth is
+    // RESET + INHERITED from the Conversation's own (membership-based)
+    // authorization — so READ on conversation attachments is granted to exactly
+    // the same holders as conversation access, and follows membership changes
+    // live. Crucially we DO NOT use the generic StorageAggregator auth here:
+    // that grants anonymous/registered READ, which would expose attachments to
+    // every signed-in user. Members get FILE_UPLOAD via the bucket's CONTRIBUTE
+    // privilege rule; non-members inherit nothing and are denied (FR-007).
+    const storageAggregator = conversation.storageAggregator;
+    if (storageAggregator?.directStorage && storageAggregator.authorization) {
+      storageAggregator.authorization = this.authorizationPolicyService.reset(
+        storageAggregator.authorization
+      );
+      storageAggregator.authorization =
+        this.authorizationPolicyService.inheritParentAuthorization(
+          storageAggregator.authorization,
+          conversation.authorization
+        );
+      updatedAuthorizations.push(storageAggregator.authorization);
+
+      // The bucket auth service resets+inherits the bucket from the aggregator
+      // auth, appends file-upload/delete privilege rules, cascades to documents,
+      // and persists internally (returns []).
+      await this.storageBucketAuthorizationService.applyAuthorizationPolicy(
+        storageAggregator.directStorage,
+        storageAggregator.authorization
+      );
     }
 
     return updatedAuthorizations;
