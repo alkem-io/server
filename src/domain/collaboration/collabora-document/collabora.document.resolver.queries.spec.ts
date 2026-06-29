@@ -74,5 +74,64 @@ describe('CollaboraDocumentResolverQueries', () => {
         accessTokenTTL: 3600,
       });
     });
+
+    it("forwards an authenticated user's profile display name to the WOPI service (#6170)", async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'Quarterly Report' },
+      } as any);
+      vi.mocked(collaboraDocumentService.getEditorUrl).mockResolvedValue({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
+
+      const actorLookupService = (resolver as any).actorLookupService;
+      vi.mocked(actorLookupService.getActorById).mockResolvedValue({
+        profile: { displayName: 'Alice Anderson' },
+        nameID: 'alice',
+      } as any);
+
+      const actorContext = { actorID: 'user-1', isGuest: false } as any;
+      await resolver.collaboraEditorUrl(actorContext, 'collab-doc-1');
+
+      expect(actorLookupService.getActorById).toHaveBeenCalledWith('user-1');
+      expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
+        'collab-doc-1',
+        'user-1',
+        'Alice Anderson'
+      );
+    });
+
+    it('uses the guest name from the ActorContext without an actor lookup (#6170)', async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'Quarterly Report' },
+      } as any);
+      vi.mocked(collaboraDocumentService.getEditorUrl).mockResolvedValue({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
+
+      const actorLookupService = (resolver as any).actorLookupService;
+      const actorContext = {
+        actorID: 'guest-abc',
+        isGuest: true,
+        guestName: 'Guest Bob',
+      } as any;
+      await resolver.collaboraEditorUrl(actorContext, 'collab-doc-1');
+
+      expect(actorLookupService.getActorById).not.toHaveBeenCalled();
+      expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
+        'collab-doc-1',
+        'guest-abc',
+        'Guest Bob'
+      );
+    });
   });
 });
