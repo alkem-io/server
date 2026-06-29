@@ -3,7 +3,7 @@
 // RabbitMQ connections/consumers (those are wired into domain modules we pull in).
 process.env.ALKEMIO_DISABLE_SUBSCRIPTIONS = 'true';
 
-import { MessagingQueue } from '@common/enums';
+import { LogContext, MessagingQueue } from '@common/enums';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
 import { MicroserviceOptions, Transport } from '@nestjs/microservices';
@@ -52,6 +52,12 @@ export const bootstrapAuthResetWorker = async () => {
       urls: [amqpEndpoint],
       queue,
       queueOptions: { durable: true },
+      // One unacked message per pod at a time. The RMQ default is 0 (unlimited):
+      // a single pod would pull the whole queue and run every reset concurrently,
+      // each holding large authorization arrays (OOM risk against the 3.5Gi limit)
+      // and trampling the parent->child ordering the inheritance chain depends on.
+      // With 1, work is spread across pods as competing consumers, one reset each.
+      prefetchCount: 1,
       socketOptions: {
         reconnectTimeInSeconds: 5,
         heartbeatIntervalInSeconds:
@@ -61,6 +67,39 @@ export const bootstrapAuthResetWorker = async () => {
       noAck: false,
     },
   });
+
+  // --- Graceful shutdown (worker-only) ---------------------------------------
+  // This binary runs as PID 1 (Dockerfile `CMD ["node", "dist/main.js"]`, no
+  // init wrapper). The Linux kernel does NOT apply the default "terminate"
+  // disposition to PID 1 for SIGTERM/SIGINT unless the process installs its own
+  // handler — so without the line below a SIGTERM (sent by kubelet on
+  // scale-down/rollout) would be IGNORED and the pod would sit until the
+  // terminationGracePeriodSeconds deadline, then get SIGKILLed.
+  //
+  // enableShutdownHooks() registers process SIGTERM/SIGINT listeners that call
+  // app.close(), which closes the RMQ microservice: the consumer is cancelled
+  // (no new deliveries) and the channel/connection are torn down, then the
+  // process exits promptly — well inside the grace window instead of stalling
+  // to SIGKILL.
+  //
+  // In-flight safety: a reset already running when SIGTERM lands continues on
+  // the event loop. If it finishes and acks before app.close() tears the
+  // channel down, the message is consumed normally. If the channel closes
+  // first, the still-unacked message is requeued by the broker and redelivered
+  // on the next scale-up — the handlers are idempotent and carry an explicit
+  // retry counter, so no work is lost either way.
+  app.enableShutdownHooks();
+
+  // Observability only — Nest's enableShutdownHooks listener does the actual
+  // app.close(). This just records that a shutdown signal arrived.
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.on(signal, () =>
+      logger.log?.(
+        `Received ${signal}: draining auth-reset worker and shutting down.`,
+        LogContext.AUTH
+      )
+    );
+  }
 
   await app.startAllMicroservices();
   // Intentionally no app.listen() — headless consumer, no HTTP surface.
