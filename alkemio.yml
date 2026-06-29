@@ -442,6 +442,18 @@ microservices:
       # RabbitMQ password
       password: ${RABBITMQ_PASSWORD}:alkemio!
 
+    # Authorization / license reset queue + deployment role.
+    auth_reset:
+      # Queue the reset events flow over. Publisher (normal server) and the
+      # dedicated consumer (worker) MUST agree on this name.
+      queue: ${RABBITMQ_AUTH_RESET_QUEUE}:alkemio-auth-reset
+
+      # Set to true ONLY on the dedicated, KEDA-scaled auth-reset worker
+      # deployment. That process binds ONLY this queue. The normal server keeps
+      # this false: it publishes reset events but never consumes them, so it
+      # never competes with the worker for messages.
+      worker: ${AUTH_RESET_WORKER}:false
+
     # configuration for the event bus used by the AiServer
     event_bus:
       exchange: ${RABBITMQ_EVENT_BUS_EXCHANGE}:event-bus

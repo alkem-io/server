@@ -1,4 +1,4 @@
-import { LogContext, MessagingQueue } from '@common/enums';
+import { LogContext } from '@common/enums';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
 import { OrganizationService } from '@domain/community/organization/organization.service';
@@ -11,6 +11,7 @@ import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { AccountLicenseService } from '@domain/space/account/account.service.license';
 import { Controller, Inject, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import {
   Ctx,
   EventPattern,
@@ -22,6 +23,7 @@ import { PlatformAuthorizationService } from '@platform/platform/platform.servic
 import { PlatformLicenseService } from '@platform/platform/platform.service.license';
 import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
 import { TaskService } from '@services/task/task.service';
+import { AlkemioConfig } from '@src/types';
 import { Channel, Message } from 'amqplib';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthResetEventPayload } from '../auth-reset.payload.interface';
@@ -48,8 +50,18 @@ export class AuthResetController {
     private organizationLicenseService: OrganizationLicenseService,
     private aiServerAuthorizationService: AiServerAuthorizationService,
     private userService: UserService,
-    private taskService: TaskService
-  ) {}
+    private taskService: TaskService,
+    configService: ConfigService<AlkemioConfig, true>
+  ) {
+    // Same config key the publisher proxy and main.ts bind use, so retry
+    // re-publishes land back on the exact queue this worker consumes.
+    this.authResetQueue = configService.get(
+      'microservices.rabbitmq.auth_reset.queue',
+      { infer: true }
+    );
+  }
+
+  private readonly authResetQueue: string;
 
   @EventPattern(RESET_EVENT_TYPE.AUTHORIZATION_RESET_ACCOUNT, Transport.RMQ)
   public async authResetAccount(
@@ -91,7 +103,7 @@ export class AuthResetController {
           } failed. Retrying (${retryCount + 1}/${MAX_RETRIES})`,
           LogContext.AUTH
         );
-        channel.publish('', MessagingQueue.AUTH_RESET, originalMsg.content, {
+        channel.publish('', this.authResetQueue, originalMsg.content, {
           headers: { [RETRY_HEADER]: retryCount + 1 },
           persistent: true, // Make the message durable
         });
@@ -138,7 +150,7 @@ export class AuthResetController {
           } failed. Retrying (${retryCount + 1}/${MAX_RETRIES})`,
           LogContext.AUTH
         );
-        channel.publish('', MessagingQueue.AUTH_RESET, originalMsg.content, {
+        channel.publish('', this.authResetQueue, originalMsg.content, {
           headers: { [RETRY_HEADER]: retryCount + 1 },
           persistent: true, // Make the message durable
         });
@@ -190,7 +202,7 @@ export class AuthResetController {
           } failed. Retrying (${retryCount + 1}/${MAX_RETRIES})`,
           LogContext.AUTH
         );
-        channel.publish('', MessagingQueue.AUTH_RESET, originalMsg.content, {
+        channel.publish('', this.authResetQueue, originalMsg.content, {
           headers: { [RETRY_HEADER]: retryCount + 1 },
           persistent: true, // Make the message durable
         });
@@ -234,7 +246,7 @@ export class AuthResetController {
           }/${MAX_RETRIES})`,
           LogContext.AUTH
         );
-        channel.publish('', MessagingQueue.AUTH_RESET, originalMsg.content, {
+        channel.publish('', this.authResetQueue, originalMsg.content, {
           headers: { [RETRY_HEADER]: retryCount + 1 },
           persistent: true, // Make the message durable
         });
@@ -277,7 +289,7 @@ export class AuthResetController {
           }/${MAX_RETRIES})`,
           LogContext.AUTH
         );
-        channel.publish('', MessagingQueue.AUTH_RESET, originalMsg.content, {
+        channel.publish('', this.authResetQueue, originalMsg.content, {
           headers: { [RETRY_HEADER]: retryCount + 1 },
           persistent: true, // Make the message durable
         });
@@ -321,7 +333,7 @@ export class AuthResetController {
           }/${MAX_RETRIES})`,
           LogContext.AUTH
         );
-        channel.publish('', MessagingQueue.AUTH_RESET, originalMsg.content, {
+        channel.publish('', this.authResetQueue, originalMsg.content, {
           headers: { [RETRY_HEADER]: retryCount + 1 },
           persistent: true, // Make the message durable
         });
@@ -371,7 +383,7 @@ export class AuthResetController {
           } failed. Retrying (${retryCount + 1}/${MAX_RETRIES})`,
           LogContext.AUTH
         );
-        channel.publish('', MessagingQueue.AUTH_RESET, originalMsg.content, {
+        channel.publish('', this.authResetQueue, originalMsg.content, {
           headers: { [RETRY_HEADER]: retryCount + 1 },
           persistent: true, // Make the message durable
         });
@@ -427,7 +439,7 @@ export class AuthResetController {
           } failed. Retrying (${retryCount + 1}/${MAX_RETRIES})`,
           LogContext.AUTH
         );
-        channel.publish('', MessagingQueue.AUTH_RESET, originalMsg.content, {
+        channel.publish('', this.authResetQueue, originalMsg.content, {
           headers: { [RETRY_HEADER]: retryCount + 1 },
           persistent: true, // Make the message durable
         });

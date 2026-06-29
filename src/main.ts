@@ -175,20 +175,33 @@ const bootstrap = async () => {
 
   const heartbeat = process.env.NODE_ENV === 'production' ? 30 : 120;
   const amqpEndpoint = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=${heartbeat}`;
-  connectMicroservice(app, amqpEndpoint, MessagingQueue.AUTH_RESET);
-  // Kratos events (e.g. USER_PASSWORD_CHANGED published by the Go kratos-webhooks
-  // service). Dedicated durable queue — do NOT also bind it via @golevelup
-  // @RabbitSubscribe; a competing consumer would steal messages (see the
-  // golevelup note below).
-  connectMicroservice(app, amqpEndpoint, MessagingQueue.KRATOS_EVENTS);
-  connectMicroservice(app, amqpEndpoint, MessagingQueue.WHITEBOARDS);
-  connectMicroservice(app, amqpEndpoint, MessagingQueue.FILES);
-  connectMicroservice(app, amqpEndpoint, MessagingQueue.IN_APP_NOTIFICATIONS);
-  connectMicroservice(
-    app,
-    amqpEndpoint,
-    MessagingQueue.COLLABORATION_DOCUMENT_SERVICE
-  );
+  // Deployment-role split (microservices.rabbitmq.auth_reset). On the dedicated,
+  // KEDA-scaled worker deployment `worker: true` binds ONLY the auth-reset
+  // queue; the normal server keeps it false, binds every OTHER queue and never
+  // consumes auth-reset. Because auth-reset is a single durable queue with
+  // competing consumers, the normal server MUST NOT bind it or it would steal
+  // a share of the reset messages. One image, behaviour selected by config.
+  const authReset = configService.get('microservices.rabbitmq.auth_reset', {
+    infer: true,
+  });
+
+  if (authReset.worker) {
+    connectMicroservice(app, amqpEndpoint, authReset.queue);
+  } else {
+    // Kratos events (e.g. USER_PASSWORD_CHANGED published by the Go kratos-webhooks
+    // service). Dedicated durable queue — do NOT also bind it via @golevelup
+    // @RabbitSubscribe; a competing consumer would steal messages (see the
+    // golevelup note below).
+    connectMicroservice(app, amqpEndpoint, MessagingQueue.KRATOS_EVENTS);
+    connectMicroservice(app, amqpEndpoint, MessagingQueue.WHITEBOARDS);
+    connectMicroservice(app, amqpEndpoint, MessagingQueue.FILES);
+    connectMicroservice(app, amqpEndpoint, MessagingQueue.IN_APP_NOTIFICATIONS);
+    connectMicroservice(
+      app,
+      amqpEndpoint,
+      MessagingQueue.COLLABORATION_DOCUMENT_SERVICE
+    );
+  }
   // Note: Push notifications use @golevelup/nestjs-rabbitmq @RabbitSubscribe decorators
   // in PushDeliveryService. No NestJS microservice connection needed — a competing
   // Transport.RMQ consumer would steal messages from the golevelup handler.
@@ -202,7 +215,7 @@ const bootstrap = async () => {
 const connectMicroservice = (
   app: INestApplication,
   amqpEndpoint: string,
-  queue: MessagingQueue
+  queue: MessagingQueue | string
 ) => {
   app.connectMicroservice<MicroserviceOptions>({
     transport: Transport.RMQ,

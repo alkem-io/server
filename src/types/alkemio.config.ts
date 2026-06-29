@@ -200,6 +200,10 @@ export type AlkemioConfig = {
         user: string;
         password: string;
       };
+      auth_reset: {
+        queue: string;
+        worker: boolean;
+      };
       event_bus: {
         exchange: string;
         ingest_body_of_knowledge_queue: string;
