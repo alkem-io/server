@@ -101,6 +101,13 @@ export const bootstrapAuthResetWorker = async () => {
     );
   }
 
+  // Run module lifecycle hooks (onModuleInit / onApplicationBootstrap) BEFORE
+  // the RMQ consumer starts pulling messages. NestFactory.create() only builds
+  // the DI graph; with no app.listen() (headless worker) nothing else triggers
+  // these hooks, and startAllMicroservices() does not. Without this the consumer
+  // could receive a reset before TypeORM/cache/bootstrap init completed.
+  await app.init();
+
   await app.startAllMicroservices();
   // Intentionally no app.listen() — headless consumer, no HTTP surface.
 };

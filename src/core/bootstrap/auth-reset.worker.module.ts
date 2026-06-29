@@ -1,7 +1,6 @@
 import configuration from '@config/configuration';
 import { WinstonConfigService } from '@config/winston.config';
 import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
-import { MicroservicesModule } from '@core/microservices/microservices.module';
 import { Cipher, EncryptionModule } from '@hedger/nestjs-encryption';
 import { CacheModule } from '@nestjs/cache-manager';
 import { Module } from '@nestjs/common';
