@@ -18,4 +18,10 @@ export interface CopyDocumentInput {
    * destination bucket's per-content dedup lookup and force a fresh row.
    */
   skipDedup?: boolean;
+  /**
+   * Opaque caller reference (feature 013) set on the copied row — used by the
+   * inbound re-share fork to preserve `externalReference = media_id` so the
+   * re-shared conversation document still resolves by-reference.
+   */
+  externalReference?: string;
 }

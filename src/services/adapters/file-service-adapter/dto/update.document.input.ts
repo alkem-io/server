@@ -13,4 +13,19 @@ export interface UpdateDocumentInput {
    * no path separators (`/` or `\`) or control characters (<0x20 or DEL).
    */
   displayName?: string;
+  /**
+   * Re-point the document at a new (server-minted) authorization policy
+   * (feature 013). Used by the inbound re-home MOVE to mirror conversation-
+   * membership auth onto a staging document.
+   */
+  authorizationId?: string;
+  /**
+   * Set the owning actor (feature 013) — the original sender on re-home.
+   */
+  createdBy?: string;
+  /**
+   * Set or clear the opaque caller reference (feature 013). Kept intact on a
+   * re-home MOVE so the document still resolves by-reference.
+   */
+  externalReference?: string;
 }

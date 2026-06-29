@@ -26,4 +26,18 @@ export interface CreateDocumentMetadata {
    * dedup for genuine content uploads.
    */
   skipDedup?: boolean;
+  /**
+   * Opaque caller reference (feature 013). For Matrix media this is the Synapse
+   * `media_id`; file-service treats it as opaque and never parses it. Distinct
+   * from `externalID` (the content hash). `UNIQUE(externalReference,
+   * storageBucketId) WHERE externalReference IS NOT NULL`.
+   */
+  externalReference?: string;
+  /**
+   * Store the bytes verbatim (feature 013) — skip HEIC transcode / EXIF rotate /
+   * dimension measure, so the bytes round-trip exactly (Synapse read-back
+   * contract). Omit it when the inbound re-home wants a web-renderable
+   * conversation copy so file-service canonicalises (research D6).
+   */
+  skipImageProcessing?: boolean;
 }

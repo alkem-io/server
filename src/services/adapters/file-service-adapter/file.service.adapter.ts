@@ -15,6 +15,7 @@ import type {
   CreateDocumentMetadata,
   CreateDocumentResult,
   DeleteDocumentResult,
+  DocumentReferenceResult,
   UpdateDocumentInput,
   UpdateDocumentResult,
 } from './dto';
@@ -100,6 +101,12 @@ export class FileServiceAdapter extends HttpClientBase {
     if (metadata.skipDedup) {
       form.append('skipDedup', 'true');
     }
+    if (metadata.externalReference) {
+      form.append('externalReference', metadata.externalReference);
+    }
+    if (metadata.skipImageProcessing) {
+      form.append('skipImageProcessing', 'true');
+    }
 
     return this.sendRequest<CreateDocumentResult>(
       'createDocument',
@@ -178,6 +185,76 @@ export class FileServiceAdapter extends HttpClientBase {
       'delete',
       this.filePath(documentId)
     );
+  }
+
+  /**
+   * Re-home a document (feature 013): a single PATCH that moves the row into a
+   * new bucket while re-pointing its authorization policy, owner, and opaque
+   * reference. This is the primary inbound re-home — move a `matrix_media`
+   * staging document into a conversation bucket and mirror membership auth onto
+   * it, all in one call. Thin semantic wrapper over the PATCH endpoint.
+   */
+  async moveDocument(
+    documentId: string,
+    patch: Pick<
+      UpdateDocumentInput,
+      | 'storageBucketId'
+      | 'authorizationId'
+      | 'createdBy'
+      | 'externalReference'
+      | 'temporaryLocation'
+      | 'displayName'
+    >
+  ): Promise<UpdateDocumentResult> {
+    this.checkEnabledAndCircuit('moveDocument');
+
+    return this.sendRequest<UpdateDocumentResult>(
+      'moveDocument',
+      'patch',
+      this.filePath(documentId),
+      patch
+    );
+  }
+
+  /**
+   * Resolve a document by its opaque `externalReference` (feature 013).
+   *
+   * - `bucketId` omitted → global lookup (provider `fetch` form): returns any
+   *   document whose `externalReference = ref` (all share one blob). Used to
+   *   decide MOVE vs COPY during re-home.
+   * - `bucketId` present → bucket-scoped lookup (read resolution): the document
+   *   in that bucket carrying the reference.
+   *
+   * Returns `null` on 404 (no match) rather than throwing.
+   */
+  async getDocumentByReference(
+    ref: string,
+    bucketId?: string
+  ): Promise<DocumentReferenceResult | null> {
+    this.checkEnabledAndCircuit('getDocumentByReference');
+
+    const params = new URLSearchParams({ ref });
+    if (bucketId) {
+      params.append('bucketId', bucketId);
+    }
+    const path = `${FILE_PATH_PREFIX}/by-reference?${params.toString()}`;
+
+    try {
+      return await this.sendRequest<DocumentReferenceResult>(
+        'getDocumentByReference',
+        'get',
+        path,
+        { ref, bucketId }
+      );
+    } catch (error) {
+      if (
+        error instanceof FileServiceAdapterException &&
+        error.httpStatus === 404
+      ) {
+        return null;
+      }
+      throw error;
+    }
   }
 
   private filePath(documentId: string): string {
