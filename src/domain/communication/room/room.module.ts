@@ -14,6 +14,7 @@ import { EntityResolverModule } from '@services/infrastructure/entity-resolver/e
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { SubscriptionServiceModule } from '@services/subscriptions/subscription-service';
 import { MessageModule } from '../message/message.module';
+import { MessageAttachmentModule } from '../message-attachment/message.attachment.module';
 import { RoomLookupModule } from '../room-lookup/room.lookup.module';
 import { VirtualContributorMessageModule } from '../virtual.contributor.message/virtual.contributor.message.module';
 import { RoomDataLoader } from './room.data.loader';
@@ -37,6 +38,7 @@ import { RoomServiceEvents } from './room.service.events';
     CommunicationAdapterModule,
     EntityResolverModule,
     MessageModule,
+    MessageAttachmentModule,
     VirtualActorLookupModule,
     VirtualContributorMessageModule,
     UserLookupModule,

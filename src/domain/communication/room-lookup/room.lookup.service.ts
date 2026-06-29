@@ -3,6 +3,7 @@ import { EntityNotFoundException } from '@common/exceptions/entity.not.found.exc
 import { Inject } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
+import { CommunicationMessageAttachment } from '@services/adapters/communication-adapter/dto/communication.message.attachment';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
 import { IMessage } from '../message/message.interface';
@@ -152,20 +153,23 @@ export class RoomLookupService {
   async sendMessage(
     room: IRoom,
     actorID: string,
-    messageData: RoomSendMessageInput
+    messageData: RoomSendMessageInput,
+    attachments?: CommunicationMessageAttachment[]
   ): Promise<IMessage> {
     // The new adapter uses alkemio room ID and handles membership internally
     return this.communicationAdapter.sendMessage({
       actorID: actorID,
       message: messageData.message,
       roomID: room.id,
+      attachments,
     });
   }
 
   async sendMessageReply(
     room: IRoom,
     actorID: string,
-    messageData: RoomSendMessageReplyInput
+    messageData: RoomSendMessageReplyInput,
+    attachments?: CommunicationMessageAttachment[]
   ): Promise<IMessage> {
     // The new adapter uses alkemio room ID and handles membership internally
     return this.communicationAdapter.sendMessageReply({
@@ -173,6 +177,7 @@ export class RoomLookupService {
       message: messageData.message,
       roomID: room.id,
       threadID: messageData.threadID,
+      attachments,
     });
   }
 }

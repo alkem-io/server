@@ -1,4 +1,6 @@
+import { CurrentActor } from '@common/decorators';
 import { LogContext } from '@common/enums/logging.context';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { ContributorByAgentIdLoaderCreator } from '@core/dataloader/creators/loader.creators';
 import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
@@ -6,11 +8,14 @@ import { IActor } from '@domain/actor/actor/actor.interface';
 import { Inject } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
+import { IMessageAttachment } from '../message-attachment/message.attachment.interface';
+import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
 import { IMessage } from './message.interface';
 
 @Resolver(() => IMessage)
 export class MessageResolverFields {
   constructor(
+    private readonly messageAttachmentService: MessageAttachmentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: WinstonLogger
   ) {}
@@ -44,5 +49,20 @@ export class MessageResolverFields {
     }
 
     return sender;
+  }
+
+  @ResolveField('attachments', () => [IMessageAttachment], {
+    nullable: false,
+    description:
+      'The media attachments on this Message (feature 013). READ-gated; empty when the feature is disabled or the viewer cannot read the documents.',
+  })
+  async attachments(
+    @Parent() message: IMessage,
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<IMessageAttachment[]> {
+    return this.messageAttachmentService.resolveMessageAttachments(
+      message,
+      actorContext
+    );
   }
 }

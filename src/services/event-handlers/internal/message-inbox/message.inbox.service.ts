@@ -7,6 +7,7 @@ import { AuthorizationPolicyService } from '@domain/common/authorization-policy/
 import { ConversationService } from '@domain/communication/conversation/conversation.service';
 import { ConversationAuthorizationService } from '@domain/communication/conversation/conversation.service.authorization';
 import { IMessage } from '@domain/communication/message/message.interface';
+import { MessageAttachmentService } from '@domain/communication/message-attachment/message.attachment.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
@@ -63,6 +64,7 @@ export class MessageInboxService {
     private readonly conversationAuthorizationService: ConversationAuthorizationService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly actorService: ActorService,
+    private readonly messageAttachmentService: MessageAttachmentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -85,6 +87,16 @@ export class MessageInboxService {
     // Atomically increment message count to avoid race conditions
     await this.roomLookupService.incrementMessagesCount(room.id);
 
+    // feature 013: EAGER re-home of inbound (Element-origin) media on receive,
+    // so reads are plain lookups. Returns the resolution bucket id (or undefined
+    // when the feature is off / no attachments / unresolved room).
+    const storageBucketId =
+      await this.messageAttachmentService.rehomeInboundAttachments(
+        room,
+        payload.actorID,
+        payload.message.attachments
+      );
+
     // Build message object
     const message: IMessage = {
       id: payload.message.id,
@@ -93,6 +105,10 @@ export class MessageInboxService {
       threadID: payload.message.threadID || '',
       timestamp: payload.message.timestamp,
       reactions: [],
+      // feature 013: carry attachment refs + resolution bucket so the live
+      // subscription payload renders attachments and reads resolve READ-gated.
+      rawAttachments: payload.message.attachments,
+      storageBucketId,
     };
 
     // Publish subscription

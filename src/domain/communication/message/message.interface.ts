@@ -1,3 +1,4 @@
+import { ReceivedAttachment } from '@alkemio/matrix-adapter-lib';
 import { MessageID } from '@domain/common/scalars';
 import { Markdown } from '@domain/common/scalars/scalar.markdown';
 import { Field, ObjectType } from '@nestjs/graphql';
@@ -39,4 +40,16 @@ export class IMessage {
     description: 'The message being replied to',
   })
   threadID?: string;
+
+  // --- feature 013: conversation media attachments (non-GraphQL carriers) ---
+  // Raw attachment refs surfaced by matrix-adapter: `document_id` (outbound echo
+  // of our own media) and/or `media_id` (Element-origin, the inbound re-home /
+  // by-reference key). Resolved to `MessageAttachment` by `@ResolveField`.
+  rawAttachments?: ReceivedAttachment[];
+
+  // The storage bucket the attachments resolve against (the conversation bucket,
+  // or the parent callout/post bucket for comment rooms). Set by message
+  // producers that have room context; required for inbound by-reference lookup
+  // and for READ-gating the resolved documents.
+  storageBucketId?: string;
 }

@@ -16,6 +16,7 @@ import { CurrentActor } from '@src/common/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IMessage } from '../message/message.interface';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
+import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { RoomAddReactionToMessageInput } from './dto/room.dto.add.reaction.to.message';
 import { RoomMarkMessageReadInput } from './dto/room.dto.mark.message.read';
@@ -38,6 +39,7 @@ export class RoomResolverMutations {
     private roomLookupService: RoomLookupService,
     private userLookupService: UserLookupService,
     private communicationAdapter: CommunicationAdapter,
+    private messageAttachmentService: MessageAttachmentService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -63,10 +65,20 @@ export class RoomResolverMutations {
     await this.validateMessageOnCalloutOrFail(room);
     await this.validateMessageOnDirectConversationOrFail(room, actorContext);
 
+    // feature 013: resolve + validate attachments (READ + type/size per the
+    // conversation bucket policy), then thread them to the matrix-adapter.
+    const attachments =
+      await this.messageAttachmentService.resolveOutboundAttachments(
+        room,
+        actorContext,
+        messageData.attachments
+      );
+
     const message = await this.roomLookupService.sendMessage(
       room,
       actorContext.actorID,
-      messageData
+      messageData,
+      attachments
     );
 
     // All post-send processing (notifications, activities, subscriptions)
@@ -168,10 +180,19 @@ export class RoomResolverMutations {
     await this.validateMessageOnCalloutOrFail(room);
     await this.validateMessageOnDirectConversationOrFail(room, actorContext);
 
+    // feature 013: resolve + validate attachments before threading to adapter.
+    const attachments =
+      await this.messageAttachmentService.resolveOutboundAttachments(
+        room,
+        actorContext,
+        messageData.attachments
+      );
+
     const reply = await this.roomLookupService.sendMessageReply(
       room,
       actorContext.actorID,
-      messageData
+      messageData,
+      attachments
     );
 
     // All post-send processing (notifications, activities, subscriptions)
@@ -233,12 +254,46 @@ export class RoomResolverMutations {
       `room remove message: ${room.id}`
     );
 
+    // feature 013: capture the message's attachments BEFORE deletion so the
+    // backing documents can be released afterwards (FR-014/015). Best-effort —
+    // never block the delete on attachment lookup.
+    let rawAttachments: IMessage['rawAttachments'];
+    let attachmentBucketId: string | undefined;
+    if (this.messageAttachmentService.isEnabled()) {
+      try {
+        const { message } = await this.roomLookupService.getMessageInRoom(
+          room.id,
+          messageData.messageID
+        );
+        rawAttachments = message.rawAttachments;
+        attachmentBucketId =
+          await this.messageAttachmentService.getResolutionBucketIdForRoom(
+            room
+          );
+      } catch (error) {
+        this.logger.warn?.(
+          `Unable to load message attachments before delete: ${
+            (error as Error)?.message
+          }`,
+          LogContext.COMMUNICATION
+        );
+      }
+    }
+
     // Pass actorContext.actorID for future use when Matrix admin reflection is implemented
     // See: docs/matrix-admin-reflection.md
     const messageID = await this.roomService.removeRoomMessage(
       room,
       messageData,
       actorContext.actorID
+    );
+
+    // Release the attachment documents once the message is gone. file-service
+    // GC's the blob only when no row references its externalID, so a re-shared
+    // blob survives in other conversations (FR-015).
+    await this.messageAttachmentService.releaseAttachments(
+      rawAttachments,
+      attachmentBucketId
     );
 
     // All post-delete processing (notifications, activities, subscriptions)

@@ -4,6 +4,7 @@ import {
   AlkemioContextID,
   // ID type aliases
   AlkemioRoomID,
+  AttachmentRef,
   BatchAddMemberRequest,
   BatchAddSpaceMemberRequest,
   BatchGetLastMessagesRequest,
@@ -40,6 +41,7 @@ import {
   MarkMessageReadRequest,
   // Event types (topics)
   MatrixAdapterEventType,
+  ReceivedAttachment,
   RemoveReactionRequest,
   RequestFor,
   ResponseFor,
@@ -74,6 +76,7 @@ import { CommunicationAddReactionToMessageInput } from './dto/communication.dto.
 import { CommunicationDeleteMessageInput } from './dto/communication.dto.message.delete';
 import { CommunicationSendMessageInput } from './dto/communication.dto.message.send';
 import { CommunicationRemoveReactionToMessageInput } from './dto/communication.dto.remove.reaction';
+import { CommunicationMessageAttachment } from './dto/communication.message.attachment';
 import { CommunicationSendMessageReplyInput } from './dto/communications.dto.message.reply';
 
 /**
@@ -797,6 +800,7 @@ export class CommunicationAdapter {
         alkemio_room_id: sendMessageData.roomID,
         sender_actor_id: sendMessageData.actorID,
         content: sendMessageData.message,
+        attachments: this.toAttachmentRefs(sendMessageData.attachments),
       } satisfies SendMessageRequest,
       errorContext: { roomID: sendMessageData.roomID },
       ensureSuccess: true,
@@ -832,6 +836,7 @@ export class CommunicationAdapter {
         sender_actor_id: sendMessageData.actorID,
         content: sendMessageData.message,
         parent_message_id: sendMessageData.threadID,
+        attachments: this.toAttachmentRefs(sendMessageData.attachments),
       } satisfies SendMessageRequest,
       errorContext: { roomID: sendMessageData.roomID },
       ensureSuccess: true,
@@ -1379,6 +1384,7 @@ export class CommunicationAdapter {
       sender_actor_id: string;
       timestamp: number;
     }>;
+    attachments?: ReceivedAttachment[];
   }): IMessage {
     return {
       id: msg.id,
@@ -1392,7 +1398,32 @@ export class CommunicationAdapter {
         sender: r.sender_actor_id,
         timestamp: r.timestamp,
       })),
+      // feature 013: surface raw attachment refs; the message resolver resolves
+      // them to MessageAttachment (READ-gated). storageBucketId is set later by
+      // producers that have room context.
+      rawAttachments: msg.attachments,
     };
+  }
+
+  /**
+   * Map resolved server-side attachments (feature 013) to the matrix-adapter-lib
+   * `AttachmentRef` wire shape. Returns undefined when there are none so the
+   * payload stays identical to the pre-feature shape.
+   */
+  private toAttachmentRefs(
+    attachments?: CommunicationMessageAttachment[]
+  ): AttachmentRef[] | undefined {
+    if (!attachments || attachments.length === 0) {
+      return undefined;
+    }
+    return attachments.map(a => ({
+      document_id: a.documentId,
+      display_name: a.displayName,
+      mime_type: a.mimeType,
+      size: a.size,
+      width: a.width,
+      height: a.height,
+    }));
   }
 
   private logInputPayload(topic: string, payload: unknown): number {

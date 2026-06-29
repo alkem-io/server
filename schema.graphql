@@ -482,21 +482,27 @@ enum LicensingCredentialBasedPlanType {
 }
 
 enum MimeType {
+  AAC
   AVIF
   BMP
   CSV
   DOC
   DOCX
+  FLAC
   GIF
   HEIC
   HEIF
   ICS
   JPEG
   JPG
+  MP3
+  MP4
   ODG
   ODP
   ODS
   ODT
+  OGA
+  OGV
   PDF
   PNG
   POTM
@@ -506,8 +512,12 @@ enum MimeType {
   PPT
   PPTM
   PPTX
+  QUICKTIME
   RTF
   SVG
+  WAV
+  WEBA
+  WEBM
   WEBP
   XLS
   XLSX
@@ -3666,6 +3676,8 @@ type MeQueryResults {
 
 """A message that was sent in a chat room"""
 type Message {
+  """The media attachments on this Message (feature 013). READ-gated; empty when the feature is disabled or the viewer cannot read the documents."""
+  attachments: [MessageAttachment!]!
   """The id for the message event."""
   id: MessageID!
   """The message being sent"""
@@ -3678,6 +3690,23 @@ type Message {
   threadID: MessageID
   """The server timestamp in UTC"""
   timestamp: Float!
+}
+
+type MessageAttachment {
+  """The filename / display name of the attachment."""
+  displayName: String!
+  """The pixel height of the attachment (images only)."""
+  height: Int
+  """The file-service document id of the attachment."""
+  id: UUID!
+  """The MIME type of the attachment."""
+  mimeType: String!
+  """The size of the attachment in bytes."""
+  size: Int!
+  """The Alkemio document URL (authorized via conversation policy)."""
+  url: String!
+  """The pixel width of the attachment (images only)."""
+  width: Int
 }
 
 """
@@ -8388,6 +8417,8 @@ input RoomRemoveReactionToMessageInput {
 }
 
 input RoomSendMessageInput {
+  """The file-service document ids of attachments to send with the message (max 10)."""
+  attachments: [UUID!]
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""
@@ -8395,6 +8426,8 @@ input RoomSendMessageInput {
 }
 
 input RoomSendMessageReplyInput {
+  """The file-service document ids of attachments to send with the message (max 10)."""
+  attachments: [UUID!]
   """The message being sent"""
   message: String!
   """The Room the message is being sent to"""

@@ -1,3 +1,5 @@
+import { CommunicationMessageAttachment } from './communication.message.attachment';
+
 export class CommunicationSendMessageReplyInput {
   actorID!: string;
 
@@ -6,4 +8,8 @@ export class CommunicationSendMessageReplyInput {
   roomID!: string;
 
   threadID!: string;
+
+  // Resolved media attachments (feature 013). Threaded to the matrix-adapter as
+  // SendMessageRequest.attachments.
+  attachments?: CommunicationMessageAttachment[];
 }
