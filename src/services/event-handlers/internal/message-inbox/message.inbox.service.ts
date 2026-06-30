@@ -107,8 +107,11 @@ export class MessageInboxService {
       reactions: [],
       // feature 013: carry attachment refs + resolution bucket so the live
       // subscription payload renders attachments and reads resolve READ-gated.
+      // roomID is the resolver's fallback for resolving the bucket on history
+      // reads (H1).
       rawAttachments: payload.message.attachments,
       storageBucketId,
+      roomID: room.id,
     };
 
     // Publish subscription

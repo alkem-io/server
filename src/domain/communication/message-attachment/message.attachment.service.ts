@@ -5,11 +5,14 @@ import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Callout } from '@domain/collaboration/callout/callout.entity';
+import { Post } from '@domain/collaboration/post/post.entity';
 import {
   AuthorizationPolicy,
   IAuthorizationPolicy,
 } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
+import { Room } from '@domain/communication/room/room.entity';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
@@ -20,6 +23,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationMessageAttachment } from '@services/adapters/communication-adapter/dto/communication.message.attachment';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
@@ -50,8 +54,11 @@ export class MessageAttachmentService {
     private readonly storageBucketService: StorageBucketService,
     private readonly authorizationService: AuthorizationService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
+    private readonly storageAggregatorResolverService: StorageAggregatorResolverService,
     @InjectRepository(Conversation)
     private readonly conversationRepository: Repository<Conversation>,
+    @InjectRepository(Room)
+    private readonly roomRepository: Repository<Room>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {
@@ -211,6 +218,31 @@ export class MessageAttachmentService {
     return bucket?.id;
   }
 
+  /**
+   * Resolve the bucket a message's attachments live in (H1). Prefers the bucket
+   * id already carried on the message (set by the live-subscription path), and
+   * otherwise resolves it from the message's room so attachments render on every
+   * read path, not just the inbox subscription.
+   */
+  private async resolveMessageBucketId(
+    message: IMessage
+  ): Promise<string | undefined> {
+    if (message.storageBucketId) {
+      return message.storageBucketId;
+    }
+    if (!message.roomID) {
+      return undefined;
+    }
+    const room = await this.roomRepository.findOne({
+      where: { id: message.roomID },
+      select: { id: true, type: true },
+    });
+    if (!room) {
+      return undefined;
+    }
+    return this.getResolutionBucketIdForRoom(room as IRoom);
+  }
+
   private async rehomeOne(
     bucket: IStorageBucket,
     senderActorID: string,
@@ -247,7 +279,15 @@ export class MessageAttachmentService {
       // transcode (research D6 / T011) is handled by the COPY-with-processing
       // branch below when the source is non-renderable.
       if (this.isBrowserUnrenderable(canonical.mimeType)) {
-        await this.rehomeTranscoded(bucket, senderActorID, canonical, mediaId);
+        // M6: reuse the single auth minted above — do NOT mint again, otherwise
+        // every inbound HEIC orphans an authorization_policy row.
+        await this.rehomeTranscoded(
+          bucket,
+          senderActorID,
+          canonical,
+          mediaId,
+          documentAuthId
+        );
         return;
       }
       await this.fileServiceAdapter.moveDocument(canonical.id, {
@@ -280,12 +320,12 @@ export class MessageAttachmentService {
     bucket: IStorageBucket,
     senderActorID: string,
     canonical: { id: string; displayName?: string; mimeType: string },
-    mediaId: string
+    mediaId: string,
+    documentAuthId: string
   ): Promise<void> {
     const bytes = await this.fileServiceAdapter.getDocumentContent(
       canonical.id
     );
-    const documentAuthId = await this.mintDocumentAuth(bucket);
 
     await this.fileServiceAdapter.createDocument(bytes, {
       displayName: canonical.displayName || 'attachment',
@@ -299,9 +339,11 @@ export class MessageAttachmentService {
       // to a web-renderable canonical form.
     });
 
-    // The verbatim staging row stays referenceable for the Synapse provider's
-    // global by-reference fetch via the conversation row's externalReference;
-    // the staging copy is reaped by the 24h staging cleanup (T014).
+    // H3: the verbatim staging row is the provider's durable, byte-exact copy
+    // (HEIC original). It stays authoritative for the global by-reference(media_id)
+    // fetch Synapse relies on for read-back, while this transcoded conversation
+    // doc serves the web client (bucket-scoped by-reference). It is intentionally
+    // NOT reaped by the staging cleanup (see message.attachment.cleanup.service).
   }
 
   // ---------------------------------------------------------------------------
@@ -322,11 +364,20 @@ export class MessageAttachmentService {
       return [];
     }
 
+    // H1: resolve the bucket on EVERY read path. The live-subscription path sets
+    // message.storageBucketId, but history reads (getMessage/getMessages/
+    // getLastMessages) do not — so fall back to resolving it from the message's
+    // room. Without this, inbound (media_id) attachments resolve to [] on reads.
+    const storageBucketId = await this.resolveMessageBucketId(message);
+    if (!storageBucketId) {
+      return [];
+    }
+
     const resolved: IMessageAttachment[] = [];
     for (const raw of message.rawAttachments) {
       const document = await this.resolveAttachmentDocument(
         raw,
-        message.storageBucketId
+        storageBucketId
       );
       if (!document) {
         continue;
@@ -360,15 +411,38 @@ export class MessageAttachmentService {
     raw: ReceivedAttachment,
     storageBucketId: string | undefined
   ): Promise<IDocument | null> {
+    // Both branches require the message's bucket: the inbound branch keys the
+    // by-reference lookup by it, and the outbound branch needs it to verify
+    // ownership (M5). Without it we cannot safely resolve anything.
+    if (!storageBucketId) {
+      return null;
+    }
     try {
-      // Outbound echo: direct id resolution.
+      // Outbound echo: direct id resolution. `document_id` originates from an
+      // influenceable Matrix event, so we MUST confirm the document actually
+      // lives in this message's bucket before exposing it — otherwise a crafted
+      // event could surface ANY document by id (confused-deputy, M5).
       if (raw.document_id) {
-        return await this.documentService.getDocumentOrFail(raw.document_id, {
-          relations: { authorization: true },
-        });
+        const document = await this.documentService.getDocumentOrFail(
+          raw.document_id,
+          { relations: { authorization: true, storageBucket: true } }
+        );
+        if (document.storageBucket?.id !== storageBucketId) {
+          this.logger.warn?.(
+            {
+              message:
+                'Outbound attachment document_id does not belong to the message bucket; ignoring',
+              documentId: raw.document_id,
+              storageBucketId,
+            },
+            LogContext.COMMUNICATION
+          );
+          return null;
+        }
+        return document;
       }
       // Inbound: bucket-scoped by-reference → the re-homed conversation doc.
-      if (raw.media_id && storageBucketId) {
+      if (raw.media_id) {
         const ref = await this.fileServiceAdapter.getDocumentByReference(
           raw.media_id,
           storageBucketId
@@ -487,10 +561,13 @@ export class MessageAttachmentService {
   }
 
   /**
-   * Resolve the storage bucket an attachment re-homes / resolves against.
-   * Conversation rooms → the conversation's bucket. Comment rooms (callout/post)
-   * → the parent's existing bucket (follow-up: see report; currently logged and
-   * skipped so inbound processing stays robust).
+   * Resolve the storage bucket an attachment re-homes / resolves against
+   * (FR-002/FR-011). Conversation rooms → the conversation's bucket. Comment
+   * rooms (callout/post) → the parent callout's existing collaboration storage
+   * bucket (no new bucket), where callout/post content media already lives, so
+   * inbound media is accounted, authorized to that collaboration's members, and
+   * renderable. Returns undefined (logged) when the target can't be resolved, so
+   * the media is left in staging rather than mis-homed.
    */
   private async getTargetBucketForRoom(
     room: IRoom
@@ -509,15 +586,76 @@ export class MessageAttachmentService {
       });
     }
 
+    if (this.isCommentRoom(room)) {
+      return this.getCommentRoomParentBucket(room);
+    }
+
     this.logger.warn?.(
       {
         message:
-          'Comment-room attachment re-home not yet wired; leaving media in staging',
+          'Unsupported room type for attachment re-home; leaving media in staging',
         roomId: room.id,
         roomType: room.type,
       },
       LogContext.COMMUNICATION
     );
+    return undefined;
+  }
+
+  /**
+   * Comment-room (callout/post) re-home target (FR-002/FR-011): resolve the room
+   * to its owning callout, then to that callout's collaboration storage
+   * aggregator's directStorage bucket — the same membership-authorized bucket the
+   * callout's own content media uses. No new bucket is created.
+   */
+  private async getCommentRoomParentBucket(
+    room: IRoom
+  ): Promise<IStorageBucket | undefined> {
+    const calloutId = await this.resolveParentCalloutId(room);
+    if (!calloutId) {
+      this.logger.warn?.(
+        {
+          message:
+            'Comment-room attachment: unable to resolve parent callout; leaving media in staging',
+          roomId: room.id,
+          roomType: room.type,
+        },
+        LogContext.COMMUNICATION
+      );
+      return undefined;
+    }
+
+    const aggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForCallout(
+        calloutId
+      );
+    const fullAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorOrFail(
+        aggregator.id,
+        { relations: { directStorage: { authorization: true } } }
+      );
+    return fullAggregator.directStorage ?? undefined;
+  }
+
+  /** Resolve a comment room (callout or post) to its owning callout id. */
+  private async resolveParentCalloutId(
+    room: IRoom
+  ): Promise<string | undefined> {
+    const manager = this.conversationRepository.manager;
+    if (room.type === RoomType.CALLOUT) {
+      const callout = await manager.findOne(Callout, {
+        where: { comments: { id: room.id } },
+        select: { id: true },
+      });
+      return callout?.id;
+    }
+    if (room.type === RoomType.POST) {
+      const post = await manager.findOne(Post, {
+        where: { comments: { id: room.id } },
+        relations: { contribution: { callout: true } },
+      });
+      return post?.contribution?.callout?.id;
+    }
     return undefined;
   }
 
@@ -527,5 +665,9 @@ export class MessageAttachmentService {
       room.type === RoomType.CONVERSATION_DIRECT ||
       room.type === RoomType.CONVERSATION_GROUP
     );
+  }
+
+  private isCommentRoom(room: IRoom): boolean {
+    return room.type === RoomType.CALLOUT || room.type === RoomType.POST;
   }
 }

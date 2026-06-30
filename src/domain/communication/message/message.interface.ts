@@ -52,4 +52,10 @@ export class IMessage {
   // producers that have room context; required for inbound by-reference lookup
   // and for READ-gating the resolved documents.
   storageBucketId?: string;
+
+  // The Alkemio room id this message belongs to. Carried so the attachments
+  // resolver can resolve the storage bucket from the room on history read paths
+  // (getMessage/getMessages/getLastMessages), where storageBucketId is not set
+  // by the producer (feature 013, H1).
+  roomID?: string;
 }

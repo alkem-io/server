@@ -580,7 +580,7 @@ export class CommunicationAdapter {
     });
 
     return (response?.messages ?? []).map(msg =>
-      this.convertMessageDtoToIMessage(msg)
+      this.convertMessageDtoToIMessage(msg, alkemioRoomId)
     );
   }
 
@@ -979,7 +979,10 @@ export class CommunicationAdapter {
       return undefined;
     }
 
-    return this.convertMessageDtoToIMessage(response.message);
+    return this.convertMessageDtoToIMessage(
+      response.message,
+      data.alkemioRoomId
+    );
   }
 
   /**
@@ -1186,7 +1189,7 @@ export class CommunicationAdapter {
 
     if (!response?.message) return null;
 
-    return this.convertMessageDtoToIMessage(response.message);
+    return this.convertMessageDtoToIMessage(response.message, alkemioRoomId);
   }
 
   /**
@@ -1214,7 +1217,9 @@ export class CommunicationAdapter {
 
     for (const roomId of alkemioRoomIds) {
       const msgDto = messages[roomId];
-      result[roomId] = msgDto ? this.convertMessageDtoToIMessage(msgDto) : null;
+      result[roomId] = msgDto
+        ? this.convertMessageDtoToIMessage(msgDto, roomId)
+        : null;
     }
 
     return result;
@@ -1336,7 +1341,7 @@ export class CommunicationAdapter {
     response: GetRoomResponse
   ): CommunicationRoomResult {
     const messages = (response.messages ?? []).map(msg =>
-      this.convertMessageDtoToIMessage(msg)
+      this.convertMessageDtoToIMessage(msg, response.alkemio_room_id)
     );
     return {
       id: response.alkemio_room_id,
@@ -1355,7 +1360,7 @@ export class CommunicationAdapter {
     response: GetRoomAsUserResponse
   ): IRoomWithReadState {
     const messages = (response.messages ?? []).map(msg =>
-      this.convertMessageDtoToIMessage(msg)
+      this.convertMessageDtoToIMessage(msg, response.alkemio_room_id)
     );
     return {
       id: response.alkemio_room_id,
@@ -1372,20 +1377,23 @@ export class CommunicationAdapter {
   /**
    * Convert a MessageDto from the Go adapter to an IMessage.
    */
-  private convertMessageDtoToIMessage(msg: {
-    id: string;
-    content: string;
-    sender_actor_id: string;
-    timestamp: number; // Unix milliseconds (contract with matrix-adapter)
-    thread_id?: string;
-    reactions?: Array<{
+  private convertMessageDtoToIMessage(
+    msg: {
       id: string;
-      emoji: string;
+      content: string;
       sender_actor_id: string;
-      timestamp: number;
-    }>;
-    attachments?: ReceivedAttachment[];
-  }): IMessage {
+      timestamp: number; // Unix milliseconds (contract with matrix-adapter)
+      thread_id?: string;
+      reactions?: Array<{
+        id: string;
+        emoji: string;
+        sender_actor_id: string;
+        timestamp: number;
+      }>;
+      attachments?: ReceivedAttachment[];
+    },
+    alkemioRoomId?: AlkemioRoomID
+  ): IMessage {
     return {
       id: msg.id,
       message: msg.content,
@@ -1400,8 +1408,10 @@ export class CommunicationAdapter {
       })),
       // feature 013: surface raw attachment refs; the message resolver resolves
       // them to MessageAttachment (READ-gated). storageBucketId is set later by
-      // producers that have room context.
+      // producers that have room context; roomID lets the resolver resolve the
+      // bucket from the room on history reads (H1).
       rawAttachments: msg.attachments,
+      roomID: alkemioRoomId,
     };
   }
 

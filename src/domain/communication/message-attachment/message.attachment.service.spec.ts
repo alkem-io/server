@@ -9,14 +9,17 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked } from 'vitest';
 import { Conversation } from '../conversation/conversation.entity';
+import { Room } from '../room/room.entity';
 import { MessageAttachmentService } from './message.attachment.service';
 
 const MATRIX_MEDIA_BUCKET = 'matrix-media-bucket';
 const CONV_BUCKET = 'conv-bucket';
+const CALLOUT_BUCKET = 'callout-bucket';
 
 const mockConfig = {
   get: vi.fn((key: string) => {
@@ -30,6 +33,11 @@ const mockConfig = {
 const conversationRoom: IRoom = {
   id: 'room-1',
   type: RoomType.CONVERSATION_GROUP,
+} as IRoom;
+
+const calloutRoom: IRoom = {
+  id: 'callout-room-1',
+  type: RoomType.CALLOUT,
 } as IRoom;
 
 const conversationBucket = {
@@ -46,11 +54,20 @@ describe('MessageAttachmentService', () => {
   let storageBucketService: Mocked<StorageBucketService>;
   let authorizationService: Mocked<AuthorizationService>;
   let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
-  let conversationRepository: { findOne: ReturnType<typeof vi.fn> };
+  let storageAggregatorResolverService: Mocked<StorageAggregatorResolverService>;
+  let conversationRepository: {
+    findOne: ReturnType<typeof vi.fn>;
+    manager: { findOne: ReturnType<typeof vi.fn> };
+  };
+  let roomRepository: { findOne: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
-    conversationRepository = { findOne: vi.fn() };
+    conversationRepository = {
+      findOne: vi.fn(),
+      manager: { findOne: vi.fn() },
+    };
+    roomRepository = { findOne: vi.fn() };
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -60,6 +77,10 @@ describe('MessageAttachmentService', () => {
         {
           provide: getRepositoryToken(Conversation),
           useValue: conversationRepository,
+        },
+        {
+          provide: getRepositoryToken(Room),
+          useValue: roomRepository,
         },
       ],
     })
@@ -72,6 +93,9 @@ describe('MessageAttachmentService', () => {
     storageBucketService = module.get(StorageBucketService);
     authorizationService = module.get(AuthorizationService);
     authorizationPolicyService = module.get(AuthorizationPolicyService);
+    storageAggregatorResolverService = module.get(
+      StorageAggregatorResolverService
+    );
 
     conversationRepository.findOne.mockResolvedValue({
       id: 'conv-1',
@@ -238,6 +262,83 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
       expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
     });
+
+    it('HEIC: transcodes once and mints a single document auth (M6)', async () => {
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'doc-heic',
+          displayName: 'photo.heic',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+          mimeType: 'image/heic',
+        } as any);
+      fileServiceAdapter.getDocumentContent.mockResolvedValue(
+        Buffer.from('bytes')
+      );
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        {
+          media_id: 'media-heic',
+          display_name: 'photo.heic',
+          mime_type: 'image/heic',
+          size: 1,
+        },
+      ]);
+
+      // Single auth mint per inbound HEIC (no orphaned authorization_policy).
+      expect(authorizationPolicyService.save).toHaveBeenCalledTimes(1);
+      // Transcoded into the conversation bucket; staging row NOT moved/deleted.
+      expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
+        expect.any(Buffer),
+        expect.objectContaining({
+          storageBucketId: CONV_BUCKET,
+          externalReference: 'media-heic',
+          authorizationId: 'minted-auth',
+        })
+      );
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+    });
+
+    it('comment-room (callout): re-homes into the parent callout bucket', async () => {
+      conversationRepository.manager.findOne.mockResolvedValue({
+        id: 'callout-1',
+      });
+      storageAggregatorResolverService.getStorageAggregatorForCallout.mockResolvedValue(
+        { id: 'agg-1' } as any
+      );
+      storageAggregatorResolverService.getStorageAggregatorOrFail.mockResolvedValue(
+        {
+          id: 'agg-1',
+          directStorage: { id: CALLOUT_BUCKET, authorization: { id: 'cb-a' } },
+        } as any
+      );
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'doc-staging',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+          mimeType: 'image/png',
+        } as any);
+
+      const bucketId = await service.rehomeInboundAttachments(
+        calloutRoom,
+        'sender-1',
+        [
+          {
+            media_id: 'media-c',
+            display_name: 'x',
+            mime_type: 'image/png',
+            size: 1,
+          },
+        ]
+      );
+
+      expect(bucketId).toBe(CALLOUT_BUCKET);
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
+        'doc-staging',
+        expect.objectContaining({ storageBucketId: CALLOUT_BUCKET })
+      );
+    });
   });
 
   // --- T013 read resolution ---
@@ -249,6 +350,7 @@ describe('MessageAttachmentService', () => {
         displayName: 'pic.png',
         mimeType: 'image/png',
         size: 1000,
+        storageBucket: { id: CONV_BUCKET },
         authorization: { id: 'doc-auth' },
       } as any);
       authorizationService.isAccessGranted.mockReturnValue(true);
@@ -259,6 +361,7 @@ describe('MessageAttachmentService', () => {
       const result = await service.resolveMessageAttachments(
         {
           id: 'm1',
+          storageBucketId: CONV_BUCKET,
           rawAttachments: [
             {
               document_id: 'doc-1',
@@ -276,9 +379,76 @@ describe('MessageAttachmentService', () => {
       ]);
     });
 
+    it('M5: ignores an outbound document_id that does not belong to the message bucket', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-evil',
+        storageBucket: { id: 'a-foreign-bucket' },
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { document_id: 'doc-evil', mime_type: 'image/png', size: 1 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(result).toEqual([]);
+    });
+
+    it('H1: resolves an inbound (media_id) attachment on a history read via roomID fallback', async () => {
+      // No storageBucketId on the message (history read path); roomID present.
+      roomRepository.findOne.mockResolvedValue({
+        id: 'room-1',
+        type: RoomType.CONVERSATION_GROUP,
+      });
+      fileServiceAdapter.getDocumentByReference.mockResolvedValue({
+        id: 'doc-rehomed',
+      } as any);
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-rehomed',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-rehomed'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          roomID: 'room-1',
+          rawAttachments: [
+            {
+              media_id: 'media-1',
+              display_name: 'x',
+              mime_type: 'image/png',
+              size: 1,
+            },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(fileServiceAdapter.getDocumentByReference).toHaveBeenCalledWith(
+        'media-1',
+        CONV_BUCKET
+      );
+      expect(result).toEqual([expect.objectContaining({ id: 'doc-rehomed' })]);
+    });
+
     it('denies a non-member (READ not granted)', async () => {
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-1',
+        storageBucket: { id: CONV_BUCKET },
         authorization: { id: 'doc-auth' },
       } as any);
       authorizationService.isAccessGranted.mockReturnValue(false);
@@ -286,6 +456,7 @@ describe('MessageAttachmentService', () => {
       const result = await service.resolveMessageAttachments(
         {
           id: 'm1',
+          storageBucketId: CONV_BUCKET,
           rawAttachments: [
             {
               document_id: 'doc-1',
