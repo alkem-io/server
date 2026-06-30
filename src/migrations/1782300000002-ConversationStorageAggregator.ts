@@ -77,6 +77,11 @@ export class ConversationStorageAggregator1782300000002
       `SELECT id FROM conversation WHERE "storageAggregatorId" IS NULL`
     );
 
+    // Best-effort sequential backfill: conversations are processed one at a time.
+    // The whole migration runs in TypeORM's transaction, so it is atomic; on a
+    // partial re-run the `WHERE storageAggregatorId IS NULL` filter skips already
+    // backfilled conversations, and the `ON CONFLICT DO NOTHING` guards below keep
+    // re-inserts harmless even if a future run is executed non-transactionally.
     for (const conversation of conversations) {
       const aggregatorAuthId = randomUUID();
       const bucketAuthId = randomUUID();
@@ -85,12 +90,14 @@ export class ConversationStorageAggregator1782300000002
 
       await queryRunner.query(
         `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
-         VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'storage-aggregator')`,
+         VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'storage-aggregator')
+         ON CONFLICT (id) DO NOTHING`,
         [aggregatorAuthId]
       );
       await queryRunner.query(
         `INSERT INTO authorization_policy (id, "createdDate", "updatedDate", version, "credentialRules", "privilegeRules", type)
-         VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'storage-bucket')`,
+         VALUES ($1, NOW(), NOW(), 1, '[]', '[]', 'storage-bucket')
+         ON CONFLICT (id) DO NOTHING`,
         [bucketAuthId]
       );
 
@@ -98,12 +105,14 @@ export class ConversationStorageAggregator1782300000002
       // the circular FK), parented to the platform aggregator.
       await queryRunner.query(
         `INSERT INTO storage_aggregator (id, "createdDate", "updatedDate", version, "authorizationId", type, "parentStorageAggregatorId")
-         VALUES ($1, NOW(), NOW(), 1, $2, 'conversation', $3)`,
+         VALUES ($1, NOW(), NOW(), 1, $2, 'conversation', $3)
+         ON CONFLICT (id) DO NOTHING`,
         [aggregatorId, aggregatorAuthId, platformStorageAggregatorId]
       );
       await queryRunner.query(
         `INSERT INTO storage_bucket (id, "createdDate", "updatedDate", version, "authorizationId", "allowedMimeTypes", "maxFileSize", "storageAggregatorId")
-         VALUES ($1, NOW(), NOW(), 1, $2, $3, $4, $5)`,
+         VALUES ($1, NOW(), NOW(), 1, $2, $3, $4, $5)
+         ON CONFLICT (id) DO NOTHING`,
         [bucketId, bucketAuthId, this.allowedMimeTypes, this.maxFileSize, aggregatorId]
       );
       await queryRunner.query(

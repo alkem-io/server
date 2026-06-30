@@ -15,12 +15,19 @@ const STAGING_TTL_MS = 24 * 60 * 60 * 1000; // 24h (FR-012, SC-007)
 /**
  * Scheduled cleanup for conversation media (feature 013, T014).
  *
- * Sweeps, once a day:
- *  - `matrix_media` staging documents older than 24h — media uploaded to Synapse
- *    but never referenced in a message (re-homed media is MOVED out of staging,
- *    so only un-homed residue remains here).
+ * Sweeps, once a day, ONLY:
  *  - unsent `temporaryLocation` conversation-bucket uploads older than 24h —
- *    web composer uploads that were never sent.
+ *    server-created web-composer uploads that were never sent (compose
+ *    abandoned).
+ *
+ * It deliberately does NOT reap `matrix_media` staging rows by age (H2/H3).
+ * Those rows are the Synapse media-storage provider's durable, byte-exact copies
+ * (HEIC verbatim originals, comment-room media before/without re-home, genuine
+ * Element orphans). The provider's global by-reference(media_id) lookup must keep
+ * returning the verbatim staging row for read-back, so reaping them by age would
+ * cause data loss and break Synapse reads. Provider-staging GC is the file-service
+ * /provider's responsibility, keyed on real un-referenced blobs — not a server age
+ * sweep.
  *
  * Reads the (read-only) `file` table via TypeORM and releases stale rows through
  * `FileServiceAdapter.deleteDocument` (never direct TypeORM writes). Disabled
@@ -30,7 +37,6 @@ const STAGING_TTL_MS = 24 * 60 * 60 * 1000; // 24h (FR-012, SC-007)
 @Injectable()
 export class MessageAttachmentCleanupService {
   private readonly enabled: boolean;
-  private readonly matrixMediaBucketId: string;
 
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
@@ -44,10 +50,6 @@ export class MessageAttachmentCleanupService {
       'communications.message_attachments.enabled',
       { infer: true }
     );
-    this.matrixMediaBucketId = this.configService.get(
-      'storage.file_service.matrix_media_bucket_id',
-      { infer: true }
-    );
   }
 
   @Cron(CronExpression.EVERY_DAY_AT_MIDNIGHT)
@@ -57,27 +59,14 @@ export class MessageAttachmentCleanupService {
     }
     const cutoff = new Date(Date.now() - STAGING_TTL_MS);
 
-    const released = await this.releaseUnhomedStagingDocuments(cutoff);
     const reaped = await this.releaseUnsentConversationUploads(cutoff);
 
-    if (released + reaped > 0) {
+    if (reaped > 0) {
       this.logger.verbose?.(
-        `Conversation media cleanup: released ${released} staging + ${reaped} unsent uploads`,
+        `Conversation media cleanup: released ${reaped} unsent uploads`,
         LogContext.COMMUNICATION
       );
     }
-  }
-
-  private async releaseUnhomedStagingDocuments(cutoff: Date): Promise<number> {
-    const stale = await this.documentRepository.find({
-      where: {
-        storageBucket: { id: this.matrixMediaBucketId },
-        createdDate: LessThan(cutoff),
-      },
-      relations: { storageBucket: true },
-      select: { id: true },
-    });
-    return this.releaseAll(stale.map(d => d.id));
   }
 
   private async releaseUnsentConversationUploads(
