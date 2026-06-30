@@ -519,6 +519,83 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
       expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
+
+    it('no-overwrite: skips when D already carries a DIFFERENT externalReference', async () => {
+      // D is owned by the sender and lives in the room bucket, but it ALREADY
+      // references mediaX. A fresh echo carrying media-Y must NOT overwrite it
+      // (that would detach the earlier message referencing mediaX).
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-D',
+        createdBy: 'sender-1',
+        externalReference: 'media-X',
+        storageBucket: { id: CONV_BUCKET },
+      } as any);
+      mockByReference({
+        // media-Y slot is free here — the OLD guard would have stamped it.
+        [CONV_BUCKET]: null,
+        [MATRIX_MEDIA_BUCKET]: {
+          id: 'doc-twin',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+        },
+      });
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        outboundEcho,
+      ]);
+
+      // Neither the overwrite stamp nor the twin delete fires.
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('stamps when D has no existing externalReference (unset slot)', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-D',
+        createdBy: 'sender-1',
+        externalReference: undefined,
+        storageBucket: { id: CONV_BUCKET },
+      } as any);
+      mockByReference({
+        [CONV_BUCKET]: null,
+        [MATRIX_MEDIA_BUCKET]: {
+          id: 'doc-twin',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+        },
+      });
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        outboundEcho,
+      ]);
+
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-D', {
+        externalReference: 'media-Y',
+      });
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+        'doc-twin'
+      );
+    });
+
+    it('idempotent: no re-stamp when D already references exactly media_id', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-D',
+        createdBy: 'sender-1',
+        externalReference: 'media-Y',
+        storageBucket: { id: CONV_BUCKET },
+      } as any);
+      mockByReference({
+        // media-Y already resolves to D in this bucket; twin already swept.
+        [CONV_BUCKET]: { id: 'doc-D', storageBucketId: CONV_BUCKET },
+        [MATRIX_MEDIA_BUCKET]: null,
+      });
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        outboundEcho,
+      ]);
+
+      // The reference is identical → no stamp, and nothing to delete.
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
   });
 
   // --- T013 read resolution ---

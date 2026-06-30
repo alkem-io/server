@@ -295,17 +295,38 @@ export class MessageAttachmentService {
       return;
     }
 
+    // No-overwrite invariant (MEDIUM): D must not already carry a DIFFERENT
+    // externalReference. The bucket-scoped slot lookup below only proves the new
+    // `media_id` is free in this bucket — it does NOT prove D itself is
+    // unreferenced. If D already references mediaY and a fresh mediaZ slot is
+    // free, the stamp would overwrite mediaY → mediaZ, detaching the earlier
+    // message (its by-reference(mediaY) resolves to nothing). The server
+    // Document entity now maps the file-service-owned `externalReference` column
+    // read-only, so D's current reference is on the entity we just loaded — no
+    // extra round-trip. `=== mediaId` is a no-op (idempotent re-delivery) and
+    // falls through to the slot lookup, which also short-circuits the re-stamp.
+    if (document.externalReference && document.externalReference !== mediaId) {
+      this.logger.warn?.(
+        {
+          message:
+            'Outbound echo document already carries a different externalReference; skipping coalesce',
+          documentId,
+          existingReference: document.externalReference,
+          mediaId,
+        },
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
     // (1) Idempotent stamp, driven off the bucket-scoped by-reference lookup.
-    // The Document entity carries no `externalReference` field (file-service owns
-    // it), so the prior `document.externalID !== mediaId` test compared the
-    // content hash against the media id and was ALWAYS true — the stamp fired
-    // unconditionally and could overwrite a live reference. Resolve the media id
-    // within this bucket instead:
+    // The D-side no-overwrite check above guarantees D is unreferenced (or
+    // already references exactly mediaId). This second, media-id-side lookup
+    // guards the COMPLEMENTARY case — mediaId already bound to a DIFFERENT doc in
+    // this bucket — so we never steal a reference another document already holds:
     //   • resolves to D            → already stamped: no-op (still clean the twin)
     //   • resolves to another doc  → media id already bound here: never steal it
     //   • resolves to nothing      → reference slot free: safe to stamp D
-    // This also honours "never overwrite an existing non-null reference": we only
-    // write when the (bucket, media_id) slot is unset.
     const referenced = await this.fileServiceAdapter.getDocumentByReference(
       mediaId,
       bucket.id

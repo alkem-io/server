@@ -64,6 +64,14 @@ export class Document extends AuthorizableEntity implements IDocument {
   @Column('varchar', { length: SMALL_TEXT_LENGTH, nullable: false })
   externalID!: string;
 
+  // Opaque, caller-supplied reference owned/written by file-service (feature
+  // 013). Mapped READ-ONLY here (all `file` writes go through FileServiceAdapter
+  // per DocumentWriteGuard) so the server can honour the coalesce "never
+  // overwrite an existing reference" invariant without an extra round-trip.
+  // Column created by migration 1782299000000-FileExternalReference (varchar 256).
+  @Column('varchar', { length: 256, nullable: true })
+  externalReference?: string;
+
   @Column('boolean', { nullable: false, default: false })
   temporaryLocation!: boolean;
 }
