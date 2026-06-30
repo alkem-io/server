@@ -493,6 +493,22 @@ describe('CollaborativeDocumentIntegrationService', () => {
       expect(arg.writeActors.unknown).toEqual(['ghost']);
     });
 
+    // Each group holds distinct actor_ids (record-shape contract): a repeated
+    // id within one set is de-duplicated, not emitted twice.
+    it('should de-duplicate a repeated id within a group', async () => {
+      arrange(new Map([['user-1', ActorType.USER]]));
+
+      await service.officeDocumentContributions({
+        documentId: STORAGE_DOCUMENT_ID,
+        writeActors: ['user-1', 'user-1'],
+        readonlyActors: [],
+      } as any);
+
+      const arg =
+        contributionReporter.officeDocumentContribution.mock.calls[0][0];
+      expect(arg.writeActors[ActorType.USER]).toEqual(['user-1']);
+    });
+
     // SC-006: the set of recorded ids equals the input — no ids gained or lost
     // by the grouping (an unresolvable id moves to `unknown`, it is not dropped).
     it('should preserve the full input id-set across the type groups (no ids lost)', async () => {

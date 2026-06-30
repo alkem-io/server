@@ -478,36 +478,51 @@ export class ContributionReporterService {
       const actor = await this.actorService.getActorOrNull(
         actorContext.actorID
       );
-      if (actor && actor.type === 'user') {
-        try {
-          const user = await this.userLookupService.getUserByIdOrFail(actor.id);
-          return {
-            author: actor.id,
-            anonymous: false,
-            alkemio: isFromAlkemioTeam(user.email),
-            guest: false,
-            // 012: the acting actor's resolved ActorType.
-            authorType: actor.type,
-          };
-        } catch (e) {
-          this.logger.error(
-            {
-              message:
-                'Unable to fetch user details for actor in ContributionReporterService',
-              actorContext,
-              actorId: actor.id,
-            },
-            e instanceof Error ? e.stack : String(e),
-            LogContext.CONTRIBUTION_REPORTER
-          );
-          return {
-            author: actor.id,
-            anonymous: false,
-            alkemio: false,
-            guest: false,
-            authorType: actor.type,
-          };
+      if (actor) {
+        // 012 / research R4: any resolvable actor records its id + ActorType.
+        // The `alkemio`-team flag is user-specific (derived from email), so the
+        // user lookup only runs for users; non-user actors (VC/org/space/
+        // account) record their id and type without it, matching the aggregate
+        // path which types every actor.
+        if (actor.type === 'user') {
+          try {
+            const user = await this.userLookupService.getUserByIdOrFail(
+              actor.id
+            );
+            return {
+              author: actor.id,
+              anonymous: false,
+              alkemio: isFromAlkemioTeam(user.email),
+              guest: false,
+              authorType: actor.type,
+            };
+          } catch (e) {
+            this.logger.error(
+              {
+                message:
+                  'Unable to fetch user details for actor in ContributionReporterService',
+                actorContext,
+                actorId: actor.id,
+              },
+              e instanceof Error ? e.stack : String(e),
+              LogContext.CONTRIBUTION_REPORTER
+            );
+            return {
+              author: actor.id,
+              anonymous: false,
+              alkemio: false,
+              guest: false,
+              authorType: actor.type,
+            };
+          }
         }
+        return {
+          author: actor.id,
+          anonymous: false,
+          alkemio: false,
+          guest: false,
+          authorType: actor.type,
+        };
       }
     }
     if (actorContext.guestName) {

@@ -688,6 +688,33 @@ describe('ContributionReporterService', () => {
       expect(indexedDocument.authorType).toBe('unknown');
       expect(indexedDocument.guest).toBe(true);
     });
+
+    // 012 / research R4: a resolvable NON-user actor (VC/org/space/account)
+    // records its id + ActorType, NOT the anonymous fallback. The lifecycle
+    // path must match the aggregate path, which already types every actor.
+    it('should record a resolvable non-user actor with its id and ActorType', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'vc-1',
+        type: ActorType.VIRTUAL_CONTRIBUTOR,
+      });
+
+      service.collaboraDocumentOpened(
+        { id: 'doc-vc', name: 'VC Opened', space: 'space-root' },
+        { actorID: 'vc-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const indexedDocument = mockIndex.mock.calls[0][0].document;
+      expect(indexedDocument.author).toBe('vc-1');
+      expect(indexedDocument.authorType).toBe(ActorType.VIRTUAL_CONTRIBUTOR);
+      expect(indexedDocument.anonymous).toBe(false);
+      expect(indexedDocument.guest).toBe(false);
+      // No user lookup for a non-user actor.
+      expect(mockUserLookupService.getUserByIdOrFail).not.toHaveBeenCalled();
+    });
   });
 
   describe('pollVoteContribution', () => {

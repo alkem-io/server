@@ -322,16 +322,18 @@ export class CollaborativeDocumentIntegrationService {
    * keyed by each id's resolved {@link ActorType} (from `typeById`), falling
    * back to the reserved `unknown` bucket for any id absent from the map
    * (FR-005). Only non-empty groups appear; an empty input yields `{}`
-   * (FR-003). Ordering within a group is unspecified (FR-002) — this folds in
-   * encounter order, but callers must not rely on it. See feature
-   * 012-collabora-actor-type (in the agents-hq workspace repo).
+   * (FR-003). Ids are de-duplicated so each group holds distinct actor_ids
+   * (matches the record-shape contract) even if the producer repeats one.
+   * Ordering within a group is unspecified (FR-002) — this folds in encounter
+   * order, but callers must not rely on it. See feature 012-collabora-actor-type
+   * (in the agents-hq workspace repo).
    */
   private groupActorsByType(
     ids: string[],
     typeById: Map<string, ActorType>
   ): TypedActorSet {
     const grouped: TypedActorSet = {};
-    for (const id of ids) {
+    for (const id of new Set(ids)) {
       const key = typeById.get(id) ?? UNKNOWN_ACTOR_TYPE;
       (grouped[key] ??= []).push(id);
     }
