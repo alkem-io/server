@@ -199,7 +199,7 @@ export class MessageAttachmentService {
       try {
         if (attachment.document_id) {
           // Outbound echo: D already exists — coalesce away the staging twin.
-          await this.coalesceOutboundEcho(bucket, attachment);
+          await this.coalesceOutboundEcho(bucket, senderActorID, attachment);
         } else if (attachment.media_id) {
           // Inbound Element-origin media → verbatim MOVE / re-share COPY.
           await this.rehomeOne(bucket, senderActorID, attachment);
@@ -248,6 +248,7 @@ export class MessageAttachmentService {
    */
   private async coalesceOutboundEcho(
     bucket: IStorageBucket,
+    senderActorID: string,
     attachment: ReceivedAttachment
   ): Promise<void> {
     const documentId = attachment.document_id as string;
@@ -257,9 +258,14 @@ export class MessageAttachmentService {
       return;
     }
 
-    // Confused-deputy guard (M5): `document_id` originates from an influenceable
-    // Matrix event, so only act on a document that actually lives in this room's
-    // bucket before stamping a reference onto it.
+    // Confused-deputy guard (HIGH): BOTH `document_id` and `media_id` are taken
+    // verbatim from an attacker-influenceable Matrix event. Before stamping a
+    // reference onto D we require (a) D lives in this room's bucket AND (b) the
+    // SENDER OWNS D. Without the ownership gate a member could forge an `m.image`
+    // pointing at another member's re-homed document D plus an arbitrary
+    // `media_id`, and the stamp below would overwrite D's `externalReference` —
+    // making that document unresolvable by-reference conversation-wide (the
+    // attachment would silently disappear for everyone).
     const document = await this.documentService.getDocumentOrFail(documentId, {
       relations: { storageBucket: true },
     });
@@ -276,9 +282,49 @@ export class MessageAttachmentService {
       );
       return;
     }
+    if (document.createdBy !== senderActorID) {
+      this.logger.warn?.(
+        {
+          message:
+            'Outbound echo document_id is not owned by the sender; skipping coalesce',
+          documentId,
+          mediaId,
+        },
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
 
-    // (1) Idempotent stamp: re-point D's opaque reference at the Synapse media id.
-    if (document.externalID !== mediaId) {
+    // (1) Idempotent stamp, driven off the bucket-scoped by-reference lookup.
+    // The Document entity carries no `externalReference` field (file-service owns
+    // it), so the prior `document.externalID !== mediaId` test compared the
+    // content hash against the media id and was ALWAYS true — the stamp fired
+    // unconditionally and could overwrite a live reference. Resolve the media id
+    // within this bucket instead:
+    //   • resolves to D            → already stamped: no-op (still clean the twin)
+    //   • resolves to another doc  → media id already bound here: never steal it
+    //   • resolves to nothing      → reference slot free: safe to stamp D
+    // This also honours "never overwrite an existing non-null reference": we only
+    // write when the (bucket, media_id) slot is unset.
+    const referenced = await this.fileServiceAdapter.getDocumentByReference(
+      mediaId,
+      bucket.id
+    );
+    if (referenced && referenced.id !== documentId) {
+      this.logger.warn?.(
+        {
+          message:
+            'Outbound echo media_id already resolves to a different document in this bucket; skipping coalesce',
+          documentId,
+          referencedId: referenced.id,
+          mediaId,
+          bucketId: bucket.id,
+        },
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+    if (!referenced) {
       await this.fileServiceAdapter.moveDocument(documentId, {
         externalReference: mediaId,
       });
@@ -362,30 +408,45 @@ export class MessageAttachmentService {
 
     const documentAuthId = await this.mintDocumentAuth(bucket);
 
-    if (canonical.storageBucketId === this.matrixMediaBucketId) {
-      // MOVE the verbatim staging row into the target bucket (T010) — uniform
-      // for EVERY media type. HEIC/unrenderable media is moved byte-exact too;
-      // file-service serves a web-renderable rendition at read time (serve-time
-      // transcode), so the server no longer mints a separate transcoded doc.
-      // Result: one verbatim document per media_id, a single auth mint, no
-      // two-rows-same-reference.
-      await this.fileServiceAdapter.moveDocument(canonical.id, {
-        storageBucketId: bucket.id,
-        authorizationId: documentAuthId,
-        createdBy: senderActorID,
-        externalReference: mediaId,
-        temporaryLocation: false,
-      });
-    } else {
-      // Re-share: same media already homed in another conversation → COPY
-      // (zero-copy, shared blob) into this bucket, preserving the reference.
-      await this.fileServiceAdapter.copyDocument({
-        sourceId: canonical.id,
-        destinationBucketId: bucket.id,
-        authorizationId: documentAuthId,
-        createdBy: senderActorID,
-        externalReference: mediaId,
-      });
+    try {
+      if (canonical.storageBucketId === this.matrixMediaBucketId) {
+        // MOVE the verbatim staging row into the target bucket (T010) — uniform
+        // for EVERY media type. HEIC/unrenderable media is moved byte-exact too;
+        // file-service serves a web-renderable rendition at read time (serve-time
+        // transcode), so the server no longer mints a separate transcoded doc.
+        // Result: one verbatim document per media_id, a single auth mint, no
+        // two-rows-same-reference.
+        await this.fileServiceAdapter.moveDocument(canonical.id, {
+          storageBucketId: bucket.id,
+          authorizationId: documentAuthId,
+          createdBy: senderActorID,
+          externalReference: mediaId,
+          temporaryLocation: false,
+        });
+      } else {
+        // Re-share: same media already homed in another conversation → COPY
+        // (zero-copy, shared blob) into this bucket, preserving the reference.
+        // `skipDedup: true` is the reference-bearing contract: file-service keys
+        // such rows by `externalReference`, not by content, so two distinct
+        // media_ids with identical bytes each get their own row instead of
+        // collapsing and dropping the second one's reference.
+        await this.fileServiceAdapter.copyDocument({
+          sourceId: canonical.id,
+          destinationBucketId: bucket.id,
+          authorizationId: documentAuthId,
+          createdBy: senderActorID,
+          externalReference: mediaId,
+          skipDedup: true,
+        });
+      }
+    } catch (error) {
+      // The auth policy is minted before placement; on a failed MOVE/COPY clean
+      // it up so a stranded DOCUMENT policy row does not leak (best-effort —
+      // never mask the original placement error).
+      await this.authorizationPolicyService
+        .deleteById(documentAuthId)
+        .catch(() => undefined);
+      throw error;
     }
   }
 

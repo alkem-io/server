@@ -239,9 +239,39 @@ describe('MessageAttachmentService', () => {
           sourceId: 'doc-other',
           destinationBucketId: CONV_BUCKET,
           externalReference: 'media-1',
+          // Reference-bearing copies must bypass content-dedup so each media_id
+          // keeps its own row (and its reference).
+          skipDedup: true,
         })
       );
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+    });
+
+    it('cleans up the minted auth policy when placement (MOVE) fails', async () => {
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null) // not already in target
+        .mockResolvedValueOnce({
+          id: 'doc-staging',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+          mimeType: 'image/png',
+        } as any);
+      fileServiceAdapter.moveDocument.mockRejectedValueOnce(
+        new Error('placement failed')
+      );
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        {
+          media_id: 'media-1',
+          display_name: 'x',
+          mime_type: 'image/png',
+          size: 1,
+        },
+      ]);
+
+      // The auth minted before placement must not leak when the MOVE fails.
+      expect(authorizationPolicyService.deleteById).toHaveBeenCalledWith(
+        'minted-auth'
+      );
     });
 
     it('is idempotent: does nothing when the document is already in the target bucket', async () => {
@@ -351,16 +381,31 @@ describe('MessageAttachmentService', () => {
       size: 1,
     };
 
-    it('stamps externalReference on D and deletes the matrix_media staging twin', async () => {
+    // Bucket-aware by-reference mock: the coalesce path now does TWO lookups for
+    // the same media id — one scoped to the room bucket (idempotency / no-
+    // overwrite), one scoped to matrix_media (locate the staging twin).
+    const mockByReference = (perBucket: Record<string, any>) => {
+      fileServiceAdapter.getDocumentByReference.mockImplementation(
+        async (_ref: string, bucketId?: string) =>
+          (bucketId ? perBucket[bucketId] : undefined) ?? null
+      );
+    };
+
+    it('stamps externalReference on D (owned by sender) and deletes the matrix_media staging twin', async () => {
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-D',
-        externalID: undefined,
+        createdBy: 'sender-1',
         storageBucket: { id: CONV_BUCKET },
       } as any);
-      fileServiceAdapter.getDocumentByReference.mockResolvedValue({
-        id: 'doc-twin',
-        storageBucketId: MATRIX_MEDIA_BUCKET,
-      } as any);
+      mockByReference({
+        // reference slot free in the conversation bucket → safe to stamp
+        [CONV_BUCKET]: null,
+        // staging twin present in matrix_media → delete it
+        [MATRIX_MEDIA_BUCKET]: {
+          id: 'doc-twin',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+        },
+      });
 
       await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
         outboundEcho,
@@ -382,13 +427,60 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
     });
 
-    it('is idempotent: D already stamped and twin already gone → no-op', async () => {
+    it('is idempotent: re-delivery finds D already stamped → no second stamp, no overwrite', async () => {
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-D',
-        externalID: 'media-Y', // already coalesced on a previous delivery
+        createdBy: 'sender-1',
         storageBucket: { id: CONV_BUCKET },
       } as any);
-      fileServiceAdapter.getDocumentByReference.mockResolvedValue(null);
+      mockByReference({
+        // media id already resolves to D in this bucket (stamped previously)
+        [CONV_BUCKET]: { id: 'doc-D', storageBucketId: CONV_BUCKET },
+        // twin already swept on the first delivery
+        [MATRIX_MEDIA_BUCKET]: null,
+      });
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        outboundEcho,
+      ]);
+
+      // The stamp is NEVER re-applied (no overwrite of the existing reference).
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('confused-deputy guard: rejects a forged echo whose document_id is owned by another member', async () => {
+      // Attacker (sender-1) forges an m.image pointing at victim's re-homed doc
+      // D + an arbitrary media_id; D IS in the room bucket but is NOT owned by
+      // the sender → coalesce must NOT overwrite D's reference.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-D',
+        createdBy: 'victim-member',
+        storageBucket: { id: CONV_BUCKET },
+      } as any);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        outboundEcho,
+      ]);
+
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('no-overwrite guard: skips when media_id already resolves to a different document in the bucket', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-D',
+        createdBy: 'sender-1',
+        storageBucket: { id: CONV_BUCKET },
+      } as any);
+      mockByReference({
+        // media id is already bound to a DIFFERENT doc here — never steal it
+        [CONV_BUCKET]: { id: 'doc-other', storageBucketId: CONV_BUCKET },
+        [MATRIX_MEDIA_BUCKET]: {
+          id: 'doc-twin',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+        },
+      });
 
       await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
         outboundEcho,
@@ -401,7 +493,7 @@ describe('MessageAttachmentService', () => {
     it('confused-deputy guard: ignores an echo whose document_id is not in the room bucket', async () => {
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-D',
-        externalID: undefined,
+        createdBy: 'sender-1',
         storageBucket: { id: 'a-foreign-bucket' },
       } as any);
 
