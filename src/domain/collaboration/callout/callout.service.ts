@@ -459,6 +459,21 @@ export class CalloutService {
       );
     }
 
+    // When the framing type is (or was just changed to) anything other than
+    // CONTRIBUTORS, a previously-stored contributors block must not linger:
+    // merge/mergeWith never delete keys, and the client clears framing by
+    // sending the new type without a `contributors` field, so the stale block
+    // would survive the merge. validateAndNormalizeContributorsSettings then
+    // throws on a non-CONTRIBUTORS framing that still carries contributors,
+    // permanently blocking the update (the callout gets stuck as CONTRIBUTORS).
+    // Strip it first so the type change — and any later edit — succeeds.
+    if (
+      callout.framing.type !== CalloutFramingType.CONTRIBUTORS &&
+      callout.settings.framing.contributors
+    ) {
+      delete callout.settings.framing.contributors;
+    }
+
     // Re-validate + auto-heal contributors settings after any framing-type or
     // settings change (FR-004b/FR-006a/FR-006b/FR-006c). Runs even when only
     // the framing type changed so a stale contributors block is rejected and a

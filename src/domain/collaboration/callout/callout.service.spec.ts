@@ -665,6 +665,67 @@ describe('CalloutService', () => {
 
       expect(roomService.createRoom).toHaveBeenCalled();
     });
+
+    // Regression: changing a CONTRIBUTORS callout to another framing type must
+    // strip the stored contributors settings block, otherwise
+    // validateAndNormalizeContributorsSettings throws on a non-CONTRIBUTORS
+    // framing that still carries contributors and the callout gets stuck.
+    it('strips the stale contributors settings block when the framing type changes away from CONTRIBUTORS', async () => {
+      const callout = {
+        id: 'callout-1',
+        framing: { id: 'framing-1', type: CalloutFramingType.CONTRIBUTORS },
+        contributionDefaults: { id: 'defaults-1' },
+        settings: {
+          contribution: { allowedTypes: [] },
+          framing: {
+            commentsEnabled: false,
+            contributors: {
+              contributorTypes: ['user'],
+              defaultContributorType: 'user',
+              defaultView: 'list',
+            },
+          },
+        },
+        classification: { id: 'class-1', tagsets: [] },
+        calloutsSet: { id: 'cs-1' },
+        isTemplate: false,
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(callout);
+      vi.mocked(repository.save).mockResolvedValue(callout);
+
+      const storageAggregatorResolverService = module.get(
+        StorageAggregatorResolverService
+      );
+      vi.mocked(
+        storageAggregatorResolverService.getStorageAggregatorForCallout
+      ).mockResolvedValue({ id: 'agg-1' } as any);
+
+      // The framing type is cleared to NONE on this update.
+      vi.mocked(framingService.updateCalloutFraming).mockResolvedValue({
+        id: 'framing-1',
+        type: CalloutFramingType.NONE,
+      } as any);
+      // Capture the settings the validation receives — it must no longer carry
+      // a contributors block (so the real validation would not throw).
+      vi.mocked(
+        framingService.validateAndNormalizeContributorsSettings
+      ).mockImplementation((_type, settings) => settings as any);
+
+      await service.updateCallout(
+        callout,
+        { framing: { type: CalloutFramingType.NONE } } as any,
+        'user-1'
+      );
+
+      expect(callout.settings.framing.contributors).toBeUndefined();
+      expect(
+        framingService.validateAndNormalizeContributorsSettings
+      ).toHaveBeenCalledWith(
+        CalloutFramingType.NONE,
+        expect.not.objectContaining({ contributors: expect.anything() })
+      );
+    });
   });
 
   describe('getComments', () => {
