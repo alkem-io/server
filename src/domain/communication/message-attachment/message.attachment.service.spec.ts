@@ -601,9 +601,10 @@ describe('MessageAttachmentService', () => {
   // --- T013 read resolution ---
 
   describe('resolveMessageAttachments', () => {
-    it('resolves an outbound (document_id) attachment and READ-gates it', async () => {
+    it('resolves an outbound (document_id) attachment owned by the sender and READ-gates it', async () => {
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-1',
+        createdBy: 'sender-1',
         displayName: 'pic.png',
         mimeType: 'image/png',
         size: 1000,
@@ -618,6 +619,7 @@ describe('MessageAttachmentService', () => {
       const result = await service.resolveMessageAttachments(
         {
           id: 'm1',
+          sender: 'sender-1',
           storageBucketId: CONV_BUCKET,
           rawAttachments: [
             {
@@ -634,6 +636,32 @@ describe('MessageAttachmentService', () => {
       expect(result).toEqual([
         expect.objectContaining({ id: 'doc-1', url: 'https://docs/doc-1' }),
       ]);
+    });
+
+    it('attribution-spoof: ignores an outbound document_id owned by another member (forged under the sender)', async () => {
+      // The message claims to be from sender-1, but document_id points at a doc
+      // owned by another member that lives in the same conversation bucket.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-victim',
+        createdBy: 'victim-member',
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { document_id: 'doc-victim', mime_type: 'image/png', size: 1 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(result).toEqual([]);
     });
 
     it('M5: ignores an outbound document_id that does not belong to the message bucket', async () => {
@@ -669,6 +697,7 @@ describe('MessageAttachmentService', () => {
       } as any);
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-rehomed',
+        createdBy: 'sender-1',
         displayName: 'pic.png',
         mimeType: 'image/png',
         size: 1000,
@@ -682,6 +711,7 @@ describe('MessageAttachmentService', () => {
       const result = await service.resolveMessageAttachments(
         {
           id: 'm1',
+          sender: 'sender-1',
           roomID: 'room-1',
           rawAttachments: [
             {
@@ -705,6 +735,7 @@ describe('MessageAttachmentService', () => {
     it('denies a non-member (READ not granted)', async () => {
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-1',
+        createdBy: 'sender-1',
         storageBucket: { id: CONV_BUCKET },
         authorization: { id: 'doc-auth' },
       } as any);
@@ -713,6 +744,7 @@ describe('MessageAttachmentService', () => {
       const result = await service.resolveMessageAttachments(
         {
           id: 'm1',
+          sender: 'sender-1',
           storageBucketId: CONV_BUCKET,
           rawAttachments: [
             {
@@ -727,6 +759,87 @@ describe('MessageAttachmentService', () => {
       );
 
       expect(result).toEqual([]);
+    });
+  });
+
+  // --- T015 delete-release (confused-deputy HIGH) ---
+
+  describe('releaseAttachments', () => {
+    it('releases the sender’s OWN outbound attachment on delete', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-mine',
+        createdBy: 'sender-1',
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+
+      await service.releaseAttachments(
+        [
+          {
+            document_id: 'doc-mine',
+            display_name: 'pic.png',
+            mime_type: 'image/png',
+            size: 1,
+          },
+        ],
+        CONV_BUCKET,
+        'sender-1'
+      );
+
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+        'doc-mine'
+      );
+    });
+
+    it('does NOT release a forged document_id owned by another member', async () => {
+      // Attacker deletes their OWN message, but its forged document_id points at
+      // a victim's re-homed doc in the same conversation bucket. The ownership
+      // gate must prevent the delete (confused-deputy HIGH).
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-victim',
+        createdBy: 'victim-member',
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+
+      await service.releaseAttachments(
+        [
+          {
+            document_id: 'doc-victim',
+            display_name: 'pic.png',
+            mime_type: 'image/png',
+            size: 1,
+          },
+        ],
+        CONV_BUCKET,
+        'sender-1'
+      );
+
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('does NOT release when the sender is unknown (fail-closed)', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-1',
+        createdBy: 'sender-1',
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+
+      await service.releaseAttachments(
+        [
+          {
+            document_id: 'doc-1',
+            display_name: 'pic.png',
+            mime_type: 'image/png',
+            size: 1,
+          },
+        ],
+        CONV_BUCKET,
+        undefined
+      );
+
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
   });
 });

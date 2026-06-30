@@ -502,7 +502,8 @@ export class MessageAttachmentService {
     for (const raw of message.rawAttachments) {
       const document = await this.resolveAttachmentDocument(
         raw,
-        storageBucketId
+        storageBucketId,
+        message.sender
       );
       if (!document) {
         continue;
@@ -532,9 +533,27 @@ export class MessageAttachmentService {
     return resolved;
   }
 
+  /**
+   * Confused-deputy / attribution-spoof guard (feature 013, security). Both
+   * `document_id` and `media_id` on a `ReceivedAttachment` come from an
+   * attacker-influenceable Matrix event. A message's *legitimate* attachments
+   * always carry `createdBy` = that message's sender — set server-side at web
+   * upload (outbound) and at inbound re-home (`createdBy: senderActorID`). So a
+   * resolved document is only genuinely THIS message's attachment when it is
+   * owned by the message's sender. Fail-closed: an unknown sender never matches,
+   * so we never resolve (and never delete) a document we cannot attribute.
+   */
+  private isOwnedBySender(
+    document: IDocument,
+    senderActorID: string | undefined
+  ): boolean {
+    return !!senderActorID && document.createdBy === senderActorID;
+  }
+
   private async resolveAttachmentDocument(
     raw: ReceivedAttachment,
-    storageBucketId: string | undefined
+    storageBucketId: string | undefined,
+    senderActorID: string | undefined
   ): Promise<IDocument | null> {
     // Both branches require the message's bucket: the inbound branch keys the
     // by-reference lookup by it, and the outbound branch needs it to verify
@@ -545,8 +564,10 @@ export class MessageAttachmentService {
     try {
       // Outbound echo: direct id resolution. `document_id` originates from an
       // influenceable Matrix event, so we MUST confirm the document actually
-      // lives in this message's bucket before exposing it — otherwise a crafted
-      // event could surface ANY document by id (confused-deputy, M5).
+      // lives in this message's bucket AND is owned by the message's sender
+      // before exposing/releasing it — otherwise a crafted event could surface
+      // or delete ANY document in the bucket by id (confused-deputy, M5 +
+      // delete-release HIGH).
       if (raw.document_id) {
         const document = await this.documentService.getDocumentOrFail(
           raw.document_id,
@@ -564,9 +585,24 @@ export class MessageAttachmentService {
           );
           return null;
         }
+        if (!this.isOwnedBySender(document, senderActorID)) {
+          this.logger.warn?.(
+            {
+              message:
+                'Outbound attachment document_id is not owned by the message sender; ignoring',
+              documentId: raw.document_id,
+              storageBucketId,
+            },
+            LogContext.COMMUNICATION
+          );
+          return null;
+        }
         return document;
       }
       // Inbound: bucket-scoped by-reference → the re-homed conversation doc.
+      // `media_id` is attacker-influenceable too, so the same ownership gate
+      // applies: the re-home stamped `createdBy = sender`, so a forged media_id
+      // pointing at another member's re-homed doc fails the gate.
       if (raw.media_id) {
         const ref = await this.fileServiceAdapter.getDocumentByReference(
           raw.media_id,
@@ -575,9 +611,22 @@ export class MessageAttachmentService {
         if (!ref) {
           return null;
         }
-        return await this.documentService.getDocumentOrFail(ref.id, {
+        const document = await this.documentService.getDocumentOrFail(ref.id, {
           relations: { authorization: true },
         });
+        if (!this.isOwnedBySender(document, senderActorID)) {
+          this.logger.warn?.(
+            {
+              message:
+                'Inbound attachment media_id resolves to a document not owned by the message sender; ignoring',
+              mediaId: raw.media_id,
+              storageBucketId,
+            },
+            LogContext.COMMUNICATION
+          );
+          return null;
+        }
+        return document;
       }
     } catch (error) {
       this.logger.warn?.(
@@ -600,10 +649,18 @@ export class MessageAttachmentService {
    * The blob is GC'd by file-service once no row references its `externalID`.
    * Outbound media is released by `document_id`; inbound by bucket-scoped
    * by-reference. Never throws into the delete flow.
+   *
+   * SECURITY (delete-release confused-deputy, HIGH): the resolution is gated on
+   * `document.createdBy === senderActorID` (the deleting message's sender) via
+   * `resolveAttachmentDocument`. Without it a member could forge an `m.image`
+   * carrying another member's `document_id` from the same bucket and delete
+   * their own message to release someone else's document. `senderActorID` is the
+   * sender of the message being deleted.
    */
   public async releaseAttachments(
     rawAttachments: ReceivedAttachment[] | undefined,
-    storageBucketId: string | undefined
+    storageBucketId: string | undefined,
+    senderActorID: string | undefined
   ): Promise<void> {
     if (!this.enabled || !rawAttachments?.length) {
       return;
@@ -611,7 +668,8 @@ export class MessageAttachmentService {
     for (const raw of rawAttachments) {
       const document = await this.resolveAttachmentDocument(
         raw,
-        storageBucketId
+        storageBucketId,
+        senderActorID
       );
       if (!document) {
         continue;

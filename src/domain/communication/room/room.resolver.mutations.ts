@@ -259,6 +259,7 @@ export class RoomResolverMutations {
     // never block the delete on attachment lookup.
     let rawAttachments: IMessage['rawAttachments'];
     let attachmentBucketId: string | undefined;
+    let attachmentSenderActorID: string | undefined;
     if (this.messageAttachmentService.isEnabled()) {
       try {
         const { message } = await this.roomLookupService.getMessageInRoom(
@@ -266,6 +267,10 @@ export class RoomResolverMutations {
           messageData.messageID
         );
         rawAttachments = message.rawAttachments;
+        // The deleted message's sender — used to gate delete-release on document
+        // ownership (confused-deputy HIGH); only this sender's own attachments
+        // are released.
+        attachmentSenderActorID = message.sender;
         attachmentBucketId =
           await this.messageAttachmentService.getResolutionBucketIdForRoom(
             room
@@ -293,7 +298,8 @@ export class RoomResolverMutations {
     // blob survives in other conversations (FR-015).
     await this.messageAttachmentService.releaseAttachments(
       rawAttachments,
-      attachmentBucketId
+      attachmentBucketId,
+      attachmentSenderActorID
     );
 
     // All post-delete processing (notifications, activities, subscriptions)
