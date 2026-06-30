@@ -263,7 +263,7 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
     });
 
-    it('HEIC: transcodes once and mints a single document auth (M6)', async () => {
+    it('HEIC: MOVES verbatim like any other type — single mint, no second doc', async () => {
       fileServiceAdapter.getDocumentByReference
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce({
@@ -272,9 +272,6 @@ describe('MessageAttachmentService', () => {
           storageBucketId: MATRIX_MEDIA_BUCKET,
           mimeType: 'image/heic',
         } as any);
-      fileServiceAdapter.getDocumentContent.mockResolvedValue(
-        Buffer.from('bytes')
-      );
 
       await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
         {
@@ -285,18 +282,20 @@ describe('MessageAttachmentService', () => {
         },
       ]);
 
-      // Single auth mint per inbound HEIC (no orphaned authorization_policy).
+      // Uniform re-home: a single verbatim MOVE, a single auth mint, and no
+      // second transcoded conversation doc (serve-time transcode lives in
+      // file-service now).
       expect(authorizationPolicyService.save).toHaveBeenCalledTimes(1);
-      // Transcoded into the conversation bucket; staging row NOT moved/deleted.
-      expect(fileServiceAdapter.createDocument).toHaveBeenCalledWith(
-        expect.any(Buffer),
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
+        'doc-heic',
         expect.objectContaining({
           storageBucketId: CONV_BUCKET,
+          createdBy: 'sender-1',
           externalReference: 'media-heic',
-          authorizationId: 'minted-auth',
         })
       );
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.createDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.getDocumentContent).not.toHaveBeenCalled();
     });
 
     it('comment-room (callout): re-homes into the parent callout bucket', async () => {

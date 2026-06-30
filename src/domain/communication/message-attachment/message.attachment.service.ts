@@ -274,22 +274,12 @@ export class MessageAttachmentService {
     const documentAuthId = await this.mintDocumentAuth(bucket);
 
     if (canonical.storageBucketId === this.matrixMediaBucketId) {
-      // MOVE the staging row into the target bucket (T010). HEIC/unrenderable
-      // verbatim staging bytes stay byte-exact for Synapse; the web-renderable
-      // transcode (research D6 / T011) is handled by the COPY-with-processing
-      // branch below when the source is non-renderable.
-      if (this.isBrowserUnrenderable(canonical.mimeType)) {
-        // M6: reuse the single auth minted above — do NOT mint again, otherwise
-        // every inbound HEIC orphans an authorization_policy row.
-        await this.rehomeTranscoded(
-          bucket,
-          senderActorID,
-          canonical,
-          mediaId,
-          documentAuthId
-        );
-        return;
-      }
+      // MOVE the verbatim staging row into the target bucket (T010) — uniform
+      // for EVERY media type. HEIC/unrenderable media is moved byte-exact too;
+      // file-service serves a web-renderable rendition at read time (serve-time
+      // transcode), so the server no longer mints a separate transcoded doc.
+      // Result: one verbatim document per media_id, a single auth mint, no
+      // two-rows-same-reference.
       await this.fileServiceAdapter.moveDocument(canonical.id, {
         storageBucketId: bucket.id,
         authorizationId: documentAuthId,
@@ -308,42 +298,6 @@ export class MessageAttachmentService {
         externalReference: mediaId,
       });
     }
-  }
-
-  /**
-   * Inbound HEIC / browser-unrenderable re-home (T011, research D6): read the
-   * verbatim staging bytes and create a transcoded conversation document
-   * (without skipImageProcessing, so file-service canonicalises), keeping the
-   * `externalReference = media_id`. The verbatim staging row is then released.
-   */
-  private async rehomeTranscoded(
-    bucket: IStorageBucket,
-    senderActorID: string,
-    canonical: { id: string; displayName?: string; mimeType: string },
-    mediaId: string,
-    documentAuthId: string
-  ): Promise<void> {
-    const bytes = await this.fileServiceAdapter.getDocumentContent(
-      canonical.id
-    );
-
-    await this.fileServiceAdapter.createDocument(bytes, {
-      displayName: canonical.displayName || 'attachment',
-      mimeType: canonical.mimeType,
-      storageBucketId: bucket.id,
-      authorizationId: documentAuthId,
-      createdBy: senderActorID,
-      externalReference: mediaId,
-      temporaryLocation: false,
-      // NB: skipImageProcessing intentionally omitted → file-service transcodes
-      // to a web-renderable canonical form.
-    });
-
-    // H3: the verbatim staging row is the provider's durable, byte-exact copy
-    // (HEIC original). It stays authoritative for the global by-reference(media_id)
-    // fetch Synapse relies on for read-back, while this transcoded conversation
-    // doc serves the web client (bucket-scoped by-reference). It is intentionally
-    // NOT reaped by the staging cleanup (see message.attachment.cleanup.service).
   }
 
   // ---------------------------------------------------------------------------
@@ -541,10 +495,6 @@ export class MessageAttachmentService {
         LogContext.COMMUNICATION
       );
     }
-  }
-
-  private isBrowserUnrenderable(mimeType: string): boolean {
-    return mimeType === 'image/heic' || mimeType === 'image/heif';
   }
 
   private async getConversationBucketForRoomOrFail(

@@ -20,14 +20,13 @@ const STAGING_TTL_MS = 24 * 60 * 60 * 1000; // 24h (FR-012, SC-007)
  *    server-created web-composer uploads that were never sent (compose
  *    abandoned).
  *
- * It deliberately does NOT reap `matrix_media` staging rows by age (H2/H3).
- * Those rows are the Synapse media-storage provider's durable, byte-exact copies
- * (HEIC verbatim originals, comment-room media before/without re-home, genuine
- * Element orphans). The provider's global by-reference(media_id) lookup must keep
- * returning the verbatim staging row for read-back, so reaping them by age would
- * cause data loss and break Synapse reads. Provider-staging GC is the file-service
- * /provider's responsibility, keyed on real un-referenced blobs — not a server age
- * sweep.
+ * It deliberately does NOT reap `matrix_media` staging rows by age (H2). Those
+ * rows back the Synapse media-storage provider's durable, byte-exact copies
+ * (comment-room media before/without re-home, genuine Element orphans). The
+ * provider's global by-reference(media_id) lookup must keep returning the
+ * staging row for read-back, so reaping them by age would cause data loss and
+ * break Synapse reads. Provider-staging GC is the file-service/provider's
+ * responsibility, keyed on real un-referenced blobs — not a server age sweep.
  *
  * Reads the (read-only) `file` table via TypeORM and releases stale rows through
  * `FileServiceAdapter.deleteDocument` (never direct TypeORM writes). Disabled
