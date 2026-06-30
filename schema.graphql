@@ -832,6 +832,7 @@ enum SpaceVisibility {
 
 enum StorageAggregatorType {
   ACCOUNT
+  CONVERSATION
   ORGANIZATION
   PLATFORM
   SPACE
@@ -2233,6 +2234,8 @@ type Conversation {
   messaging: Messaging!
   """The room for this Conversation."""
   room: Room!
+  """The storage bucket holding this Conversation's message attachments (feature 013). READ-gated to conversation members; null when message attachments are disabled."""
+  storageBucket: StorageBucket
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
 }

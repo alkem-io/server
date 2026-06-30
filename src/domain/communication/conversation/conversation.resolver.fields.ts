@@ -1,3 +1,7 @@
+import { CurrentActor } from '@common/decorators';
+import { AuthorizationPrivilege } from '@common/enums';
+import { ActorContext } from '@core/actor-context/actor.context';
+import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
   ContributorByAgentIdLoaderCreator,
   ConversationMembershipsLoaderCreator,
@@ -7,13 +11,27 @@ import { Loader } from '@core/dataloader/decorators/data.loader.decorator';
 import { ILoader } from '@core/dataloader/loader.interface';
 import { IActor } from '@domain/actor/actor/actor.interface';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
+import { ConfigService } from '@nestjs/config';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
+import { AlkemioConfig } from '@src/types/alkemio.config';
 import { IConversation } from './conversation.interface';
 import { ConversationService } from './conversation.service';
 
 @Resolver(() => IConversation)
 export class ConversationResolverFields {
-  constructor(private readonly conversationService: ConversationService) {}
+  private readonly attachmentsEnabled: boolean;
+
+  constructor(
+    private readonly conversationService: ConversationService,
+    private readonly authorizationService: AuthorizationService,
+    configService: ConfigService<AlkemioConfig, true>
+  ) {
+    this.attachmentsEnabled = configService.get(
+      'communications.message_attachments.enabled',
+      { infer: true }
+    );
+  }
 
   @ResolveField('room', () => IRoom, {
     nullable: false,
@@ -47,5 +65,33 @@ export class ConversationResolverFields {
     );
 
     return actors.filter((actor): actor is IActor => actor !== null);
+  }
+
+  @ResolveField('storageBucket', () => IStorageBucket, {
+    nullable: true,
+    description:
+      "The storage bucket holding this Conversation's message attachments (feature 013). READ-gated to conversation members; null when message attachments are disabled.",
+  })
+  async storageBucket(
+    @Parent() conversation: IConversation,
+    @CurrentActor() actorContext: ActorContext
+  ): Promise<IStorageBucket | null> {
+    // Behind the message-attachments feature flag (T016): the field exists in the
+    // schema but resolves to null while disabled, so clients show no upload UI.
+    if (!this.attachmentsEnabled) {
+      return null;
+    }
+    const bucket = await this.conversationService.getStorageBucket(
+      conversation.id
+    );
+    // READ-gate (C1): the bucket auth mirrors the conversation-member credential,
+    // so non-members are denied.
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      bucket.authorization,
+      AuthorizationPrivilege.READ,
+      `conversation storage bucket: ${conversation.id}`
+    );
+    return bucket;
   }
 }

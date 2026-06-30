@@ -23,6 +23,7 @@ import { IVirtualContributor } from '@domain/community/virtual-contributor/virtu
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
@@ -223,6 +224,31 @@ export class ConversationService {
       );
     }
     return bucketId;
+  }
+
+  /**
+   * Resolve the conversation's storage bucket (feature 013, C1) with its
+   * authorization loaded, so the GraphQL resolver can READ-gate it and the web
+   * client can discover the bucket id + policy (allowedMimeTypes/maxFileSize)
+   * to upload attachments before sending.
+   */
+  public async getStorageBucket(
+    conversationID: string
+  ): Promise<IStorageBucket> {
+    const conversation = await this.getConversationOrFail(conversationID, {
+      relations: {
+        storageAggregator: { directStorage: { authorization: true } },
+      },
+    });
+    const bucket = conversation.storageAggregator?.directStorage;
+    if (!bucket) {
+      throw new EntityNotInitializedException(
+        'Conversation has no storage bucket',
+        LogContext.COMMUNICATION_CONVERSATION,
+        { conversationID }
+      );
+    }
+    return bucket;
   }
 
   public async getConversationOrFail(
