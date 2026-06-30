@@ -1,9 +1,13 @@
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { streamToBuffer } from '@common/utils/file.util';
 import { AuthorizationService } from '@core/authorization/authorization.service';
@@ -139,6 +143,72 @@ describe('CalloutResolverMutations', () => {
         calloutAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalled();
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
+    });
+
+    // The CONTRIBUTORS framing guard must hold on the UPDATE path too, not just
+    // create — otherwise the admin-only / collaboration-only restriction
+    // (FR-004a/FR-004f) is bypassable by converting a callout via updateCallout.
+    describe('CONTRIBUTORS framing guard', () => {
+      it('rejects converting a callout to CONTRIBUTORS in a non-COLLABORATION callouts set', async () => {
+        const callout = {
+          id: 'callout-1',
+          authorization: { id: 'auth-1' },
+          framing: { type: CalloutFramingType.NONE },
+          calloutsSet: {
+            type: CalloutsSetType.KNOWLEDGE_BASE,
+            authorization: { id: 'cs-auth' },
+          },
+        } as any;
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await expect(
+          resolver.updateCallout(actorContext, {
+            ID: 'callout-1',
+            framing: { type: CalloutFramingType.CONTRIBUTORS },
+          } as any)
+        ).rejects.toThrow(ValidationException);
+        expect(calloutService.updateCallout).not.toHaveBeenCalled();
+      });
+
+      it('requires the CREATE (admin) privilege to update/convert to CONTRIBUTORS even with UPDATE rights', async () => {
+        const callout = {
+          id: 'callout-1',
+          authorization: { id: 'auth-1' },
+          framing: { type: CalloutFramingType.NONE },
+          calloutsSet: {
+            type: CalloutsSetType.COLLABORATION,
+            authorization: { id: 'cs-auth' },
+          },
+        } as any;
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+        // First call (the generic UPDATE on the callout) passes; the second call
+        // (the admin CREATE on the callouts set) throws.
+        vi.mocked(authorizationService.grantAccessOrFail)
+          .mockImplementationOnce(() => undefined as any)
+          .mockImplementationOnce(() => {
+            throw new ValidationException('forbidden', 'collaboration' as any);
+          });
+
+        const actorContext = { actorID: 'member-1' } as any;
+
+        await expect(
+          resolver.updateCallout(actorContext, {
+            ID: 'callout-1',
+            framing: { type: CalloutFramingType.CONTRIBUTORS },
+          } as any)
+        ).rejects.toThrow();
+
+        expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+          actorContext,
+          callout.calloutsSet.authorization,
+          AuthorizationPrivilege.CREATE,
+          expect.any(String)
+        );
+        expect(calloutService.updateCallout).not.toHaveBeenCalled();
+      });
     });
   });
 

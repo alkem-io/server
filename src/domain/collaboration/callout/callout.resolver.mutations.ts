@@ -2,10 +2,14 @@ import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -103,13 +107,43 @@ export class CalloutResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('calloutData') calloutData: UpdateCalloutEntityInput
   ): Promise<ICallout> {
-    const callout = await this.calloutService.getCalloutOrFail(calloutData.ID);
+    const callout = await this.calloutService.getCalloutOrFail(calloutData.ID, {
+      relations: {
+        authorization: true,
+        framing: true,
+        calloutsSet: { authorization: true },
+      },
+    });
     this.authorizationService.grantAccessOrFail(
       actorContext,
       callout.authorization,
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
+
+    // CONTRIBUTORS framing is admin-only and collaboration-only (FR-004a/FR-004f,
+    // R5). Mirror the create guard on the update path so the restriction can't be
+    // bypassed by converting an existing callout — or one living in a
+    // non-COLLABORATION callouts set (e.g. a VC knowledge base) — to CONTRIBUTORS
+    // via updateCallout, which otherwise only checks the generic UPDATE privilege.
+    // The resulting type is the incoming framing type when provided, else the
+    // stored one (so editing an existing CONTRIBUTORS callout is gated too).
+    const resultingFramingType =
+      calloutData.framing?.type ?? callout.framing?.type;
+    if (resultingFramingType === CalloutFramingType.CONTRIBUTORS) {
+      if (callout.calloutsSet?.type !== CalloutsSetType.COLLABORATION) {
+        throw new ValidationException(
+          'CONTRIBUTORS framing is only available on COLLABORATION callouts sets.',
+          LogContext.COLLABORATION
+        );
+      }
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        callout.calloutsSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        `update CONTRIBUTORS callout (admin-only) on callouts Set: ${callout.calloutsSet.id}`
+      );
+    }
 
     const updatedCallout = await this.calloutService.updateCallout(
       callout,
