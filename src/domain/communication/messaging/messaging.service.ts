@@ -10,7 +10,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { Actor } from '@domain/actor/actor/actor.entity';
-import { getMatrixDisplayName } from '@domain/actor/actor.matrix.display.name';
+import { getActorDisplayName } from '@domain/actor/actor.display.name';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy/authorization.policy.entity';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -652,7 +652,7 @@ export class MessagingService {
    * `room.info` RPC handler body (feature 099-element-room-check).
    *
    * Look up the Conversation by the supplied Room id; return type + members
-   * with displayNames resolved via `getMatrixDisplayName`. A miss returns the
+   * with displayNames resolved via `getActorDisplayName`. A miss returns the
    * empty-members miss envelope (NOT an error) — the adapter retries
    * reconciliation on subsequent room events.
    */
@@ -676,7 +676,7 @@ export class MessagingService {
     const actorIds = memberships.map(m => m.actorID);
     // Resolve members against the Actor base table so VirtualContributors,
     // Organizations, etc. render correctly — not just Users. profile is
-    // eager:false on Actor, so load it explicitly (getMatrixDisplayName reads
+    // eager:false on Actor, so load it explicitly (getActorDisplayName reads
     // profile.displayName per FR-018).
     const actors = await this.entityManager.find(Actor, {
       where: { id: In(actorIds) },
@@ -688,7 +688,7 @@ export class MessagingService {
       const actor = actorsById.get(m.actorID);
       return {
         actorId: m.actorID,
-        displayName: actor ? getMatrixDisplayName(actor) : m.actorID,
+        displayName: actor ? getActorDisplayName(actor) : m.actorID,
       };
     });
 
