@@ -157,19 +157,29 @@ export class MessageAttachmentService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Re-home inbound attachments eagerly (T010). For each Element-origin
-   * attachment (carries `media_id`), resolve the canonical document globally:
-   *  - still in `matrix_media` staging → MOVE into the target bucket, minting a
-   *    DOCUMENT auth inheriting the target bucket's (membership) auth, setting
-   *    `createdBy = sender`, and keeping `externalReference = media_id`.
-   *  - already homed elsewhere (re-share) → COPY (zero-copy, shared blob) into
-   *    the target bucket with its own minted auth.
-   * Idempotent: a second receive/read finds the document already in the target
-   * bucket and does nothing.
+   * Re-home / coalesce a received message's media eagerly on `message.received`
+   * (T010), so reads are plain lookups. Each attachment is one of two kinds:
    *
-   * Branches on room type: conversation rooms re-home into the conversation
-   * bucket; comment rooms (callout/post) would re-home into the parent's
-   * existing bucket — see getTargetBucketForRoom.
+   *  - OUTBOUND echo (carries `document_id`) — the conversation doc D already
+   *    exists (created at web upload). When the echo also carries the Synapse
+   *    `media_id`, COALESCE: stamp `externalReference = media_id` onto D and
+   *    delete the redundant `matrix_media` staging twin D′ the provider minted
+   *    for the same blob (see coalesceOutboundEcho). No re-home — D is already
+   *    homed. Without a surfaced `media_id` this is a no-op (cross-repo: see the
+   *    note on coalesceOutboundEcho).
+   *
+   *  - INBOUND (Element-origin, carries `media_id` only) — resolve the canonical
+   *    document globally and re-home into the target bucket:
+   *      • still in `matrix_media` staging → MOVE (uniform for every type),
+   *        minting a DOCUMENT auth inheriting the target bucket's (membership)
+   *        auth, setting `createdBy = sender`, keeping `externalReference`.
+   *      • already homed elsewhere (re-share) → COPY (zero-copy, shared blob).
+   *    Idempotent: a second receive finds the document already in the target
+   *    bucket and does nothing.
+   *
+   * Branches on room type: conversation rooms target the conversation bucket;
+   * comment rooms (callout/post) target the parent's existing bucket — see
+   * getTargetBucketForRoom.
    */
   public async rehomeInboundAttachments(
     room: IRoom,
@@ -185,16 +195,22 @@ export class MessageAttachmentService {
       return undefined; // unresolved target (logged) — leave media in staging
     }
 
-    const inbound = attachments.filter(a => a.media_id);
-    for (const attachment of inbound) {
+    for (const attachment of attachments) {
       try {
-        await this.rehomeOne(bucket, senderActorID, attachment);
+        if (attachment.document_id) {
+          // Outbound echo: D already exists — coalesce away the staging twin.
+          await this.coalesceOutboundEcho(bucket, attachment);
+        } else if (attachment.media_id) {
+          // Inbound Element-origin media → verbatim MOVE / re-share COPY.
+          await this.rehomeOne(bucket, senderActorID, attachment);
+        }
       } catch (error) {
         // Never let one attachment break inbound message processing.
         this.logger.error?.(
           {
-            message: 'Failed to re-home inbound attachment',
+            message: 'Failed to re-home/coalesce message attachment',
             mediaId: attachment.media_id,
+            documentId: attachment.document_id,
             roomId: room.id,
           },
           (error as Error)?.stack,
@@ -205,6 +221,79 @@ export class MessageAttachmentService {
     // Return the bucket id so callers can set message.storageBucketId for read
     // resolution of both inbound (media_id) and outbound-echo (document_id) refs.
     return bucket.id;
+  }
+
+  /**
+   * Outbound coalesce (feature 013). For a WEB-originated attachment the
+   * conversation doc D already exists (created at web upload, `externalReference`
+   * null). When matrix-adapter pushes its bytes to Synapse, the media-storage
+   * provider mints a SECOND `matrix_media` staging row D′ keyed by
+   * `externalReference = media_id`, sharing D's content-addressed blob. Re-home
+   * is skipped for outbound (the echo carries `document_id`), so D′ would be
+   * stranded — pinning the blob past message delete. This coalesces the twin:
+   *
+   *  1. stamp `externalReference = media_id` onto D (so by-reference(media_id)
+   *     resolves to the conversation doc, not the staging twin), and
+   *  2. delete the redundant `matrix_media` staging row D′ — the shared blob
+   *     survives because D still references it.
+   *
+   * Idempotent: re-delivery/re-read finds D already stamped and D′ already gone,
+   * and does nothing.
+   *
+   * Cross-repo note: this requires matrix-adapter to surface BOTH
+   * `io.alkemio.document_id` AND the `media_id` (from the event `url`/`mxc`) on
+   * outbound echoes. While the adapter still clears `media_id` on echoes, this is
+   * a safe no-op (the twin remains until the adapter slice lands) — never an
+   * error.
+   */
+  private async coalesceOutboundEcho(
+    bucket: IStorageBucket,
+    attachment: ReceivedAttachment
+  ): Promise<void> {
+    const documentId = attachment.document_id as string;
+    const mediaId = attachment.media_id;
+    if (!mediaId) {
+      // No staging media id surfaced on this echo → cannot locate the twin.
+      return;
+    }
+
+    // Confused-deputy guard (M5): `document_id` originates from an influenceable
+    // Matrix event, so only act on a document that actually lives in this room's
+    // bucket before stamping a reference onto it.
+    const document = await this.documentService.getDocumentOrFail(documentId, {
+      relations: { storageBucket: true },
+    });
+    if (document.storageBucket?.id !== bucket.id) {
+      this.logger.warn?.(
+        {
+          message:
+            'Outbound echo document_id does not belong to the room bucket; skipping coalesce',
+          documentId,
+          mediaId,
+          bucketId: bucket.id,
+        },
+        LogContext.COMMUNICATION
+      );
+      return;
+    }
+
+    // (1) Idempotent stamp: re-point D's opaque reference at the Synapse media id.
+    if (document.externalID !== mediaId) {
+      await this.fileServiceAdapter.moveDocument(documentId, {
+        externalReference: mediaId,
+      });
+    }
+
+    // (2) Delete the redundant matrix_media staging twin D′ (shares D's blob,
+    // which survives because D now references it). Scoped to the matrix_media
+    // bucket so we never touch D itself (now also carrying the reference).
+    const twin = await this.fileServiceAdapter.getDocumentByReference(
+      mediaId,
+      this.matrixMediaBucketId
+    );
+    if (twin && twin.storageBucketId === this.matrixMediaBucketId) {
+      await this.fileServiceAdapter.deleteDocument(twin.id);
+    }
   }
 
   /** Resolve the read/resolution bucket id for a room (feature 013). */

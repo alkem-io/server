@@ -340,6 +340,95 @@ describe('MessageAttachmentService', () => {
     });
   });
 
+  // --- outbound coalesce (eliminate the stranded matrix_media twin) ---
+
+  describe('rehomeInboundAttachments — outbound coalesce', () => {
+    const outboundEcho = {
+      document_id: 'doc-D',
+      media_id: 'media-Y',
+      display_name: 'pic.png',
+      mime_type: 'image/png',
+      size: 1,
+    };
+
+    it('stamps externalReference on D and deletes the matrix_media staging twin', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-D',
+        externalID: undefined,
+        storageBucket: { id: CONV_BUCKET },
+      } as any);
+      fileServiceAdapter.getDocumentByReference.mockResolvedValue({
+        id: 'doc-twin',
+        storageBucketId: MATRIX_MEDIA_BUCKET,
+      } as any);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        outboundEcho,
+      ]);
+
+      // (1) D stamped with the Synapse media id.
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-D', {
+        externalReference: 'media-Y',
+      });
+      // (2) twin looked up scoped to matrix_media, then deleted.
+      expect(fileServiceAdapter.getDocumentByReference).toHaveBeenCalledWith(
+        'media-Y',
+        MATRIX_MEDIA_BUCKET
+      );
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+        'doc-twin'
+      );
+      // No re-home of the echo.
+      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
+    });
+
+    it('is idempotent: D already stamped and twin already gone → no-op', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-D',
+        externalID: 'media-Y', // already coalesced on a previous delivery
+        storageBucket: { id: CONV_BUCKET },
+      } as any);
+      fileServiceAdapter.getDocumentByReference.mockResolvedValue(null);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        outboundEcho,
+      ]);
+
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('confused-deputy guard: ignores an echo whose document_id is not in the room bucket', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-D',
+        externalID: undefined,
+        storageBucket: { id: 'a-foreign-bucket' },
+      } as any);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        outboundEcho,
+      ]);
+
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('no-op when the echo carries no media_id (twin not locatable yet)', async () => {
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        {
+          document_id: 'doc-D',
+          display_name: 'pic.png',
+          mime_type: 'image/png',
+          size: 1,
+        },
+      ]);
+
+      expect(documentService.getDocumentOrFail).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+  });
+
   // --- T013 read resolution ---
 
   describe('resolveMessageAttachments', () => {
