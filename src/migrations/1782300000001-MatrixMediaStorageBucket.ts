@@ -35,7 +35,8 @@ export class MatrixMediaStorageBucket1782300000001
     'image/png',
     'image/gif',
     'image/webp',
-    'image/svg+xml',
+    // image/svg+xml intentionally excluded — SVG can carry active content, so it
+    // is not accepted for member-to-member upload (defense-in-depth, feature 013).
     'image/avif',
     'image/heic',
     'image/heif',

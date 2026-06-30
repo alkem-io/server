@@ -32,7 +32,8 @@ export class ConversationStorageAggregator1782300000002
     'image/png',
     'image/gif',
     'image/webp',
-    'image/svg+xml',
+    // image/svg+xml intentionally excluded — SVG can carry active content, so it
+    // is not accepted for member-to-member upload (defense-in-depth, feature 013).
     'image/avif',
     'image/heic',
     'image/heif',
@@ -54,11 +55,27 @@ export class ConversationStorageAggregator1782300000002
     await queryRunner.query(
       `ALTER TABLE "conversation" ADD COLUMN IF NOT EXISTS "storageAggregatorId" uuid`
     );
+    // PostgreSQL has no `ADD CONSTRAINT IF NOT EXISTS`, so guard each constraint
+    // with a `pg_constraint` lookup to keep a partial re-run idempotent.
     await queryRunner.query(
-      `ALTER TABLE "conversation" ADD CONSTRAINT "UQ_conversation_storageAggregatorId" UNIQUE ("storageAggregatorId")`
+      `DO $$
+       BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint WHERE conname = 'UQ_conversation_storageAggregatorId'
+         ) THEN
+           ALTER TABLE "conversation" ADD CONSTRAINT "UQ_conversation_storageAggregatorId" UNIQUE ("storageAggregatorId");
+         END IF;
+       END $$;`
     );
     await queryRunner.query(
-      `ALTER TABLE "conversation" ADD CONSTRAINT "FK_conversation_storageAggregatorId" FOREIGN KEY ("storageAggregatorId") REFERENCES "storage_aggregator"("id") ON DELETE SET NULL ON UPDATE NO ACTION`
+      `DO $$
+       BEGIN
+         IF NOT EXISTS (
+           SELECT 1 FROM pg_constraint WHERE conname = 'FK_conversation_storageAggregatorId'
+         ) THEN
+           ALTER TABLE "conversation" ADD CONSTRAINT "FK_conversation_storageAggregatorId" FOREIGN KEY ("storageAggregatorId") REFERENCES "storage_aggregator"("id") ON DELETE SET NULL ON UPDATE NO ACTION;
+         END IF;
+       END $$;`
     );
 
     // 2. Backfill for pre-existing conversations.
