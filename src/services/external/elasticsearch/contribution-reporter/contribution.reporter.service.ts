@@ -251,6 +251,28 @@ export class ContributionReporterService {
     );
   }
 
+  /**
+   * A CollaboraDocument's backing file was swapped in place (the document
+   * identity is preserved; only its content changed). Single-actor shape,
+   * identical to {@link calloutCollaboraDocumentUploaded}; the record `id`
+   * is the `CollaboraDocument.id`. See feature 014-officedocs-replace-file
+   * (FR-014).
+   */
+  public calloutCollaboraDocumentReplaced(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.COLLABORA_DOCUMENT_REPLACED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
   public collaboraDocumentOpened(
     contribution: ContributionDetails,
     actorContext: ContributionActorContext

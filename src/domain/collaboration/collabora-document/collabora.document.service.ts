@@ -405,6 +405,157 @@ export class CollaboraDocumentService {
   }
 
   /**
+   * Swap the backing file of an existing CollaboraDocument in place while
+   * preserving its identity (id, createdBy/createdDate, profile/displayName,
+   * authorization, documentType) and any surface link to it (e.g. a callout's
+   * framing link). Only the `document` FK is re-pointed to a newly-staged file
+   * row; the old backing file is released afterward. Surface-agnostic — it
+   * operates on a CollaboraDocument by id.
+   *
+   * Guarantees (feature 014-officedocs-replace-file):
+   *  - FR-013 active-edit guard: refuses if the document currently has a live
+   *    WOPI lock. The lock-status call is FAIL-CLOSED (see the adapter): an
+   *    unavailable signal blocks the swap.
+   *  - FR-004/005/012 validation: reuses `uploadFileAsDocumentFromBuffer` with
+   *    the Collabora allowlist + the bucket size cap; file-service-go
+   *    content-sniffs the MIME rather than trusting the extension.
+   *  - FR-006 same-type rule: the sniffed MIME must map to the SAME
+   *    `documentType`; otherwise the swap is rejected. `documentType` never
+   *    changes.
+   *  - FR-008 atomicity: on any failure before the FK is re-pointed the
+   *    freshly-staged temp file is deleted and the original document + file
+   *    are left intact.
+   *  - FR-010: the old backing file is deleted only AFTER the new file is
+   *    finalized out of temp and the FK re-pointed.
+   *  - FR-009/FR-015: `displayName` is intentionally NOT accepted here — the
+   *    resolver ignores it. The stored profile display name is unchanged
+   *    (rename persistence is feature 016).
+   */
+  public async replaceCollaboraDocument(
+    collaboraDocumentID: string,
+    buffer: Buffer,
+    filename: string,
+    mimetype: string,
+    userID?: string
+  ): Promise<ICollaboraDocument> {
+    const collaboraDocument = await this.getCollaboraDocumentOrFail(
+      collaboraDocumentID,
+      {
+        relations: { document: { storageBucket: true } },
+      }
+    );
+
+    if (!collaboraDocument.document) {
+      throw new RelationshipNotFoundException(
+        'Document not found on CollaboraDocument',
+        LogContext.COLLABORATION,
+        { collaboraDocumentId: collaboraDocumentID }
+      );
+    }
+    if (!collaboraDocument.document.storageBucket) {
+      throw new RelationshipNotFoundException(
+        'Storage bucket not found on CollaboraDocument backing document',
+        LogContext.COLLABORATION,
+        { collaboraDocumentId: collaboraDocumentID }
+      );
+    }
+
+    const oldDocumentId = collaboraDocument.document.id;
+    const storageBucketId = collaboraDocument.document.storageBucket.id;
+
+    // FR-013 active-edit guard (fail-closed inside the adapter). The WOPI
+    // file_id is the file-service Document id.
+    const locked = await this.wopiServiceAdapter.getLockStatus(oldDocumentId);
+    if (locked) {
+      throw new ValidationException(
+        'This document is currently being edited. Please try again once no one is editing.',
+        LogContext.COLLABORATION
+      );
+    }
+
+    // Stage the replacement bytes into the SAME bucket as the current file.
+    // temporaryLocation:true so a downstream failure can roll the row back;
+    // COLLABORA_SUPPORTED_MIMES enforces the allowlist and triggers the
+    // content-sniff; the bucket's maxFileSize enforces the size cap;
+    // skipDedup:true so this doc owns its own backing row.
+    const newDocument =
+      await this.storageBucketService.uploadFileAsDocumentFromBuffer(
+        storageBucketId,
+        buffer,
+        filename,
+        mimetype,
+        userID,
+        true, // temporaryLocation
+        true, // skipDedup
+        COLLABORA_SUPPORTED_MIMES
+      );
+
+    // From here on, any failure must roll back the freshly-staged file and
+    // leave the original document + file untouched (FR-008).
+    try {
+      // FR-006 same-type rule. The sniffed MIME (authoritative) must map to
+      // the SAME documentType as the existing document; otherwise reject.
+      const sniffedMime = newDocument.mimeType;
+      const derivedType = MIME_TO_DOCUMENT_TYPE[sniffedMime];
+      if (!derivedType) {
+        // Should not happen: file-service-go validated against
+        // COLLABORA_SUPPORTED_MIMES, so an unmapped MIME is a bug in our maps.
+        throw new RelationshipNotFoundException(
+          'Replacement file MIME not in CollaboraDocument category map',
+          LogContext.COLLABORATION,
+          { sniffedMime }
+        );
+      }
+      if (derivedType !== collaboraDocument.documentType) {
+        throw new ValidationException(
+          `The replacement must be the same kind of document as the original (${collaboraDocument.documentType}). The uploaded file is a ${derivedType}.`,
+          LogContext.COLLABORATION
+        );
+      }
+
+      // Finalize the new file out of temp BEFORE re-pointing, mirroring the
+      // create flow: the new file is permanent and self-contained before the
+      // FK commit, so a save failure leaves an orphan permanent file (cleaned
+      // up below) rather than a saved entity pointing at a still-temp file.
+      await this.fileServiceAdapter.updateDocument(newDocument.id, {
+        temporaryLocation: false,
+      });
+
+      // Re-point the FK. originalMimeType tracks the actual sniffed MIME so
+      // the rename/extension logic stays correct (documentType is unchanged).
+      collaboraDocument.document = newDocument;
+      collaboraDocument.originalMimeType = sniffedMime;
+      await this.collaboraDocumentRepository.save(
+        collaboraDocument as CollaboraDocument
+      );
+    } catch (error) {
+      // Compensate: drop the freshly-staged file (deleteDocument works on both
+      // temporary and permanent rows). The original document + file are still
+      // referenced and intact.
+      await this.fileServiceAdapter
+        .deleteDocument(newDocument.id)
+        .catch(() => undefined);
+      throw error;
+    }
+
+    // FR-010: release the old backing file only AFTER the new one is finalized
+    // and the FK re-pointed. Best-effort — the document is already valid on the
+    // new file, so a delete failure only leaves an orphan old row.
+    try {
+      await this.documentService.deleteDocument({ ID: oldDocumentId });
+    } catch (cleanupError) {
+      this.logger.warn?.(
+        `Failed to delete old backing file ${oldDocumentId} after replacing CollaboraDocument ${collaboraDocumentID}: ${String(cleanupError)}`,
+        LogContext.COLLABORATION
+      );
+    }
+
+    return this.getCollaboraDocumentOrFail(collaboraDocumentID, {
+      relations: { profile: true },
+    });
+  }
+
+  /**
    * Default MIME for a blank-create flow. Each `documentType` maps to a
    * single canonical format we use when creating empty placeholders:
    * SPREADSHEET → .xlsx, PRESENTATION → .pptx, WORDPROCESSING → .docx,
