@@ -210,6 +210,91 @@ describe('CalloutResolverMutations', () => {
         expect(calloutService.updateCallout).not.toHaveBeenCalled();
       });
     });
+
+    // A CONTRIBUTORS callout TEMPLATE has no calloutsSet, so it must be EXEMPT
+    // from the collaboration-only / admin-CREATE guard — its settings can be
+    // edited and the framing removed (→ NONE), but it must not be switched to
+    // another framing type.
+    describe('CONTRIBUTORS framing on templates', () => {
+      const setupUpdateSuccess = (callout: any) => {
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+        vi.mocked(calloutService.updateCallout).mockResolvedValue(callout);
+        const roomResolverService = (resolver as any).roomResolverService;
+        vi.mocked(
+          roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+        ).mockResolvedValue({
+          roleSet: { id: 'rs-1' },
+          platformRolesAccess: { roles: [] },
+        });
+        vi.mocked(
+          calloutAuthorizationService.applyAuthorizationPolicy
+        ).mockResolvedValue([{ id: 'updated-auth' }] as any);
+      };
+
+      it('allows editing a CONTRIBUTORS callout template (no calloutsSet) — no collaboration/admin guard', async () => {
+        const callout = {
+          id: 'tmpl-1',
+          isTemplate: true,
+          authorization: { id: 'auth-1' },
+          framing: { type: CalloutFramingType.CONTRIBUTORS },
+          // standalone callout template → no calloutsSet
+        } as any;
+        setupUpdateSuccess(callout);
+
+        await resolver.updateCallout(
+          { actorID: 'u1' } as any,
+          {
+            ID: 'tmpl-1',
+            settings: {
+              framing: { contributors: { contributorTypes: ['organization'] } },
+            },
+          } as any
+        );
+
+        expect(calloutService.updateCallout).toHaveBeenCalled();
+      });
+
+      it('allows removing the framing on a template (CONTRIBUTORS → NONE)', async () => {
+        const callout = {
+          id: 'tmpl-1',
+          isTemplate: true,
+          authorization: { id: 'auth-1' },
+          framing: { type: CalloutFramingType.CONTRIBUTORS },
+        } as any;
+        setupUpdateSuccess(callout);
+
+        await resolver.updateCallout(
+          { actorID: 'u1' } as any,
+          {
+            ID: 'tmpl-1',
+            framing: { type: CalloutFramingType.NONE },
+          } as any
+        );
+
+        expect(calloutService.updateCallout).toHaveBeenCalled();
+      });
+
+      it('rejects switching a CONTRIBUTORS template framing to another type', async () => {
+        const callout = {
+          id: 'tmpl-1',
+          isTemplate: true,
+          authorization: { id: 'auth-1' },
+          framing: { type: CalloutFramingType.CONTRIBUTORS },
+        } as any;
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+        await expect(
+          resolver.updateCallout(
+            { actorID: 'u1' } as any,
+            {
+              ID: 'tmpl-1',
+              framing: { type: CalloutFramingType.WHITEBOARD },
+            } as any
+          )
+        ).rejects.toThrow(ValidationException);
+        expect(calloutService.updateCallout).not.toHaveBeenCalled();
+      });
+    });
   });
 
   describe('updateCalloutVisibility', () => {

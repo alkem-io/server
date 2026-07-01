@@ -121,16 +121,27 @@ export class CalloutResolverMutations {
       `update callout: ${callout.id}`
     );
 
-    // CONTRIBUTORS framing is admin-only and collaboration-only (FR-004a/FR-004f,
-    // R5). Mirror the create guard on the update path so the restriction can't be
-    // bypassed by converting an existing callout — or one living in a
-    // non-COLLABORATION callouts set (e.g. a VC knowledge base) — to CONTRIBUTORS
-    // via updateCallout, which otherwise only checks the generic UPDATE privilege.
-    // The resulting type is the incoming framing type when provided, else the
-    // stored one (so editing an existing CONTRIBUTORS callout is gated too).
+    // CONTRIBUTORS framing is admin-only and collaboration-only for LIVE callouts
+    // (FR-004a/FR-004f, R5). Mirror the create guard on the update path so the
+    // restriction can't be bypassed by converting an existing callout — or one
+    // living in a non-COLLABORATION callouts set (e.g. a VC knowledge base) — to
+    // CONTRIBUTORS via updateCallout, which otherwise only checks the generic
+    // UPDATE privilege. The resulting type is the incoming framing type when
+    // provided, else the stored one (so editing an existing CONTRIBUTORS callout
+    // is gated too).
+    //
+    // Template callouts (callout.isTemplate) are EXEMPT: a standalone callout
+    // template has no calloutsSet at all (calloutsSet is null), and template
+    // callouts are governed by template-edit authorization (the UPDATE privilege
+    // checked above), not the live-callout admin/collaboration rules. Without
+    // this exemption, editing a CONTRIBUTORS callout template throws "only
+    // available on COLLABORATION callouts sets" because its calloutsSet is null.
     const resultingFramingType =
       calloutData.framing?.type ?? callout.framing?.type;
-    if (resultingFramingType === CalloutFramingType.CONTRIBUTORS) {
+    if (
+      !callout.isTemplate &&
+      resultingFramingType === CalloutFramingType.CONTRIBUTORS
+    ) {
       if (callout.calloutsSet?.type !== CalloutsSetType.COLLABORATION) {
         throw new ValidationException(
           'CONTRIBUTORS framing is only available on COLLABORATION callouts sets.',
@@ -142,6 +153,23 @@ export class CalloutResolverMutations {
         callout.calloutsSet.authorization,
         AuthorizationPrivilege.CREATE,
         `update CONTRIBUTORS callout (admin-only) on callouts Set: ${callout.calloutsSet.id}`
+      );
+    }
+
+    // A CONTRIBUTORS callout TEMPLATE's framing may be edited (its contributor
+    // settings — types, list/map) or removed (set to NONE), but MUST NOT be
+    // switched to another framing type: templates only support keeping or
+    // clearing the contributors framing.
+    if (
+      callout.isTemplate &&
+      callout.framing?.type === CalloutFramingType.CONTRIBUTORS &&
+      calloutData.framing?.type != null &&
+      calloutData.framing.type !== CalloutFramingType.CONTRIBUTORS &&
+      calloutData.framing.type !== CalloutFramingType.NONE
+    ) {
+      throw new ValidationException(
+        'A CONTRIBUTORS callout template framing can only be kept or removed (set to NONE), not changed to another framing type.',
+        LogContext.COLLABORATION
       );
     }
 
