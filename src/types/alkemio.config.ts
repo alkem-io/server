@@ -51,6 +51,7 @@ export type AlkemioConfig = {
   search: {
     max_results: number;
     index_pattern: string;
+    collabora_document_max_source_size: number;
   };
   licensing: {
     wingback: {
