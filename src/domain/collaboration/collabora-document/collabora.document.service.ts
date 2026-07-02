@@ -263,7 +263,8 @@ export class CollaboraDocumentService {
 
   public async getEditorUrl(
     collaboraDocumentID: string,
-    actorID: string
+    actorID: string,
+    actorName?: string
   ): Promise<{ editorUrl: string; accessTokenTTL: number }> {
     const collaboraDocument = await this.getCollaboraDocumentOrFail(
       collaboraDocumentID,
@@ -282,7 +283,8 @@ export class CollaboraDocumentService {
 
     const result = await this.wopiServiceAdapter.issueToken(
       collaboraDocument.document.id,
-      actorID
+      actorID,
+      actorName
     );
 
     return {

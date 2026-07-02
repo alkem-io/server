@@ -36,6 +36,10 @@ export class SpaceSettingsService {
         settings.privacy.allowPlatformSupportAsAdmin =
           updateData.privacy.allowPlatformSupportAsAdmin;
       }
+      if (updateData.privacy.userInformationVisibility !== undefined) {
+        settings.privacy.userInformationVisibility =
+          updateData.privacy.userInformationVisibility;
+      }
     }
     if (updateData.membership) {
       settings.membership = updateData.membership;

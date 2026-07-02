@@ -1222,6 +1222,19 @@ type CalloutContributionsCountOutput {
   whiteboard: Float!
 }
 
+type CalloutContributorsSettings {
+  """
+  The contributor types included in this contributor-collection callout. At least one.
+  """
+  contributorTypes: [ActorType!]!
+  """
+  The contributor type shown first (the segmented switch opens on it). One of contributorTypes.
+  """
+  defaultContributorType: ActorType!
+  """The default display mode (list or map)."""
+  defaultView: ContributorCollectionView!
+}
+
 enum CalloutDescriptionDisplayMode {
   COLLAPSED
   EXPANDED
@@ -1234,6 +1247,14 @@ type CalloutFraming {
   The Collabora document attached to this Callout Framing, if any. Present when framing.type = COLLABORA_DOCUMENT.
   """
   collaboraDocument: CollaboraDocument
+  """
+  Per-type counts (users, organizations, virtual contributors) of the total eligible set for a CONTRIBUTORS framing, after type-selection and user-information visibility filtering. Zeroed for non-CONTRIBUTORS framings.
+  """
+  contributorCounts: ContributorCollectionCounts!
+  """
+  The full authorized set of contributors of the given type for a CONTRIBUTORS framing, ordered leads/admins first then alphabetically. No server-side pagination or search: the client paginates (list) and name-searches client-side over this set. Empty for non-CONTRIBUTORS framings or deselected types.
+  """
+  contributors(type: ActorType!): [ContributorCollectionItem!]!
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
@@ -1262,6 +1283,7 @@ type CalloutFraming {
 
 enum CalloutFramingType {
   COLLABORA_DOCUMENT
+  CONTRIBUTORS
   LINK
   MEDIA_GALLERY
   MEMO
@@ -1306,6 +1328,10 @@ type CalloutSettingsContribution {
 type CalloutSettingsFraming {
   """Can comment to callout framing."""
   commentsEnabled: Boolean!
+  """
+  Configuration for a contributor-collection callout. Present only when framing.type = CONTRIBUTORS.
+  """
+  contributors: CalloutContributorsSettings
 }
 
 enum CalloutVisibility {
@@ -1694,9 +1720,46 @@ input ContributionsFilterInput {
   types: [CalloutContributionType!]
 }
 
+type ContributorCollectionCounts {
+  organizations: Int!
+  users: Int!
+  virtualContributors: Int!
+}
+
+type ContributorCollectionItem {
+  avatarUrl: String
+  displayName: String!
+  id: UUID!
+  """
+  Location of the contributor; null for Virtual Contributors or when not readable.
+  """
+  location: ContributorLocation
+  """The role label for this contributor (lead/admin/member)."""
+  roleLabel: String
+  type: ActorType!
+  url: String
+}
+
+"""The default display mode for a contributor-collection callout framing."""
+enum ContributorCollectionView {
+  LIST
+  MAP
+}
+
 input ContributorFilterInput {
   displayName: String
   nameID: String
+}
+
+type ContributorLocation {
+  city: String
+  country: String
+  """
+  Whether the location has valid stored coordinates (geoLocation.isValid). City/country alone is false.
+  """
+  hasValidCoordinates: Boolean!
+  latitude: Float
+  longitude: Float
 }
 
 type Conversation {
@@ -1925,6 +1988,32 @@ input CreateCalloutContributionInput {
   whiteboard: CreateWhiteboardInput
 }
 
+type CreateCalloutContributorsSettingsData {
+  """The contributor types to include. At least one type is required."""
+  contributorTypes: [ActorType!]!
+  """
+  The default contributor type (one of contributorTypes). Defaults to the first selected type.
+  """
+  defaultContributorType: ActorType
+  """
+  The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
+  """
+  defaultView: ContributorCollectionView
+}
+
+input CreateCalloutContributorsSettingsInput {
+  """The contributor types to include. At least one type is required."""
+  contributorTypes: [ActorType!]!
+  """
+  The default contributor type (one of contributorTypes). Defaults to the first selected type.
+  """
+  defaultContributorType: ActorType
+  """
+  The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
+  """
+  defaultView: ContributorCollectionView
+}
+
 type CreateCalloutData {
   classification: CreateClassificationData
   contributionDefaults: CreateCalloutContributionDefaultsData
@@ -2049,11 +2138,19 @@ type CreateCalloutSettingsData {
 type CreateCalloutSettingsFramingData {
   """Can comment to callout framing."""
   commentsEnabled: Boolean
+  """
+  Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
+  """
+  contributors: CreateCalloutContributorsSettingsData
 }
 
 input CreateCalloutSettingsFramingInput {
   """Can comment to callout framing."""
   commentsEnabled: Boolean
+  """
+  Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
+  """
+  contributors: CreateCalloutContributorsSettingsInput
 }
 
 input CreateCalloutSettingsInput {
@@ -2504,6 +2601,10 @@ input CreateSpaceSettingsPrivacyInput {
   allowPlatformSupportAsAdmin: Boolean
   """"""
   mode: SpacePrivacyMode
+  """
+  Controls who may read member-user information. Follows space visibility by default, or restricts it to members only.
+  """
+  userInformationVisibility: UserInformationVisibility
 }
 
 input CreateStateOnInnovationFlowInput {
@@ -6822,6 +6923,14 @@ input SearchInput {
   """Return results that satisfy these conditions."""
   filters: [SearchFilterInput!]
   """
+  When searching Callouts (COLLABORATION_TOOLS / CALLOUT), also match in the Callout framing resources (whiteboard, memo) and its contributions (post, whiteboard, memo). Any match folds up to the containing Callout, deduped, in calloutResults.
+  """
+  foldCalloutResources: Boolean = false
+  """
+  Restrict the search to a single flow state, identified by the InnovationFlowState UUID. The state UUID is globally unique and transitively identifies its Collaboration, so no separate CalloutsSet filter is needed. Default is all flow states.
+  """
+  searchInFlowStateFilter: UUID
+  """
   Restrict the search to only the specified Space. Default is all Spaces.
   """
   searchInSpaceFilter: UUID
@@ -7230,6 +7339,10 @@ type SpaceSettingsPrivacy {
   allowPlatformSupportAsAdmin: Boolean!
   """The privacy mode for this Space"""
   mode: SpacePrivacyMode!
+  """
+  Controls who may read member-user information. Follows space visibility by default, or restricts it to members only. Absent is treated as follow-space-visibility.
+  """
+  userInformationVisibility: UserInformationVisibility
 }
 
 enum SpaceSortMode {
@@ -7790,6 +7903,19 @@ input UpdateCalloutContributionDefaultsInput {
   whiteboardContent: WhiteboardContent
 }
 
+input UpdateCalloutContributorsSettingsInput {
+  """When provided, replaces the selected contributor types (at least one)."""
+  contributorTypes: [ActorType!]
+  """
+  The default contributor type (one of contributorTypes). Defaults to the first selected type.
+  """
+  defaultContributorType: ActorType
+  """
+  The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
+  """
+  defaultView: ContributorCollectionView
+}
+
 input UpdateCalloutEntityInput {
   ID: UUID!
   classification: UpdateClassificationInput
@@ -7851,6 +7977,10 @@ input UpdateCalloutSettingsContributionInput {
 input UpdateCalloutSettingsFramingInput {
   """Can comment to callout framing."""
   commentsEnabled: Boolean
+  """
+  Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
+  """
+  contributors: UpdateCalloutContributorsSettingsInput
 }
 
 input UpdateCalloutSettingsInput {
@@ -8324,6 +8454,10 @@ input UpdateSpaceSettingsPrivacyInput {
   allowPlatformSupportAsAdmin: Boolean
   """"""
   mode: SpacePrivacyMode
+  """
+  Controls who may read member-user information. Follows space visibility by default, or restricts it to members only.
+  """
+  userInformationVisibility: UserInformationVisibility
 }
 
 input UpdateSubspacePinnedInput {
@@ -8964,6 +9098,14 @@ type UserGroup {
   profile: Profile
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+}
+
+"""
+Controls who may read member-user information in a Space. Follows space visibility by default, or restricts user info to members only.
+"""
+enum UserInformationVisibility {
+  FOLLOW_SPACE_VISIBILITY
+  MEMBERS_ONLY
 }
 
 """
