@@ -101,8 +101,9 @@ export class CollaboraDocumentResolverQueries {
    * Guests carry their name on the ActorContext (no Actor row exists for the
    * synthetic guest id); authenticated users get the canonical, PII-safe
    * `getActorDisplayName` (profile.displayName → nameID, never email).
-   * Returns undefined when no name can be resolved (anonymous, or a failed
-   * lookup), letting the WOPI service apply its own fallback.
+   * Returns undefined when no name can be resolved (anonymous, a failed
+   * lookup, or a resolved actor whose display name is blank), letting the WOPI
+   * service apply its own fallback rather than surfacing an empty name.
    *
    * Best-effort by design: `actorName` is optional and the editor flow works
    * without it, so a failed actor lookup must NEVER block opening the document
@@ -118,7 +119,9 @@ export class CollaboraDocumentResolverQueries {
       const actor = await this.actorLookupService.getActorById(
         actorContext.actorID
       );
-      return actor ? getActorDisplayName(actor) : undefined;
+      // getActorDisplayName can return '' (blank displayName and empty nameID);
+      // coalesce to undefined so WOPI applies its fallback, not a blank name.
+      return (actor && getActorDisplayName(actor)) || undefined;
     } catch (e: any) {
       this.logger.warn?.(
         {
