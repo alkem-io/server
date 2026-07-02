@@ -4,9 +4,11 @@
 process.env.ALKEMIO_DISABLE_SUBSCRIPTIONS = 'true';
 
 import { LogContext, MessagingQueue } from '@common/enums';
+import { DrainableRmqServer } from '@core/microservices/drainable-rmq.server';
 import { ConfigService } from '@nestjs/config';
 import { NestFactory } from '@nestjs/core';
-import { MicroserviceOptions, Transport } from '@nestjs/microservices';
+import { MicroserviceOptions } from '@nestjs/microservices';
+import { AuthResetWorkerState } from '@services/auth-reset/subscriber/auth-reset.worker-state.service';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { AuthResetWorkerModule } from './core/bootstrap/auth-reset.worker.module';
@@ -46,59 +48,87 @@ export const bootstrapAuthResetWorker = async () => {
   const heartbeat = process.env.NODE_ENV === 'production' ? 30 : 120;
   const amqpEndpoint = `amqp://${connectionOptions.user}:${connectionOptions.password}@${connectionOptions.host}:${connectionOptions.port}?heartbeat=${heartbeat}`;
 
-  app.connectMicroservice<MicroserviceOptions>({
-    transport: Transport.RMQ,
-    options: {
-      urls: [amqpEndpoint],
-      queue,
-      queueOptions: { durable: true },
-      // One unacked message per pod at a time. The RMQ default is 0 (unlimited):
-      // a single pod would pull the whole queue and run every reset concurrently,
-      // each holding large authorization arrays (OOM risk against the 3.5Gi limit)
-      // and trampling the parent->child ordering the inheritance chain depends on.
-      // With 1, work is spread across pods as competing consumers, one reset each.
-      prefetchCount: 1,
-      socketOptions: {
-        reconnectTimeInSeconds: 5,
-        heartbeatIntervalInSeconds:
-          process.env.NODE_ENV === 'production' ? 30 : 240,
-      },
-      // Manual ack — the controller acks/rejects explicitly (retry handling).
-      noAck: false,
+  // Custom RMQ strategy (instead of transport+options) so the SIGTERM handler
+  // below can cancel the consumer WITHOUT tearing the channel out from under an
+  // in-flight reset. Same options as the stock Transport.RMQ server.
+  const rmqServer = new DrainableRmqServer({
+    urls: [amqpEndpoint],
+    queue,
+    queueOptions: { durable: true },
+    // One unacked message per pod at a time. The RMQ default is 0 (unlimited):
+    // a single pod would pull the whole queue and run every reset concurrently,
+    // each holding large authorization arrays (OOM risk against the 3.5Gi limit)
+    // and trampling the parent->child ordering the inheritance chain depends on.
+    // With 1, work is spread across pods as competing consumers, one reset each.
+    prefetchCount: 1,
+    socketOptions: {
+      reconnectTimeInSeconds: 5,
+      heartbeatIntervalInSeconds:
+        process.env.NODE_ENV === 'production' ? 30 : 240,
     },
+    // Manual ack — the controller acks/rejects explicitly (retry handling).
+    noAck: false,
   });
+  app.connectMicroservice<MicroserviceOptions>({ strategy: rmqServer });
 
-  // --- Graceful shutdown (worker-only) ---------------------------------------
+  const workerState = app.get(AuthResetWorkerState);
+
+  // --- Graceful drain on shutdown (worker-only) ------------------------------
   // This binary runs as PID 1 (Dockerfile `CMD ["node", "dist/main.js"]`, no
   // init wrapper). The Linux kernel does NOT apply the default "terminate"
   // disposition to PID 1 for SIGTERM/SIGINT unless the process installs its own
-  // handler — so without the line below a SIGTERM (sent by kubelet on
+  // handler — so without the handler below a SIGTERM (sent by kubelet on
   // scale-down/rollout) would be IGNORED and the pod would sit until the
   // terminationGracePeriodSeconds deadline, then get SIGKILLed.
   //
-  // enableShutdownHooks() registers process SIGTERM/SIGINT listeners that call
-  // app.close(), which closes the RMQ microservice: the consumer is cancelled
-  // (no new deliveries) and the channel/connection are torn down, then the
-  // process exits promptly — well inside the grace window instead of stalling
-  // to SIGKILL.
+  // Drain sequence:
+  //   1. rmqServer.stopConsuming() — AMQP basic.cancel: the broker stops
+  //      delivering NEW resets to this pod. The channel stays OPEN so an
+  //      in-flight reset can still ack the message it is processing.
+  //   2. workerState.waitForIdle() — wait for the active reset (0 or 1, given
+  //      prefetchCount: 1) to finish and ack, bounded by the drain timeout.
+  //   3. app.close() — tear down. Any message still unacked at this point is
+  //      requeued by the broker and redelivered to a live pod later.
   //
-  // In-flight safety: a reset already running when SIGTERM lands continues on
-  // the event loop. If it finishes and acks before app.close() tears the
-  // channel down, the message is consumed normally. If the channel closes
-  // first, the still-unacked message is requeued by the broker and redelivered
-  // on the next scale-up — the handlers are idempotent and carry an explicit
-  // retry counter, so no work is lost either way.
-  app.enableShutdownHooks();
-
-  // Observability only — Nest's enableShutdownHooks listener does the actual
-  // app.close(). This just records that a shutdown signal arrived.
-  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
-    process.on(signal, () =>
-      logger.log?.(
-        `Received ${signal}: draining auth-reset worker and shutting down.`,
-        LogContext.AUTH
-      )
+  // The timeout MUST sit comfortably below the pod's terminationGracePeriod so
+  // step 3 runs before SIGKILL. Handlers are idempotent and carry an explicit
+  // x-retry-count header, so a requeue on timeout loses no work.
+  // Max wait for the in-flight reset (a ceiling, not a fixed wait);
+  // keep it a few seconds BELOW the deployment's terminationGracePeriodSeconds so app.close() runs before SIGKILL.
+  const drainTimeoutMs =
+    Number(process.env.AUTH_RESET_DRAIN_TIMEOUT_SECONDS ?? 55) * 1000;
+  let shuttingDown = false;
+  const shutdown = async (signal: NodeJS.Signals) => {
+    if (shuttingDown) {
+      return;
+    }
+    shuttingDown = true;
+    logger.log?.(
+      `Received ${signal}: cancelling auth-reset consumer, draining in-flight work.`,
+      LogContext.AUTH
     );
+    try {
+      await rmqServer.stopConsuming();
+      const drained = await workerState.waitForIdle(drainTimeoutMs);
+      if (!drained) {
+        logger.warn?.(
+          `Auth-reset drain timed out after ${drainTimeoutMs}ms with ${workerState.activeCount} reset(s) in flight; unacked message(s) will be requeued on close.`,
+          LogContext.AUTH
+        );
+      }
+    } catch (error: any) {
+      logger.error?.(
+        `Error during auth-reset worker drain: ${error?.message}`,
+        error?.stack,
+        LogContext.AUTH
+      );
+    } finally {
+      await app.close();
+      process.exit(0);
+    }
+  };
+  for (const signal of ['SIGTERM', 'SIGINT'] as const) {
+    process.on(signal, () => void shutdown(signal));
   }
 
   // Run module lifecycle hooks (onModuleInit / onApplicationBootstrap) BEFORE
