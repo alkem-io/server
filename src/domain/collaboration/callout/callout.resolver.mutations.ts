@@ -2,10 +2,14 @@ import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -103,13 +107,71 @@ export class CalloutResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('calloutData') calloutData: UpdateCalloutEntityInput
   ): Promise<ICallout> {
-    const callout = await this.calloutService.getCalloutOrFail(calloutData.ID);
+    const callout = await this.calloutService.getCalloutOrFail(calloutData.ID, {
+      relations: {
+        authorization: true,
+        framing: true,
+        calloutsSet: { authorization: true },
+      },
+    });
     this.authorizationService.grantAccessOrFail(
       actorContext,
       callout.authorization,
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
+
+    // CONTRIBUTORS framing is admin-only and collaboration-only for LIVE callouts
+    // (FR-004a/FR-004f, R5). Mirror the create guard on the update path so the
+    // restriction can't be bypassed by converting an existing callout — or one
+    // living in a non-COLLABORATION callouts set (e.g. a VC knowledge base) — to
+    // CONTRIBUTORS via updateCallout, which otherwise only checks the generic
+    // UPDATE privilege. The resulting type is the incoming framing type when
+    // provided, else the stored one (so editing an existing CONTRIBUTORS callout
+    // is gated too).
+    //
+    // Template callouts (callout.isTemplate) are EXEMPT: a standalone callout
+    // template has no calloutsSet at all (calloutsSet is null), and template
+    // callouts are governed by template-edit authorization (the UPDATE privilege
+    // checked above), not the live-callout admin/collaboration rules. Without
+    // this exemption, editing a CONTRIBUTORS callout template throws "only
+    // available on COLLABORATION callouts sets" because its calloutsSet is null.
+    const resultingFramingType =
+      calloutData.framing?.type ?? callout.framing?.type;
+    if (
+      !callout.isTemplate &&
+      resultingFramingType === CalloutFramingType.CONTRIBUTORS
+    ) {
+      if (callout.calloutsSet?.type !== CalloutsSetType.COLLABORATION) {
+        throw new ValidationException(
+          'CONTRIBUTORS framing is only available on COLLABORATION callouts sets.',
+          LogContext.COLLABORATION
+        );
+      }
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        callout.calloutsSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        `update CONTRIBUTORS callout (admin-only) on callouts Set: ${callout.calloutsSet.id}`
+      );
+    }
+
+    // A CONTRIBUTORS callout TEMPLATE's framing may be edited (its contributor
+    // settings — types, list/map) or removed (set to NONE), but MUST NOT be
+    // switched to another framing type: templates only support keeping or
+    // clearing the contributors framing.
+    if (
+      callout.isTemplate &&
+      callout.framing?.type === CalloutFramingType.CONTRIBUTORS &&
+      calloutData.framing?.type != null &&
+      calloutData.framing.type !== CalloutFramingType.CONTRIBUTORS &&
+      calloutData.framing.type !== CalloutFramingType.NONE
+    ) {
+      throw new ValidationException(
+        'A CONTRIBUTORS callout template framing can only be kept or removed (set to NONE), not changed to another framing type.',
+        LogContext.COLLABORATION
+      );
+    }
 
     const updatedCallout = await this.calloutService.updateCallout(
       callout,

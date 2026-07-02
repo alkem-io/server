@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { DocumentModule } from '@domain/storage/document/document.module';
@@ -20,6 +21,7 @@ import { CollaboraDocumentAuthorizationService } from './collabora.document.serv
 @Module({
   imports: [
     AuthorizationModule,
+    ActorLookupModule,
     AuthorizationPolicyModule,
     DocumentModule,
     ProfileModule,

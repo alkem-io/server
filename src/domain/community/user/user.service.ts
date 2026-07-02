@@ -23,7 +23,7 @@ import { IPaginatedType } from '@core/pagination/paginated.type';
 import { getPaginationResults } from '@core/pagination/pagination.fn';
 import { actorDefaults } from '@domain/actor/actor/actor.defaults';
 import { ActorService } from '@domain/actor/actor/actor.service';
-import { getMatrixDisplayName } from '@domain/actor/actor.matrix.display.name';
+import { getActorDisplayName } from '@domain/actor/actor.display.name';
 import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -47,6 +47,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
+import { getReadOnlyDefaultCapabilityToggles } from '@services/mcp-server/capabilities/assistant.capability.classification';
 import { InstrumentService } from '@src/apm/decorators';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, QueryFailedError, Repository } from 'typeorm';
@@ -230,7 +231,7 @@ export class UserService {
 
     // Sync the user to the communication adapter
     // User.id (which is Actor.id) is used as the AlkemioActorID for all communication operations
-    const displayName = getMatrixDisplayName(user);
+    const displayName = getActorDisplayName(user);
 
     try {
       await this.communicationAdapter.syncActor(user.id, displayName);
@@ -387,6 +388,13 @@ export class UserService {
       homeSpace: {
         spaceID: null,
         autoRedirect: false,
+      },
+      // Read-only assistant authority by default (FR-018): all READ capabilities
+      // enabled, all WRITE_* disabled, derived from the shared frozen
+      // classification (contracts/assistant-authority.md §1/§2). A new WRITE
+      // capability defaults disabled for existing users (absence = disabled).
+      assistant: {
+        enabledCapabilities: getReadOnlyDefaultCapabilityToggles(),
       },
       designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
     };

@@ -31,6 +31,7 @@ import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/ca
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
+import { VirtualAssistantModule } from '@domain/community/virtual-assistant/virtual.assistant.module';
 import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { PushSubscriptionModule } from '@domain/push-subscription/push.subscription.module';
@@ -75,6 +76,7 @@ import { KratosEventsModule } from '@services/external/kratos-events/kratos.even
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
+import { McpServerModule } from '@services/mcp-server/mcp-server.module';
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { AppController } from '@src/app.controller';
 import { WinstonConfigService } from '@src/config/winston.config';
@@ -207,7 +209,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
           infer: true,
         });
         return {
-          cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
+          cors: false, // avoids a duplicate CORS origin header when behind the Traefik edge reverse proxy
           uploads: false,
           autoSchemaFile: true,
           inheritResolversFromInterfaces: true,
@@ -344,8 +346,10 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     CalendarEventIcsModule,
     IdentityResolveModule,
     InternalAdminModule,
+    McpServerModule,
     MeModule,
     VirtualActorModule,
+    VirtualAssistantModule,
     InputCreatorModule,
     LookupModule,
     LookupByNameModule,

@@ -2,6 +2,8 @@ import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { getActorDisplayName } from '@domain/actor/actor.display.name';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Inject } from '@nestjs/common';
 import { Args, Query, Resolver } from '@nestjs/graphql';
@@ -22,7 +24,8 @@ export class CollaboraDocumentResolverQueries {
     private authorizationService: AuthorizationService,
     private collaboraDocumentService: CollaboraDocumentService,
     private contributionReporter: ContributionReporterService,
-    private communityResolverService: CommunityResolverService
+    private communityResolverService: CommunityResolverService,
+    private actorLookupService: ActorLookupService
   ) {}
 
   @Query(() => CollaboraEditorUrlResult, {
@@ -49,9 +52,14 @@ export class CollaboraDocumentResolverQueries {
     // Identity is resolved from the ActorContext (alkemio_session cookie /
     // forwardAuth), not an inbound Bearer JWT. The WOPI service trusts the
     // X-Alkemio-Actor-Id header the adapter stamps on the internal call.
+    // The actor name is resolved here (the only layer that sees guest names)
+    // and forwarded so the WOPI CheckFileInfo UserFriendlyName is the real name
+    // instead of "UnknownUser" (#6170 — forwardAuth no longer carries it).
+    const actorName = await this.resolveActorName(actorContext);
     const editorUrl = await this.collaboraDocumentService.getEditorUrl(
       collaboraDocumentID,
-      actorContext.actorID
+      actorContext.actorID,
+      actorName
     );
 
     // Lifecycle analytics (US4 / FR-014): one COLLABORA_DOCUMENT_OPENED record
@@ -86,5 +94,44 @@ export class CollaboraDocumentResolverQueries {
     }
 
     return editorUrl;
+  }
+
+  /**
+   * Resolves the human-readable name to surface in the Collabora editor.
+   * Guests carry their name on the ActorContext (no Actor row exists for the
+   * synthetic guest id); authenticated users get the canonical, PII-safe
+   * `getActorDisplayName` (profile.displayName → nameID, never email).
+   * Returns undefined when no name can be resolved (anonymous, a failed
+   * lookup, or a resolved actor whose display name is blank), letting the WOPI
+   * service apply its own fallback rather than surfacing an empty name.
+   *
+   * Best-effort by design: `actorName` is optional and the editor flow works
+   * without it, so a failed actor lookup must NEVER block opening the document
+   * (mirrors the best-effort analytics block in collaboraEditorUrl, FR-008).
+   */
+  private async resolveActorName(
+    actorContext: ActorContext
+  ): Promise<string | undefined> {
+    if (actorContext.isGuest) {
+      return actorContext.guestName;
+    }
+    try {
+      const actor = await this.actorLookupService.getActorById(
+        actorContext.actorID
+      );
+      // getActorDisplayName can return '' (blank displayName and empty nameID);
+      // coalesce to undefined so WOPI applies its fallback, not a blank name.
+      return (actor && getActorDisplayName(actor)) || undefined;
+    } catch (e: any) {
+      this.logger.warn?.(
+        {
+          message: 'Failed to resolve actor name for Collabora editor',
+          actorId: actorContext.actorID,
+          error: e?.message,
+        },
+        LogContext.COLLABORATION
+      );
+      return undefined;
+    }
   }
 }

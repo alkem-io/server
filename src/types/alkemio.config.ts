@@ -1,3 +1,18 @@
+export type McpConfig = {
+  enabled: boolean;
+  api_key_enabled: boolean;
+  sse: {
+    heartbeat_interval_ms: number;
+    connection_timeout_ms: number;
+  };
+  rate_limit: {
+    requests_per_minute: number;
+  };
+  resources: {
+    max_response_items: number;
+  };
+};
+
 export type AlkemioConfig = {
   authorization: {
     chunk: number;
@@ -5,6 +20,7 @@ export type AlkemioConfig = {
   endpoints: {
     client_web: string;
   };
+  mcp: McpConfig;
   hosting: {
     environment: string;
     port: number;
@@ -183,6 +199,12 @@ export type AlkemioConfig = {
         port: number;
         user: string;
         password: string;
+      };
+      auth_reset: {
+        // Queue the auth/license reset events flow over. Publisher (normal
+        // server) and the dedicated worker (src/main.worker.ts) MUST agree on
+        // this name.
+        queue: string;
       };
       event_bus: {
         exchange: string;

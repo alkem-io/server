@@ -73,6 +73,9 @@ export abstract class IActor extends INameable {
     const {
       IVirtualContributor,
     } = require('../../community/virtual-contributor/virtual.contributor.interface');
+    const {
+      IVirtualAssistant,
+    } = require('../../community/virtual-assistant/virtual.assistant.interface');
     const { ISpace } = require('../../space/space/space.interface');
     const { IAccount } = require('../../space/account/account.interface');
     /* eslint-enable @typescript-eslint/no-require-imports */
@@ -84,6 +87,8 @@ export abstract class IActor extends INameable {
         return IOrganization;
       case ActorType.VIRTUAL_CONTRIBUTOR:
         return IVirtualContributor;
+      case ActorType.VIRTUAL_ASSISTANT:
+        return IVirtualAssistant;
       case ActorType.SPACE:
         return ISpace;
       case ActorType.ACCOUNT:

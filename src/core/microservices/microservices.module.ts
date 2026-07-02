@@ -9,11 +9,19 @@ import {
   SUBSCRIPTION_ROOM_EVENT,
   SUBSCRIPTION_SUBSPACE_CREATED,
   SUBSCRIPTION_VIRTUAL_UPDATED,
+  WHITEBOARD_COLLABORATION_SERVICE,
 } from '@common/constants/providers';
 import { MessagingQueue } from '@common/enums/messaging.queue';
-import { Global, Inject, Module, OnModuleDestroy } from '@nestjs/common';
+import {
+  Global,
+  Inject,
+  LoggerService,
+  Module,
+  OnModuleDestroy,
+} from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { RABBITMQ_EXCHANGE_NAME_DIRECT } from '@src/common/constants';
+import { AlkemioConfig } from '@src/types';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
@@ -70,7 +78,23 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     },
     {
       provide: AUTH_RESET_SERVICE,
-      useFactory: clientProxyFactory(MessagingQueue.AUTH_RESET),
+      // Queue name comes from config (microservices.rabbitmq.auth_reset.queue)
+      // so publisher and the dedicated worker consumer stay in lock-step.
+      useFactory: (
+        logger: LoggerService,
+        configService: ConfigService<AlkemioConfig, true>
+      ) => {
+        const queue = configService.get(
+          'microservices.rabbitmq.auth_reset.queue',
+          { infer: true }
+        );
+        return clientProxyFactory(queue)(logger, configService);
+      },
+      inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
+    },
+    {
+      provide: WHITEBOARD_COLLABORATION_SERVICE,
+      useFactory: clientProxyFactory(MessagingQueue.WHITEBOARD_COLLABORATION),
       inject: [WINSTON_MODULE_NEST_PROVIDER, ConfigService],
     },
     {
@@ -84,6 +108,7 @@ const subscriptionFactoryProviders = subscriptionConfig.map(
     NOTIFICATIONS_SERVICE,
     MATRIX_ADAPTER_SERVICE,
     AUTH_RESET_SERVICE,
+    WHITEBOARD_COLLABORATION_SERVICE,
     IS_SCHEMA_BOOTSTRAP,
   ],
 })

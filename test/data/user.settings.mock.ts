@@ -188,6 +188,9 @@ export const userSettingsData: { userSettings: IUserSettings } = {
       spaceID: null,
       autoRedirect: false,
     },
+    assistant: {
+      enabledCapabilities: [],
+    },
     designVersion: DESIGN_VERSION_CURRENT_DEFAULT,
   },
 };

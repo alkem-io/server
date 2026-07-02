@@ -1,6 +1,7 @@
 import {
   CREDENTIAL_RULE_PLATFORM_CREATE_ORGANIZATION,
   CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE,
+  CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_VIRTUAL_ASSISTANT,
   CREDENTIAL_RULE_TYPES_PLATFORM_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER,
@@ -164,6 +165,10 @@ export class PlatformAuthorizationService {
       await this.createCredentialRuleInteractiveGuidance();
     credentialRules.push(credentialRuleInteractiveGuidance);
 
+    const credentialRuleVirtualAssistantAccess =
+      this.createCredentialRuleVirtualAssistantAccess();
+    credentialRules.push(credentialRuleVirtualAssistantAccess);
+
     return this.authorizationPolicyService.appendCredentialAuthorizationRules(
       authorization,
       credentialRules
@@ -215,6 +220,29 @@ export class PlatformAuthorizationService {
     userChatGuidanceAccessPrivilegeRule.cascade = false;
 
     return userChatGuidanceAccessPrivilegeRule;
+  }
+
+  /**
+   * 004-web-ai-assistant (FR-027): grant ACCESS_VIRTUAL_ASSISTANT to platform
+   * admins OR holders of the admin-assignable ASSISTANT_ACCESS credential
+   * (the PLATFORM_ASSISTANT_ACCESS role). Anchored to GLOBAL_ADMIN — NOT
+   * GLOBAL_REGISTERED — so out of the box only platform admins may use the
+   * web AI assistant. Mirrors createCredentialRuleInteractiveGuidance, but the
+   * criteria are the two access-bearing credentials (OR semantics).
+   */
+  private createCredentialRuleVirtualAssistantAccess(): IAuthorizationPolicyRuleCredential {
+    const virtualAssistantAccessRule =
+      this.authorizationPolicyService.createCredentialRule(
+        [AuthorizationPrivilege.ACCESS_VIRTUAL_ASSISTANT],
+        [
+          { type: AuthorizationCredential.GLOBAL_ADMIN, resourceID: '' },
+          { type: AuthorizationCredential.ASSISTANT_ACCESS, resourceID: '' },
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_VIRTUAL_ASSISTANT
+      );
+    virtualAssistantAccessRule.cascade = false;
+
+    return virtualAssistantAccessRule;
   }
 
   private createPlatformCredentialRules(): IAuthorizationPolicyRuleCredential[] {
