@@ -123,8 +123,34 @@ export const bootstrapAuthResetWorker = async () => {
         LogContext.AUTH
       );
     } finally {
-      await app.close();
-      process.exit(0);
+      // A hanging teardown must NOT hold the pod in Terminating until the
+      // grace-period SIGKILL. app.close() awaits every module's onModuleDestroy
+      // and closes the DB pool / Redis cache / RMQ connection; if any of those
+      // stalls (the legacy redis cache store and pooled connections are common
+      // offenders) it never resolves, and a plain `await app.close()` would
+      // swallow the exit below. Cap it and force-exit regardless.
+      const HARD_EXIT_MS = 5000;
+      setTimeout(() => {
+        logger.warn?.(
+          `app.close() did not finish within ${HARD_EXIT_MS}ms; forcing exit.`,
+          LogContext.AUTH
+        );
+        process.exit(0);
+      }, HARD_EXIT_MS).unref();
+
+      try {
+        logger.log?.('Closing auth-reset worker app...', LogContext.AUTH);
+        await app.close();
+        logger.log?.('Auth-reset worker app closed cleanly.', LogContext.AUTH);
+      } catch (error: any) {
+        logger.error?.(
+          `Error closing auth-reset worker app: ${error?.message}`,
+          error?.stack,
+          LogContext.AUTH
+        );
+      } finally {
+        process.exit(0);
+      }
     }
   };
   for (const signal of ['SIGTERM', 'SIGINT'] as const) {
