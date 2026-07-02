@@ -93,10 +93,16 @@ export const bootstrapAuthResetWorker = async () => {
   // The timeout MUST sit comfortably below the pod's terminationGracePeriod so
   // step 3 runs before SIGKILL. Handlers are idempotent and carry an explicit
   // x-retry-count header, so a requeue on timeout loses no work.
-  // Max wait for the in-flight reset (a ceiling, not a fixed wait);
-  // keep it a few seconds BELOW the deployment's terminationGracePeriodSeconds so app.close() runs before SIGKILL.
+  // Total budget for the WHOLE shutdown (drain + close). Keep it a few seconds
+  // BELOW the deployment's terminationGracePeriodSeconds so the process exits on
+  // its own before the grace-period SIGKILL.
   const drainTimeoutMs =
     Number(process.env.AUTH_RESET_DRAIN_TIMEOUT_SECONDS ?? 55) * 1000;
+  // Carve the budget in two: most of it waits for the in-flight reset, a small
+  // reserve (derived from the same budget) is left for app.close() so a
+  // long-running reset can't starve the teardown.
+  const closeBudgetMs = Math.min(5000, Math.floor(drainTimeoutMs / 5));
+  const drainWaitMs = Math.max(0, drainTimeoutMs - closeBudgetMs);
   let shuttingDown = false;
   const shutdown = async (signal: NodeJS.Signals) => {
     if (shuttingDown) {
@@ -107,12 +113,27 @@ export const bootstrapAuthResetWorker = async () => {
       `Received ${signal}: cancelling auth-reset consumer, draining in-flight work.`,
       LogContext.AUTH
     );
+
+    // Absolute backstop tied to drainTimeoutMs: whatever stalls — a reset that
+    // never finishes OR a hanging app.close() (it awaits every onModuleDestroy
+    // and closes the DB pool / Redis cache / RMQ connection; the legacy redis
+    // cache store and pooled connections are common offenders) — the process
+    // force-exits at the full budget instead of sitting in Terminating until
+    // the grace-period SIGKILL.
+    setTimeout(() => {
+      logger.warn?.(
+        `Shutdown did not complete within ${drainTimeoutMs}ms; forcing exit.`,
+        LogContext.AUTH
+      );
+      process.exit(0);
+    }, drainTimeoutMs).unref();
+
     try {
       await rmqServer.stopConsuming();
-      const drained = await workerState.waitForIdle(drainTimeoutMs);
+      const drained = await workerState.waitForIdle(drainWaitMs);
       if (!drained) {
         logger.warn?.(
-          `Auth-reset drain timed out after ${drainTimeoutMs}ms with ${workerState.activeCount} reset(s) in flight; unacked message(s) will be requeued on close.`,
+          `Auth-reset drain timed out after ${drainWaitMs}ms with ${workerState.activeCount} reset(s) in flight; unacked message(s) will be requeued on close.`,
           LogContext.AUTH
         );
       }
@@ -123,21 +144,6 @@ export const bootstrapAuthResetWorker = async () => {
         LogContext.AUTH
       );
     } finally {
-      // A hanging teardown must NOT hold the pod in Terminating until the
-      // grace-period SIGKILL. app.close() awaits every module's onModuleDestroy
-      // and closes the DB pool / Redis cache / RMQ connection; if any of those
-      // stalls (the legacy redis cache store and pooled connections are common
-      // offenders) it never resolves, and a plain `await app.close()` would
-      // swallow the exit below. Cap it and force-exit regardless.
-      const HARD_EXIT_MS = 5000;
-      setTimeout(() => {
-        logger.warn?.(
-          `app.close() did not finish within ${HARD_EXIT_MS}ms; forcing exit.`,
-          LogContext.AUTH
-        );
-        process.exit(0);
-      }, HARD_EXIT_MS).unref();
-
       try {
         logger.log?.('Closing auth-reset worker app...', LogContext.AUTH);
         await app.close();
