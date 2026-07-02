@@ -12,6 +12,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
+import { validate as uuidValidate } from 'uuid';
 import { McpTool, McpToolDefinition, McpToolResult } from '../dto/mcp.types';
 import { resolveTemplateScene } from './whiteboard-template-scene';
 
@@ -66,8 +67,9 @@ export class CreateWhiteboardInSpaceTool implements McpTool {
         'NOT have a specific callout that already accepts whiteboard contributions — it creates the ' +
         'hosting callout for you, so "create a whiteboard in space X" works even when no suitable ' +
         'callout exists. (To add a whiteboard to an EXISTING callout that accepts contributions, use ' +
-        'create_whiteboard instead.) Provide the space/subspace id (resolve it from a name via ' +
-        'search_content / list_whiteboards). To start FROM A TEMPLATE, set "fromTemplateId" — the ' +
+        'create_whiteboard instead.) Provide the space UUID (resolve it from a name via ' +
+        'search_content), or a TOP-LEVEL space nameID / URL slug; a SUBSPACE requires its UUID. ' +
+        'To start FROM A TEMPLATE, set "fromTemplateId" — the ' +
         'server fills the board with the template scene by reference, so do NOT generate or paste the ' +
         'scene yourself. Otherwise set "content" to a full Excalidraw scene JSON string, or omit both ' +
         'for a blank board. Provide at most one of "fromTemplateId" or "content". Requires ' +
@@ -78,7 +80,9 @@ export class CreateWhiteboardInSpaceTool implements McpTool {
           spaceId: {
             type: 'string',
             description:
-              'The ID of the space OR subspace to create the whiteboard in (its CalloutsSet hosts the new callout).',
+              'The space to create the whiteboard in (its CalloutsSet hosts the new callout): a space ' +
+              'or subspace UUID, or a top-level space nameID (the URL slug, e.g. "my-space" from ' +
+              'https://…/my-space). Subspaces can only be addressed by UUID.',
           },
           displayName: {
             type: 'string',
@@ -150,15 +154,22 @@ export class CreateWhiteboardInSpaceTool implements McpTool {
     }
 
     // Resolve the space/subspace -> its Collaboration -> CalloutsSet (where
-    // callouts are created). getSpaceOrFail works for any level by id.
+    // callouts are created). A UUID resolves any level; anything else is
+    // treated as a top-level space nameID (the URL slug) — the id the model
+    // most often has at hand (listings/URLs carry the slug, not the UUID).
     let calloutsSetId: string | undefined;
     try {
-      const space = await this.spaceLookupService.getSpaceOrFail(spaceId, {
-        relations: { collaboration: { calloutsSet: true } },
-      });
+      const relations = { collaboration: { calloutsSet: true } } as const;
+      const space = uuidValidate(spaceId)
+        ? await this.spaceLookupService.getSpaceOrFail(spaceId, { relations })
+        : await this.spaceLookupService.getSpaceByNameIdOrFail(spaceId, {
+            relations,
+          });
       calloutsSetId = space.collaboration?.calloutsSet?.id;
     } catch {
-      return this.errorResult(`Space not found: ${spaceId}`);
+      return this.errorResult(
+        `Space not found: ${spaceId}. Pass a space/subspace UUID, or a top-level space nameID (URL slug); subspaces require the UUID.`
+      );
     }
     if (!calloutsSetId) {
       return this.errorResult(
