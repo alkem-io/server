@@ -92,7 +92,12 @@ export class AuthResetController {
     );
     const channel: Channel = context.getChannelRef();
     const originalMsg = context.getMessage() as Message;
-    const retryCount = originalMsg.properties.headers?.[RETRY_HEADER] ?? 0;
+    // Normalize the retry header: it is an RMQ integration boundary, so a
+    // missing or malformed value must not leak a non-number into `retryCount + 1`
+    // (string concatenation) or the limit comparison. Fall back to 0.
+    const parsedRetry = Number(originalMsg.properties.headers?.[RETRY_HEADER]);
+    const retryCount =
+      Number.isInteger(parsedRetry) && parsedRetry >= 0 ? parsedRetry : 0;
 
     this.workerState.begin();
     try {
@@ -101,7 +106,10 @@ export class AuthResetController {
       const message = `Finished resetting ${subject}.`;
       this.logger.verbose?.(message, LogContext.AUTH_POLICY);
       if (task) {
-        this.taskService.updateTaskResults(task, message);
+        // Awaited so the task cache write completes before the message is acked,
+        // but isolated (recordTaskResult swallows its own errors) so a task-cache
+        // hiccup can never requeue a reset that already succeeded.
+        await this.recordTaskResult(task, message);
       }
       channel.ack(originalMsg);
     } catch (error: any) {
@@ -109,7 +117,7 @@ export class AuthResetController {
         const message = `Resetting ${subject} failed! Max retries reached. Rejecting message.`;
         this.logger.error(message, error?.stack, LogContext.AUTH);
         if (task) {
-          this.taskService.updateTaskErrors(task, message);
+          await this.recordTaskError(task, message);
         }
         channel.reject(originalMsg, false); // Reject and don't requeue
       } else {
@@ -127,6 +135,34 @@ export class AuthResetController {
       }
     } finally {
       this.workerState.end();
+    }
+  }
+
+  /**
+   * Persist a task result, swallowing any failure. Task tracking is best-effort
+   * telemetry — it must never throw back into the reset flow (which would requeue
+   * an already-successful reset), so its errors are logged and contained here.
+   */
+  private async recordTaskResult(task: string, message: string): Promise<void> {
+    try {
+      await this.taskService.updateTaskResults(task, message);
+    } catch (error: any) {
+      this.logger.warn(
+        `Failed to persist task result for task ${task}: ${error?.message}`,
+        LogContext.AUTH
+      );
+    }
+  }
+
+  /** As {@link recordTaskResult}, for the terminal (max-retries) error path. */
+  private async recordTaskError(task: string, message: string): Promise<void> {
+    try {
+      await this.taskService.updateTaskErrors(task, message);
+    } catch (error: any) {
+      this.logger.warn(
+        `Failed to persist task error for task ${task}: ${error?.message}`,
+        LogContext.AUTH
+      );
     }
   }
 

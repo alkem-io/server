@@ -96,8 +96,17 @@ export const bootstrapAuthResetWorker = async () => {
   // Total budget for the WHOLE shutdown (drain + close). Keep it a few seconds
   // BELOW the deployment's terminationGracePeriodSeconds so the process exits on
   // its own before the grace-period SIGKILL.
+  // Guard the parse: a non-numeric value would yield NaN (breaking the timeout
+  // math so waitForIdle never bounds) and an empty string would yield 0
+  // (disabling the drain entirely) — fall back to 55 unless it is a finite,
+  // positive number.
+  const parsedDrainSeconds = Number(
+    process.env.AUTH_RESET_DRAIN_TIMEOUT_SECONDS
+  );
   const drainTimeoutMs =
-    Number(process.env.AUTH_RESET_DRAIN_TIMEOUT_SECONDS ?? 55) * 1000;
+    (Number.isFinite(parsedDrainSeconds) && parsedDrainSeconds > 0
+      ? parsedDrainSeconds
+      : 55) * 1000;
   // Carve the budget in two: most of it waits for the in-flight reset, a small
   // reserve (derived from the same budget) is left for app.close() so a
   // long-running reset can't starve the teardown.
