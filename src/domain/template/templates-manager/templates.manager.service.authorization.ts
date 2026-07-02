@@ -29,9 +29,11 @@ export class TemplatesManagerAuthorizationService {
             templateDefaults: {
               authorization: true,
             },
-            templatesSet: {
-              authorization: true,
-            },
+            // Auth-load optimization: the templates-set authorization service re-fetches by id
+            // (templates.set.service.authorization.ts) and only the templatesSet id/existence is
+            // used here, so its authorization is not needed. (templateDefaults are passed as whole
+            // objects to a child that consumes their authorization, so that load is retained.)
+            templatesSet: true,
           },
         }
       );

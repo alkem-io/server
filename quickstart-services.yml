@@ -247,6 +247,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_oidc_service
     image: alkemio/oidc-service:v0.8.0
+    platform: linux/amd64
     depends_on:
       - hydra
       - kratos
@@ -390,6 +391,7 @@ services:
     container_name: alkemio_dev_notifications
     hostname: notifications
     image: alkemio/notifications:v0.35.0
+    platform: linux/amd64
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -427,6 +429,7 @@ services:
     container_name: alkemio_dev_matrix_adapter
     hostname: matrix-adapter
     image: alkemio/matrix-adapter:v0.8.17
+    platform: linux/amd64
     depends_on:
       - rabbitmq
     environment:
@@ -505,6 +508,7 @@ services:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
     image: alkemio/whiteboard-collaboration-service:v0.11.0
+    platform: linux/amd64
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -527,6 +531,7 @@ services:
     container_name: alkemio_dev_file_service
     hostname: file-service
     image: alkemio/file-service:v0.1.0
+    platform: linux/amd64
     depends_on:
       postgres:
         condition: service_healthy
@@ -556,6 +561,7 @@ services:
     container_name: alkemio_dev_kratos_hooks
     hostname: kratos-hooks
     image: alkemio/kratos-webhooks:v0.2.3
+    platform: linux/amd64
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -585,6 +591,7 @@ services:
     container_name: alkemio_dev_collaborative-document
     hostname: collaborative-document
     image: alkemio/collaborative-document-service:v0.4.0
+    platform: linux/amd64
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -607,6 +614,7 @@ services:
     container_name: alkemio_dev_authorization_evaluation
     hostname: authorization-evaluation
     image: alkemio/authorization-evaluation-service:v0.0.4
+    platform: linux/amd64
     depends_on:
       postgres:
         condition: service_healthy
@@ -625,6 +633,7 @@ services:
     container_name: alkemio_dev_wopi_service
     hostname: wopi-service
     image: alkemio/wopi-service:v0.1.0
+    platform: linux/amd64
     depends_on:
       postgres:
         condition: service_healthy
@@ -668,6 +677,7 @@ services:
     container_name: alkemio_dev_collabora
     hostname: collabora
     image: collabora/code:24.04.12.2.1
+    platform: linux/amd64
     environment:
       # Reach wopi through Traefik (not a direct port), so callbacks ride the
       # wopi-service failover. A `wopi-service:host-gateway` extra_host here

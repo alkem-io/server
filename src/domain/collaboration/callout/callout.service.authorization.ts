@@ -65,15 +65,10 @@ export class CalloutAuthorizationService {
             },
           },
         },
-        framing: {
-          profile: true,
-          whiteboard: {
-            profile: true,
-          },
-          memo: {
-            profile: true,
-          },
-        },
+        // Auth-load optimization: the framing authorization service re-fetches the framing
+        // (and its profile/whiteboard/memo) by id, so we only need the framing row here, not
+        // its nested profile/whiteboard/memo content. See callout.framing.service.authorization.ts.
+        framing: true,
       },
     });
 

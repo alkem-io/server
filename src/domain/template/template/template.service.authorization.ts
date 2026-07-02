@@ -37,19 +37,14 @@ export class TemplateAuthorizationService {
           communityGuidelines: {
             profile: true,
           },
-          callout: {
-            framing: {
-              profile: true,
-              whiteboard: {
-                profile: true,
-              },
-            },
-            contributionDefaults: true,
-          },
+          // Auth-load optimization: only template.callout.id is used here; the callout
+          // authorization service re-fetches the callout (framing, contributionDefaults, etc.)
+          // by id, so we do not hydrate that subtree. See callout.service.authorization.ts.
+          callout: true,
           whiteboard: true,
-          contentSpace: {
-            authorization: true,
-          },
+          // Auth-load optimization: only contentSpace.id is used here; the content-space
+          // authorization service re-fetches by id, so its authorization is not needed here.
+          contentSpace: true,
         },
       }
     );
