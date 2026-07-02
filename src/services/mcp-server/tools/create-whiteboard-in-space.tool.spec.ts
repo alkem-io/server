@@ -3,11 +3,12 @@ import { vi } from 'vitest';
 import { CreateWhiteboardInSpaceTool } from './create-whiteboard-in-space.tool';
 
 /**
- * Space resolution for `create_whiteboard_in_space`: a UUID resolves any
- * space/subspace by id, anything else is treated as a TOP-LEVEL space nameID
- * (the URL slug) — the id the model most often has at hand. Found live: the
- * model passed a space's slug and the tool refused it as "not found" even
- * though its own description said "resolve it from a name".
+ * Space resolution for `create_whiteboard_in_space` delegates to
+ * `SpaceLookupService.getSpaceByIdOrNameIdOrFail` — UUID resolves any
+ * space/subspace, anything else a TOP-LEVEL space nameID (URL slug); routing
+ * itself is covered by space.lookup.service.spec.ts. Found live: the model
+ * passed a space's slug and the tool refused it as "not found" even though
+ * its own description said "resolve it from a name".
  */
 describe('create_whiteboard_in_space — space id/nameID resolution', () => {
   const SPACE_UUID = 'e0e2e08f-04cc-40dc-b40c-089b6cc27689';
@@ -26,8 +27,7 @@ describe('create_whiteboard_in_space — space id/nameID resolution', () => {
       collaboration: { calloutsSet: { id: CALLOUTS_SET_ID } },
     };
     const spaceLookupService = {
-      getSpaceOrFail: vi.fn().mockResolvedValue(space),
-      getSpaceByNameIdOrFail: vi.fn().mockResolvedValue(space),
+      getSpaceByIdOrNameIdOrFail: vi.fn().mockResolvedValue(space),
     };
     const calloutsSetResolverMutations = {
       createCalloutOnCalloutsSet: vi
@@ -54,50 +54,33 @@ describe('create_whiteboard_in_space — space id/nameID resolution', () => {
     return { tool, spaceLookupService, calloutsSetResolverMutations };
   };
 
-  it('resolves a UUID via getSpaceOrFail (any level)', async () => {
+  it('resolves the spaceId (UUID or slug alike) via the shared id-or-nameID resolver', async () => {
     const { tool, spaceLookupService, calloutsSetResolverMutations } =
       buildTool();
 
-    const result = await tool.execute(
-      { spaceId: SPACE_UUID, displayName: 'Test board' },
-      actor()
-    );
+    for (const spaceId of [SPACE_UUID, 'zimbabve']) {
+      const result = await tool.execute(
+        { spaceId, displayName: 'Test board' },
+        actor()
+      );
 
-    expect(spaceLookupService.getSpaceOrFail).toHaveBeenCalledWith(
-      SPACE_UUID,
-      expect.objectContaining({ relations: expect.anything() })
-    );
-    expect(spaceLookupService.getSpaceByNameIdOrFail).not.toHaveBeenCalled();
-    expect(result.isError).toBeUndefined();
+      expect(
+        spaceLookupService.getSpaceByIdOrNameIdOrFail
+      ).toHaveBeenCalledWith(
+        spaceId,
+        expect.objectContaining({ relations: expect.anything() })
+      );
+      expect(result.isError).toBeUndefined();
+    }
     expect(
       calloutsSetResolverMutations.createCalloutOnCalloutsSet
-    ).toHaveBeenCalled();
-  });
-
-  it('resolves a non-UUID as a top-level space nameID (URL slug)', async () => {
-    const { tool, spaceLookupService, calloutsSetResolverMutations } =
-      buildTool();
-
-    const result = await tool.execute(
-      { spaceId: 'zimbabve', displayName: 'Test board' },
-      actor()
-    );
-
-    expect(spaceLookupService.getSpaceByNameIdOrFail).toHaveBeenCalledWith(
-      'zimbabve',
-      expect.objectContaining({ relations: expect.anything() })
-    );
-    expect(spaceLookupService.getSpaceOrFail).not.toHaveBeenCalled();
-    expect(result.isError).toBeUndefined();
-    expect(
-      calloutsSetResolverMutations.createCalloutOnCalloutsSet
-    ).toHaveBeenCalled();
+    ).toHaveBeenCalledTimes(2);
   });
 
   it('returns a guidance error when neither resolution finds the space', async () => {
     const { tool, spaceLookupService, calloutsSetResolverMutations } =
       buildTool();
-    spaceLookupService.getSpaceByNameIdOrFail.mockRejectedValue(
+    spaceLookupService.getSpaceByIdOrNameIdOrFail.mockRejectedValue(
       new Error('L0 Space not found')
     );
 

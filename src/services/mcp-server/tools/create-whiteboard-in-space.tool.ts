@@ -12,7 +12,6 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { UrlGeneratorService } from '@services/infrastructure/url-generator/url.generator.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
-import { validate as uuidValidate } from 'uuid';
 import { McpTool, McpToolDefinition, McpToolResult } from '../dto/mcp.types';
 import { resolveTemplateScene } from './whiteboard-template-scene';
 
@@ -154,17 +153,15 @@ export class CreateWhiteboardInSpaceTool implements McpTool {
     }
 
     // Resolve the space/subspace -> its Collaboration -> CalloutsSet (where
-    // callouts are created). A UUID resolves any level; anything else is
-    // treated as a top-level space nameID (the URL slug) — the id the model
-    // most often has at hand (listings/URLs carry the slug, not the UUID).
+    // callouts are created). The lookup service owns the id-or-nameID policy:
+    // a UUID resolves any level; anything else is a top-level space nameID
+    // (the URL slug) — the id the model most often has at hand.
     let calloutsSetId: string | undefined;
     try {
-      const relations = { collaboration: { calloutsSet: true } } as const;
-      const space = uuidValidate(spaceId)
-        ? await this.spaceLookupService.getSpaceOrFail(spaceId, { relations })
-        : await this.spaceLookupService.getSpaceByNameIdOrFail(spaceId, {
-            relations,
-          });
+      const space = await this.spaceLookupService.getSpaceByIdOrNameIdOrFail(
+        spaceId,
+        { relations: { collaboration: { calloutsSet: true } } }
+      );
       calloutsSetId = space.collaboration?.calloutsSet?.id;
     } catch {
       return this.errorResult(
