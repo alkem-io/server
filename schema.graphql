@@ -4187,6 +4187,10 @@ type Mutation {
   Reorder Poll options. Requires UPDATE privilege. The provided list must contain exactly the same option IDs as the current poll options.
   """
   reorderPollOptions(optionData: ReorderPollOptionsInput!): Poll!
+  """
+  Replace the backing file of an existing CollaboraDocument in place, preserving its identity. Requires UPDATE on the document. The replacement must be an allowed OfficeDocs format, within the size cap, and the SAME document type as the current file. Refused while the document is being edited.
+  """
+  replaceCollaboraDocument(file: Upload!, replaceData: ReplaceCollaboraDocumentInput!): CollaboraDocument!
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
@@ -8425,6 +8429,15 @@ input RemoveUserGroupMemberInput {
 input ReorderPollOptionsInput {
   optionIDs: [UUID!]!
   pollID: UUID!
+}
+
+input ReplaceCollaboraDocumentInput {
+  """
+  Optional title chosen in the replace dialog (defaults to the incoming file title). ACCEPTED FOR FORWARD-COMPATIBILITY BUT NOT APPLIED in this feature: the stored display name is left unchanged. Persisting a rename is owned by feature 016-officedocs-rename-ux (FR-009 / FR-015). Present so reviewers do not read the unused field as a bug.
+  """
+  displayName: String
+  """The ID of the CollaboraDocument whose backing file is being replaced."""
+  ID: UUID!
 }
 
 input RevokeAuthorizationCredentialInput {
