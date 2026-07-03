@@ -124,17 +124,7 @@ export class CollaboraDocumentService {
       let originalMimeType: string;
       if (isUpload) {
         originalMimeType = document.mimeType;
-        const derivedType = MIME_TO_DOCUMENT_TYPE[originalMimeType];
-        if (!derivedType) {
-          // file-service-go's allowlist matched COLLABORA_SUPPORTED_MIMES,
-          // so this would be a bug in our static maps.
-          throw new RelationshipNotFoundException(
-            'Imported file MIME not in CollaboraDocument category map',
-            LogContext.COLLABORATION,
-            { sniffedMime: originalMimeType }
-          );
-        }
-        documentType = derivedType;
+        documentType = this.documentTypeFromSniffedMimeOrFail(originalMimeType);
       } else {
         documentType = input.documentType!;
         originalMimeType = blankCanonicalMime!;
@@ -209,6 +199,27 @@ export class CollaboraDocumentService {
         .catch(() => undefined);
       throw error;
     }
+  }
+
+  /**
+   * Map a file-service-sniffed MIME to its {@link CollaboraDocumentType}. Shared
+   * by the create/import and replace flows, which both stage the file through
+   * file-service-go (validated against `COLLABORA_SUPPORTED_MIMES`) — so an
+   * unmapped MIME here means our static maps are out of sync, an internal error
+   * rather than a user one.
+   */
+  private documentTypeFromSniffedMimeOrFail(
+    sniffedMime: string
+  ): CollaboraDocumentType {
+    const documentType = MIME_TO_DOCUMENT_TYPE[sniffedMime];
+    if (!documentType) {
+      throw new RelationshipNotFoundException(
+        'Sniffed file MIME not in CollaboraDocument category map',
+        LogContext.COLLABORATION,
+        { sniffedMime }
+      );
+    }
+    return documentType;
   }
 
   /**
@@ -496,16 +507,7 @@ export class CollaboraDocumentService {
       // FR-006 same-type rule. The sniffed MIME (authoritative) must map to
       // the SAME documentType as the existing document; otherwise reject.
       const sniffedMime = newDocument.mimeType;
-      const derivedType = MIME_TO_DOCUMENT_TYPE[sniffedMime];
-      if (!derivedType) {
-        // Should not happen: file-service-go validated against
-        // COLLABORA_SUPPORTED_MIMES, so an unmapped MIME is a bug in our maps.
-        throw new RelationshipNotFoundException(
-          'Replacement file MIME not in CollaboraDocument category map',
-          LogContext.COLLABORATION,
-          { sniffedMime }
-        );
-      }
+      const derivedType = this.documentTypeFromSniffedMimeOrFail(sniffedMime);
       if (derivedType !== collaboraDocument.documentType) {
         throw new ValidationException(
           `The replacement must be the same kind of document as the original (${collaboraDocument.documentType}). The uploaded file is a ${derivedType}.`,
