@@ -530,6 +530,17 @@ export class SearchIngestService {
           batchSize,
           task
         );
+        // Office-document is a rebuild-once, read-only index. Its extracted
+        // `content` is excluded from _source, but a freshly-bulk-loaded index
+        // still carries many small segments plus a transient `_recovery_source`
+        // full copy that mask the reduced footprint. Compact to a single
+        // segment now — while the new index is populated but not yet aliased,
+        // so no reads are served — to realize the smaller size immediately.
+        // Scoped to office-document only; other indices are left to ES's
+        // background merges. Non-fatal: force-merge is an optimization.
+        if (index.startsWith(`${this.indexPattern}office-document-`)) {
+          await this.forceMergeIndex(index);
+        }
         const total = batches.reduce((acc, val) => acc + (val.total ?? 0), 0);
         acc[index] = {
           total: total + (acc[index]?.total ?? 0),
@@ -540,6 +551,36 @@ export class SearchIngestService {
       },
       result
     );
+  }
+
+  /**
+   * Compacts a freshly-ingested index down to a single segment. Used only for
+   * the write-once, read-only office-document index to drop unmerged segments
+   * and the transient `_recovery_source`, so the (content-excluded) footprint
+   * settles immediately instead of waiting for background merges. Best-effort:
+   * a failure is logged but never fails the ingest, since the index is already
+   * fully searchable — this only affects on-disk size.
+   */
+  private async forceMergeIndex(index: string): Promise<void> {
+    if (!this.elasticClient) {
+      return;
+    }
+
+    try {
+      await this.elasticClient.indices.forcemerge({
+        index,
+        max_num_segments: 1,
+      });
+      this.logger.verbose?.(
+        `[${index}] - force-merged to a single segment`,
+        LogContext.SEARCH_INGEST
+      );
+    } catch (error) {
+      this.logger.warn?.(
+        `[${index}] - force-merge failed (non-fatal): ${(error as Error)?.message}`,
+        LogContext.SEARCH_INGEST
+      );
+    }
   }
 
   private async fetchAndIngest(
