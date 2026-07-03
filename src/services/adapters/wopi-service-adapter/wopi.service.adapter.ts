@@ -105,8 +105,12 @@ export class WopiServiceAdapter {
    */
   async checkHealth(): Promise<boolean> {
     const url = `${this.baseUrl}/health`;
+    // Must exceed the WOPI /health handler's own worst-case budget (a ~5s context that includes a
+    // live Collabora probe up to ~2s) — a tighter timeout would report a slow-but-healthy service
+    // as down and surface a spurious save-path outage in the editor. A genuinely-down service
+    // fails fast (connection refused) regardless.
     const request$ = this.httpService.get(url).pipe(
-      timeout({ first: 3000 }),
+      timeout({ first: 6000 }),
       map(response => response.status >= 200 && response.status < 300),
       catchError(() => of(false))
     );
