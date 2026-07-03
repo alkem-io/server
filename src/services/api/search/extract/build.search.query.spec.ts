@@ -11,10 +11,11 @@ describe('buildSearchQuery', () => {
     expect(textMatch.should).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
+          // name + tags boosted above the wildcard field weight
           multi_match: {
             query: 'hello world',
             type: 'most_fields',
-            fields: ['*'],
+            fields: ['*', 'profile.displayName^3', 'profile.tagsets.tags^2'],
           },
         }),
         expect.objectContaining({
@@ -26,6 +27,16 @@ describe('buildSearchQuery', () => {
               prefix_length: 2,
               max_expansions: 50,
             },
+          },
+        }),
+      ])
+    );
+    // pure ranking boost: phrase-proximity on content, outer should (no filter)
+    expect(query.bool?.should).toEqual(
+      expect.arrayContaining([
+        expect.objectContaining({
+          match_phrase: {
+            content: { query: 'hello world', slop: 2, boost: 2 },
           },
         }),
       ])
