@@ -94,26 +94,84 @@ export class CollaboraDocumentAuthorizationService {
     // Cascade authorization to the underlying Document entity so that
     // external services (WOPI, file-service-go) can evaluate access
     // using the document's own authorizationPolicyId.
-    if (collaboraDocument.document?.authorization) {
-      collaboraDocument.document.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          collaboraDocument.document.authorization,
-          collaboraDocument.authorization
-        );
-      // Also copy privilege rules (inheritParentAuthorization only copies
-      // credential rules); the WOPI service needs the contribute→update-content
-      // mapping on the document's own policy.
-      collaboraDocument.document.authorization =
-        this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-          collaboraDocument.document.authorization,
-          this.authorizationPolicyService.getPrivilegeRules(
-            collaboraDocument.authorization
-          )
-        );
-      updatedAuthorizations.push(collaboraDocument.document.authorization);
+    const documentAuthorization =
+      this.cascadeAuthorizationToDocument(collaboraDocument);
+    if (documentAuthorization) {
+      updatedAuthorizations.push(documentAuthorization);
     }
 
     return updatedAuthorizations;
+  }
+
+  /**
+   * Re-derive ONLY the backing Document's authorization from the CollaboraDocument's
+   * already-applied authorization. Used after a backing-file **replace**, which mints
+   * a NEW Document row whose policy is empty: without re-cascading, opening the editor
+   * fails at /wopi/token with 403 because external services (WOPI, file-service-go)
+   * evaluate access on the document's own policy. The CollaboraDocument's own
+   * authorization is unchanged by a replace, so only the document cascade is needed.
+   * Returns the updated document authorization to persist (`[]` if no backing document).
+   */
+  async applyBackingDocumentAuthorization(
+    collaboraDocumentID: string
+  ): Promise<IAuthorizationPolicy[]> {
+    const collaboraDocument =
+      await this.collaboraDocumentService.getCollaboraDocumentOrFail(
+        collaboraDocumentID,
+        {
+          loadEagerRelations: false,
+          relations: {
+            authorization: true,
+            document: { authorization: true },
+          },
+          select: {
+            id: true,
+            authorization:
+              this.authorizationPolicyService.authorizationSelectOptions,
+            document: {
+              id: true,
+              authorization:
+                this.authorizationPolicyService.authorizationSelectOptions,
+            },
+          },
+        }
+      );
+    const documentAuthorization =
+      this.cascadeAuthorizationToDocument(collaboraDocument);
+    return documentAuthorization ? [documentAuthorization] : [];
+  }
+
+  /**
+   * Cascade the CollaboraDocument's authorization onto its backing Document's own
+   * policy — credential rules (via inheritance) plus the contribute→update-content
+   * privilege mapping the WOPI service needs. Mutates and returns the document
+   * authorization, or `undefined` when there is no backing document / policy.
+   */
+  private cascadeAuthorizationToDocument(
+    collaboraDocument: ICollaboraDocument
+  ): IAuthorizationPolicy | undefined {
+    if (
+      !collaboraDocument.authorization ||
+      !collaboraDocument.document?.authorization
+    ) {
+      return undefined;
+    }
+    collaboraDocument.document.authorization =
+      this.authorizationPolicyService.inheritParentAuthorization(
+        collaboraDocument.document.authorization,
+        collaboraDocument.authorization
+      );
+    // inheritParentAuthorization only copies credential rules; the WOPI service
+    // needs the contribute→update-content privilege mapping on the document's own
+    // policy too.
+    collaboraDocument.document.authorization =
+      this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
+        collaboraDocument.document.authorization,
+        this.authorizationPolicyService.getPrivilegeRules(
+          collaboraDocument.authorization
+        )
+      );
+    return collaboraDocument.document.authorization;
   }
 
   private appendCredentialRules(
