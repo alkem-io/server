@@ -455,7 +455,7 @@ export class SearchIngestService {
 
     const result: IngestReturnType = {};
     const params = [
-      /*{
+      {
         index: `${this.indexPattern}spaces-${suffix}`,
         fetchFn: this.fetchSpacesLevel0.bind(this),
         countFn: this.fetchSpacesLevel0Count.bind(this),
@@ -508,7 +508,7 @@ export class SearchIngestService {
         fetchFn: this.fetchMemo.bind(this),
         countFn: this.fetchMemoCount.bind(this),
         batchSize: 50,
-      },*/
+      },
       {
         index: `${this.indexPattern}office-document-${suffix}`,
         // bind the active Task so per-document extraction skips/failures are
