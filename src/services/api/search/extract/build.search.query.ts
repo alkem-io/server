@@ -12,12 +12,39 @@ export const buildSearchQuery = (
     bool: {
       must: [
         {
-          // Match the terms in any TEXT field
-          // Accumulate the score from all fields - more matches on more fields will result in a higher score
-          multi_match: {
-            query: terms,
-            type: 'most_fields',
-            fields: ['*'],
+          // A hit needs to satisfy EITHER of the two text matchers below.
+          bool: {
+            should: [
+              {
+                // Exact match across every TEXT field. `most_fields` accumulates
+                // score from all fields — more matches on more fields ranks higher.
+                multi_match: {
+                  query: terms,
+                  type: 'most_fields',
+                  fields: ['*'],
+                },
+              },
+              {
+                // Typo tolerance, scoped to `content` ONLY. Fuzziness is applied
+                // to a single field on purpose: applying it via the all-fields
+                // multi_match above (fields:['*']) builds a Levenshtein automaton
+                // per field per shard, which on a multi-index search costs
+                // seconds of query rewrite. One field keeps rewrite ~10ms.
+                // `prefix_length: 2` requires the first two characters to match —
+                // it both prunes the automaton (speed) and drops the worst false
+                // positives (precision). Exact hits also match the clause above,
+                // so a typo-only hit ranks below a clean one.
+                match: {
+                  content: {
+                    query: terms,
+                    fuzziness: 'AUTO',
+                    prefix_length: 2,
+                    max_expansions: 50,
+                  },
+                },
+              },
+            ],
+            minimum_should_match: 1,
           },
         },
       ],

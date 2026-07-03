@@ -1,17 +1,31 @@
 import { buildSearchQuery } from './build.search.query';
 
 describe('buildSearchQuery', () => {
-  it('should build a basic multi_match query with no filters', () => {
+  it('should OR an exact all-fields match with a content-scoped fuzzy match', () => {
     const query = buildSearchQuery('hello world');
 
     expect(query.bool?.must).toBeDefined();
-    expect(query.bool?.must).toEqual(
+    // The text match is a single should-block: exact-all-fields OR fuzzy-content.
+    const textMatch = (query.bool?.must as any[])[0].bool;
+    expect(textMatch.minimum_should_match).toBe(1);
+    expect(textMatch.should).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
           multi_match: {
             query: 'hello world',
             type: 'most_fields',
             fields: ['*'],
+          },
+        }),
+        expect.objectContaining({
+          // fuzziness is scoped to `content` only — never applied via fields:['*']
+          match: {
+            content: {
+              query: 'hello world',
+              fuzziness: 'AUTO',
+              prefix_length: 2,
+              max_expansions: 50,
+            },
           },
         }),
       ])
