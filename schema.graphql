@@ -5159,6 +5159,8 @@ type Query {
   aiServer: AiServer!
   """Retrieves the editor URL for the specified CollaboraDocument."""
   collaboraEditorUrl(collaboraDocumentID: UUID!): CollaboraEditorUrlResult!
+  """Whether the WOPI save service backing this CollaboraDocument is currently reachable. A side-effect-free health check — unlike collaboraEditorUrl it issues no access token and records no analytics — used to surface a save-path outage in the editor."""
+  collaboraServiceAvailable(collaboraDocumentID: UUID!): Boolean!
   """Active Spaces only, order by most active in the past X days."""
   exploreSpaces(options: ExploreSpacesInput): [Space!]!
   """

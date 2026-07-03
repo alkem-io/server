@@ -6,7 +6,7 @@ import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { isAxiosError } from 'axios';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { catchError, firstValueFrom, map, timeout } from 'rxjs';
+import { catchError, firstValueFrom, map, of, timeout } from 'rxjs';
 
 export interface WopiTokenResult {
   accessToken: string;
@@ -94,6 +94,22 @@ export class WopiServiceAdapter {
         })
       );
 
+    return firstValueFrom(request$);
+  }
+
+  /**
+   * Side-effect-free reachability check of the WOPI service (`GET /health`) — unlike
+   * {@link issueToken} it mints no access token and records no analytics. Used by the editor
+   * to distinguish a genuine save-path outage (WOPI down) from a cosmetic "unsaved" flag.
+   * Returns false on any failure (unreachable / non-2xx / timeout).
+   */
+  async checkHealth(): Promise<boolean> {
+    const url = `${this.baseUrl}/health`;
+    const request$ = this.httpService.get(url).pipe(
+      timeout({ first: 3000 }),
+      map(response => response.status >= 200 && response.status < 300),
+      catchError(() => of(false))
+    );
     return firstValueFrom(request$);
   }
 }
