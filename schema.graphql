@@ -3116,6 +3116,10 @@ type InnovationHub {
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  """
+  The Innovation Packs curated for this Innovation Hub, in stored (curated) order, filtered to those the requesting agent may read.
+  """
+  innovationPackListFilter: [InnovationPack!]
   """Flag to control if this InnovationHub is listed in the platform store."""
   listedInStore: Boolean!
   """A name identifier of the entity, unique within a given scope."""
@@ -3137,6 +3141,10 @@ type InnovationHub {
   type: InnovationHubType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """
+  The Virtual Contributors curated for this Innovation Hub, in stored (curated) order, filtered to those the requesting agent may read.
+  """
+  virtualContributorListFilter: [VirtualContributor!]
 }
 
 type InnovationPack {
@@ -7588,6 +7596,10 @@ input CreateInnovationFlowStateSettingsInput {
 input CreateInnovationHubOnAccountInput {
   """The Account where the InnovationHub is to be created."""
   accountID: UUID!
+  """
+  The Innovation Packs curated for this Innovation Hub. When omitted, defaults to all Innovation Packs of the Account.
+  """
+  innovationPackListFilter: [UUID!]
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
   profileData: CreateProfileInput!
@@ -7603,6 +7615,10 @@ input CreateInnovationHubOnAccountInput {
   subdomain: String!
   """The type of Innovation Hub."""
   type: InnovationHubType!
+  """
+  The Virtual Contributors curated for this Innovation Hub. When omitted, defaults to all Virtual Contributors of the Account.
+  """
+  virtualContributorListFilter: [UUID!]
 }
 
 input CreateInnovationPackOnAccountInput {
@@ -8965,6 +8981,10 @@ input UpdateInnovationFlowStatesSortOrderInput {
 input UpdateInnovationHubInput {
   ID: UUID!
   """
+  The Innovation Packs curated for this Innovation Hub; full replace. An empty list is allowed and hides the section. Omit to leave unchanged.
+  """
+  innovationPackListFilter: [UUID!]
+  """
   Flag to control the visibility of the InnovationHub in the platform store.
   """
   listedInStore: Boolean
@@ -8984,6 +9004,10 @@ input UpdateInnovationHubInput {
   Spaces with which visibility this Innovation Hub will display. Only valid when type 'visibility' is used.
   """
   spaceVisibilityFilter: SpaceVisibility
+  """
+  The Virtual Contributors curated for this Innovation Hub; full replace. An empty list is allowed and hides the section. Omit to leave unchanged.
+  """
+  virtualContributorListFilter: [UUID!]
 }
 
 input UpdateInnovationPackInput {

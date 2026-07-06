@@ -19,7 +19,13 @@ import { TemplatesSetService } from '@domain/template/templates-set/templates.se
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, FindOptionsRelations, Repository } from 'typeorm';
+import {
+  FindManyOptions,
+  FindOneOptions,
+  FindOptionsRelations,
+  In,
+  Repository,
+} from 'typeorm';
 import { CreateInnovationPackInput } from './dto/innovation.pack.dto.create';
 import { UpdateInnovationPackInput } from './dto/innovation.pack.dto.update';
 import { DeleteInnovationPackInput } from './dto/innovationPack.dto.delete';
@@ -175,6 +181,39 @@ export class InnovationPackService {
     );
     result.id = deleteData.ID;
     return result;
+  }
+
+  /**
+   * Batch-loads InnovationPacks by their IDs. Missing IDs are simply not
+   * present in the result — no error is raised (callers decide how to treat
+   * dangling references).
+   */
+  public getInnovationPacksByIds(
+    innovationPackIDs: string[],
+    options?: Omit<FindManyOptions<InnovationPack>, 'where'>
+  ): Promise<IInnovationPack[]> {
+    if (innovationPackIDs.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.innovationPackRepository.find({
+      ...options,
+      where: { id: In(innovationPackIDs) },
+    });
+  }
+
+  /**
+   * All InnovationPack IDs of an Account, in Innovation Library seed order
+   * (`rowId` ascending).
+   */
+  public async getInnovationPackIdsForAccount(
+    accountID: string
+  ): Promise<string[]> {
+    const innovationPacks = await this.innovationPackRepository.find({
+      where: { account: { id: accountID } },
+      order: { rowId: 'ASC' },
+      select: { id: true, rowId: true },
+    });
+    return innovationPacks.map(pack => pack.id);
   }
 
   async getInnovationPackOrFail(

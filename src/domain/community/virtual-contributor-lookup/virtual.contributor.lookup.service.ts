@@ -18,7 +18,13 @@ import { Inject, LoggerService } from '@nestjs/common';
 import { InjectEntityManager, InjectRepository } from '@nestjs/typeorm';
 import { isUUID } from 'class-validator';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { EntityManager, FindOneOptions, Repository } from 'typeorm';
+import {
+  EntityManager,
+  FindManyOptions,
+  FindOneOptions,
+  In,
+  Repository,
+} from 'typeorm';
 
 export class VirtualContributorLookupService {
   constructor(
@@ -81,6 +87,39 @@ export class VirtualContributorLookupService {
       );
     }
     return virtualContributor;
+  }
+
+  /**
+   * Batch-loads VirtualContributors by their (actor) IDs. Missing IDs are
+   * simply not present in the result — no error is raised (callers decide how
+   * to treat dangling references).
+   */
+  public getVirtualContributorsByIds(
+    virtualContributorIDs: string[],
+    options?: Omit<FindManyOptions<VirtualContributor>, 'where'>
+  ): Promise<IVirtualContributor[]> {
+    if (virtualContributorIDs.length === 0) {
+      return Promise.resolve([]);
+    }
+    return this.virtualContributorRepository.find({
+      ...options,
+      where: { id: In(virtualContributorIDs) },
+    });
+  }
+
+  /**
+   * All VirtualContributor (actor) IDs of an Account, in account seed order
+   * (`rowId` ascending).
+   */
+  public async getVirtualContributorIdsForAccount(
+    accountID: string
+  ): Promise<string[]> {
+    const virtualContributors = await this.virtualContributorRepository.find({
+      where: { account: { id: accountID } },
+      order: { rowId: 'ASC' },
+      select: { id: true, rowId: true },
+    });
+    return virtualContributors.map(vc => vc.id);
   }
 
   async getVirtualContributorByNameIdOrFail(

@@ -12,9 +12,11 @@ import { IActor } from '@domain/actor/actor/actor.interface';
 import { AuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
+import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { IAccount } from '@domain/space/account/account.interface';
 import { AccountLookupService } from '@domain/space/account.lookup/account.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { InnovationPackService } from '@library/innovation-pack/innovation.pack.service';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
@@ -31,7 +33,9 @@ export class InnovationHubService {
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly spaceLookupService: SpaceLookupService,
     private namingService: NamingService,
-    private accountLookupService: AccountLookupService
+    private accountLookupService: AccountLookupService,
+    private innovationPackService: InnovationPackService,
+    private virtualContributorLookupService: VirtualContributorLookupService
   ) {}
 
   public async createInnovationHub(
@@ -88,6 +92,35 @@ export class InnovationHubService {
     hub.listedInStore = true;
     hub.searchVisibility = SearchVisibility.ACCOUNT;
     hub.account = account;
+
+    // FR-014 (workspace#017-innovation-hub-resources): one-time seeding of the
+    // curated lists — any list omitted on create defaults to ALL matching
+    // Account resources, in seed order. Explicitly provided lists (including
+    // empty ones) are honored as-is. Both creation surfaces (the direct
+    // mutation and AccountService.createInnovationHubOnAccount) flow through
+    // this method, so this is the single seeding site.
+    if (!createData.innovationPackListFilter) {
+      hub.innovationPackListFilter =
+        await this.innovationPackService.getInnovationPackIdsForAccount(
+          account.id
+        );
+    }
+    if (!createData.virtualContributorListFilter) {
+      hub.virtualContributorListFilter =
+        await this.virtualContributorLookupService.getVirtualContributorIdsForAccount(
+          account.id
+        );
+    }
+    // The Spaces default only applies to hubs whose Spaces listing is a
+    // curated list; VISIBILITY-type hubs derive their listing from a filter.
+    if (
+      createData.type === InnovationHubType.LIST &&
+      !createData.spaceListFilter
+    ) {
+      hub.spaceListFilter = await this.spaceLookupService.getSpaceIdsForAccount(
+        account.id
+      );
+    }
 
     // Phase 1: build entity in memory.
     hub.profile = await this.profileService.createProfile(
@@ -169,6 +202,22 @@ export class InnovationHubService {
       input.spaceVisibilityFilter
     )
       innovationHub.spaceVisibilityFilter = input.spaceVisibilityFilter;
+    // Full-replace semantics for the curated resource lists; an empty array is
+    // valid (hides the section — deliberate divergence from the Spaces >= 1
+    // rule above); an absent field leaves the stored list unchanged.
+    if (input.innovationPackListFilter) {
+      await this.validateInnovationPackListFilterOrFail(
+        input.innovationPackListFilter
+      );
+      innovationHub.innovationPackListFilter = input.innovationPackListFilter;
+    }
+    if (input.virtualContributorListFilter) {
+      await this.validateVirtualContributorListFilterOrFail(
+        input.virtualContributorListFilter
+      );
+      innovationHub.virtualContributorListFilter =
+        input.virtualContributorListFilter;
+    }
     if (input.profileData) {
       innovationHub.profile = await this.profileService.updateProfile(
         innovationHub.profile,
@@ -296,10 +345,117 @@ export class InnovationHubService {
     return hub.spaceListFilter;
   }
 
+  public async getInnovationPackListFilterOrFail(
+    hubId: string
+  ): Promise<string[] | undefined | never> {
+    const hub = await this.innovationHubRepository.findOneBy({
+      id: hubId,
+    });
+
+    if (!hub) {
+      throw new EntityNotFoundException(
+        'Innovation Hub not found',
+        LogContext.INNOVATION_HUB,
+        { hubId }
+      );
+    }
+
+    return hub.innovationPackListFilter;
+  }
+
+  public async getVirtualContributorListFilterOrFail(
+    hubId: string
+  ): Promise<string[] | undefined | never> {
+    const hub = await this.innovationHubRepository.findOneBy({
+      id: hubId,
+    });
+
+    if (!hub) {
+      throw new EntityNotFoundException(
+        'Innovation Hub not found',
+        LogContext.INNOVATION_HUB,
+        { hubId }
+      );
+    }
+
+    return hub.virtualContributorListFilter;
+  }
+
+  /**
+   * A curated list must not contain duplicates and every ID must resolve to an
+   * existing InnovationPack. IDs may reference packs of any Account (add-by-URL).
+   */
+  private async validateInnovationPackListFilterOrFail(
+    innovationPackIDs: string[]
+  ): Promise<void | never> {
+    const duplicateIDs = this.getDuplicateIDs(innovationPackIDs);
+    if (duplicateIDs.length > 0) {
+      throw new ValidationException(
+        'Duplicate Innovation Pack identifiers provided for the Innovation Hub curated list',
+        LogContext.INNOVATION_HUB,
+        { duplicateIDs }
+      );
+    }
+    if (innovationPackIDs.length === 0) {
+      return;
+    }
+    const innovationPacks =
+      await this.innovationPackService.getInnovationPacksByIds(
+        innovationPackIDs
+      );
+    if (innovationPacks.length !== innovationPackIDs.length) {
+      const foundIDs = new Set(innovationPacks.map(pack => pack.id));
+      throw new ValidationException(
+        'Innovation Packs not found for identifiers provided for the Innovation Hub curated list',
+        LogContext.INNOVATION_HUB,
+        { missingIDs: innovationPackIDs.filter(id => !foundIDs.has(id)) }
+      );
+    }
+  }
+
+  /**
+   * A curated list must not contain duplicates and every ID must resolve to an
+   * existing VirtualContributor (actor ID). IDs may reference Virtual
+   * Contributors of any Account (add-by-URL).
+   */
+  private async validateVirtualContributorListFilterOrFail(
+    virtualContributorIDs: string[]
+  ): Promise<void | never> {
+    const duplicateIDs = this.getDuplicateIDs(virtualContributorIDs);
+    if (duplicateIDs.length > 0) {
+      throw new ValidationException(
+        'Duplicate Virtual Contributor identifiers provided for the Innovation Hub curated list',
+        LogContext.INNOVATION_HUB,
+        { duplicateIDs }
+      );
+    }
+    if (virtualContributorIDs.length === 0) {
+      return;
+    }
+    const virtualContributors =
+      await this.virtualContributorLookupService.getVirtualContributorsByIds(
+        virtualContributorIDs
+      );
+    if (virtualContributors.length !== virtualContributorIDs.length) {
+      const foundIDs = new Set(virtualContributors.map(vc => vc.id));
+      throw new ValidationException(
+        'Virtual Contributors not found for identifiers provided for the Innovation Hub curated list',
+        LogContext.INNOVATION_HUB,
+        { missingIDs: virtualContributorIDs.filter(id => !foundIDs.has(id)) }
+      );
+    }
+  }
+
+  private getDuplicateIDs(ids: string[]): string[] {
+    return [...new Set(ids.filter((id, index) => ids.indexOf(id) !== index))];
+  }
+
   private async validateCreateInput({
     type,
     spaceListFilter,
     spaceVisibilityFilter,
+    innovationPackListFilter,
+    virtualContributorListFilter,
   }: CreateInnovationHubInput): Promise<true | never> {
     if (type === InnovationHubType.LIST) {
       if (spaceVisibilityFilter) {
@@ -334,6 +490,18 @@ export class InnovationHubService {
           `List of Spaces not applicable for Innovation Hub of type '${InnovationHubType.VISIBILITY}'`
         );
       }
+    }
+
+    // Curated resource lists apply to every hub, regardless of its type.
+    if (innovationPackListFilter) {
+      await this.validateInnovationPackListFilterOrFail(
+        innovationPackListFilter
+      );
+    }
+    if (virtualContributorListFilter) {
+      await this.validateVirtualContributorListFilterOrFail(
+        virtualContributorListFilter
+      );
     }
 
     return true;
