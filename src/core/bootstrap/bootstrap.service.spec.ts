@@ -349,6 +349,15 @@ describe('BootstrapService', () => {
       expect(keyMock.ensureActorKeyFromPlaintext).not.toHaveBeenCalled();
     });
 
+    it("skips before resolving the actor when the key lacks the 'mcp_' prefix (it could never authenticate)", async () => {
+      process.env[ENV_KEY] = 'not-a-valid-mcp-key';
+
+      await ensure();
+
+      expect(vaMock.getSingletonOrFail).not.toHaveBeenCalled();
+      expect(keyMock.ensureActorKeyFromPlaintext).not.toHaveBeenCalled();
+    });
+
     it('skips on the expected not-found (actor absent) without writing a key (FR-006)', async () => {
       process.env[ENV_KEY] = 'mcp_test';
       vaMock.getSingletonOrFail = vi

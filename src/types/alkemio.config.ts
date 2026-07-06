@@ -200,6 +200,12 @@ export type AlkemioConfig = {
         user: string;
         password: string;
       };
+      auth_reset: {
+        // Queue the auth/license reset events flow over. Publisher (normal
+        // server) and the dedicated worker (src/main.worker.ts) MUST agree on
+        // this name.
+        queue: string;
+      };
       event_bus: {
         exchange: string;
         ingest_body_of_knowledge_queue: string;
