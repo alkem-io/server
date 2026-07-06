@@ -504,7 +504,9 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.11.0
+    # External scene updates (Option A: merge external writes as a collaborator)
+    # shipped in v0.12.0 (2026-06-29), superseding the earlier livepush-local build.
+    image: alkemio/whiteboard-collaboration-service:v0.12.0
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -520,6 +522,40 @@ services:
       - alkemio_dev_net
     ports:
       - 4002
+
+  # Web-Client AI Assistant (workspace#004-web-ai-assistant). The MCP host runs in
+  # the server, started from source on the host (:4000) — reached via host.docker.internal.
+  # Secrets (ASSISTANT_LLM_API_KEY = Mistral key, ASSISTANT_MCP_API_KEY = virtual-assistant
+  # mcp_api_key) come from the compose env — merge assistant-service/.env via a second
+  # --env-file, or add them to .env.docker.
+  assistant-service:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_assistant_service
+    hostname: assistant-service
+    # Token-budget metering (app/budget/*) landed on develop and shipped in the
+    # published v0.1.3 image (2026-07-02), superseding the local-develop build.
+    image: alkemio/assistant-service:v0.1.3
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/assistant
+      - REDIS_URL=redis://redis:6379
+      - MCP_URL=http://host.docker.internal:4000/rest/mcp
+      - ASSISTANT_LLM_PROVIDER=mistral
+      - ASSISTANT_LLM_MODEL=mistral-large-latest
+      - ASSISTANT_LLM_API_KEY=${ASSISTANT_LLM_API_KEY}
+      - ASSISTANT_MCP_API_KEY=${ASSISTANT_MCP_API_KEY}
+      - ASSISTANT_CORS_ORIGIN=http://localhost:3001
+      - ASSISTANT_PORT=4006
+    restart: always
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 4006:4006
 
   file-service:
     extra_hosts:
@@ -691,3 +727,90 @@ services:
       - alkemio_dev_net
     ports:
       - 9980
+
+  # Headless auth-reset consumer. Same Alkemio image as the API server; the
+  # AUTH_RESET_WORKER=true env flips main.ts into worker role (binds only the
+  # `alkemio-auth-reset` queue, prefetch=1, no HTTP). The API publisher runs on
+  # the host (`pnpm start:dev`) and emits resets that these containers drain.
+  #
+  # Competing-consumers: scale to N instances that split the queue with no extra
+  # config. Hence NO container_name and NO published port (both would collide
+  # across replicas). profiles: ['auth-reset'] keeps it OUT of a plain `up` — it
+  # boots at 0 and is scaled 0<->N solely by the auth-reset-scaler sidecar below.
+  auth-reset-worker:
+    profiles: ['auth-reset']
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.docker
+    environment:
+      - AUTH_RESET_WORKER=true
+      # Graceful-drain budget on SIGTERM (default 55s). Short locally so
+      # `compose down` / scale-in returns quickly.
+      - AUTH_RESET_DRAIN_TIMEOUT_SECONDS=55
+      # .env.docker maps DATABASE_HOST=postgres and RABBITMQ_HOST=rabbitmq, but
+      # not REDIS_HOST (defaults to localhost in alkemio.yml — right for the host
+      # server via traefik, wrong inside a container). Point it at the service.
+      - REDIS_HOST=redis
+    # No command override: the image's own CMD (`node dist/main.js`) is correct.
+    # In the Docker build only `src` is copied, so tsc's rootDir collapses to
+    # `src` and output flattens to dist/main.js. (A host `nest build` instead
+    # emits dist/src/main.js because tsconfig `include` also pulls in test/,
+    # keeping src/ as a subdir — that layout does NOT exist in the image.)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    # SIGTERM starts the drain; give it the full budget + margin before SIGKILL.
+    stop_grace_period: 60s
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net
+
+  # Local KEDA analogue. Starts with the base stack (no profile), watches the
+  # `alkemio-auth-reset` queue via the RabbitMQ mgmt API, and drives the worker
+  # 0<->MAX_REPLICAS through the host Docker socket. Nothing manual: `up` brings
+  # this online, it scales the worker up from zero when resets arrive and back to
+  # zero once the queue drains. COMPOSE_PROFILES=auth-reset lets it manage the
+  # profiled worker; COMPOSE_PROJECT_NAME must match the host stack's project
+  # (compose derives it from the repo dir basename, default `server`) so the
+  # sidecar targets the SAME containers/network instead of forking a new stack.
+  auth-reset-scaler:
+    image: docker:27-cli
+    working_dir: /workspace
+    # RABBITMQ_HOST / RABBITMQ_USER / RABBITMQ_PASSWORD (+ optional
+    # RABBITMQ_AUTH_RESET_QUEUE) come straight from .env.docker; the script
+    # derives the mgmt URL and creds from them. No credentials duplicated here.
+    # .env.docker.local (per-dev, gitignored) layers on top when present.
+    env_file:
+      - path: .env.docker
+        required: true
+      - path: .env.docker.local
+        required: false
+    environment:
+      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-server}
+      - COMPOSE_PROFILES=auth-reset
+      - COMPOSE_FILE=quickstart-services.yml
+      - ENV_FILE=.env.docker
+      - MAX_REPLICAS=${AUTH_RESET_MAX_REPLICAS:-3}
+      - INTERVAL=${AUTH_RESET_POLL_INTERVAL:-5}
+      - IDLE_ROUNDS=${AUTH_RESET_IDLE_ROUNDS:-3}
+    volumes:
+      # Host Docker socket => the sidecar drives the same daemon the stack runs on.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Repo mount => the compose file, .env.docker, build context, and the
+      # autoscale script are all visible at /workspace.
+      - .:/workspace
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - 'apk add --no-cache bash jq curl docker-cli-compose >/dev/null && exec bash ./scripts/auth-reset-autoscale.sh'
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net
