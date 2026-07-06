@@ -30,8 +30,10 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * orphan comments room / emit publish info on edit). This folds in the fix that
  * 008 needed a separate follow-up migration for; here the backfill has not
  * shipped, so it is corrected inline. The platform default L0 space template is
- * seeded by the template branch of this same loop (its level is already 0 and it
- * has a `welcome` callout, so the sibling-callout lookups resolve) — no separate
+ * seeded by the template branch of this same loop (its level is already 0; its
+ * flow-state tagsetTemplate is resolved DIRECTLY via callouts_set.tagsetTemplateSetId
+ * — robust on sparse templates — and its storage aggregator from a sibling
+ * callout's framing bucket, which the `welcome` callout supplies) — no separate
  * platform-default seed migration is needed.
  *
  * Template content spaces have no storageAggregatorId column; the callout's
@@ -155,6 +157,7 @@ export class BackfillSpacesCalloutL0Subspaces1783329479325
           SELECT
             cs.id AS callouts_set_id,
             s."storageAggregatorId" AS storage_aggregator_id,
+            cs."tagsetTemplateSetId" AS tagset_template_set_id,
             false AS is_template
           FROM space s
           JOIN collaboration c ON c.id = s."collaborationId"
@@ -181,27 +184,26 @@ export class BackfillSpacesCalloutL0Subspaces1783329479325
                WHERE co2."calloutsSetId" = cs.id
                  AND sb2."storageAggregatorId" IS NOT NULL
                LIMIT 1) AS storage_aggregator_id,
+            cs."tagsetTemplateSetId" AS tagset_template_set_id,
             true AS is_template
           FROM template_content_space tcs
           JOIN collaboration c ON c.id = tcs."collaborationId"
           JOIN callouts_set cs ON cs.id = c."calloutsSetId"
           WHERE tcs.level = 0
         LOOP
-          -- The new flow-state tagset MUST reference the space's flow-state
-          -- tagsetTemplate (one per calloutsSet) so the client can resolve
-          -- classification.flowState.allowedValues. Reuse the template already
-          -- used by this calloutsSet's other callouts.
-          SELECT ts."tagsetTemplateId" INTO flow_state_template_id
-            FROM callout co2
-            JOIN callout_framing cf2 ON cf2.id = co2."framingId"
-            JOIN classification cl2 ON cl2.id = co2."classificationId"
-            JOIN tagset ts ON ts."classificationId" = cl2.id
-            WHERE co2."calloutsSetId" = rec.callouts_set_id
-              AND ts.name = 'flow-state'
-              AND ts."tagsetTemplateId" IS NOT NULL
+          -- The new flow-state tagset MUST reference the calloutsSet's flow-state
+          -- tagsetTemplate so the client can resolve classification.flowState.
+          -- allowedValues. Resolve it DIRECTLY off callouts_set.tagsetTemplateSetId
+          -- (not via a sibling callout — that lookup starves on sparse template
+          -- callouts sets), matching the contributors migrations (008 fix
+          -- 1782998815506 + BackfillContributorsCalloutL0Templates).
+          SELECT tt.id, tt."allowedValues"
+            INTO flow_state_template_id, allowed_values
+            FROM tagset_template tt
+            WHERE tt."tagsetTemplateSetId" = rec.tagset_template_set_id
+              AND tt.name = 'flow-state'
             LIMIT 1;
-          -- Without the flow-state template we cannot place a tab; skip
-          -- (does not happen for L0 spaces, which always have flow-tab callouts).
+          -- Without the flow-state template we cannot place a tab; skip.
           IF flow_state_template_id IS NULL THEN
             CONTINUE;
           END IF;
@@ -210,9 +212,6 @@ export class BackfillSpacesCalloutL0Subspaces1783329479325
           -- 'Subspaces'): the flow-state tab order is the tagsetTemplate's
           -- ordered comma-separated allowedValues, so the third tab is the third
           -- element. This is robust to a renamed / localized third tab.
-          SELECT tt."allowedValues" INTO allowed_values
-            FROM tagset_template tt
-            WHERE tt.id = flow_state_template_id;
           third_tab_name := split_part(COALESCE(allowed_values, ''), ',', 3);
           -- No third tab (fewer than three flow states) → nothing to target; skip.
           IF third_tab_name IS NULL OR third_tab_name = '' THEN
