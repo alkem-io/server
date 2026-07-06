@@ -20,8 +20,25 @@ export class TemplatesSetAuthorizationService {
     const templatesSet = await this.templatesSetService.getTemplatesSetOrFail(
       templatesSetInput.id,
       {
+        // Auth-load optimization: the template authorization service re-fetches each template by id
+        // (template.service.authorization.ts), so only template ids are needed here. Disable eager
+        // relations and select id-only to avoid hydrating every template's full graph.
+        loadEagerRelations: false,
         relations: {
+          authorization: true,
           templates: true,
+        },
+        select: {
+          id: true,
+          // Include `type` so the recomputed policy is byte-identical to the previous
+          // (eager) load; authorizationSelectOptions intentionally omits it.
+          authorization: {
+            ...this.authorizationPolicyService.authorizationSelectOptions,
+            type: true,
+          },
+          templates: {
+            id: true,
+          },
         },
       }
     );

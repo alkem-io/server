@@ -79,15 +79,18 @@ export class SpaceAuthorizationService {
         community: {
           roleSet: true,
         },
-        collaboration: { authorization: true },
+        // Auth-load optimization: the collaboration authorization service re-fetches by id
+        // (collaboration.service.authorization.ts), and Space only passes the collaboration on,
+        // so its authorization is not needed here.
+        collaboration: true,
         about: {
           profile: true,
         },
         profile: true,
-        storageAggregator: {
-          authorization: true,
-          directStorage: { authorization: true },
-        },
+        // Auth-load optimization: the storage-aggregator authorization service re-fetches by id
+        // (storage.aggregator.service.authorization.ts), and Space only passes the aggregator on
+        // (never reads its authorization/directStorage here), so the aggregator row alone suffices.
+        storageAggregator: true,
         templatesManager: true,
         subspaces: true,
         license: { authorization: true },
