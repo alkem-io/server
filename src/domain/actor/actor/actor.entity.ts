@@ -22,6 +22,10 @@ import { IActor } from './actor.interface';
   unique: true,
   where: `"type" = 'virtual-contributor'`,
 })
+@Index('UQ_actor_nameID_virtual_assistant', ['nameID'], {
+  unique: true,
+  where: `"type" = 'virtual-assistant'`,
+})
 @Index('UQ_actor_nameID_account', ['nameID'], {
   unique: true,
   where: `"type" = 'account'`,

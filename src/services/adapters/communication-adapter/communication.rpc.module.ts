@@ -39,6 +39,15 @@ const rabbitMqImport = RabbitMQModule.forRootAsync({
     const timeout = communicationsConfig?.matrix?.connection_timeout ?? 10000;
 
     return {
+      // ⚠️ This named connection rides into the auth-reset worker graph (via
+      // CommunicationAdapterModule ← UserModule/SpaceModule/AiServerModule) and
+      // is intentionally kept there for CommunicationAdapter's OUTBOUND RPC. It
+      // is safe in the worker ONLY because no `@RabbitSubscribe` handler targets
+      // it: handlers omit `name`, so they bind to golevelup's `'default'`
+      // connection (EventBusModule), which the worker excludes. Do NOT add
+      // `name: 'communication-adapter'` to any `@RabbitSubscribe` decorator, or
+      // this connection's discovery binds it and the worker starts consuming
+      // that queue — competing with the API server. See worker.event-bus.module.
       name: 'communication-adapter',
       uri,
       connectionInitOptions: {

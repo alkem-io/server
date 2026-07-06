@@ -1,15 +1,19 @@
 import { ActorContextModule } from '@core/actor-context/actor.context.module';
 import { NonInteractiveLoginModule } from '@core/auth/non-interactive-login/non-interactive-login.module';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
+import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { Logger, Module } from '@nestjs/common';
 import { ConfigModule, ConfigService } from '@nestjs/config';
 import { APP_FILTER } from '@nestjs/core';
 import { PassportModule } from '@nestjs/passport';
+import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { AlkemioConfig } from '@src/types';
 import Redis from 'ioredis';
 import { createRemoteJWKSet } from 'jose';
+import { AssistantForwardAuthController } from './assistant-forward-auth.controller';
 import { parseBearerAudAllowList } from './bearer-aud-allow-list';
 import { ForwardAuthController } from './forward-auth.controller';
+import { ForwardAuthResolverService } from './forward-auth.resolver.service';
 import { OidcController } from './oidc.controller';
 import { OidcService } from './oidc.service';
 import { buildSessionStore } from './session-store.redis';
@@ -31,10 +35,17 @@ import {
     AuthenticationModule,
     ActorContextModule,
     NonInteractiveLoginModule,
+    AuthorizationModule,
+    PlatformAuthorizationPolicyModule,
   ],
-  controllers: [OidcController, ForwardAuthController],
+  controllers: [
+    OidcController,
+    ForwardAuthController,
+    AssistantForwardAuthController,
+  ],
   providers: [
     OidcService,
+    ForwardAuthResolverService,
     {
       provide: SESSION_STORE_HANDLE,
       inject: [ConfigService],

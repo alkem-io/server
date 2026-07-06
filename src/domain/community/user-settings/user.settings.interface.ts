@@ -1,5 +1,6 @@
 import { IAuthorizable } from '@domain/common/entity/authorizable-entity';
 import { Field, Int, ObjectType } from '@nestjs/graphql';
+import { IUserSettingsAssistant } from './user.settings.assistant.interface';
 import { IUserSettingsCommunication } from './user.settings.communications.interface';
 import { IUserSettingsHomeSpace } from './user.settings.home.space.interface';
 import { IUserSettingsNotification } from './user.settings.notification.interface';
@@ -12,6 +13,13 @@ export class IUserSettings extends IAuthorizable {
     description: 'The privacy settings for this User',
   })
   privacy!: IUserSettingsPrivacy;
+
+  @Field(() => IUserSettingsAssistant, {
+    nullable: false,
+    description:
+      'The AI assistant authority settings for this User (per-capability toggles).',
+  })
+  assistant!: IUserSettingsAssistant;
 
   @Field(() => IUserSettingsCommunication, {
     nullable: false,

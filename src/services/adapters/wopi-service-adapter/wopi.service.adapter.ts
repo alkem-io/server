@@ -1,4 +1,5 @@
 import { LogContext } from '@common/enums';
+import { HEADER_ACTOR_ID } from '@core/auth/oidc/constants';
 import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -42,7 +43,8 @@ export class WopiServiceAdapter {
    */
   async issueToken(
     documentId: string,
-    actorID: string
+    actorID: string,
+    actorName?: string
   ): Promise<WopiTokenResult> {
     const url = `${this.baseUrl}/wopi/token`;
 
@@ -54,10 +56,14 @@ export class WopiServiceAdapter {
     const request$ = this.httpService
       .post<WopiTokenResult>(
         url,
-        { documentId },
+        // actorName is sent in the body (UTF-8, native) rather than a header
+        // so arbitrary-Unicode names need no encoding. The WOPI service maps it
+        // to the WOPI CheckFileInfo UserFriendlyName. Omitted when unknown
+        // (e.g. anonymous), letting the WOPI service keep its own fallback.
+        { documentId, actorName },
         {
           headers: {
-            'X-Alkemio-Actor-Id': actorID,
+            [HEADER_ACTOR_ID]: actorID,
             'Content-Type': 'application/json',
           },
         }

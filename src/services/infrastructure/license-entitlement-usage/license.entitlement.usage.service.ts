@@ -93,6 +93,12 @@ export class LicenseEntitlementUsageService {
         return account.innovationHubs.length;
       case LicenseEntitlementType.ACCOUNT_INNOVATION_PACK:
         return account.innovationPacks.length;
+      case LicenseEntitlementType.ACCOUNT_AI_ASSISTANT_TOKENS_MONTH:
+        // Month-to-date token usage is owned by assistant-service (the §3 budget
+        // resource / its monthly counter), not the server — this entitlement is a
+        // token LIMIT, not a countable domain object. The server reports 0 here;
+        // the real meter is the asvc GET /api/private/rest/assistant/budget endpoint.
+        return 0;
       default:
         throw new RelationshipNotFoundException(
           `Unexpected entitlement type encountered: ${entitlementType}`,

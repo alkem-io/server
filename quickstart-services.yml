@@ -323,6 +323,13 @@ services:
       - POSTGRES_INITDB_ARGS=--encoding=UTF8 --lc-collate=C --lc-ctype=C
       - POSTGRES_MULTIPLE_DATABASES
     entrypoint: ['bash', '/usr/local/bin/entrypoint-wrapper.sh']
+    # Forwarded by entrypoint-wrapper.sh to docker-entrypoint.sh as the postgres
+    # args. Raise max_connections from the default 100 — this single dev Postgres
+    # is shared by server + hydra + kratos + oidc-service + synapse + collab +
+    # assistant-service + wopi, and transient bursts exhausted the 100-cap pool
+    # (FATAL: sorry, too many clients already / SQLSTATE 53300), which surfaced as
+    # a misleading Hydra `invalid_client` ("client does not exist") at OIDC login.
+    command: ['postgres', '-c', 'max_connections=200']
     restart: always
     ports:
       - 5432
@@ -641,7 +648,10 @@ services:
       - FILE_SERVICE_URL=http://file-service:4003
       - WOPI_COLLABORA_URL=http://collabora:9980
       - WOPI_BASE_URL=http://localhost:3000
-      - WOPI_CALLBACK_URL=http://wopi-service:8080
+      # WOPISrc handed to Collabora routes via Traefik's /wopi route so it rides
+      # the wopi-service failover (local primary → container fallback), instead
+      # of hitting a single instance directly.
+      - WOPI_CALLBACK_URL=http://traefik
       - WOPI_TOKEN_SECRET=dev-wopi-token-secret-change-in-production
       - WOPI_SERVER_PORT=8080
       - WOPI_PROOF_VALIDATION=false
@@ -659,7 +669,11 @@ services:
     hostname: collabora
     image: collabora/code:24.04.12.2.1
     environment:
-      - aliasgroup1=http://wopi-service:8080
+      # Reach wopi through Traefik (not a direct port), so callbacks ride the
+      # wopi-service failover. A `wopi-service:host-gateway` extra_host here
+      # would shadow the container's Docker DNS name and pin Collabora to the
+      # host — exactly what we must avoid.
+      - aliasgroup1=http://traefik
       - username=admin
       - password=admin
       - extra_params=--o:ssl.enable=false --o:net.proto=IPv4 --o:security.seccomp=false --o:security.capabilities=false

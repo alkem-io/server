@@ -34,7 +34,7 @@ import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { NamingService } from '@services/infrastructure/naming/naming.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
-import { cloneDeep, keyBy, merge } from 'lodash';
+import { cloneDeep, keyBy, merge, mergeWith } from 'lodash';
 import {
   DeepPartial,
   FindManyOptions,
@@ -105,6 +105,15 @@ export class CalloutService {
     );
 
     callout.settings = this.createCalloutSettings(calloutData.settings);
+
+    // Validate + auto-heal the contributors framing settings against the
+    // framing type (present iff CONTRIBUTORS; defaultContributorType/defaultView
+    // normalization). FR-004b/FR-006a/FR-006b/FR-006c.
+    callout.settings.framing =
+      this.calloutFramingService.validateAndNormalizeContributorsSettings(
+        callout.framing.type,
+        callout.settings.framing
+      );
 
     if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
       callout.publishedDate = new Date();
@@ -438,8 +447,42 @@ export class CalloutService {
     }
 
     if (calloutUpdateData.settings) {
-      callout.settings = merge(callout.settings, calloutUpdateData.settings);
+      // Replace arrays wholesale instead of deep-merging them element-by-index:
+      // a default `merge` keeps the longer stored array's tail, so EXCLUDING a
+      // contributor type (sending a shorter `contributorTypes`) would silently
+      // not persist. Arrays in settings are config lists, not positional patches.
+      callout.settings = mergeWith(
+        callout.settings,
+        calloutUpdateData.settings,
+        (_existing, incoming) =>
+          Array.isArray(incoming) ? incoming : undefined
+      );
     }
+
+    // When the framing type is (or was just changed to) anything other than
+    // CONTRIBUTORS, a previously-stored contributors block must not linger:
+    // merge/mergeWith never delete keys, and the client clears framing by
+    // sending the new type without a `contributors` field, so the stale block
+    // would survive the merge. validateAndNormalizeContributorsSettings then
+    // throws on a non-CONTRIBUTORS framing that still carries contributors,
+    // permanently blocking the update (the callout gets stuck as CONTRIBUTORS).
+    // Strip it first so the type change — and any later edit — succeeds.
+    if (
+      callout.framing.type !== CalloutFramingType.CONTRIBUTORS &&
+      callout.settings.framing.contributors
+    ) {
+      delete callout.settings.framing.contributors;
+    }
+
+    // Re-validate + auto-heal contributors settings after any framing-type or
+    // settings change (FR-004b/FR-006a/FR-006b/FR-006c). Runs even when only
+    // the framing type changed so a stale contributors block is rejected and a
+    // type/view that became invalid is healed.
+    callout.settings.framing =
+      this.calloutFramingService.validateAndNormalizeContributorsSettings(
+        callout.framing.type,
+        callout.settings.framing
+      );
 
     if (calloutUpdateData.classification) {
       callout.classification = this.classificationService.updateClassification(
