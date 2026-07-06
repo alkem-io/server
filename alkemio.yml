@@ -447,6 +447,12 @@ microservices:
       # RabbitMQ password
       password: ${RABBITMQ_PASSWORD}:alkemio!
 
+    # Authorization / license reset queue. Consumed by the dedicated worker
+    # (src/main.worker.ts); the normal server publishes reset events here but
+    # never consumes them. Publisher and worker MUST agree on this name.
+    auth_reset:
+      queue: ${RABBITMQ_AUTH_RESET_QUEUE}:alkemio-auth-reset
+
     # configuration for the event bus used by the AiServer
     event_bus:
       exchange: ${RABBITMQ_EVENT_BUS_EXCHANGE}:event-bus
