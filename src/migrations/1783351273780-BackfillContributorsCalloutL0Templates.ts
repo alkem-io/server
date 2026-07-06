@@ -50,10 +50,10 @@ import type { MigrationInterface, QueryRunner } from 'typeorm';
  * Validate with `.scripts/migrations/run_validate_migration.sh` against a DB copy
  * before release.
  */
-export class BackfillContributorsCalloutL0Templates1783500000000
+export class BackfillContributorsCalloutL0Templates1783351273780
   implements MigrationInterface
 {
-  name = 'BackfillContributorsCalloutL0Templates1783500000000';
+  name = 'BackfillContributorsCalloutL0Templates1783351273780';
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
