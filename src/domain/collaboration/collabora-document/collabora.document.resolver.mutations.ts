@@ -3,7 +3,6 @@ import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Inject } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
@@ -15,7 +14,6 @@ import { FileUpload, GraphQLUpload } from 'graphql-upload';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { ICollaboraDocument } from './collabora.document.interface';
 import { CollaboraDocumentService } from './collabora.document.service';
-import { CollaboraDocumentAuthorizationService } from './collabora.document.service.authorization';
 import { DeleteCollaboraDocumentInput } from './dto/collabora.document.dto.delete';
 import { ReplaceCollaboraDocumentInput } from './dto/collabora.document.dto.replace';
 import { UpdateCollaboraDocumentInput } from './dto/collabora.document.dto.update';
@@ -27,9 +25,7 @@ export class CollaboraDocumentResolverMutations {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: WinstonLogger,
     private authorizationService: AuthorizationService,
-    private authorizationPolicyService: AuthorizationPolicyService,
     private collaboraDocumentService: CollaboraDocumentService,
-    private collaboraDocumentAuthorizationService: CollaboraDocumentAuthorizationService,
     private contributionReporter: ContributionReporterService,
     private communityResolverService: CommunityResolverService,
     private readonly configService: ConfigService<AlkemioConfig, true>
@@ -129,16 +125,6 @@ export class CollaboraDocumentResolverMutations {
         mimetype,
         actorContext.actorID
       );
-
-    // The swap minted a NEW backing Document whose authorization policy is empty.
-    // Re-cascade the (unchanged) CollaboraDocument authorization onto it so external
-    // services (WOPI, file-service-go) can evaluate access on the new file — without
-    // this, opening the editor fails at /wopi/token with 403.
-    const updatedAuthorizations =
-      await this.collaboraDocumentAuthorizationService.applyBackingDocumentAuthorization(
-        updated.id
-      );
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
 
     // FR-014 lifecycle analytics: record the swap as a single-actor
     // COLLABORA_DOCUMENT_REPLACED event. Resolve the level-zero space via the

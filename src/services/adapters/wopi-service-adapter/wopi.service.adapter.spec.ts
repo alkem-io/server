@@ -77,6 +77,12 @@ describe('WopiServiceAdapter', () => {
       await expect(adapter.getLockStatus('doc-1')).resolves.toBe(false);
     });
 
+    it('FAILS CLOSED (returns true) on a 200 with a malformed body (no boolean `locked`)', async () => {
+      vi.mocked(httpService.get).mockReturnValue(of(axiosResponse({})));
+
+      await expect(adapter.getLockStatus('doc-1')).resolves.toBe(true);
+    });
+
     it('FAILS CLOSED (returns true) on an HTTP error', async () => {
       const err = new AxiosError('boom');
       err.response = axiosResponse({}, 500) as any;

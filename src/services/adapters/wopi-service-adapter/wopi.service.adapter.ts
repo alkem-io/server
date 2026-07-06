@@ -139,7 +139,17 @@ export class WopiServiceAdapter {
       .pipe(
         timeout({ first: 10000 }),
         map(response => {
-          const locked = response.data?.locked === true;
+          const locked = response.data?.locked;
+          if (typeof locked !== 'boolean') {
+            // Fail-closed on an unexpected/malformed body shape (not just on a
+            // thrown transport error): a 200 without a boolean `locked` must not
+            // be read as "free" and allow a swap during an active edit.
+            this.logger.warn?.(
+              `[WopiService] getLockStatus: malformed response body for ${documentId}, treating as locked`,
+              LogContext.COLLABORATION
+            );
+            return true;
+          }
           this.logger.verbose?.(
             `[WopiService] getLockStatus: locked=${locked}`,
             LogContext.COLLABORATION

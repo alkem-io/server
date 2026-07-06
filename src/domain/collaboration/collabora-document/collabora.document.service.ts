@@ -25,6 +25,7 @@ import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file
 import { WopiServiceAdapter } from '@services/adapters/wopi-service-adapter/wopi.service.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { FindOneOptions, Repository } from 'typeorm';
+import { cascadeCollaboraAuthorizationToDocument } from './collabora.document.authorization.util';
 import { CollaboraDocument } from './collabora.document.entity';
 import { ICollaboraDocument } from './collabora.document.interface';
 import { CreateCollaboraDocumentInput } from './dto/collabora.document.dto.create';
@@ -452,7 +453,12 @@ export class CollaboraDocumentService {
     const collaboraDocument = await this.getCollaboraDocumentOrFail(
       collaboraDocumentID,
       {
-        relations: { document: { storageBucket: true } },
+        // `authorization` is the parent the new backing Document's policy is
+        // re-cascaded from (see below); `storageBucket` is where the file lands.
+        relations: {
+          authorization: true,
+          document: { storageBucket: true },
+        },
       }
     );
 
@@ -523,19 +529,36 @@ export class CollaboraDocumentService {
         temporaryLocation: false,
       });
 
-      // Re-point the FK. originalMimeType tracks the actual sniffed MIME so
-      // the rename/extension logic stays correct (documentType is unchanged).
+      // Re-point the FK (in memory). originalMimeType tracks the actual sniffed
+      // MIME so the rename/extension logic stays correct (documentType is
+      // unchanged).
       collaboraDocument.document = newDocument;
       collaboraDocument.originalMimeType = sniffedMime;
+
+      // Re-cascade the CollaboraDocument's (unchanged) authorization onto the
+      // NEW backing Document's own policy and persist it BEFORE the FK save —
+      // the staged Document is created with an empty policy, so without this
+      // WOPI /token would 403 for everyone. Done inside this compensation
+      // boundary and before the old file is deleted, so any authz/save failure
+      // rolls back the new file and leaves the original document + file intact.
+      const documentAuthorization = cascadeCollaboraAuthorizationToDocument(
+        this.authorizationPolicyService,
+        collaboraDocument
+      );
+      if (documentAuthorization) {
+        await this.authorizationPolicyService.saveAll([documentAuthorization]);
+      }
+
       await this.collaboraDocumentRepository.save(
         collaboraDocument as CollaboraDocument
       );
     } catch (error) {
-      // Compensate: drop the freshly-staged file (deleteDocument works on both
-      // temporary and permanent rows). The original document + file are still
-      // referenced and intact.
-      await this.fileServiceAdapter
-        .deleteDocument(newDocument.id)
+      // Compensate: fully drop the freshly-staged Document — file AND its
+      // server-side auth policy + tagset (documentService.deleteDocument, not
+      // the file-only fileServiceAdapter). The original document + file are
+      // still referenced and intact.
+      await this.documentService
+        .deleteDocument({ ID: newDocument.id })
         .catch(() => undefined);
       throw error;
     }

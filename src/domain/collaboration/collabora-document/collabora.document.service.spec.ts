@@ -1,5 +1,6 @@
 import { CollaboraDocumentType } from '@common/enums/collabora.document.type';
 import { ValidationException } from '@common/exceptions';
+import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileService } from '@domain/common/profile/profile.service';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
@@ -26,6 +27,7 @@ describe('CollaboraDocumentService', () => {
   let fileServiceAdapter: FileServiceAdapter;
   let documentService: DocumentService;
   let profileService: ProfileService;
+  let authorizationPolicyService: AuthorizationPolicyService;
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -54,6 +56,7 @@ describe('CollaboraDocumentService', () => {
     fileServiceAdapter = module.get(FileServiceAdapter);
     documentService = module.get(DocumentService);
     profileService = module.get(ProfileService);
+    authorizationPolicyService = module.get(AuthorizationPolicyService);
   });
 
   it('should be defined', () => {
@@ -192,7 +195,7 @@ describe('CollaboraDocumentService', () => {
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).mockResolvedValue({ id: 'new-doc', mimeType: DOCX_MIME } as any);
-      vi.mocked(fileServiceAdapter.deleteDocument).mockResolvedValue({} as any);
+      vi.mocked(documentService.deleteDocument).mockResolvedValue({} as any);
 
       await expect(
         service.replaceCollaboraDocument(
@@ -203,11 +206,113 @@ describe('CollaboraDocumentService', () => {
         )
       ).rejects.toThrow(ValidationException);
 
-      // Staged temp file cleaned up; original never re-pointed or deleted.
-      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith('new-doc');
+      // Staged file fully cleaned up (file + auth policy + tagset, via
+      // documentService.deleteDocument — not the file-only adapter); original
+      // never re-pointed and the OLD file is never touched.
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'new-doc',
+      });
+      expect(documentService.deleteDocument).not.toHaveBeenCalledWith({
+        ID: 'old-doc',
+      });
       expect(fileServiceAdapter.updateDocument).not.toHaveBeenCalled();
       expect(repository.save).not.toHaveBeenCalled();
-      expect(documentService.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    // Cascade helpers pass the document policy through unchanged, so the value
+    // saved/returned is the new backing document's own policy object.
+    const wireCascade = () => {
+      vi.mocked(
+        authorizationPolicyService.inheritParentAuthorization
+      ).mockImplementation((docAuth: any) => docAuth);
+      vi.mocked(
+        authorizationPolicyService.appendPrivilegeAuthorizationRules
+      ).mockImplementation((docAuth: any) => docAuth);
+      vi.mocked(authorizationPolicyService.getPrivilegeRules).mockReturnValue(
+        [] as any
+      );
+    };
+
+    it('re-cascades the CollaboraDocument authorization onto the new backing document and persists it BEFORE the FK save', async () => {
+      repository.findOne
+        .mockResolvedValueOnce({
+          ...existingDoc(),
+          authorization: { id: 'collab-auth' },
+        })
+        .mockResolvedValueOnce({
+          id: 'collab-doc-1',
+          document: { id: 'new-doc' },
+          profile: { displayName: 'Quarterly Report' },
+        } as any);
+      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue(false);
+      vi.mocked(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).mockResolvedValue({
+        id: 'new-doc',
+        mimeType: XLSX_MIME,
+        authorization: { id: 'new-doc-auth' },
+      } as any);
+      vi.mocked(fileServiceAdapter.updateDocument).mockResolvedValue({} as any);
+      vi.mocked(documentService.deleteDocument).mockResolvedValue({} as any);
+      repository.save.mockImplementation(async (d: any) => d);
+      wireCascade();
+
+      await service.replaceCollaboraDocument(
+        'collab-doc-1',
+        Buffer.from('x'),
+        'report.xlsx',
+        XLSX_MIME,
+        'user-1'
+      );
+
+      // The new backing document's policy is persisted...
+      expect(authorizationPolicyService.saveAll).toHaveBeenCalledWith([
+        { id: 'new-doc-auth' },
+      ]);
+      // ...and BEFORE the FK re-point is saved, so an authz failure rolls back.
+      const saveAllOrder = (authorizationPolicyService.saveAll as Mock).mock
+        .invocationCallOrder[0];
+      const repoSaveOrder = repository.save.mock.invocationCallOrder[0];
+      expect(saveAllOrder).toBeLessThan(repoSaveOrder);
+    });
+
+    it('compensates the staged file and leaves the original intact when persisting the new authorization fails', async () => {
+      repository.findOne.mockResolvedValueOnce({
+        ...existingDoc(),
+        authorization: { id: 'collab-auth' },
+      });
+      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue(false);
+      vi.mocked(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).mockResolvedValue({
+        id: 'new-doc',
+        mimeType: XLSX_MIME,
+        authorization: { id: 'new-doc-auth' },
+      } as any);
+      vi.mocked(fileServiceAdapter.updateDocument).mockResolvedValue({} as any);
+      wireCascade();
+      vi.mocked(authorizationPolicyService.saveAll).mockRejectedValue(
+        new Error('db down')
+      );
+      vi.mocked(documentService.deleteDocument).mockResolvedValue({} as any);
+
+      await expect(
+        service.replaceCollaboraDocument(
+          'collab-doc-1',
+          Buffer.from('x'),
+          'report.xlsx',
+          XLSX_MIME
+        )
+      ).rejects.toThrow('db down');
+
+      // New staged file fully rolled back; FK never saved; OLD file untouched.
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'new-doc',
+      });
+      expect(documentService.deleteDocument).not.toHaveBeenCalledWith({
+        ID: 'old-doc',
+      });
+      expect(repository.save).not.toHaveBeenCalled();
     });
 
     it('propagates an unsupported-format rejection from staging and makes no change', async () => {

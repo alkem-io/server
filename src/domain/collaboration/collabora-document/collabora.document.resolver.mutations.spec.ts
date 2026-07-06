@@ -1,6 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
@@ -8,7 +7,6 @@ import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { CollaboraDocumentResolverMutations } from './collabora.document.resolver.mutations';
 import { CollaboraDocumentService } from './collabora.document.service';
-import { CollaboraDocumentAuthorizationService } from './collabora.document.service.authorization';
 
 vi.mock('@common/utils/file.util', () => ({
   streamToBuffer: vi.fn().mockResolvedValue(Buffer.from('new-bytes')),
@@ -21,8 +19,6 @@ describe('CollaboraDocumentResolverMutations', () => {
   let resolver: CollaboraDocumentResolverMutations;
   let authorizationService: AuthorizationService;
   let collaboraDocumentService: CollaboraDocumentService;
-  let collaboraDocumentAuthorizationService: CollaboraDocumentAuthorizationService;
-  let authorizationPolicyService: AuthorizationPolicyService;
   let contributionReporter: ContributionReporterService;
   let communityResolverService: CommunityResolverService;
 
@@ -45,10 +41,6 @@ describe('CollaboraDocumentResolverMutations', () => {
     resolver = module.get(CollaboraDocumentResolverMutations);
     authorizationService = module.get(AuthorizationService);
     collaboraDocumentService = module.get(CollaboraDocumentService);
-    collaboraDocumentAuthorizationService = module.get(
-      CollaboraDocumentAuthorizationService
-    );
-    authorizationPolicyService = module.get(AuthorizationPolicyService);
     contributionReporter = module.get(ContributionReporterService);
     communityResolverService = module.get(CommunityResolverService);
   });
@@ -77,9 +69,6 @@ describe('CollaboraDocumentResolverMutations', () => {
       vi.mocked(
         communityResolverService.getLevelZeroSpaceIdForCommunity
       ).mockResolvedValue('space-root');
-      vi.mocked(
-        collaboraDocumentAuthorizationService.applyBackingDocumentAuthorization
-      ).mockResolvedValue([{ id: 'doc-auth-1' }] as any);
     };
 
     it('enforces UPDATE, does not forward displayName, and reports COLLABORA_DOCUMENT_REPLACED on success', async () => {
@@ -98,15 +87,6 @@ describe('CollaboraDocumentResolverMutations', () => {
         AuthorizationPrivilege.UPDATE,
         expect.any(String)
       );
-
-      // The swap minted a new backing Document, so its authorization must be
-      // re-cascaded and persisted (otherwise opening the editor 403s at /wopi/token).
-      expect(
-        collaboraDocumentAuthorizationService.applyBackingDocumentAuthorization
-      ).toHaveBeenCalledWith('collab-doc-1');
-      expect(authorizationPolicyService.saveAll).toHaveBeenCalledWith([
-        { id: 'doc-auth-1' },
-      ]);
 
       // displayName is accepted but NOT applied (FR-009/FR-015): it must never
       // reach the service. The service is called with id/buffer/filename/mime/
