@@ -95,6 +95,29 @@ export class CalloutsSetResolverMutations {
       );
     }
 
+    // SPACES framing is admin-only and collaboration-only, mirroring CONTRIBUTORS
+    // (workspace#013-spaces-collection-callout, FR-004a/FR-004d):
+    //  - require CREATE (space admin) even when allowMembersToCreateCallouts is on.
+    //  - reject on non-COLLABORATION CalloutsSets (VC knowledge bases).
+    //  - NOT level-restricted: an admin may create a SPACES callout on any space
+    //    (L0 or L1); it lists the host space's subspaces. Only AUTOMATIC
+    //    provisioning (migration + default template) is L0-only (FR-004e). There
+    //    is deliberately no create-time space.level guard here.
+    if (calloutData.framing?.type === CalloutFramingType.SPACES) {
+      if (calloutsSet.type !== CalloutsSetType.COLLABORATION) {
+        throw new ValidationException(
+          'SPACES framing is only available on COLLABORATION callouts sets.',
+          LogContext.COLLABORATION
+        );
+      }
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        calloutsSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        `create SPACES callout (admin-only) on callouts Set: ${calloutsSet.id}`
+      );
+    }
+
     // Office Docs entitlement gate (FR-001/FR-004/FR-009): block introduction of a
     // Collabora Document — in framing form, contribution-allowed form, or via attached
     // contributions — when the owning Collaboration lacks SPACE_FLAG_OFFICE_DOCUMENTS.
@@ -201,12 +224,13 @@ export class CalloutsSetResolverMutations {
 
     if (calloutsSet.type === CalloutsSetType.COLLABORATION) {
       if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
-        // A CONTRIBUTORS callout is a passive display that accepts no
+        // A CONTRIBUTORS or SPACES callout is a passive display that accepts no
         // contributions and never emits a callout-published notification
-        // (FR-004e), regardless of any sendNotification flag.
-        const isContributorsFraming =
-          callout.framing?.type === CalloutFramingType.CONTRIBUTORS;
-        if (calloutData.sendNotification && !isContributorsFraming) {
+        // (008 FR-004e / 013 FR-004c), regardless of any sendNotification flag.
+        const isCollectionFraming =
+          callout.framing?.type === CalloutFramingType.CONTRIBUTORS ||
+          callout.framing?.type === CalloutFramingType.SPACES;
+        if (calloutData.sendNotification && !isCollectionFraming) {
           const notificationInput: NotificationInputCalloutPublished = {
             triggeredBy: actorContext.actorID,
             callout: callout,

@@ -108,6 +108,34 @@ export const bootstrapTemplateSpaceContentSpaceL0: CreateTemplateContentSpaceInp
               },
             },
           },
+          // Spaces-collection callout on the Subspaces tab, replacing the
+          // removed hard-coded subspaces block
+          // (workspace#013-spaces-collection-callout, US3/FR-013). It is
+          // CONFIG-FREE (no settings block) — contrast the CONTRIBUTORS callout
+          // above — and its framing profile displayName is deliberately
+          // "Subspaces" (preserve the block name, FR-004g). `sortOrder: 1`
+          // renders it first on the Subspaces tab. Spaces created from this
+          // default template inherit it via the normal template clone path;
+          // existing environments get the same callout backfilled by the
+          // BackfillSpacesCalloutL0Subspaces migration.
+          {
+            nameID: 'subspaces',
+            sortOrder: 1,
+            classification: {
+              tagsets: [
+                {
+                  name: TagsetReservedName.FLOW_STATE,
+                  tags: [FlowState.SUBSPACES],
+                },
+              ],
+            },
+            framing: {
+              type: CalloutFramingType.SPACES,
+              profile: {
+                displayName: 'Subspaces',
+              },
+            },
+          },
         ],
       },
     },

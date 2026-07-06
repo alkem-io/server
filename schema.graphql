@@ -287,6 +287,7 @@ enum CalloutFramingType {
   MEMO
   NONE
   POLL
+  SPACES
   WHITEBOARD
 }
 
@@ -1904,6 +1905,10 @@ type CalloutFraming {
   poll: Poll
   """The Profile for framing the associated Callout."""
   profile: Profile!
+  """
+  The host space's subspaces for a SPACES framing, ordered pinned-first then the space's sortOrder/displayName. Returns the existing Space type (no new item type). No server-side pagination/search: the client name-searches and paginates client-side over this set. Empty for non-SPACES framings, for a callout not attached to a space, or for a host with no subspaces.
+  """
+  subspaces: [Space!]!
   """
   The type of the Callout Framing, the additional content attached to this callout
   """

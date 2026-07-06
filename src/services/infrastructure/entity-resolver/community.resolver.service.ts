@@ -256,6 +256,39 @@ export class CommunityResolverService {
     return community;
   }
 
+  /**
+   * Resolve callout → CalloutsSet → Collaboration → Space (the HOST space) for a
+   * collaboration callout, loading the host space's direct subspaces and their
+   * profiles (workspace#013-spaces-collection-callout). Host-space-generic:
+   * works on any level (L0 or L1) — it returns whatever the host space's
+   * subspaces relation contains (empty for a leaf). Returns null when the
+   * callout is not attached to a space (e.g. a template / knowledge-base
+   * callout), so the SPACES collection resolves to an empty list there.
+   */
+  public async getSpaceWithSubspacesFromCollaborationCallout(
+    calloutId: string
+  ): Promise<Space | null> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          calloutsSet: {
+            callouts: {
+              id: calloutId,
+            },
+          },
+        },
+      },
+      relations: {
+        subspaces: {
+          about: {
+            profile: true,
+          },
+        },
+      },
+    });
+    return space ?? null;
+  }
+
   public async getCommunityFromWhiteboardOrFail(
     whiteboardId: string
   ): Promise<ICommunity> {
