@@ -4,6 +4,7 @@ import { CalloutContributionType } from '@common/enums/callout.contribution.type
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
+import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectEntityManager } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -76,6 +77,7 @@ export class ContributionsAnalyzeTool implements McpTool {
     @InjectEntityManager('default')
     private readonly entityManager: EntityManager,
     private readonly authorizationService: AuthorizationService,
+    private readonly spaceLookupService: SpaceLookupService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -94,7 +96,8 @@ export class ContributionsAnalyzeTool implements McpTool {
             type: 'string',
             description:
               'Scope of analysis: "my_contributions" for your contributions, ' +
-              '"callout:{id}" for a specific callout, "space:{id}" for all contributions in a space',
+              '"callout:{id}" for a specific callout, "space:{id}" for all contributions in a space ' +
+              '(a space/subspace UUID, or a top-level space nameID / URL slug)',
           },
           analysisType: {
             type: 'string',
@@ -141,6 +144,22 @@ export class ContributionsAnalyzeTool implements McpTool {
       return this.errorResult(
         'Invalid scope format. Use "my_contributions", "callout:{id}", or "space:{id}"'
       );
+    }
+
+    // Resolve the space scope's id-or-nameID to a UUID (the lookup service
+    // owns the policy) — a slug matched raw against space.id would silently
+    // return an empty set instead of an error.
+    if (scope.type === 'space') {
+      try {
+        const space = await this.spaceLookupService.getSpaceByIdOrNameIdOrFail(
+          scope.spaceId
+        );
+        scope.spaceId = space.id;
+      } catch {
+        return this.errorResult(
+          `Space not found: ${scope.spaceId}. Pass a space/subspace UUID, or a top-level space nameID (URL slug); subspaces require the UUID.`
+        );
+      }
     }
 
     this.logger.verbose?.(

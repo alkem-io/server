@@ -48,9 +48,15 @@ export async function subscriptionFactory(
   queueName: string,
   isBootstrap = false
 ): Promise<PubSubEngine | undefined> {
-  if (isBootstrap) {
+  // Processes that do not serve GraphQL subscriptions (schema bootstrap, the
+  // dedicated auth-reset worker) must not open a RabbitMQ connection + consumer
+  // per subscription topic. Both fall back to an in-memory PubSub. The worker
+  // flag is read from process.env (not a DI token) so it cannot be shadowed by
+  // the @Global IS_SCHEMA_BOOTSTRAP=false that MicroservicesModule declares and
+  // that is pulled in transitively by domain modules (e.g. UserModule).
+  if (isBootstrap || process.env.ALKEMIO_DISABLE_SUBSCRIPTIONS === 'true') {
     logger.log?.(
-      'Skipping RabbitMQ connection for schema bootstrap',
+      'Skipping RabbitMQ subscription connection (in-memory PubSub)',
       LogContext.SUBSCRIPTIONS
     );
     return new PubSub();
