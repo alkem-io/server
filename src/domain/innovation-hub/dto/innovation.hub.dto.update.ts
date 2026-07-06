@@ -22,6 +22,22 @@ export class UpdateInnovationHubInput extends UpdateNameableInput {
   })
   spaceVisibilityFilter?: SpaceVisibility;
 
+  @IsOptional()
+  @Field(() => [UUID], {
+    nullable: true,
+    description:
+      'The Innovation Packs curated for this Innovation Hub; full replace. An empty list is allowed and hides the section. Omit to leave unchanged.',
+  })
+  innovationPackListFilter?: string[];
+
+  @IsOptional()
+  @Field(() => [UUID], {
+    nullable: true,
+    description:
+      'The Virtual Contributors curated for this Innovation Hub; full replace. An empty list is allowed and hides the section. Omit to leave unchanged.',
+  })
+  virtualContributorListFilter?: string[];
+
   @Field(() => Boolean, {
     nullable: true,
     description:

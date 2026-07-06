@@ -39,6 +39,16 @@ export class InnovationHub extends NameableEntity implements IInnovationHub {
   })
   spaceListFilter?: string[];
 
+  @Column('simple-array', {
+    nullable: true,
+  })
+  innovationPackListFilter?: string[];
+
+  @Column('simple-array', {
+    nullable: true,
+  })
+  virtualContributorListFilter?: string[];
+
   @Column('boolean', { nullable: false })
   listedInStore!: boolean;
 
