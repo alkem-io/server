@@ -55,6 +55,24 @@ export const buildMultiSearchRequestItems = (
         fields: ['id', 'type'],
         // do not include the source in the result
         _source: false,
+        // Ask ES which text matched, so `ISearchResult.terms` can report why a
+        // document surfaced (server#3702). `*` + the default
+        // `require_field_match: true` highlights exactly the fields the query
+        // matched, whatever each index's text fields are named. Highlighting
+        // needs a retrievable copy of the field — `_source` or a stored field;
+        // office-document `content` is `_source`-excluded but mapped
+        // `store: true` (reporting-orchestration template) exactly so body
+        // matches can still be reported here.
+        highlight: {
+          fields: { '*': {} },
+          // terms are extracted from fragments, not shown as excerpts — keep
+          // fragments small and few to bound query-time analysis cost
+          fragment_size: 100,
+          number_of_fragments: 3,
+          // truncate analysis instead of failing the search when a stored
+          // field exceeds the index's `highlight.max_analyzed_offset` (1M)
+          max_analyzed_offset: 999_999,
+        },
         // max amount of results
         size: resultCount,
         // sort by these fields
