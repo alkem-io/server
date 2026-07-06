@@ -1,8 +1,5 @@
-import { randomUUID } from 'node:crypto';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
-import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
-import { AuthenticationService } from '@core/authentication/authentication.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { WhiteboardService } from '@domain/common/whiteboard';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
@@ -19,7 +16,6 @@ import {
   ContributionInputData,
   InfoInputData,
   SaveInputData,
-  WhoInputData,
 } from './inputs';
 import {
   FetchContentData,
@@ -37,7 +33,6 @@ export class WhiteboardIntegrationService {
   constructor(
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService,
     private readonly authorizationService: AuthorizationService,
-    private readonly authenticationService: AuthenticationService,
     private readonly whiteboardService: WhiteboardService,
     private readonly contributionReporter: ContributionReporterService,
     private readonly communityResolver: CommunityResolverService,
@@ -57,18 +52,10 @@ export class WhiteboardIntegrationService {
         data.whiteboardId
       );
 
-      const actorContext = await this.resolveActorContext(data);
-      if (!actorContext) {
-        this.logger.warn?.(
-          {
-            message: `Unable to build ActorContext for userId: ${data.userId}`,
-            whiteboardId: data.whiteboardId,
-            guestName: data.guestName,
-          },
-          LogContext.WHITEBOARD_INTEGRATION
-        );
-        return false;
-      }
+      const actorContext = await this.actorContextService.resolveActorContext(
+        data.userId,
+        data.guestName
+      );
 
       return this.authorizationService.isAccessGranted(
         actorContext,
@@ -131,22 +118,6 @@ export class WhiteboardIntegrationService {
       : 1;
 
     return { read, update, maxCollaborators };
-  }
-
-  public async who(data: WhoInputData): Promise<string> {
-    const actorContext = await this.authenticationService.getActorContext(
-      data.auth
-    );
-
-    if (actorContext.isAnonymous) {
-      return '';
-    }
-
-    if (actorContext.guestName) {
-      return `guest-${randomUUID()}`;
-    }
-
-    return actorContext.actorID;
   }
 
   public async save({
@@ -233,54 +204,5 @@ export class WhiteboardIntegrationService {
           LogContext.WHITEBOARD_INTEGRATION
         );
       });
-  }
-
-  private async resolveActorContext(
-    data: AccessGrantedInputData
-  ): Promise<ActorContext | null> {
-    if (this.isGuestUserIdentifier(data.userId)) {
-      return this.actorContextService.createGuest(
-        this.normalizeGuestName(data.guestName)
-      );
-    }
-
-    try {
-      return await this.actorContextService.buildForUser(data.userId);
-    } catch (error) {
-      if (data.guestName?.trim()) {
-        this.logger.verbose?.(
-          {
-            message:
-              'Falling back to guest agent info after user lookup failure',
-            userId: data.userId,
-            whiteboardId: data.whiteboardId,
-          },
-          LogContext.WHITEBOARD_INTEGRATION
-        );
-        return this.actorContextService.createGuest(data.guestName.trim());
-      }
-
-      throw error;
-    }
-  }
-
-  private isGuestUserIdentifier(userId: string): boolean {
-    if (!userId) {
-      return true;
-    }
-
-    const normalized = userId.trim().toLowerCase();
-    return (
-      normalized.length === 0 ||
-      normalized === 'n/a' ||
-      normalized === 'guest' ||
-      normalized.startsWith('guest-') ||
-      normalized.startsWith('guest_')
-    );
-  }
-
-  private normalizeGuestName(guestName?: string): string {
-    const trimmed = guestName?.trim();
-    return trimmed && trimmed.length > 0 ? trimmed : 'Guest collaborator';
   }
 }

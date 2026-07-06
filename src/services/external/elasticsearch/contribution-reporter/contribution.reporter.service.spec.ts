@@ -371,6 +371,352 @@ describe('ContributionReporterService', () => {
     });
   });
 
+  describe('officeDocumentContribution', () => {
+    it('should index ONE aggregate OFFICE_DOCUMENT_CONTRIBUTION document carrying both type-keyed actor sets verbatim', async () => {
+      service.officeDocumentContribution({
+        id: 'doc-1',
+        name: 'My Document',
+        space: 'space-root',
+        writeActors: {
+          [ActorType.USER]: ['user-1', 'user-2'],
+          [ActorType.VIRTUAL_CONTRIBUTOR]: ['vc-1'],
+        },
+        readonlyActors: { [ActorType.USER]: ['user-3'] },
+      });
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const indexedDocument = mockIndex.mock.calls[0][0].document;
+      expect(indexedDocument.type).toBe('OFFICE_DOCUMENT_CONTRIBUTION');
+      expect(indexedDocument.id).toBe('doc-1');
+      expect(indexedDocument.name).toBe('My Document');
+      expect(indexedDocument.space).toBe('space-root');
+      // the typed map is written verbatim — no flattening (assert by membership)
+      expect(indexedDocument.writeActors[ActorType.USER]).toEqual(
+        expect.arrayContaining(['user-1', 'user-2'])
+      );
+      expect(
+        indexedDocument.writeActors[ActorType.VIRTUAL_CONTRIBUTOR]
+      ).toEqual(['vc-1']);
+      expect(indexedDocument.readonlyActors).toEqual({
+        [ActorType.USER]: ['user-3'],
+      });
+    });
+
+    // FR-008 / C1: ONLY the typed shape is written — no flat-array field is
+    // emitted alongside it (no dual-write).
+    it('should write only the typed shape with no flat-array fallback alongside it', async () => {
+      service.officeDocumentContribution({
+        id: 'doc-2',
+        name: 'Another Document',
+        space: 'space-root',
+        writeActors: { [ActorType.USER]: ['user-1'] },
+        readonlyActors: {},
+      });
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const indexedDocument = mockIndex.mock.calls[0][0].document;
+      // typed objects, never arrays
+      expect(Array.isArray(indexedDocument.writeActors)).toBe(false);
+      expect(Array.isArray(indexedDocument.readonlyActors)).toBe(false);
+      // no per-user author shape on the aggregate
+      expect(indexedDocument).not.toHaveProperty('author');
+      expect(indexedDocument).not.toHaveProperty('anonymous');
+      expect(indexedDocument).not.toHaveProperty('guest');
+      // the reporter does no resolution — it writes what it is given
+      expect(mockActorService.getActorOrNull).not.toHaveBeenCalled();
+    });
+
+    // SC-005: distinct type keys are independently addressable in the index.
+    it('should keep distinct actor-type groups independently addressable', async () => {
+      service.officeDocumentContribution({
+        id: 'doc-seg',
+        name: 'Segmentable Document',
+        space: 'space-root',
+        writeActors: {
+          [ActorType.USER]: ['user-1'],
+          [ActorType.VIRTUAL_CONTRIBUTOR]: ['vc-1'],
+        },
+        readonlyActors: {},
+      });
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const indexedDocument = mockIndex.mock.calls[0][0].document;
+      expect(indexedDocument.writeActors[ActorType.USER]).toEqual(['user-1']);
+      expect(
+        indexedDocument.writeActors[ActorType.VIRTUAL_CONTRIBUTOR]
+      ).toEqual(['vc-1']);
+    });
+
+    // FR-003: an empty actor set is preserved as {} (empty object).
+    it('should preserve an empty readonlyActors set as {}', async () => {
+      service.officeDocumentContribution({
+        id: 'doc-3',
+        name: 'Doc',
+        space: 'space-root',
+        writeActors: { [ActorType.USER]: ['user-1'] },
+        readonlyActors: {},
+      });
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const indexedDocument = mockIndex.mock.calls[0][0].document;
+      expect(indexedDocument.type).toBe('OFFICE_DOCUMENT_CONTRIBUTION');
+      expect(indexedDocument.writeActors).toEqual({
+        [ActorType.USER]: ['user-1'],
+      });
+      expect(indexedDocument.readonlyActors).toEqual({});
+    });
+  });
+
+  describe('officeDocumentView', () => {
+    it('should index ONE aggregate OFFICE_DOCUMENT_VIEW document carrying both type-keyed actor sets verbatim', async () => {
+      service.officeDocumentView({
+        id: 'doc-1',
+        name: 'My Document',
+        space: 'space-root',
+        writeActors: {
+          [ActorType.USER]: ['user-1', 'user-2'],
+        },
+        readonlyActors: { [ActorType.USER]: ['user-3'] },
+      });
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const indexedDocument = mockIndex.mock.calls[0][0].document;
+      expect(indexedDocument.type).toBe('OFFICE_DOCUMENT_VIEW');
+      expect(indexedDocument.id).toBe('doc-1');
+      expect(indexedDocument.name).toBe('My Document');
+      expect(indexedDocument.space).toBe('space-root');
+      expect(indexedDocument.writeActors[ActorType.USER]).toEqual(
+        expect.arrayContaining(['user-1', 'user-2'])
+      );
+      expect(indexedDocument.readonlyActors).toEqual({
+        [ActorType.USER]: ['user-3'],
+      });
+    });
+
+    // FR-008: only the typed shape is written — no flat-array field alongside.
+    it('should write only the typed shape with no flat-array fallback alongside it', async () => {
+      service.officeDocumentView({
+        id: 'doc-2',
+        name: 'Another Document',
+        space: 'space-root',
+        writeActors: { [ActorType.USER]: ['user-1'] },
+        readonlyActors: {},
+      });
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const indexedDocument = mockIndex.mock.calls[0][0].document;
+      expect(Array.isArray(indexedDocument.writeActors)).toBe(false);
+      expect(Array.isArray(indexedDocument.readonlyActors)).toBe(false);
+      expect(indexedDocument).not.toHaveProperty('author');
+      expect(indexedDocument).not.toHaveProperty('anonymous');
+      expect(indexedDocument).not.toHaveProperty('guest');
+      // resolve once, not per-user — actor lookup is never consulted
+      expect(mockActorService.getActorOrNull).not.toHaveBeenCalled();
+    });
+
+    it('should preserve an empty readonlyActors set as {}', async () => {
+      service.officeDocumentView({
+        id: 'doc-3',
+        name: 'Doc',
+        space: 'space-root',
+        writeActors: { [ActorType.USER]: ['user-1'] },
+        readonlyActors: {},
+      });
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const indexedDocument = mockIndex.mock.calls[0][0].document;
+      expect(indexedDocument.type).toBe('OFFICE_DOCUMENT_VIEW');
+      expect(indexedDocument.writeActors).toEqual({
+        [ActorType.USER]: ['user-1'],
+      });
+      expect(indexedDocument.readonlyActors).toEqual({});
+    });
+  });
+
+  describe('calloutCollaboraDocumentCreated', () => {
+    it('should index a COLLABORA_DOCUMENT_CREATED document with author', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'user-1',
+        type: ActorType.USER,
+      });
+      mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
+        email: 'user@example.com',
+      });
+
+      service.calloutCollaboraDocumentCreated(
+        { id: 'doc-1', name: 'My Document', space: 'space-root' },
+        { actorID: 'user-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockIndex).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: expect.objectContaining({
+            type: 'COLLABORA_DOCUMENT_CREATED',
+            id: 'doc-1',
+            name: 'My Document',
+            space: 'space-root',
+            author: 'user-1',
+            // 012: scalar actorType alongside the author id
+            authorType: ActorType.USER,
+          }),
+        })
+      );
+    });
+  });
+
+  describe('calloutCollaboraDocumentUploaded', () => {
+    it('should index a COLLABORA_DOCUMENT_UPLOADED document with author', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'user-1',
+        type: ActorType.USER,
+      });
+      mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
+        email: 'user@example.com',
+      });
+
+      service.calloutCollaboraDocumentUploaded(
+        { id: 'doc-2', name: 'Imported Document', space: 'space-root' },
+        { actorID: 'user-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockIndex).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: expect.objectContaining({
+            type: 'COLLABORA_DOCUMENT_UPLOADED',
+            id: 'doc-2',
+            name: 'Imported Document',
+            space: 'space-root',
+            author: 'user-1',
+            authorType: ActorType.USER,
+          }),
+        })
+      );
+    });
+  });
+
+  describe('collaboraDocumentOpened', () => {
+    it('should index a COLLABORA_DOCUMENT_OPENED document with author', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'user-1',
+        type: ActorType.USER,
+      });
+      mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
+        email: 'user@example.com',
+      });
+
+      service.collaboraDocumentOpened(
+        { id: 'doc-3', name: 'Opened Document', space: 'space-root' },
+        { actorID: 'user-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockIndex).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: expect.objectContaining({
+            type: 'COLLABORA_DOCUMENT_OPENED',
+            id: 'doc-3',
+            name: 'Opened Document',
+            space: 'space-root',
+            author: 'user-1',
+            authorType: ActorType.USER,
+          }),
+        })
+      );
+    });
+
+    // FR-005 / SC-004: a guest/anonymous/unresolvable actor context yields
+    // authorType "unknown" — a discrete, filterable scalar (SC-005).
+    it('should set authorType "unknown" for an anonymous actor context', async () => {
+      service.collaboraDocumentOpened(
+        { id: 'doc-anon', name: 'Anon Opened', space: 'space-root' },
+        { isAnonymous: true }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const indexedDocument = mockIndex.mock.calls[0][0].document;
+      expect(indexedDocument.type).toBe('COLLABORA_DOCUMENT_OPENED');
+      expect(indexedDocument.authorType).toBe('unknown');
+      expect(indexedDocument.anonymous).toBe(true);
+    });
+
+    it('should set authorType "unknown" for a guest actor context', async () => {
+      service.collaboraDocumentOpened(
+        { id: 'doc-guest', name: 'Guest Opened', space: 'space-root' },
+        { guestName: 'Guest User' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const indexedDocument = mockIndex.mock.calls[0][0].document;
+      expect(indexedDocument.authorType).toBe('unknown');
+      expect(indexedDocument.guest).toBe(true);
+    });
+
+    // 012 / research R4: a resolvable NON-user actor (VC/org/space/account)
+    // records its id + ActorType, NOT the anonymous fallback. The lifecycle
+    // path must match the aggregate path, which already types every actor.
+    it('should record a resolvable non-user actor with its id and ActorType', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'vc-1',
+        type: ActorType.VIRTUAL_CONTRIBUTOR,
+      });
+
+      service.collaboraDocumentOpened(
+        { id: 'doc-vc', name: 'VC Opened', space: 'space-root' },
+        { actorID: 'vc-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      const indexedDocument = mockIndex.mock.calls[0][0].document;
+      expect(indexedDocument.author).toBe('vc-1');
+      expect(indexedDocument.authorType).toBe(ActorType.VIRTUAL_CONTRIBUTOR);
+      expect(indexedDocument.anonymous).toBe(false);
+      expect(indexedDocument.guest).toBe(false);
+      // No user lookup for a non-user actor.
+      expect(mockUserLookupService.getUserByIdOrFail).not.toHaveBeenCalled();
+    });
+  });
+
   describe('pollVoteContribution', () => {
     it('should index a POLL_VOTE_CONTRIBUTION document', async () => {
       mockActorService.getActorOrNull.mockResolvedValue({

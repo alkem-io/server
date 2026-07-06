@@ -188,6 +188,33 @@ describe('UserSettingsService', () => {
 
       expect(result.communication.allowOtherUsersToSendMessages).toBe(true);
     });
+
+    it('should update allowOtherUsersToContactViaEmail when provided', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        communication: { allowOtherUsersToContactViaEmail: true },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.communication.allowOtherUsersToContactViaEmail).toBe(true);
+    });
+
+    it('should leave allowOtherUsersToContactViaEmail untouched when not provided', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        communication: { allowOtherUsersToSendMessages: true },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      // Not in the update payload → unchanged (undefined on a pre-existing
+      // settings object that predates the field; the GraphQL read-path resolver
+      // coerces it to false).
+      expect(
+        result.communication.allowOtherUsersToContactViaEmail
+      ).toBeUndefined();
+    });
   });
 
   describe('updateSettings - homeSpace', () => {

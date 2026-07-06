@@ -18,6 +18,10 @@ export const CREDENTIAL_RULE_TYPES_SPACE_PLATFORM_SETTINGS =
   'credentialRuleTypes-spacePlatformSettings';
 export const CREDENTIAL_RULE_VIRTUAL_PLATFORM_SETTINGS =
   'credentialRuleTypes-virtualContributorPlatformSettings';
+export const CREDENTIAL_RULE_TYPES_VIRTUAL_ASSISTANT_MANAGE =
+  'credentialRuleTypes-virtualAssistantManage';
+export const CREDENTIAL_RULE_TYPES_VIRTUAL_ASSISTANT_READ =
+  'credentialRuleTypes-virtualAssistantRead';
 export const CREDENTIAL_RULE_TYPES_GLOBAL_SPACE_READ =
   'credentialRuleTypes-spaceGlobalRead';
 export const CREDENTIAL_RULE_TYPES_ROLESET_APPLY_GLOBAL_REGISTERED =
@@ -88,6 +92,8 @@ export const CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK =
   'credentialRuleTypes-platformCreateInnovationPack';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_GUIDANCE =
   'credentialRuleTypes-platformAccessGuidance';
+export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_VIRTUAL_ASSISTANT =
+  'credentialRuleTypes-platformAccessVirtualAssistant';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_ACCESS_DASHBOARD =
   'credentialRuleTypes-platformAccessDashboard';
 export const CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER =

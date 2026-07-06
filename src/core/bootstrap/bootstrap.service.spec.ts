@@ -1,9 +1,12 @@
-import { AuthorizationCredential } from '@common/enums';
+import { AuthorizationCredential, LogContext } from '@common/enums';
+import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { VirtualAssistantService } from '@domain/community/virtual-assistant/virtual.assistant.service';
 import { Account } from '@domain/space/account/account.entity';
 import { Space } from '@domain/space/space/space.entity';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
+import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -313,6 +316,83 @@ describe('BootstrapService', () => {
 
   it('should be defined', () => {
     expect(service).toBeDefined();
+  });
+
+  describe('ensureAssistantMcpApiKey (#1937)', () => {
+    const ENV_KEY = 'ASSISTANT_MCP_API_KEY';
+    let saved: string | undefined;
+    let keyMock: any;
+    let vaMock: any;
+
+    beforeEach(() => {
+      saved = process.env[ENV_KEY];
+      keyMock = module.get(McpApiKeyService);
+      vaMock = module.get(VirtualAssistantService);
+      keyMock.ensureActorKeyFromPlaintext = vi.fn().mockResolvedValue({});
+      vaMock.getSingletonOrFail = vi
+        .fn()
+        .mockResolvedValue({ id: 'va-default' });
+    });
+    afterEach(() => {
+      if (saved === undefined) delete process.env[ENV_KEY];
+      else process.env[ENV_KEY] = saved;
+    });
+
+    const ensure = () => (service as any).ensureAssistantMcpApiKey();
+
+    it('skips before resolving the actor when ASSISTANT_MCP_API_KEY is unset (FR-006)', async () => {
+      delete process.env[ENV_KEY];
+
+      await ensure();
+
+      expect(vaMock.getSingletonOrFail).not.toHaveBeenCalled();
+      expect(keyMock.ensureActorKeyFromPlaintext).not.toHaveBeenCalled();
+    });
+
+    it("skips before resolving the actor when the key lacks the 'mcp_' prefix (it could never authenticate)", async () => {
+      process.env[ENV_KEY] = 'not-a-valid-mcp-key';
+
+      await ensure();
+
+      expect(vaMock.getSingletonOrFail).not.toHaveBeenCalled();
+      expect(keyMock.ensureActorKeyFromPlaintext).not.toHaveBeenCalled();
+    });
+
+    it('skips on the expected not-found (actor absent) without writing a key (FR-006)', async () => {
+      process.env[ENV_KEY] = 'mcp_test';
+      vaMock.getSingletonOrFail = vi
+        .fn()
+        .mockRejectedValue(
+          new EntityNotFoundException('absent', LogContext.COMMUNITY)
+        );
+
+      await ensure();
+
+      expect(keyMock.ensureActorKeyFromPlaintext).not.toHaveBeenCalled();
+    });
+
+    it('rethrows an unexpected (transient/DB) error instead of masking it as "actor absent"', async () => {
+      process.env[ENV_KEY] = 'mcp_test';
+      vaMock.getSingletonOrFail = vi
+        .fn()
+        .mockRejectedValue(new Error('db connection lost'));
+
+      await expect(ensure()).rejects.toThrow('db connection lost');
+      expect(keyMock.ensureActorKeyFromPlaintext).not.toHaveBeenCalled();
+    });
+
+    it('ensures the [read,tools] actor-bound key when secret + actor present (FR-001/FR-002)', async () => {
+      process.env[ENV_KEY] = 'mcp_test';
+      vaMock.getSingletonOrFail = vi.fn().mockResolvedValue({ id: 'va-1' });
+
+      await ensure();
+
+      expect(keyMock.ensureActorKeyFromPlaintext).toHaveBeenCalledWith(
+        'va-1',
+        'mcp_test',
+        [{ operations: ['read', 'tools'] }]
+      );
+    });
   });
 
   describe('bootstrap', () => {

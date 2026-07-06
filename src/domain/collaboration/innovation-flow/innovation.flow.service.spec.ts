@@ -323,6 +323,30 @@ describe('InnovationFlowService', () => {
       expect(result).toBe(updatedState);
     });
 
+    it('should throw ValidationException when renamed state name contains a comma', async () => {
+      const states = [
+        { id: 's-1', displayName: 'State A', sortOrder: 10 },
+        { id: 's-2', displayName: 'State B', sortOrder: 20 },
+      ];
+      const flow = {
+        id: 'flow-1',
+        states,
+        currentStateID: 's-1',
+        flowStatesTagsetTemplate: undefined,
+      } as any;
+
+      vi.mocked(repository.findOne).mockResolvedValue(flow);
+
+      await expect(
+        service.updateInnovationFlowState('flow-1', {
+          innovationFlowStateID: 's-1',
+          displayName: 'State,A',
+        } as any)
+      ).rejects.toThrow(ValidationException);
+      // Must reject before the state is ever updated/persisted
+      expect(innovationFlowStateService.update).not.toHaveBeenCalled();
+    });
+
     it('should throw EntityNotFoundException when state is not found in flow', async () => {
       const flow = {
         id: 'flow-1',
@@ -464,6 +488,24 @@ describe('InnovationFlowService', () => {
           displayName: 'X',
         } as any)
       ).rejects.toThrow(RelationshipNotFoundException);
+    });
+
+    it('should throw ValidationException when the new state name contains a comma', async () => {
+      const flow = {
+        id: 'flow-1',
+        states: [{ id: 's-1', sortOrder: 5 }],
+        settings: { maximumNumberOfStates: 10 },
+      } as any;
+
+      await expect(
+        service.createStateOnInnovationFlow(flow, {
+          displayName: 'New,State',
+        } as any)
+      ).rejects.toThrow(ValidationException);
+      // Must reject before the state is ever created/persisted
+      expect(
+        innovationFlowStateService.createInnovationFlowState
+      ).not.toHaveBeenCalled();
     });
 
     it('should throw ValidationException when maximum number of states is reached', async () => {
@@ -791,6 +833,233 @@ describe('InnovationFlowService', () => {
         tagsetTemplateService.updateTagsetTemplateDefinition
       ).toHaveBeenCalled();
       expect(tagsetService.updateTagsetsSelectedValue).toHaveBeenCalled();
+    });
+
+    it('should throw ValidationException when a new state name contains a comma', async () => {
+      const flow = {
+        id: 'flow-1',
+        states: [{ id: 's-old-1', displayName: 'Old A', sortOrder: 10 }],
+        currentStateID: 's-old-1',
+      } as any;
+
+      await expect(
+        service.updateInnovationFlowStates(flow, [
+          { displayName: 'New A', sortOrder: 5 },
+          { displayName: 'New,B', sortOrder: 10 },
+        ] as any)
+      ).rejects.toThrow(ValidationException);
+      // Must reject before any existing state is deleted or rebuilt
+      expect(innovationFlowStateService.delete).not.toHaveBeenCalled();
+      expect(
+        innovationFlowStateService.createInnovationFlowState
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  // Story #6177: L0 spaces use min 4 / max 8 (was 4/4). The add/delete guards
+  // are settings-driven, so these assert the loosened L0 bounds end-to-end.
+  describe('L0 bounds (story #6177)', () => {
+    const l0Settings = { minimumNumberOfStates: 4, maximumNumberOfStates: 8 };
+
+    it('US1: should add a 5th state to an L0 flow that has the 4 fixed states', async () => {
+      const flow = {
+        id: 'flow-l0',
+        states: [
+          { id: 's-1', sortOrder: 1 },
+          { id: 's-2', sortOrder: 2 },
+          { id: 's-3', sortOrder: 3 },
+          { id: 's-4', sortOrder: 4 },
+        ],
+        settings: l0Settings,
+      } as any;
+
+      const newState = { id: 's-5' } as any;
+      vi.mocked(
+        innovationFlowStateService.createInnovationFlowState
+      ).mockResolvedValue(newState);
+      vi.mocked(innovationFlowStateService.save).mockResolvedValue(newState);
+
+      const stateData = { displayName: 'Fifth' } as any;
+      const result = await service.createStateOnInnovationFlow(flow, stateData);
+
+      expect(result).toBe(newState);
+      // sortOrder should be max(1..4) + 1 = 5 (appended last)
+      expect(stateData.sortOrder).toBe(5);
+    });
+
+    it('US1: should reject adding a 9th state when an L0 flow is at the max of 8', async () => {
+      const flow = {
+        id: 'flow-l0',
+        states: Array.from({ length: 8 }, (_v, i) => ({
+          id: `s-${i + 1}`,
+          sortOrder: i + 1,
+        })),
+        settings: l0Settings,
+      } as any;
+
+      await expect(
+        service.createStateOnInnovationFlow(flow, {
+          displayName: 'Ninth',
+        } as any)
+      ).rejects.toThrow(ValidationException);
+      expect(
+        innovationFlowStateService.createInnovationFlowState
+      ).not.toHaveBeenCalled();
+    });
+
+    it('US2: should reject deleting from an L0 flow at exactly 4 states (the fixed floor)', async () => {
+      const flow = {
+        id: 'flow-l0',
+        states: [{ id: 's-1' }, { id: 's-2' }, { id: 's-3' }, { id: 's-4' }],
+        settings: l0Settings,
+      } as any;
+
+      await expect(
+        service.deleteStateOnInnovationFlow(flow, { ID: 's-4' } as any)
+      ).rejects.toThrow(ValidationException);
+    });
+  });
+
+  // Story #6177: applying a Space Template to an L0 space must preserve the 4
+  // fixed phases and append only the template's additional states (capped at 8).
+  describe('updateInnovationFlowStatesFromTemplate (story #6177)', () => {
+    const l0Settings = { minimumNumberOfStates: 4, maximumNumberOfStates: 8 };
+
+    // Helper: stub the owning-space level lookup used by isLevelZeroInnovationFlow.
+    const mockOwningSpaceLevel = (level: number | undefined) => {
+      (repository as any).manager = {
+        getRepository: vi.fn().mockReturnValue({
+          findOne: vi
+            .fn()
+            .mockResolvedValue(
+              level === undefined ? null : { id: 'space-1', level }
+            ),
+        }),
+      };
+    };
+
+    const fixedL0States = [
+      {
+        id: 's-1',
+        displayName: 'Define',
+        description: 'd1',
+        settings: {},
+        sortOrder: 1,
+      },
+      {
+        id: 's-2',
+        displayName: 'Discover',
+        description: 'd2',
+        settings: {},
+        sortOrder: 2,
+      },
+      {
+        id: 's-3',
+        displayName: 'Develop',
+        description: 'd3',
+        settings: {},
+        sortOrder: 3,
+      },
+      {
+        id: 's-4',
+        displayName: 'Deliver',
+        description: 'd4',
+        settings: {},
+        sortOrder: 4,
+      },
+    ];
+
+    it('US3: preserves the 4 fixed L0 phases and appends only additional template states', async () => {
+      mockOwningSpaceLevel(0); // L0
+      const flow = {
+        id: 'flow-l0',
+        states: fixedL0States,
+        settings: l0Settings,
+      } as any;
+
+      const updateSpy = vi
+        .spyOn(service, 'updateInnovationFlowStates')
+        .mockResolvedValue(flow);
+
+      // Template carries the 4 fixed names plus two extras.
+      const templateStates = [
+        { displayName: 'Define', sortOrder: 1 },
+        { displayName: 'Discover', sortOrder: 2 },
+        { displayName: 'Develop', sortOrder: 3 },
+        { displayName: 'Deliver', sortOrder: 4 },
+        { displayName: 'Extra One', sortOrder: 5 },
+        { displayName: 'Extra Two', sortOrder: 6 },
+      ] as any;
+
+      await service.updateInnovationFlowStatesFromTemplate(
+        flow,
+        templateStates
+      );
+
+      expect(updateSpy).toHaveBeenCalledTimes(1);
+      const combined = updateSpy.mock.calls[0][1];
+      const names = combined.map(s => s.displayName);
+      // First 4 are the preserved fixed phases in their original leading order.
+      expect(names.slice(0, 4)).toEqual([
+        'Define',
+        'Discover',
+        'Develop',
+        'Deliver',
+      ]);
+      // Only the non-duplicate template states are appended.
+      expect(names.slice(4)).toEqual(['Extra One', 'Extra Two']);
+      expect(combined).toHaveLength(6);
+    });
+
+    it('US3: rejects atomically when applying a template would exceed the L0 maximum', async () => {
+      mockOwningSpaceLevel(0); // L0
+      const flow = {
+        id: 'flow-l0',
+        states: fixedL0States,
+        settings: l0Settings,
+      } as any;
+
+      const updateSpy = vi
+        .spyOn(service, 'updateInnovationFlowStates')
+        .mockResolvedValue(flow);
+
+      // 4 fixed + 5 unique extras = 9 > max 8 → must reject.
+      const templateStates = Array.from({ length: 5 }, (_v, i) => ({
+        displayName: `Extra ${i + 1}`,
+        sortOrder: 10 + i,
+      })) as any;
+
+      await expect(
+        service.updateInnovationFlowStatesFromTemplate(flow, templateStates)
+      ).rejects.toThrow(ValidationException);
+      // No mutation attempted on overflow.
+      expect(updateSpy).not.toHaveBeenCalled();
+    });
+
+    it('US3 regression: subspaces fall through to a wholesale replacement', async () => {
+      mockOwningSpaceLevel(1); // L1 subspace
+      const flow = {
+        id: 'flow-l1',
+        states: [{ id: 's-1', displayName: 'Old', sortOrder: 1 }],
+        settings: { minimumNumberOfStates: 1, maximumNumberOfStates: 8 },
+      } as any;
+
+      const updateSpy = vi
+        .spyOn(service, 'updateInnovationFlowStates')
+        .mockResolvedValue(flow);
+
+      const templateStates = [
+        { displayName: 'New A', sortOrder: 1 },
+        { displayName: 'New B', sortOrder: 2 },
+      ] as any;
+
+      await service.updateInnovationFlowStatesFromTemplate(
+        flow,
+        templateStates
+      );
+
+      // Subspace path passes the template states through untouched.
+      expect(updateSpy).toHaveBeenCalledWith(flow, templateStates);
     });
   });
 });

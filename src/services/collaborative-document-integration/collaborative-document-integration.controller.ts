@@ -14,8 +14,8 @@ import {
   FetchInputData,
   InfoInputData,
   MemoContributionsInputData,
+  OfficeDocumentContributionsInputData,
   SaveInputData,
-  WhoInputData,
 } from './inputs';
 import {
   FetchOutputData,
@@ -46,19 +46,6 @@ export class CollaborativeDocumentIntegrationController {
     );
     ack(context);
     return this.integrationService.info(data);
-  }
-
-  @MessagePattern(CollaborativeDocumentMessagePattern.WHO, Transport.RMQ)
-  public async who(
-    @Payload() data: WhoInputData,
-    @Ctx() context: RmqContext
-  ): Promise<string> {
-    this.logger.verbose?.(
-      'Received WHO request',
-      LogContext.COLLAB_DOCUMENT_INTEGRATION
-    );
-    ack(context);
-    return this.integrationService.who(data);
   }
 
   @MessagePattern(
@@ -112,5 +99,37 @@ export class CollaborativeDocumentIntegrationController {
     );
     ack(context);
     return this.integrationService.memoContributions(data);
+  }
+
+  @MessagePattern(
+    CollaborativeDocumentEventPattern.OFFICE_DOCUMENT_CONTRIBUTION,
+    Transport.RMQ
+  )
+  public officeDocumentContribution(
+    @Payload() data: OfficeDocumentContributionsInputData,
+    @Ctx() context: RmqContext
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Received OFFICE_DOCUMENT_CONTRIBUTION request for document: ${data.documentId}`,
+      LogContext.COLLAB_DOCUMENT_INTEGRATION
+    );
+    ack(context);
+    return this.integrationService.officeDocumentContributions(data);
+  }
+
+  @MessagePattern(
+    CollaborativeDocumentEventPattern.OFFICE_DOCUMENT_VIEW,
+    Transport.RMQ
+  )
+  public officeDocumentView(
+    @Payload() data: OfficeDocumentContributionsInputData,
+    @Ctx() context: RmqContext
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Received OFFICE_DOCUMENT_VIEW request for document: ${data.documentId}`,
+      LogContext.COLLAB_DOCUMENT_INTEGRATION
+    );
+    ack(context);
+    return this.integrationService.officeDocumentViews(data);
   }
 }

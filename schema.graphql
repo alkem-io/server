@@ -68,6 +68,7 @@ enum ActorType {
   ORGANIZATION
   SPACE
   USER
+  VIRTUAL_ASSISTANT
   VIRTUAL_CONTRIBUTOR
 }
 
@@ -78,6 +79,15 @@ enum AiPersonaEngine {
   GUIDANCE
   LIBRA_FLOW
   OPENAI_ASSISTANT
+}
+
+"""
+The kind of an assistant capability — READ is enabled by default; WRITE_* are disabled by default and confirmation-gated.
+"""
+enum AssistantCapabilityKind {
+  READ
+  WRITE_ADDITIVE
+  WRITE_DESTRUCTIVE
 }
 
 enum AuthenticationType {
@@ -92,6 +102,7 @@ enum AuthenticationType {
 
 enum AuthorizationCredential {
   ACCOUNT_ADMIN
+  ASSISTANT_ACCESS
   BETA_TESTER
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
@@ -177,6 +188,7 @@ enum AuthorizationPolicyType {
   USER
   USER_GROUP
   USER_SETTINGS
+  VIRTUAL_ASSISTANT
   VIRTUAL_CONTRIBUTOR
   VISUAL
   WHITEBOARD
@@ -184,6 +196,7 @@ enum AuthorizationPolicyType {
 
 enum AuthorizationPrivilege {
   ACCESS_INTERACTIVE_GUIDANCE
+  ACCESS_VIRTUAL_ASSISTANT
   ACCOUNT_LICENSE_MANAGE
   AUTHORIZATION_RESET
   COMMUNITY_ASSIGN_VC_FROM_ACCOUNT
@@ -268,6 +281,7 @@ enum CalloutDescriptionDisplayMode {
 
 enum CalloutFramingType {
   COLLABORA_DOCUMENT
+  CONTRIBUTORS
   LINK
   MEDIA_GALLERY
   MEMO
@@ -312,6 +326,12 @@ enum ContentUpdatePolicy {
   OWNER
 }
 
+"""The default display mode for a contributor-collection callout framing."""
+enum ContributorCollectionView {
+  LIST
+  MAP
+}
+
 """
 The type of conversation to create. Maps to room type: DIRECT → DM room, GROUP → group room.
 """
@@ -335,6 +355,7 @@ enum ConversationEventType {
 enum CredentialType {
   ACCOUNT_ADMIN
   ACCOUNT_LICENSE_PLUS
+  ASSISTANT_ACCESS
   BETA_TESTER
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
@@ -366,6 +387,15 @@ enum CredentialType {
   USER_GROUP_MEMBER
   USER_SELF_MANAGEMENT
   VC_CAMPAIGN
+}
+
+"""
+Per-recipient outcome of sendDirectMessageToUsers. SENT: delivered (a conversation id is returned). BLOCKED_NO_CONSENT: the recipient disabled direct messages. FAILED: an unexpected per-recipient error (other recipients are still processed).
+"""
+enum DirectMessageDeliveryStatus {
+  BLOCKED_NO_CONSENT
+  FAILED
+  SENT
 }
 
 enum DiscussionsOrderBy {
@@ -412,6 +442,7 @@ enum LicenseEntitlementDataType {
 }
 
 enum LicenseEntitlementType {
+  ACCOUNT_AI_ASSISTANT_TOKENS_MONTH
   ACCOUNT_INNOVATION_HUB
   ACCOUNT_INNOVATION_PACK
   ACCOUNT_SPACE_FREE
@@ -466,6 +497,7 @@ enum MimeType {
   GIF
   HEIC
   HEIF
+  ICS
   JPEG
   JPG
   ODG
@@ -704,6 +736,7 @@ enum RoleName {
   LEAD
   MEMBER
   OWNER
+  PLATFORM_ASSISTANT_ACCESS
   PLATFORM_BETA_TESTER
   PLATFORM_VC_CAMPAIGN
   REGISTERED
@@ -901,6 +934,14 @@ enum UserEmailChangeAuditOutcome {
 enum UserEmailChangeInitiatorRole {
   PLATFORM_ADMIN
   SELF
+}
+
+"""
+Controls who may read member-user information in a Space. Follows space visibility by default, or restricts user info to members only.
+"""
+enum UserInformationVisibility {
+  FOLLOW_SPACE_VISIBILITY
+  MEMBERS_ONLY
 }
 
 enum VirtualContributorBodyOfKnowledgeType {
@@ -1573,6 +1614,26 @@ type Application {
   updatedDate: DateTime!
 }
 
+type AssistantCapability {
+  """What the capability does (for the settings UI)."""
+  description: String!
+  """Human-readable label for the capability toggle."""
+  displayName: String!
+  """
+  READ | WRITE_ADDITIVE | WRITE_DESTRUCTIVE — drives the default (READ enabled, WRITE_* disabled) and confirmation behaviour.
+  """
+  kind: AssistantCapabilityKind!
+  """The MCP tool name, e.g. "search_content"."""
+  name: String!
+}
+
+type AssistantCapabilityToggle {
+  """The capability (MCP tool name) this toggle controls."""
+  capability: String!
+  """Whether the capability is enabled."""
+  enabled: Boolean!
+}
+
 type AuthenticationConfig {
   """Alkemio Authentication Providers Config."""
   providers: [AuthenticationProviderConfig!]!
@@ -1799,6 +1860,19 @@ type CalloutContributionsCountOutput {
   whiteboard: Float!
 }
 
+type CalloutContributorsSettings {
+  """
+  The contributor types included in this contributor-collection callout. At least one.
+  """
+  contributorTypes: [ActorType!]!
+  """
+  The contributor type shown first (the segmented switch opens on it). One of contributorTypes.
+  """
+  defaultContributorType: ActorType!
+  """The default display mode (list or map)."""
+  defaultView: ContributorCollectionView!
+}
+
 type CalloutFraming {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -1806,6 +1880,14 @@ type CalloutFraming {
   The Collabora document attached to this Callout Framing, if any. Present when framing.type = COLLABORA_DOCUMENT.
   """
   collaboraDocument: CollaboraDocument
+  """
+  Per-type counts (users, organizations, virtual contributors) of the total eligible set for a CONTRIBUTORS framing, after type-selection and user-information visibility filtering. Zeroed for non-CONTRIBUTORS framings.
+  """
+  contributorCounts: ContributorCollectionCounts!
+  """
+  The full authorized set of contributors of the given type for a CONTRIBUTORS framing, ordered leads/admins first then alphabetically. No server-side pagination or search: the client paginates (list) and name-searches client-side over this set. Empty for non-CONTRIBUTORS framings or deselected types.
+  """
+  contributors(type: ActorType!): [ContributorCollectionItem!]!
   """The date at which the entity was created."""
   createdDate: DateTime!
   """The ID of the entity"""
@@ -1868,6 +1950,10 @@ type CalloutSettingsContribution {
 type CalloutSettingsFraming {
   """Can comment to callout framing."""
   commentsEnabled: Boolean!
+  """
+  Configuration for a contributor-collection callout. Present only when framing.type = CONTRIBUTORS.
+  """
+  contributors: CalloutContributorsSettings
 }
 
 type CalloutsSet {
@@ -2165,6 +2251,37 @@ type Config {
   storage: StorageConfig!
 }
 
+type ContributorCollectionCounts {
+  organizations: Int!
+  users: Int!
+  virtualContributors: Int!
+}
+
+type ContributorCollectionItem {
+  avatarUrl: String
+  displayName: String!
+  id: UUID!
+  """
+  Location of the contributor; null for Virtual Contributors or when not readable.
+  """
+  location: ContributorLocation
+  """The role label for this contributor (lead/admin/member)."""
+  roleLabel: String
+  type: ActorType!
+  url: String
+}
+
+type ContributorLocation {
+  city: String
+  country: String
+  """
+  Whether the location has valid stored coordinates (geoLocation.isValid). City/country alone is false.
+  """
+  hasValidCoordinates: Boolean!
+  latitude: Float
+  longitude: Float
+}
+
 type Conversation {
   """The authorization rules for the entity"""
   authorization: Authorization
@@ -2294,6 +2411,19 @@ type CreateCalloutContributionDefaultsData {
   whiteboardContent: WhiteboardContent
 }
 
+type CreateCalloutContributorsSettingsData {
+  """The contributor types to include. At least one type is required."""
+  contributorTypes: [ActorType!]!
+  """
+  The default contributor type (one of contributorTypes). Defaults to the first selected type.
+  """
+  defaultContributorType: ActorType
+  """
+  The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
+  """
+  defaultView: ContributorCollectionView
+}
+
 type CreateCalloutData {
   classification: CreateClassificationData
   contributionDefaults: CreateCalloutContributionDefaultsData
@@ -2352,6 +2482,10 @@ type CreateCalloutSettingsData {
 type CreateCalloutSettingsFramingData {
   """Can comment to callout framing."""
   commentsEnabled: Boolean
+  """
+  Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
+  """
+  contributors: CreateCalloutContributorsSettingsData
 }
 
 type CreateCalloutsSetData {
@@ -2405,6 +2539,10 @@ type CreateInnovationFlowStateData {
 type CreateInnovationFlowStateSettingsData {
   """The flag to set."""
   allowNewCallouts: Boolean!
+  """
+  Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
+  """
+  visible: Boolean
 }
 
 type CreateLinkData {
@@ -2516,6 +2654,17 @@ type CredentialDefinition {
   resourceID: String!
   """The type for this CredentialDefinition"""
   type: String!
+}
+
+type DirectMessageDeliveryResult {
+  """
+  Set when status = SENT — the (existing or newly created) 1:1 conversation the message was delivered to.
+  """
+  conversationID: UUID
+  """The intended recipient."""
+  receiverID: UUID!
+  """The per-recipient delivery outcome."""
+  status: DirectMessageDeliveryStatus!
 }
 
 type Discussion {
@@ -2952,6 +3101,10 @@ type InnovationFlowState {
 type InnovationFlowStateSettings {
   """Whether new callouts can be added to this State."""
   allowNewCallouts: Boolean!
+  """
+  Whether this State/phase is shown in the member-facing navigation. Default true. UI-affordance only: it does NOT gate access to the phase content.
+  """
+  visible: Boolean!
 }
 
 type InnovationHub {
@@ -4048,6 +4201,10 @@ type Mutation {
   revokeLicensePlanFromAccount(planData: RevokeLicensePlanFromAccount!): Account!
   """Revokes the specified LicensePlan on a Space."""
   revokeLicensePlanFromSpace(planData: RevokeLicensePlanFromSpace!): Space!
+  """
+  Send a private (1:1) chat message to each of the given Users individually. Does NOT create a group conversation. Each recipient is processed independently and reported on; partial success is possible.
+  """
+  sendDirectMessageToUsers(messageData: SendDirectMessageToUsersInput!): [DirectMessageDeliveryResult!]!
   """Sends a reply to a message from the specified Room."""
   sendMessageReplyToRoom(messageData: RoomSendMessageReplyInput!): Message!
   """Send message to Community Leads."""
@@ -4086,6 +4243,10 @@ type Mutation {
   unsubscribeFromPushNotifications(subscriptionData: UnsubscribeFromPushNotificationsInput!): PushSubscription!
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
+  """
+  Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires platform-admin.
+  """
+  updateAssistantActorCapabilities(grantData: GrantAssistantActorCapabilitiesInput!): VirtualAssistant!
   """Update the baseline License Plan on the specified Account."""
   updateBaselineLicensePlanOnAccount(updateData: UpdateBaselineLicensePlanOnAccount!): Account!
   """Updates the specified CalendarEvent."""
@@ -4450,6 +4611,10 @@ type Platform {
   templatesManager: TemplatesManager
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """
+  Whether the current user may use the web AI assistant (the ACCESS_VIRTUAL_ASSISTANT privilege, 004-web-ai-assistant). client-web reads this to gate every assistant UI cue.
+  """
+  virtualAssistantAccess: Boolean!
   """The mappings of well-known Virtual Contributors to their UUIDs."""
   wellKnownVirtualContributors: PlatformWellKnownVirtualContributors!
 }
@@ -4542,6 +4707,10 @@ type PlatformAdminQueryResults {
     """Return only users with tags"""
     withTags: Boolean
   ): PaginatedUsers!
+  """
+  The singleton virtual-assistant actor, including its current admin capability grant and ID. This is only available to Platform Admins, and is the discovery path for updateAssistantActorCapabilities.
+  """
+  virtualAssistant: VirtualAssistant!
   """
   Retrieve all Virtual Contributors on the Platform. This is only available to Platform Admins.
   """
@@ -5039,6 +5208,10 @@ type Query {
   platform: Platform!
   """Allow looking up of information for Platform administration."""
   platformAdmin: PlatformAdminQueryResults!
+  """
+  The enumerable assistant capability surface (one per MCP tool), with each tool classified READ / WRITE_ADDITIVE / WRITE_DESTRUCTIVE.
+  """
+  platformCapabilities: [AssistantCapability!]!
   """Get the list of restricted space names."""
   restrictedSpaceNames: [String!]!
   """The roles that the specified Organization has."""
@@ -5892,6 +6065,10 @@ type SpaceSettingsPrivacy {
   allowPlatformSupportAsAdmin: Boolean!
   """The privacy mode for this Space"""
   mode: SpacePrivacyMode!
+  """
+  Controls who may read member-user information. Follows space visibility by default, or restricts it to members only. Absent is treated as follow-space-visibility.
+  """
+  userInformationVisibility: UserInformationVisibility
 }
 
 type SpaceSubscription {
@@ -6347,6 +6524,10 @@ type User implements ActorFull {
   id: UUID!
   """Can a message be sent to this User."""
   isContactable: Boolean!
+  """
+  Whether this User can be offered an email contact route (they enabled email contact). Exposes only the consent flag, never the email address.
+  """
+  isContactableViaEmail: Boolean!
   lastName: String!
   """A name identifier of the entity, unique within a given scope."""
   nameID: NameID!
@@ -6463,6 +6644,10 @@ type UserProfileSummary {
 }
 
 type UserSettings {
+  """
+  The AI assistant authority settings for this User (per-capability toggles).
+  """
+  assistant: UserSettingsAssistant!
   """The authorization rules for the entity"""
   authorization: Authorization
   """The communication settings for this User."""
@@ -6470,7 +6655,7 @@ type UserSettings {
   """The date at which the entity was created."""
   createdDate: DateTime!
   """
-  The design version this User has selected (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).
+  The design version this User has selected (1 = legacy design generation, deprecated and scheduled for removal; 2 = current default design generation; 3+ reserved for future generations).
   """
   designVersion: Int!
   """The home space settings for this User."""
@@ -6485,7 +6670,18 @@ type UserSettings {
   updatedDate: DateTime!
 }
 
+type UserSettingsAssistant {
+  """
+  Per-capability enable/disable toggles bounding what the assistant may do on behalf of this user (read-only by default).
+  """
+  enabledCapabilities: [AssistantCapabilityToggle!]!
+}
+
 type UserSettingsCommunication {
+  """
+  Allow other Users to be offered an email contact route to this User (using the account email; the address is never exposed). Default false.
+  """
+  allowOtherUsersToContactViaEmail: Boolean!
   """Allow Users to send messages to this User."""
   allowOtherUsersToSendMessages: Boolean!
 }
@@ -6646,6 +6842,29 @@ type VcInteraction {
   threadID: MessageID!
   """The actor ID (agent.id) of the Virtual Contributor"""
   virtualContributorID: String!
+}
+
+type VirtualAssistant implements ActorFull {
+  """The authorization rules for the Actor"""
+  authorization: Authorization
+  """
+  The admin per-capability grant governing system-invoked authority for this Virtual Assistant (default read-only).
+  """
+  capabilityGrant: [AssistantCapabilityToggle!]!
+  """The date at which the entity was created."""
+  createdDate: DateTime!
+  """The credentials held by this Actor"""
+  credentials: [Credential!]
+  """The ID of the Actor"""
+  id: UUID!
+  """A name identifier of the entity, unique within a given scope."""
+  nameID: NameID!
+  """The profile for this Actor."""
+  profile: Profile
+  """The type of Actor"""
+  type: ActorType!
+  """The date at which the entity was last updated."""
+  updatedDate: DateTime!
 }
 
 type VirtualContributor implements ActorFull {
@@ -7028,6 +7247,13 @@ input AssignUserGroupMemberInput {
   userID: UUID!
 }
 
+input AssistantCapabilityToggleInput {
+  """The capability (MCP tool name) this toggle controls."""
+  capability: String!
+  """Whether the capability is enabled."""
+  enabled: Boolean!
+}
+
 input CastPollVoteInput {
   """The ID of the Poll to vote on."""
   pollID: UUID!
@@ -7165,6 +7391,19 @@ input CreateCalloutContributionInput {
   whiteboard: CreateWhiteboardInput
 }
 
+input CreateCalloutContributorsSettingsInput {
+  """The contributor types to include. At least one type is required."""
+  contributorTypes: [ActorType!]!
+  """
+  The default contributor type (one of contributorTypes). Defaults to the first selected type.
+  """
+  defaultContributorType: ActorType
+  """
+  The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
+  """
+  defaultView: ContributorCollectionView
+}
+
 input CreateCalloutFramingInput {
   """Collabora document input. Required when type = COLLABORA_DOCUMENT."""
   collaboraDocument: CreateCollaboraDocumentInput
@@ -7234,6 +7473,10 @@ input CreateCalloutSettingsContributionInput {
 input CreateCalloutSettingsFramingInput {
   """Can comment to callout framing."""
   commentsEnabled: Boolean
+  """
+  Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
+  """
+  contributors: CreateCalloutContributorsSettingsInput
 }
 
 input CreateCalloutSettingsInput {
@@ -7336,6 +7579,10 @@ input CreateInnovationFlowStateInput {
 input CreateInnovationFlowStateSettingsInput {
   """The flag to set."""
   allowNewCallouts: Boolean!
+  """
+  Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
+  """
+  visible: Boolean
 }
 
 input CreateInnovationHubOnAccountInput {
@@ -7565,6 +7812,10 @@ input CreateSpaceSettingsPrivacyInput {
   allowPlatformSupportAsAdmin: Boolean
   """"""
   mode: SpacePrivacyMode
+  """
+  Controls who may read member-user information. Follows space visibility by default, or restricts it to members only.
+  """
+  userInformationVisibility: UserInformationVisibility
 }
 
 input CreateStateOnInnovationFlowInput {
@@ -7883,6 +8134,15 @@ input ForumCreateDiscussionInput {
   forumID: UUID!
   profile: CreateProfileInput!
   tags: [String!]
+}
+
+input GrantAssistantActorCapabilitiesInput {
+  """
+  Per-capability enable/disable toggles governing what the assistant may do system-invoked (default read-only).
+  """
+  enabledCapabilities: [AssistantCapabilityToggleInput!]!
+  """The VirtualAssistant actor whose admin grant is being set."""
+  virtualAssistantID: UUID!
 }
 
 input GrantAuthorizationCredentialInput {
@@ -8275,6 +8535,14 @@ input SearchInput {
   """Return results that satisfy these conditions."""
   filters: [SearchFilterInput!]
   """
+  When searching Callouts (COLLABORATION_TOOLS / CALLOUT), also match in the Callout framing resources (whiteboard, memo) and its contributions (post, whiteboard, memo). Any match folds up to the containing Callout, deduped, in calloutResults.
+  """
+  foldCalloutResources: Boolean = false
+  """
+  Restrict the search to a single flow state, identified by the InnovationFlowState UUID. The state UUID is globally unique and transitively identifies its Collaboration, so no separate CalloutsSet filter is needed. Default is all flow states.
+  """
+  searchInFlowStateFilter: UUID
+  """
   Restrict the search to only the specified Space. Default is all Spaces.
   """
   searchInSpaceFilter: UUID
@@ -8282,6 +8550,15 @@ input SearchInput {
   tagsetNames: [String!]
   """The terms to be searched for within this Space. Max 5."""
   terms: [String!]!
+}
+
+input SendDirectMessageToUsersInput {
+  """The message being sent to each recipient."""
+  message: String!
+  """
+  The Users (1..N) the message is sent to, each as an individual 1:1 chat. No group conversation is created.
+  """
+  receiverIDs: [UUID!]!
 }
 
 input SetDefaultCalloutTemplateOnInnovationFlowStateInput {
@@ -8443,6 +8720,19 @@ input UpdateCalloutContributionDefaultsInput {
   whiteboardContent: WhiteboardContent
 }
 
+input UpdateCalloutContributorsSettingsInput {
+  """When provided, replaces the selected contributor types (at least one)."""
+  contributorTypes: [ActorType!]
+  """
+  The default contributor type (one of contributorTypes). Defaults to the first selected type.
+  """
+  defaultContributorType: ActorType
+  """
+  The default display mode. Defaults to LIST; MAP requires a locatable contributor type.
+  """
+  defaultView: ContributorCollectionView
+}
+
 input UpdateCalloutEntityInput {
   classification: UpdateClassificationInput
   contributionDefaults: UpdateCalloutContributionDefaultsInput
@@ -8504,6 +8794,10 @@ input UpdateCalloutSettingsContributionInput {
 input UpdateCalloutSettingsFramingInput {
   """Can comment to callout framing."""
   commentsEnabled: Boolean
+  """
+  Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
+  """
+  contributors: UpdateCalloutContributorsSettingsInput
 }
 
 input UpdateCalloutSettingsInput {
@@ -8652,8 +8946,14 @@ input UpdateInnovationFlowStateInput {
 }
 
 input UpdateInnovationFlowStateSettingsInput {
-  """The flag to set."""
-  allowNewCallouts: Boolean!
+  """
+  Optional. Sets whether new callouts can be added to this State; omission leaves the stored value unchanged.
+  """
+  allowNewCallouts: Boolean
+  """
+  Optional. Sets whether the phase is shown in member-facing navigation; omission leaves the stored value unchanged.
+  """
+  visible: Boolean
 }
 
 input UpdateInnovationFlowStatesSortOrderInput {
@@ -8971,6 +9271,10 @@ input UpdateSpaceSettingsPrivacyInput {
   allowPlatformSupportAsAdmin: Boolean
   """"""
   mode: SpacePrivacyMode
+  """
+  Controls who may read member-user information. Follows space visibility by default, or restricts it to members only.
+  """
+  userInformationVisibility: UserInformationVisibility
 }
 
 input UpdateSubspacePinnedInput {
@@ -9061,16 +9365,29 @@ input UpdateUserPlatformSettingsInput {
   userID: String!
 }
 
+input UpdateUserSettingsAssistantInput {
+  """
+  Per-capability enable/disable toggles bounding what the assistant may do on behalf of this user.
+  """
+  enabledCapabilities: [AssistantCapabilityToggleInput!]
+}
+
 input UpdateUserSettingsCommunicationInput {
+  """
+  Allow other Users to be offered an email contact route to this User (using the account email; the address is never exposed).
+  """
+  allowOtherUsersToContactViaEmail: Boolean
   """Allow Users to send messages to this User."""
   allowOtherUsersToSendMessages: Boolean
 }
 
 input UpdateUserSettingsEntityInput {
+  """Settings related to the AI assistant authority for this User."""
+  assistant: UpdateUserSettingsAssistantInput
   """Settings related to this users Communication preferences."""
   communication: UpdateUserSettingsCommunicationInput
   """
-  Update the user's design version. Any integer accepted (1 = legacy design generation; 2 = current default design generation; 3+ reserved for future generations).
+  Update the user's design version. Any integer accepted (1 = legacy design generation, deprecated and scheduled for removal; 2 = current default design generation; 3+ reserved for future generations).
   """
   designVersion: Int
   """Settings related to Home Space."""

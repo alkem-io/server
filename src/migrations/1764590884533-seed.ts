@@ -395,6 +395,11 @@ export class Seed1764590884533 implements MigrationInterface {
         userPolicy: { minimum: 0, maximum: -1 },
       },
       {
+        name: 'platform-assistant-access',
+        credential: { type: 'assistant-access', resourceID: '' },
+        userPolicy: { minimum: 0, maximum: -1 },
+      },
+      {
         name: 'global-community-reader',
         credential: { type: 'global-community-reader', resourceID: '' },
         userPolicy: { minimum: 0, maximum: -1 },

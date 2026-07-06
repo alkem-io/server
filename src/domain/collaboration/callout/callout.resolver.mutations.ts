@@ -2,10 +2,14 @@ import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
 import { SubscriptionType } from '@common/enums/subscription.type';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
 import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -39,10 +43,12 @@ import { CurrentActor } from '@src/common/decorators';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { FileUpload, GraphQLUpload } from 'graphql-upload';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { ICalloutContribution } from '../callout-contribution/callout.contribution.interface';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { UpdateContributionCalloutsSortOrderInput } from '../callout-contribution/dto/callout.contribution.dto.update.callouts.sort.order';
+import { ICollaboraDocument } from '../collabora-document/collabora.document.interface';
 import { ImportCollaboraDocumentInput } from '../collabora-document/dto/collabora.document.dto.import';
 import { CollaborationLicenseService } from '../collaboration/collaboration.service.license';
 import { ILink } from '../link/link.interface';
@@ -57,6 +63,8 @@ import { UpdateCalloutVisibilityInput } from './dto/callout.dto.update.visibilit
 @Resolver()
 export class CalloutResolverMutations {
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: WinstonLogger,
     private readonly communityResolverService: CommunityResolverService,
     private readonly contributionReporter: ContributionReporterService,
     private readonly activityAdapter: ActivityAdapter,
@@ -99,13 +107,71 @@ export class CalloutResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('calloutData') calloutData: UpdateCalloutEntityInput
   ): Promise<ICallout> {
-    const callout = await this.calloutService.getCalloutOrFail(calloutData.ID);
+    const callout = await this.calloutService.getCalloutOrFail(calloutData.ID, {
+      relations: {
+        authorization: true,
+        framing: true,
+        calloutsSet: { authorization: true },
+      },
+    });
     this.authorizationService.grantAccessOrFail(
       actorContext,
       callout.authorization,
       AuthorizationPrivilege.UPDATE,
       `update callout: ${callout.id}`
     );
+
+    // CONTRIBUTORS framing is admin-only and collaboration-only for LIVE callouts
+    // (FR-004a/FR-004f, R5). Mirror the create guard on the update path so the
+    // restriction can't be bypassed by converting an existing callout — or one
+    // living in a non-COLLABORATION callouts set (e.g. a VC knowledge base) — to
+    // CONTRIBUTORS via updateCallout, which otherwise only checks the generic
+    // UPDATE privilege. The resulting type is the incoming framing type when
+    // provided, else the stored one (so editing an existing CONTRIBUTORS callout
+    // is gated too).
+    //
+    // Template callouts (callout.isTemplate) are EXEMPT: a standalone callout
+    // template has no calloutsSet at all (calloutsSet is null), and template
+    // callouts are governed by template-edit authorization (the UPDATE privilege
+    // checked above), not the live-callout admin/collaboration rules. Without
+    // this exemption, editing a CONTRIBUTORS callout template throws "only
+    // available on COLLABORATION callouts sets" because its calloutsSet is null.
+    const resultingFramingType =
+      calloutData.framing?.type ?? callout.framing?.type;
+    if (
+      !callout.isTemplate &&
+      resultingFramingType === CalloutFramingType.CONTRIBUTORS
+    ) {
+      if (callout.calloutsSet?.type !== CalloutsSetType.COLLABORATION) {
+        throw new ValidationException(
+          'CONTRIBUTORS framing is only available on COLLABORATION callouts sets.',
+          LogContext.COLLABORATION
+        );
+      }
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        callout.calloutsSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        `update CONTRIBUTORS callout (admin-only) on callouts Set: ${callout.calloutsSet.id}`
+      );
+    }
+
+    // A CONTRIBUTORS callout TEMPLATE's framing may be edited (its contributor
+    // settings — types, list/map) or removed (set to NONE), but MUST NOT be
+    // switched to another framing type: templates only support keeping or
+    // clearing the contributors framing.
+    if (
+      callout.isTemplate &&
+      callout.framing?.type === CalloutFramingType.CONTRIBUTORS &&
+      calloutData.framing?.type != null &&
+      calloutData.framing.type !== CalloutFramingType.CONTRIBUTORS &&
+      calloutData.framing.type !== CalloutFramingType.NONE
+    ) {
+      throw new ValidationException(
+        'A CONTRIBUTORS callout template framing can only be kept or removed (set to NONE), not changed to another framing type.',
+        LogContext.COLLABORATION
+      );
+    }
 
     const updatedCallout = await this.calloutService.updateCallout(
       callout,
@@ -427,6 +493,21 @@ export class CalloutResolverMutations {
           );
         }
       }
+
+      if (
+        contributionData.collaboraDocument &&
+        contribution.collaboraDocument
+      ) {
+        if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
+          this.processActivityCollaboraDocumentCreated(
+            callout,
+            contribution,
+            contribution.collaboraDocument,
+            levelZeroSpaceID,
+            actorContext
+          );
+        }
+      }
     }
 
     return await this.calloutContributionService.getCalloutContributionOrFail(
@@ -522,6 +603,42 @@ export class CalloutResolverMutations {
         spaceSettings
       );
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    // Lifecycle analytics (US4 / FR-013): record the upload as a single-actor
+    // COLLABORA_DOCUMENT_UPLOADED event for the uploading user. Resolve the
+    // level-zero space by the freshly-created CollaboraDocument the same way
+    // the open path does (via the community resolver), then report.
+    // Best-effort (FR-008): the contribution is already persisted above, so a
+    // failure here must NOT fail the import — that would prompt a client retry
+    // and a duplicate document. Catch and log; never re-throw.
+    if (contribution.collaboraDocument) {
+      try {
+        const collaboraDocument = contribution.collaboraDocument;
+        const community =
+          await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
+            collaboraDocument.id
+          );
+        const levelZeroSpaceID =
+          await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+            community.id
+          );
+        this.contributionReporter.calloutCollaboraDocumentUploaded(
+          {
+            id: collaboraDocument.id,
+            name:
+              collaboraDocument.profile?.displayName ?? collaboraDocument.id,
+            space: levelZeroSpaceID,
+          },
+          actorContext
+        );
+      } catch (e: any) {
+        this.logger.error(
+          `Failed to report COLLABORA_DOCUMENT_UPLOADED analytics for contribution ${contribution.id}: ${e?.message}`,
+          e?.stack,
+          LogContext.COLLABORATION
+        );
+      }
+    }
 
     return await this.calloutContributionService.getCalloutContributionOrFail(
       contribution.id
@@ -660,6 +777,34 @@ export class CalloutResolverMutations {
       {
         id: memo.id,
         name: memo.nameID,
+        space: levelZeroSpaceID,
+      },
+      actorContext
+    );
+  }
+
+  private async processActivityCollaboraDocumentCreated(
+    callout: ICallout,
+    contribution: ICalloutContribution,
+    collaboraDocument: ICollaboraDocument,
+    levelZeroSpaceID: string,
+    actorContext: ActorContext
+  ) {
+    const notificationInput: NotificationInputCollaborationCalloutContributionCreated =
+      {
+        contribution: contribution,
+        callout: callout,
+        contributionType: CalloutContributionType.COLLABORA_DOCUMENT,
+        triggeredBy: actorContext.actorID,
+      };
+    await this.notificationAdapterSpace.spaceCollaborationCalloutContributionCreated(
+      notificationInput
+    );
+
+    this.contributionReporter.calloutCollaboraDocumentCreated(
+      {
+        id: collaboraDocument.id,
+        name: collaboraDocument.profile?.displayName ?? collaboraDocument.id,
         space: levelZeroSpaceID,
       },
       actorContext

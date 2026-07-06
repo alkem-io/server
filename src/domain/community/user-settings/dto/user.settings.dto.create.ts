@@ -1,6 +1,7 @@
 import { Field, InputType, Int } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
 import { IsInt, IsOptional, ValidateNested } from 'class-validator';
+import { CreateUserSettingsAssistantInput } from './user.settings.assistant.dto.create';
 import { CreateUserSettingsCommunicationInput } from './user.settings.communications.dto.create';
 import { CreateUserSettingsHomeSpaceInput } from './user.settings.home.space.dto.create';
 import { CreateUserSettingsNotificationInput } from './user.settings.notification.dto.create';
@@ -15,6 +16,15 @@ export class CreateUserSettingsInput {
   @ValidateNested()
   @Type(() => CreateUserSettingsPrivacyInput)
   privacy?: CreateUserSettingsPrivacyInput;
+
+  @Field(() => CreateUserSettingsAssistantInput, {
+    nullable: true,
+    description: 'Initial AI assistant authority settings for this User.',
+  })
+  @IsOptional()
+  @ValidateNested()
+  @Type(() => CreateUserSettingsAssistantInput)
+  assistant?: CreateUserSettingsAssistantInput;
 
   @Field(() => CreateUserSettingsCommunicationInput, {
     nullable: true,
@@ -43,7 +53,7 @@ export class CreateUserSettingsInput {
   @Field(() => Int, {
     nullable: true,
     description:
-      'Initial design version for this User. Defaults to 2 (the current default design generation) when omitted. Pass 1 to opt into the legacy design.',
+      'Initial design version for this User. Defaults to 2 (the current default design generation) when omitted. Pass 1 to opt into the legacy design (deprecated; scheduled for removal).',
   })
   @IsOptional()
   @IsInt()

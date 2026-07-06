@@ -1,3 +1,18 @@
+export type McpConfig = {
+  enabled: boolean;
+  api_key_enabled: boolean;
+  sse: {
+    heartbeat_interval_ms: number;
+    connection_timeout_ms: number;
+  };
+  rate_limit: {
+    requests_per_minute: number;
+  };
+  resources: {
+    max_response_items: number;
+  };
+};
+
 export type AlkemioConfig = {
   authorization: {
     chunk: number;
@@ -5,6 +20,7 @@ export type AlkemioConfig = {
   endpoints: {
     client_web: string;
   };
+  mcp: McpConfig;
   hosting: {
     environment: string;
     port: number;
@@ -51,7 +67,6 @@ export type AlkemioConfig = {
   };
   identity: {
     authentication: {
-      api_access_enabled: boolean;
       cache_ttl: number;
       providers: {
         ory: {
@@ -60,13 +75,34 @@ export type AlkemioConfig = {
           kratos_public_base_url: string;
           kratos_public_base_url_server: string;
           kratos_admin_base_url_server: string;
-          earliest_possible_extend: number;
           admin_service_account: {
             username: string;
             password: string;
           };
           session_cookie_name: string;
-          session_extend_enabled: boolean;
+        };
+        oidc: {
+          issuer_url: string;
+          jwks_url: string;
+          web_client_id: string;
+          web_redirect_uri: string;
+          bearer_aud_allow_list: string;
+          refresh_leeway_s: number;
+          pre_auth_cookie_signing_key: string;
+          state_hmac_key: string;
+          session_signing_key: string;
+          cookie: {
+            name: string;
+            domain: string;
+            secure: boolean;
+            idle_ttl_s: number;
+            absolute_ttl_s: number;
+          };
+        };
+        non_interactive_login: {
+          enabled: boolean;
+          signing_key: string;
+          token_ttl_s: number;
         };
       };
     };
@@ -163,6 +199,12 @@ export type AlkemioConfig = {
         port: number;
         user: string;
         password: string;
+      };
+      auth_reset: {
+        // Queue the auth/license reset events flow over. Publisher (normal
+        // server) and the dedicated worker (src/main.worker.ts) MUST agree on
+        // this name.
+        queue: string;
       };
       event_bus: {
         exchange: string;

@@ -1,6 +1,7 @@
 import { ActorContextModule } from '@core/actor-context/actor.context.module';
-import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
+import { CollaboraDocumentModule } from '@domain/collaboration/collabora-document/collabora.document.module';
 import { MemoModule } from '@domain/common/memo';
 import { Module } from '@nestjs/common';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
@@ -11,9 +12,10 @@ import { CollaborativeDocumentIntegrationService } from './collaborative-documen
 @Module({
   imports: [
     AuthorizationModule,
-    AuthenticationModule,
     ActorContextModule,
+    ActorLookupModule,
     MemoModule,
+    CollaboraDocumentModule,
     ContributionReporterModule,
     EntityResolverModule,
   ],

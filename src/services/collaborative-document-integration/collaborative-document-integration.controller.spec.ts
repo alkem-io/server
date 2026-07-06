@@ -8,8 +8,8 @@ import {
   FetchInputData,
   InfoInputData,
   MemoContributionsInputData,
+  OfficeDocumentContributionsInputData,
   SaveInputData,
-  WhoInputData,
 } from './inputs';
 import { HealthCheckOutputData } from './outputs';
 
@@ -26,6 +26,8 @@ describe('CollaborativeDocumentIntegrationController', () => {
     save: Mock;
     fetch: Mock;
     memoContributions: Mock;
+    officeDocumentContributions: Mock;
+    officeDocumentViews: Mock;
   };
 
   const mockRmqContext = {
@@ -71,20 +73,6 @@ describe('CollaborativeDocumentIntegrationController', () => {
 
       expect(integrationService.info).toHaveBeenCalledWith(payload);
       expect(result).toEqual(expected);
-    });
-  });
-
-  describe('who', () => {
-    it('should delegate to integrationService.who and return its result', async () => {
-      const payload = {
-        auth: { cookie: 'session=abc' },
-      } as WhoInputData;
-      integrationService.who.mockResolvedValue('user-42');
-
-      const result = await controller.who(payload, mockRmqContext);
-
-      expect(integrationService.who).toHaveBeenCalledWith(payload);
-      expect(result).toBe('user-42');
     });
   });
 
@@ -140,6 +128,42 @@ describe('CollaborativeDocumentIntegrationController', () => {
       await controller.memoContribution(payload, mockRmqContext);
 
       expect(integrationService.memoContributions).toHaveBeenCalledWith(
+        payload
+      );
+    });
+  });
+
+  describe('officeDocumentContribution', () => {
+    it('should delegate to integrationService.officeDocumentContributions', async () => {
+      const payload = {
+        documentId: 'doc-1',
+        writeActors: ['user-1'],
+        readonlyActors: ['user-2'],
+      } as OfficeDocumentContributionsInputData;
+      integrationService.officeDocumentContributions.mockResolvedValue(
+        undefined
+      );
+
+      await controller.officeDocumentContribution(payload, mockRmqContext);
+
+      expect(
+        integrationService.officeDocumentContributions
+      ).toHaveBeenCalledWith(payload);
+    });
+  });
+
+  describe('officeDocumentView', () => {
+    it('should delegate to integrationService.officeDocumentViews', async () => {
+      const payload = {
+        documentId: 'doc-1',
+        writeActors: ['user-1'],
+        readonlyActors: ['user-2'],
+      } as OfficeDocumentContributionsInputData;
+      integrationService.officeDocumentViews.mockResolvedValue(undefined);
+
+      await controller.officeDocumentView(payload, mockRmqContext);
+
+      expect(integrationService.officeDocumentViews).toHaveBeenCalledWith(
         payload
       );
     });

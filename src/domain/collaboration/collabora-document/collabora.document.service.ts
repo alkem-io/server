@@ -240,9 +240,31 @@ export class CollaboraDocumentService {
     return collaboraDocument;
   }
 
+  /**
+   * Reverse-resolve a CollaboraDocument by the id of its backing storage
+   * `Document` (= `access_tokens.file_id` minted at `getEditorUrl` for
+   * `collaboraDocument.document.id`). The Collabora contribution event carries
+   * the storage `Document` id — NOT the `CollaboraDocument` id — so the
+   * consumer must bridge it back to the domain entity before reporting.
+   * Returns `null` when no CollaboraDocument is backed by that storage id
+   * (deleted/unknown document) so the caller can log-and-discard (FR-008).
+   */
+  public async getCollaboraDocumentByStorageDocumentId(
+    storageDocumentID: string,
+    options?: FindOneOptions<CollaboraDocument>
+  ): Promise<ICollaboraDocument | null> {
+    return this.collaboraDocumentRepository.findOne({
+      ...options,
+      // `where` last so a caller-supplied `options` cannot override the
+      // storage-document filter this method's contract guarantees.
+      where: { document: { id: storageDocumentID } },
+    });
+  }
+
   public async getEditorUrl(
     collaboraDocumentID: string,
-    actorJWT: string
+    actorID: string,
+    actorName?: string
   ): Promise<{ editorUrl: string; accessTokenTTL: number }> {
     const collaboraDocument = await this.getCollaboraDocumentOrFail(
       collaboraDocumentID,
@@ -261,7 +283,8 @@ export class CollaboraDocumentService {
 
     const result = await this.wopiServiceAdapter.issueToken(
       collaboraDocument.document.id,
-      actorJWT
+      actorID,
+      actorName
     );
 
     return {

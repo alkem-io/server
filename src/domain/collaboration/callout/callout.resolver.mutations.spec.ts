@@ -1,21 +1,31 @@
 import { SUBSCRIPTION_CALLOUT_POST_CREATED } from '@common/constants';
 import { AuthorizationPrivilege } from '@common/enums';
 import { CalloutAllowedActors } from '@common/enums/callout.allowed.contributors';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
 import { CalloutsSetType } from '@common/enums/callouts.set.type';
-import { RelationshipNotFoundException } from '@common/exceptions';
+import {
+  RelationshipNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { CalloutClosedException } from '@common/exceptions/callout/callout.closed.exception';
+import { streamToBuffer } from '@common/utils/file.util';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
+import { Readable } from 'stream';
 import { CalloutContributionService } from '../callout-contribution/callout.contribution.service';
 import { CalloutContributionAuthorizationService } from '../callout-contribution/callout.contribution.service.authorization';
 import { CalloutResolverMutations } from './callout.resolver.mutations';
 import { CalloutService } from './callout.service';
 import { CalloutAuthorizationService } from './callout.service.authorization';
+
+vi.mock('@common/utils/file.util', () => ({
+  streamToBuffer: vi.fn().mockResolvedValue(Buffer.from('test')),
+}));
 
 describe('CalloutResolverMutations', () => {
   let resolver: CalloutResolverMutations;
@@ -28,6 +38,11 @@ describe('CalloutResolverMutations', () => {
 
   beforeEach(async () => {
     vi.restoreAllMocks();
+
+    // restoreAllMocks() above resets the factory mock for file.util, which would
+    // let the real streamToBuffer run against the fake upload stream. Re-establish
+    // the resolved buffer so importCollaboraDocument never touches a real stream.
+    vi.mocked(streamToBuffer).mockResolvedValue(Buffer.from('test'));
 
     const module: TestingModule = await Test.createTestingModule({
       providers: [
@@ -128,6 +143,157 @@ describe('CalloutResolverMutations', () => {
         calloutAuthorizationService.applyAuthorizationPolicy
       ).toHaveBeenCalled();
       expect(authorizationPolicyService.saveAll).toHaveBeenCalled();
+    });
+
+    // The CONTRIBUTORS framing guard must hold on the UPDATE path too, not just
+    // create — otherwise the admin-only / collaboration-only restriction
+    // (FR-004a/FR-004f) is bypassable by converting a callout via updateCallout.
+    describe('CONTRIBUTORS framing guard', () => {
+      it('rejects converting a callout to CONTRIBUTORS in a non-COLLABORATION callouts set', async () => {
+        const callout = {
+          id: 'callout-1',
+          authorization: { id: 'auth-1' },
+          framing: { type: CalloutFramingType.NONE },
+          calloutsSet: {
+            type: CalloutsSetType.KNOWLEDGE_BASE,
+            authorization: { id: 'cs-auth' },
+          },
+        } as any;
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+        const actorContext = { actorID: 'user-1' } as any;
+
+        await expect(
+          resolver.updateCallout(actorContext, {
+            ID: 'callout-1',
+            framing: { type: CalloutFramingType.CONTRIBUTORS },
+          } as any)
+        ).rejects.toThrow(ValidationException);
+        expect(calloutService.updateCallout).not.toHaveBeenCalled();
+      });
+
+      it('requires the CREATE (admin) privilege to update/convert to CONTRIBUTORS even with UPDATE rights', async () => {
+        const callout = {
+          id: 'callout-1',
+          authorization: { id: 'auth-1' },
+          framing: { type: CalloutFramingType.NONE },
+          calloutsSet: {
+            type: CalloutsSetType.COLLABORATION,
+            authorization: { id: 'cs-auth' },
+          },
+        } as any;
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+        // First call (the generic UPDATE on the callout) passes; the second call
+        // (the admin CREATE on the callouts set) throws.
+        vi.mocked(authorizationService.grantAccessOrFail)
+          .mockImplementationOnce(() => undefined as any)
+          .mockImplementationOnce(() => {
+            throw new ValidationException('forbidden', 'collaboration' as any);
+          });
+
+        const actorContext = { actorID: 'member-1' } as any;
+
+        await expect(
+          resolver.updateCallout(actorContext, {
+            ID: 'callout-1',
+            framing: { type: CalloutFramingType.CONTRIBUTORS },
+          } as any)
+        ).rejects.toThrow();
+
+        expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+          actorContext,
+          callout.calloutsSet.authorization,
+          AuthorizationPrivilege.CREATE,
+          expect.any(String)
+        );
+        expect(calloutService.updateCallout).not.toHaveBeenCalled();
+      });
+    });
+
+    // A CONTRIBUTORS callout TEMPLATE has no calloutsSet, so it must be EXEMPT
+    // from the collaboration-only / admin-CREATE guard — its settings can be
+    // edited and the framing removed (→ NONE), but it must not be switched to
+    // another framing type.
+    describe('CONTRIBUTORS framing on templates', () => {
+      const setupUpdateSuccess = (callout: any) => {
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+        vi.mocked(calloutService.updateCallout).mockResolvedValue(callout);
+        const roomResolverService = (resolver as any).roomResolverService;
+        vi.mocked(
+          roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+        ).mockResolvedValue({
+          roleSet: { id: 'rs-1' },
+          platformRolesAccess: { roles: [] },
+        });
+        vi.mocked(
+          calloutAuthorizationService.applyAuthorizationPolicy
+        ).mockResolvedValue([{ id: 'updated-auth' }] as any);
+      };
+
+      it('allows editing a CONTRIBUTORS callout template (no calloutsSet) — no collaboration/admin guard', async () => {
+        const callout = {
+          id: 'tmpl-1',
+          isTemplate: true,
+          authorization: { id: 'auth-1' },
+          framing: { type: CalloutFramingType.CONTRIBUTORS },
+          // standalone callout template → no calloutsSet
+        } as any;
+        setupUpdateSuccess(callout);
+
+        await resolver.updateCallout(
+          { actorID: 'u1' } as any,
+          {
+            ID: 'tmpl-1',
+            settings: {
+              framing: { contributors: { contributorTypes: ['organization'] } },
+            },
+          } as any
+        );
+
+        expect(calloutService.updateCallout).toHaveBeenCalled();
+      });
+
+      it('allows removing the framing on a template (CONTRIBUTORS → NONE)', async () => {
+        const callout = {
+          id: 'tmpl-1',
+          isTemplate: true,
+          authorization: { id: 'auth-1' },
+          framing: { type: CalloutFramingType.CONTRIBUTORS },
+        } as any;
+        setupUpdateSuccess(callout);
+
+        await resolver.updateCallout(
+          { actorID: 'u1' } as any,
+          {
+            ID: 'tmpl-1',
+            framing: { type: CalloutFramingType.NONE },
+          } as any
+        );
+
+        expect(calloutService.updateCallout).toHaveBeenCalled();
+      });
+
+      it('rejects switching a CONTRIBUTORS template framing to another type', async () => {
+        const callout = {
+          id: 'tmpl-1',
+          isTemplate: true,
+          authorization: { id: 'auth-1' },
+          framing: { type: CalloutFramingType.CONTRIBUTORS },
+        } as any;
+        vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+
+        await expect(
+          resolver.updateCallout(
+            { actorID: 'u1' } as any,
+            {
+              ID: 'tmpl-1',
+              framing: { type: CalloutFramingType.WHITEBOARD },
+            } as any
+          )
+        ).rejects.toThrow(ValidationException);
+        expect(calloutService.updateCallout).not.toHaveBeenCalled();
+      });
     });
   });
 
@@ -304,6 +470,259 @@ describe('CalloutResolverMutations', () => {
           calloutID: 'callout-1',
         } as any)
       ).rejects.toThrow(CalloutClosedException);
+    });
+
+    const setupCollaboraCreateHappyPath = (visibility: CalloutVisibility) => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+        calloutsSet: { id: 'cs-1', type: CalloutsSetType.COLLABORATION },
+        settings: {
+          contribution: {
+            enabled: true,
+            canAddContributions: CalloutAllowedActors.MEMBERS,
+          },
+          visibility,
+        },
+      } as any;
+      const contribution = {
+        id: 'contrib-1',
+        collaboraDocument: {
+          id: 'collab-doc-1',
+          profile: { displayName: 'My Spreadsheet' },
+        },
+      } as any;
+
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+      vi.mocked(calloutService.createContributionOnCallout).mockResolvedValue(
+        contribution
+      );
+
+      const roomResolverService = (resolver as any).roomResolverService;
+      vi.mocked(
+        roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+      ).mockResolvedValue({
+        roleSet: { id: 'rs-1' },
+        platformRolesAccess: { roles: [] },
+        spaceSettings: {},
+      });
+
+      vi.mocked(_calloutContributionService.save).mockResolvedValue(
+        contribution
+      );
+      vi.mocked(
+        _calloutContributionService.materializeCalloutContributionContent
+      ).mockResolvedValue(undefined as any);
+      vi.mocked(
+        _calloutContributionService.getStorageBucketForContribution
+      ).mockResolvedValue({ id: 'bucket-1' } as any);
+      vi.mocked(
+        _contributionAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      vi.mocked(
+        _calloutContributionService.getCalloutContributionOrFail
+      ).mockResolvedValue(contribution);
+
+      const communityResolverService = (resolver as any)
+        .communityResolverService;
+      vi.mocked(
+        communityResolverService.getLevelZeroSpaceIdForCalloutsSet
+      ).mockResolvedValue('space-root');
+
+      return { callout, contribution };
+    };
+
+    it('should report COLLABORA_DOCUMENT_CREATED when the callout is PUBLISHED', async () => {
+      setupCollaboraCreateHappyPath(CalloutVisibility.PUBLISHED);
+      const contributionReporter = (resolver as any).contributionReporter;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await resolver.createContributionOnCallout(actorContext, {
+        calloutID: 'callout-1',
+        type: 'collabora_document',
+        collaboraDocument: {},
+      } as any);
+
+      expect(
+        contributionReporter.calloutCollaboraDocumentCreated
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'collab-doc-1',
+          name: 'My Spreadsheet',
+          space: 'space-root',
+        }),
+        actorContext
+      );
+    });
+
+    it('should NOT report COLLABORA_DOCUMENT_CREATED when the callout is DRAFT', async () => {
+      setupCollaboraCreateHappyPath(CalloutVisibility.DRAFT);
+      const contributionReporter = (resolver as any).contributionReporter;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await resolver.createContributionOnCallout(actorContext, {
+        calloutID: 'callout-1',
+        type: 'collabora_document',
+        collaboraDocument: {},
+      } as any);
+
+      expect(
+        contributionReporter.calloutCollaboraDocumentCreated
+      ).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('importCollaboraDocument', () => {
+    it('should report COLLABORA_DOCUMENT_UPLOADED for the uploading actor', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+        settings: {
+          contribution: {
+            enabled: true,
+            canAddContributions: CalloutAllowedActors.MEMBERS,
+          },
+        },
+      } as any;
+      const contribution = {
+        id: 'contrib-1',
+        collaboraDocument: {
+          id: 'collab-doc-1',
+          profile: { displayName: 'Imported.docx' },
+        },
+      } as any;
+
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+      vi.mocked(
+        calloutService.importCollaboraDocumentToCallout
+      ).mockResolvedValue(contribution);
+
+      const configService = (resolver as any).configService;
+      vi.mocked(configService.get).mockReturnValue(1000);
+
+      const roomResolverService = (resolver as any).roomResolverService;
+      vi.mocked(
+        roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+      ).mockResolvedValue({
+        roleSet: { id: 'rs-1' },
+        platformRolesAccess: { roles: [] },
+        spaceSettings: {},
+      });
+
+      vi.mocked(_calloutContributionService.save).mockResolvedValue(
+        contribution
+      );
+      vi.mocked(
+        _contributionAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      vi.mocked(
+        _calloutContributionService.getCalloutContributionOrFail
+      ).mockResolvedValue(contribution);
+
+      const communityResolverService = (resolver as any)
+        .communityResolverService;
+      vi.mocked(
+        communityResolverService.getCommunityForCollaboraDocumentOrFail
+      ).mockResolvedValue({ id: 'community-1' } as any);
+      vi.mocked(
+        communityResolverService.getLevelZeroSpaceIdForCommunity
+      ).mockResolvedValue('space-root');
+
+      const contributionReporter = (resolver as any).contributionReporter;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await resolver.importCollaboraDocument(
+        actorContext,
+        { calloutID: 'callout-1' } as any,
+        {
+          createReadStream: () => Readable.from([Buffer.from('test')]),
+          filename: 'Imported.docx',
+          mimetype: 'application/octet-stream',
+        } as any
+      );
+
+      expect(
+        contributionReporter.calloutCollaboraDocumentUploaded
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({
+          id: 'collab-doc-1',
+          name: 'Imported.docx',
+          space: 'space-root',
+        }),
+        actorContext
+      );
+    });
+
+    it('should still return the persisted contribution when analytics reporting fails', async () => {
+      const callout = {
+        id: 'callout-1',
+        authorization: { id: 'auth-1' },
+        settings: {
+          contribution: {
+            enabled: true,
+            canAddContributions: CalloutAllowedActors.MEMBERS,
+          },
+        },
+      } as any;
+      const contribution = {
+        id: 'contrib-1',
+        collaboraDocument: {
+          id: 'collab-doc-1',
+          profile: { displayName: 'Imported.docx' },
+        },
+      } as any;
+
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(authorizationService.isAccessGranted).mockReturnValue(true);
+      vi.mocked(
+        calloutService.importCollaboraDocumentToCallout
+      ).mockResolvedValue(contribution);
+
+      const configService = (resolver as any).configService;
+      vi.mocked(configService.get).mockReturnValue(1000);
+
+      const roomResolverService = (resolver as any).roomResolverService;
+      vi.mocked(
+        roomResolverService.getRoleSetAndPlatformRolesWithAccessForCallout
+      ).mockResolvedValue({
+        roleSet: { id: 'rs-1' },
+        platformRolesAccess: { roles: [] },
+        spaceSettings: {},
+      });
+
+      vi.mocked(_calloutContributionService.save).mockResolvedValue(
+        contribution
+      );
+      vi.mocked(
+        _contributionAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      vi.mocked(
+        _calloutContributionService.getCalloutContributionOrFail
+      ).mockResolvedValue(contribution);
+
+      // analytics resolution blows up after the contribution is persisted
+      const communityResolverService = (resolver as any)
+        .communityResolverService;
+      vi.mocked(
+        communityResolverService.getCommunityForCollaboraDocumentOrFail
+      ).mockRejectedValue(new Error('community resolution failed'));
+
+      const actorContext = { actorID: 'user-1' } as any;
+
+      const result = await resolver.importCollaboraDocument(
+        actorContext,
+        { calloutID: 'callout-1' } as any,
+        {
+          createReadStream: () => Readable.from([Buffer.from('test')]),
+          filename: 'Imported.docx',
+          mimetype: 'application/octet-stream',
+        } as any
+      );
+
+      // the persisted contribution is returned; analytics failure is swallowed
+      expect(result).toBe(contribution);
     });
   });
 

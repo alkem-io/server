@@ -1,4 +1,5 @@
 import { LogContext } from '@common/enums';
+import { HEADER_ACTOR_ID } from '@core/auth/oidc/constants';
 import { HttpService } from '@nestjs/axios';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
@@ -34,12 +35,16 @@ export class WopiServiceAdapter {
 
   /**
    * Request a WOPI access token for a document.
-   * Forwards the actor's JWT for Oathkeeper authentication on the WOPI service.
+   * This is a cluster-internal call that bypasses the Traefik gateway, so the
+   * adapter itself stamps the actor identity the WOPI service trusts via its
+   * X-Alkemio-Actor-Id header (the gateway's alkemio-resolve forwardAuth does
+   * the same for external callers).
    * Returns a ready-to-use editorUrl (constructed by the WOPI service).
    */
   async issueToken(
     documentId: string,
-    actorJWT: string
+    actorID: string,
+    actorName?: string
   ): Promise<WopiTokenResult> {
     const url = `${this.baseUrl}/wopi/token`;
 
@@ -51,10 +56,14 @@ export class WopiServiceAdapter {
     const request$ = this.httpService
       .post<WopiTokenResult>(
         url,
-        { documentId },
+        // actorName is sent in the body (UTF-8, native) rather than a header
+        // so arbitrary-Unicode names need no encoding. The WOPI service maps it
+        // to the WOPI CheckFileInfo UserFriendlyName. Omitted when unknown
+        // (e.g. anonymous), letting the WOPI service keep its own fallback.
+        { documentId, actorName },
         {
           headers: {
-            Authorization: `Bearer ${actorJWT}`,
+            [HEADER_ACTOR_ID]: actorID,
             'Content-Type': 'application/json',
           },
         }

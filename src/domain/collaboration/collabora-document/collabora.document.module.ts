@@ -1,4 +1,5 @@
 import { AuthorizationModule } from '@core/authorization/authorization.module';
+import { ActorLookupModule } from '@domain/actor/actor-lookup/actor.lookup.module';
 import { AuthorizationPolicyModule } from '@domain/common/authorization-policy/authorization.policy.module';
 import { ProfileModule } from '@domain/common/profile/profile.module';
 import { DocumentModule } from '@domain/storage/document/document.module';
@@ -8,6 +9,8 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
 import { WopiServiceAdapterModule } from '@services/adapters/wopi-service-adapter/wopi.service.adapter.module';
+import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { CollaboraDocument } from './collabora.document.entity';
 import { CollaboraDocumentResolverFields } from './collabora.document.resolver.fields';
 import { CollaboraDocumentResolverMutations } from './collabora.document.resolver.mutations';
@@ -18,6 +21,7 @@ import { CollaboraDocumentAuthorizationService } from './collabora.document.serv
 @Module({
   imports: [
     AuthorizationModule,
+    ActorLookupModule,
     AuthorizationPolicyModule,
     DocumentModule,
     ProfileModule,
@@ -25,6 +29,8 @@ import { CollaboraDocumentAuthorizationService } from './collabora.document.serv
     StorageBucketModule,
     WopiServiceAdapterModule,
     FileServiceAdapterModule,
+    ContributionReporterModule,
+    EntityResolverModule,
     TypeOrmModule.forFeature([CollaboraDocument]),
   ],
   providers: [

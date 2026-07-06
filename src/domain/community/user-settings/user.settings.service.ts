@@ -33,6 +33,9 @@ export class UserSettingsService {
       privacy: settingsData.privacy,
       notification: settingsData.notification,
       homeSpace: settingsData.homeSpace,
+      assistant: {
+        enabledCapabilities: settingsData.assistant?.enabledCapabilities ?? [],
+      },
       designVersion:
         settingsData.designVersion ?? DESIGN_VERSION_CURRENT_DEFAULT,
     });
@@ -76,6 +79,31 @@ export class UserSettingsService {
         settings.communication.allowOtherUsersToSendMessages =
           updateData.communication.allowOtherUsersToSendMessages;
       }
+      if (
+        updateData.communication.allowOtherUsersToContactViaEmail !== undefined
+      ) {
+        settings.communication.allowOtherUsersToContactViaEmail =
+          updateData.communication.allowOtherUsersToContactViaEmail;
+      }
+    }
+
+    // Assistant authority (FR-018): when enabledCapabilities is provided it
+    // replaces the user's toggle set. Absence of a capability from the set means
+    // disabled (the host gate treats missing/false identically). Never widened
+    // beyond the user's privileges — that bound is enforced structurally at the
+    // host gate, not here. See contracts/assistant-authority.md §2.
+    if (
+      updateData.assistant &&
+      updateData.assistant.enabledCapabilities !== undefined
+    ) {
+      settings.assistant = {
+        enabledCapabilities: updateData.assistant.enabledCapabilities.map(
+          toggle => ({
+            capability: toggle.capability,
+            enabled: toggle.enabled,
+          })
+        ),
+      };
     }
     const notificationPlatformData = updateData.notification?.platform;
     if (notificationPlatformData) {

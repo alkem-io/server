@@ -8,6 +8,8 @@ import {
   platformMetadataQuery,
   spacesQuery,
 } from '@config/graphql';
+import { NonInteractiveLoginModule } from '@core/auth/non-interactive-login/non-interactive-login.module';
+import { OidcModule } from '@core/auth/oidc/oidc.module';
 import { AuthenticationModule } from '@core/authentication/authentication.module';
 import { AuthorizationModule } from '@core/authorization/authorization.module';
 import { GraphqlGuardModule } from '@core/authorization/graphql.guard.module';
@@ -19,6 +21,7 @@ import {
   HttpExceptionFilter,
   UnhandledExceptionFilter,
 } from '@core/error-handling';
+import { HealthModule } from '@core/health/health.module';
 import { AuthInterceptor } from '@core/interceptors';
 import { RequestLoggerMiddleware } from '@core/middleware/request.logger.middleware';
 import { ActivityFeedModule } from '@domain/activity-feed';
@@ -28,6 +31,7 @@ import { CalloutTransferModule } from '@domain/collaboration/callout-transfer/ca
 import { ScalarsModule } from '@domain/common/scalars/scalars.module';
 import { MessageModule } from '@domain/communication/message/message.module';
 import { MessageReactionModule } from '@domain/communication/message.reaction/message.reaction.module';
+import { VirtualAssistantModule } from '@domain/community/virtual-assistant/virtual.assistant.module';
 import { VirtualActorModule } from '@domain/community/virtual-contributor/virtual.contributor.module';
 import { InnovationHubModule } from '@domain/innovation-hub/innovation.hub.module';
 import { PushSubscriptionModule } from '@domain/push-subscription/push.subscription.module';
@@ -63,6 +67,7 @@ import { SearchModule } from '@services/api/search/search.module';
 import { UrlResolverModule } from '@services/api/url-resolver/url.resolver.module';
 import { CalendarEventIcsModule } from '@services/api-rest/calendar-event-ics/calendar-event-ics.module';
 import { IdentityResolveModule } from '@services/api-rest/identity-resolve/identity-resolve.module';
+import { InternalAdminModule } from '@services/api-rest/internal-admin/internal-admin.module';
 import { AuthResetSubscriberModule } from '@services/auth-reset/subscriber/auth-reset.subscriber.module';
 import { CollaborativeDocumentIntegrationModule } from '@services/collaborative-document-integration';
 import { ContributionReporterModule } from '@services/external/elasticsearch/contribution-reporter';
@@ -71,10 +76,19 @@ import { KratosEventsModule } from '@services/external/kratos-events/kratos.even
 import { WingbackManagerModule } from '@services/external/wingback/wingback.manager.module';
 import { WingbackWebhookModule } from '@services/external/wingback-webhooks';
 import { EventBusModule } from '@services/infrastructure/event-bus/event.bus.module';
+import { McpServerModule } from '@services/mcp-server/mcp-server.module';
 import { WhiteboardIntegrationModule } from '@services/whiteboard-integration/whiteboard.integration.module';
 import { AppController } from '@src/app.controller';
 import { WinstonConfigService } from '@src/config/winston.config';
-import { SessionExtendMiddleware } from '@src/core/middleware';
+
+// FR-025 — SessionExtendMiddleware retired with the Kratos-whoami rolling
+// session. Idle TTL is now driven by express-session rolling cookie.
+
+import { buildGraphqlWsRequest } from '@core/auth/oidc/graphql-ws-auth';
+import {
+  getCookieMiddleware,
+  getSessionMiddleware,
+} from '@core/auth/oidc/session-middleware.holder';
 import { KonfigModule } from '@src/platform/configuration/config/config.module';
 import { MetadataModule } from '@src/platform/metadata/metadata.module';
 import { AdminCommunicationModule } from '@src/platform-admin/domain/communication/admin.communication.module';
@@ -195,7 +209,7 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
           infer: true,
         });
         return {
-          cors: false, // this is to avoid a duplicate cors origin header being created when behind the oathkeeper reverse proxy
+          cors: false, // avoids a duplicate CORS origin header when behind the Traefik edge reverse proxy
           uploads: false,
           autoSchemaFile: true,
           inheritResolversFromInterfaces: true,
@@ -235,17 +249,20 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
            * graphql-ws requires passing the request object through the context method
            * !!! this is graphql-ws ONLY
            */
-          context: (ctx: ConnectionContext) => {
+          context: async (ctx: ConnectionContext) => {
             if (isWebsocketContext(ctx)) {
+              // FR-023 — auth credentials must come from the HTTP upgrade only.
+              // Do NOT merge connectionParams.headers; that allows a client to
+              // smuggle a Bearer token past the upgrade-time Passport check.
+              //
+              // FR-023 (WS addendum) — replay cookie-parser + express-session
+              // against the upgrade IncomingMessage so `req.sessionID` and
+              // `req.cookies` populate the way they do on HTTP requests.
+              // Without this, CookieSessionStrategy returns null on every
+              // subscription and every authenticated user degrades to anonymous.
+              await runUpgradeSessionMiddleware(ctx.extra.request);
               return {
-                req: {
-                  ...ctx.extra.request,
-                  headers: {
-                    ...ctx.extra.request.headers,
-                    ...ctx.connectionParams?.headers,
-                  },
-                  connectionParams: ctx.connectionParams,
-                },
+                req: buildGraphqlWsRequest(ctx),
               };
             }
 
@@ -291,6 +308,9 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     LoaderCreatorModule,
     ScalarsModule,
     AuthenticationModule,
+    OidcModule,
+    NonInteractiveLoginModule,
+    HealthModule,
     AuthorizationModule,
     GraphqlGuardModule,
     SpaceModule,
@@ -325,8 +345,11 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
     InnovationHubModule,
     CalendarEventIcsModule,
     IdentityResolveModule,
+    InternalAdminModule,
+    McpServerModule,
     MeModule,
     VirtualActorModule,
+    VirtualAssistantModule,
     InputCreatorModule,
     LookupModule,
     LookupByNameModule,
@@ -383,11 +406,37 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
 })
 export class AppModule {
   configure(consumer: MiddlewareConsumer) {
-    consumer
-      .apply(RequestLoggerMiddleware, SessionExtendMiddleware)
-      .forRoutes('/');
+    consumer.apply(RequestLoggerMiddleware).forRoutes('/');
   }
 }
 
 const isWebsocketContext = (context: unknown): context is WebsocketContext =>
   !!(context as WebsocketContext)?.extra;
+
+const runMiddleware = (
+  mw: ((req: any, res: any, next: (err?: unknown) => void) => void) | null,
+  req: unknown,
+  res: unknown
+): Promise<void> =>
+  new Promise((resolve, reject) => {
+    if (!mw) return resolve();
+    mw(req, res, (err?: unknown) => (err ? reject(err) : resolve()));
+  });
+
+// Replays cookie-parser + express-session against the WS-upgrade
+// IncomingMessage. `res` is a stub: express-session only calls `res.end`/
+// `res.on('finish', ...)` on the response path which we never traverse here.
+const runUpgradeSessionMiddleware = async (req: unknown): Promise<void> => {
+  const res = {
+    on: () => undefined,
+    once: () => undefined,
+    emit: () => undefined,
+    setHeader: () => undefined,
+    getHeader: () => undefined,
+    removeHeader: () => undefined,
+    end: () => undefined,
+    writeHead: () => undefined,
+  };
+  await runMiddleware(getCookieMiddleware(), req, res);
+  await runMiddleware(getSessionMiddleware(), req, res);
+};

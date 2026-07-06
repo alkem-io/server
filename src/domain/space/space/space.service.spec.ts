@@ -2065,6 +2065,7 @@ const getSubspacesMock = (
               id: '',
               settings: {
                 allowNewCallouts: true,
+                visible: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2075,6 +2076,7 @@ const getSubspacesMock = (
               id: '',
               settings: {
                 allowNewCallouts: true,
+                visible: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2085,6 +2087,7 @@ const getSubspacesMock = (
               id: '',
               settings: {
                 allowNewCallouts: true,
+                visible: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2095,6 +2098,7 @@ const getSubspacesMock = (
               id: '',
               settings: {
                 allowNewCallouts: true,
+                visible: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2213,6 +2217,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
               id: '',
               settings: {
                 allowNewCallouts: true,
+                visible: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2223,6 +2228,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
               id: '',
               settings: {
                 allowNewCallouts: true,
+                visible: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2233,6 +2239,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
               id: '',
               settings: {
                 allowNewCallouts: true,
+                visible: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2243,6 +2250,7 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
               id: '',
               settings: {
                 allowNewCallouts: true,
+                visible: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),

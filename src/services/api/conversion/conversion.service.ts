@@ -237,6 +237,16 @@ export class ConversionService {
       );
     }
 
+    // The persisted platformRolesAccess JSON was derived from the OLD parent
+    // hierarchy (alkem-io/client-web#9891). For a subspace it gates platform
+    // (anonymous/guest/registered) READ behind the parent's grants, so a space
+    // promoted out of a private parent keeps platform users locked out of its
+    // dashboard until the value is recomputed. Recompute for the new L0 root
+    // (no parent) and cascade to the migrated descendants before the
+    // authorization policy is applied, since applyAuthorizationPolicy only
+    // reads platformRolesAccess and would otherwise propagate the stale rules.
+    await this.spaceService.updatePlatformRolesAccessRecursively(spaceL1);
+
     // Drop the now-stale SUBSPACE_CREATED entry on the source L0's activity
     // log — the moved space is no longer a subspace of that L0.
     await this.activityService.removeSubspaceCreatedActivityForResource(

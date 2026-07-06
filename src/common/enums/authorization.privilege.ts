@@ -44,6 +44,7 @@ export enum AuthorizationPrivilege {
   MOVE_POST = 'move-post',
   MOVE_CONTRIBUTION = 'move-contribution',
   ACCESS_INTERACTIVE_GUIDANCE = 'access-interactive-guidance',
+  ACCESS_VIRTUAL_ASSISTANT = 'access-virtual-assistant', // may the user use the web AI assistant (004-web-ai-assistant, FR-027)
   UPDATE_CONTENT = 'update-content',
   RECEIVE_NOTIFICATIONS = 'receive-notifications',
   RECEIVE_NOTIFICATIONS_ADMIN = 'receive-notifications-admin',
