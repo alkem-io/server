@@ -201,10 +201,21 @@ export class RoleSetResolverMutationsMembership {
         RoleName.MEMBER
       );
       if (!userIsMemberInParent) {
-        throw new RoleSetMembershipException(
-          `Unable to apply for Community (${roleSet.id}): user is not a member of the parent Community`,
-          LogContext.COMMUNITY
-        );
+        // Feature 017 — combined Subspace application: a non-parent-member may
+        // apply directly IFF the combined-flow preconditions hold (parent chain
+        // PUBLIC + the ancestor Spaces' `allowSubspaceAdminsToInviteMembers`
+        // enabled). On approval they are registered in the Subspace AND every
+        // missing ancestor. Otherwise today's "join the parent first" still fires.
+        const combinedApplicationAllowed =
+          await this.roleSetService.isCombinedApplicationGrantAuthorised(
+            roleSet
+          );
+        if (!combinedApplicationAllowed) {
+          throw new RoleSetMembershipException(
+            `Unable to apply for Community (${roleSet.id}): user is not a member of the parent Community`,
+            LogContext.COMMUNITY
+          );
+        }
       }
     }
 

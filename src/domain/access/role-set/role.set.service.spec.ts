@@ -1,6 +1,9 @@
+import { ActorType } from '@common/enums/actor.type';
+import { CommunityMembershipPolicy } from '@common/enums/community.membership.policy';
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
 import { RoleName } from '@common/enums/role.name';
 import { RoleSetType } from '@common/enums/role.set.type';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -2289,6 +2292,375 @@ describe('RoleSetService', () => {
       expect(
         platformInvitationService.deletePlatformInvitation
       ).toHaveBeenCalledWith({ ID: 'plat-1' });
+    });
+  });
+
+  // Feature 017 — Combined Subspace application. Shared ancestor-chain grant
+  // (FR-006/FR-017/FR-020) + approval-time re-evaluation gate (FR-015) +
+  // notification/event parity (FR-021).
+  describe('ensureMemberOfRoleSetAndAncestors (shared grant — feature 017)', () => {
+    const spaceRoleSet = (id: string): IRoleSet =>
+      ({ id, type: RoleSetType.SPACE }) as unknown as IRoleSet;
+
+    const passthroughTransaction = () => {
+      const transaction = vi.fn(async (cb: any) => cb({} as any));
+      (roleSetRepository as any).manager = { transaction };
+      return transaction;
+    };
+
+    beforeEach(() => {
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        ActorType.USER
+      );
+    });
+
+    it('(a) grants only the MISSING ancestors — already-member ancestors are skipped (FR-006)', async () => {
+      const root = spaceRoleSet('root');
+      const mid = spaceRoleSet('mid');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        mid,
+        target,
+      ]);
+      // Already a member of root, missing mid + target.
+      vi.spyOn(service, 'isMember').mockImplementation(
+        async (_actorID: string, rs: IRoleSet) => rs.id === 'root'
+      );
+      const grantSpy = vi
+        .spyOn(service as any, 'grantRoleCredential')
+        .mockResolvedValue(undefined);
+      vi.spyOn(service as any, 'applyMemberGrantSideEffects').mockResolvedValue(
+        undefined
+      );
+      passthroughTransaction();
+
+      await service.ensureMemberOfRoleSetAndAncestors(
+        target,
+        'user-1',
+        { actorID: 'user-1' } as any,
+        { source: 'invitation', invitedToParent: true }
+      );
+
+      const grantedIds = grantSpy.mock.calls.map((c: any[]) => c[0].id);
+      expect(grantedIds).toEqual(['mid', 'target']);
+      expect(grantedIds).not.toContain('root');
+    });
+
+    it('(b) grants the chain TOP-DOWN (root first) so the parent invariant holds', async () => {
+      const root = spaceRoleSet('root');
+      const mid = spaceRoleSet('mid');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        mid,
+        target,
+      ]);
+      vi.spyOn(service, 'isMember').mockResolvedValue(false);
+      const grantSpy = vi
+        .spyOn(service as any, 'grantRoleCredential')
+        .mockResolvedValue(undefined);
+      vi.spyOn(service as any, 'applyMemberGrantSideEffects').mockResolvedValue(
+        undefined
+      );
+      passthroughTransaction();
+
+      await service.ensureMemberOfRoleSetAndAncestors(
+        target,
+        'user-1',
+        { actorID: 'user-1' } as any,
+        { source: 'invitation', invitedToParent: true }
+      );
+
+      expect(grantSpy.mock.calls.map((c: any[]) => c[0].id)).toEqual([
+        'root',
+        'mid',
+        'target',
+      ]);
+    });
+
+    it('(c) full 3-level chain grant for a non-member application, all inside one transaction (FR-006/FR-020)', async () => {
+      const root = spaceRoleSet('root');
+      const mid = spaceRoleSet('mid');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        mid,
+        target,
+      ]);
+      vi.spyOn(
+        service,
+        'isCombinedApplicationGrantAuthorised'
+      ).mockResolvedValue(true);
+      vi.spyOn(service, 'isMember').mockResolvedValue(false);
+      const grantSpy = vi
+        .spyOn(service as any, 'grantRoleCredential')
+        .mockResolvedValue(undefined);
+      const sideEffectsSpy = vi
+        .spyOn(service as any, 'applyMemberGrantSideEffects')
+        .mockResolvedValue(undefined);
+      const transaction = passthroughTransaction();
+
+      await service.ensureMemberOfRoleSetAndAncestors(
+        target,
+        'user-1',
+        { actorID: 'user-1' } as any,
+        { source: 'application' }
+      );
+
+      expect(transaction).toHaveBeenCalledTimes(1);
+      expect(grantSpy).toHaveBeenCalledTimes(3);
+      // The credential write is threaded with the transactional EntityManager.
+      expect(grantSpy.mock.calls.every((c: any[]) => c[4] !== undefined)).toBe(
+        true
+      );
+      // One post-commit side-effect dispatch per Space joined, events triggered.
+      expect(sideEffectsSpy).toHaveBeenCalledTimes(3);
+      expect(sideEffectsSpy.mock.calls.every((c: any[]) => c[4] === true)).toBe(
+        true
+      );
+    });
+
+    it('(d) rolls back atomically on a mid-chain failure — no partial side-effects, error propagates (FR-020)', async () => {
+      const root = spaceRoleSet('root');
+      const mid = spaceRoleSet('mid');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        mid,
+        target,
+      ]);
+      vi.spyOn(
+        service,
+        'isCombinedApplicationGrantAuthorised'
+      ).mockResolvedValue(true);
+      vi.spyOn(service, 'isMember').mockResolvedValue(false);
+      vi.spyOn(service as any, 'grantRoleCredential').mockImplementation(
+        async (...args: unknown[]) => {
+          const rs = args[0] as IRoleSet;
+          if (rs.id === 'mid') {
+            throw new Error('grant failed mid-chain');
+          }
+        }
+      );
+      const sideEffectsSpy = vi
+        .spyOn(service as any, 'applyMemberGrantSideEffects')
+        .mockResolvedValue(undefined);
+      passthroughTransaction();
+
+      await expect(
+        service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'application' }
+        )
+      ).rejects.toThrow('grant failed mid-chain');
+
+      // Post-commit side-effects (events/notifications) must NOT run when the
+      // transaction failed — no membership is announced for a rolled-back grant.
+      expect(sideEffectsSpy).not.toHaveBeenCalled();
+    });
+
+    it('(US3/FR-015) withholds ancestor grants and falls back to today’s single-target rule when authorisation was revoked at approval time', async () => {
+      const target = spaceRoleSet('target');
+      // Combined authorisation no longer holds at approval time.
+      vi.spyOn(
+        service,
+        'isCombinedApplicationGrantAuthorised'
+      ).mockResolvedValue(false);
+      const chainSpy = vi.spyOn(service, 'getRoleSetAncestorChain');
+      const grantSpy = vi
+        .spyOn(service as any, 'grantRoleCredential')
+        .mockResolvedValue(undefined);
+      const assignSpy = vi
+        .spyOn(service, 'assignActorToRole')
+        .mockResolvedValue('user-1');
+      const transaction = passthroughTransaction();
+
+      await service.ensureMemberOfRoleSetAndAncestors(
+        target,
+        'user-1',
+        { actorID: 'user-1' } as any,
+        { source: 'application' }
+      );
+
+      // No ancestor walk, no atomic ancestor grants...
+      expect(chainSpy).not.toHaveBeenCalled();
+      expect(grantSpy).not.toHaveBeenCalled();
+      expect(transaction).not.toHaveBeenCalled();
+      // ...the target grant follows today's rules (parent-membership enforced).
+      expect(assignSpy).toHaveBeenCalledWith(
+        target,
+        RoleName.MEMBER,
+        'user-1',
+        expect.anything(),
+        true
+      );
+    });
+
+    it('(FR-021) notification/event parity: application and invitation emit the SAME per-Space dispatch, one per Space joined', async () => {
+      const root = spaceRoleSet('root');
+      const mid = spaceRoleSet('mid');
+      const target = spaceRoleSet('target');
+      const setupChain = () => {
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          root,
+          mid,
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(
+          service,
+          'isCombinedApplicationGrantAuthorised'
+        ).mockResolvedValue(true);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        passthroughTransaction();
+        // actorAddedToRole is the single per-Space membership-event dispatch
+        // point shared by both flows.
+        return vi
+          .spyOn(service as any, 'actorAddedToRole')
+          .mockResolvedValue(undefined);
+      };
+
+      const applicationDispatch = setupChain();
+      await service.ensureMemberOfRoleSetAndAncestors(
+        target,
+        'user-1',
+        { actorID: 'user-1' } as any,
+        { source: 'application' }
+      );
+      const applicationCalls = applicationDispatch.mock.calls.map(
+        (c: any[]) => ({
+          roleSetId: c[2].id,
+          triggerEvents: c[5],
+        })
+      );
+
+      vi.restoreAllMocks();
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        ActorType.USER
+      );
+
+      const invitationDispatch = setupChain();
+      await service.ensureMemberOfRoleSetAndAncestors(
+        target,
+        'user-1',
+        { actorID: 'user-1' } as any,
+        { source: 'invitation', invitedToParent: true }
+      );
+      const invitationCalls = invitationDispatch.mock.calls.map((c: any[]) => ({
+        roleSetId: c[2].id,
+        triggerEvents: c[5],
+      }));
+
+      // Same number of dispatches (one per Space joined), same Spaces, same
+      // trigger flag — no new, aggregated, or suppressed events.
+      expect(applicationCalls).toEqual([
+        { roleSetId: 'root', triggerEvents: true },
+        { roleSetId: 'mid', triggerEvents: true },
+        { roleSetId: 'target', triggerEvents: true },
+      ]);
+      expect(invitationCalls).toEqual(applicationCalls);
+    });
+  });
+
+  // Feature 017 — the combined-flow authorisation predicate. Drives BOTH the
+  // client-facing APPLY privilege exposure (T009) and the approval-time gate
+  // (T013), so the setting (US2/FR-003/FR-014) and privacy (US3) govern both.
+  describe('isCombinedApplicationGrantAuthorised (feature 017)', () => {
+    const spaceRoleSet = (id: string): IRoleSet =>
+      ({ id, type: RoleSetType.SPACE }) as unknown as IRoleSet;
+
+    const settings = (mode: SpacePrivacyMode, allow: boolean) =>
+      ({
+        privacy: { mode },
+        membership: {
+          policy: CommunityMembershipPolicy.APPLICATIONS,
+          allowSubspaceAdminsToInviteMembers: allow,
+        },
+      }) as any;
+
+    const mockSpaceSettings = (byId: Record<string, any>) => {
+      const communityResolverService = (service as any)
+        .communityResolverService;
+      (
+        communityResolverService.getSpaceForRoleSetOrFail as Mock
+      ).mockImplementation(async (roleSetID: string) => ({
+        id: `space-${roleSetID}`,
+        settings: byId[roleSetID],
+      }));
+    };
+
+    it('returns false for a non-SPACE role-set', async () => {
+      const orgRoleSet = {
+        id: 'org',
+        type: RoleSetType.ORGANIZATION,
+      } as unknown as IRoleSet;
+      await expect(
+        service.isCombinedApplicationGrantAuthorised(orgRoleSet)
+      ).resolves.toBe(false);
+    });
+
+    it('returns false for an L0 Space (no ancestors — combined flow N/A)', async () => {
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([target]);
+      await expect(
+        service.isCombinedApplicationGrantAuthorised(target)
+      ).resolves.toBe(false);
+    });
+
+    it('returns true when the whole chain is PUBLIC and every ancestor has the setting enabled', async () => {
+      const root = spaceRoleSet('root');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        target,
+      ]);
+      mockSpaceSettings({
+        root: settings(SpacePrivacyMode.PUBLIC, true),
+        target: settings(SpacePrivacyMode.PUBLIC, true),
+      });
+      await expect(
+        service.isCombinedApplicationGrantAuthorised(target)
+      ).resolves.toBe(true);
+    });
+
+    it('(US2/FR-003) returns false when the parent setting is disabled', async () => {
+      const root = spaceRoleSet('root');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        target,
+      ]);
+      mockSpaceSettings({
+        root: settings(SpacePrivacyMode.PUBLIC, false), // setting OFF
+        target: settings(SpacePrivacyMode.PUBLIC, true),
+      });
+      await expect(
+        service.isCombinedApplicationGrantAuthorised(target)
+      ).resolves.toBe(false);
+    });
+
+    it('(US3) returns false when an intermediate ancestor is PRIVATE', async () => {
+      const root = spaceRoleSet('root');
+      const mid = spaceRoleSet('mid');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        mid,
+        target,
+      ]);
+      mockSpaceSettings({
+        root: settings(SpacePrivacyMode.PUBLIC, true),
+        mid: settings(SpacePrivacyMode.PRIVATE, true), // private intermediate
+        target: settings(SpacePrivacyMode.PUBLIC, true),
+      });
+      await expect(
+        service.isCombinedApplicationGrantAuthorised(target)
+      ).resolves.toBe(false);
     });
   });
 });

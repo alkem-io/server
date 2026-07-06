@@ -1,6 +1,7 @@
 import {
   CREDENTIAL_RULE_ROLESET_ASSIGN,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
+  CREDENTIAL_RULE_SUBSPACE_NON_MEMBER_APPLY,
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY,
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN,
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
@@ -254,6 +255,28 @@ export class CommunityAuthorizationService {
             );
           spaceMemberCanApply.cascade = false;
           newRules.push(spaceMemberCanApply);
+
+          // Feature 017 — combined Subspace application: when the combined-flow
+          // preconditions hold (whole parent chain PUBLIC + the ancestor Spaces'
+          // `allowSubspaceAdminsToInviteMembers` enabled) also surface
+          // ROLESET_ENTRY_ROLE_APPLY to any registered (non-parent-member) user
+          // that can reach this Subspace. This privilege is the single signal the
+          // client trusts (contract §1); the apply mutation and approval re-check
+          // the same predicate server-side (FR-014/FR-015).
+          const combinedApplicationAllowed =
+            await this.roleSetService.isCombinedApplicationGrantAuthorised(
+              roleSet
+            );
+          if (combinedApplicationAllowed) {
+            const nonMemberCanApply =
+              this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+                [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY],
+                [AuthorizationCredential.GLOBAL_REGISTERED],
+                CREDENTIAL_RULE_SUBSPACE_NON_MEMBER_APPLY
+              );
+            nonMemberCanApply.cascade = false;
+            newRules.push(nonMemberCanApply);
+          }
           break;
         }
         case CommunityMembershipPolicy.OPEN: {
