@@ -11,7 +11,7 @@ export class UpdateInnovationHubInput extends UpdateNameableInput {
   @IsOptional()
   @Field(() => [UUID], {
     nullable: true,
-    description: `A list of Spaces to include in this Innovation Hub. Only valid when type '${InnovationHubType.LIST}' is used.`,
+    description: `A list of Spaces to include in this Innovation Hub; full replace. An empty list is allowed and hides the Spaces listing. Only valid when type '${InnovationHubType.LIST}' is used.`,
   })
   spaceListFilter?: string[];
 

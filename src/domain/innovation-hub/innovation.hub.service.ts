@@ -153,23 +153,22 @@ export class InnovationHubService {
       innovationHub.type === InnovationHubType.LIST &&
       input.spaceListFilter
     ) {
-      if (!input.spaceListFilter.length) {
-        throw new Error(
-          `At least one Space needs to be provided for Innovation Hub of type '${InnovationHubType.LIST}'`
+      // An empty list is valid — it clears the hub's Spaces listing (the
+      // public page hides the section), the same semantics as the pack/VC
+      // lists below (FR-015 amendment 2026-07-07).
+      if (input.spaceListFilter.length > 0) {
+        // validate spaces
+        const trueOrList = await this.spaceLookupService.spacesExist(
+          input.spaceListFilter
         );
-      }
 
-      // validate spaces
-      const trueOrList = await this.spaceLookupService.spacesExist(
-        input.spaceListFilter
-      );
-
-      if (Array.isArray(trueOrList)) {
-        throw new Error(
-          `Spaces with the following identifiers not found: '${trueOrList.join(
-            ','
-          )}'`
-        );
+        if (Array.isArray(trueOrList)) {
+          throw new Error(
+            `Spaces with the following identifiers not found: '${trueOrList.join(
+              ','
+            )}'`
+          );
+        }
       }
       innovationHub.spaceListFilter = input.spaceListFilter;
     }
@@ -179,8 +178,8 @@ export class InnovationHubService {
     )
       innovationHub.spaceVisibilityFilter = input.spaceVisibilityFilter;
     // Full-replace semantics for the curated resource lists; an empty array is
-    // valid (hides the section — deliberate divergence from the Spaces >= 1
-    // rule above); an absent field leaves the stored list unchanged.
+    // valid (hides the section — same semantics as the Spaces list above); an
+    // absent field leaves the stored list unchanged.
     if (input.innovationPackListFilter) {
       await this.validateInnovationPackListFilterOrFail(
         input.innovationPackListFilter

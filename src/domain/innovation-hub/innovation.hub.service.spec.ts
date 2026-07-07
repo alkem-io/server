@@ -586,11 +586,12 @@ describe('InnovationHubService', () => {
       expect(result.spaceListFilter).toEqual(['space-1', 'space-2']);
     });
 
-    it('should throw Error when updating LIST hub with empty spaceListFilter', async () => {
+    it('should allow an empty spaceListFilter on a LIST hub (clears the listing)', async () => {
       // Arrange
       const listHub = {
         ...existingHub,
         type: InnovationHubType.LIST,
+        spaceListFilter: ['space-1'],
       } as unknown as InnovationHub;
       vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(listHub);
 
@@ -599,10 +600,15 @@ describe('InnovationHubService', () => {
         spaceListFilter: [],
       };
 
-      // Act & Assert
-      await expect(service.updateOrFail(input)).rejects.toThrow(
-        /At least one Space needs to be provided/
-      );
+      // Act
+      const result = await service.updateOrFail(input);
+
+      // Assert — empty is valid (FR-015 amendment): the listing is cleared
+      // and no Space lookup happens for an empty list.
+      expect(result.spaceListFilter).toEqual([]);
+      expect(
+        (service['spaceLookupService'] as any).spacesExist
+      ).not.toHaveBeenCalled();
     });
 
     it('should throw Error when updating LIST hub with non-existent space IDs', async () => {
