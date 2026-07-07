@@ -737,17 +737,7 @@ export class RoleSetService {
     // 4. Assign role credential
     await this.grantRoleCredential(roleSet, roleType, actorID, actorType);
 
-    // 5. Clear caches (applies to all actors)
-    await this.roleSetCacheService.deleteOpenApplicationFromCache(
-      actorID,
-      roleSet.id
-    );
-    await this.roleSetCacheService.deleteOpenInvitationFromCache(
-      actorID,
-      roleSet.id
-    );
-
-    // 6. Handle implicit roles (for ALL actor types - any actor can be admin!)
+    // 5. Handle implicit roles (for ALL actor types - any actor can be admin!)
     switch (roleSet.type) {
       case RoleSetType.SPACE: {
         if (roleType === RoleName.ADMIN && parentRoleSet) {
@@ -792,27 +782,17 @@ export class RoleSetService {
       }
     }
 
-    // 7. Post-assignment processing (unified for all actors)
-    await this.actorAddedToRole(
-      actorID,
-      actorType,
+    // 6. Post-assignment side-effects (cache clears + community events /
+    // notifications / Matrix membership + type-specific extensions) — one
+    // shared sequence with the ancestor-chain grant path (FR-021).
+    await this.applyRoleGrantSideEffects(
       roleSet,
       roleType,
+      actorID,
+      actorType,
       actorContext,
       triggerNewMemberEvents
     );
-
-    // 8. Type-specific extensions (can be moved to events later)
-    if (
-      actorType === ActorType.VIRTUAL_CONTRIBUTOR &&
-      roleSet.type === RoleSetType.SPACE
-    ) {
-      const space =
-        await this.communityResolverService.getSpaceForRoleSetOrFail(
-          roleSet.id
-        );
-      void this.aiServerAdapter.ensureContextIsLoaded(space.id);
-    }
 
     return actorID;
   }
@@ -2021,18 +2001,50 @@ export class RoleSetService {
 
         // POST-COMMIT (outside the transaction): membership events /
         // notifications / Matrix room membership / caches, one dispatch per
-        // Space joined (FR-021 — parity with the invitation path).
+        // Space joined (FR-021 — parity with the invitation path). The
+        // credentials are already committed, so these dispatches are
+        // best-effort: a failure on one Space is logged and MUST NOT skip the
+        // remaining Spaces' dispatches nor fail the whole flow — throwing
+        // here would leave the caller's lifecycle out of sync with the
+        // committed membership state.
         for (const grantedRoleSet of toGrant) {
-          await this.applyMemberGrantSideEffects(
-            grantedRoleSet,
-            actorID,
-            actorType,
-            actorContext,
-            true
-          );
+          try {
+            await this.applyRoleGrantSideEffects(
+              grantedRoleSet,
+              RoleName.MEMBER,
+              actorID,
+              actorType,
+              actorContext,
+              true
+            );
+          } catch (e: any) {
+            this.logger.error(
+              `Post-commit member-grant side-effects failed for roleSet ${grantedRoleSet.id}, actor ${actorID}: ${e}`,
+              e?.stack,
+              LogContext.COMMUNITY
+            );
+          }
         }
       }
     } else {
+      if (opts.source === 'application') {
+        // FR-015: the combined-flow authorisation was revoked between
+        // submission and approval — ancestor grants are withheld. When the
+        // applicant is a member of the immediate parent the target grant
+        // still follows today's rules below; otherwise fail with an
+        // actionable error instead of assignActorToRole's opaque parent-
+        // membership ValidationException. The application remains in
+        // `approving`, from which an admin can REJECT it (see the
+        // application lifecycle machine).
+        const { isMember: hasMemberRoleInParent } =
+          await this.isActorMemberInParentRoleSet(actorID, targetRoleSet.id);
+        if (!hasMemberRoleInParent) {
+          throw new RoleSetMembershipException(
+            'Application approval not possible: the combined-flow authorisation was revoked after submission (an ancestor Space is no longer public or its setting was disabled) and the applicant is not a member of the parent Space. Reject the application, or restore the ancestor chain and retry.',
+            LogContext.COMMUNITY
+          );
+        }
+      }
       // Not authorised to grant the ancestor chain — grant only the target via
       // the standard path (enforces the parent-membership precondition; today's
       // behaviour). For an application this is the FR-015 safe fallback.
@@ -2237,24 +2249,27 @@ export class RoleSetService {
     if (roleSet.type !== RoleSetType.SPACE) {
       return undefined;
     }
-    const space = await this.communityResolverService.getSpaceForRoleSetOrFail(
-      roleSet.id
-    );
-    return space.settings;
+    // Settings-only read — this runs per-ancestor on hot paths (authorization
+    // resets walk it for every APPLICATIONS subspace), so avoid the full Space
+    // + about.profile hydration of getSpaceForRoleSetOrFail.
+    return this.communityResolverService.getSpaceSettingsForRoleSet(roleSet.id);
   }
 
   /**
-   * The post-commit side-effects of a MEMBER grant, factored out so the shared
-   * ancestor-chain grant reproduces exactly what {@link assignActorToRole} emits
-   * (cache clears + community events/notifications/Matrix membership), one
-   * dispatch per Space joined (FR-021). Ancestor grants are always MEMBER, so the
-   * ADMIN-only implicit-role branch of assignActorToRole never applies here.
+   * The post-grant side-effects of a role grant (cache clears + community
+   * events/notifications/Matrix membership + type-specific extensions) — the
+   * SINGLE owner of this sequence, consumed by both {@link assignActorToRole}
+   * and the shared ancestor-chain grant (one dispatch per Space joined,
+   * FR-021). The implicit-role handling (ADMIN/OWNER credentials) stays in
+   * assignActorToRole — ancestor grants are always MEMBER, so it never applies
+   * to the chain path.
    */
-  private async applyMemberGrantSideEffects(
+  private async applyRoleGrantSideEffects(
     roleSet: IRoleSet,
+    roleType: RoleName,
     actorID: string,
     actorType: ActorType,
-    actorContext: ActorContext,
+    actorContext: ActorContext | undefined,
     triggerNewMemberEvents: boolean
   ): Promise<void> {
     await this.roleSetCacheService.deleteOpenApplicationFromCache(
@@ -2270,7 +2285,7 @@ export class RoleSetService {
       actorID,
       actorType,
       roleSet,
-      RoleName.MEMBER,
+      roleType,
       actorContext,
       triggerNewMemberEvents
     );

@@ -75,6 +75,15 @@ export const applicationLifecycleMachine: ILifecycleDefinition = {
           guard: 'hasGrantPrivilege',
           target: ApplicationLifecycleState.APPROVED,
         },
+        // Escape hatch: the membership grant can fail after entering
+        // `approving` (e.g. the combined-flow authorisation was revoked
+        // between submission and approval — FR-015). Without a transition out
+        // the application would be stranded here, since retrying APPROVED just
+        // re-fails the grant. Allow an admin to REJECT such an application.
+        REJECT: {
+          guard: 'hasUpdatePrivilege',
+          target: ApplicationLifecycleState.REJECTED,
+        },
       },
     },
     approved: {
