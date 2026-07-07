@@ -1383,6 +1383,22 @@ export class RoleSetService {
           resourceID: spaceID,
         });
       }
+
+      // Invalidate the cached membership state on the descendant's role-set:
+      // isMember() / membership-status reads are cache-first, so a stale entry
+      // would keep reporting the revoked membership (e.g. blocking a later
+      // re-application with ROLE_SET_ALREADY_MEMBER).
+      const descendantSpace = await this.spaceLookupService.getSpaceOrFail(
+        spaceID,
+        { relations: { community: { roleSet: true } } }
+      );
+      const descendantRoleSetID = descendantSpace.community?.roleSet?.id;
+      if (descendantRoleSetID) {
+        await this.roleSetCacheService.cleanActorMembershipCache(
+          actorID,
+          descendantRoleSetID
+        );
+      }
     }
   }
 
@@ -2091,9 +2107,12 @@ export class RoleSetService {
   /**
    * Re-evaluates (FR-015) whether the combined Subspace-application flow is
    * authorised to grant the ancestor chain for the supplied target role-set:
-   * every Space in the chain (target included, for reachability) is PUBLIC and
-   * every ANCESTOR Space (parent .. root) has `allowSubspaceAdminsToInviteMembers`
-   * enabled. An L0 Space (no parent) is not part of the combined flow.
+   * every ANCESTOR Space (parent .. root) is PUBLIC (FR-002 — reachability is
+   * defined over the ancestors; the target's own privacy is not part of the
+   * gate, since a Space with an application membership policy accepts
+   * applications regardless of its privacy mode) and every ancestor Space has
+   * `allowSubspaceAdminsToInviteMembers` enabled (FR-003). An L0 Space (no
+   * parent) is not part of the combined flow.
    *
    * This same predicate drives the client-facing APPLY privilege exposure so the
    * offered entry point and the actual grant stay consistent (contract §1/§2).
@@ -2105,22 +2124,18 @@ export class RoleSetService {
       return false;
     }
     const chain = await this.getRoleSetAncestorChain(targetRoleSet);
-    const ancestors = chain.slice(0, -1); // parent .. root (excludes target)
+    const ancestors = chain.slice(0, -1); // root .. parent (excludes target)
     if (ancestors.length === 0) {
       return false; // L0 Space — no combined flow
     }
-    // Whole chain must be reachable (public) for a non-member.
-    for (const roleSetInChain of chain) {
-      const settings = await this.getSpaceSettingsForRoleSet(roleSetInChain);
+    // Every ancestor Space must be reachable (public) for a non-member and
+    // must have opted in to admitting members via a descendant application.
+    for (const ancestorRoleSet of ancestors) {
+      const settings = await this.getSpaceSettingsForRoleSet(ancestorRoleSet);
       if (!settings || settings.privacy.mode !== SpacePrivacyMode.PUBLIC) {
         return false;
       }
-    }
-    // Every ancestor Space must have opted in to admitting members via a
-    // descendant application/invitation.
-    for (const ancestorRoleSet of ancestors) {
-      const settings = await this.getSpaceSettingsForRoleSet(ancestorRoleSet);
-      if (!settings?.membership.allowSubspaceAdminsToInviteMembers) {
+      if (!settings.membership.allowSubspaceAdminsToInviteMembers) {
         return false;
       }
     }
