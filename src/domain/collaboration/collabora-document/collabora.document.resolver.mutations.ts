@@ -148,10 +148,12 @@ export class CollaboraDocumentResolverMutations {
         },
         actorContext
       );
-    } catch (e: any) {
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      const details = e instanceof Error ? e.stack : String(e);
       this.logger.error(
-        `Failed to report COLLABORA_DOCUMENT_REPLACED analytics for CollaboraDocument ${updated.id}: ${e?.message}`,
-        e?.stack,
+        `Failed to report COLLABORA_DOCUMENT_REPLACED analytics for CollaboraDocument ${updated.id}: ${message}`,
+        details,
         LogContext.COLLABORATION
       );
     }

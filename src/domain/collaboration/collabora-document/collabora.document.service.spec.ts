@@ -157,28 +157,6 @@ describe('CollaboraDocumentService', () => {
           'report.xlsx',
           XLSX_MIME
         )
-      ).rejects.toThrow(ValidationException);
-
-      expect(
-        storageBucketService.uploadFileAsDocumentFromBuffer
-      ).not.toHaveBeenCalled();
-      expect(repository.save).not.toHaveBeenCalled();
-      expect(documentService.deleteDocument).not.toHaveBeenCalled();
-    });
-
-    it('refuses when the lock signal is unavailable (adapter fail-closed → true)', async () => {
-      // The adapter returns true on any error (fail-closed); the service must
-      // treat that as locked and refuse without staging anything.
-      repository.findOne.mockResolvedValueOnce(existingDoc());
-      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue(true);
-
-      await expect(
-        service.replaceCollaboraDocument(
-          'collab-doc-1',
-          Buffer.from('x'),
-          'report.xlsx',
-          XLSX_MIME
-        )
       ).rejects.toThrow(
         'This document is currently being edited. Please try again once no one is editing.'
       );
@@ -186,6 +164,8 @@ describe('CollaboraDocumentService', () => {
       expect(
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).not.toHaveBeenCalled();
+      expect(repository.save).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('rejects a different-type replacement and compensates the staged file, leaving the original intact', async () => {
