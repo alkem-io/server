@@ -202,13 +202,17 @@ export class RoleSetResolverMutationsMembership {
       );
       if (!userIsMemberInParent) {
         // Feature 017 — combined Subspace application: a non-parent-member may
-        // apply directly IFF the combined-flow preconditions hold (parent chain
-        // PUBLIC + the ancestor Spaces' `allowSubspaceAdminsToInviteMembers`
-        // enabled). On approval they are registered in the Subspace AND every
-        // missing ancestor. Otherwise today's "join the parent first" still fires.
+        // apply directly IFF the combined-flow preconditions hold for THIS
+        // applicant (actor-relative reachability, ADR 0001 — ancestors they
+        // already belong to impose no requirements; every ancestor they would
+        // be granted into must be PUBLIC with
+        // `allowSubspaceAdminsToInviteMembers` enabled). On approval they are
+        // registered in the Subspace AND every missing ancestor. Otherwise
+        // today's "join the parent first" still fires.
         const combinedApplicationAllowed =
           await this.roleSetService.isCombinedApplicationGrantAuthorised(
-            roleSet
+            roleSet,
+            actorContext.actorID
           );
         if (!combinedApplicationAllowed) {
           throw new RoleSetMembershipException(

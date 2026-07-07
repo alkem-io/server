@@ -1985,7 +1985,10 @@ export class RoleSetService {
 
     const grantAncestors =
       opts.source === 'application'
-        ? await this.isCombinedApplicationGrantAuthorised(targetRoleSet)
+        ? await this.isCombinedApplicationGrantAuthorised(
+            targetRoleSet,
+            actorID
+          )
         : opts.invitedToParent === true;
 
     if (grantAncestors) {
@@ -2106,19 +2109,27 @@ export class RoleSetService {
 
   /**
    * Re-evaluates (FR-015) whether the combined Subspace-application flow is
-   * authorised to grant the ancestor chain for the supplied target role-set:
-   * every ANCESTOR Space (parent .. root) is PUBLIC (FR-002 — reachability is
-   * defined over the ancestors; the target's own privacy is not part of the
-   * gate, since a Space with an application membership policy accepts
-   * applications regardless of its privacy mode) and every ancestor Space has
-   * `allowSubspaceAdminsToInviteMembers` enabled (FR-003). An L0 Space (no
+   * authorised to grant the ancestor chain for the supplied target role-set.
+   *
+   * Reachability is ACTOR-RELATIVE (explicit scope decision, 2026-07-07 — see
+   * ADR 0001): when `actorID` is supplied, ancestors the actor already belongs
+   * to impose NO requirements — they are skipped by the missing-only grant
+   * anyway. Every ancestor the actor would actually be GRANTED into must be
+   * PUBLIC (FR-002) and have `allowSubspaceAdminsToInviteMembers` enabled
+   * (FR-003). The target's own privacy is never part of the gate — a Space
+   * with an application membership policy accepts applications regardless of
+   * its privacy mode. Without `actorID` the check degrades to the generic
+   * non-member reading (every ancestor public + opted in). An L0 Space (no
    * parent) is not part of the combined flow.
    *
-   * This same predicate drives the client-facing APPLY privilege exposure so the
-   * offered entry point and the actual grant stay consistent (contract §1/§2).
+   * The client-facing APPLY privilege exposure is driven by
+   * {@link getCombinedApplicationEligibleCriteria}, the credential-rule
+   * counterpart of this predicate, so the offered entry point and the actual
+   * grant stay consistent (contract §1/§2).
    */
   public async isCombinedApplicationGrantAuthorised(
-    targetRoleSet: IRoleSet
+    targetRoleSet: IRoleSet,
+    actorID?: string
   ): Promise<boolean> {
     if (targetRoleSet.type !== RoleSetType.SPACE) {
       return false;
@@ -2128,9 +2139,15 @@ export class RoleSetService {
     if (ancestors.length === 0) {
       return false; // L0 Space — no combined flow
     }
-    // Every ancestor Space must be reachable (public) for a non-member and
-    // must have opted in to admitting members via a descendant application.
     for (const ancestorRoleSet of ancestors) {
+      // Actor-relative reachability: an ancestor the actor already belongs to
+      // is not granted (missing-only) and imposes no requirements.
+      if (actorID && (await this.isMember(actorID, ancestorRoleSet))) {
+        continue;
+      }
+      // Every ancestor the actor would be granted into must be reachable
+      // (public) and must have opted in to admitting members via a descendant
+      // application.
       const settings = await this.getSpaceSettingsForRoleSet(ancestorRoleSet);
       if (!settings || settings.privacy.mode !== SpacePrivacyMode.PUBLIC) {
         return false;
@@ -2140,6 +2157,78 @@ export class RoleSetService {
       }
     }
     return true;
+  }
+
+  /**
+   * Credential-rule counterpart of {@link isCombinedApplicationGrantAuthorised}
+   * for the authorization-policy APPLY exposure (contract §1). Authorization
+   * policies are static credential rules, so actor-relative reachability is
+   * expressed via the platform invariant `member(Space) ⇒ member(parent)`
+   * (upheld by assignActorToRole, the shared top-down grant, and the removal
+   * cascade): being a member of the DEEPEST PRIVATE ancestor implies membership
+   * of every ancestor above it, so that single membership credential identifies
+   * exactly the population for which every non-owned ancestor is public.
+   *
+   * Returns the criteria for who may be offered APPLY on the target:
+   * - `{ kind: 'globalRegistered' }` — no private ancestor; every ancestor is
+   *   public + opted in (the generic non-member cell).
+   * - `{ kind: 'credential', credential }` — the MEMBER credential of the
+   *   deepest private ancestor; every ancestor BELOW it is public + opted in.
+   *   (Ancestors at/above the deepest private ancestor are owned by that
+   *   population by the invariant, so they impose no requirements.)
+   * - `undefined` — no eligible non-parent-member population (some ancestor
+   *   that would need granting is private or not opted in, the deepest private
+   *   ancestor IS the direct parent — that population is already covered by the
+   *   parent-member APPLY rule — or the target is an L0 Space / non-Space).
+   */
+  public async getCombinedApplicationEligibleCriteria(
+    targetRoleSet: IRoleSet
+  ): Promise<
+    | { kind: 'globalRegistered' }
+    | { kind: 'credential'; credential: ICredentialDefinition }
+    | undefined
+  > {
+    if (targetRoleSet.type !== RoleSetType.SPACE) {
+      return undefined;
+    }
+    const chain = await this.getRoleSetAncestorChain(targetRoleSet);
+    const ancestors = chain.slice(0, -1); // root .. parent (top-down)
+    if (ancestors.length === 0) {
+      return undefined; // L0 Space — no combined flow
+    }
+
+    const ancestorSettings = await Promise.all(
+      ancestors.map(a => this.getSpaceSettingsForRoleSet(a))
+    );
+    let deepestPrivateIndex = -1;
+    for (let i = 0; i < ancestors.length; i++) {
+      if (ancestorSettings[i]?.privacy.mode !== SpacePrivacyMode.PUBLIC) {
+        deepestPrivateIndex = i;
+      }
+    }
+
+    // Every ancestor BELOW the deepest private one would be granted to this
+    // population, so it must be public (guaranteed by deepest-private choice)
+    // and opted in via the setting.
+    for (let i = deepestPrivateIndex + 1; i < ancestors.length; i++) {
+      if (!ancestorSettings[i]?.membership.allowSubspaceAdminsToInviteMembers) {
+        return undefined;
+      }
+    }
+
+    if (deepestPrivateIndex === -1) {
+      return { kind: 'globalRegistered' };
+    }
+    if (deepestPrivateIndex === ancestors.length - 1) {
+      // Deepest private ancestor is the direct parent — parent members are
+      // already offered APPLY by the parent-member rule; nothing to add.
+      return undefined;
+    }
+    const credential = await this.getCredentialDefinitionForRole(
+      ancestors[deepestPrivateIndex],
+      RoleName.MEMBER
+    );
+    return { kind: 'credential', credential };
   }
 
   private async getSpaceSettingsForRoleSet(

@@ -2767,5 +2767,213 @@ describe('RoleSetService', () => {
         service.isCombinedApplicationGrantAuthorised(target)
       ).resolves.toBe(false);
     });
+
+    describe('actor-relative reachability (ADR 0001 — explicit scope decision 2026-07-07)', () => {
+      const mockActorMemberships = (memberOf: string[]) => {
+        vi.spyOn(service, 'isMember').mockImplementation(
+          async (_actorID: string, rs: IRoleSet) => memberOf.includes(rs.id)
+        );
+      };
+
+      it('returns true for an actor who is a member of the PRIVATE root when everything below is public + opted in', async () => {
+        const root = spaceRoleSet('root');
+        const mid = spaceRoleSet('mid');
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          root,
+          mid,
+          target,
+        ]);
+        mockSpaceSettings({
+          root: settings(SpacePrivacyMode.PRIVATE, true), // private — but owned
+          mid: settings(SpacePrivacyMode.PUBLIC, true),
+          target: settings(SpacePrivacyMode.PUBLIC, true),
+        });
+        mockActorMemberships(['root']);
+        await expect(
+          service.isCombinedApplicationGrantAuthorised(target, 'actor-1')
+        ).resolves.toBe(true);
+      });
+
+      it('setting is only required on ancestors actually being granted — an owned ancestor with the setting OFF does not block', async () => {
+        const root = spaceRoleSet('root');
+        const mid = spaceRoleSet('mid');
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          root,
+          mid,
+          target,
+        ]);
+        mockSpaceSettings({
+          root: settings(SpacePrivacyMode.PRIVATE, false), // owned — setting irrelevant
+          mid: settings(SpacePrivacyMode.PUBLIC, true),
+          target: settings(SpacePrivacyMode.PUBLIC, true),
+        });
+        mockActorMemberships(['root']);
+        await expect(
+          service.isCombinedApplicationGrantAuthorised(target, 'actor-1')
+        ).resolves.toBe(true);
+      });
+
+      it('returns false for an actor who is NOT a member of the PRIVATE root (generic non-member outcome unchanged)', async () => {
+        const root = spaceRoleSet('root');
+        const mid = spaceRoleSet('mid');
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          root,
+          mid,
+          target,
+        ]);
+        mockSpaceSettings({
+          root: settings(SpacePrivacyMode.PRIVATE, true),
+          mid: settings(SpacePrivacyMode.PUBLIC, true),
+          target: settings(SpacePrivacyMode.PUBLIC, true),
+        });
+        mockActorMemberships([]);
+        await expect(
+          service.isCombinedApplicationGrantAuthorised(target, 'actor-1')
+        ).resolves.toBe(false);
+      });
+
+      it('returns false when a NON-owned ancestor below the owned one is private', async () => {
+        const root = spaceRoleSet('root');
+        const mid = spaceRoleSet('mid');
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          root,
+          mid,
+          target,
+        ]);
+        mockSpaceSettings({
+          root: settings(SpacePrivacyMode.PRIVATE, true), // owned
+          mid: settings(SpacePrivacyMode.PRIVATE, true), // not owned + private
+          target: settings(SpacePrivacyMode.PUBLIC, true),
+        });
+        mockActorMemberships(['root']);
+        await expect(
+          service.isCombinedApplicationGrantAuthorised(target, 'actor-1')
+        ).resolves.toBe(false);
+      });
+    });
+  });
+
+  describe('getCombinedApplicationEligibleCriteria (feature 017 — APPLY exposure)', () => {
+    const spaceRoleSet = (id: string): IRoleSet =>
+      ({ id, type: RoleSetType.SPACE }) as unknown as IRoleSet;
+
+    const settings = (mode: SpacePrivacyMode, allow: boolean) =>
+      ({
+        privacy: { mode },
+        membership: {
+          policy: CommunityMembershipPolicy.APPLICATIONS,
+          allowSubspaceAdminsToInviteMembers: allow,
+        },
+      }) as any;
+
+    const mockSpaceSettings = (byId: Record<string, any>) => {
+      const communityResolverService = (service as any)
+        .communityResolverService;
+      (
+        communityResolverService.getSpaceForRoleSetOrFail as Mock
+      ).mockImplementation(async (roleSetID: string) => ({
+        id: `space-${roleSetID}`,
+        settings: byId[roleSetID],
+      }));
+    };
+
+    it('returns globalRegistered when every ancestor is PUBLIC + opted in', async () => {
+      const root = spaceRoleSet('root');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        target,
+      ]);
+      mockSpaceSettings({
+        root: settings(SpacePrivacyMode.PUBLIC, true),
+        target: settings(SpacePrivacyMode.PRIVATE, true), // target privacy irrelevant
+      });
+      await expect(
+        service.getCombinedApplicationEligibleCriteria(target)
+      ).resolves.toEqual({ kind: 'globalRegistered' });
+    });
+
+    it('returns the deepest private ancestor MEMBER credential when everything below it is public + opted in', async () => {
+      const root = spaceRoleSet('root');
+      const mid = spaceRoleSet('mid');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        mid,
+        target,
+      ]);
+      mockSpaceSettings({
+        root: settings(SpacePrivacyMode.PRIVATE, true), // deepest (only) private ancestor
+        mid: settings(SpacePrivacyMode.PUBLIC, true),
+        target: settings(SpacePrivacyMode.PUBLIC, true),
+      });
+      const rootMemberCredential = {
+        type: 'space-member',
+        resourceID: 'space-root',
+      } as any;
+      vi.spyOn(service, 'getCredentialDefinitionForRole').mockResolvedValue(
+        rootMemberCredential
+      );
+      await expect(
+        service.getCombinedApplicationEligibleCriteria(target)
+      ).resolves.toEqual({
+        kind: 'credential',
+        credential: rootMemberCredential,
+      });
+      expect(service.getCredentialDefinitionForRole).toHaveBeenCalledWith(
+        root,
+        RoleName.MEMBER
+      );
+    });
+
+    it('returns undefined when the deepest private ancestor is the direct parent (covered by the parent-member rule)', async () => {
+      const root = spaceRoleSet('root');
+      const parent = spaceRoleSet('parent');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        parent,
+        target,
+      ]);
+      mockSpaceSettings({
+        root: settings(SpacePrivacyMode.PUBLIC, true),
+        parent: settings(SpacePrivacyMode.PRIVATE, true), // private direct parent
+        target: settings(SpacePrivacyMode.PUBLIC, true),
+      });
+      await expect(
+        service.getCombinedApplicationEligibleCriteria(target)
+      ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined when an ancestor below the deepest private one is not opted in', async () => {
+      const root = spaceRoleSet('root');
+      const mid = spaceRoleSet('mid');
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+        root,
+        mid,
+        target,
+      ]);
+      mockSpaceSettings({
+        root: settings(SpacePrivacyMode.PRIVATE, true),
+        mid: settings(SpacePrivacyMode.PUBLIC, false), // setting OFF on granted ancestor
+        target: settings(SpacePrivacyMode.PUBLIC, true),
+      });
+      await expect(
+        service.getCombinedApplicationEligibleCriteria(target)
+      ).resolves.toBeUndefined();
+    });
+
+    it('returns undefined for an L0 Space', async () => {
+      const target = spaceRoleSet('target');
+      vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([target]);
+      await expect(
+        service.getCombinedApplicationEligibleCriteria(target)
+      ).resolves.toBeUndefined();
+    });
   });
 });

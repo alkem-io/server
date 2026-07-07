@@ -6,6 +6,8 @@ export const CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY =
   'credentialRule-subspaceParentMemberApply';
 export const CREDENTIAL_RULE_SUBSPACE_NON_MEMBER_APPLY =
   'credentialRule-subspaceNonMemberApply';
+export const CREDENTIAL_RULE_SUBSPACE_ANCESTOR_MEMBER_APPLY =
+  'credentialRule-subspaceAncestorMemberApply';
 export const CREDENTIAL_RULE_SPACE_ADMIN_DELETE_SUBSPACE =
   'credentialRule-SpaceAdminDeleteSubspace';
 export const CREDENTIAL_RULE_SPACE_ADMINS = 'credentialRule-spaceAdmins';
