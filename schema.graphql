@@ -7597,7 +7597,7 @@ input CreateInnovationHubOnAccountInput {
   """The Account where the InnovationHub is to be created."""
   accountID: UUID!
   """
-  The Innovation Packs curated for this Innovation Hub. When omitted, defaults to all Innovation Packs of the Account.
+  The Innovation Packs curated for this Innovation Hub. When omitted, the Innovation Hub is created with no Innovation Packs.
   """
   innovationPackListFilter: [UUID!]
   """A readable identifier, unique within the containing scope."""
@@ -7616,7 +7616,7 @@ input CreateInnovationHubOnAccountInput {
   """The type of Innovation Hub."""
   type: InnovationHubType!
   """
-  The Virtual Contributors curated for this Innovation Hub. When omitted, defaults to all Virtual Contributors of the Account.
+  The Virtual Contributors curated for this Innovation Hub. When omitted, the Innovation Hub is created with no Virtual Contributors.
   """
   virtualContributorListFilter: [UUID!]
 }
