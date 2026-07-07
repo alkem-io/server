@@ -45,6 +45,11 @@ export class InnovationHubService {
     try {
       await this.validateCreateInput(createData);
     } catch (e) {
+      // Preserve structured details (duplicateIDs / missingIDs) from the
+      // curated-list validators instead of flattening them into the message.
+      if (e instanceof ValidationException) {
+        throw e;
+      }
       const err = e as Error;
       throw new ValidationException(
         `Incorrect input provided: ${err.message}`,

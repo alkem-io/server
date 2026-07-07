@@ -25,6 +25,9 @@ export class AddInnovationHubResourceLists1783415076372
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Rollback note: dropping these columns permanently discards any curated
+    // pack/VC lists admins have saved since the migration ran; `spaceListFilter`
+    // and all other innovation_hub data are unaffected.
     await queryRunner.query(
       `ALTER TABLE "innovation_hub" DROP COLUMN "virtualContributorListFilter"`
     );
