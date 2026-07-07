@@ -1852,12 +1852,9 @@ describe('RoleSetService', () => {
         'space-sub',
         'space-subsub',
       ]);
-      (spaceLookupService.getSpaceOrFail as Mock).mockImplementation(
-        async (spaceID: string) => ({
-          id: spaceID,
-          community: { roleSet: { id: `rs-of-${spaceID}` } },
-        })
-      );
+      (
+        communityResolverService.getRoleSetIdForSpace as Mock
+      ).mockImplementation(async (spaceID: string) => `rs-of-${spaceID}`);
 
       const inAppNotificationService = (service as any)
         .inAppNotificationService;
@@ -1897,6 +1894,80 @@ describe('RoleSetService', () => {
       expect(
         roleSetCacheService.cleanActorMembershipCache
       ).toHaveBeenCalledWith('actor-1', 'rs-parent');
+    });
+
+    it('a descendant deleted mid-cascade does not abort the remaining descendants’ revocations (best-effort cache resolution)', async () => {
+      const roleSet = {
+        id: 'rs-parent',
+        type: RoleSetType.SPACE,
+        roles: [
+          {
+            name: RoleName.MEMBER,
+            credential: { type: 'space-member', resourceID: 'space-parent' },
+            userPolicy: { minimum: -1, maximum: -1 },
+            organizationPolicy: { minimum: -1, maximum: -1 },
+            virtualContributorPolicy: { minimum: -1, maximum: -1 },
+          },
+        ],
+      } as any;
+
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        'user'
+      );
+      (actorService.revokeCredential as Mock).mockResolvedValue(undefined);
+      vi.spyOn(service, 'getParentRoleSet').mockResolvedValue(undefined);
+
+      const communityResolverService = (service as any)
+        .communityResolverService;
+      (
+        communityResolverService.getCommunicationForRoleSet as Mock
+      ).mockResolvedValue({ id: 'comm-1' });
+      (
+        communityResolverService.getSpaceForRoleSetOrFail as Mock
+      ).mockResolvedValue({ id: 'space-parent' });
+      // First descendant was deleted concurrently — resolves to undefined
+      // (non-throwing); the second still resolves.
+      (communityResolverService.getRoleSetIdForSpace as Mock)
+        .mockResolvedValueOnce(undefined)
+        .mockResolvedValueOnce('rs-of-space-subsub');
+
+      const communityCommunicationService = (service as any)
+        .communityCommunicationService;
+      (
+        communityCommunicationService.removeMemberFromCommunication as Mock
+      ).mockResolvedValue(undefined);
+
+      const spaceLookupService = (service as any).spaceLookupService;
+      (spaceLookupService.getAllDescendantSpaceIDs as Mock).mockResolvedValue([
+        'space-sub',
+        'space-subsub',
+      ]);
+
+      const inAppNotificationService = (service as any)
+        .inAppNotificationService;
+      (
+        inAppNotificationService.deleteAllForReceiverInSpace as Mock
+      ).mockResolvedValue(undefined);
+      (
+        inAppNotificationService.deleteAllForReceiverInSpaces as Mock
+      ).mockResolvedValue(undefined);
+      (roleSetCacheService.cleanActorMembershipCache as Mock).mockResolvedValue(
+        undefined
+      );
+
+      await expect(
+        service.removeActorFromRole(roleSet, RoleName.MEMBER, 'actor-1', false)
+      ).resolves.toBe('actor-1');
+
+      // Both descendants' credentials were still revoked...
+      expect(actorService.revokeCredential).toHaveBeenCalledWith('actor-1', {
+        type: AuthorizationCredential.SPACE_MEMBER,
+        resourceID: 'space-subsub',
+      });
+      // ...and the surviving descendant's cache was cleaned.
+      expect(
+        roleSetCacheService.cleanActorMembershipCache
+      ).toHaveBeenCalledWith('actor-1', 'rs-of-space-subsub');
     });
   });
 

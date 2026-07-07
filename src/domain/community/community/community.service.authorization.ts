@@ -212,7 +212,15 @@ export class CommunityAuthorizationService {
       newRules.push(spaceAdminsInvite);
     }
 
-    if (entryRoleAllowed) {
+    if (entryRoleAllowed && !isSubspace) {
+      // L0 only: the blanket GLOBAL_REGISTERED APPLY/JOIN (+ trusted-org JOIN)
+      // rules. On a SUBSPACE these were always false signals — the entry-role
+      // mutations enforce parent membership, so a non-parent-member holding
+      // this privilege got an error instead of an entry point. Since the
+      // client trusts the privilege as the single signal (feature 017,
+      // contract §1), a subspace's exposure comes exclusively from the
+      // subspace branch below (parent-member rule + combined-eligibility
+      // rule), keeping the offered entry point and the actual grant in sync.
       newRules.push(
         ...this.extendRoleSetAuthorizationPolicySpace(spaceSettings)
       );

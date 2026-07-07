@@ -1367,12 +1367,11 @@ export class RoleSetService {
       // Invalidate the cached membership state on the descendant's role-set:
       // isMember() / membership-status reads are cache-first, so a stale entry
       // would keep reporting the revoked membership (e.g. blocking a later
-      // re-application with ROLE_SET_ALREADY_MEMBER).
-      const descendantSpace = await this.spaceLookupService.getSpaceOrFail(
-        spaceID,
-        { relations: { community: { roleSet: true } } }
-      );
-      const descendantRoleSetID = descendantSpace.community?.roleSet?.id;
+      // re-application with ROLE_SET_ALREADY_MEMBER). Best-effort resolution —
+      // a descendant deleted between the ID gathering and this loop must not
+      // abort the cascade (later descendants still need their revocations).
+      const descendantRoleSetID =
+        await this.communityResolverService.getRoleSetIdForSpace(spaceID);
       if (descendantRoleSetID) {
         await this.roleSetCacheService.cleanActorMembershipCache(
           actorID,
