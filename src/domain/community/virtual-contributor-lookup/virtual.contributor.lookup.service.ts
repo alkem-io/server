@@ -107,21 +107,6 @@ export class VirtualContributorLookupService {
     });
   }
 
-  /**
-   * All VirtualContributor (actor) IDs of an Account, in account seed order
-   * (`rowId` ascending).
-   */
-  public async getVirtualContributorIdsForAccount(
-    accountID: string
-  ): Promise<string[]> {
-    const virtualContributors = await this.virtualContributorRepository.find({
-      where: { account: { id: accountID } },
-      order: { rowId: 'ASC' },
-      select: { id: true, rowId: true },
-    });
-    return virtualContributors.map(vc => vc.id);
-  }
-
   async getVirtualContributorByNameIdOrFail(
     virtualContributorNameID: string,
     options?: FindOneOptions<VirtualContributor>

@@ -43,7 +43,7 @@ export class CreateInnovationHubInput extends CreateNameableInput {
   @Field(() => [UUID], {
     nullable: true,
     description:
-      'The Innovation Packs curated for this Innovation Hub. When omitted, defaults to all Innovation Packs of the Account.',
+      'The Innovation Packs curated for this Innovation Hub. When omitted, the Innovation Hub is created with no Innovation Packs.',
   })
   innovationPackListFilter?: string[];
 
@@ -51,7 +51,7 @@ export class CreateInnovationHubInput extends CreateNameableInput {
   @Field(() => [UUID], {
     nullable: true,
     description:
-      'The Virtual Contributors curated for this Innovation Hub. When omitted, defaults to all Virtual Contributors of the Account.',
+      'The Virtual Contributors curated for this Innovation Hub. When omitted, the Innovation Hub is created with no Virtual Contributors.',
   })
   virtualContributorListFilter?: string[];
 }

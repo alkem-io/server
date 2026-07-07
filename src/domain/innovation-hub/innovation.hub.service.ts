@@ -93,35 +93,6 @@ export class InnovationHubService {
     hub.searchVisibility = SearchVisibility.ACCOUNT;
     hub.account = account;
 
-    // FR-014 (workspace#017-innovation-hub-resources): one-time seeding of the
-    // curated lists — any list omitted on create defaults to ALL matching
-    // Account resources, in seed order. Explicitly provided lists (including
-    // empty ones) are honored as-is. Both creation surfaces (the direct
-    // mutation and AccountService.createInnovationHubOnAccount) flow through
-    // this method, so this is the single seeding site.
-    if (!createData.innovationPackListFilter) {
-      hub.innovationPackListFilter =
-        await this.innovationPackService.getInnovationPackIdsForAccount(
-          account.id
-        );
-    }
-    if (!createData.virtualContributorListFilter) {
-      hub.virtualContributorListFilter =
-        await this.virtualContributorLookupService.getVirtualContributorIdsForAccount(
-          account.id
-        );
-    }
-    // The Spaces default only applies to hubs whose Spaces listing is a
-    // curated list; VISIBILITY-type hubs derive their listing from a filter.
-    if (
-      createData.type === InnovationHubType.LIST &&
-      !createData.spaceListFilter
-    ) {
-      hub.spaceListFilter = await this.spaceLookupService.getSpaceIdsForAccount(
-        account.id
-      );
-    }
-
     // Phase 1: build entity in memory.
     hub.profile = await this.profileService.createProfile(
       createData.profileData,

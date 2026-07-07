@@ -201,21 +201,6 @@ export class InnovationPackService {
     });
   }
 
-  /**
-   * All InnovationPack IDs of an Account, in Innovation Library seed order
-   * (`rowId` ascending).
-   */
-  public async getInnovationPackIdsForAccount(
-    accountID: string
-  ): Promise<string[]> {
-    const innovationPacks = await this.innovationPackRepository.find({
-      where: { account: { id: accountID } },
-      order: { rowId: 'ASC' },
-      select: { id: true, rowId: true },
-    });
-    return innovationPacks.map(pack => pack.id);
-  }
-
   async getInnovationPackOrFail(
     innovationPackID: string,
     options?: FindOneOptions<InnovationPack>

@@ -214,19 +214,6 @@ export class SpaceLookupService {
   }
 
   /**
-   * All Space IDs of an Account (the Account.spaces relation), in account
-   * seed order (`rowId` ascending).
-   */
-  public async getSpaceIdsForAccount(accountID: string): Promise<string[]> {
-    const spaces = await this.spaceRepository.find({
-      where: { account: { id: accountID } },
-      order: { rowId: 'ASC' },
-      select: { id: true, rowId: true },
-    });
-    return spaces.map(space => space.id);
-  }
-
-  /**
    * Retrieves a collaboration for a given space ID or throws if not found.
    * @throws {RelationshipNotFoundException} if collaboration is not found.
    * @throws {EntityNotFoundException} if space is not found.

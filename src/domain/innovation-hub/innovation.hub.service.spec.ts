@@ -328,94 +328,47 @@ describe('InnovationHubService', () => {
     });
   });
 
-  describe('createInnovationHub — curated list seeding (FR-014)', () => {
+  describe('createInnovationHub — curated lists start empty', () => {
     const mockAccount = {
       id: 'account-1',
       storageAggregator: { id: 'storage-1' },
     } as IAccount;
 
-    const setupSeedingMocks = (seeds: {
-      packIds?: string[];
-      vcIds?: string[];
-      spaceIds?: string[];
-    }) => {
-      (service['innovationPackService'] as any).getInnovationPackIdsForAccount =
-        vi.fn().mockResolvedValue(seeds.packIds ?? []);
-      (
-        service['virtualContributorLookupService'] as any
-      ).getVirtualContributorIdsForAccount = vi
-        .fn()
-        .mockResolvedValue(seeds.vcIds ?? []);
-      (service['spaceLookupService'] as any).getSpaceIdsForAccount = vi
-        .fn()
-        .mockResolvedValue(seeds.spaceIds ?? []);
-    };
-
-    it('should seed all account packs and VCs (in seed order) when the lists are omitted', async () => {
+    it('should leave innovationPackListFilter and virtualContributorListFilter unset when omitted', async () => {
       // Arrange
       const input: CreateInnovationHubInput = {
-        subdomain: 'seeded-hub',
+        subdomain: 'new-hub',
         type: InnovationHubType.VISIBILITY,
         spaceVisibilityFilter: SpaceVisibility.ACTIVE,
-        profileData: { displayName: 'Seeded Hub' },
+        profileData: { displayName: 'New Hub' },
       };
       setupSuccessfulCreateMocks();
-      setupSeedingMocks({
-        packIds: ['pack-1', 'pack-2'],
-        vcIds: ['vc-1', 'vc-2', 'vc-3'],
-      });
 
       // Act
       const result = await service.createInnovationHub(input, mockAccount);
 
       // Assert
-      expect(result.innovationPackListFilter).toEqual(['pack-1', 'pack-2']);
-      expect(result.virtualContributorListFilter).toEqual([
-        'vc-1',
-        'vc-2',
-        'vc-3',
-      ]);
+      expect(result.innovationPackListFilter).toBeUndefined();
+      expect(result.virtualContributorListFilter).toBeUndefined();
     });
 
-    it('should seed spaceListFilter with all account spaces for a LIST-type hub when omitted', async () => {
+    it('should NOT seed spaceListFilter for a LIST-type hub when omitted', async () => {
       // Arrange
       const input: CreateInnovationHubInput = {
-        subdomain: 'seeded-list-hub',
+        subdomain: 'new-list-hub',
         type: InnovationHubType.LIST,
-        profileData: { displayName: 'Seeded List Hub' },
+        profileData: { displayName: 'New List Hub' },
       };
       setupSuccessfulCreateMocks();
-      setupSeedingMocks({ spaceIds: ['space-1', 'space-2'] });
-
-      // Act
-      const result = await service.createInnovationHub(input, mockAccount);
-
-      // Assert
-      expect(result.spaceListFilter).toEqual(['space-1', 'space-2']);
-    });
-
-    it('should NOT seed spaceListFilter for a VISIBILITY-type hub', async () => {
-      // Arrange
-      const input: CreateInnovationHubInput = {
-        subdomain: 'vis-seeded-hub',
-        type: InnovationHubType.VISIBILITY,
-        spaceVisibilityFilter: SpaceVisibility.ACTIVE,
-        profileData: { displayName: 'Vis Seeded Hub' },
-      };
-      setupSuccessfulCreateMocks();
-      setupSeedingMocks({ spaceIds: ['space-1'] });
 
       // Act
       const result = await service.createInnovationHub(input, mockAccount);
 
       // Assert
       expect(result.spaceListFilter).toBeUndefined();
-      expect(
-        (service['spaceLookupService'] as any).getSpaceIdsForAccount
-      ).not.toHaveBeenCalled();
     });
 
-    it('should honor explicitly provided lists and not seed them', async () => {
+    it('should honor explicitly provided lists', async () => {
       // Arrange
       const input: CreateInnovationHubInput = {
         subdomain: 'explicit-hub',
@@ -426,7 +379,6 @@ describe('InnovationHubService', () => {
         virtualContributorListFilter: ['vc-9'],
       };
       setupSuccessfulCreateMocks();
-      setupSeedingMocks({ packIds: ['pack-1'], vcIds: ['vc-1'] });
       (
         service['innovationPackService'] as any
       ).getInnovationPacksByIds.mockResolvedValue([{ id: 'pack-9' }]);
@@ -440,16 +392,9 @@ describe('InnovationHubService', () => {
       // Assert
       expect(result.innovationPackListFilter).toEqual(['pack-9']);
       expect(result.virtualContributorListFilter).toEqual(['vc-9']);
-      expect(
-        (service['innovationPackService'] as any).getInnovationPackIdsForAccount
-      ).not.toHaveBeenCalled();
-      expect(
-        (service['virtualContributorLookupService'] as any)
-          .getVirtualContributorIdsForAccount
-      ).not.toHaveBeenCalled();
     });
 
-    it('should honor explicitly provided empty lists (no seeding)', async () => {
+    it('should honor explicitly provided empty lists', async () => {
       // Arrange
       const input: CreateInnovationHubInput = {
         subdomain: 'empty-lists-hub',
@@ -460,29 +405,6 @@ describe('InnovationHubService', () => {
         virtualContributorListFilter: [],
       };
       setupSuccessfulCreateMocks();
-      setupSeedingMocks({ packIds: ['pack-1'], vcIds: ['vc-1'] });
-
-      // Act
-      const result = await service.createInnovationHub(input, mockAccount);
-
-      // Assert
-      expect(result.innovationPackListFilter).toEqual([]);
-      expect(result.virtualContributorListFilter).toEqual([]);
-      expect(
-        (service['innovationPackService'] as any).getInnovationPackIdsForAccount
-      ).not.toHaveBeenCalled();
-    });
-
-    it('should seed empty lists for an account with zero packs and VCs', async () => {
-      // Arrange
-      const input: CreateInnovationHubInput = {
-        subdomain: 'empty-account-hub',
-        type: InnovationHubType.VISIBILITY,
-        spaceVisibilityFilter: SpaceVisibility.ACTIVE,
-        profileData: { displayName: 'Empty Account Hub' },
-      };
-      setupSuccessfulCreateMocks();
-      setupSeedingMocks({ packIds: [], vcIds: [] });
 
       // Act
       const result = await service.createInnovationHub(input, mockAccount);
