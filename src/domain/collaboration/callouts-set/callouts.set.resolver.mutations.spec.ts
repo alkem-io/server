@@ -475,4 +475,142 @@ describe('CalloutsSetResolverMutations', () => {
       ).not.toHaveBeenCalled();
     });
   });
+
+  // 013 admin-only / collaboration-only guards for SPACES framing
+  // (workspace#013-spaces-collection-callout, FR-004a / FR-004d / FR-004e). T008.
+  describe('SPACES framing guards', () => {
+    const setupBaseMocks = (calloutsSet: any) => {
+      vi.mocked(calloutsSetService.getCalloutsSetOrFail).mockResolvedValue(
+        calloutsSet
+      );
+    };
+
+    it('rejects SPACES on a non-COLLABORATION (knowledge base) callouts set', async () => {
+      const calloutsSet = {
+        id: 'cs-kb',
+        type: CalloutsSetType.KNOWLEDGE_BASE,
+        authorization: { id: 'auth-kb' },
+      } as any;
+      setupBaseMocks(calloutsSet);
+      // CREATE_CALLOUT passes; the type check rejects before any CREATE check.
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+
+      const actorContext = { actorID: 'user-1' } as any;
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actorContext, {
+          calloutsSetID: 'cs-kb',
+          framing: { type: CalloutFramingType.SPACES },
+        } as any)
+      ).rejects.toThrow(ValidationException);
+
+      expect(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).not.toHaveBeenCalled();
+    });
+
+    it('requires the CREATE (admin) privilege for SPACES even with member create-callout rights', async () => {
+      const calloutsSet = {
+        id: 'cs-collab',
+        type: CalloutsSetType.COLLABORATION,
+        authorization: { id: 'auth-collab' },
+      } as any;
+      setupBaseMocks(calloutsSet);
+
+      // First call (CREATE_CALLOUT) succeeds, second call (CREATE admin) throws.
+      vi.mocked(authorizationService.grantAccessOrFail)
+        .mockImplementationOnce(() => undefined as any)
+        .mockImplementationOnce(() => {
+          throw new ValidationException('forbidden', 'collaboration' as any);
+        });
+
+      const actorContext = { actorID: 'member-1' } as any;
+
+      await expect(
+        resolver.createCalloutOnCalloutsSet(actorContext, {
+          calloutsSetID: 'cs-collab',
+          framing: { type: CalloutFramingType.SPACES },
+        } as any)
+      ).rejects.toThrow();
+
+      // The second authorization assertion was for the admin CREATE privilege.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        calloutsSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        expect.any(String)
+      );
+      expect(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).not.toHaveBeenCalled();
+    });
+
+    it('lets an admin create a SPACES callout with NO space-level restriction (host-space-generic, FR-004e)', async () => {
+      // The resolver imposes no space.level guard: an admin (CREATE granted)
+      // may create a SPACES callout on any COLLABORATION callouts set — L0 or
+      // L1 — and it lists that host space's subspaces. Both CREATE_CALLOUT and
+      // the admin CREATE assertions pass; creation proceeds.
+      const calloutsSet = {
+        id: 'cs-l1',
+        type: CalloutsSetType.COLLABORATION,
+        authorization: { id: 'auth-l1' },
+      } as any;
+      const callout = {
+        id: 'callout-spaces',
+        nameID: 'subspaces',
+        framing: { type: CalloutFramingType.SPACES },
+        settings: { visibility: CalloutVisibility.DRAFT },
+      } as any;
+      setupBaseMocks(calloutsSet);
+      vi.mocked(authorizationService.grantAccessOrFail).mockReturnValue(
+        undefined as any
+      );
+      vi.mocked(
+        calloutsSetService.createCalloutOnCalloutsSet
+      ).mockResolvedValue(callout);
+      vi.mocked(calloutService.save).mockResolvedValue(callout);
+      vi.mocked(calloutService.getStorageBucket).mockResolvedValue({
+        id: 'sb-1',
+      } as any);
+      vi.mocked(calloutService.getCalloutOrFail).mockResolvedValue(callout);
+      vi.mocked(
+        calloutAuthorizationService.applyAuthorizationPolicy
+      ).mockResolvedValue([]);
+      const temporaryStorageService = (resolver as any).temporaryStorageService;
+      vi.mocked(
+        temporaryStorageService.moveTemporaryDocuments
+      ).mockResolvedValue(undefined);
+      const roomResolverService = (resolver as any).roomResolverService;
+      vi.mocked(
+        roomResolverService.getRoleSetAndSettingsForCollaborationCalloutsSet
+      ).mockResolvedValue({
+        roleSet: { id: 'rs-1' },
+        platformRolesAccess: { roles: [] },
+        spaceSettings: {},
+      });
+      const communityResolverService = (resolver as any)
+        .communityResolverService;
+      vi.mocked(
+        communityResolverService.getLevelZeroSpaceIdForCalloutsSet
+      ).mockResolvedValue('space-1');
+
+      const actorContext = { actorID: 'admin-1' } as any;
+
+      await resolver.createCalloutOnCalloutsSet(actorContext, {
+        calloutsSetID: 'cs-l1',
+        framing: { type: CalloutFramingType.SPACES },
+      } as any);
+
+      // Creation proceeded — no level guard rejected it.
+      expect(calloutsSetService.createCalloutOnCalloutsSet).toHaveBeenCalled();
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
+        actorContext,
+        calloutsSet.authorization,
+        AuthorizationPrivilege.CREATE,
+        expect.any(String)
+      );
+    });
+  });
 });
