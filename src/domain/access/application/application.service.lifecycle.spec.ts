@@ -4,7 +4,11 @@ import { MockCacheManager } from '@test/mocks/cache-manager.mock';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mock } from 'vitest';
-import { ApplicationLifecycleService } from './application.service.lifecycle';
+import {
+  ApplicationLifecycleService,
+  ApplicationLifecycleState,
+  applicationLifecycleMachine,
+} from './application.service.lifecycle';
 
 describe('ApplicationLifecycleService', () => {
   let service: ApplicationLifecycleService;
@@ -83,6 +87,22 @@ describe('ApplicationLifecycleService', () => {
       const result = service.isFinalState(mockLifecycle);
 
       expect(result).toBe(false);
+    });
+  });
+
+  describe('applicationLifecycleMachine definition', () => {
+    it('allows REJECT from `approving` so a failed approval (e.g. FR-015 combined-flow authorisation revoked) is not stranded', () => {
+      const approving = (applicationLifecycleMachine.states as any)[
+        ApplicationLifecycleState.APPROVING
+      ];
+      expect(approving.on.APPROVED.target).toBe(
+        ApplicationLifecycleState.APPROVED
+      );
+      expect(approving.on.REJECT).toBeDefined();
+      expect(approving.on.REJECT.target).toBe(
+        ApplicationLifecycleState.REJECTED
+      );
+      expect(approving.on.REJECT.guard).toBe('hasUpdatePrivilege');
     });
   });
 });

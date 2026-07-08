@@ -596,6 +596,43 @@ export class CommunityResolverService {
     return community;
   }
 
+  /**
+   * Lightweight spaceID -> roleSetID resolution (only the join needed for the
+   * lookup, no relation hydration beyond it). Returns undefined when the space
+   * (or its community/role-set) does not exist — for best-effort cache
+   * invalidation, not authorisation.
+   */
+  public async getRoleSetIdForSpace(
+    spaceID: string
+  ): Promise<string | undefined> {
+    const space = await this.entityManager.findOne(Space, {
+      where: { id: spaceID },
+      relations: { community: { roleSet: true } },
+    });
+    return space?.community?.roleSet?.id;
+  }
+
+  /**
+   * Settings-only Space read for a role-set: no relation hydration (unlike
+   * {@link getSpaceForRoleSetOrFail}, which joins about.profile). Used on hot
+   * paths that only gate on `space.settings` — e.g. the combined-application
+   * reachability checks, which run per-ancestor during authorization resets.
+   */
+  public async getSpaceSettingsForRoleSet(
+    roleSetID: string
+  ): Promise<ISpace['settings'] | undefined> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          roleSet: {
+            id: roleSetID,
+          },
+        },
+      },
+    });
+    return space?.settings;
+  }
+
   public async getSpaceForRoleSetOrFail(roleSetID: string): Promise<ISpace> {
     const space = await this.entityManager.findOne(Space, {
       where: {
