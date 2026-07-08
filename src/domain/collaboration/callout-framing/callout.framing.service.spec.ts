@@ -896,6 +896,48 @@ describe('CalloutFramingService', () => {
       );
     });
 
+    // 013: a SPACES framing has a FIXED kind — it can never be switched to
+    // another framing type (workspace#013-spaces-collection-callout, FR-005/FR-006).
+    it('should reject switching a SPACES framing to another type (fixed kind, FR-005/FR-006)', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.SPACES,
+        profile: { id: 'profile-1' },
+      } as any;
+      const updateData = {
+        type: CalloutFramingType.CONTRIBUTORS,
+      } as any;
+
+      await expect(
+        service.updateCalloutFraming(
+          framing,
+          updateData,
+          storageAggregator,
+          false
+        )
+      ).rejects.toThrow(ValidationException);
+    });
+
+    it('should allow a no-op SPACES → SPACES type update (fixed kind is idempotent)', async () => {
+      const framing = {
+        id: 'framing-1',
+        type: CalloutFramingType.SPACES,
+        profile: { id: 'profile-1' },
+      } as any;
+      const updateData = {
+        type: CalloutFramingType.SPACES,
+      } as any;
+
+      const result = await service.updateCalloutFraming(
+        framing,
+        updateData,
+        storageAggregator,
+        false
+      );
+
+      expect(result.type).toBe(CalloutFramingType.SPACES);
+    });
+
     it('should create new link when framing type is LINK but no existing link', async () => {
       const framing = {
         id: 'framing-1',

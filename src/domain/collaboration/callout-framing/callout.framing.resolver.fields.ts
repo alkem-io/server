@@ -1,4 +1,5 @@
 import { ActorType } from '@common/enums/actor.type';
+import { CalloutFramingType } from '@common/enums/callout.framing.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ProfileLoaderCreator } from '@core/dataloader/creators';
 import { Loader } from '@core/dataloader/decorators';
@@ -9,10 +10,12 @@ import { IContributorCollectionCounts } from '@domain/collaboration/contributor-
 import { IContributorCollectionItem } from '@domain/collaboration/contributor-collection/dto/contributor.collection.item';
 import { ILink } from '@domain/collaboration/link/link.interface';
 import { IPoll } from '@domain/collaboration/poll/poll.interface';
+import { SpaceCollectionService } from '@domain/collaboration/space-collection/space.collection.service';
 import { IMediaGallery } from '@domain/common/media-gallery/media.gallery.interface';
 import { IMemo } from '@domain/common/memo/types';
 import { IProfile } from '@domain/common/profile/profile.interface';
 import { IWhiteboard } from '@domain/common/whiteboard/types';
+import { ISpace } from '@domain/space/space/space.interface';
 import { Args, Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { CurrentActor } from '@src/common/decorators';
 import { CalloutFraming } from './callout.framing.entity';
@@ -23,7 +26,8 @@ import { CalloutFramingService } from './callout.framing.service';
 export class CalloutFramingResolverFields {
   constructor(
     private calloutFramingService: CalloutFramingService,
-    private contributorCollectionService: ContributorCollectionService
+    private contributorCollectionService: ContributorCollectionService,
+    private spaceCollectionService: SpaceCollectionService
   ) {}
 
   @ResolveField('profile', () => IProfile, {
@@ -134,5 +138,27 @@ export class CalloutFramingResolverFields {
       callout,
       actorContext
     );
+  }
+
+  @ResolveField('subspaces', () => [ISpace], {
+    nullable: false,
+    description:
+      "The host space's subspaces for a SPACES framing, ordered pinned-first then the space's sortOrder/displayName. Returns the existing Space type (no new item type). No server-side pagination/search: the client name-searches and paginates client-side over this set. Empty for non-SPACES framings, for a callout not attached to a space, or for a host with no subspaces.",
+  })
+  async subspaces(
+    @Parent() calloutFraming: ICalloutFraming
+  ): Promise<ISpace[]> {
+    // Config-free + host-space-generic (workspace#013-spaces-collection-callout,
+    // US1/US2). Only SPACES framings expose a collection; every other framing
+    // resolves to an empty list (mirrors the conditional `contributors` field).
+    if (calloutFraming.type !== CalloutFramingType.SPACES) {
+      return [];
+    }
+    const callout =
+      await this.calloutFramingService.getParentCallout(calloutFraming);
+    if (!callout) {
+      return [];
+    }
+    return this.spaceCollectionService.getSubspaces(callout);
   }
 }
