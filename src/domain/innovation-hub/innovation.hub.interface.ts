@@ -27,6 +27,12 @@ export abstract class IInnovationHub extends INameable {
   // exposed through the field resolver
   spaceListFilter?: string[];
 
+  // exposed through the field resolver
+  innovationPackListFilter?: string[];
+
+  // exposed through the field resolver
+  virtualContributorListFilter?: string[];
+
   account!: IAccount;
 
   @Field(() => SearchVisibility, {

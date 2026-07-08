@@ -440,6 +440,16 @@ export class CalloutFramingService {
       const oldType = calloutFraming.type;
       const newType = calloutFramingData.type;
 
+      // Fixed kind (workspace#013-spaces-collection-callout, FR-005/FR-006):
+      // a SPACES framing can never be switched to another framing type (and
+      // never offers a map/view option — it carries no config at all).
+      if (oldType === CalloutFramingType.SPACES && newType !== oldType) {
+        throw new ValidationException(
+          'A SPACES callout framing has a fixed kind and cannot be changed to another framing type.',
+          LogContext.COLLABORATION
+        );
+      }
+
       // Validate framing type transitions for callout templates
       if (
         isParentCalloutTemplate &&
@@ -707,6 +717,11 @@ export class CalloutFramingService {
           LogContext.COLLABORATION
         );
       }
+      // A SPACES framing is deliberately CONFIG-FREE
+      // (workspace#013-spaces-collection-callout, FR-004b): it carries no
+      // framing settings block (no contributors object, no counts, no view/map).
+      // The check above already rejects any `contributors` payload on a SPACES
+      // callout; nothing else needs to be persisted for SPACES.
       return framingSettings;
     }
 

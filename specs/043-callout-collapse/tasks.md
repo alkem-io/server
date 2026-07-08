@@ -51,15 +51,16 @@
 
 ## Phase 3: User Story 2 — Default Display Mode for New Spaces (Priority: P1)
 
-**Goal**: Newly created spaces default to `COLLAPSED` callout description display mode without requiring explicit configuration.
+**Goal**: Newly created spaces default to `EXPANDED` callout description display mode without requiring explicit configuration.
 
-**Independent Test**: Create a new space via `createSpace` mutation without specifying layout settings, then query `space.settings.layout.calloutDescriptionDisplayMode` and verify it returns `COLLAPSED`.
+**Independent Test**: Create a new space via `createSpace` mutation without specifying layout settings, then query `space.settings.layout.calloutDescriptionDisplayMode` and verify it returns `EXPANDED`.
 
 ### Implementation for User Story 2
 
-- [x] T011 [US2] Add layout default initialization in `createSpace()` in `src/domain/space/space/space.service.ts` — after template settings are applied, set `space.settings.layout = { calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED }` if not already present, following the `sortMode` default pattern
+- [x] T011 [US2] Set the creation default in `SpaceSettingsService.applyCreationDefaults()` (`src/domain/space/space.settings/space.settings.service.ts`) — after template settings are applied, set `calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED` if not already present, following the `sortMode` default pattern
+- [x] T011b [US2] Migration `DefaultPlatformTemplatesCalloutExpanded` — force `layout.calloutDescriptionDisplayMode = 'expanded'` on the four platform-level default templates (`platform-space`, `platform-subspace`, `platform-subspace-knowledge`, `platform-space-tutorials`) so platform-provisioned new spaces default to `EXPANDED` independent of the code fallback
 
-**Checkpoint**: New spaces and subspaces are created with `layout.calloutDescriptionDisplayMode = COLLAPSED`. Verify via creating a space and querying settings.
+**Checkpoint**: New spaces and subspaces are created with `layout.calloutDescriptionDisplayMode = EXPANDED`. Verify via creating a space and querying settings.
 
 ---
 

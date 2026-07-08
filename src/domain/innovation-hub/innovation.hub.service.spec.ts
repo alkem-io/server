@@ -328,6 +328,112 @@ describe('InnovationHubService', () => {
     });
   });
 
+  describe('createInnovationHub — curated lists start empty', () => {
+    const mockAccount = {
+      id: 'account-1',
+      storageAggregator: { id: 'storage-1' },
+    } as IAccount;
+
+    it('should leave innovationPackListFilter and virtualContributorListFilter unset when omitted', async () => {
+      // Arrange
+      const input: CreateInnovationHubInput = {
+        subdomain: 'new-hub',
+        type: InnovationHubType.VISIBILITY,
+        spaceVisibilityFilter: SpaceVisibility.ACTIVE,
+        profileData: { displayName: 'New Hub' },
+      };
+      setupSuccessfulCreateMocks();
+
+      // Act
+      const result = await service.createInnovationHub(input, mockAccount);
+
+      // Assert
+      expect(result.innovationPackListFilter).toBeUndefined();
+      expect(result.virtualContributorListFilter).toBeUndefined();
+    });
+
+    it('should NOT seed spaceListFilter for a LIST-type hub when omitted', async () => {
+      // Arrange
+      const input: CreateInnovationHubInput = {
+        subdomain: 'new-list-hub',
+        type: InnovationHubType.LIST,
+        profileData: { displayName: 'New List Hub' },
+      };
+      setupSuccessfulCreateMocks();
+
+      // Act
+      const result = await service.createInnovationHub(input, mockAccount);
+
+      // Assert
+      expect(result.spaceListFilter).toBeUndefined();
+    });
+
+    it('should honor explicitly provided lists', async () => {
+      // Arrange
+      const input: CreateInnovationHubInput = {
+        subdomain: 'explicit-hub',
+        type: InnovationHubType.VISIBILITY,
+        spaceVisibilityFilter: SpaceVisibility.ACTIVE,
+        profileData: { displayName: 'Explicit Hub' },
+        innovationPackListFilter: ['pack-9'],
+        virtualContributorListFilter: ['vc-9'],
+      };
+      setupSuccessfulCreateMocks();
+      (
+        service['innovationPackService'] as any
+      ).getInnovationPacksByIds.mockResolvedValue([{ id: 'pack-9' }]);
+      (
+        service['virtualContributorLookupService'] as any
+      ).getVirtualContributorsByIds.mockResolvedValue([{ id: 'vc-9' }]);
+
+      // Act
+      const result = await service.createInnovationHub(input, mockAccount);
+
+      // Assert
+      expect(result.innovationPackListFilter).toEqual(['pack-9']);
+      expect(result.virtualContributorListFilter).toEqual(['vc-9']);
+    });
+
+    it('should honor explicitly provided empty lists', async () => {
+      // Arrange
+      const input: CreateInnovationHubInput = {
+        subdomain: 'empty-lists-hub',
+        type: InnovationHubType.VISIBILITY,
+        spaceVisibilityFilter: SpaceVisibility.ACTIVE,
+        profileData: { displayName: 'Empty Lists Hub' },
+        innovationPackListFilter: [],
+        virtualContributorListFilter: [],
+      };
+      setupSuccessfulCreateMocks();
+
+      // Act
+      const result = await service.createInnovationHub(input, mockAccount);
+
+      // Assert
+      expect(result.innovationPackListFilter).toEqual([]);
+      expect(result.virtualContributorListFilter).toEqual([]);
+    });
+
+    it('should reject create input with an unknown pack ID', async () => {
+      // Arrange
+      const input: CreateInnovationHubInput = {
+        subdomain: 'bad-pack-hub',
+        type: InnovationHubType.VISIBILITY,
+        spaceVisibilityFilter: SpaceVisibility.ACTIVE,
+        profileData: { displayName: 'Bad Pack Hub' },
+        innovationPackListFilter: ['pack-1', 'pack-unknown'],
+      };
+      (
+        service['innovationPackService'] as any
+      ).getInnovationPacksByIds.mockResolvedValue([{ id: 'pack-1' }]);
+
+      // Act & Assert
+      await expect(
+        service.createInnovationHub(input, mockAccount)
+      ).rejects.toThrow(ValidationException);
+    });
+  });
+
   describe('updateOrFail', () => {
     const existingHub = {
       id: 'hub-1',
@@ -480,11 +586,12 @@ describe('InnovationHubService', () => {
       expect(result.spaceListFilter).toEqual(['space-1', 'space-2']);
     });
 
-    it('should throw Error when updating LIST hub with empty spaceListFilter', async () => {
+    it('should allow an empty spaceListFilter on a LIST hub (clears the listing)', async () => {
       // Arrange
       const listHub = {
         ...existingHub,
         type: InnovationHubType.LIST,
+        spaceListFilter: ['space-1'],
       } as unknown as InnovationHub;
       vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(listHub);
 
@@ -493,10 +600,15 @@ describe('InnovationHubService', () => {
         spaceListFilter: [],
       };
 
-      // Act & Assert
-      await expect(service.updateOrFail(input)).rejects.toThrow(
-        /At least one Space needs to be provided/
-      );
+      // Act
+      const result = await service.updateOrFail(input);
+
+      // Assert — empty is valid (FR-015 amendment): the listing is cleared
+      // and no Space lookup happens for an empty list.
+      expect(result.spaceListFilter).toEqual([]);
+      expect(
+        (service['spaceLookupService'] as any).spacesExist
+      ).not.toHaveBeenCalled();
     });
 
     it('should throw Error when updating LIST hub with non-existent space IDs', async () => {
@@ -520,6 +632,174 @@ describe('InnovationHubService', () => {
       await expect(service.updateOrFail(input)).rejects.toThrow(
         /Spaces with the following identifiers not found/
       );
+    });
+
+    it('should validate and replace innovationPackListFilter', async () => {
+      // Arrange
+      (
+        service['innovationPackService'] as any
+      ).getInnovationPacksByIds.mockResolvedValue([
+        { id: 'pack-1' },
+        { id: 'pack-2' },
+      ]);
+
+      const input: UpdateInnovationHubInput = {
+        ID: 'hub-1',
+        innovationPackListFilter: ['pack-2', 'pack-1'],
+      };
+
+      // Act
+      const result = await service.updateOrFail(input);
+
+      // Assert — full replace, stored order preserved as submitted
+      expect(result.innovationPackListFilter).toEqual(['pack-2', 'pack-1']);
+    });
+
+    it('should throw ValidationException when innovationPackListFilter has an unknown ID', async () => {
+      // Arrange
+      (
+        service['innovationPackService'] as any
+      ).getInnovationPacksByIds.mockResolvedValue([{ id: 'pack-1' }]);
+
+      const input: UpdateInnovationHubInput = {
+        ID: 'hub-1',
+        innovationPackListFilter: ['pack-1', 'pack-unknown'],
+      };
+
+      // Act & Assert
+      await expect(service.updateOrFail(input)).rejects.toThrow(
+        ValidationException
+      );
+    });
+
+    it('should throw ValidationException when innovationPackListFilter has duplicates', async () => {
+      // Arrange
+      const input: UpdateInnovationHubInput = {
+        ID: 'hub-1',
+        innovationPackListFilter: ['pack-1', 'pack-1'],
+      };
+
+      // Act & Assert
+      await expect(service.updateOrFail(input)).rejects.toThrow(
+        ValidationException
+      );
+      expect(
+        (service['innovationPackService'] as any).getInnovationPacksByIds
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should allow an empty innovationPackListFilter (hides the section)', async () => {
+      // Arrange
+      const hubWithPacks = {
+        ...existingHub,
+        innovationPackListFilter: ['pack-1'],
+      } as unknown as InnovationHub;
+      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(
+        hubWithPacks
+      );
+
+      const input: UpdateInnovationHubInput = {
+        ID: 'hub-1',
+        innovationPackListFilter: [],
+      };
+
+      // Act
+      const result = await service.updateOrFail(input);
+
+      // Assert
+      expect(result.innovationPackListFilter).toEqual([]);
+      expect(
+        (service['innovationPackService'] as any).getInnovationPacksByIds
+      ).not.toHaveBeenCalled();
+    });
+
+    it('should leave the curated lists unchanged when absent from the input', async () => {
+      // Arrange
+      const hubWithLists = {
+        ...existingHub,
+        innovationPackListFilter: ['pack-1'],
+        virtualContributorListFilter: ['vc-1'],
+      } as unknown as InnovationHub;
+      vi.spyOn(innovationHubRepository, 'findOne').mockResolvedValue(
+        hubWithLists
+      );
+
+      const input: UpdateInnovationHubInput = {
+        ID: 'hub-1',
+        listedInStore: false,
+      };
+
+      // Act
+      const result = await service.updateOrFail(input);
+
+      // Assert
+      expect(result.innovationPackListFilter).toEqual(['pack-1']);
+      expect(result.virtualContributorListFilter).toEqual(['vc-1']);
+    });
+
+    it('should validate and replace virtualContributorListFilter', async () => {
+      // Arrange
+      (
+        service['virtualContributorLookupService'] as any
+      ).getVirtualContributorsByIds.mockResolvedValue([
+        { id: 'vc-1' },
+        { id: 'vc-2' },
+      ]);
+
+      const input: UpdateInnovationHubInput = {
+        ID: 'hub-1',
+        virtualContributorListFilter: ['vc-2', 'vc-1'],
+      };
+
+      // Act
+      const result = await service.updateOrFail(input);
+
+      // Assert
+      expect(result.virtualContributorListFilter).toEqual(['vc-2', 'vc-1']);
+    });
+
+    it('should throw ValidationException when virtualContributorListFilter has an unknown ID', async () => {
+      // Arrange
+      (
+        service['virtualContributorLookupService'] as any
+      ).getVirtualContributorsByIds.mockResolvedValue([{ id: 'vc-1' }]);
+
+      const input: UpdateInnovationHubInput = {
+        ID: 'hub-1',
+        virtualContributorListFilter: ['vc-1', 'vc-unknown'],
+      };
+
+      // Act & Assert
+      await expect(service.updateOrFail(input)).rejects.toThrow(
+        ValidationException
+      );
+    });
+
+    it('should throw ValidationException when virtualContributorListFilter has duplicates', async () => {
+      // Arrange
+      const input: UpdateInnovationHubInput = {
+        ID: 'hub-1',
+        virtualContributorListFilter: ['vc-1', 'vc-1'],
+      };
+
+      // Act & Assert
+      await expect(service.updateOrFail(input)).rejects.toThrow(
+        ValidationException
+      );
+    });
+
+    it('should allow an empty virtualContributorListFilter (hides the section)', async () => {
+      // Arrange
+      const input: UpdateInnovationHubInput = {
+        ID: 'hub-1',
+        virtualContributorListFilter: [],
+      };
+
+      // Act
+      const result = await service.updateOrFail(input);
+
+      // Assert
+      expect(result.virtualContributorListFilter).toEqual([]);
     });
 
     it('should update searchVisibility when provided', async () => {
@@ -844,6 +1124,53 @@ describe('InnovationHubService', () => {
       // Act & Assert
       await expect(
         service.getSpaceListFilterOrFail('non-existent')
+      ).rejects.toThrow(EntityNotFoundException);
+    });
+  });
+
+  describe('getInnovationPackListFilterOrFail / getVirtualContributorListFilterOrFail', () => {
+    it('should return the stored lists when the hub exists', async () => {
+      // Arrange
+      const hub = {
+        id: 'hub-1',
+        innovationPackListFilter: ['pack-1'],
+        virtualContributorListFilter: ['vc-1', 'vc-2'],
+      } as InnovationHub;
+      vi.spyOn(innovationHubRepository, 'findOneBy').mockResolvedValue(hub);
+
+      // Act & Assert
+      await expect(
+        service.getInnovationPackListFilterOrFail('hub-1')
+      ).resolves.toEqual(['pack-1']);
+      await expect(
+        service.getVirtualContributorListFilterOrFail('hub-1')
+      ).resolves.toEqual(['vc-1', 'vc-2']);
+    });
+
+    it('should return undefined when the hub has no stored lists (never seeded)', async () => {
+      // Arrange
+      const hub = { id: 'hub-1' } as InnovationHub;
+      vi.spyOn(innovationHubRepository, 'findOneBy').mockResolvedValue(hub);
+
+      // Act & Assert
+      await expect(
+        service.getInnovationPackListFilterOrFail('hub-1')
+      ).resolves.toBeUndefined();
+      await expect(
+        service.getVirtualContributorListFilterOrFail('hub-1')
+      ).resolves.toBeUndefined();
+    });
+
+    it('should throw EntityNotFoundException when the hub does not exist', async () => {
+      // Arrange
+      vi.spyOn(innovationHubRepository, 'findOneBy').mockResolvedValue(null);
+
+      // Act & Assert
+      await expect(
+        service.getInnovationPackListFilterOrFail('missing')
+      ).rejects.toThrow(EntityNotFoundException);
+      await expect(
+        service.getVirtualContributorListFilterOrFail('missing')
       ).rejects.toThrow(EntityNotFoundException);
     });
   });
