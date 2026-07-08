@@ -111,10 +111,6 @@ export class CollaboraDocumentResolverMutations {
       `replace CollaboraDocument: ${collaboraDocument.id}`
     );
 
-    // Note: `replaceData.displayName` is intentionally NOT applied here — the
-    // client sends it but this feature does not persist a rename (FR-009 /
-    // FR-015; rename persistence is feature 016). The service ignores it too.
-
     // Read the upload to a buffer with a configured timeout so a slow or hung
     // client can't pin Node's heap (mirrors importCollaboraDocument).
     const streamTimeoutMs = this.configService.get<number>(
@@ -123,7 +119,7 @@ export class CollaboraDocumentResolverMutations {
     )!;
     const buffer = await streamToBuffer(createReadStream(), streamTimeoutMs);
 
-    const updated =
+    const swapped =
       await this.collaboraDocumentService.replaceCollaboraDocument(
         replaceData.ID,
         buffer,
@@ -131,6 +127,18 @@ export class CollaboraDocumentResolverMutations {
         mimetype,
         actorContext.actorID
       );
+
+    // Persist the title chosen in the replace dialog as the document's display
+    // name (feature 016 / FR-009 / FR-015). The swap keeps the same
+    // CollaboraDocument entity; reusing the rename path propagates the new name
+    // to the editor title bar and the download filename (with the replacement
+    // file's extension). Skipped when no title was supplied.
+    const updated = replaceData.displayName
+      ? await this.collaboraDocumentService.updateCollaboraDocument(
+          replaceData.ID,
+          replaceData.displayName
+        )
+      : swapped;
 
     // FR-014 lifecycle analytics: record the swap as a single-actor
     // COLLABORA_DOCUMENT_REPLACED event. Resolve the level-zero space via the
