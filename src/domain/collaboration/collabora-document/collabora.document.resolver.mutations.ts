@@ -28,12 +28,30 @@ export class CollaboraDocumentResolverMutations {
       await this.collaboraDocumentService.getCollaboraDocumentOrFail(
         updateData.ID
       );
-    this.authorizationService.grantAccessOrFail(
-      actorContext,
-      collaboraDocument.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `update CollaboraDocument: ${collaboraDocument.id}`
-    );
+    // Renaming a CollaboraDocument (the only field this mutation updates today) is
+    // permitted on the UPDATE_CONTENT privilege — i.e. anyone who can edit the file
+    // content. UPDATE_CONTENT is granted from CONTRIBUTE and is the privilege the WOPI
+    // service uses to grant write access in Collabora, so a content editor who can
+    // write the document can also rename it. For a framing document, the entity-level
+    // UPDATE comes from the callout, so gating rename on UPDATE alone would wrongly
+    // exclude content editors who lack callout-edit rights. Managers (UPDATE) are still
+    // allowed; if the actor has neither, grantAccessOrFail throws the standard error.
+    const authorization = collaboraDocument.authorization;
+    const canEditContent =
+      !!authorization &&
+      this.authorizationService.isAccessGranted(
+        actorContext,
+        authorization,
+        AuthorizationPrivilege.UPDATE_CONTENT
+      );
+    if (!canEditContent) {
+      this.authorizationService.grantAccessOrFail(
+        actorContext,
+        authorization,
+        AuthorizationPrivilege.UPDATE,
+        `update CollaboraDocument: ${collaboraDocument.id}`
+      );
+    }
 
     if (updateData.displayName) {
       return await this.collaboraDocumentService.updateCollaboraDocument(
