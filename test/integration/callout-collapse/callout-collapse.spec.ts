@@ -5,7 +5,7 @@
  *   1. The GraphQL mutation path for calloutDescriptionDisplayMode – the
  *      SpaceSettingsService assembled inside a NestJS TestingModule, verifying that
  *      the COLLAPSED / EXPANDED values are persisted and queried back correctly.
- *   2. New-Space defaults – the inline defaulting logic in SpaceService.createSpace()
+ *   2. New-Space defaults – the defaulting logic in SpaceSettingsService.applyCreationDefaults()
  *      that seeds EXPANDED for every new Space record.
  *   3. Migration idempotency – the AddLayoutSettingsToSpace migration SQL is verified
  *      structurally: the UP query only touches rows where layout is absent, and a
