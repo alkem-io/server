@@ -1,20 +1,34 @@
 import { CurrentActor } from '@common/decorators';
-import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { streamToBuffer } from '@common/utils/file.util';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { Inject } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
+import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
+import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { AlkemioConfig } from '@src/types/alkemio.config';
+import { FileUpload, GraphQLUpload } from 'graphql-upload';
+import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
 import { ICollaboraDocument } from './collabora.document.interface';
 import { CollaboraDocumentService } from './collabora.document.service';
 import { DeleteCollaboraDocumentInput } from './dto/collabora.document.dto.delete';
+import { ReplaceCollaboraDocumentInput } from './dto/collabora.document.dto.replace';
 import { UpdateCollaboraDocumentInput } from './dto/collabora.document.dto.update';
 
 @InstrumentResolver()
 @Resolver(() => ICollaboraDocument)
 export class CollaboraDocumentResolverMutations {
   constructor(
+    @Inject(WINSTON_MODULE_NEST_PROVIDER)
+    private readonly logger: WinstonLogger,
     private authorizationService: AuthorizationService,
-    private collaboraDocumentService: CollaboraDocumentService
+    private collaboraDocumentService: CollaboraDocumentService,
+    private contributionReporter: ContributionReporterService,
+    private communityResolverService: CommunityResolverService,
+    private readonly configService: ConfigService<AlkemioConfig, true>
   ) {}
 
   @Mutation(() => ICollaboraDocument, {
@@ -72,5 +86,84 @@ export class CollaboraDocumentResolverMutations {
     return await this.collaboraDocumentService.deleteCollaboraDocument(
       deleteData.ID
     );
+  }
+
+  @Mutation(() => ICollaboraDocument, {
+    description:
+      'Replace the backing file of an existing CollaboraDocument in place, preserving its identity. Requires UPDATE on the document. The replacement must be an allowed OfficeDocs format, within the size cap, and the SAME document type as the current file. Refused while the document is being edited.',
+  })
+  async replaceCollaboraDocument(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('replaceData') replaceData: ReplaceCollaboraDocumentInput,
+    @Args({ name: 'file', type: () => GraphQLUpload })
+    { createReadStream, filename, mimetype }: FileUpload
+  ): Promise<ICollaboraDocument> {
+    const collaboraDocument =
+      await this.collaboraDocumentService.getCollaboraDocumentOrFail(
+        replaceData.ID
+      );
+    // FR-002: re-check UPDATE (the same "edit rights" gate as
+    // updateCollaboraDocument) at mutation time.
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      collaboraDocument.authorization,
+      AuthorizationPrivilege.UPDATE,
+      `replace CollaboraDocument: ${collaboraDocument.id}`
+    );
+
+    // Note: `replaceData.displayName` is intentionally NOT applied here — the
+    // client sends it but this feature does not persist a rename (FR-009 /
+    // FR-015; rename persistence is feature 016). The service ignores it too.
+
+    // Read the upload to a buffer with a configured timeout so a slow or hung
+    // client can't pin Node's heap (mirrors importCollaboraDocument).
+    const streamTimeoutMs = this.configService.get<number>(
+      'storage.file.stream_timeout_ms',
+      { infer: true }
+    )!;
+    const buffer = await streamToBuffer(createReadStream(), streamTimeoutMs);
+
+    const updated =
+      await this.collaboraDocumentService.replaceCollaboraDocument(
+        replaceData.ID,
+        buffer,
+        filename,
+        mimetype,
+        actorContext.actorID
+      );
+
+    // FR-014 lifecycle analytics: record the swap as a single-actor
+    // COLLABORA_DOCUMENT_REPLACED event. Resolve the level-zero space via the
+    // community resolver exactly as the upload path does. Best-effort: the
+    // swap is already committed, so a failure here must NOT fail the mutation
+    // (a retry would double-swap). Catch and log; never re-throw.
+    try {
+      const community =
+        await this.communityResolverService.getCommunityForCollaboraDocumentOrFail(
+          updated.id
+        );
+      const levelZeroSpaceID =
+        await this.communityResolverService.getLevelZeroSpaceIdForCommunity(
+          community.id
+        );
+      this.contributionReporter.calloutCollaboraDocumentReplaced(
+        {
+          id: updated.id,
+          name: updated.profile?.displayName ?? updated.id,
+          space: levelZeroSpaceID,
+        },
+        actorContext
+      );
+    } catch (e) {
+      const message = e instanceof Error ? e.message : String(e);
+      const details = e instanceof Error ? e.stack : String(e);
+      this.logger.error(
+        `Failed to report COLLABORA_DOCUMENT_REPLACED analytics for CollaboraDocument ${updated.id}: ${message}`,
+        details,
+        LogContext.COLLABORATION
+      );
+    }
+
+    return updated;
   }
 }
