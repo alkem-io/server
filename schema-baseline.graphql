@@ -1272,6 +1272,10 @@ type CalloutFraming {
   """The Profile for framing the associated Callout."""
   profile: Profile!
   """
+  The host space's subspaces for a SPACES framing, ordered pinned-first then the space's sortOrder/displayName. Returns the existing Space type (no new item type). No server-side pagination/search: the client name-searches and paginates client-side over this set. Empty for non-SPACES framings, for a callout not attached to a space, or for a host with no subspaces.
+  """
+  subspaces: [Space!]!
+  """
   The type of the Callout Framing, the additional content attached to this callout
   """
   type: CalloutFramingType!
@@ -1289,6 +1293,7 @@ enum CalloutFramingType {
   MEMO
   NONE
   POLL
+  SPACES
   WHITEBOARD
 }
 
@@ -2319,6 +2324,10 @@ input CreateInnovationFlowStateSettingsInput {
 input CreateInnovationHubOnAccountInput {
   """The Account where the InnovationHub is to be created."""
   accountID: UUID!
+  """
+  The Innovation Packs curated for this Innovation Hub. When omitted, the Innovation Hub is created with no Innovation Packs.
+  """
+  innovationPackListFilter: [UUID!]
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
   profileData: CreateProfileInput!
@@ -2334,6 +2343,10 @@ input CreateInnovationHubOnAccountInput {
   subdomain: String!
   """The type of Innovation Hub."""
   type: InnovationHubType!
+  """
+  The Virtual Contributors curated for this Innovation Hub. When omitted, the Innovation Hub is created with no Virtual Contributors.
+  """
+  virtualContributorListFilter: [UUID!]
 }
 
 input CreateInnovationPackOnAccountInput {
@@ -3596,6 +3609,10 @@ type InnovationHub {
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  """
+  The Innovation Packs curated for this Innovation Hub, in stored (curated) order, filtered to those the requesting agent may read.
+  """
+  innovationPackListFilter: [InnovationPack!]
   """Flag to control if this InnovationHub is listed in the platform store."""
   listedInStore: Boolean!
   """A name identifier of the entity, unique within a given scope."""
@@ -3617,6 +3634,10 @@ type InnovationHub {
   type: InnovationHubType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """
+  The Virtual Contributors curated for this Innovation Hub, in stored (curated) order, filtered to those the requesting agent may read.
+  """
+  virtualContributorListFilter: [VirtualContributor!]
 }
 
 enum InnovationHubType {
@@ -8148,6 +8169,10 @@ input UpdateInnovationFlowStatesSortOrderInput {
 input UpdateInnovationHubInput {
   ID: UUID!
   """
+  The Innovation Packs curated for this Innovation Hub; full replace. An empty list is allowed and hides the section. Omit to leave unchanged.
+  """
+  innovationPackListFilter: [UUID!]
+  """
   Flag to control the visibility of the InnovationHub in the platform store.
   """
   listedInStore: Boolean
@@ -8160,13 +8185,17 @@ input UpdateInnovationHubInput {
   """Visibility of the InnovationHub in searches."""
   searchVisibility: SearchVisibility
   """
-  A list of Spaces to include in this Innovation Hub. Only valid when type 'list' is used.
+  A list of Spaces to include in this Innovation Hub; full replace. An empty list is allowed and hides the Spaces listing. Only valid when type 'list' is used.
   """
   spaceListFilter: [UUID!]
   """
   Spaces with which visibility this Innovation Hub will display. Only valid when type 'visibility' is used.
   """
   spaceVisibilityFilter: SpaceVisibility
+  """
+  The Virtual Contributors curated for this Innovation Hub; full replace. An empty list is allowed and hides the section. Omit to leave unchanged.
+  """
+  virtualContributorListFilter: [UUID!]
 }
 
 input UpdateInnovationPackInput {
