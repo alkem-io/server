@@ -192,6 +192,12 @@ describe('RoleSetResolverMutationsMembership', () => {
         undefined
       );
       (roleSetService.isInRole as Mock).mockResolvedValue(false);
+      // Feature 017: a non-parent-member is only allowed to apply when the
+      // combined-flow preconditions hold; here they do not, so the original
+      // "join the parent first" exception must still fire.
+      (
+        roleSetService.isCombinedApplicationGrantAuthorised as Mock
+      ).mockResolvedValue(false);
 
       await expect(
         resolver.applyForEntryRoleOnRoleSet(actorContext, {
@@ -199,6 +205,46 @@ describe('RoleSetResolverMutationsMembership', () => {
           questions: [],
         } as any)
       ).rejects.toThrow(RoleSetMembershipException);
+    });
+
+    it('should allow a non-parent-member to apply when the combined Subspace flow is authorised', async () => {
+      const actorContext = { actorID: 'user-1' } as any;
+      const parentRoleSet = { id: 'parent-rs' } as any;
+      const mockRoleSet = {
+        id: 'rs-1',
+        type: RoleSetType.SPACE,
+        authorization: { id: 'auth-1' },
+        parentRoleSet,
+      } as any;
+      const mockApplication = { id: 'app-1' } as any;
+
+      (roleSetService.getRoleSetOrFail as Mock).mockResolvedValue(mockRoleSet);
+      (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
+        undefined
+      );
+      // Not a member of the parent...
+      (roleSetService.isInRole as Mock).mockResolvedValue(false);
+      // ...but the combined Subspace application flow is authorised.
+      (
+        roleSetService.isCombinedApplicationGrantAuthorised as Mock
+      ).mockResolvedValue(true);
+      (roleSetService.createApplication as Mock).mockResolvedValue(
+        mockApplication
+      );
+      (applicationService.save as Mock).mockResolvedValue(mockApplication);
+      (applicationService.getApplicationOrFail as Mock).mockResolvedValue(
+        mockApplication
+      );
+      (
+        roleSetAuthorizationService.applyAuthorizationPolicyOnInvitationsApplications as Mock
+      ).mockResolvedValue([]);
+
+      const result = await resolver.applyForEntryRoleOnRoleSet(actorContext, {
+        roleSetID: 'rs-1',
+        questions: [],
+      } as any);
+
+      expect(result).toBe(mockApplication);
     });
   });
 
