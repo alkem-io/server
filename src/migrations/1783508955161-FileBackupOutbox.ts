@@ -29,7 +29,7 @@ export class FileBackupOutbox1783508955161 implements MigrationInterface {
 
   public async up(queryRunner: QueryRunner): Promise<void> {
     await queryRunner.query(`
-      CREATE TABLE IF NOT EXISTS "file_backup_outbox" (
+      CREATE TABLE "file_backup_outbox" (
         "id"          BIGINT GENERATED ALWAYS AS IDENTITY PRIMARY KEY,
         "fileId"      uuid                     NOT NULL,
         "externalID"  character varying(128)   NOT NULL,
@@ -47,12 +47,12 @@ export class FileBackupOutbox1783508955161 implements MigrationInterface {
     `);
     // Claim scan: only pending rows whose backoff elapsed, hot first, oldest first.
     await queryRunner.query(`
-      CREATE INDEX IF NOT EXISTS "idx_file_backup_outbox_claim"
+      CREATE INDEX "idx_file_backup_outbox_claim"
         ON "file_backup_outbox" ("priority" DESC, "createdDate")
         WHERE "status" = 'pending'
     `);
     await queryRunner.query(`
-      CREATE INDEX IF NOT EXISTS "idx_file_backup_outbox_external"
+      CREATE INDEX "idx_file_backup_outbox_external"
         ON "file_backup_outbox" ("externalID")
     `);
     // NOLOGIN, password-free privilege role (guarded — CREATE ROLE has no IF NOT EXISTS).
