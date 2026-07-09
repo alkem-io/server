@@ -184,6 +184,8 @@ export class OrganizationAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.SERVICE_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_ORGANIZATION_AUTHORIZATION_RESET
       );

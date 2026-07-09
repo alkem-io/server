@@ -2,6 +2,7 @@ import {
   CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK,
   CREDENTIAL_RULE_PLATFORM_CREATE_SPACE,
   CREDENTIAL_RULE_PLATFORM_CREATE_VC,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES,
   CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE,
   CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE,
@@ -326,6 +327,21 @@ export class AccountAuthorizationService {
       );
     authorizationReset.cascade = false;
     newRules.push(authorizationReset);
+
+    // Dedicated reset rule: uniform four-role set for AUTHORIZATION_RESET only
+    const serviceAdminReset =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.AUTHORIZATION_RESET],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.SERVICE_ADMIN,
+        ],
+        CREDENTIAL_RULE_TYPES_ACCOUNT_AUTH_RESET
+      );
+    serviceAdminReset.cascade = false;
+    newRules.push(serviceAdminReset);
 
     // Allow Global Spaces Read to view Spaces + contents
     const globalSpacesReader =

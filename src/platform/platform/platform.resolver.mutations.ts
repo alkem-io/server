@@ -40,7 +40,7 @@ export class PlatformResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN, // TODO: back to authorization reset
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization on platform: ${actorContext.actorID}`
     );
     const updatedAuthorizations =

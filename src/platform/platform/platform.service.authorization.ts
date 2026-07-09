@@ -298,6 +298,8 @@ export class PlatformAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.SERVICE_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET
       );

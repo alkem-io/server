@@ -161,7 +161,7 @@ export class AdminAuthorizationResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN, // todo: replace with AUTHORIZATION_RESET once that has been granted
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization on platform: ${actorContext.actorID}`
     );
 
@@ -181,7 +181,7 @@ export class AdminAuthorizationResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN, // todo: replace with AUTHORIZATION_RESET once that has been granted
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset platformRolesAccess on all Spaces: ${actorContext.actorID}`
     );
 

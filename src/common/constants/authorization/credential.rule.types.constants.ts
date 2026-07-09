@@ -104,6 +104,10 @@ export const CREDENTIAL_RULE_TYPES_INNOVATION_HUBS =
   'credentialRuleTypes-platformInnovationHubs';
 export const CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS =
   'credentialRuleTypes-aiServerGlobalAdmins';
+export const CREDENTIAL_RULE_AI_SERVER_AUTH_RESET =
+  'credentialRuleTypes-aiServerAuthReset';
+export const CREDENTIAL_RULE_TYPES_ACCOUNT_AUTH_RESET =
+  'credentialRuleTypes-accountAuthReset';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE =
   'credentialRuleTypes-accountLicenseManage';
 export const CREDENTIAL_RULE_TYPES_FORUM_READ = 'credentialRuleTypes-forumRead';

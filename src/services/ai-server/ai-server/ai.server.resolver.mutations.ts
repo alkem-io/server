@@ -129,7 +129,7 @@ export class AiServerResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       aiServer.authorization,
-      AuthorizationPrivilege.GRANT, // to be auth reset
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization on aiServer: ${actorContext.actorID}`
     );
     const authorizations =

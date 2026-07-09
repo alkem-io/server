@@ -1,4 +1,7 @@
-import { CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS } from '@common/constants/authorization/credential.rule.types.constants';
+import {
+  CREDENTIAL_RULE_AI_SERVER_AUTH_RESET,
+  CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS,
+} from '@common/constants/authorization/credential.rule.types.constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -79,12 +82,26 @@ export class AiServerAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.GRANT,
-          AuthorizationPrivilege.AUTHORIZATION_RESET,
         ],
         [AuthorizationCredential.GLOBAL_ADMIN],
         CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS
       );
     credentialRules.push(globalAdmins);
+
+    // Reset kept separate: SERVICE_ADMIN must not gain CRUD/GRANT
+    const authorizationReset =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.AUTHORIZATION_RESET],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.SERVICE_ADMIN,
+        ],
+        CREDENTIAL_RULE_AI_SERVER_AUTH_RESET
+      );
+    authorizationReset.cascade = false;
+    credentialRules.push(authorizationReset);
 
     return credentialRules;
   }
