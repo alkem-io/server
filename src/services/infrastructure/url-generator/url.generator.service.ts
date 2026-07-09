@@ -11,6 +11,7 @@ import {
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CalloutContribution } from '@domain/collaboration/callout-contribution/callout.contribution.entity';
 import { CalloutFraming } from '@domain/collaboration/callout-framing/callout.framing.entity';
+import { CollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { Post } from '@domain/collaboration/post/post.entity';
 import { Memo } from '@domain/common/memo/memo.entity';
@@ -148,6 +149,8 @@ export class UrlGeneratorService {
         );
       case ProfileType.WHITEBOARD:
         return await this.getWhiteboardUrlPathByProfileID(profile.id);
+      case ProfileType.COLLABORA_DOCUMENT:
+        return await this.getCollaboraDocumentUrlPathByProfileID(profile.id);
       case ProfileType.MEMO:
         return await this.getMemoUrlPathByProfileID(profile.id);
       case ProfileType.INNOVATION_FLOW:
@@ -976,6 +979,67 @@ export class UrlGeneratorService {
         },
       },*/
     });
+  }
+
+  /**
+   * Collabora documents have no nameID and no client deep-link route
+   * (the client opens them in a dialog from the callout page), so the
+   * canonical URL is the containing callout — via framing or contribution.
+   */
+  private async getCollaboraDocumentUrlPathByProfileID(
+    collaboraDocumentProfileID: string
+  ): Promise<string> {
+    const collaboraDocument = await this.entityManager.findOne(
+      CollaboraDocument,
+      {
+        where: {
+          profile: {
+            id: collaboraDocumentProfileID,
+          },
+        },
+        select: {
+          id: true,
+        },
+      }
+    );
+
+    if (!collaboraDocument) {
+      throw new EntityNotFoundException(
+        'Unable to find collabora document for profile',
+        LogContext.URL_GENERATOR,
+        { collaboraDocumentProfileID }
+      );
+    }
+
+    let callout = await this.entityManager.findOne(Callout, {
+      where: {
+        framing: {
+          collaboraDocument: {
+            id: collaboraDocument.id,
+          },
+        },
+      },
+    });
+    if (!callout) {
+      callout = await this.entityManager.findOne(Callout, {
+        where: {
+          contributions: {
+            collaboraDocument: {
+              id: collaboraDocument.id,
+            },
+          },
+        },
+      });
+    }
+    if (!callout) {
+      throw new EntityNotFoundException(
+        'Unable to find callout for collabora document',
+        LogContext.URL_GENERATOR,
+        { collaboraDocumentID: collaboraDocument.id }
+      );
+    }
+
+    return this.getCalloutUrlPath(callout.id);
   }
 
   private async getMemoUrlPathByProfileID(

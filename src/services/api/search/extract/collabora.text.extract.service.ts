@@ -70,7 +70,18 @@ export type CollaboraExtractResult = {
  * within Elasticsearch's default `index.highlight.max_analyzed_offset`
  * (1,000,000) and analysis bounds.
  */
-const CONTENT_FIELD_SIZE_LIMIT = 1_000_000;
+export const CONTENT_FIELD_SIZE_LIMIT = 1_000_000;
+
+/**
+ * FR-016: truncates cleaned text to the content-field size limit — leading
+ * text kept, overflow dropped silently. Exported so the truncation contract is
+ * unit-testable with a synthetic overlong string (a real >1M-char office
+ * fixture would be impractical to embed).
+ */
+export const truncateToContentFieldLimit = (cleaned: string): string =>
+  cleaned.length > CONTENT_FIELD_SIZE_LIMIT
+    ? cleaned.slice(0, CONTENT_FIELD_SIZE_LIMIT)
+    : cleaned;
 
 /**
  * Extracts, cleans, size-guards and truncates the readable text of a Collabora
@@ -172,6 +183,17 @@ export class CollaboraTextExtractService {
       );
     }
 
+    // Re-check the cap against the bytes actually fetched: the DB `size`
+    // column is advisory (it can lag or be wrong), and the pre-fetch check
+    // alone would let an oversized body straight into the in-process parser.
+    if (buffer.length > this.maxSourceSizeBytes) {
+      return this.skip(
+        CollaboraExtractSkipReason.OVER_CAP,
+        collaboraDocument.id,
+        `fetched=${buffer.length} cap=${this.maxSourceSizeBytes} (DB size=${document.size})`
+      );
+    }
+
     let rawText: string;
     try {
       rawText = await this.parse(buffer, fileType);
@@ -192,13 +214,7 @@ export class CollaboraTextExtractService {
       );
     }
 
-    // FR-016: truncate to the field-size limit; keep leading text, drop overflow.
-    const content =
-      cleaned.length > CONTENT_FIELD_SIZE_LIMIT
-        ? cleaned.slice(0, CONTENT_FIELD_SIZE_LIMIT)
-        : cleaned;
-
-    return { content };
+    return { content: truncateToContentFieldLimit(cleaned) };
   }
 
   /**

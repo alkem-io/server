@@ -23,14 +23,15 @@ export const buildSearchQuery = (
                 // documents surfacing by name even when their long `content`
                 // field is discounted by BM25 length-normalization. The explicit
                 // boosts override the `*` weight for those two fields.
+                // `profile.displayName` is mapped `keyword` with a `.text`
+                // subfield (alkemio-data-base-fields template) — the boost must
+                // target `.text` or it only fires on whole-string exact matches.
+                // Ingestion writes tags to `profile.tags` (a joined text field),
+                // NOT `profile.tagsets.tags` — boost the field that exists.
                 multi_match: {
                   query: terms,
                   type: 'most_fields',
-                  fields: [
-                    '*',
-                    'profile.displayName^3',
-                    'profile.tagsets.tags^2',
-                  ],
+                  fields: ['*', 'profile.displayName.text^3', 'profile.tags^2'],
                 },
               },
               {

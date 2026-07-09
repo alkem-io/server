@@ -4,10 +4,12 @@ import { Test } from '@nestjs/testing';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import {
+  CONTENT_FIELD_SIZE_LIMIT,
   CollaboraExtractSkipReason,
   CollaboraTextExtractService,
   cleanExtractedText,
   collectTextFromOfficeAst,
+  truncateToContentFieldLimit,
 } from './collabora.text.extract.service';
 
 /**
@@ -161,23 +163,22 @@ describe('CollaboraTextExtractService', () => {
       expect(pptxText.match(/migration cutover plan/g)?.length).toBe(1);
     });
 
-    it('never throws on the xlsx fixture — succeeds with content or skips cleanly', async () => {
+    it('degrades an xlsx parser failure to a clean PARSE_ERROR skip, never an exception (FR-014)', async () => {
+      // Deterministic parse failure: a truncated zip is invalid in every
+      // environment. (The happy-path xlsx content contract — sheet names +
+      // cell values — is covered deterministically by the AST-walk test above;
+      // the full-fixture parse is environment-dependent under the SWC/vitest
+      // transform, so asserting both outcomes here gave no regression signal.)
       const moduleRef = await buildService({
-        getDocumentContent: async () => bufferFor('xlsx'),
+        getDocumentContent: async () => bufferFor('xlsx').subarray(0, 100),
       });
       const service = moduleRef.get(CollaboraTextExtractService);
 
       const { content, skipReason } = await service.extract(
         docEntity(1000, 'cd-1', MimeTypeDocument.XLSX)
       );
-      if (content !== null) {
-        // when the environment parses it (plain Node), the data is correct
-        expect(content).toContain('Quarterly Budget');
-        expect(content).toContain('supplier onboarding checklist');
-      } else {
-        // a parser failure degrades to a clean skip, never an exception (FR-014)
-        expect(skipReason).toBe(CollaboraExtractSkipReason.PARSE_ERROR);
-      }
+      expect(content).toBeNull();
+      expect(skipReason).toBe(CollaboraExtractSkipReason.PARSE_ERROR);
     });
 
     it('extracts pptx slide text AND speaker notes (FR-001)', async () => {
@@ -246,6 +247,23 @@ describe('CollaboraTextExtractService', () => {
       expect(fetched).toBe(false); // guard ran BEFORE the fetch
     });
 
+    it('skips OVER_CAP on the actual fetched byte count when the DB size lies (FR-018)', async () => {
+      const moduleRef = await buildService(
+        {
+          // body is larger than the cap even though the DB row claims 50 bytes
+          getDocumentContent: async () => bufferFor('docx'),
+        },
+        100 // tiny cap
+      );
+      const service = moduleRef.get(CollaboraTextExtractService);
+
+      const { content, skipReason } = await service.extract(
+        docEntity(50) // DB size passes the pre-fetch check
+      );
+      expect(content).toBeNull();
+      expect(skipReason).toBe(CollaboraExtractSkipReason.OVER_CAP);
+    });
+
     it('returns NO_TEXT (not PARSE_ERROR) when the file-service body is empty', async () => {
       const moduleRef = await buildService({
         getDocumentContent: async () => Buffer.alloc(0),
@@ -284,16 +302,19 @@ describe('CollaboraTextExtractService', () => {
       expect(skipReason).toBe(CollaboraExtractSkipReason.FETCH_ERROR);
     });
 
-    it('truncates cleaned text to the field-size limit (FR-016)', async () => {
-      // Drive a huge cleaned string by stubbing parse via a giant docx is hard;
-      // instead assert the public truncation contract directly through extract
-      // by feeding a fixture and checking length never exceeds the limit.
-      const moduleRef = await buildService({
-        getDocumentContent: async () => bufferFor('docx'),
-      });
-      const service = moduleRef.get(CollaboraTextExtractService);
-      const { content } = await service.extract(docEntity());
-      expect((content ?? '').length).toBeLessThanOrEqual(1_000_000);
+    it('truncates cleaned text to the field-size limit (FR-016)', () => {
+      // Assert the truncation contract directly with a synthetic overlong
+      // string — a fixture-driven extract() can never exceed the limit, so it
+      // would pass whether or not the truncation branch works.
+      const overlong = 'a'.repeat(CONTENT_FIELD_SIZE_LIMIT + 500_000);
+      const truncated = truncateToContentFieldLimit(overlong);
+      expect(truncated.length).toBe(CONTENT_FIELD_SIZE_LIMIT);
+      // leading text kept, overflow dropped
+      expect(truncated).toBe(overlong.slice(0, CONTENT_FIELD_SIZE_LIMIT));
+
+      // under the limit: untouched
+      const short = 'b'.repeat(100);
+      expect(truncateToContentFieldLimit(short)).toBe(short);
     });
   });
 });

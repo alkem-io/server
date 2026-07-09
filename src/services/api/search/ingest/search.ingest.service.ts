@@ -7,6 +7,7 @@ import { TagsetReservedName } from '@common/enums/tagset.reserved.name';
 import { ExcalidrawContent, isExcalidrawTextElement } from '@common/interfaces';
 import { isDefined } from '@common/utils';
 import { asyncMap } from '@common/utils/async.map';
+import { asyncMapSequential } from '@common/utils/async.map.sequential';
 import { asyncReduceSequential } from '@common/utils/async.reduce.sequential';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { CollaboraDocument } from '@domain/collaboration/collabora-document/collabora.document.entity';
@@ -76,6 +77,42 @@ const journeyFindOptions: FindManyOptions<Space> = {
 };
 
 const EMPTY_VALUE = 'N/A';
+
+/**
+ * Upper bound (bytes, JSON-serialized) for a single ES bulk request payload.
+ * Deliberately far below the transport's http.max_content_length (100 MB
+ * default) so a content-heavy batch (office documents carry up to ~1 MB of
+ * extracted text each) is split instead of rejected wholesale.
+ */
+const MAX_BULK_PAYLOAD_BYTES = 10 * 1024 * 1024;
+
+/**
+ * Splits documents into chunks whose cumulative JSON size stays under
+ * `maxBytes`. A single document larger than the cap still gets its own chunk —
+ * ES rejects just that one request and the error is recorded per batch, rather
+ * than poisoning the neighbours.
+ */
+const chunkByPayloadSize = (data: unknown[], maxBytes: number): unknown[][] => {
+  const chunks: unknown[][] = [];
+  let current: unknown[] = [];
+  let currentBytes = 0;
+
+  for (const doc of data) {
+    const docBytes = Buffer.byteLength(JSON.stringify(doc) ?? '');
+    if (current.length > 0 && currentBytes + docBytes > maxBytes) {
+      chunks.push(current);
+      current = [];
+      currentBytes = 0;
+    }
+    current.push(doc);
+    currentBytes += docBytes;
+  }
+  if (current.length > 0) {
+    chunks.push(current);
+  }
+
+  return chunks;
+};
 
 type ErroredDocument = {
   status: number | undefined;
@@ -606,7 +643,10 @@ export class SearchIngestService {
       `Found ${total} total results to ingest into ${index}`,
       LogContext.SEARCH_INGEST
     );
-    this.taskService.updateTaskResults(
+    // awaited: TaskService updates are read-modify-write on a shared cache
+    // entry — firing this without awaiting lets it interleave with the batch
+    // updates below and lose records to last-write-wins.
+    await this.taskService.updateTaskResults(
       task.id,
       `Found ${total} total results to ingest into ${index}`
     );
@@ -615,8 +655,20 @@ export class SearchIngestService {
     const results: IngestBatchResultType[] = [];
 
     while (start <= total) {
-      const fetched = await fetchFn(start, batchSize);
-      const result = await this.ingestBulk(fetched, index, task);
+      // A single poisoned batch (e.g. a bulk payload the ES transport rejects
+      // outright) must not abort the whole reindex — office-document is
+      // ingested last, so an uncaught throw here would discard every freshly
+      // rebuilt index by skipping the alias flip. Record the failure as an
+      // errored batch and move on to the next one.
+      let result: IngestBatchResultType;
+      try {
+        const fetched = await fetchFn(start, batchSize);
+        result = await this.ingestBulk(fetched, index, task);
+      } catch (error) {
+        const message = `[${index}] - batch at offset ${start} failed: ${(error as Error)?.message}`;
+        await this.taskService.updateTaskErrors(task.id, message);
+        result = { success: false, total: 0, message };
+      }
       results.push(result);
 
       if (result.erroredDocuments?.length) {
@@ -652,6 +704,29 @@ export class SearchIngestService {
         total: 0,
         message: `[${index}] - 0 documents indexed`,
       };
+    }
+
+    // Batch sizes are row counts, but payload BYTES are what the ES transport
+    // caps (http.max_content_length, 100 MB default). Office documents carry
+    // up to 1M chars of extracted content each, so a count-based batch can
+    // still exceed the transport cap. Split into byte-bounded sub-requests and
+    // aggregate — one oversized document set must never turn into a rejected
+    // request that aborts the reindex.
+    const chunks = chunkByPayloadSize(data, MAX_BULK_PAYLOAD_BYTES);
+    if (chunks.length > 1) {
+      const results: IngestBatchResultType[] = [];
+      for (const chunk of chunks) {
+        results.push(await this.ingestBulk(chunk, index, task));
+      }
+      return results.reduce((acc, val) => ({
+        success: acc.success && val.success,
+        total: acc.total + val.total,
+        message: [acc.message, val.message].filter(Boolean).join(' | '),
+        erroredDocuments: [
+          ...(acc.erroredDocuments ?? []),
+          ...(val.erroredDocuments ?? []),
+        ],
+      }));
     }
 
     const operations = data.flatMap(doc => [{ index: { _index: index } }, doc]);
@@ -1569,9 +1644,14 @@ export class SearchIngestService {
       }
     }
 
-    // extract + build index docs (await per document; extraction is off the
-    // request path — runs during async reindex ingestion, SC-005)
-    return asyncMap(docsToIndex, async entry => {
+    // extract + build index docs strictly one document at a time —
+    // asyncMapSequential, NOT asyncMap (= Promise.all): each extraction can
+    // hold up to the 25 MiB source cap in memory plus parser overhead, so
+    // concurrent extraction of a whole batch would multiply peak memory by the
+    // document count. Sequential also serializes the per-skip task-record
+    // writes below (TaskService updates are read-modify-write and not atomic).
+    // Extraction is off the request path — runs during async reindex, SC-005.
+    return asyncMapSequential(docsToIndex, async entry => {
       const { collaboraDocument, callout, space, flowStateID, isContribution } =
         entry;
 

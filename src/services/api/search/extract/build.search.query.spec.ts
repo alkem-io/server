@@ -11,11 +11,13 @@ describe('buildSearchQuery', () => {
     expect(textMatch.should).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          // name + tags boosted above the wildcard field weight
+          // name + tags boosted above the wildcard field weight; boosts target
+          // the fields that exist in the index: displayName's `.text` subfield
+          // (the base field is keyword) and the ingested `profile.tags`
           multi_match: {
             query: 'hello world',
             type: 'most_fields',
-            fields: ['*', 'profile.displayName^3', 'profile.tagsets.tags^2'],
+            fields: ['*', 'profile.displayName.text^3', 'profile.tags^2'],
           },
         }),
         expect.objectContaining({
