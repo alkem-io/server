@@ -139,6 +139,26 @@ describe('CollaboraDocumentResolverMutations', () => {
       ).not.toHaveBeenCalled();
     });
 
+    it('still returns the swapped document when persisting the chosen title fails (best-effort, no double-swap)', async () => {
+      wireHappyPath();
+      vi.mocked(
+        collaboraDocumentService.updateCollaboraDocument
+      ).mockRejectedValue(new Error('file-service blip'));
+
+      const result = await resolver.replaceCollaboraDocument(
+        { actorID: 'user-1' } as any,
+        { ID: 'collab-doc-1', displayName: 'A New Title' },
+        fileUpload()
+      );
+
+      // The already-committed swap is returned; the mutation does not throw
+      // (which would prompt a client retry → a second swap).
+      expect(result.id).toBe('collab-doc-1');
+      expect(
+        collaboraDocumentService.replaceCollaboraDocument
+      ).toHaveBeenCalledTimes(1);
+    });
+
     it('refuses when the caller lacks UPDATE and never touches the document', async () => {
       vi.mocked(
         collaboraDocumentService.getCollaboraDocumentOrFail

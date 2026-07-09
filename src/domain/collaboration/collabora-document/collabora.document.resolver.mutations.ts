@@ -133,13 +133,27 @@ export class CollaboraDocumentResolverMutations {
     // name. The swap keeps the same CollaboraDocument entity; reusing the rename
     // path propagates the new name to the editor title bar and the download
     // filename (with the replacement file's extension). Skipped when no title
-    // was supplied.
-    const updated = replaceData.displayName
-      ? await this.collaboraDocumentService.updateCollaboraDocument(
+    // was supplied. Best-effort: the swap is already committed and is NOT
+    // idempotent (a retry would double-swap), so a rename failure here must not
+    // fail the mutation — log it and return the swapped document with its
+    // previous name; the user can rename again.
+    let updated = swapped;
+    if (replaceData.displayName) {
+      try {
+        updated = await this.collaboraDocumentService.updateCollaboraDocument(
           replaceData.ID,
           replaceData.displayName
-        )
-      : swapped;
+        );
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        const details = e instanceof Error ? e.stack : String(e);
+        this.logger.error(
+          `Replace succeeded but persisting the chosen title for CollaboraDocument ${replaceData.ID} failed: ${message}`,
+          details,
+          LogContext.COLLABORATION
+        );
+      }
+    }
 
     // FR-014 lifecycle analytics: record the swap as a single-actor
     // COLLABORA_DOCUMENT_REPLACED event. Resolve the level-zero space via the

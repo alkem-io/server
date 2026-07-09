@@ -247,6 +247,18 @@ export class CollaborativeDocumentIntegrationService {
     documentId,
     displayName,
   }: OfficeDocumentRenameInputData): Promise<void> {
+    // Never blank a document's name from a malformed event (an empty displayName
+    // would collapse the file-service name to just its extension).
+    if (!displayName?.trim()) {
+      this.logger.warn?.(
+        {
+          message: 'Ignoring Collabora document rename event with a blank name',
+          documentId,
+        },
+        LogContext.COLLAB_DOCUMENT_INTEGRATION
+      );
+      return;
+    }
     try {
       const collaboraDocument =
         await this.collaboraDocumentService.getCollaboraDocumentByStorageDocumentId(

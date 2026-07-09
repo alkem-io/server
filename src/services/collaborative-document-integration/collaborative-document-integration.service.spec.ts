@@ -753,6 +753,20 @@ describe('CollaborativeDocumentIntegrationService', () => {
       ).toHaveBeenCalledWith(COLLABORA_DOCUMENT_ID, 'Renamed doc');
     });
 
+    it('ignores a blank displayName without touching the document (never blanks the name)', async () => {
+      await service.officeDocumentRename({
+        documentId: STORAGE_DOCUMENT_ID,
+        displayName: '   ',
+      } as any);
+
+      expect(
+        collaboraDocumentService.getCollaboraDocumentByStorageDocumentId
+      ).not.toHaveBeenCalled();
+      expect(
+        collaboraDocumentService.updateCollaboraDocument
+      ).not.toHaveBeenCalled();
+    });
+
     it('discards the event without renaming when no CollaboraDocument is backed by the storage id', async () => {
       collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
         null
