@@ -697,9 +697,11 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_wopi_service
     hostname: wopi-service
-    image: alkemio/wopi-service:v0.1.0
+    image: alkemio/wopi-service:v0.1.3
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       authorization-evaluation:
         condition: service_started
@@ -728,6 +730,10 @@ services:
       - WOPI_TOKEN_SECRET=dev-wopi-token-secret-change-in-production
       - WOPI_SERVER_PORT=8080
       - WOPI_PROOF_VALIDATION=false
+      # RabbitMQ — WITHOUT this the publisher is a no-op and every event the WOPI
+      # emits (office-document contribution/view AND the in-editor rename event the
+      # server consumes to persist a Collabora rename) is silently dropped.
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       - LOG_LEVEL=info
     restart: unless-stopped
     networks:
