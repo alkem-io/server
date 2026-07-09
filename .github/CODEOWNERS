@@ -2,16 +2,17 @@
 # Owners listed below will be requested for review on pull requests.
 
 # Set repository-wide owners
-* @valentinyanakiev @techsmyth
+#* @valentinyanakiev @techsmyth
+* @valentinyanakiev
 
 # Authorization ownership
 # Files and modules related to authorization
-/src/core/authorization/ @techsmyth
+# /src/core/authorization/ @techsmyth
 
 # Core and common ownership
 # Broad ownership for infrastructure-level code
-/src/core/ @valentinyanakiev
-/src/common/ @valentinyanakiev
+# /src/core/ @valentinyanakiev
+# /src/common/ @valentinyanakiev
 
 # Generic dataloaders, elasticsearch, reporting, contributions
 # Loaders and external/reporting infra
@@ -33,16 +34,16 @@
 
 # Domain model entities, GraphQL interfaces and abstractions
 # Ownership for domain entities and GraphQL interface definitions/abstractions
-/src/domain/**/entity/ @techsmyth
-/src/domain/**/entity/** @techsmyth
-/src/common/interfaces/ @techsmyth
-/src/common/interfaces/** @techsmyth
-/src/domain/**/interfaces/ @techsmyth
-/src/domain/**/interfaces/** @techsmyth
-/src/config/graphql/ @techsmyth
-/src/config/graphql/** @techsmyth
-/src/types/graphql/ @techsmyth
-/src/types/graphql/** @techsmyth
+# /src/domain/**/entity/ @techsmyth
+# /src/domain/**/entity/** @techsmyth
+# /src/common/interfaces/ @techsmyth
+# /src/common/interfaces/** @techsmyth
+# /src/domain/**/interfaces/ @techsmyth
+# /src/domain/**/interfaces/** @techsmyth
+# /src/config/graphql/ @techsmyth
+# /src/config/graphql/** @techsmyth
+# /src/types/graphql/ @techsmyth
+# /src/types/graphql/** @techsmyth
 
 # Migrations ownership
 # All migration files should be owned by @valentinyanakiev
