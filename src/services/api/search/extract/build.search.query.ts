@@ -18,20 +18,31 @@ export const buildSearchQuery = (
               {
                 // Exact match across every TEXT field. `most_fields` accumulates
                 // score from all fields — more matches on more fields ranks higher.
-                // The name and tags are boosted above the wildcard: a title/tag
-                // hit is a strong relevance signal and, crucially, keeps large
-                // documents surfacing by name even when their long `content`
-                // field is discounted by BM25 length-normalization. The explicit
-                // boosts override the `*` weight for those two fields.
-                // `profile.displayName` is mapped `keyword` with a `.text`
-                // subfield (alkemio-data-base-fields template) — the boost must
-                // target `.text` or it only fires on whole-string exact matches.
-                // Ingestion writes tags to `profile.tags` (a joined text field),
-                // NOT `profile.tagsets.tags` — boost the field that exists.
+                // displayName is boosted above the wildcard so a title hit stays
+                // a strong signal and large documents keep surfacing by name even
+                // when their long `content` field is discounted by BM25 length
+                // normalization. `profile.displayName` is mapped `keyword` with a
+                // `.text` subfield (alkemio-data-base-fields template) — the boost
+                // must target `.text` or it only fires on whole-string matches.
+                // `content^0`: content is scored ONCE, by the dedicated fuzzy
+                // `match(content)` clause below. Giving it zero weight in this
+                // all-fields matcher removes the double-count (all-fields exact +
+                // fuzzy) that previously scored every content hit twice and sank
+                // tag-only hits to dead-last (M-05). `profile.tags^2` keeps a mild
+                // tag boost as before; note a tag-only hit still ranks near/below
+                // a content match — forcing it strictly above content was tried
+                // (constant_score) and reverted as brittle: absolute scores drift
+                // across reindexes on the multi-shard index, so no fixed boost is
+                // stable. Tag ≈ content parity is the accepted behaviour (M-05).
                 multi_match: {
                   query: terms,
                   type: 'most_fields',
-                  fields: ['*', 'profile.displayName.text^3', 'profile.tags^2'],
+                  fields: [
+                    '*',
+                    'profile.displayName.text^3',
+                    'profile.tags^2',
+                    'content^0',
+                  ],
                 },
               },
               {

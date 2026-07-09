@@ -11,13 +11,20 @@ describe('buildSearchQuery', () => {
     expect(textMatch.should).toEqual(
       expect.arrayContaining([
         expect.objectContaining({
-          // name + tags boosted above the wildcard field weight; boosts target
-          // the fields that exist in the index: displayName's `.text` subfield
-          // (the base field is keyword) and the ingested `profile.tags`
+          // displayName's `.text` subfield and profile.tags are boosted above the
+          // wildcard (displayName's base field is keyword). `content^0` gives
+          // content zero weight HERE so it is scored only once, by the fuzzy
+          // `content` clause below — removing the double-count that used to sink
+          // tag-only hits to dead-last (M-05).
           multi_match: {
             query: 'hello world',
             type: 'most_fields',
-            fields: ['*', 'profile.displayName.text^3', 'profile.tags^2'],
+            fields: [
+              '*',
+              'profile.displayName.text^3',
+              'profile.tags^2',
+              'content^0',
+            ],
           },
         }),
         expect.objectContaining({
