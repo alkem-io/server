@@ -6,13 +6,18 @@ import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { isAxiosError } from 'axios';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { catchError, firstValueFrom, map, timeout } from 'rxjs';
+import { catchError, firstValueFrom, map, of, timeout } from 'rxjs';
 
 export interface WopiTokenResult {
   accessToken: string;
   accessTokenTTL: number;
   wopiSrc: string;
   editorUrl: string;
+}
+
+export interface WopiLockStatusResult {
+  locked: boolean;
+  expiresAt?: string;
 }
 
 @Injectable()
@@ -91,6 +96,82 @@ export class WopiServiceAdapter {
             );
           }
           throw error;
+        })
+      );
+
+    return firstValueFrom(request$);
+  }
+
+  /**
+   * Read-only check of whether a document currently has a non-expired WOPI
+   * lock (i.e. it is actively being edited in Collabora). Used to block an
+   * in-place backing-file replace while someone is editing (FR-013).
+   *
+   * `documentId` is the file-service `Document.id`, which is the WOPI
+   * `file_id`. This is a cluster-internal call that bypasses the Traefik
+   * gateway, so the adapter stamps the actor identity via the
+   * X-Alkemio-Actor-Id header exactly as {@link issueToken} does.
+   *
+   * FAIL-CLOSED: on ANY error (timeout / non-2xx / parse) the call logs and
+   * returns `true` (treat as locked). Refusing the swap when the signal is
+   * unavailable is the conservative choice — it prevents an unsafe swap
+   * during a wopi-service outage, at the cost of temporarily blocking
+   * replaces. This is why wopi-service must ship before this mutation
+   * (rollout ordering). See contracts/wopi-lock-status.md.
+   */
+  async getLockStatus(documentId: string): Promise<boolean> {
+    const url = `${this.baseUrl}/wopi/files/${documentId}/lock-status`;
+
+    this.logger.verbose?.(
+      `[WopiService] getLockStatus for document: ${documentId}`,
+      LogContext.COLLABORATION
+    );
+
+    const request$ = this.httpService
+      .get<WopiLockStatusResult>(url, {
+        headers: {
+          // No actor body/token needed; still stamp the trusted actor header
+          // for parity with the other cluster-internal WOPI calls. The check
+          // is document-scoped and read-only.
+          [HEADER_ACTOR_ID]: 'system',
+        },
+      })
+      .pipe(
+        timeout({ first: 10000 }),
+        map(response => {
+          const locked = response.data?.locked;
+          if (typeof locked !== 'boolean') {
+            // Fail-closed on an unexpected/malformed body shape (not just on a
+            // thrown transport error): a 200 without a boolean `locked` must not
+            // be read as "free" and allow a swap during an active edit.
+            this.logger.warn?.(
+              `[WopiService] getLockStatus: malformed response body for ${documentId}, treating as locked`,
+              LogContext.COLLABORATION
+            );
+            return true;
+          }
+          this.logger.verbose?.(
+            `[WopiService] getLockStatus: locked=${locked}`,
+            LogContext.COLLABORATION
+          );
+          return locked;
+        }),
+        // FAIL-CLOSED: any error means we cannot confirm the document is
+        // free, so we conservatively report it as locked to block the swap.
+        catchError(error => {
+          if (isAxiosError(error) && error.response) {
+            this.logger.warn?.(
+              `[WopiService] getLockStatus failed (fail-closed, treating as locked): HTTP ${error.response.status}`,
+              LogContext.COLLABORATION
+            );
+          } else {
+            this.logger.error?.(
+              `[WopiService] getLockStatus failed (fail-closed, treating as locked): ${error.message ?? error}`,
+              error.stack,
+              LogContext.COLLABORATION
+            );
+          }
+          return of(true);
         })
       );
 

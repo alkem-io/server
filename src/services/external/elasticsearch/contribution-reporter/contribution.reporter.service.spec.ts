@@ -623,6 +623,40 @@ describe('ContributionReporterService', () => {
     });
   });
 
+  describe('calloutCollaboraDocumentReplaced', () => {
+    it('should index a COLLABORA_DOCUMENT_REPLACED document with author', async () => {
+      mockActorService.getActorOrNull.mockResolvedValue({
+        id: 'user-1',
+        type: ActorType.USER,
+      });
+      mockUserLookupService.getUserByIdOrFail.mockResolvedValue({
+        email: 'user@example.com',
+      });
+
+      service.calloutCollaboraDocumentReplaced(
+        { id: 'doc-3', name: 'Quarterly Report', space: 'space-root' },
+        { actorID: 'user-1' }
+      );
+
+      await vi.waitFor(() => {
+        expect(mockIndex).toHaveBeenCalledTimes(1);
+      });
+
+      expect(mockIndex).toHaveBeenCalledWith(
+        expect.objectContaining({
+          document: expect.objectContaining({
+            type: 'COLLABORA_DOCUMENT_REPLACED',
+            id: 'doc-3',
+            name: 'Quarterly Report',
+            space: 'space-root',
+            author: 'user-1',
+            authorType: ActorType.USER,
+          }),
+        })
+      );
+    });
+  });
+
   describe('collaboraDocumentOpened', () => {
     it('should index a COLLABORA_DOCUMENT_OPENED document with author', async () => {
       mockActorService.getActorOrNull.mockResolvedValue({

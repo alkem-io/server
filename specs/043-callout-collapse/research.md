@@ -69,14 +69,14 @@ WHERE "settings" ->> 'layout' IS NULL
 
 ## R6: Default Value for New Spaces
 
-**Decision**: Set `layout.calloutDescriptionDisplayMode = COLLAPSED` during space creation, after template settings are applied.
+**Decision**: Set `layout.calloutDescriptionDisplayMode = EXPANDED` during space creation, after template settings are applied. (Updated 2026-07-06 — originally `COLLAPSED`; see spec Clarifications.)
 
-**Rationale**: Follows the same pattern as `sortMode` default in `space.service.ts`:
+**Rationale**: Follows the same pattern as `sortMode` default in `space.service.ts`, and matches both the runtime resolver fallback and the platform default templates so a new space is `EXPANDED` regardless of which path supplies the value:
 ```typescript
 if (!space.settings.layout?.calloutDescriptionDisplayMode) {
   space.settings.layout = {
     ...space.settings.layout,
-    calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+    calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
   };
 }
 ```

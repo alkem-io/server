@@ -94,6 +94,7 @@ import { Space } from './space.entity';
 import { ISpace } from './space.interface';
 import { ISpaceSubscription } from './space.license.subscription.interface';
 import { SpacePlatformRolesAccessService } from './space.service.platform.roles.access';
+import { orderSubspaces } from './subspace.ordering';
 
 const EXPLORE_SPACES_LIMIT = 30;
 const EXPLORE_SPACES_ACTIVITY_DAYS_OLD = 30;
@@ -1114,20 +1115,15 @@ export class SpaceService {
       args?.shuffle
     );
 
-    // Sort the subspaces based on sortOrder, with displayName as tiebreaker
-    // Skip sorting when shuffle is requested to preserve randomization
+    // Order the subspaces PINNED-first, then by sortOrder, then displayName
+    // (case-insensitive) — the single ordering source shared with the SPACES
+    // callout collection (workspace#013-spaces-collection-callout, FR-007 / R2).
+    // Skip ordering when shuffle is requested to preserve randomization.
     if (args?.shuffle) {
       return limitAndShuffled;
     }
 
-    return limitAndShuffled.sort((a, b) => {
-      if (a.sortOrder !== b.sortOrder) {
-        return a.sortOrder - b.sortOrder;
-      }
-      return a.about.profile.displayName
-        .toLowerCase()
-        .localeCompare(b.about.profile.displayName.toLowerCase());
-    });
+    return orderSubspaces(limitAndShuffled);
   }
 
   public async updateSubspacesSortOrder(
