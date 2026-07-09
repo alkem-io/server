@@ -480,12 +480,25 @@ export class CollaboraDocumentService {
     const oldDocumentId = collaboraDocument.document.id;
     const storageBucketId = collaboraDocument.document.storageBucket.id;
 
-    // FR-013 active-edit guard (fail-closed inside the adapter). The WOPI
-    // file_id is the file-service Document id.
-    const locked = await this.wopiServiceAdapter.getLockStatus(oldDocumentId);
-    if (locked) {
+    // FR-013 active-edit guard. The WOPI file_id is the file-service Document
+    // id. Distinguish a genuine lock from a check that couldn't be completed:
+    // - `locked`      → someone is editing; refuse with the active-edit message.
+    // - `unavailable` → the check failed (transient error / unreadable answer);
+    //                   fail closed but tell the truth so the user retries.
+    // - `unlocked`    → free to replace (also the deliberate outcome when the
+    //                   lock-status route is missing, so a stale wopi-service
+    //                   can't permanently block replace — see the adapter).
+    const lockCheck =
+      await this.wopiServiceAdapter.getLockStatus(oldDocumentId);
+    if (lockCheck === 'locked') {
       throw new ValidationException(
         'This document is currently being edited. Please try again once no one is editing.',
+        LogContext.COLLABORATION
+      );
+    }
+    if (lockCheck === 'unavailable') {
+      throw new ValidationException(
+        'The document could not be checked for active edits. Please try again in a moment.',
         LogContext.COLLABORATION
       );
     }
