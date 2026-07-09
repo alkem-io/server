@@ -98,18 +98,20 @@ export class FileBackupOutbox1783508955161 implements MigrationInterface {
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
+    // Revoke the grant on the surviving `file` table before dropping the role (a lingering grant
+    // blocks DROP ROLE). Guarded by BOTH role and table existence so down() is idempotent even
+    // after a partial up(). The grant on file_backup_outbox needs no explicit REVOKE — dropping
+    // the table below removes it.
     await queryRunner.query(`
       DO $$
       BEGIN
-        IF EXISTS (SELECT 1 FROM information_schema.tables
-                   WHERE table_schema = 'public' AND table_name = 'file') THEN
+        IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'filebackup_consumer')
+           AND EXISTS (SELECT 1 FROM information_schema.tables
+                       WHERE table_schema = 'public' AND table_name = 'file') THEN
           REVOKE SELECT ON "file" FROM "filebackup_consumer";
         END IF;
       END $$
     `);
-    await queryRunner.query(
-      `REVOKE SELECT, UPDATE ON "file_backup_outbox" FROM "filebackup_consumer"`
-    );
     await queryRunner.query(`DROP TABLE IF EXISTS "file_backup_outbox"`);
     // Drop the role last (after its grants are gone). Guarded; a real rollout would not roll
     // back past infra-ops attaching LOGIN, but the guard keeps down() safe if it does.

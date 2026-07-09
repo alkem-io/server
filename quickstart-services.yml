@@ -546,6 +546,10 @@ services:
       - STORAGE_TYPE=local
       # 008-continuous-file-backup: write the backup outbox on every non-temporary object so
       # file-backup-service can replicate it. Consumed by the file-backup-service below.
+      # REQUIRES the file_backup_outbox table + scoped role from server migration 1783508955161 —
+      # run `pnpm run migration:run` (dev-flow step 2) BEFORE uploading files. Until it is applied,
+      # every upload's transactional outbox INSERT fails and the worker below crash-loops on its
+      # startup probe (both recover once the migration runs).
       - FILE_BACKUP_OUTBOX_ENABLED=true
       - LOG_LEVEL=info
     restart: always
@@ -595,7 +599,7 @@ services:
       - FBS_FILESERVICEBASE=http://file-service:4003
       # the outbox lives in the alkemio DB; the ledger in its own DB — both on the shared dev postgres
       - FBS_ALKEMIODB_HOST=postgres
-      - FBS_ALKEMIODB_DBNAME=alkemio
+      - FBS_ALKEMIODB_DBNAME=${DATABASE_NAME}
       - FBS_ALKEMIODB_SSLMODE=disable
       - FBS_ALKEMIODB_USER=${POSTGRES_USER}
       - FBS_ALKEMIODB_PASSWORD=${POSTGRES_PASSWORD}
