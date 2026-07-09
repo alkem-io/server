@@ -45,15 +45,32 @@ export class FileBackupOutbox1783508955161 implements MigrationInterface {
         "visibleAt"   TIMESTAMP WITH TIME ZONE
       )
     `);
-    // Claim scan: only pending rows whose backoff elapsed, hot first, oldest first.
+    // Claim scan: pending rows whose backoff elapsed, hot first, oldest first. "visibleAt" is a
+    // trailing index column so the visibility filter ("visibleAt" IS NULL OR <= now()) is evaluated
+    // within the index — a backed-off backlog during a single-target outage is not heap-checked on
+    // every claim.
     await queryRunner.query(`
       CREATE INDEX "idx_file_backup_outbox_claim"
-        ON "file_backup_outbox" ("priority" DESC, "createdDate")
+        ON "file_backup_outbox" ("priority" DESC, "createdDate", "visibleAt")
         WHERE "status" = 'pending'
     `);
     await queryRunner.query(`
       CREATE INDEX "idx_file_backup_outbox_external"
         ON "file_backup_outbox" ("externalID")
+    `);
+    // Stale-claim reaper: WHERE status='in_progress' AND "claimedAt" < now() - ttl. A partial index
+    // so ReapStale scans only in-flight claims, never the whole outbox each sweep.
+    await queryRunner.query(`
+      CREATE INDEX "idx_file_backup_outbox_inprogress"
+        ON "file_backup_outbox" ("claimedAt")
+        WHERE "status" = 'in_progress'
+    `);
+    // Retention prune: DELETE WHERE status='done' AND "createdDate" < cutoff. A partial index so the
+    // hourly prune doesn't sequential-scan the accumulated done rows as the outbox grows.
+    await queryRunner.query(`
+      CREATE INDEX "idx_file_backup_outbox_done"
+        ON "file_backup_outbox" ("createdDate")
+        WHERE "status" = 'done'
     `);
     // NOLOGIN, password-free privilege role (guarded — CREATE ROLE has no IF NOT EXISTS).
     await queryRunner.query(`
