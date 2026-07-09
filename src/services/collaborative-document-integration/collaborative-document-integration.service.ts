@@ -10,6 +10,7 @@ import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MemoContributionsInputData } from '@services/collaborative-document-integration/inputs/memo.contributions.input.data';
 import { OfficeDocumentContributionsInputData } from '@services/collaborative-document-integration/inputs/office.document.contributions.input.data';
+import { OfficeDocumentRenameInputData } from '@services/collaborative-document-integration/inputs/office.document.rename.input.data';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import {
   TypedActorSet,
@@ -227,6 +228,57 @@ export class CollaborativeDocumentIntegrationService {
     await this.reportOfficeDocumentWindow(data, 'view', contribution =>
       this.contributionReporter.officeDocumentView(contribution)
     );
+  }
+
+  /**
+   * Persist a rename initiated from inside the editor (Collabora RenameFile → WOPI
+   * → this event). The server is the rename authority: `updateCollaboraDocument`
+   * updates BOTH the CollaboraDocument profile and the backing file-service
+   * document, so the callout title and the editor's filename stay in sync — the
+   * same path the in-app header pencil uses.
+   *
+   * `documentId` is the storage `Document` id (see {@link reportOfficeDocumentWindow}),
+   * so we reverse-resolve the domain entity first. Best-effort and tolerant
+   * (FR-008): a bad/stale event is logged and discarded without throwing, so it
+   * cannot wedge the consumer. Authorization was already enforced at the WOPI
+   * layer (the editor token carries write access), consistent with the other
+   * events on this consumer.
+   */
+  public async officeDocumentRename({
+    documentId,
+    displayName,
+  }: OfficeDocumentRenameInputData): Promise<void> {
+    try {
+      const collaboraDocument =
+        await this.collaboraDocumentService.getCollaboraDocumentByStorageDocumentId(
+          documentId
+        );
+      if (!collaboraDocument) {
+        this.logger.warn?.(
+          {
+            message:
+              'Discarding Collabora document rename event: no CollaboraDocument for storage document id',
+            documentId,
+          },
+          LogContext.COLLAB_DOCUMENT_INTEGRATION
+        );
+        return;
+      }
+
+      await this.collaboraDocumentService.updateCollaboraDocument(
+        collaboraDocument.id,
+        displayName
+      );
+    } catch (e: any) {
+      this.logger.warn?.(
+        {
+          message: 'Discarding unresolvable Collabora document rename event',
+          documentId,
+          error: e?.message,
+        },
+        LogContext.COLLAB_DOCUMENT_INTEGRATION
+      );
+    }
   }
 
   /**

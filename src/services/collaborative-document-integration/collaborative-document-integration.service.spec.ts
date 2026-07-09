@@ -35,6 +35,7 @@ describe('CollaborativeDocumentIntegrationService', () => {
   let collaboraDocumentService: {
     getCollaboraDocumentOrFail: Mock;
     getCollaboraDocumentByStorageDocumentId: Mock;
+    updateCollaboraDocument: Mock;
   };
   let contributionReporter: {
     memoContribution: Mock;
@@ -724,6 +725,65 @@ describe('CollaborativeDocumentIntegrationService', () => {
       ).resolves.toBeUndefined();
 
       expect(contributionReporter.officeDocumentView).not.toHaveBeenCalled();
+    });
+  });
+
+  describe('officeDocumentRename', () => {
+    const STORAGE_DOCUMENT_ID = 'storage-doc-1';
+    const COLLABORA_DOCUMENT_ID = 'collabora-doc-1';
+
+    it('reverse-resolves by storage document id and renames the CollaboraDocument', async () => {
+      collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
+        { id: COLLABORA_DOCUMENT_ID }
+      );
+      collaboraDocumentService.updateCollaboraDocument.mockResolvedValue(
+        {} as any
+      );
+
+      await service.officeDocumentRename({
+        documentId: STORAGE_DOCUMENT_ID,
+        displayName: 'Renamed doc',
+      } as any);
+
+      expect(
+        collaboraDocumentService.getCollaboraDocumentByStorageDocumentId
+      ).toHaveBeenCalledWith(STORAGE_DOCUMENT_ID);
+      expect(
+        collaboraDocumentService.updateCollaboraDocument
+      ).toHaveBeenCalledWith(COLLABORA_DOCUMENT_ID, 'Renamed doc');
+    });
+
+    it('discards the event without renaming when no CollaboraDocument is backed by the storage id', async () => {
+      collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
+        null
+      );
+
+      await expect(
+        service.officeDocumentRename({
+          documentId: 'missing',
+          displayName: 'X',
+        } as any)
+      ).resolves.toBeUndefined();
+
+      expect(
+        collaboraDocumentService.updateCollaboraDocument
+      ).not.toHaveBeenCalled();
+    });
+
+    it('swallows a rename failure (best-effort, does not throw)', async () => {
+      collaboraDocumentService.getCollaboraDocumentByStorageDocumentId.mockResolvedValue(
+        { id: COLLABORA_DOCUMENT_ID }
+      );
+      collaboraDocumentService.updateCollaboraDocument.mockRejectedValue(
+        new Error('boom')
+      );
+
+      await expect(
+        service.officeDocumentRename({
+          documentId: STORAGE_DOCUMENT_ID,
+          displayName: 'Renamed doc',
+        } as any)
+      ).resolves.toBeUndefined();
     });
   });
 });
