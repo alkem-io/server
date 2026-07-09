@@ -1,6 +1,6 @@
 {
   "name": "alkemio-server",
-  "version": "0.156.2",
+  "version": "0.157.0",
   "description": "Alkemio server, responsible for managing the shared Alkemio platform",
   "author": "Alkemio Foundation",
   "private": false,
@@ -22,7 +22,7 @@
     "start:dev": "nest start --watch",
     "start:debug": "nest start --debug --watch",
     "start:prod": "node dist/src/main.js",
-    "start:services": "docker compose -f quickstart-services.yml --env-file .env.docker up --build --force-recreate -d",
+    "start:services": "docker compose -f quickstart-services.yml --env-file .env.docker $([ -f .env.docker.local ] && echo --env-file .env.docker.local) up --build --force-recreate -d",
     "start:services:kratos:debug": "docker compose -f quickstart-services.yml -f overlays/kratos-debug.yml --env-file .env.docker up --build --force-recreate -d",
     "start:services:ai": "docker compose -f quickstart-services-ai.yml --env-file .env.docker up --build --force-recreate -d",
     "start:services:ai:scaleway": "docker compose -f quickstart-services-ai.yml --env-file .env.docker.scaleway up --build --force-recreate -d",

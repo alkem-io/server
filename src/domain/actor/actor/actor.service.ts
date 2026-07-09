@@ -19,7 +19,7 @@ import { InjectRepository } from '@nestjs/typeorm';
 import { AlkemioConfig } from '@src/types';
 import { Cache } from 'cache-manager';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { Actor } from './actor.entity';
 import { IActor } from './actor.interface';
 
@@ -248,15 +248,19 @@ export class ActorService {
    */
   async grantCredentialOrFail(
     actorID: string,
-    credentialData: CreateCredentialInput
+    credentialData: CreateCredentialInput,
+    entityManager?: EntityManager
   ): Promise<ICredential> {
     // Verify actor exists
     await this.getActorOrFail(actorID);
 
-    // Create the credential with the actorID
+    // Create the credential with the actorID. When a transactional
+    // EntityManager is supplied the write participates in that transaction
+    // (feature 017 — atomic ancestor-chain grant, FR-020).
     const credential = await this.credentialService.createCredentialForActor(
       actorID,
-      credentialData
+      credentialData,
+      entityManager
     );
 
     // Invalidate cache since credentials changed

@@ -18,7 +18,7 @@ export class SpaceSettingsService {
     if (!settings.layout?.calloutDescriptionDisplayMode) {
       settings.layout = {
         ...settings.layout,
-        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
       };
     }
     return settings;
