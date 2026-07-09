@@ -14,7 +14,7 @@ export class ReplaceCollaboraDocumentInput {
   @Field(() => String, {
     nullable: true,
     description:
-      'Optional title chosen in the replace dialog (defaults to the incoming file title). When supplied it is persisted as the CollaboraDocument display name (the same entity), propagating to the editor title and the download filename (feature 016-officedocs-rename-ux / FR-009 / FR-015). Omit to leave the current name unchanged.',
+      'Optional title chosen in the replace dialog (defaults to the incoming file title). When supplied it is persisted as the CollaboraDocument display name (the same entity), propagating to the editor title and the download filename. Omit to leave the current name unchanged.',
   })
   @IsOptional()
   @IsString()

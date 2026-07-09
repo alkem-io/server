@@ -102,9 +102,9 @@ export class CollaboraDocumentResolverMutations {
       await this.collaboraDocumentService.getCollaboraDocumentOrFail(
         replaceData.ID
       );
-    // FR-002: re-check UPDATE at mutation time. Replacing the whole backing file
-    // is a management action gated on UPDATE — distinct from editing the content
-    // or renaming, which are gated on UPDATE_CONTENT (updateCollaboraDocument).
+    // Re-check UPDATE at mutation time. Replacing the whole backing file is a
+    // management action gated on UPDATE — distinct from editing the content or
+    // renaming, which are gated on UPDATE_CONTENT (updateCollaboraDocument).
     this.authorizationService.grantAccessOrFail(
       actorContext,
       collaboraDocument.authorization,
@@ -130,10 +130,10 @@ export class CollaboraDocumentResolverMutations {
       );
 
     // Persist the title chosen in the replace dialog as the document's display
-    // name (feature 016 / FR-009 / FR-015). The swap keeps the same
-    // CollaboraDocument entity; reusing the rename path propagates the new name
-    // to the editor title bar and the download filename (with the replacement
-    // file's extension). Skipped when no title was supplied.
+    // name. The swap keeps the same CollaboraDocument entity; reusing the rename
+    // path propagates the new name to the editor title bar and the download
+    // filename (with the replacement file's extension). Skipped when no title
+    // was supplied.
     const updated = replaceData.displayName
       ? await this.collaboraDocumentService.updateCollaboraDocument(
           replaceData.ID,

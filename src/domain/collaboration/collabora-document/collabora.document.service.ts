@@ -480,8 +480,8 @@ export class CollaboraDocumentService {
     const oldDocumentId = collaboraDocument.document.id;
     const storageBucketId = collaboraDocument.document.storageBucket.id;
 
-    // FR-013 active-edit guard. The WOPI file_id is the file-service Document
-    // id. Distinguish a genuine lock from a check that couldn't be completed:
+    // Active-edit guard. The WOPI file_id is the file-service Document id.
+    // Distinguish a genuine lock from a check that couldn't be completed:
     // - `locked`      → someone is editing; refuse with the active-edit message.
     // - `unavailable` → the check failed (transient error / unreadable answer);
     //                   fail closed but tell the truth so the user retries.

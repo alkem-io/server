@@ -106,7 +106,7 @@ describe('CollaboraDocumentResolverMutations', () => {
       );
 
       // … then the chosen title is persisted as the display name via the rename
-      // path (feature 016 / FR-009 / FR-015), keeping the same document entity.
+      // path, keeping the same document entity.
       expect(
         collaboraDocumentService.updateCollaboraDocument
       ).toHaveBeenCalledWith('collab-doc-1', 'A New Title');

@@ -238,11 +238,10 @@ export class CollaborativeDocumentIntegrationService {
    * same path the in-app header pencil uses.
    *
    * `documentId` is the storage `Document` id (see {@link reportOfficeDocumentWindow}),
-   * so we reverse-resolve the domain entity first. Best-effort and tolerant
-   * (FR-008): a bad/stale event is logged and discarded without throwing, so it
-   * cannot wedge the consumer. Authorization was already enforced at the WOPI
-   * layer (the editor token carries write access), consistent with the other
-   * events on this consumer.
+   * so we reverse-resolve the domain entity first. Best-effort and tolerant: a
+   * bad/stale event is logged and discarded without throwing, so it cannot wedge
+   * the consumer. Authorization was already enforced at the WOPI layer (the editor
+   * token carries write access), consistent with the other events on this consumer.
    */
   public async officeDocumentRename({
     documentId,
