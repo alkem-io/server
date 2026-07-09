@@ -1,6 +1,7 @@
 import { prosemirrorToYDoc } from '@tiptap/y-tiptap';
 import { JSDOM } from 'jsdom';
-import markdownIt, { Token } from 'markdown-it';
+import markdownIt from 'markdown-it';
+import type MarkdownItToken from 'markdown-it/lib/token.mjs';
 import { MarkdownParser } from 'prosemirror-markdown';
 import {
   DOMParser as ProseMirrorDOMParser,
@@ -109,7 +110,7 @@ const parserRules: MarkdownParser['tokens'] = {
   blockquote: { block: 'blockquote' },
   heading: {
     block: 'heading',
-    getAttrs: (token: Token) => ({
+    getAttrs: (token: MarkdownItToken) => ({
       level: Number(token.tag.slice(1)),
     }),
   },
@@ -119,7 +120,7 @@ const parserRules: MarkdownParser['tokens'] = {
   },
   fence: {
     block: 'codeBlock',
-    getAttrs: (token: Token) => ({
+    getAttrs: (token: MarkdownItToken) => ({
       language: token.info,
     }),
   },
@@ -127,7 +128,7 @@ const parserRules: MarkdownParser['tokens'] = {
   bullet_list: { block: 'bulletList' },
   ordered_list: {
     block: 'orderedList',
-    getAttrs: (token: Token) => ({
+    getAttrs: (token: MarkdownItToken) => ({
       start: Number(token.attrGet('start') || 1),
     }),
   },
@@ -141,14 +142,14 @@ const parserRules: MarkdownParser['tokens'] = {
   tr: { block: 'tableRow' },
   th: {
     block: 'tableHeader',
-    getAttrs: (token: Token) => ({
+    getAttrs: (token: MarkdownItToken) => ({
       colspan: Number(token.attrGet('colspan') || 1),
       rowspan: Number(token.attrGet('rowspan') || 1),
     }),
   },
   td: {
     block: 'tableCell',
-    getAttrs: (token: Token) => ({
+    getAttrs: (token: MarkdownItToken) => ({
       colspan: Number(token.attrGet('colspan') || 1),
       rowspan: Number(token.attrGet('rowspan') || 1),
     }),
@@ -157,7 +158,7 @@ const parserRules: MarkdownParser['tokens'] = {
   // Inline Nodes
   image: {
     node: 'image',
-    getAttrs: (token: Token) => ({
+    getAttrs: (token: MarkdownItToken) => ({
       src: token.attrGet('src'),
       alt: token.attrGet('alt'),
       title: token.attrGet('title'),
@@ -167,7 +168,7 @@ const parserRules: MarkdownParser['tokens'] = {
   // Marks
   link: {
     mark: 'link',
-    getAttrs: (token: Token) => ({
+    getAttrs: (token: MarkdownItToken) => ({
       href: token.attrGet('href'),
       title: token.attrGet('title'),
       target: '_blank', // Set a default target based on your schema
