@@ -1,9 +1,4 @@
-import {
-  MsearchMultisearchBody,
-  MsearchMultisearchHeader,
-  MsearchRequestItem,
-  QueryDslQueryContainer,
-} from '@elastic/elasticsearch/lib/api/types';
+import { estypes } from '@elastic/elasticsearch';
 import { groupBy } from 'lodash';
 import { SearchFilterInput } from '../dto/inputs';
 import { SearchCategory } from '../search.category';
@@ -18,7 +13,7 @@ import { SearchIndex } from './search.index';
  */
 export const buildMultiSearchRequestItems = (
   indicesToSearchOn: SearchIndex[],
-  searchQuery: QueryDslQueryContainer,
+  searchQuery: estypes.QueryDslQueryContainer,
   options: {
     filters?: SearchFilterInput[];
     /** Multiplier for the size argument as an attempt to ensure the requested size after authorization */
@@ -27,7 +22,7 @@ export const buildMultiSearchRequestItems = (
       size: number;
     };
   }
-): MsearchRequestItem[] => {
+): estypes.MsearchRequestItem[] => {
   const { filters, defaults, sizeMultiplier = 2 } = options;
   // grouping by category will highlight the search requests
   const indexByCategory = groupBy(indicesToSearchOn, 'category') as Record<
@@ -48,7 +43,7 @@ export const buildMultiSearchRequestItems = (
     const resultCount = Math.round((size ?? defaults.size) * sizeMultiplier);
 
     return [
-      { index: indices } as MsearchMultisearchHeader,
+      { index: indices } as estypes.MsearchMultisearchHeader,
       {
         query: searchQuery,
         // return only a small subset of fields to conserve data
@@ -63,7 +58,7 @@ export const buildMultiSearchRequestItems = (
         // to form another page of results
         // skip if it's a new search
         search_after,
-      } as MsearchMultisearchBody,
+      } as estypes.MsearchMultisearchBody,
     ];
   });
 };
