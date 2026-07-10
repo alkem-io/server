@@ -7004,6 +7004,29 @@ type SearchResultCallout implements SearchResult {
   type: SearchResultType!
 }
 
+type SearchResultCollaboraDocument implements SearchResult {
+  """The Callout of the Collabora document."""
+  callout: Callout!
+  """The Collabora document that was found."""
+  collaboraDocument: CollaboraDocument!
+  """
+  The identifier of the search result. Does not represent the entity in Alkemio.
+  """
+  id: UUID!
+  """
+  Whether the Collabora document is a contribution (response) or part of the framing.
+  """
+  isContribution: Boolean!
+  """The score for this search result; more matches means a higher score."""
+  score: Float!
+  """The Space of the Collabora document."""
+  space: Space!
+  """The terms that were matched for this result"""
+  terms: [String!]!
+  """The type of returned result for this search."""
+  type: SearchResultType!
+}
+
 type SearchResultMemo implements SearchResult {
   """The Callout of the Memo."""
   callout: Callout!
@@ -7079,6 +7102,7 @@ type SearchResultSpace implements SearchResult {
 """The different types of available search results."""
 enum SearchResultType {
   CALLOUT
+  COLLABORA_DOCUMENT
   MEMO
   ORGANIZATION
   POST
