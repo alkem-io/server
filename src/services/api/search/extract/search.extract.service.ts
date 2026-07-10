@@ -1,13 +1,7 @@
 import { LogContext } from '@common/enums';
 import { isDefined } from '@common/utils';
 import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
-import { Client as ElasticClient } from '@elastic/elasticsearch';
-import {
-  ErrorResponseBase,
-  MsearchMultiSearchItem,
-  MsearchResponse,
-  MsearchResponseItem,
-} from '@elastic/elasticsearch/lib/api/types';
+import { Client as ElasticClient, estypes } from '@elastic/elasticsearch';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { getIndexPattern } from '@services/api/search/ingest/get.index.pattern';
@@ -351,7 +345,7 @@ export class SearchExtractService {
       filters?: SearchFilterInput[];
       sizeMultiplier: number;
     }
-  ): Promise<MsearchResponse<BaseSearchHit>> {
+  ): Promise<estypes.MsearchResponse<BaseSearchHit>> {
     if (!this.client) {
       throw new Error('Elasticsearch client not initialized');
     }
@@ -405,10 +399,14 @@ export class SearchExtractService {
   }
 
   private processMultiSearchResponses(
-    responses: MsearchResponseItem<BaseSearchHit>[]
+    responses: estypes.MsearchResponseItem<BaseSearchHit>[]
   ): ISearchResult[] {
     const results = responses.flatMap(
-      (response: MsearchMultiSearchItem<BaseSearchHit> | ErrorResponseBase) => {
+      (
+        response:
+          | estypes.MsearchMultiSearchItem<BaseSearchHit>
+          | estypes.ErrorResponseBase
+      ) => {
         if (isElasticError(response)) {
           this.processMultiSearchError(response);
           return undefined;
@@ -422,7 +420,7 @@ export class SearchExtractService {
   }
 
   private processMultiSearchItem(
-    item: MsearchMultiSearchItem<BaseSearchHit>
+    item: estypes.MsearchMultiSearchItem<BaseSearchHit>
   ): ISearchResult[] {
     return item.hits.hits.map<ISearchResult>(hit => {
       const entityId = hit.fields?.id?.[0];
@@ -457,7 +455,7 @@ export class SearchExtractService {
     });
   }
 
-  private processMultiSearchError(error: ErrorResponseBase): void {
+  private processMultiSearchError(error: estypes.ErrorResponseBase): void {
     this.logger.error(
       {
         message: 'Error response for multi search request',
