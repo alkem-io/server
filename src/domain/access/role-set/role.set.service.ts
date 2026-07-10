@@ -68,18 +68,26 @@ import { RoleSetEventsService } from './role.set.service.events';
 
 /**
  * Options for {@link RoleSetService.ensureMemberOfRoleSetAndAncestors}. The
- * shared grant service is consumed by BOTH the application-approval and the
- * invitation-accept flows (feature 017 — FR-017); the source-specific
- * behaviour is expressed through these options.
+ * shared grant service is consumed by the application-approval, the
+ * invitation-accept, and the direct-join flows (feature 017 — FR-017/FR-026);
+ * the source-specific behaviour is expressed through these options.
  */
 export interface EnsureMemberOfRoleSetAndAncestorsOptions {
-  /** Which lifecycle is invoking the shared grant. */
-  source: 'application' | 'invitation';
+  /**
+   * Which flow is invoking the shared grant. `'join'` (feature 017 round 2 —
+   * direct join / OPEN membership policy) is treated identically to
+   * `'application'` for the ancestor-grant decision, except that it has no
+   * approval step: the combined-flow authorisation is evaluated once, at join
+   * time (no FR-015 re-evaluation window). It carries no invitation-only
+   * post-steps.
+   */
+  source: 'application' | 'invitation' | 'join';
   /**
    * Invitation only: whether the invitee should also be granted membership of
    * the ancestor chain (mirrors `Invitation.invitedToParent`). For the
-   * application source ancestor-granting is decided by re-evaluating the
-   * combined-flow authorisation at approval time (FR-015), not by this flag.
+   * application and join sources ancestor-granting is decided by evaluating the
+   * combined-flow authorisation (application: re-evaluated at approval time,
+   * FR-015; join: evaluated once at join time), not by this flag.
    */
   invitedToParent?: boolean;
   /** Invitation only: extra roles to (best-effort) grant on the target role-set. */
@@ -1932,9 +1940,9 @@ export class RoleSetService {
   }
 
   /**
-   * Shared membership grant for the application-approval and invitation-accept
-   * flows (feature 017 — FR-017, single owner of the ancestor-chain grant so
-   * there is no duplicated grant logic, SC-007).
+   * Shared membership grant for the application-approval, invitation-accept, and
+   * direct-join flows (feature 017 — FR-017/FR-026, single owner of the
+   * ancestor-chain grant so there is no duplicated grant logic, SC-007/SC-013).
    *
    * When granting the ancestor chain: walks `parentRoleSet` from the target up
    * to the L0 root, then grants `RoleName.MEMBER` on every role-set the actor is
@@ -1946,6 +1954,8 @@ export class RoleSetService {
    * Ancestor granting is authorised by:
    * - application: re-evaluating the combined-flow authorisation NOW (FR-015) —
    *   the whole chain still PUBLIC and the ancestor Spaces' setting still enabled;
+   * - join: the same combined-flow authorisation, evaluated once at join time
+   *   (round 2 — no approval step, so no re-evaluation window);
    * - invitation: the invitation's `invitedToParent` flag (existing invite
    *   privilege already checked when the invitation was created).
    * When ancestor granting is NOT authorised the target is granted via the
@@ -1962,8 +1972,14 @@ export class RoleSetService {
     const actorType =
       await this.actorLookupService.getActorTypeByIdOrFail(actorID);
 
+    // Application and direct-join share the same combined-flow authorisation:
+    // grant the ancestor chain iff every ancestor the actor would be granted
+    // into is public + opted in (actor-relative). For application this is the
+    // approval-time re-evaluation (FR-015); for join it is the single join-time
+    // evaluation (round 2 — there is no approval window). Invitation is gated by
+    // its own `invitedToParent` flag.
     const grantAncestors =
-      opts.source === 'application'
+      opts.source === 'application' || opts.source === 'join'
         ? await this.isCombinedApplicationGrantAuthorised(
             targetRoleSet,
             actorID
@@ -2083,13 +2099,16 @@ export class RoleSetService {
       }
     }
 
-    // Source-specific cache tail (mirrors the original callers).
+    // Source-specific cache tail (mirrors the original callers). A direct join
+    // (round 2) has neither an open application nor an open invitation, so it
+    // clears neither — the target's membership caches are already invalidated
+    // by applyRoleGrantSideEffects / assignActorToRole above.
     if (opts.source === 'application') {
       await this.roleSetCacheService.deleteOpenApplicationFromCache(
         actorID,
         targetRoleSet.id
       );
-    } else {
+    } else if (opts.source === 'invitation') {
       await this.roleSetCacheService.deleteOpenInvitationFromCache(
         actorID,
         targetRoleSet.id
