@@ -305,12 +305,13 @@ export class AccountAuthorizationService {
         AuthorizationPrivilege.READ
       );
 
-    // Allow global admins to reset authorization, manage platform settings
-    // and transfer resources
-    const authorizationReset =
+    // Allow global admins/support/license-manager to manage platform
+    // settings, reset licenses and transfer resources. NOTE: authorization
+    // reset is deliberately NOT granted here — it lives solely in the
+    // dedicated reset rule below, which excludes Global License Manager.
+    const manageGlobalRoles =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
-          AuthorizationPrivilege.AUTHORIZATION_RESET,
           AuthorizationPrivilege.LICENSE_RESET,
           AuthorizationPrivilege.PLATFORM_ADMIN,
           AuthorizationPrivilege.CREATE_SPACE,
@@ -325,17 +326,17 @@ export class AccountAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE_GLOBAL_ROLES
       );
-    authorizationReset.cascade = false;
-    newRules.push(authorizationReset);
+    manageGlobalRoles.cascade = false;
+    newRules.push(manageGlobalRoles);
 
-    // Dedicated reset rule: uniform four-role set for AUTHORIZATION_RESET only
+    // Dedicated reset rule: three-role set for AUTHORIZATION_RESET only.
+    // Global License Manager is intentionally excluded from auth reset.
     const serviceAdminReset =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
           AuthorizationCredential.SERVICE_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_AUTH_RESET
