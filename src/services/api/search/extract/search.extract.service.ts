@@ -62,6 +62,11 @@ const getIndexStore = (
       type: SearchResultType.WHITEBOARD,
       category: SearchCategory.FRAMINGS,
     },
+    {
+      name: `${indexPattern}office-document`,
+      type: SearchResultType.COLLABORA_DOCUMENT,
+      category: SearchCategory.FRAMINGS,
+    },
   ],
   [SearchCategory.CONTRIBUTIONS]: [
     {
@@ -77,6 +82,11 @@ const getIndexStore = (
     {
       name: `${indexPattern}whiteboards`,
       type: SearchResultType.WHITEBOARD,
+      category: SearchCategory.CONTRIBUTIONS,
+    },
+    {
+      name: `${indexPattern}office-document`,
+      type: SearchResultType.COLLABORA_DOCUMENT,
       category: SearchCategory.CONTRIBUTIONS,
     },
   ],
@@ -107,6 +117,11 @@ const getPublicIndexStore = (
       type: SearchResultType.WHITEBOARD,
       category: SearchCategory.FRAMINGS,
     },
+    {
+      name: `${indexPattern}office-document`,
+      type: SearchResultType.COLLABORA_DOCUMENT,
+      category: SearchCategory.FRAMINGS,
+    },
   ],
   [SearchCategory.CONTRIBUTIONS]: [
     {
@@ -124,6 +139,11 @@ const getPublicIndexStore = (
       type: SearchResultType.WHITEBOARD,
       category: SearchCategory.CONTRIBUTIONS,
     },
+    {
+      name: `${indexPattern}office-document`,
+      type: SearchResultType.COLLABORA_DOCUMENT,
+      category: SearchCategory.CONTRIBUTIONS,
+    },
   ],
 });
 
@@ -137,11 +157,13 @@ const allowedTypesPerCategory: Record<SearchCategory, SearchResultType[]> = {
   [SearchCategory.FRAMINGS]: [
     SearchResultType.MEMO,
     SearchResultType.WHITEBOARD,
+    SearchResultType.COLLABORA_DOCUMENT,
   ],
   [SearchCategory.CONTRIBUTIONS]: [
     SearchResultType.POST,
     SearchResultType.WHITEBOARD,
     SearchResultType.MEMO,
+    SearchResultType.COLLABORA_DOCUMENT,
   ],
 };
 
@@ -447,7 +469,7 @@ export class SearchExtractService {
         id: hit._id ?? 'N/A',
         score: hit._score ?? -1,
         type,
-        terms: [], // todo - https://github.com/alkem-io/server/issues/3702
+        terms: extractMatchedTerms(hit.highlight),
         result: {
           id: entityId ?? 'N/A',
         },
@@ -466,3 +488,30 @@ export class SearchExtractService {
     );
   }
 }
+
+/**
+ * Pulls the distinct matched terms out of a hit's highlight fragments
+ * (server#3702). ES wraps each matched token in `<em>...</em>` (the default
+ * tags); the tokens are the document's own words — for fuzzy matches this is
+ * the actual (possibly misspelled) term that matched, i.e. the real reason the
+ * document surfaced. A field is only highlightable when ES holds a retrievable
+ * copy of it (`_source` or `store: true` — office-document `content` uses the
+ * latter); a matched field without one contributes no terms.
+ */
+const extractMatchedTerms = (
+  highlight: Record<string, string[]> | undefined
+): string[] => {
+  if (!highlight) {
+    return [];
+  }
+
+  const terms = new Set<string>();
+  for (const fragments of Object.values(highlight)) {
+    for (const fragment of fragments) {
+      for (const match of fragment.matchAll(/<em>(.+?)<\/em>/g)) {
+        terms.add(match[1].toLowerCase());
+      }
+    }
+  }
+  return [...terms];
+};
