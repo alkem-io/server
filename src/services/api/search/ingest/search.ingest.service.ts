@@ -1646,7 +1646,7 @@ export class SearchIngestService {
 
     // extract + build index docs strictly one document at a time —
     // asyncMapSequential, NOT asyncMap (= Promise.all): each extraction can
-    // hold up to the 25 MiB source cap in memory plus parser overhead, so
+    // hold up to the 15 MiB source cap in memory plus parser overhead, so
     // concurrent extraction of a whole batch would multiply peak memory by the
     // document count. Sequential also serializes the per-skip task-record
     // writes below (TaskService updates are read-modify-write and not atomic).
