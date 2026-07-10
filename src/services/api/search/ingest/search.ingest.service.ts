@@ -17,11 +17,7 @@ import { Tagset } from '@domain/common/tagset';
 import { Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user/user.entity';
 import { Space } from '@domain/space/space/space.entity';
-import { Client as ElasticClient } from '@elastic/elasticsearch';
-import {
-  ErrorCause,
-  IndicesUpdateAliasesAction,
-} from '@elastic/elasticsearch/lib/api/types';
+import { Client as ElasticClient, estypes } from '@elastic/elasticsearch';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { InjectEntityManager } from '@nestjs/typeorm';
@@ -116,7 +112,7 @@ const chunkByPayloadSize = (data: unknown[], maxBytes: number): unknown[][] => {
 
 type ErroredDocument = {
   status: number | undefined;
-  error: ErrorCause | undefined;
+  error: estypes.ErrorCause | undefined;
   operation: unknown;
   document: unknown;
 };
@@ -368,7 +364,7 @@ export class SearchIngestService {
       throw new Error('Elasticsearch client not initialized');
     }
 
-    const actions: IndicesUpdateAliasesAction[] = [];
+    const actions: estypes.IndicesUpdateAliasesAction[] = [];
 
     for (const { alias, index } of data) {
       if (removeOldAlias) {

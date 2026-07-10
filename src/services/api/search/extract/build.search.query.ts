@@ -1,4 +1,4 @@
-import { QueryDslQueryContainer } from '@elastic/elasticsearch/lib/api/types';
+import { estypes } from '@elastic/elasticsearch';
 
 export const buildSearchQuery = (
   terms: string,
@@ -6,7 +6,7 @@ export const buildSearchQuery = (
     spaceIdFilter?: string;
     flowStateIdFilter?: string;
   }
-): QueryDslQueryContainer => {
+): estypes.QueryDslQueryContainer => {
   const { spaceIdFilter, flowStateIdFilter } = options ?? {};
   return {
     bool: {
@@ -107,7 +107,7 @@ export const buildSearchQuery = (
 const buildScopeShouldClause = (
   field: string,
   value: string
-): QueryDslQueryContainer => ({
+): estypes.QueryDslQueryContainer => ({
   bool: {
     // match either of the two conditions
     minimum_should_match: 1,
@@ -136,10 +136,10 @@ const buildScopeShouldClause = (
 const buildFilter = (opts?: {
   spaceIdFilter?: string;
   flowStateIdFilter?: string;
-}): QueryDslQueryContainer | undefined => {
+}): estypes.QueryDslQueryContainer | undefined => {
   const { spaceIdFilter, flowStateIdFilter } = opts ?? {};
 
-  const filters: QueryDslQueryContainer[] = [];
+  const filters: estypes.QueryDslQueryContainer[] = [];
 
   if (spaceIdFilter) {
     filters.push(buildScopeShouldClause('spaceID', spaceIdFilter));
