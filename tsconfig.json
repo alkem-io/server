@@ -7,7 +7,6 @@
     "outDir": "./dist",
     "removeComments": true,
     "strict": true,
-    "rootDir": ".",
     "allowSyntheticDefaultImports": true,
     "esModuleInterop": true,
     "experimentalDecorators": true,
