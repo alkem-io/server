@@ -1,0 +1,111 @@
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { OidcService } from './oidc.service';
+
+// Control issuer discovery by mocking openid-client's static `Issuer.discover`.
+const { discoverMock } = vi.hoisted(() => ({ discoverMock: vi.fn() }));
+vi.mock('openid-client', () => ({
+  Issuer: { discover: discoverMock },
+}));
+
+const OIDC_CONFIG = {
+  issuer_url: 'https://identity.test-alkem.io/',
+  web_client_id: 'alkemio-web',
+  web_redirect_uri: 'https://test-alkem.io/auth/callback',
+};
+
+const makeService = (): OidcService => {
+  const configService = { get: vi.fn().mockReturnValue(OIDC_CONFIG) } as any;
+  const logger = { log: vi.fn(), warn: vi.fn(), error: vi.fn() } as any;
+  return new OidcService(configService, logger);
+};
+
+// A discovered issuer exposes a `Client` constructor; `new issuer.Client(...)`
+// must yield the resolved client instance (a real class, so the constructor's
+// object return is honoured exactly like openid-client's).
+const makeFakeIssuer = () => {
+  const client = { id: 'fake-client' };
+  return {
+    metadata: { issuer: OIDC_CONFIG.issuer_url },
+    Client: class {
+      constructor() {
+        return client;
+      }
+    },
+    resolvedClient: client,
+  } as any;
+};
+
+// The failure the live crash was caused by (openid-client RPError).
+const DISCOVERY_ERROR = new Error('outgoing request timed out after 3500ms');
+
+// Drive fake timers forward in backoff-sized rounds, flushing the discovery
+// promise chain each round, until the client is ready (or we give up).
+const settleDiscovery = async (service: OidcService): Promise<boolean> => {
+  for (let round = 0; round < 40; round++) {
+    try {
+      service.getClient();
+      return true;
+    } catch {
+      await vi.advanceTimersByTimeAsync(1000);
+    }
+  }
+  return false;
+};
+
+describe('OidcService — boot resilience', () => {
+  beforeEach(() => {
+    discoverMock.mockReset();
+    vi.useFakeTimers();
+  });
+
+  afterEach(() => {
+    // Leave the never-resolving background retry parked on a cleared fake timer.
+    vi.clearAllTimers();
+    vi.useRealTimers();
+  });
+
+  it('does not throw on boot when issuer discovery fails, and reports not-ready', async () => {
+    discoverMock.mockRejectedValue(DISCOVERY_ERROR);
+    const service = makeService();
+
+    // onModuleInit is fire-and-forget: it must return synchronously without
+    // throwing (a boot-fatal discovery previously crashed the whole process).
+    expect(() => service.onModuleInit()).not.toThrow();
+
+    // Let the first (failing) discovery attempt settle.
+    await vi.advanceTimersByTimeAsync(0);
+
+    // The server is up; interactive-login accessors surface a clear
+    // "not yet initialised" error instead of exposing an undefined client.
+    expect(() => service.getClient()).toThrow(/not yet initialised/);
+    expect(() => service.getIssuer()).toThrow(/not yet initialised/);
+    expect(discoverMock).toHaveBeenCalled();
+  });
+
+  it('self-heals: resolves the client once discovery succeeds on a later attempt', async () => {
+    const fakeIssuer = makeFakeIssuer();
+    discoverMock
+      .mockRejectedValueOnce(DISCOVERY_ERROR) // first attempt fails
+      .mockResolvedValue(fakeIssuer); // retry succeeds
+
+    const service = makeService();
+    service.onModuleInit();
+
+    expect(await settleDiscovery(service)).toBe(true);
+    expect(service.getClient()).toBe(fakeIssuer.resolvedClient);
+    expect(service.getIssuer()).toBe(fakeIssuer);
+    expect(discoverMock).toHaveBeenCalledTimes(2);
+  });
+
+  it('discovers on the first attempt with no retry when the issuer is reachable', async () => {
+    const fakeIssuer = makeFakeIssuer();
+    discoverMock.mockResolvedValue(fakeIssuer);
+
+    const service = makeService();
+    service.onModuleInit();
+
+    expect(await settleDiscovery(service)).toBe(true);
+    expect(service.getClient()).toBe(fakeIssuer.resolvedClient);
+    expect(discoverMock).toHaveBeenCalledTimes(1);
+  });
+});
