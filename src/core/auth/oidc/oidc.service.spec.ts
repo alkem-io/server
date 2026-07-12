@@ -19,19 +19,20 @@ const makeService = (): OidcService => {
   return new OidcService(configService, logger);
 };
 
-// A discovered issuer exposes a `Client` constructor; `new issuer.Client(...)`
-// must yield the resolved client instance (a real class, so the constructor's
-// object return is honoured exactly like openid-client's).
+// A discovered issuer exposes a `Client` constructor; the service does
+// `new issuer.Client(opts)`. Use a real class (records its construction opts) so
+// the resolved client is a genuine instance.
 const makeFakeIssuer = () => {
-  const client = { id: 'fake-client' };
+  const constructedWith: unknown[] = [];
+  class FakeClient {
+    constructor(opts: unknown) {
+      constructedWith.push(opts);
+    }
+  }
   return {
     metadata: { issuer: OIDC_CONFIG.issuer_url },
-    Client: class {
-      constructor() {
-        return client;
-      }
-    },
-    resolvedClient: client,
+    Client: FakeClient,
+    constructedWith,
   } as any;
 };
 
@@ -92,8 +93,11 @@ describe('OidcService — boot resilience', () => {
     service.onModuleInit();
 
     expect(await settleDiscovery(service)).toBe(true);
-    expect(service.getClient()).toBe(fakeIssuer.resolvedClient);
+    expect(service.getClient()).toBeInstanceOf(fakeIssuer.Client);
     expect(service.getIssuer()).toBe(fakeIssuer);
+    expect(fakeIssuer.constructedWith[0]).toMatchObject({
+      client_id: OIDC_CONFIG.web_client_id,
+    });
     expect(discoverMock).toHaveBeenCalledTimes(2);
   });
 
@@ -105,7 +109,7 @@ describe('OidcService — boot resilience', () => {
     service.onModuleInit();
 
     expect(await settleDiscovery(service)).toBe(true);
-    expect(service.getClient()).toBe(fakeIssuer.resolvedClient);
+    expect(service.getClient()).toBeInstanceOf(fakeIssuer.Client);
     expect(discoverMock).toHaveBeenCalledTimes(1);
   });
 });
