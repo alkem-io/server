@@ -268,6 +268,19 @@ export class UserSettingsService {
       );
     }
 
+    // Sound playback preferences. Merge field-by-field (never by spread) so a
+    // partial update of one flag leaves the sibling flag untouched.
+    if (updateData.notification?.sound) {
+      const soundData = updateData.notification.sound;
+      if (soundData.chatMessage !== undefined) {
+        settings.notification.sound.chatMessage = soundData.chatMessage;
+      }
+      if (soundData.inAppNotification !== undefined) {
+        settings.notification.sound.inAppNotification =
+          soundData.inAppNotification;
+      }
+    }
+
     if (updateData.homeSpace) {
       // Note: spaceID can be explicitly set to null to clear
       if (updateData.homeSpace.spaceID !== undefined) {

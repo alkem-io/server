@@ -116,6 +116,17 @@ describe('UserService', () => {
     expect(service).toBeDefined();
   });
 
+  describe('getDefaultUserSettings', () => {
+    it('should default both notification.sound flags to true', () => {
+      const defaults = (service as any).getDefaultUserSettings();
+
+      expect(defaults.notification.sound).toEqual({
+        chatMessage: true,
+        inAppNotification: true,
+      });
+    });
+  });
+
   describe('getUserByIdOrFail', () => {
     it('should throw EntityNotFoundException when userID is empty string', async () => {
       await expect(service.getUserByIdOrFail('')).rejects.toThrow(
