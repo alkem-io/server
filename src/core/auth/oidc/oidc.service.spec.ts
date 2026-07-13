@@ -112,4 +112,23 @@ describe('OidcService — boot resilience', () => {
     expect(service.getClient()).toBeInstanceOf(fakeIssuer.Client);
     expect(discoverMock).toHaveBeenCalledTimes(1);
   });
+
+  it('runs discovery only once — the guard blocks overlapping and post-success rounds', async () => {
+    const fakeIssuer = makeFakeIssuer();
+    discoverMock.mockResolvedValue(fakeIssuer);
+    const service = makeService();
+
+    // Two near-simultaneous inits: the second must short-circuit on
+    // `discovering` while the first round is still in flight.
+    service.onModuleInit();
+    service.onModuleInit();
+    expect(await settleDiscovery(service)).toBe(true);
+
+    // A later init, after discovery has completed, must short-circuit on
+    // `this.client`.
+    service.onModuleInit();
+    await settleDiscovery(service);
+
+    expect(discoverMock).toHaveBeenCalledTimes(1);
+  });
 });
