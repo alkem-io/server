@@ -42,10 +42,16 @@ export class CollaboraDocumentResolverMutations {
       await this.collaboraDocumentService.getCollaboraDocumentOrFail(
         updateData.ID
       );
+    // Renaming a CollaboraDocument (the only field this mutation updates today) is a
+    // content-edit action, so it is gated on UPDATE_CONTENT — not the entity-level
+    // UPDATE. UPDATE_CONTENT is granted from CONTRIBUTE and is the privilege the WOPI
+    // service uses to grant write access in Collabora, so anyone who can write the file
+    // can rename it. For a framing document UPDATE comes from the callout, so gating on
+    // UPDATE would wrongly exclude content editors who lack callout-edit rights.
     this.authorizationService.grantAccessOrFail(
       actorContext,
       collaboraDocument.authorization,
-      AuthorizationPrivilege.UPDATE,
+      AuthorizationPrivilege.UPDATE_CONTENT,
       `update CollaboraDocument: ${collaboraDocument.id}`
     );
 
@@ -96,18 +102,15 @@ export class CollaboraDocumentResolverMutations {
       await this.collaboraDocumentService.getCollaboraDocumentOrFail(
         replaceData.ID
       );
-    // FR-002: re-check UPDATE (the same "edit rights" gate as
-    // updateCollaboraDocument) at mutation time.
+    // Re-check UPDATE at mutation time. Replacing the whole backing file is a
+    // management action gated on UPDATE — distinct from editing the content or
+    // renaming, which are gated on UPDATE_CONTENT (updateCollaboraDocument).
     this.authorizationService.grantAccessOrFail(
       actorContext,
       collaboraDocument.authorization,
       AuthorizationPrivilege.UPDATE,
       `replace CollaboraDocument: ${collaboraDocument.id}`
     );
-
-    // Note: `replaceData.displayName` is intentionally NOT applied here — the
-    // client sends it but this feature does not persist a rename (FR-009 /
-    // FR-015; rename persistence is feature 016). The service ignores it too.
 
     // Read the upload to a buffer with a configured timeout so a slow or hung
     // client can't pin Node's heap (mirrors importCollaboraDocument).
@@ -117,7 +120,7 @@ export class CollaboraDocumentResolverMutations {
     )!;
     const buffer = await streamToBuffer(createReadStream(), streamTimeoutMs);
 
-    const updated =
+    const swapped =
       await this.collaboraDocumentService.replaceCollaboraDocument(
         replaceData.ID,
         buffer,
@@ -125,6 +128,32 @@ export class CollaboraDocumentResolverMutations {
         mimetype,
         actorContext.actorID
       );
+
+    // Persist the title chosen in the replace dialog as the document's display
+    // name. The swap keeps the same CollaboraDocument entity; reusing the rename
+    // path propagates the new name to the editor title bar and the download
+    // filename (with the replacement file's extension). Skipped when no title
+    // was supplied. Best-effort: the swap is already committed and is NOT
+    // idempotent (a retry would double-swap), so a rename failure here must not
+    // fail the mutation — log it and return the swapped document with its
+    // previous name; the user can rename again.
+    let updated = swapped;
+    if (replaceData.displayName) {
+      try {
+        updated = await this.collaboraDocumentService.updateCollaboraDocument(
+          replaceData.ID,
+          replaceData.displayName
+        );
+      } catch (e) {
+        const message = e instanceof Error ? e.message : String(e);
+        const details = e instanceof Error ? e.stack : String(e);
+        this.logger.error(
+          `Replace succeeded but persisting the chosen title for CollaboraDocument ${replaceData.ID} failed: ${message}`,
+          details,
+          LogContext.COLLABORATION
+        );
+      }
+    }
 
     // FR-014 lifecycle analytics: record the swap as a single-actor
     // COLLABORA_DOCUMENT_REPLACED event. Resolve the level-zero space via the

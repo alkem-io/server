@@ -55,48 +55,56 @@ describe('WopiServiceAdapter', () => {
   });
 
   describe('getLockStatus', () => {
-    it('GETs the lock-status endpoint and returns true when locked', async () => {
+    it('GETs the lock-status endpoint and returns `locked` when locked', async () => {
       vi.mocked(httpService.get).mockReturnValue(
         of(axiosResponse({ locked: true, expiresAt: '2026-07-01T12:00:00Z' }))
       );
 
-      const locked = await adapter.getLockStatus('doc-1');
+      const status = await adapter.getLockStatus('doc-1');
 
-      expect(locked).toBe(true);
+      expect(status).toBe('locked');
       expect(httpService.get).toHaveBeenCalledWith(
         'http://wopi-service:4000/wopi/files/doc-1/lock-status',
         expect.anything()
       );
     });
 
-    it('returns false when the document is not locked', async () => {
+    it('returns `unlocked` when the document is not locked', async () => {
       vi.mocked(httpService.get).mockReturnValue(
         of(axiosResponse({ locked: false }))
       );
 
-      await expect(adapter.getLockStatus('doc-1')).resolves.toBe(false);
+      await expect(adapter.getLockStatus('doc-1')).resolves.toBe('unlocked');
     });
 
-    it('FAILS CLOSED (returns true) on a 200 with a malformed body (no boolean `locked`)', async () => {
+    it('returns `unavailable` on a 200 with a malformed body (no boolean `locked`)', async () => {
       vi.mocked(httpService.get).mockReturnValue(of(axiosResponse({})));
 
-      await expect(adapter.getLockStatus('doc-1')).resolves.toBe(true);
+      await expect(adapter.getLockStatus('doc-1')).resolves.toBe('unavailable');
     });
 
-    it('FAILS CLOSED (returns true) on an HTTP error', async () => {
+    it('returns `unlocked` on a 404 (stale/misconfigured wopi-service) so a missing route cannot block replace', async () => {
+      const err = new AxiosError('not found');
+      err.response = axiosResponse({}, 404) as any;
+      vi.mocked(httpService.get).mockReturnValue(throwError(() => err));
+
+      await expect(adapter.getLockStatus('doc-1')).resolves.toBe('unlocked');
+    });
+
+    it('returns `unavailable` on a non-404 HTTP error', async () => {
       const err = new AxiosError('boom');
       err.response = axiosResponse({}, 500) as any;
       vi.mocked(httpService.get).mockReturnValue(throwError(() => err));
 
-      await expect(adapter.getLockStatus('doc-1')).resolves.toBe(true);
+      await expect(adapter.getLockStatus('doc-1')).resolves.toBe('unavailable');
     });
 
-    it('FAILS CLOSED (returns true) on a network/timeout error', async () => {
+    it('returns `unavailable` on a network/timeout error', async () => {
       vi.mocked(httpService.get).mockReturnValue(
         throwError(() => new Error('ECONNREFUSED'))
       );
 
-      await expect(adapter.getLockStatus('doc-1')).resolves.toBe(true);
+      await expect(adapter.getLockStatus('doc-1')).resolves.toBe('unavailable');
     });
   });
 });
