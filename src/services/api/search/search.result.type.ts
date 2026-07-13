@@ -9,6 +9,7 @@ export enum SearchResultType {
   CALLOUT = 'callout',
   WHITEBOARD = 'whiteboard',
   MEMO = 'memo',
+  COLLABORA_DOCUMENT = 'collabora_document',
 }
 
 registerEnumType(SearchResultType, {

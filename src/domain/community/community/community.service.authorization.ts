@@ -1,6 +1,10 @@
 import {
   CREDENTIAL_RULE_ROLESET_ASSIGN,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
+  CREDENTIAL_RULE_SUBSPACE_ANCESTOR_MEMBER_APPLY,
+  CREDENTIAL_RULE_SUBSPACE_ANCESTOR_MEMBER_JOIN,
+  CREDENTIAL_RULE_SUBSPACE_NON_MEMBER_APPLY,
+  CREDENTIAL_RULE_SUBSPACE_NON_MEMBER_JOIN,
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY,
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN,
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
@@ -210,7 +214,15 @@ export class CommunityAuthorizationService {
       newRules.push(spaceAdminsInvite);
     }
 
-    if (entryRoleAllowed) {
+    if (entryRoleAllowed && !isSubspace) {
+      // L0 only: the blanket GLOBAL_REGISTERED APPLY/JOIN (+ trusted-org JOIN)
+      // rules. On a SUBSPACE these were always false signals — the entry-role
+      // mutations enforce parent membership, so a non-parent-member holding
+      // this privilege got an error instead of an entry point. Since the
+      // client trusts the privilege as the single signal (feature 017,
+      // contract §1), a subspace's exposure comes exclusively from the
+      // subspace branch below (parent-member rule + combined-eligibility
+      // rule), keeping the offered entry point and the actual grant in sync.
       newRules.push(
         ...this.extendRoleSetAuthorizationPolicySpace(spaceSettings)
       );
@@ -254,6 +266,41 @@ export class CommunityAuthorizationService {
             );
           spaceMemberCanApply.cascade = false;
           newRules.push(spaceMemberCanApply);
+
+          // Feature 017 — combined Subspace application: surface
+          // ROLESET_ENTRY_ROLE_APPLY to the eligible non-parent-member
+          // population. Reachability is actor-relative (ADR 0001): with no
+          // private ancestor the whole registered platform is eligible (every
+          // ancestor public + opted in); with a private ancestor, members of
+          // the DEEPEST private ancestor are eligible when every ancestor
+          // below it is public + opted in (member(Space) ⇒ member(parent), so
+          // that one credential owns everything above). This privilege is the
+          // single signal the client trusts (contract §1); the apply mutation
+          // and approval re-check the actor-aware predicate server-side
+          // (FR-014/FR-015).
+          const eligibleCriteria =
+            await this.roleSetService.getCombinedApplicationEligibleCriteria(
+              roleSet
+            );
+          if (eligibleCriteria?.kind === 'globalRegistered') {
+            const nonMemberCanApply =
+              this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+                [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY],
+                [AuthorizationCredential.GLOBAL_REGISTERED],
+                CREDENTIAL_RULE_SUBSPACE_NON_MEMBER_APPLY
+              );
+            nonMemberCanApply.cascade = false;
+            newRules.push(nonMemberCanApply);
+          } else if (eligibleCriteria?.kind === 'credential') {
+            const ancestorMemberCanApply =
+              this.authorizationPolicyService.createCredentialRule(
+                [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_APPLY],
+                [eligibleCriteria.credential],
+                CREDENTIAL_RULE_SUBSPACE_ANCESTOR_MEMBER_APPLY
+              );
+            ancestorMemberCanApply.cascade = false;
+            newRules.push(ancestorMemberCanApply);
+          }
           break;
         }
         case CommunityMembershipPolicy.OPEN: {
@@ -265,6 +312,41 @@ export class CommunityAuthorizationService {
             );
           spaceMemberCanJoin.cascade = false;
           newRules.push(spaceMemberCanJoin);
+
+          // Feature 017 round 2 — combined Subspace direct join: surface
+          // ROLESET_ENTRY_ROLE_JOIN to the eligible non-parent-member
+          // population, exactly mirroring the APPLICATIONS/APPLY branch above.
+          // Reachability is actor-relative (ADR 0001) and flow-neutral, so the
+          // same `getCombinedApplicationEligibleCriteria` predicate drives the
+          // exposure: with no private ancestor the whole registered platform is
+          // eligible (every ancestor public + opted in); with a private
+          // ancestor, members of the DEEPEST private ancestor are eligible when
+          // every ancestor below it is public + opted in. This privilege is the
+          // single signal the client trusts; joinRoleSet re-checks the same
+          // actor-aware predicate server-side at join time (FR-024/FR-025).
+          const eligibleCriteria =
+            await this.roleSetService.getCombinedApplicationEligibleCriteria(
+              roleSet
+            );
+          if (eligibleCriteria?.kind === 'globalRegistered') {
+            const nonMemberCanJoin =
+              this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+                [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
+                [AuthorizationCredential.GLOBAL_REGISTERED],
+                CREDENTIAL_RULE_SUBSPACE_NON_MEMBER_JOIN
+              );
+            nonMemberCanJoin.cascade = false;
+            newRules.push(nonMemberCanJoin);
+          } else if (eligibleCriteria?.kind === 'credential') {
+            const ancestorMemberCanJoin =
+              this.authorizationPolicyService.createCredentialRule(
+                [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
+                [eligibleCriteria.credential],
+                CREDENTIAL_RULE_SUBSPACE_ANCESTOR_MEMBER_JOIN
+              );
+            ancestorMemberCanJoin.cascade = false;
+            newRules.push(ancestorMemberCanJoin);
+          }
           break;
         }
       }

@@ -287,6 +287,7 @@ enum CalloutFramingType {
   MEMO
   NONE
   POLL
+  SPACES
   WHITEBOARD
 }
 
@@ -789,6 +790,7 @@ enum SearchCategory {
 """The different types of available search results."""
 enum SearchResultType {
   CALLOUT
+  COLLABORA_DOCUMENT
   MEMO
   ORGANIZATION
   POST
@@ -1904,6 +1906,10 @@ type CalloutFraming {
   poll: Poll
   """The Profile for framing the associated Callout."""
   profile: Profile!
+  """
+  The host space's subspaces for a SPACES framing, ordered pinned-first then the space's sortOrder/displayName. Returns the existing Space type (no new item type). No server-side pagination/search: the client name-searches and paginates client-side over this set. Empty for non-SPACES framings, for a callout not attached to a space, or for a host with no subspaces.
+  """
+  subspaces: [Space!]!
   """
   The type of the Callout Framing, the additional content attached to this callout
   """
@@ -3116,6 +3122,10 @@ type InnovationHub {
   createdDate: DateTime!
   """The ID of the entity"""
   id: UUID!
+  """
+  The Innovation Packs curated for this Innovation Hub, in stored (curated) order, filtered to those the requesting agent may read.
+  """
+  innovationPackListFilter: [InnovationPack!]
   """Flag to control if this InnovationHub is listed in the platform store."""
   listedInStore: Boolean!
   """A name identifier of the entity, unique within a given scope."""
@@ -3137,6 +3147,10 @@ type InnovationHub {
   type: InnovationHubType!
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
+  """
+  The Virtual Contributors curated for this Innovation Hub, in stored (curated) order, filtered to those the requesting agent may read.
+  """
+  virtualContributorListFilter: [VirtualContributor!]
 }
 
 type InnovationPack {
@@ -4187,6 +4201,10 @@ type Mutation {
   Reorder Poll options. Requires UPDATE privilege. The provided list must contain exactly the same option IDs as the current poll options.
   """
   reorderPollOptions(optionData: ReorderPollOptionsInput!): Poll!
+  """
+  Replace the backing file of an existing CollaboraDocument in place, preserving its identity. Requires UPDATE on the document. The replacement must be an allowed OfficeDocs format, within the size cap, and the SAME document type as the current file. Refused while the document is being edited.
+  """
+  replaceCollaboraDocument(file: Upload!, replaceData: ReplaceCollaboraDocumentInput!): CollaboraDocument!
   """Resets the interaction with the VC by recreating the room."""
   resetConversationVc(input: ConversationVcResetInput!): Conversation!
   """Reset all license plans on Accounts"""
@@ -5746,6 +5764,29 @@ type SearchResultCallout implements SearchResult {
   """The score for this search result; more matches means a higher score."""
   score: Float!
   """The parent Space of the Callout."""
+  space: Space!
+  """The terms that were matched for this result"""
+  terms: [String!]!
+  """The type of returned result for this search."""
+  type: SearchResultType!
+}
+
+type SearchResultCollaboraDocument implements SearchResult {
+  """The Callout of the Collabora document."""
+  callout: Callout!
+  """The Collabora document that was found."""
+  collaboraDocument: CollaboraDocument!
+  """
+  The identifier of the search result. Does not represent the entity in Alkemio.
+  """
+  id: UUID!
+  """
+  Whether the Collabora document is a contribution (response) or part of the framing.
+  """
+  isContribution: Boolean!
+  """The score for this search result; more matches means a higher score."""
+  score: Float!
+  """The Space of the Collabora document."""
   space: Space!
   """The terms that were matched for this result"""
   terms: [String!]!
@@ -7590,6 +7631,10 @@ input CreateInnovationFlowStateSettingsInput {
 input CreateInnovationHubOnAccountInput {
   """The Account where the InnovationHub is to be created."""
   accountID: UUID!
+  """
+  The Innovation Packs curated for this Innovation Hub. When omitted, the Innovation Hub is created with no Innovation Packs.
+  """
+  innovationPackListFilter: [UUID!]
   """A readable identifier, unique within the containing scope."""
   nameID: NameID
   profileData: CreateProfileInput!
@@ -7605,6 +7650,10 @@ input CreateInnovationHubOnAccountInput {
   subdomain: String!
   """The type of Innovation Hub."""
   type: InnovationHubType!
+  """
+  The Virtual Contributors curated for this Innovation Hub. When omitted, the Innovation Hub is created with no Virtual Contributors.
+  """
+  virtualContributorListFilter: [UUID!]
 }
 
 input CreateInnovationPackOnAccountInput {
@@ -8429,6 +8478,15 @@ input ReorderPollOptionsInput {
   pollID: UUID!
 }
 
+input ReplaceCollaboraDocumentInput {
+  """
+  Optional title chosen in the replace dialog (defaults to the incoming file title). ACCEPTED FOR FORWARD-COMPATIBILITY BUT NOT APPLIED in this feature: the stored display name is left unchanged. Persisting a rename is owned by feature 016-officedocs-rename-ux (FR-009 / FR-015). Present so reviewers do not read the unused field as a bug.
+  """
+  displayName: String
+  """The ID of the CollaboraDocument whose backing file is being replaced."""
+  ID: UUID!
+}
+
 input RevokeAuthorizationCredentialInput {
   """The resource to which access is being removed."""
   resourceID: String!
@@ -8967,6 +9025,10 @@ input UpdateInnovationFlowStatesSortOrderInput {
 input UpdateInnovationHubInput {
   ID: UUID!
   """
+  The Innovation Packs curated for this Innovation Hub; full replace. An empty list is allowed and hides the section. Omit to leave unchanged.
+  """
+  innovationPackListFilter: [UUID!]
+  """
   Flag to control the visibility of the InnovationHub in the platform store.
   """
   listedInStore: Boolean
@@ -8979,13 +9041,17 @@ input UpdateInnovationHubInput {
   """Visibility of the InnovationHub in searches."""
   searchVisibility: SearchVisibility
   """
-  A list of Spaces to include in this Innovation Hub. Only valid when type 'list' is used.
+  A list of Spaces to include in this Innovation Hub; full replace. An empty list is allowed and hides the Spaces listing. Only valid when type 'list' is used.
   """
   spaceListFilter: [UUID!]
   """
   Spaces with which visibility this Innovation Hub will display. Only valid when type 'visibility' is used.
   """
   spaceVisibilityFilter: SpaceVisibility
+  """
+  The Virtual Contributors curated for this Innovation Hub; full replace. An empty list is allowed and hides the section. Omit to leave unchanged.
+  """
+  virtualContributorListFilter: [UUID!]
 }
 
 input UpdateInnovationPackInput {

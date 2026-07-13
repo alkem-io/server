@@ -5,8 +5,8 @@
  *   1. The GraphQL mutation path for calloutDescriptionDisplayMode – the
  *      SpaceSettingsService assembled inside a NestJS TestingModule, verifying that
  *      the COLLAPSED / EXPANDED values are persisted and queried back correctly.
- *   2. New-Space defaults – the inline defaulting logic in SpaceService.createSpace()
- *      that seeds COLLAPSED for every new Space record.
+ *   2. New-Space defaults – the defaulting logic in SpaceSettingsService.applyCreationDefaults()
+ *      that seeds EXPANDED for every new Space record.
  *   3. Migration idempotency – the AddLayoutSettingsToSpace migration SQL is verified
  *      structurally: the UP query only touches rows where layout is absent, and a
  *      second run produces the same result (idempotent WHERE clause).
@@ -174,7 +174,7 @@ describe('Callout collapse — new Space creation defaults (applyCreationDefault
     await module.close();
   });
 
-  it('space created without calloutDescriptionDisplayMode defaults to COLLAPSED', () => {
+  it('space created without calloutDescriptionDisplayMode defaults to EXPANDED', () => {
     const settings: ISpaceSettings = {
       ...baseSettings(),
       layout: {} as any,
@@ -183,7 +183,7 @@ describe('Callout collapse — new Space creation defaults (applyCreationDefault
     const result = service.applyCreationDefaults(settings);
 
     expect(result.layout.calloutDescriptionDisplayMode).toBe(
-      CalloutDescriptionDisplayMode.COLLAPSED
+      CalloutDescriptionDisplayMode.EXPANDED
     );
   });
 
@@ -203,9 +203,11 @@ describe('Callout collapse — new Space creation defaults (applyCreationDefault
   });
 
   it('settings layout for a new subspace is independent of any parent space value', () => {
+    // Parent explicitly COLLAPSED; the subspace must still take the creation
+    // default (EXPANDED) rather than inheriting the parent's value.
     const parentSettings = baseSettings();
     parentSettings.layout.calloutDescriptionDisplayMode =
-      CalloutDescriptionDisplayMode.EXPANDED;
+      CalloutDescriptionDisplayMode.COLLAPSED;
 
     const subspaceSettings: ISpaceSettings = {
       ...baseSettings(),
@@ -215,11 +217,11 @@ describe('Callout collapse — new Space creation defaults (applyCreationDefault
     const result = service.applyCreationDefaults(subspaceSettings);
 
     expect(result.layout.calloutDescriptionDisplayMode).toBe(
-      CalloutDescriptionDisplayMode.COLLAPSED
+      CalloutDescriptionDisplayMode.EXPANDED
     );
     // Parent unchanged
     expect(parentSettings.layout.calloutDescriptionDisplayMode).toBe(
-      CalloutDescriptionDisplayMode.EXPANDED
+      CalloutDescriptionDisplayMode.COLLAPSED
     );
   });
 

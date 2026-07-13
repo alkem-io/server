@@ -1,9 +1,4 @@
-import {
-  MsearchMultisearchBody,
-  MsearchMultisearchHeader,
-  MsearchRequestItem,
-  QueryDslQueryContainer,
-} from '@elastic/elasticsearch/lib/api/types';
+import { estypes } from '@elastic/elasticsearch';
 import { groupBy } from 'lodash';
 import { SearchFilterInput } from '../dto/inputs';
 import { SearchCategory } from '../search.category';
@@ -18,7 +13,7 @@ import { SearchIndex } from './search.index';
  */
 export const buildMultiSearchRequestItems = (
   indicesToSearchOn: SearchIndex[],
-  searchQuery: QueryDslQueryContainer,
+  searchQuery: estypes.QueryDslQueryContainer,
   options: {
     filters?: SearchFilterInput[];
     /** Multiplier for the size argument as an attempt to ensure the requested size after authorization */
@@ -27,7 +22,7 @@ export const buildMultiSearchRequestItems = (
       size: number;
     };
   }
-): MsearchRequestItem[] => {
+): estypes.MsearchRequestItem[] => {
   const { filters, defaults, sizeMultiplier = 2 } = options;
   // grouping by category will highlight the search requests
   const indexByCategory = groupBy(indicesToSearchOn, 'category') as Record<
@@ -48,13 +43,31 @@ export const buildMultiSearchRequestItems = (
     const resultCount = Math.round((size ?? defaults.size) * sizeMultiplier);
 
     return [
-      { index: indices } as MsearchMultisearchHeader,
+      { index: indices } as estypes.MsearchMultisearchHeader,
       {
         query: searchQuery,
         // return only a small subset of fields to conserve data
         fields: ['id', 'type'],
         // do not include the source in the result
         _source: false,
+        // Ask ES which text matched, so `ISearchResult.terms` can report why a
+        // document surfaced (server#3702). `*` + the default
+        // `require_field_match: true` highlights exactly the fields the query
+        // matched, whatever each index's text fields are named. Highlighting
+        // needs a retrievable copy of the field — `_source` or a stored field;
+        // office-document `content` is `_source`-excluded but mapped
+        // `store: true` (reporting-orchestration template) exactly so body
+        // matches can still be reported here.
+        highlight: {
+          fields: { '*': {} },
+          // terms are extracted from fragments, not shown as excerpts — keep
+          // fragments small and few to bound query-time analysis cost
+          fragment_size: 100,
+          number_of_fragments: 3,
+          // truncate analysis instead of failing the search when a stored
+          // field exceeds the index's `highlight.max_analyzed_offset` (1M)
+          max_analyzed_offset: 999_999,
+        },
         // max amount of results
         size: resultCount,
         // sort by these fields
@@ -63,7 +76,7 @@ export const buildMultiSearchRequestItems = (
         // to form another page of results
         // skip if it's a new search
         search_after,
-      } as MsearchMultisearchBody,
+      } as estypes.MsearchMultisearchBody,
     ];
   });
 };

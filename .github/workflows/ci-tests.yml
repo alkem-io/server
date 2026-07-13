@@ -34,6 +34,9 @@ jobs:
       - name: Install dependencies
         run: pnpm install --frozen-lockfile
 
+      - name: Native TypeScript 7 typecheck gate
+        run: pnpm run typecheck:native
+
       - name: Run tests with coverage
         timeout-minutes: 10
         run: pnpm run test:ci

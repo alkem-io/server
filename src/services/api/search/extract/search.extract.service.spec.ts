@@ -159,6 +159,48 @@ describe('SearchExtractService', () => {
       expect(result[0].id).toBe('hit-1');
     });
 
+    it('should extract deduplicated matched terms from highlight fragments (server#3702)', async () => {
+      mockClient.msearch.mockResolvedValue({
+        responses: [
+          {
+            hits: {
+              hits: [
+                {
+                  _id: 'hit-1',
+                  _score: 5.0,
+                  fields: { id: ['memo-1'], type: [SearchResultType.MEMO] },
+                  highlight: {
+                    markdown: [
+                      'notes on <em>governance</em> and more <em>governance</em>',
+                      'the <em>board</em> decided',
+                    ],
+                    'profile.displayName.text': ['<em>Governance</em> memo'],
+                  },
+                },
+                {
+                  _id: 'hit-2',
+                  _score: 3.0,
+                  fields: { id: ['space-1'], type: [SearchResultType.SPACE] },
+                  // no highlight on the hit (e.g. only fields without a
+                  // retrievable copy matched) -> terms stays empty
+                },
+              ],
+            },
+          },
+        ],
+      });
+
+      const result = await service.search({
+        terms: ['governance board'],
+        filters: [{ category: SearchCategory.SPACES, size: 5 }],
+      } as any);
+
+      expect(result).toHaveLength(2);
+      // lowercased + deduplicated across fields and fragments
+      expect(result[0].terms).toEqual(['governance', 'board']);
+      expect(result[1].terms).toEqual([]);
+    });
+
     it('should handle search results with missing entity id gracefully', async () => {
       mockClient.msearch.mockResolvedValue({
         responses: [
