@@ -11,6 +11,7 @@ import {
   NonInteractiveLoginActorIdMissingError,
   NonInteractiveLoginInvalidCredentialsError,
   NonInteractiveLoginKratosUnavailableError,
+  NonInteractiveLoginRateLimitedError,
   NonInteractiveLoginService,
 } from './non-interactive-login.service';
 import type {
@@ -39,6 +40,7 @@ import type {
  *                                       email)
  *   404                             — feature disabled
  *   422 message="actor_id_missing"   — identity has no alkemio_actor_id
+ *   429 message="rate_limited"       — Kratos rate-limited the login flow
  *   503 message="kratos_unavailable"
  */
 @Controller('api/auth')
@@ -76,6 +78,9 @@ export class NonInteractiveLoginController {
     } catch (e) {
       if (e instanceof NonInteractiveLoginInvalidCredentialsError) {
         throw new HttpException('invalid_credentials', HttpStatus.UNAUTHORIZED);
+      }
+      if (e instanceof NonInteractiveLoginRateLimitedError) {
+        throw new HttpException('rate_limited', HttpStatus.TOO_MANY_REQUESTS);
       }
       if (e instanceof NonInteractiveLoginActorIdMissingError) {
         throw new HttpException(
