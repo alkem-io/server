@@ -287,6 +287,20 @@ describe('UserSettingsService', () => {
       expect(result.notification.sound.chatMessage).toBe(true);
       expect(result.notification.sound.inAppNotification).toBe(false);
     });
+
+    it('should treat an explicit null as a no-op rather than persisting it', () => {
+      const settings = buildSettings();
+      const updateData = {
+        notification: { sound: { chatMessage: null, inAppNotification: null } },
+      } as unknown as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      // The output fields are Boolean! — a persisted null would fail the non-null
+      // check on every later read of this User, so null must never be written.
+      expect(result.notification.sound.chatMessage).toBe(true);
+      expect(result.notification.sound.inAppNotification).toBe(true);
+    });
   });
 
   describe('updateSettings - homeSpace', () => {

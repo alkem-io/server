@@ -17,6 +17,7 @@ export class AddNotificationSoundSettings1783953322515
       )
       WHERE notification -> 'sound' IS NULL
          OR notification -> 'sound' = 'null'::jsonb
+    `);
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {

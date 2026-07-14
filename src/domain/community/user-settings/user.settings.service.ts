@@ -269,13 +269,16 @@ export class UserSettingsService {
     }
 
     // Sound playback preferences. Merge field-by-field (never by spread) so a
-    // partial update of one flag leaves the sibling flag untouched.
+    // partial update of one flag leaves the sibling flag untouched. The `!= null`
+    // guards skip both undefined and an explicit null: the output fields are
+    // Boolean!, so persisting a null would make every later read of this User
+    // fail the non-null check.
     if (updateData.notification?.sound) {
       const soundData = updateData.notification.sound;
-      if (soundData.chatMessage !== undefined) {
+      if (soundData.chatMessage != null) {
         settings.notification.sound.chatMessage = soundData.chatMessage;
       }
-      if (soundData.inAppNotification !== undefined) {
+      if (soundData.inAppNotification != null) {
         settings.notification.sound.inAppNotification =
           soundData.inAppNotification;
       }
