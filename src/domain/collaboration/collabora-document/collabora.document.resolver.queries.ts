@@ -113,7 +113,9 @@ export class CollaboraDocumentResolverQueries {
       actorContext,
       collaboraDocument.authorization,
       AuthorizationPrivilege.READ,
-      `collabora service health: ${collaboraDocument.id}`
+      // Static message — no dynamic data (e.g. the document id) in exception messages
+      // (.github/copilot-instructions.md coding standards).
+      'collabora service health check'
     );
     return this.collaboraDocumentService.isWopiServiceAvailable();
   }
