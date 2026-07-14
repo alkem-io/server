@@ -252,13 +252,13 @@ describe('InnovationFlowStateService', () => {
       expect(state.settings.visible).toBe(false);
     });
 
-    it('should preserve stored descriptionDisplayMode/showPublishDetails when sent as explicit null (never overwrite a NonNull field)', async () => {
+    it('should preserve every stored settings field when sent as explicit null (never overwrite a NonNull field)', async () => {
       const state = {
         id: 'state-1',
         displayName: 'Name',
         description: '',
         settings: {
-          allowNewCallouts: true,
+          allowNewCallouts: false,
           visible: true,
           descriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
           showPublishDetails: false,
@@ -273,6 +273,7 @@ describe('InnovationFlowStateService', () => {
       await service.update(state, {
         displayName: 'Name',
         settings: {
+          allowNewCallouts: null,
           descriptionDisplayMode: null,
           showPublishDetails: null,
           visible: null,
@@ -284,6 +285,9 @@ describe('InnovationFlowStateService', () => {
       );
       expect(state.settings.showPublishDetails).toBe(false);
       expect(state.settings.visible).toBe(true);
+      // allowNewCallouts is Boolean! on the output type: an explicit null must never be
+      // persisted, or every subsequent read of this state fails NonNull serialization.
+      expect(state.settings.allowNewCallouts).toBe(false);
     });
 
     it('should preserve stored settings.allowNewCallouts when omitted from the update', async () => {
@@ -325,7 +329,10 @@ describe('InnovationFlowStateService', () => {
       expect(state.settings.visible).toBe(false);
     });
 
-    it('should default description to empty string when undefined', async () => {
+    // FR-013: displayName/description are partial updates too. A client editing only
+    // `settings` omits them, and omission must preserve — previously `description ?? ''`
+    // wiped the stored description whenever it was not re-sent.
+    it('should preserve the stored description when omitted from the update (FR-013)', async () => {
       const state = {
         id: 'state-1',
         displayName: 'Name',
@@ -340,7 +347,45 @@ describe('InnovationFlowStateService', () => {
         description: undefined,
       } as any);
 
+      expect(state.description).toBe('Old');
+    });
+
+    it('should clear the description when an explicit empty string is sent', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: 'Old',
+        settings: { allowNewCallouts: true },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        description: '',
+      } as any);
+
       expect(state.description).toBe('');
+    });
+
+    it('should preserve the stored displayName when omitted from the update (FR-013)', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Original',
+        description: 'Desc',
+        settings: { allowNewCallouts: true },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      // A settings-only edit must not clobber a concurrent rename it never saw.
+      await service.update(state, {
+        settings: { showPublishDetails: false },
+      } as any);
+
+      expect(state.displayName).toBe('Original');
+      expect(state.description).toBe('Desc');
+      expect(state.settings.showPublishDetails).toBe(false);
     });
 
     // FR-001/021: descriptionDisplayMode partial update

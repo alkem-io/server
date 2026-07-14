@@ -9018,10 +9018,14 @@ input UpdateInnovationFlowInput {
 }
 
 input UpdateInnovationFlowStateInput {
-  """The explanation text to clarify the State."""
+  """
+  Optional. The explanation text to clarify the State; omission leaves the stored value unchanged.
+  """
   description: Markdown
-  """The display name for the State"""
-  displayName: String!
+  """
+  Optional. The display name for the State; omission leaves the stored value unchanged.
+  """
+  displayName: String
   """ID of the Innovation Flow"""
   innovationFlowStateID: UUID!
   settings: UpdateInnovationFlowStateSettingsInput

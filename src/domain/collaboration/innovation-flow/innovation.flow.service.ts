@@ -30,6 +30,7 @@ import { CreateInnovationFlowStateInput } from '../innovation-flow-state/dto/inn
 import { UpdateInnovationFlowStateInput } from '../innovation-flow-state/dto/innovation.flow.state.dto.update';
 import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
 import { InnovationFlowStateService } from '../innovation-flow-state/innovation.flow.state.service';
+import { normalizeStatesSettings } from '../innovation-flow-state/normalize.state.settings';
 import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
 import { CreateInnovationFlowInput } from './dto/innovation.flow.dto.create';
 import { DeleteStateOnInnovationFlowInput } from './dto/innovation.flow.dto.state.delete';
@@ -192,12 +193,24 @@ export class InnovationFlowService {
         }
       );
     }
-    // Reject comma-containing names on rename (commas are reserved separators)
-    this.validateStateDisplayNames([stateUpdatedData.displayName]);
+    // displayName is an optional partial update: only validate/rename when supplied.
+    const newDisplayName = stateUpdatedData.displayName;
+    if (newDisplayName != null) {
+      // Reject comma-containing names on rename (commas are reserved separators)
+      this.validateStateDisplayNames([newDisplayName]);
+      // Reject a rename that collides with another state. Posts are joined to their phase
+      // by display name, so duplicates make that join ambiguous: the settings of whichever
+      // phase sorts first would silently apply to both.
+      this.validateStateDisplayNameIsUnique(
+        newDisplayName,
+        states,
+        updatedState.id
+      );
+    }
 
     const renamedState =
-      updatedState.displayName !== stateUpdatedData.displayName
-        ? { old: updatedState.displayName, new: stateUpdatedData.displayName }
+      newDisplayName != null && updatedState.displayName !== newDisplayName
+        ? { old: updatedState.displayName, new: newDisplayName }
         : undefined;
 
     // Update the state with the new data
@@ -458,6 +471,11 @@ export class InnovationFlowService {
         LogContext.INNOVATION_FLOW
       );
     }
+    // Posts join to their phase by display name, so a duplicate makes that join ambiguous.
+    this.validateStateDisplayNameIsUnique(
+      stateData.displayName,
+      innovationFlow.states
+    );
     if (innovationFlow.states.length >= maximumNumberOfStates) {
       throw new ValidationException(
         `Innovation Flow can have a maximum of ${maximumNumberOfStates} states; provided: ${innovationFlow.states.length}`,
@@ -618,7 +636,11 @@ export class InnovationFlowService {
         );
       }
     }
-    const stateNames = states.map(state => state.displayName);
+    // On an update input, an omitted displayName means "leave unchanged", so it carries no
+    // name to validate. Creation inputs always carry one.
+    const stateNames = states
+      .map(state => state.displayName)
+      .filter((displayName): displayName is string => displayName != null);
     const uniqueStateNames = new Set(stateNames);
     if (uniqueStateNames.size !== stateNames.length) {
       throw new ValidationException(
@@ -646,6 +668,42 @@ export class InnovationFlowService {
       throw new ValidationException(
         `Invalid characters found on flow state: ${stateNames}`,
         LogContext.INNOVATION_FLOW
+      );
+    }
+  }
+
+  /**
+   * Rejects a state display name that collides with an existing state in the same flow.
+   *
+   * `validateInnovationFlowDefinition` enforces uniqueness when a flow is created, but the
+   * incremental edit paths (rename, add state) bypassed it — so a flow could be edited into
+   * a state that creating it from scratch would have rejected.
+   *
+   * Uniqueness is load-bearing, not cosmetic: a post resolves its presentation settings by
+   * joining its flow-state classification on the phase *display name* (there is no stable
+   * phase id in the classification). Two phases sharing a name make that join ambiguous.
+   *
+   * Comparison is case-insensitive and trims surrounding whitespace, matching the
+   * collision check the client applies when adding a phase.
+   *
+   * @param excludeStateID the state being renamed, so it does not collide with itself
+   */
+  public validateStateDisplayNameIsUnique(
+    displayName: string,
+    existingStates: IInnovationFlowState[],
+    excludeStateID?: string
+  ) {
+    const normalized = displayName.trim().toLowerCase();
+    const collides = existingStates.some(
+      state =>
+        state.id !== excludeStateID &&
+        state.displayName?.trim().toLowerCase() === normalized
+    );
+    if (collides) {
+      throw new ValidationException(
+        'A state with this display name already exists in the Innovation Flow',
+        LogContext.INNOVATION_FLOW,
+        { displayName }
       );
     }
   }
@@ -770,8 +828,11 @@ export class InnovationFlowService {
       );
     }
 
-    // sort the states by sortOrder
-    return [...innovationFlow.states].sort(sortBySortOrder);
+    // sort the states by sortOrder, and normalize settings: these are raw TypeORM rows,
+    // so an un-backfilled row would serialize null into the NonNull settings fields.
+    return normalizeStatesSettings(
+      [...innovationFlow.states].sort(sortBySortOrder)
+    );
   }
 
   public async getCurrentState(
@@ -856,7 +917,8 @@ export class InnovationFlowService {
 
     await this.innovationFlowStateService.saveAll(modifiedStates);
 
-    return statesInOrder;
+    // This mutation returns [IInnovationFlowState!]! straight from the raw rows.
+    return normalizeStatesSettings(statesInOrder);
   }
 
   private async getCollaborationByInnovationFlowId(innovationFlowId: string) {

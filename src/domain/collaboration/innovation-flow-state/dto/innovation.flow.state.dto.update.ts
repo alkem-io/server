@@ -15,15 +15,17 @@ export class UpdateInnovationFlowStateInput {
   innovationFlowStateID!: string;
 
   @Field(() => String, {
-    nullable: false,
-    description: 'The display name for the State',
+    nullable: true,
+    description:
+      'Optional. The display name for the State; omission leaves the stored value unchanged.',
   })
   @MaxLength(SMALL_TEXT_LENGTH)
-  displayName!: string;
+  displayName?: string;
 
   @Field(() => Markdown, {
     nullable: true,
-    description: 'The explanation text to clarify the State.',
+    description:
+      'Optional. The explanation text to clarify the State; omission leaves the stored value unchanged.',
   })
   @MaxLength(LONG_TEXT_LENGTH)
   description?: string;

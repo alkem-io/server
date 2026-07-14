@@ -16,6 +16,7 @@ import { CreateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.
 import { UpdateInnovationFlowStateInput } from './dto/innovation.flow.state.dto.update';
 import { InnovationFlowState } from './innovation.flow.state.entity';
 import { IInnovationFlowState } from './innovation.flow.state.interface';
+import { normalizeStateSettings } from './normalize.state.settings';
 
 @Injectable()
 export class InnovationFlowStateService {
@@ -73,13 +74,22 @@ export class InnovationFlowStateService {
     innovationFlowState: IInnovationFlowState,
     updateData: UpdateInnovationFlowStateInput
   ): Promise<IInnovationFlowState> {
-    innovationFlowState.displayName = updateData.displayName;
-    innovationFlowState.description = updateData.description ?? '';
+    // FR-013: every field of this mutation is a non-destructive partial update. Omission
+    // (or an explicit null) preserves the stored value, so a client editing only `settings`
+    // cannot clobber a concurrent rename or description edit it never saw.
+    if (updateData.displayName != null) {
+      innovationFlowState.displayName = updateData.displayName;
+    }
+    // `!= null`, not `?? ''`: omitting `description` must preserve it, not wipe it.
+    // Clearing a description still works — an explicit '' is not null.
+    if (updateData.description != null) {
+      innovationFlowState.description = updateData.description;
+    }
     if (updateData.settings) {
       // Both flags are optional, non-destructive partial updates: an explicit
       // value (including `false`) is honored; omission preserves the stored
       // value.
-      if (updateData.settings.allowNewCallouts !== undefined) {
+      if (updateData.settings.allowNewCallouts != null) {
         innovationFlowState.settings.allowNewCallouts =
           updateData.settings.allowNewCallouts;
       }
@@ -135,29 +145,7 @@ export class InnovationFlowStateService {
         `Unable to find InnovationFlowState with ID: ${innovationFlowStateID}`,
         LogContext.INNOVATION_FLOW
       );
-    // FR-001 / research Decision 2: non-nullable GraphQL fields on settings.
-    // The backfill migration guarantees every persisted row carries them, but
-    // coerce defensively here so any un-backfilled row — or a row with missing
-    // settings — still resolves to a value rather than null (risk R-4).
-    if (!innovationFlowState.settings) {
-      innovationFlowState.settings = {
-        allowNewCallouts: true,
-        visible: true,
-        descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
-        showPublishDetails: true,
-      };
-    } else {
-      innovationFlowState.settings.visible =
-        innovationFlowState.settings.visible ?? true;
-      // FR-001/021: coerce absent descriptionDisplayMode to EXPANDED.
-      innovationFlowState.settings.descriptionDisplayMode =
-        innovationFlowState.settings.descriptionDisplayMode ??
-        CalloutDescriptionDisplayMode.EXPANDED;
-      // FR-002/021: coerce absent showPublishDetails to true.
-      innovationFlowState.settings.showPublishDetails =
-        innovationFlowState.settings.showPublishDetails ?? true;
-    }
-    return innovationFlowState;
+    return normalizeStateSettings(innovationFlowState);
   }
 
   public getStateNames(states: IInnovationFlowState[]): string[] {

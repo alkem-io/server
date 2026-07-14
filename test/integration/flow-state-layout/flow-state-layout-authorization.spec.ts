@@ -365,8 +365,12 @@ describe('flow-state-layout — public-read cascade contract (FR-007, intake Q1)
       flowAuth
     );
     expect(result).toBe(inheritedAuth);
-    // The returned authorization carries the cascaded READ rule from the flow
-    expect(result.credentialRules[0].cascade).toBe(true);
+    // NOTE: deliberately NOT asserting on result.credentialRules here. `inheritParentAuthorization`
+    // is mocked, so those rules are this test's own fixture — asserting `cascade === true` on them
+    // would check the literal declared above against itself and could never fail. What this test
+    // can honestly prove is the delegation: reset(state) → inheritParentAuthorization(reset, flow).
+    // That the cascade actually REACHES a flow state is a live-stack property (FR-007), not a
+    // mockable one.
 
     await stateModule.close();
   });
