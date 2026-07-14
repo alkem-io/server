@@ -2042,7 +2042,7 @@ type CollaboraDocument {
 }
 
 type CollaboraEditorUrlResult {
-  """The time-to-live of the access token in seconds."""
+  """When the access token expires, as an absolute Unix timestamp in milliseconds (the WOPI access_token_ttl passed through from the WOPI host); 0 means it does not expire."""
   accessTokenTTL: Float!
   """The URL to open the document in the Collabora editor."""
   editorUrl: String!
