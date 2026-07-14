@@ -11,12 +11,12 @@ export class AddNotificationSoundSettings1783953322515
     await queryRunner.query(`
       UPDATE user_settings
       SET notification = jsonb_set(
-        notification,
+        COALESCE(notification, '{}'::jsonb),
         '{sound}',
         '{"chatMessage": true, "inAppNotification": true}'::jsonb
       )
       WHERE notification -> 'sound' IS NULL
-    `);
+         OR notification -> 'sound' = 'null'::jsonb
   }
 
   public async down(queryRunner: QueryRunner): Promise<void> {
