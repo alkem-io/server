@@ -2066,6 +2066,8 @@ const getSubspacesMock = (
               settings: {
                 allowNewCallouts: true,
                 visible: true,
+                descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+                showPublishDetails: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2077,6 +2079,8 @@ const getSubspacesMock = (
               settings: {
                 allowNewCallouts: true,
                 visible: true,
+                descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+                showPublishDetails: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2088,6 +2092,8 @@ const getSubspacesMock = (
               settings: {
                 allowNewCallouts: true,
                 visible: true,
+                descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+                showPublishDetails: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2099,6 +2105,8 @@ const getSubspacesMock = (
               settings: {
                 allowNewCallouts: true,
                 visible: true,
+                descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+                showPublishDetails: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2218,6 +2226,8 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
               settings: {
                 allowNewCallouts: true,
                 visible: true,
+                descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+                showPublishDetails: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2229,6 +2239,8 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
               settings: {
                 allowNewCallouts: true,
                 visible: true,
+                descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+                showPublishDetails: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2240,6 +2252,8 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
               settings: {
                 allowNewCallouts: true,
                 visible: true,
+                descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+                showPublishDetails: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),
@@ -2251,6 +2265,8 @@ const getSubsubspacesMock = (subsubspaceId: string, count: number): Space[] => {
               settings: {
                 allowNewCallouts: true,
                 visible: true,
+                descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+                showPublishDetails: true,
               },
               sortOrder: 1,
               ...getEntityMock<InnovationFlowState>(),

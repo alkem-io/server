@@ -1,5 +1,6 @@
 import { LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { TemplateType } from '@common/enums/template.type';
 import {
   EntityNotFoundException,
@@ -41,6 +42,12 @@ export class InnovationFlowStateService {
       // intentionally left untouched (consuming create-time allowNewCallouts is
       // out of scope for story #6138).
       visible: stateData.settings?.visible ?? true,
+      // FR-001/021: descriptionDisplayMode defaults to EXPANDED; honor explicit create-time value.
+      descriptionDisplayMode:
+        stateData.settings?.descriptionDisplayMode ??
+        CalloutDescriptionDisplayMode.EXPANDED,
+      // FR-002/021: showPublishDetails defaults to true; honor explicit create-time value.
+      showPublishDetails: stateData.settings?.showPublishDetails ?? true,
     };
     innovationFlowState.sortOrder = stateData.sortOrder ?? 0;
     innovationFlowState.authorization = new AuthorizationPolicy(
@@ -83,8 +90,22 @@ export class InnovationFlowStateService {
       // UPDATE privilege (see innovation.flow.resolver.mutations.ts); `visible`
       // is a navigation hint only and is never read by authorization or content
       // access logic.
-      if (updateData.settings.visible !== undefined) {
+      // `!= null` (not `!== undefined`): these settings fields are non-nullable, but the
+      // GraphQL inputs are nullable, so a client can send an explicit `null`. Guarding on
+      // `!= null` skips both `undefined` (omitted → preserve) AND `null` (never overwrite a
+      // NonNull field, which would otherwise make the mutation's own response fail to serialize).
+      if (updateData.settings.visible != null) {
         innovationFlowState.settings.visible = updateData.settings.visible;
+      }
+      // FR-001/021: partial update for descriptionDisplayMode — omission/null preserves stored value.
+      if (updateData.settings.descriptionDisplayMode != null) {
+        innovationFlowState.settings.descriptionDisplayMode =
+          updateData.settings.descriptionDisplayMode;
+      }
+      // FR-002/021: partial update for showPublishDetails — omission/null preserves stored value.
+      if (updateData.settings.showPublishDetails != null) {
+        innovationFlowState.settings.showPublishDetails =
+          updateData.settings.showPublishDetails;
       }
     }
 
@@ -114,16 +135,27 @@ export class InnovationFlowStateService {
         `Unable to find InnovationFlowState with ID: ${innovationFlowStateID}`,
         LogContext.INNOVATION_FLOW
       );
-    // FR-001 / research Decision 2: `visible` is a non-nullable GraphQL field.
-    // The backfill migration guarantees every persisted row carries it, but
-    // coerce defensively here (treat absent as visible) so any un-backfilled
-    // row — or, in the worst case, a row with missing settings — still resolves
-    // to a boolean rather than null.
+    // FR-001 / research Decision 2: non-nullable GraphQL fields on settings.
+    // The backfill migration guarantees every persisted row carries them, but
+    // coerce defensively here so any un-backfilled row — or a row with missing
+    // settings — still resolves to a value rather than null (risk R-4).
     if (!innovationFlowState.settings) {
-      innovationFlowState.settings = { allowNewCallouts: true, visible: true };
+      innovationFlowState.settings = {
+        allowNewCallouts: true,
+        visible: true,
+        descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+        showPublishDetails: true,
+      };
     } else {
       innovationFlowState.settings.visible =
         innovationFlowState.settings.visible ?? true;
+      // FR-001/021: coerce absent descriptionDisplayMode to EXPANDED.
+      innovationFlowState.settings.descriptionDisplayMode =
+        innovationFlowState.settings.descriptionDisplayMode ??
+        CalloutDescriptionDisplayMode.EXPANDED;
+      // FR-002/021: coerce absent showPublishDetails to true.
+      innovationFlowState.settings.showPublishDetails =
+        innovationFlowState.settings.showPublishDetails ?? true;
     }
     return innovationFlowState;
   }
