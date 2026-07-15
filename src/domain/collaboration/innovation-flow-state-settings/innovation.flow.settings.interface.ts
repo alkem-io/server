@@ -29,4 +29,11 @@ export abstract class IInnovationFlowStateSettings {
       'Whether Posts in this State show publish details (publisher, publish date, avatar) in the feed. Presentation only — does not restrict access to publisher data. Default true.',
   })
   showPublishDetails!: boolean;
+
+  @Field(() => Boolean, {
+    nullable: false,
+    description:
+      'Whether Callouts in this State are presented as a forum: a compact table (title, author, date, comment count) with a search box, instead of the default feed. Presentation only. Default true (POC).',
+  })
+  forumMode!: boolean;
 }

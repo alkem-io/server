@@ -49,6 +49,8 @@ export class InnovationFlowStateService {
         CalloutDescriptionDisplayMode.EXPANDED,
       // FR-002/021: showPublishDetails defaults to true; honor explicit create-time value.
       showPublishDetails: stateData.settings?.showPublishDetails ?? true,
+      // POC: forumMode hardcoded true for every new State.
+      forumMode: true,
     };
     innovationFlowState.sortOrder = stateData.sortOrder ?? 0;
     innovationFlowState.authorization = new AuthorizationPolicy(

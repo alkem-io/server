@@ -26,6 +26,8 @@ export const normalizeStateSettings = (
       visible: true,
       descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
       showPublishDetails: true,
+      // POC: forumMode is hardcoded true for every State.
+      forumMode: true,
     };
     return state;
   }
@@ -36,6 +38,8 @@ export const normalizeStateSettings = (
     state.settings.descriptionDisplayMode ??
     CalloutDescriptionDisplayMode.EXPANDED;
   state.settings.showPublishDetails = state.settings.showPublishDetails ?? true;
+  // POC: forumMode hardcoded true — always serialize true regardless of stored JSONB.
+  state.settings.forumMode = true;
 
   return state;
 };
