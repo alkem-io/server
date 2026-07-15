@@ -39,18 +39,21 @@ const makeFakeIssuer = () => {
 // The failure the live crash was caused by (openid-client RPError).
 const DISCOVERY_ERROR = new Error('outgoing request timed out after 3500ms');
 
-// Drive fake timers forward in backoff-sized rounds, flushing the discovery
-// promise chain each round, until the client is ready (or we give up).
-const settleDiscovery = async (service: OidcService): Promise<boolean> => {
-  for (let round = 0; round < 40; round++) {
-    try {
-      service.getClient();
-      return true;
-    } catch {
-      await vi.advanceTimersByTimeAsync(1000);
-    }
-  }
-  return false;
+// Deterministically settle the fire-and-forget discovery.
+//
+// The prior helper raced: it polled getClient() while advancing fake time in
+// fixed 1s steps, so whether the client was ready by a given step depended on how
+// many microtask turns the discovery promise chain happened to get — flaky under
+// parallel load.
+//
+// Instead: `advanceTimersByTimeAsync(0)` flushes the discovery promise chain at
+// t=0 (covers the immediate-success path, which schedules no backoff timer), then
+// `runAllTimersAsync` fires every pending/newly-scheduled backoff timer, flushing
+// microtasks between them, until the queue drains (the success path stops
+// scheduling once the client resolves). No polling, no race window.
+const settleDiscovery = async (): Promise<void> => {
+  await vi.advanceTimersByTimeAsync(0);
+  await vi.runAllTimersAsync();
 };
 
 describe('OidcService — boot resilience', () => {
@@ -92,7 +95,7 @@ describe('OidcService — boot resilience', () => {
     const service = makeService();
     service.onModuleInit();
 
-    expect(await settleDiscovery(service)).toBe(true);
+    await settleDiscovery();
     expect(service.getClient()).toBeInstanceOf(fakeIssuer.Client);
     expect(service.getIssuer()).toBe(fakeIssuer);
     expect(fakeIssuer.constructedWith[0]).toMatchObject({
@@ -108,7 +111,7 @@ describe('OidcService — boot resilience', () => {
     const service = makeService();
     service.onModuleInit();
 
-    expect(await settleDiscovery(service)).toBe(true);
+    await settleDiscovery();
     expect(service.getClient()).toBeInstanceOf(fakeIssuer.Client);
     expect(discoverMock).toHaveBeenCalledTimes(1);
   });
@@ -122,12 +125,14 @@ describe('OidcService — boot resilience', () => {
     // `discovering` while the first round is still in flight.
     service.onModuleInit();
     service.onModuleInit();
-    expect(await settleDiscovery(service)).toBe(true);
+    await settleDiscovery();
+    // The first round resolved the client (so the second init above was a no-op).
+    expect(service.getClient()).toBeInstanceOf(fakeIssuer.Client);
 
     // A later init, after discovery has completed, must short-circuit on
     // `this.client`.
     service.onModuleInit();
-    await settleDiscovery(service);
+    await settleDiscovery();
 
     expect(discoverMock).toHaveBeenCalledTimes(1);
   });
