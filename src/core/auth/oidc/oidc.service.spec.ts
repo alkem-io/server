@@ -1,11 +1,20 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { Issuer } from 'openid-client';
+import {
+  afterAll,
+  afterEach,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from 'vitest';
 import { OidcService } from './oidc.service';
 
-// Control issuer discovery by mocking openid-client's static `Issuer.discover`.
-const { discoverMock } = vi.hoisted(() => ({ discoverMock: vi.fn() }));
-vi.mock('openid-client', () => ({
-  Issuer: { discover: discoverMock },
-}));
+// Vitest runs this repository with `isolate: false`, so OidcService may already
+// hold the shared openid-client module instance by the time this file loads.
+// Spy on that real shared Issuer instead of installing a late module mock that
+// can leave the service calling one instance while assertions watch another.
+const discoverMock = vi.spyOn(Issuer, 'discover');
 
 const OIDC_CONFIG = {
   issuer_url: 'https://identity.test-alkem.io/',
@@ -79,6 +88,10 @@ describe('OidcService — boot resilience', () => {
     // Leave the never-resolving background retry parked on a cleared fake timer.
     vi.clearAllTimers();
     vi.useRealTimers();
+  });
+
+  afterAll(() => {
+    discoverMock.mockRestore();
   });
 
   it('does not throw on boot when issuer discovery fails, and reports not-ready', async () => {
