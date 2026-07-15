@@ -2307,6 +2307,14 @@ type CreateInnovationFlowStateSettingsData {
   """The flag to set."""
   allowNewCallouts: Boolean!
   """
+  Optional. How Post descriptions in this State are displayed in the feed: expanded or collapsed. Defaults to EXPANDED when omitted.
+  """
+  descriptionDisplayMode: CalloutDescriptionDisplayMode
+  """
+  Optional. Whether Posts in this State show publish details in the feed. Defaults to true when omitted.
+  """
+  showPublishDetails: Boolean
+  """
   Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
   """
   visible: Boolean
@@ -2315,6 +2323,14 @@ type CreateInnovationFlowStateSettingsData {
 input CreateInnovationFlowStateSettingsInput {
   """The flag to set."""
   allowNewCallouts: Boolean!
+  """
+  Optional. How Post descriptions in this State are displayed in the feed: expanded or collapsed. Defaults to EXPANDED when omitted.
+  """
+  descriptionDisplayMode: CalloutDescriptionDisplayMode
+  """
+  Optional. Whether Posts in this State show publish details in the feed. Defaults to true when omitted.
+  """
+  showPublishDetails: Boolean
   """
   Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
   """
@@ -3594,6 +3610,14 @@ type InnovationFlowState {
 type InnovationFlowStateSettings {
   """Whether new callouts can be added to this State."""
   allowNewCallouts: Boolean!
+  """
+  How Post descriptions in this State are displayed in the feed: expanded or collapsed. Default expanded.
+  """
+  descriptionDisplayMode: CalloutDescriptionDisplayMode!
+  """
+  Whether Posts in this State show publish details (publisher, publish date, avatar) in the feed. Presentation only — does not restrict access to publisher data. Default true.
+  """
+  showPublishDetails: Boolean!
   """
   Whether this State/phase is shown in the member-facing navigation. Default true. UI-affordance only: it does NOT gate access to the phase content.
   """
@@ -6476,7 +6500,7 @@ input ReplaceCollaboraDocumentInput {
   """The ID of the CollaboraDocument whose backing file is being replaced."""
   ID: UUID!
   """
-  Optional title chosen in the replace dialog (defaults to the incoming file title). ACCEPTED FOR FORWARD-COMPATIBILITY BUT NOT APPLIED in this feature: the stored display name is left unchanged. Persisting a rename is owned by feature 016-officedocs-rename-ux (FR-009 / FR-015). Present so reviewers do not read the unused field as a bug.
+  Optional title chosen in the replace dialog (defaults to the incoming file title). When supplied it is persisted as the CollaboraDocument display name (the same entity), propagating to the editor title and the download filename. Omit to leave the current name unchanged.
   """
   displayName: String
 }
@@ -7380,7 +7404,7 @@ type SpaceSettingsCollaboration {
 
 type SpaceSettingsLayout {
   """The default display mode for callout descriptions in this Space."""
-  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode!
+  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode! @deprecated(reason: "REMOVE_AFTER=2026-10-31 | superseded by InnovationFlowStateSettings.descriptionDisplayMode")
 }
 
 type SpaceSettingsMembership {
@@ -8177,10 +8201,14 @@ input UpdateInnovationFlowInput {
 }
 
 input UpdateInnovationFlowStateInput {
-  """The explanation text to clarify the State."""
+  """
+  Optional. The explanation text to clarify the State; omission leaves the stored value unchanged.
+  """
   description: Markdown
-  """The display name for the State"""
-  displayName: String!
+  """
+  Optional. The display name for the State; omission leaves the stored value unchanged.
+  """
+  displayName: String
   """ID of the Innovation Flow"""
   innovationFlowStateID: UUID!
   settings: UpdateInnovationFlowStateSettingsInput
@@ -8191,6 +8219,14 @@ input UpdateInnovationFlowStateSettingsInput {
   Optional. Sets whether new callouts can be added to this State; omission leaves the stored value unchanged.
   """
   allowNewCallouts: Boolean
+  """
+  Optional. Sets how Post descriptions in this State are displayed in the feed; omission leaves the stored value unchanged.
+  """
+  descriptionDisplayMode: CalloutDescriptionDisplayMode
+  """
+  Optional. Sets whether Posts in this State show publish details (publisher, publish date, avatar) in the feed; omission leaves the stored value unchanged.
+  """
+  showPublishDetails: Boolean
   """
   Optional. Sets whether the phase is shown in member-facing navigation; omission leaves the stored value unchanged.
   """
