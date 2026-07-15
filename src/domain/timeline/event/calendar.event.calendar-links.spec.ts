@@ -1,7 +1,7 @@
 import {
   calculateCalendarEventEndDate,
   foldIcsLine,
-  formatDateOnly,
+  formatDateOnlyLocal,
   formatDatesForCalendar,
   generateCalendarUrls,
   generateICS,
@@ -22,7 +22,8 @@ describe('CalendarEventCalendarLinks', () => {
     expect(result.icalEnd).toBe('20260220T110000Z');
   });
 
-  it('formats whole-day dates as date-only values', () => {
+  it('formats whole-day dates as date-only values with an exclusive end', () => {
+    // Last covered day is the 21st; every target's end is exclusive (the 22nd).
     const result = formatDatesForCalendar(
       '2026-02-20T00:00:00Z',
       '2026-02-21T00:00:00Z',
@@ -31,14 +32,66 @@ describe('CalendarEventCalendarLinks', () => {
 
     expect(result.google).toBe('20260220/20260222');
     expect(result.outlookStart).toBe('2026-02-20');
-    expect(result.outlookEnd).toBe('2026-02-21');
+    expect(result.outlookEnd).toBe('2026-02-22');
     expect(result.icalStart).toBe('20260220');
-    expect(result.icalEnd).toBe('20260221');
+    expect(result.icalEnd).toBe('20260222');
     expect(result.wholeDay).toBe(true);
   });
 
-  it('formatDateOnly extracts YYYYMMDD from ISO string', () => {
-    expect(formatDateOnly('2026-02-20T10:00:00.000Z')).toBe('20260220');
+  it('formatDateOnlyLocal extracts the local wall-clock YYYYMMDD', () => {
+    // Constructed at local midnight so the assertion holds in any runner TZ.
+    const localMidnight = new Date(2026, 1, 20, 0, 0, 0); // 2026-02-20 local
+    expect(formatDateOnlyLocal(localMidnight.toISOString())).toBe('20260220');
+  });
+
+  describe('whole-day time-zone handling (Europe/Amsterdam)', () => {
+    // Reproduces the reported bug: a whole-day event stored as local midnight
+    // is read back (node-postgres, timestamp-without-tz) as the previous day in
+    // UTC. Slicing the UTC ISO produced an ICS date one day early; the export
+    // must emit the local calendar day instead.
+    const originalTz = process.env.TZ;
+
+    beforeEach(() => {
+      process.env.TZ = 'Europe/Amsterdam';
+    });
+
+    afterEach(() => {
+      process.env.TZ = originalTz;
+    });
+
+    it('exports the local calendar day for a whole-day event, not the UTC day', () => {
+      // Single-day whole-day event stored at Amsterdam local midnight:
+      // 2026-07-23 00:00 local is 2026-07-22T22:00Z. The last covered day is the
+      // 23rd (the end instant is later the same local day), so DTSTART is the
+      // 23rd and the exclusive DTEND is the 24th.
+      const startIso = '2026-07-22T22:00:00.000Z';
+      const endIso = '2026-07-22T22:30:00.000Z';
+
+      const result = formatDatesForCalendar(startIso, endIso, true);
+
+      // Without the local-date fix DTSTART would slip to the 22nd (UTC).
+      expect(result.icalStart).toBe('20260723');
+      expect(result.icalEnd).toBe('20260724');
+      expect(result.outlookStart).toBe('2026-07-23');
+      expect(result.outlookEnd).toBe('2026-07-24');
+      expect(result.google).toBe('20260723/20260724');
+    });
+
+    it('emits an exclusive DTEND (last day + 1) for a multi-day whole-day event', () => {
+      // The reported case: an event covering Jan 1–Jan 3 (three days). The
+      // stored end date is the last covered day (the 3rd); DTEND must be the
+      // 4th so importers show Jan 1–3 rather than Jan 1–2.
+      const result = formatDatesForCalendar(
+        '2001-01-01T00:00:00.000Z',
+        '2001-01-03T00:00:00.000Z',
+        true
+      );
+
+      expect(result.icalStart).toBe('20010101');
+      expect(result.icalEnd).toBe('20010104');
+      expect(result.outlookEnd).toBe('2001-01-04');
+      expect(result.google).toBe('20010101/20010104');
+    });
   });
 
   it('generates calendar URLs with encoded fields', () => {
@@ -87,7 +140,8 @@ describe('CalendarEventCalendarLinks', () => {
     expect(urls.googleCalendarUrl).toContain('dates=20260310/20260312');
     expect(urls.outlookCalendarUrl).toContain('allday=true');
     expect(urls.outlookCalendarUrl).toContain('startdt=2026-03-10');
-    expect(urls.outlookCalendarUrl).toContain('enddt=2026-03-11');
+    // Exclusive end — the day after the last covered day (the 11th → the 12th).
+    expect(urls.outlookCalendarUrl).toContain('enddt=2026-03-12');
   });
 
   it('generates RFC5545 iCalendar content', () => {
