@@ -46,14 +46,27 @@ const DISCOVERY_ERROR = new Error('outgoing request timed out after 3500ms');
 // many microtask turns the discovery promise chain happened to get — flaky under
 // parallel load.
 //
-// Instead: `advanceTimersByTimeAsync(0)` flushes the discovery promise chain at
-// t=0 (covers the immediate-success path, which schedules no backoff timer), then
-// `runAllTimersAsync` fires every pending/newly-scheduled backoff timer, flushing
-// microtasks between them, until the queue drains (the success path stops
-// scheduling once the client resolves). No polling, no race window.
+// Flush the promise chain explicitly before asking Vitest to run timers. When
+// discovery succeeds immediately there is no timer in the queue, and
+// `advanceTimersByTimeAsync(0)` / `runAllTimersAsync()` are allowed to return
+// without yielding enough microtask turns for both nested awaits
+// (`discoverWithRetry` and `initDiscovery`). That showed up on the macOS CI
+// runner under coverage as all discovery assertions running too early.
+const flushDiscoveryMicrotasks = async (): Promise<void> => {
+  // Two turns are currently sufficient; keep a small cushion so this helper
+  // remains valid if the discovery promise chain gains another async boundary.
+  for (let turn = 0; turn < 5; turn++) {
+    await Promise.resolve();
+  }
+};
+
+// Once the first attempt has either completed or scheduled its retry,
+// `runAllTimersAsync` fires each pending backoff and flushes microtasks between
+// timers until the successful attempt leaves the queue empty.
 const settleDiscovery = async (): Promise<void> => {
-  await vi.advanceTimersByTimeAsync(0);
+  await flushDiscoveryMicrotasks();
   await vi.runAllTimersAsync();
+  await flushDiscoveryMicrotasks();
 };
 
 describe('OidcService — boot resilience', () => {
@@ -76,8 +89,9 @@ describe('OidcService — boot resilience', () => {
     // throwing (a boot-fatal discovery previously crashed the whole process).
     expect(() => service.onModuleInit()).not.toThrow();
 
-    // Let the first (failing) discovery attempt settle.
-    await vi.advanceTimersByTimeAsync(0);
+    // Let the first (failing) discovery attempt settle and park its retry on a
+    // fake timer without advancing into the intentionally endless retry loop.
+    await flushDiscoveryMicrotasks();
 
     // The server is up; interactive-login accessors surface a clear
     // "not yet initialised" error instead of exposing an undefined client.
