@@ -140,6 +140,50 @@ describe('InnovationFlowService', () => {
     });
   });
 
+  // Uniqueness was enforced only when a flow was CREATED, so the incremental edit paths
+  // (rename, add state) could produce a flow that creating it from scratch would reject.
+  // Posts join to their phase by display name, so duplicates make that join ambiguous.
+  describe('validateStateDisplayNameIsUnique', () => {
+    const existingStates = [
+      { id: 's-1', displayName: 'Home' },
+      { id: 's-2', displayName: 'Community' },
+    ] as any[];
+
+    it('should throw when adding a name that already exists', () => {
+      expect(() =>
+        service.validateStateDisplayNameIsUnique('Home', existingStates)
+      ).toThrow(ValidationException);
+    });
+
+    it('should throw regardless of casing or surrounding whitespace', () => {
+      expect(() =>
+        service.validateStateDisplayNameIsUnique('  hOmE ', existingStates)
+      ).toThrow(ValidationException);
+    });
+
+    it('should allow a state to keep its own name on rename (self-collision excluded)', () => {
+      expect(() =>
+        service.validateStateDisplayNameIsUnique('Home', existingStates, 's-1')
+      ).not.toThrow();
+    });
+
+    it('should throw when renaming one state onto another state name', () => {
+      expect(() =>
+        service.validateStateDisplayNameIsUnique(
+          'Community',
+          existingStates,
+          's-1'
+        )
+      ).toThrow(ValidationException);
+    });
+
+    it('should allow a genuinely new name', () => {
+      expect(() =>
+        service.validateStateDisplayNameIsUnique('Knowledge', existingStates)
+      ).not.toThrow();
+    });
+  });
+
   describe('getInnovationFlowOrFail', () => {
     it('should return innovation flow when found', async () => {
       const flow = { id: 'flow-1' } as any;
