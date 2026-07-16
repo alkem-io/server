@@ -12,8 +12,8 @@ importers:
         specifier: 0.8.16
         version: 0.8.16
       '@alkemio/notifications-lib':
-        specifier: 0.17.0
-        version: 0.17.0(@types/express@4.17.23)
+        specifier: 0.18.0
+        version: 0.18.0(@types/express@4.17.23)
       '@apollo/server':
         specifier: ^4.10.4
         version: 4.12.2(graphql@16.11.0)
@@ -407,8 +407,8 @@ packages:
     resolution: {integrity: sha512-XwnfgDpfvwOfBHXiUEys6zjAu9nLuOQgOeAKBEqwuaUKXMNEchRBpDOgdTc8Gad/ZPmvJ56XnhPuoP5Rl2yIrw==}
     engines: {node: '>=22.x', pnpm: '>=9.x'}
 
-  '@alkemio/notifications-lib@0.17.0':
-    resolution: {integrity: sha512-JQypshIuwrCyuvH2ShqFYtdxS9ZMHyBc0ZuXztcYxavo8cbJXl5xles/lZ5W+zaUEU4Y76Ca6X39PlqKoxMgzQ==}
+  '@alkemio/notifications-lib@0.18.0':
+    resolution: {integrity: sha512-qzb4zSN5pw7pEU3dKjXFr53FjPafHE1kakHquyoQUhHz0LAlxhaEd9+w4tzPT907V5FcB+2T03cRaUvivpx9tA==}
     engines: {node: '>=20.0.0', npm: '>=8.5.5'}
 
   '@angular-devkit/core@17.3.11':
@@ -6543,7 +6543,7 @@ snapshots:
 
   '@alkemio/matrix-adapter-lib@0.8.16': {}
 
-  '@alkemio/notifications-lib@0.17.0(@types/express@4.17.23)':
+  '@alkemio/notifications-lib@0.18.0(@types/express@4.17.23)':
     dependencies:
       '@alkemio/client-lib': 0.36.0(@types/express@4.17.23)
     transitivePeerDependencies:
@@ -10276,7 +10276,7 @@ snapshots:
       busboy: 1.6.0
       fs-capacitor: 8.0.0
       graphql: 16.11.0
-      http-errors: 2.0.0
+      http-errors: 2.0.1
       object-path: 0.11.8
     optionalDependencies:
       '@types/express': 4.17.23
