@@ -2,7 +2,9 @@ import {
   CREDENTIAL_RULE_ROLESET_ASSIGN,
   CREDENTIAL_RULE_SPACE_HOST_ASSOCIATES_JOIN,
   CREDENTIAL_RULE_SUBSPACE_ANCESTOR_MEMBER_APPLY,
+  CREDENTIAL_RULE_SUBSPACE_ANCESTOR_MEMBER_JOIN,
   CREDENTIAL_RULE_SUBSPACE_NON_MEMBER_APPLY,
+  CREDENTIAL_RULE_SUBSPACE_NON_MEMBER_JOIN,
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_APPLY,
   CREDENTIAL_RULE_SUBSPACE_PARENT_MEMBER_JOIN,
   CREDENTIAL_RULE_TYPES_COMMUNITY_READ_GLOBAL_REGISTERED,
@@ -310,6 +312,41 @@ export class CommunityAuthorizationService {
             );
           spaceMemberCanJoin.cascade = false;
           newRules.push(spaceMemberCanJoin);
+
+          // Feature 017 round 2 — combined Subspace direct join: surface
+          // ROLESET_ENTRY_ROLE_JOIN to the eligible non-parent-member
+          // population, exactly mirroring the APPLICATIONS/APPLY branch above.
+          // Reachability is actor-relative (ADR 0001) and flow-neutral, so the
+          // same `getCombinedApplicationEligibleCriteria` predicate drives the
+          // exposure: with no private ancestor the whole registered platform is
+          // eligible (every ancestor public + opted in); with a private
+          // ancestor, members of the DEEPEST private ancestor are eligible when
+          // every ancestor below it is public + opted in. This privilege is the
+          // single signal the client trusts; joinRoleSet re-checks the same
+          // actor-aware predicate server-side at join time (FR-024/FR-025).
+          const eligibleCriteria =
+            await this.roleSetService.getCombinedApplicationEligibleCriteria(
+              roleSet
+            );
+          if (eligibleCriteria?.kind === 'globalRegistered') {
+            const nonMemberCanJoin =
+              this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+                [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
+                [AuthorizationCredential.GLOBAL_REGISTERED],
+                CREDENTIAL_RULE_SUBSPACE_NON_MEMBER_JOIN
+              );
+            nonMemberCanJoin.cascade = false;
+            newRules.push(nonMemberCanJoin);
+          } else if (eligibleCriteria?.kind === 'credential') {
+            const ancestorMemberCanJoin =
+              this.authorizationPolicyService.createCredentialRule(
+                [AuthorizationPrivilege.ROLESET_ENTRY_ROLE_JOIN],
+                [eligibleCriteria.credential],
+                CREDENTIAL_RULE_SUBSPACE_ANCESTOR_MEMBER_JOIN
+              );
+            ancestorMemberCanJoin.cascade = false;
+            newRules.push(ancestorMemberCanJoin);
+          }
           break;
         }
       }

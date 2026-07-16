@@ -15,6 +15,7 @@ import { IAuthorizationPolicy } from '@domain/common/authorization-policy';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { ProfileAuthorizationService } from '@domain/common/profile/profile.service.authorization';
 import { Injectable } from '@nestjs/common';
+import { cascadeCollaboraAuthorizationToDocument } from './collabora.document.authorization.util';
 import { ICollaboraDocument } from './collabora.document.interface';
 import { CollaboraDocumentService } from './collabora.document.service';
 
@@ -93,24 +94,14 @@ export class CollaboraDocumentAuthorizationService {
 
     // Cascade authorization to the underlying Document entity so that
     // external services (WOPI, file-service-go) can evaluate access
-    // using the document's own authorizationPolicyId.
-    if (collaboraDocument.document?.authorization) {
-      collaboraDocument.document.authorization =
-        this.authorizationPolicyService.inheritParentAuthorization(
-          collaboraDocument.document.authorization,
-          collaboraDocument.authorization
-        );
-      // Also copy privilege rules (inheritParentAuthorization only copies
-      // credential rules); the WOPI service needs the contribute→update-content
-      // mapping on the document's own policy.
-      collaboraDocument.document.authorization =
-        this.authorizationPolicyService.appendPrivilegeAuthorizationRules(
-          collaboraDocument.document.authorization,
-          this.authorizationPolicyService.getPrivilegeRules(
-            collaboraDocument.authorization
-          )
-        );
-      updatedAuthorizations.push(collaboraDocument.document.authorization);
+    // using the document's own authorizationPolicyId. Shared with the
+    // replace flow via the pure util (no service-to-service cycle).
+    const documentAuthorization = cascadeCollaboraAuthorizationToDocument(
+      this.authorizationPolicyService,
+      collaboraDocument
+    );
+    if (documentAuthorization) {
+      updatedAuthorizations.push(documentAuthorization);
     }
 
     return updatedAuthorizations;
