@@ -1445,7 +1445,9 @@ enum CollaboraDocumentType {
 }
 
 type CollaboraEditorUrlResult {
-  """The time-to-live of the access token in seconds."""
+  """
+  When the access token expires, as an absolute Unix timestamp in milliseconds (the WOPI access_token_ttl passed through from the WOPI host); 0 means it does not expire.
+  """
   accessTokenTTL: Float!
   """The URL to open the document in the Collabora editor."""
   editorUrl: String!
@@ -6173,6 +6175,10 @@ type Query {
   aiServer: AiServer!
   """Retrieves the editor URL for the specified CollaboraDocument."""
   collaboraEditorUrl(collaboraDocumentID: UUID!): CollaboraEditorUrlResult!
+  """
+  Whether the WOPI save service backing this CollaboraDocument is currently reachable. A side-effect-free health check — unlike collaboraEditorUrl it issues no access token and records no analytics — used to surface a save-path outage in the editor.
+  """
+  collaboraServiceAvailable(collaboraDocumentID: UUID!): Boolean!
   """Active Spaces only, order by most active in the past X days."""
   exploreSpaces(options: ExploreSpacesInput): [Space!]!
   """
@@ -8702,6 +8708,8 @@ input UpdateUserSettingsNotificationInput {
   organization: UpdateUserSettingsNotificationOrganizationInput
   """Settings related to Platform Notifications."""
   platform: UpdateUserSettingsNotificationPlatformInput
+  """Settings related to notification sound playback."""
+  sound: UpdateUserSettingsNotificationSoundInput
   """Settings related to Space Notifications."""
   space: UpdateUserSettingsNotificationSpaceInput
   """Settings related to User Notifications."""
@@ -8747,6 +8755,15 @@ input UpdateUserSettingsNotificationPlatformInput {
   forumDiscussionComment: NotificationSettingInput
   """Receive a notification when a new Discussion is created in the Forum"""
   forumDiscussionCreated: NotificationSettingInput
+}
+
+input UpdateUserSettingsNotificationSoundInput {
+  """Play a sound when a chat message is received. Default true."""
+  chatMessage: Boolean
+  """
+  Play a sound when a non-chat in-app notification is received. Default true.
+  """
+  inAppNotification: Boolean
 }
 
 input UpdateUserSettingsNotificationSpaceAdminInput {
@@ -9273,6 +9290,8 @@ type UserSettingsNotification {
   organization: UserSettingsNotificationOrganization!
   """The notifications settings for Platform events for this User"""
   platform: UserSettingsNotificationPlatform!
+  """The sound playback settings for this User."""
+  sound: UserSettingsNotificationSound!
   """The notifications settings for Space events for this User"""
   space: UserSettingsNotificationSpace!
   """The notifications settings for User events for this User"""
@@ -9325,6 +9344,15 @@ type UserSettingsNotificationPlatformAdmin {
   userProfileCreated: UserSettingsNotificationChannels!
   """Receive a notification when a user profile is removed"""
   userProfileRemoved: UserSettingsNotificationChannels!
+}
+
+type UserSettingsNotificationSound {
+  """Play a sound when a chat message is received. Default true."""
+  chatMessage: Boolean!
+  """
+  Play a sound when a non-chat in-app notification is received. Default true.
+  """
+  inAppNotification: Boolean!
 }
 
 type UserSettingsNotificationSpace {
