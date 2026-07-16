@@ -96,6 +96,30 @@ export class CollaboraDocumentResolverQueries {
     return editorUrl;
   }
 
+  @Query(() => Boolean, {
+    description:
+      'Whether the WOPI save service backing this CollaboraDocument is currently reachable. A side-effect-free health check — unlike collaboraEditorUrl it issues no access token and records no analytics — used to surface a save-path outage in the editor.',
+  })
+  async collaboraServiceAvailable(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('collaboraDocumentID', { type: () => UUID })
+    collaboraDocumentID: string
+  ): Promise<boolean> {
+    const collaboraDocument =
+      await this.collaboraDocumentService.getCollaboraDocumentOrFail(
+        collaboraDocumentID
+      );
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      collaboraDocument.authorization,
+      AuthorizationPrivilege.READ,
+      // Static message — no dynamic data (e.g. the document id) in exception messages
+      // (.github/copilot-instructions.md coding standards).
+      'collabora service health check'
+    );
+    return this.collaboraDocumentService.isWopiServiceAvailable();
+  }
+
   /**
    * Resolves the human-readable name to surface in the Collabora editor.
    * Guests carry their name on the ActorContext (no Actor row exists for the
