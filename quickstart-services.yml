@@ -390,7 +390,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.35.0
+    image: alkemio/notifications:v0.36.0
     depends_on:
       rabbitmq:
         condition: service_healthy
