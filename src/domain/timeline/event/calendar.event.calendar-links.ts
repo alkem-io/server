@@ -65,29 +65,25 @@ export const formatDatesForCalendar = (
   const endIso = toIsoString(end, 'endDate');
 
   if (wholeDay) {
-    // A whole-day event carries a calendar date, not an instant. The stored
-    // `timestamp` (without time zone) is read back by node-postgres in the
-    // process-local time zone — the same reference the client renders in — so
-    // the date-only value MUST be derived from the local wall-clock components,
-    // not from the UTC ISO string. Slicing the UTC ISO lands on the previous
-    // day for time zones east of UTC (e.g. Europe/Amsterdam, where the server
-    // runs: local midnight 2026-07-23 is 2026-07-22T22:00Z in UTC).
-    const dateStart = formatDateOnlyLocal(startIso);
+    // A whole-day event is a bare calendar date, not an instant. Its canonical
+    // value is UTC-midnight of the intended date, so the date-only value is the
+    // UTC calendar day — timezone-independent for every server. (Deriving it from
+    // process-local parts slips a day west of UTC; the client is responsible for
+    // sending UTC-midnight so this holds end to end.)
+    const dateStart = formatDateOnlyUtc(startIso);
     // Whole-day end dates are EXCLUSIVE (RFC 5545 §3.6.1 for ICS; Google and
     // Outlook all-day links use the same convention): the end must be the day
-    // AFTER the last covered day. The stored end date is the last covered day,
-    // so add one local day. All three targets share this exclusive end —
-    // previously only the Google URL added the +1, so ICS and Outlook were a
-    // day short and importers (Thunderbird, Outlook) showed the event ending
-    // one day early.
+    // AFTER the last covered day. The stored end date is the last covered day, so
+    // add one UTC day (UTC has no DST, so day arithmetic is exact). All three
+    // targets share this exclusive end.
     const exclusiveEnd = new Date(endIso);
-    exclusiveEnd.setDate(exclusiveEnd.getDate() + 1);
+    exclusiveEnd.setUTCDate(exclusiveEnd.getUTCDate() + 1);
     const exclusiveEndIso = exclusiveEnd.toISOString();
-    const dateEndExclusive = formatDateOnlyLocal(exclusiveEndIso);
+    const dateEndExclusive = formatDateOnlyUtc(exclusiveEndIso);
     return {
       google: `${dateStart}/${dateEndExclusive}`,
-      outlookStart: formatLocalDateHyphenated(startIso),
-      outlookEnd: formatLocalDateHyphenated(exclusiveEndIso),
+      outlookStart: formatUtcDateHyphenated(startIso),
+      outlookEnd: formatUtcDateHyphenated(exclusiveEndIso),
       icalStart: dateStart,
       icalEnd: dateEndExclusive,
       wholeDay: true,
@@ -208,31 +204,31 @@ export const formatDateForCalendar = (iso: string): string =>
   iso.replace(/[-:]/g, '').replace(/\.\d{3}Z$/, 'Z');
 
 /**
- * Local wall-clock date parts of the instant an ISO-8601 string represents.
- * Whole-day events are stored/read/displayed in the process-local time zone,
- * so their date-only value must come from these local components rather than
- * the UTC slice of the ISO string (which can be off by a day east of UTC).
+ * UTC date parts of the instant an ISO-8601 string represents. A whole-day event
+ * is a bare calendar date whose canonical value is UTC-midnight of that date, so
+ * its date-only value is the UTC calendar day — independent of the server's
+ * process timezone (deriving it from process-local parts slips a day west of UTC).
  */
-const localDateParts = (
+const utcDateParts = (
   iso: string
 ): { year: string; month: string; day: string } => {
   const d = new Date(iso);
   return {
-    year: String(d.getFullYear()).padStart(4, '0'),
-    month: String(d.getMonth() + 1).padStart(2, '0'),
-    day: String(d.getDate()).padStart(2, '0'),
+    year: String(d.getUTCFullYear()).padStart(4, '0'),
+    month: String(d.getUTCMonth() + 1).padStart(2, '0'),
+    day: String(d.getUTCDate()).padStart(2, '0'),
   };
 };
 
-/** Local wall-clock date as an iCal date-only value (YYYYMMDD). */
-export const formatDateOnlyLocal = (iso: string): string => {
-  const { year, month, day } = localDateParts(iso);
+/** UTC calendar date as an iCal date-only value (YYYYMMDD). */
+export const formatDateOnlyUtc = (iso: string): string => {
+  const { year, month, day } = utcDateParts(iso);
   return `${year}${month}${day}`;
 };
 
-/** Local wall-clock date as YYYY-MM-DD (Outlook all-day format). */
-const formatLocalDateHyphenated = (iso: string): string => {
-  const { year, month, day } = localDateParts(iso);
+/** UTC calendar date as YYYY-MM-DD (Outlook all-day format). */
+const formatUtcDateHyphenated = (iso: string): string => {
+  const { year, month, day } = utcDateParts(iso);
   return `${year}-${month}-${day}`;
 };
 

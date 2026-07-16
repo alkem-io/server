@@ -1,7 +1,7 @@
 import {
   calculateCalendarEventEndDate,
   foldIcsLine,
-  formatDateOnlyLocal,
+  formatDateOnlyUtc,
   formatDatesForCalendar,
   generateCalendarUrls,
   generateICS,
@@ -38,38 +38,23 @@ describe('CalendarEventCalendarLinks', () => {
     expect(result.wholeDay).toBe(true);
   });
 
-  it('formatDateOnlyLocal extracts the local wall-clock YYYYMMDD', () => {
-    // Constructed at local midnight so the assertion holds in any runner TZ.
-    const localMidnight = new Date(2026, 1, 20, 0, 0, 0); // 2026-02-20 local
-    expect(formatDateOnlyLocal(localMidnight.toISOString())).toBe('20260220');
+  it('formatDateOnlyUtc extracts the UTC calendar day YYYYMMDD', () => {
+    expect(formatDateOnlyUtc('2026-02-20T00:00:00.000Z')).toBe('20260220');
   });
 
-  describe('whole-day time-zone handling (Europe/Amsterdam)', () => {
-    // Reproduces the reported bug: a whole-day event stored as local midnight
-    // is read back (node-postgres, timestamp-without-tz) as the previous day in
-    // UTC. Slicing the UTC ISO produced an ICS date one day early; the export
-    // must emit the local calendar day instead.
-    const originalTz = process.env.TZ;
+  describe('whole-day date-only handling', () => {
+    // A whole-day event is a bare calendar date, sent by the client as
+    // UTC-midnight of the intended day and exported as that UTC calendar day —
+    // timezone-independent (see calendar.event.calendar-links.wholeday-tz.spec.ts).
 
-    beforeEach(() => {
-      process.env.TZ = 'Europe/Amsterdam';
-    });
+    it('exports the UTC calendar day with an exclusive end for a single-day event', () => {
+      // Whole-day "23 July 2026", single day, stored as UTC-midnight.
+      const result = formatDatesForCalendar(
+        '2026-07-23T00:00:00.000Z',
+        '2026-07-23T00:00:00.000Z',
+        true
+      );
 
-    afterEach(() => {
-      process.env.TZ = originalTz;
-    });
-
-    it('exports the local calendar day for a whole-day event, not the UTC day', () => {
-      // Single-day whole-day event stored at Amsterdam local midnight:
-      // 2026-07-23 00:00 local is 2026-07-22T22:00Z. The last covered day is the
-      // 23rd (the end instant is later the same local day), so DTSTART is the
-      // 23rd and the exclusive DTEND is the 24th.
-      const startIso = '2026-07-22T22:00:00.000Z';
-      const endIso = '2026-07-22T22:30:00.000Z';
-
-      const result = formatDatesForCalendar(startIso, endIso, true);
-
-      // Without the local-date fix DTSTART would slip to the 22nd (UTC).
       expect(result.icalStart).toBe('20260723');
       expect(result.icalEnd).toBe('20260724');
       expect(result.outlookStart).toBe('2026-07-23');
