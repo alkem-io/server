@@ -273,7 +273,7 @@ services:
       - "4002:4002"
 
   file-service:
-    image: alkemio/file-service:v0.2.1
+    image: alkemio/file-service:v0.2.2
     depends_on:
       rabbitmq:
         condition: service_healthy
