@@ -8702,6 +8702,8 @@ input UpdateUserSettingsNotificationInput {
   organization: UpdateUserSettingsNotificationOrganizationInput
   """Settings related to Platform Notifications."""
   platform: UpdateUserSettingsNotificationPlatformInput
+  """Settings related to notification sound playback."""
+  sound: UpdateUserSettingsNotificationSoundInput
   """Settings related to Space Notifications."""
   space: UpdateUserSettingsNotificationSpaceInput
   """Settings related to User Notifications."""
@@ -8747,6 +8749,15 @@ input UpdateUserSettingsNotificationPlatformInput {
   forumDiscussionComment: NotificationSettingInput
   """Receive a notification when a new Discussion is created in the Forum"""
   forumDiscussionCreated: NotificationSettingInput
+}
+
+input UpdateUserSettingsNotificationSoundInput {
+  """Play a sound when a chat message is received. Default true."""
+  chatMessage: Boolean
+  """
+  Play a sound when a non-chat in-app notification is received. Default true.
+  """
+  inAppNotification: Boolean
 }
 
 input UpdateUserSettingsNotificationSpaceAdminInput {
@@ -9273,6 +9284,8 @@ type UserSettingsNotification {
   organization: UserSettingsNotificationOrganization!
   """The notifications settings for Platform events for this User"""
   platform: UserSettingsNotificationPlatform!
+  """The sound playback settings for this User."""
+  sound: UserSettingsNotificationSound!
   """The notifications settings for Space events for this User"""
   space: UserSettingsNotificationSpace!
   """The notifications settings for User events for this User"""
@@ -9325,6 +9338,15 @@ type UserSettingsNotificationPlatformAdmin {
   userProfileCreated: UserSettingsNotificationChannels!
   """Receive a notification when a user profile is removed"""
   userProfileRemoved: UserSettingsNotificationChannels!
+}
+
+type UserSettingsNotificationSound {
+  """Play a sound when a chat message is received. Default true."""
+  chatMessage: Boolean!
+  """
+  Play a sound when a non-chat in-app notification is received. Default true.
+  """
+  inAppNotification: Boolean!
 }
 
 type UserSettingsNotificationSpace {
