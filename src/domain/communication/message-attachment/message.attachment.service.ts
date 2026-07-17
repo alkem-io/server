@@ -464,14 +464,33 @@ export class MessageAttachmentService {
     if (!message.roomID) {
       return undefined;
     }
-    const room = await this.roomRepository.findOne({
-      where: { id: message.roomID },
-      select: { id: true, type: true },
-    });
-    if (!room) {
+    // FIX B: attachment resolution must NEVER break message reads. The read/
+    // history path (resolveMessageAttachments → here → getResolutionBucketIdForRoom
+    // → getTargetBucketForRoom) can throw transiently (storage-aggregator / bucket
+    // lookups). An unguarded throw would propagate out of the @ResolveField and
+    // fail the ENTIRE getMessages/getLastMessages query for the viewer. Degrade to
+    // "bucket unknown" (undefined) → resolveMessageAttachments omits this message's
+    // attachments while the history query still succeeds. Same invariant as FIX 2.
+    try {
+      const room = await this.roomRepository.findOne({
+        where: { id: message.roomID },
+        select: { id: true, type: true },
+      });
+      if (!room) {
+        return undefined;
+      }
+      return await this.getResolutionBucketIdForRoom(room as IRoom);
+    } catch {
+      this.logger.warn?.(
+        {
+          message:
+            'Failed to resolve attachment bucket on read; omitting attachments for this message',
+          roomId: message.roomID,
+        },
+        LogContext.COMMUNICATION
+      );
       return undefined;
     }
-    return this.getResolutionBucketIdForRoom(room as IRoom);
   }
 
   private async rehomeOne(
@@ -485,6 +504,15 @@ export class MessageAttachmentService {
     const existingInTarget =
       await this.fileServiceAdapter.getDocumentByReference(mediaId, bucket.id);
     if (existingInTarget) {
+      // Self-heal (FIX A.2): a prior re-share COPY may have created the row but
+      // failed to pin it durable (transient), leaving it temporaryLocation=true —
+      // idempotency would otherwise early-return here un-pinned and the 24h sweep
+      // would delete it. Re-issue the durable pin so the next receive for this
+      // media recovers it. Best-effort: a re-pin failure just leaves it temporary
+      // for the next retry (never throws out of the inbound handler — FIX 2).
+      if (existingInTarget.temporaryLocation === true) {
+        await this.pinDocumentDurable(existingInTarget.id, mediaId);
+      }
       return;
     }
 
@@ -504,6 +532,12 @@ export class MessageAttachmentService {
 
     const documentAuthId = await this.mintDocumentAuth(bucket);
 
+    // The auth-owning try covers ONLY the atomic placement unit (the MOVE, or the
+    // COPY that creates the row + points it at documentAuthId). On failure the
+    // minted-but-unused auth is cleaned up. The re-share durable-pin is a SEPARATE
+    // best-effort step AFTER this try (see below) so a transient pin failure never
+    // deletes the auth the copied row already points at (FIX A.1).
+    let copiedDocumentId: string | undefined;
     try {
       if (canonical.storageBucketId === this.matrixMediaBucketId) {
         // MOVE the verbatim staging row into the target bucket (T010) — uniform
@@ -511,7 +545,10 @@ export class MessageAttachmentService {
         // file-service serves a web-renderable rendition at read time (serve-time
         // transcode), so the server no longer mints a separate transcoded doc.
         // Result: one verbatim document per media_id, a single auth mint, no
-        // two-rows-same-reference.
+        // two-rows-same-reference. This is a SINGLE atomic PATCH that also pins
+        // (temporaryLocation:false); a failure leaves the staging row untouched
+        // and the minted auth unused, so the catch cleanup is correct — there is
+        // no separate pin step to leave the doc corrupt.
         await this.fileServiceAdapter.moveDocument(canonical.id, {
           storageBucketId: bucket.id,
           authorizationId: documentAuthId,
@@ -534,13 +571,7 @@ export class MessageAttachmentService {
           externalReference: mediaId,
           skipDedup: true,
         });
-        // CopyDocumentInput has no temporaryLocation, so the copied row lands
-        // temporary and the 24h staging sweep would delete the re-shared doc.
-        // Pin it durable with a follow-up PATCH, mirroring the MOVE branch
-        // (temporaryLocation:false) so a re-shared attachment persists.
-        await this.fileServiceAdapter.moveDocument(copied.id, {
-          temporaryLocation: false,
-        });
+        copiedDocumentId = copied.id;
       }
     } catch (error) {
       // The auth policy is minted before placement; on a failed MOVE/COPY clean
@@ -550,6 +581,44 @@ export class MessageAttachmentService {
         .deleteById(documentAuthId)
         .catch(() => undefined);
       throw error;
+    }
+
+    // Re-share durable-pin (FIX A.1) — OUTSIDE the auth-owning try. CopyDocumentInput
+    // carries no temporaryLocation, so the copied row lands temporary; pin it durable
+    // here. A failure leaves a VALID copy (auth intact) that is merely still
+    // temporary → recovered by the self-heal path above on the next receive. The
+    // pin failure must NOT delete the auth the copy points at.
+    if (copiedDocumentId) {
+      await this.pinDocumentDurable(copiedDocumentId, mediaId);
+    }
+  }
+
+  /**
+   * Pin a re-homed/re-shared document durable (temporaryLocation=false),
+   * best-effort (FIX A). Kept OUTSIDE any auth-owning try: a transient pin
+   * failure just leaves the document temporary — a valid row with its auth
+   * intact — to be re-pinned by the idempotency self-heal on the next
+   * `message.received` for the same media, never a deleted/corrupt auth. Never
+   * throws (consistent with FIX 2: attachment work must not break the handler).
+   */
+  private async pinDocumentDurable(
+    documentId: string,
+    mediaId: string
+  ): Promise<void> {
+    try {
+      await this.fileServiceAdapter.moveDocument(documentId, {
+        temporaryLocation: false,
+      });
+    } catch {
+      this.logger.warn?.(
+        {
+          message:
+            'Failed to pin re-shared attachment durable; it stays temporary and is re-pinned on the next receive',
+          documentId,
+          mediaId,
+        },
+        LogContext.COMMUNICATION
+      );
     }
   }
 

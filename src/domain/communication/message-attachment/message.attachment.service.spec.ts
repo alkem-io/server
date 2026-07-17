@@ -354,6 +354,95 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
     });
 
+    it('re-share COPY: a follow-up pin failure does NOT delete the auth and leaves a valid (temporary) copy (FIX A.1)', async () => {
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null) // not already in target
+        .mockResolvedValueOnce({
+          id: 'doc-other',
+          storageBucketId: 'another-conversation-bucket',
+          mimeType: 'image/png',
+        } as any); // canonical (homed elsewhere → COPY)
+      fileServiceAdapter.copyDocument.mockResolvedValue({
+        id: 'doc-copied',
+      } as any);
+      // The durable-pin PATCH throws transiently.
+      fileServiceAdapter.moveDocument.mockRejectedValue(
+        new Error('transient pin failure')
+      );
+
+      await expect(
+        service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+          {
+            media_id: 'media-1',
+            display_name: 'x',
+            mime_type: 'image/png',
+            size: 1,
+          },
+        ])
+      ).resolves.toBeDefined();
+
+      // The copy was created and the pin attempted…
+      expect(fileServiceAdapter.copyDocument).toHaveBeenCalled();
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
+        'doc-copied',
+        {
+          temporaryLocation: false,
+        }
+      );
+      // …but the pin failure must NOT delete the auth the copy points at — the
+      // copy stays valid (merely temporary) and self-heals on the next receive.
+      expect(authorizationPolicyService.deleteById).not.toHaveBeenCalled();
+    });
+
+    it('self-heals a previously un-pinned copy: re-issues the durable pin on the next receive (FIX A.2)', async () => {
+      // Idempotency finds the copy already in the target bucket, still temporary
+      // (a prior pin failed). It must be re-pinned, not early-returned un-pinned.
+      fileServiceAdapter.getDocumentByReference.mockResolvedValueOnce({
+        id: 'doc-copied',
+        storageBucketId: CONV_BUCKET,
+        temporaryLocation: true,
+      } as any);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        {
+          media_id: 'media-1',
+          display_name: 'x',
+          mime_type: 'image/png',
+          size: 1,
+        },
+      ]);
+
+      // Re-pinned durable; no new copy/canonical lookup, no auth mint.
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
+        'doc-copied',
+        {
+          temporaryLocation: false,
+        }
+      );
+      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.save).not.toHaveBeenCalled();
+    });
+
+    it('does NOT re-pin an already-durable existing copy (idempotency, temporaryLocation=false)', async () => {
+      fileServiceAdapter.getDocumentByReference.mockResolvedValueOnce({
+        id: 'doc-copied',
+        storageBucketId: CONV_BUCKET,
+        temporaryLocation: false,
+      } as any);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        {
+          media_id: 'media-1',
+          display_name: 'x',
+          mime_type: 'image/png',
+          size: 1,
+        },
+      ]);
+
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
+    });
+
     it('cleans up the minted auth policy when placement (MOVE) fails', async () => {
       fileServiceAdapter.getDocumentByReference
         .mockResolvedValueOnce(null) // not already in target
@@ -856,6 +945,38 @@ describe('MessageAttachmentService', () => {
           rawAttachments: [
             {
               document_id: 'doc-1',
+              display_name: 'x',
+              mime_type: 'image/png',
+              size: 1,
+            },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(result).toEqual([]);
+    });
+
+    it('read path degrades gracefully: a transient bucket-resolution throw omits attachments, never fails the read (FIX B)', async () => {
+      // History read (no storageBucketId, roomID present). getTargetBucketForRoom
+      // → conversationRepository.findOne throws transiently; the resolver must NOT
+      // propagate — attachments are omitted, the history query still succeeds.
+      roomRepository.findOne.mockResolvedValue({
+        id: 'room-1',
+        type: RoomType.CONVERSATION_GROUP,
+      });
+      conversationRepository.findOne.mockRejectedValueOnce(
+        new Error('db down during read')
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          roomID: 'room-1',
+          rawAttachments: [
+            {
+              media_id: 'media-1',
               display_name: 'x',
               mime_type: 'image/png',
               size: 1,
