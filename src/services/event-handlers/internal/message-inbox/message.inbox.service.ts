@@ -10,6 +10,7 @@ import { IMessage } from '@domain/communication/message/message.interface';
 import { MessageAttachmentService } from '@domain/communication/message-attachment/message.attachment.service';
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomServiceEvents } from '@domain/communication/room/room.service.events';
+import { isConversationRoom } from '@domain/communication/room/room.utils';
 import { RoomLookupService } from '@domain/communication/room-lookup/room.lookup.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { OnEvent } from '@nestjs/event-emitter';
@@ -29,17 +30,6 @@ import { RoomMemberUpdatedEvent } from './room.member.updated.event';
 import { RoomReceiptUpdatedEvent } from './room.receipt.updated.event';
 import { RoomUpdatedEvent } from './room.updated.event';
 import { VcInvocationService } from './vc.invocation.service';
-
-/**
- * Check if a room is a conversation room (direct messaging).
- */
-function isConversationRoom(room: IRoom): boolean {
-  return (
-    room.type === RoomType.CONVERSATION ||
-    room.type === RoomType.CONVERSATION_DIRECT ||
-    room.type === RoomType.CONVERSATION_GROUP
-  );
-}
 
 /**
  * Event handler service for Matrix events.

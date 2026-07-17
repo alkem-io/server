@@ -14,6 +14,7 @@ import {
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Room } from '@domain/communication/room/room.entity';
 import { IRoom } from '@domain/communication/room/room.interface';
+import { isConversationRoom } from '@domain/communication/room/room.utils';
 import { IDocument } from '@domain/storage/document/document.interface';
 import { DocumentService } from '@domain/storage/document/document.service';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
@@ -81,11 +82,17 @@ export class MessageAttachmentService {
   // ---------------------------------------------------------------------------
 
   /**
-   * Resolve outbound attachment document ids (T007/T008). Validates count <=10,
-   * that each document is in the conversation bucket and READable by the sender,
-   * and that type/size satisfy the bucket policy (FR-020/022/023). Flips
-   * `temporaryLocation` off so the documents are no longer swept. Returns the
+   * Resolve + VALIDATE outbound attachment document ids (T007/T008), WITHOUT
+   * mutating anything. Validates count <=10, that each document is in the
+   * conversation bucket, is owned by the sender, is READable by the sender, and
+   * that type/size satisfy the bucket policy (FR-020/022/023). Returns the
    * resolved refs for the communication adapter; `[]` when the feature is off.
+   *
+   * Pinning (`temporaryLocation=false`) is deliberately NOT done here — it is
+   * deferred to `persistOutboundAttachments`, called only AFTER the message send
+   * is confirmed. If validation passes but a later attachment or the send itself
+   * throws, no document is pinned, so the staged uploads are swept normally by
+   * the 24h staging cleanup instead of being permanently retained (FR-024).
    */
   public async resolveOutboundAttachments(
     room: IRoom,
@@ -103,8 +110,9 @@ export class MessageAttachmentService {
     }
     if (documentIds.length > MAX_MESSAGE_ATTACHMENTS) {
       throw new ValidationException(
-        `A message may carry at most ${MAX_MESSAGE_ATTACHMENTS} attachments`,
-        LogContext.COMMUNICATION
+        'A message carries more than the maximum number of attachments',
+        LogContext.COMMUNICATION,
+        { max: MAX_MESSAGE_ATTACHMENTS, count: documentIds.length }
       );
     }
 
@@ -126,6 +134,22 @@ export class MessageAttachmentService {
         );
       }
 
+      // Outbound must match the read/delete invariant (isOwnedBySender): a sender
+      // may only attach their OWN uploads. Without this a member could attach
+      // another member's staged upload — the send would succeed and permanently
+      // pin that document, yet it would resolve to nothing on every read (the
+      // read path requires createdBy === sender). Fail-closed on an unknown
+      // sender so a missing actor never matches a document with a null owner.
+      if (
+        !actorContext.actorID ||
+        document.createdBy !== actorContext.actorID
+      ) {
+        throw new ValidationException(
+          'Attachment is not owned by the sender',
+          LogContext.COMMUNICATION
+        );
+      }
+
       this.authorizationService.grantAccessOrFail(
         actorContext,
         document.authorization,
@@ -134,11 +158,6 @@ export class MessageAttachmentService {
       );
 
       this.validateAgainstBucketPolicy(bucket, document);
-
-      // The upload was temporaryLocation=true until send; persist it now.
-      await this.fileServiceAdapter.moveDocument(document.id, {
-        temporaryLocation: false,
-      });
 
       refs.push({
         documentId: document.id,
@@ -150,6 +169,39 @@ export class MessageAttachmentService {
       });
     }
     return refs;
+  }
+
+  /**
+   * Pin outbound attachments as durable AFTER the message send is confirmed
+   * (FR-024). Flips `temporaryLocation` off for every resolved attachment so the
+   * staging sweep no longer reaps them. Best-effort per document: a transient
+   * failure leaves that document temporary (swept later) rather than throwing
+   * into the post-send path — the message has already been delivered. MUST be
+   * called only once `sendMessage`/`sendMessageReply` has succeeded.
+   */
+  public async persistOutboundAttachments(
+    attachments: CommunicationMessageAttachment[] | undefined
+  ): Promise<void> {
+    if (!this.enabled || !attachments || attachments.length === 0) {
+      return;
+    }
+    await Promise.all(
+      attachments.map(attachment =>
+        this.fileServiceAdapter
+          .moveDocument(attachment.documentId, { temporaryLocation: false })
+          .catch(error => {
+            this.logger.error?.(
+              {
+                message:
+                  'Failed to pin outbound attachment durable after send; it will be swept from staging',
+                documentId: attachment.documentId,
+              },
+              (error as Error)?.stack,
+              LogContext.COMMUNICATION
+            );
+          })
+      )
+    );
   }
 
   // ---------------------------------------------------------------------------
@@ -190,7 +242,30 @@ export class MessageAttachmentService {
       return undefined;
     }
 
-    const bucket = await this.getTargetBucketForRoom(room);
+    // Bucket resolution is wrapped too: getTargetBucketForRoom throws for
+    // callout/comment rooms (getStorageAggregatorForCallout/OrFail) and can
+    // throw on a transiently-unresolvable conversation bucket. This method is
+    // called on the inbound message.received path, which does NOT wrap it — so
+    // an unhandled throw here would skip publish/notifications/VC invocation for
+    // the whole message. Never let attachment re-home break inbound processing:
+    // log best-effort and return undefined (media stays in staging, resolvable
+    // later via the room fallback on read).
+    let bucket: IStorageBucket | undefined;
+    try {
+      bucket = await this.getTargetBucketForRoom(room);
+    } catch (error) {
+      this.logger.error?.(
+        {
+          message:
+            'Failed to resolve target bucket for inbound attachment re-home; leaving media in staging',
+          roomId: room.id,
+          roomType: room.type,
+        },
+        (error as Error)?.stack,
+        LogContext.COMMUNICATION
+      );
+      return undefined;
+    }
     if (!bucket) {
       return undefined; // unresolved target (logged) — leave media in staging
     }
@@ -451,13 +526,20 @@ export class MessageAttachmentService {
         // such rows by `externalReference`, not by content, so two distinct
         // media_ids with identical bytes each get their own row instead of
         // collapsing and dropping the second one's reference.
-        await this.fileServiceAdapter.copyDocument({
+        const copied = await this.fileServiceAdapter.copyDocument({
           sourceId: canonical.id,
           destinationBucketId: bucket.id,
           authorizationId: documentAuthId,
           createdBy: senderActorID,
           externalReference: mediaId,
           skipDedup: true,
+        });
+        // CopyDocumentInput has no temporaryLocation, so the copied row lands
+        // temporary and the 24h staging sweep would delete the re-shared doc.
+        // Pin it durable with a follow-up PATCH, mirroring the MOVE branch
+        // (temporaryLocation:false) so a re-shared attachment persists.
+        await this.fileServiceAdapter.moveDocument(copied.id, {
+          temporaryLocation: false,
         });
       }
     } catch (error) {
@@ -498,39 +580,66 @@ export class MessageAttachmentService {
       return [];
     }
 
-    const resolved: IMessageAttachment[] = [];
-    for (const raw of message.rawAttachments) {
-      const document = await this.resolveAttachmentDocument(
-        raw,
-        storageBucketId,
-        message.sender
-      );
-      if (!document) {
-        continue;
-      }
-
-      // READ-gate: non-members are denied (FR-007).
-      if (
-        !this.authorizationService.isAccessGranted(
-          actorContext,
-          document.authorization,
-          AuthorizationPrivilege.READ
+    // Resolve the message's attachments in parallel — each is an independent
+    // document lookup (+ file-service round-trip for inbound refs); awaiting them
+    // sequentially serialised the round-trips on every history read. Promise.all
+    // preserves order, so the resolved attachments keep their original sequence.
+    const resolved = await Promise.all(
+      message.rawAttachments.map(raw =>
+        this.resolveReadAttachment(
+          raw,
+          storageBucketId,
+          message.sender,
+          actorContext
         )
-      ) {
-        continue;
-      }
+      )
+    );
+    return resolved.filter(
+      (attachment): attachment is IMessageAttachment => attachment !== null
+    );
+  }
 
-      resolved.push({
-        id: document.id,
-        url: this.documentService.getPubliclyAccessibleURL(document),
-        displayName: document.displayName,
-        mimeType: document.mimeType,
-        size: document.size,
-        width: document.imageWidth,
-        height: document.imageHeight,
-      });
+  /**
+   * Resolve a single raw attachment for read (T012): document resolution +
+   * ownership gate (via resolveAttachmentDocument) followed by the READ-gate.
+   * Returns null when the document cannot be resolved or the viewer cannot read
+   * it, so the caller drops it from the resolved set.
+   */
+  private async resolveReadAttachment(
+    raw: ReceivedAttachment,
+    storageBucketId: string,
+    senderActorID: string | undefined,
+    actorContext: ActorContext
+  ): Promise<IMessageAttachment | null> {
+    const document = await this.resolveAttachmentDocument(
+      raw,
+      storageBucketId,
+      senderActorID
+    );
+    if (!document) {
+      return null;
     }
-    return resolved;
+
+    // READ-gate: non-members are denied (FR-007).
+    if (
+      !this.authorizationService.isAccessGranted(
+        actorContext,
+        document.authorization,
+        AuthorizationPrivilege.READ
+      )
+    ) {
+      return null;
+    }
+
+    return {
+      id: document.id,
+      url: this.documentService.getPubliclyAccessibleURL(document),
+      displayName: document.displayName,
+      mimeType: document.mimeType,
+      size: document.size,
+      width: document.imageWidth,
+      height: document.imageHeight,
+    };
   }
 
   /**
@@ -709,6 +818,10 @@ export class MessageAttachmentService {
     bucket: IStorageBucket,
     document: IDocument
   ): void {
+    // An empty / unset allowedMimeTypes list means "no explicit MIME allow-list"
+    // → no type restriction (platform convention). A non-empty list is enforced
+    // as an allow-list. Conversation buckets always carry a curated non-empty
+    // list, so in practice this branch always enforces.
     if (
       bucket.allowedMimeTypes?.length &&
       !bucket.allowedMimeTypes.includes(document.mimeType)
@@ -718,7 +831,11 @@ export class MessageAttachmentService {
         LogContext.COMMUNICATION
       );
     }
-    if (bucket.maxFileSize && document.size > bucket.maxFileSize) {
+    // maxFileSize === 0 (or unset) means "no explicit size limit" (platform
+    // convention, matching how other buckets treat 0). Only a positive cap is
+    // enforced — the truthiness check `bucket.maxFileSize && …` would have
+    // skipped enforcement identically, but be explicit so the intent is clear.
+    if (bucket.maxFileSize > 0 && document.size > bucket.maxFileSize) {
       throw new ValidationException(
         'Attachment exceeds the maximum allowed size',
         LogContext.COMMUNICATION
@@ -751,7 +868,7 @@ export class MessageAttachmentService {
   private async getTargetBucketForRoom(
     room: IRoom
   ): Promise<IStorageBucket | undefined> {
-    if (this.isConversationRoom(room)) {
+    if (isConversationRoom(room)) {
       const conversation = await this.conversationRepository.findOne({
         where: { room: { id: room.id } },
         relations: { storageAggregator: { directStorage: true } },
@@ -836,14 +953,6 @@ export class MessageAttachmentService {
       return post?.contribution?.callout?.id;
     }
     return undefined;
-  }
-
-  private isConversationRoom(room: IRoom): boolean {
-    return (
-      room.type === RoomType.CONVERSATION ||
-      room.type === RoomType.CONVERSATION_DIRECT ||
-      room.type === RoomType.CONVERSATION_GROUP
-    );
   }
 
   private isCommentRoom(room: IRoom): boolean {

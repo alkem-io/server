@@ -107,45 +107,73 @@ export class ConversationService {
     // (feature 013) have a membership-authorized home from the start. The
     // bucket auth is mirrored from the conversation in
     // ConversationAuthorizationService.applyAuthorizationPolicy.
+    //
+    // This commits its own transaction (storage_aggregator + bucket + 2 auth
+    // rows) BEFORE the room (a Matrix RPC that can fail) and the conversation /
+    // membership rows are persisted. If any of those later steps throws, roll
+    // the storage back so no orphaned storage_aggregator/storage_bucket/
+    // authorization_policy remains (FIX 1). Least-invasive of the options:
+    // preserves the "home from the start" ordering and adds only cleanup.
     conversation.storageAggregator =
       await this.createConversationStorageAggregator();
 
-    // Create room — either by asking the adapter to create the Matrix room
-    // (normal flow) or with a pre-assigned UUID (Element room-check flow:
-    // Synapse creates the Matrix room, the adapter reconciles it; the server
-    // MUST NOT ask the adapter to create a room here).
-    conversation.room = externalRoomId
-      ? await this.roomService.createRoomFromExternal({
-          id: externalRoomId,
-          type: roomType,
+    try {
+      // Create room — either by asking the adapter to create the Matrix room
+      // (normal flow) or with a pre-assigned UUID (Element room-check flow:
+      // Synapse creates the Matrix room, the adapter reconciles it; the server
+      // MUST NOT ask the adapter to create a room here).
+      conversation.room = externalRoomId
+        ? await this.roomService.createRoomFromExternal({
+            id: externalRoomId,
+            type: roomType,
+          })
+        : await this.createConversationRoom(
+            allMemberIds,
+            roomType,
+            displayName,
+            avatarUrl
+          );
+
+      // Save conversation to get ID
+      const savedConversation = await this.conversationRepository.save(
+        conversation as Conversation
+      );
+
+      // Create membership records for all members
+      const memberships = allMemberIds.map(actorID =>
+        this.conversationMembershipRepository.create({
+          conversationId: savedConversation.id,
+          actorID,
         })
-      : await this.createConversationRoom(
-          allMemberIds,
-          roomType,
-          displayName,
-          avatarUrl
-        );
+      );
+      await this.conversationMembershipRepository.save(memberships);
 
-    // Save conversation to get ID
-    const savedConversation = await this.conversationRepository.save(
-      conversation as Conversation
-    );
+      this.logger.verbose?.(
+        `Created ${roomType} conversation ${savedConversation.id} with ${allMemberIds.length} members`,
+        LogContext.COMMUNICATION_CONVERSATION
+      );
 
-    // Create membership records for all members
-    const memberships = allMemberIds.map(actorID =>
-      this.conversationMembershipRepository.create({
-        conversationId: savedConversation.id,
-        actorID,
-      })
-    );
-    await this.conversationMembershipRepository.save(memberships);
-
-    this.logger.verbose?.(
-      `Created ${roomType} conversation ${savedConversation.id} with ${allMemberIds.length} members`,
-      LogContext.COMMUNICATION_CONVERSATION
-    );
-
-    return savedConversation;
+      return savedConversation;
+    } catch (error) {
+      // Roll back the pre-created storage so a failed room/conversation/
+      // membership step never leaves orphaned storage (FIX 1). Best-effort —
+      // never mask the original failure.
+      const orphanedAggregatorId = conversation.storageAggregator?.id;
+      if (orphanedAggregatorId) {
+        await this.storageAggregatorService
+          .delete(orphanedAggregatorId)
+          .catch(cleanupError =>
+            this.logger.error(
+              `Failed to roll back orphaned conversation storage aggregator ${orphanedAggregatorId}: ${
+                (cleanupError as Error)?.message
+              }`,
+              (cleanupError as Error)?.stack,
+              LogContext.COMMUNICATION_CONVERSATION
+            )
+          );
+      }
+      throw error;
+    }
   }
 
   /**
@@ -203,27 +231,6 @@ export class ConversationService {
     }
 
     return storageAggregator;
-  }
-
-  /**
-   * Resolve the storage bucket that conversation attachments live in. Returns
-   * the conversation's directStorage bucket id.
-   */
-  public async getConversationStorageBucketId(
-    conversationID: string
-  ): Promise<string> {
-    const conversation = await this.getConversationOrFail(conversationID, {
-      relations: { storageAggregator: { directStorage: true } },
-    });
-    const bucketId = conversation.storageAggregator?.directStorage?.id;
-    if (!bucketId) {
-      throw new EntityNotInitializedException(
-        'Conversation has no storage bucket',
-        LogContext.COMMUNICATION_CONVERSATION,
-        { conversationID }
-      );
-    }
-    return bucketId;
   }
 
   /**
@@ -452,19 +459,23 @@ export class ConversationService {
 
     await this.authorizationPolicyService.delete(conversation.authorization);
 
-    // Release the per-conversation storage (feature 013). The FK is
-    // onDelete:SET NULL, so removing the conversation would orphan the
-    // aggregator — delete it explicitly first.
+    // Release the per-conversation storage (feature 013) as the SINGLE deletion
+    // path (FIX 5). Delete the aggregator EXPLICITLY first — this cleans its
+    // bucket + documents + auth (StorageAggregatorService.delete). The relation
+    // no longer cascade-removes (cascade: insert/update only), so the subsequent
+    // conversationRepository.remove does NOT double-delete the already-removed
+    // aggregator (which previously threw EntityNotFound and orphaned bucket/docs).
+    // Detach the in-memory reference as well, so nothing revisits the removed row.
     const storageAggregatorId = conversation.storageAggregator?.id;
+    if (storageAggregatorId) {
+      await this.storageAggregatorService.delete(storageAggregatorId);
+      conversation.storageAggregator = undefined;
+    }
 
     const result = await this.conversationRepository.remove(
       conversation as Conversation
     );
     result.id = conversationID;
-
-    if (storageAggregatorId) {
-      await this.storageAggregatorService.delete(storageAggregatorId);
-    }
 
     return result;
   }

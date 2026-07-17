@@ -11,6 +11,7 @@ import { RoomService } from '@domain/communication/room/room.service';
 import { RoomAuthorizationService } from '@domain/communication/room/room.service.authorization';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
+import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
@@ -32,6 +33,7 @@ describe('ConversationService', () => {
   let userLookupService: Mocked<UserLookupService>;
   let virtualActorLookupService: Mocked<VirtualActorLookupService>;
   let platformWellKnownVCService: Mocked<PlatformWellKnownVirtualContributorsService>;
+  let storageAggregatorService: Mocked<StorageAggregatorService>;
   let conversationRepo: Mocked<Repository<Conversation>>;
   let membershipRepo: Mocked<Repository<ConversationMembership>>;
   let mockManagerFind: ReturnType<typeof vi.fn>;
@@ -66,6 +68,7 @@ describe('ConversationService', () => {
     platformWellKnownVCService = module.get(
       PlatformWellKnownVirtualContributorsService
     );
+    storageAggregatorService = module.get(StorageAggregatorService);
     conversationRepo = module.get(getRepositoryToken(Conversation));
     membershipRepo = module.get(getRepositoryToken(ConversationMembership));
 
@@ -135,6 +138,33 @@ describe('ConversationService', () => {
       );
       expect(conversationRepo.remove).toHaveBeenCalled();
       expect(result.id).toBe('conv-1');
+    });
+
+    it('deletes the storage aggregator explicitly BEFORE remove (single path, no double-delete)', async () => {
+      const mockConversation = {
+        id: 'conv-1',
+        room: { id: 'room-1', type: RoomType.CONVERSATION_DIRECT },
+        authorization: { id: 'auth-1' },
+        messaging: { id: 'messaging-1' },
+        storageAggregator: { id: 'agg-1' },
+      } as unknown as Conversation;
+
+      conversationRepo.findOne.mockResolvedValue(mockConversation);
+      conversationRepo.remove.mockResolvedValue({
+        ...mockConversation,
+        id: '',
+      } as Conversation);
+
+      await service.deleteConversation('conv-1');
+
+      // FIX 5: aggregator deleted explicitly (cleans its bucket + docs + auth)…
+      expect(storageAggregatorService.delete).toHaveBeenCalledWith('agg-1');
+      // …exactly once (remove no longer cascade-deletes it) …
+      expect(storageAggregatorService.delete).toHaveBeenCalledTimes(1);
+      // …and the in-memory reference is detached before removing the conversation
+      // so the cascade cannot revisit the already-removed aggregator.
+      expect(mockConversation.storageAggregator).toBeUndefined();
+      expect(conversationRepo.remove).toHaveBeenCalled();
     });
 
     it('should throw EntityNotInitializedException when room is missing', async () => {
@@ -695,6 +725,28 @@ describe('ConversationService', () => {
           RoomType.CONVERSATION_DIRECT
         )
       ).rejects.toThrow(ValidationException);
+    });
+
+    it('rolls back the pre-created storage aggregator when a later step fails (FIX 1)', async () => {
+      // Storage is created (own transaction) BEFORE the room RPC. If the room
+      // RPC fails, the aggregator/bucket/auth must be rolled back — no orphan.
+      storageAggregatorService.createStorageAggregator.mockResolvedValue({
+        id: 'agg-1',
+        directStorage: undefined,
+      } as any);
+      roomService.createRoom.mockRejectedValue(
+        new Error('matrix room RPC failed')
+      );
+
+      await expect(
+        service.createConversation(
+          'agent-1',
+          ['agent-2'],
+          RoomType.CONVERSATION_DIRECT
+        )
+      ).rejects.toThrow('matrix room RPC failed');
+
+      expect(storageAggregatorService.delete).toHaveBeenCalledWith('agg-1');
     });
   });
 

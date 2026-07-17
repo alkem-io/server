@@ -350,7 +350,48 @@ describe('CommunicationAdapter', () => {
         timestamp: 1234567890123,
         threadID: undefined,
         reactions: [],
+        // feature 013 (FIX 6): the send response carries its own attachments +
+        // room so it resolves attachments like the read path. No attachments
+        // here → rawAttachments undefined; roomID always echoed back.
+        rawAttachments: undefined,
+        roomID: 'room-uuid-123',
       });
+    });
+
+    it('returns the forwarded attachments + room on the send response (FIX 6)', async () => {
+      const response = createSuccessResponse({
+        message_id: 'msg-att',
+        timestamp: 1234567890123,
+      });
+      mockAmqpConnection.request.mockResolvedValue(response);
+
+      const result = await adapter.sendMessage({
+        roomID: 'room-uuid-123',
+        actorID: 'actor-uuid-456',
+        message: 'with media',
+        attachments: [
+          {
+            documentId: 'doc-1',
+            displayName: 'pic.png',
+            mimeType: 'image/png',
+            size: 1000,
+            width: 10,
+            height: 20,
+          },
+        ],
+      });
+
+      expect(result.roomID).toBe('room-uuid-123');
+      expect(result.rawAttachments).toEqual([
+        {
+          document_id: 'doc-1',
+          display_name: 'pic.png',
+          mime_type: 'image/png',
+          size: 1000,
+          width: 10,
+          height: 20,
+        },
+      ]);
     });
 
     it('should throw when roomID is empty', async () => {

@@ -24,7 +24,18 @@ export class ConversationStorageAggregator1782300000002
 
   private readonly maxFileSize = 52428800; // 50 MiB
 
+  // MUST stay identical to CONVERSATION_MEDIA_ALLOWED_MIME_TYPES in
+  // src/common/enums/mime.file.type.ts (the runtime constant applied to
+  // new-conversation buckets in ConversationService). Backfilled buckets and
+  // new-conversation buckets must end up with the same policy, otherwise an
+  // identical upload succeeds in a new conversation but is rejected in a
+  // backfilled one. Inlined (not imported) to keep this migration a
+  // self-contained, immutable snapshot per repo convention. Order is
+  // irrelevant (membership is a simple-array `includes` check); the SET must
+  // match: visual (excl. SVG) + audio/video + documents.
   private readonly allowedMimeTypes = [
+    // Visual (image/svg+xml intentionally excluded — SVG can carry active
+    // content, so it is not accepted for member-to-member upload).
     'image/bmp',
     'image/jpg',
     'image/jpeg',
@@ -32,11 +43,10 @@ export class ConversationStorageAggregator1782300000002
     'image/png',
     'image/gif',
     'image/webp',
-    // image/svg+xml intentionally excluded — SVG can carry active content, so it
-    // is not accepted for member-to-member upload (defense-in-depth, feature 013).
     'image/avif',
     'image/heic',
     'image/heif',
+    // Audio / video.
     'video/mp4',
     'video/webm',
     'video/ogg',
@@ -47,7 +57,26 @@ export class ConversationStorageAggregator1782300000002
     'audio/webm',
     'audio/aac',
     'audio/flac',
+    // Documents (full office set — must match MimeTypeDocument).
     'application/pdf',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.oasis.opendocument.spreadsheet',
+    'text/csv',
+    'text/calendar',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.oasis.opendocument.text',
+    'application/rtf',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.oasis.opendocument.presentation',
+    'application/vnd.ms-powerpoint.presentation.macroEnabled.12',
+    'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
+    'application/vnd.ms-powerpoint.slideshow.macroEnabled.12',
+    'application/vnd.openxmlformats-officedocument.presentationml.template',
+    'application/vnd.ms-powerpoint.template.macroEnabled.12',
+    'application/vnd.oasis.opendocument.graphics',
   ].join(',');
 
   public async up(queryRunner: QueryRunner): Promise<void> {
@@ -99,6 +128,13 @@ export class ConversationStorageAggregator1782300000002
     // partial re-run the `WHERE storageAggregatorId IS NULL` filter skips already
     // backfilled conversations, and the `ON CONFLICT DO NOTHING` guards below keep
     // re-inserts harmless even if a future run is executed non-transactionally.
+    //
+    // FIX 11 (kept sequential, deliberately): each conversation needs a 5-step
+    // cross-table chain with generated UUIDs and FK ordering (2 auth rows →
+    // aggregator → bucket → aggregator.directStorageId update → conversation
+    // update). Batching into multi-row INSERTs would tangle that ordering for
+    // marginal benefit on a ONE-TIME backfill; the single-transaction lock cost
+    // is acceptable given the bounded, one-off conversation set.
     for (const conversation of conversations) {
       const aggregatorAuthId = randomUUID();
       const bucketAuthId = randomUUID();

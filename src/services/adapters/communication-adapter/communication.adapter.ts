@@ -818,6 +818,11 @@ export class CommunicationAdapter {
       timestamp: response!.timestamp,
       threadID: undefined,
       reactions: [],
+      // feature 013: carry the just-sent attachments + room on the response so
+      // the send result resolves attachments like the read path (roomID is the
+      // resolver's fallback to resolve the bucket when storageBucketId is unset).
+      rawAttachments: this.toReceivedAttachments(sendMessageData.attachments),
+      roomID: sendMessageData.roomID,
     };
   }
 
@@ -854,6 +859,10 @@ export class CommunicationAdapter {
       timestamp: response!.timestamp,
       threadID: sendMessageData.threadID,
       reactions: [],
+      // feature 013: carry the just-sent attachments + room on the reply response
+      // so it resolves attachments like the read path (see sendMessage).
+      rawAttachments: this.toReceivedAttachments(sendMessageData.attachments),
+      roomID: sendMessageData.roomID,
     };
   }
 
@@ -1423,6 +1432,29 @@ export class CommunicationAdapter {
   private toAttachmentRefs(
     attachments?: CommunicationMessageAttachment[]
   ): AttachmentRef[] | undefined {
+    if (!attachments || attachments.length === 0) {
+      return undefined;
+    }
+    return attachments.map(a => ({
+      document_id: a.documentId,
+      display_name: a.displayName,
+      mime_type: a.mimeType,
+      size: a.size,
+      width: a.width,
+      height: a.height,
+    }));
+  }
+
+  /**
+   * Map resolved server-side attachments (feature 013) to the `rawAttachments`
+   * carrier shape (`ReceivedAttachment`) for the IMessage returned by the send
+   * path — so the send response carries its own attachments (consistent with
+   * the read path), not just the Matrix echo. Outbound attachments are keyed by
+   * `document_id`. Returns undefined when there are none.
+   */
+  private toReceivedAttachments(
+    attachments?: CommunicationMessageAttachment[]
+  ): ReceivedAttachment[] | undefined {
     if (!attachments || attachments.length === 0) {
       return undefined;
     }

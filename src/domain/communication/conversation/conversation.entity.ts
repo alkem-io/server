@@ -44,9 +44,16 @@ export class Conversation extends AuthorizableEntity implements IConversation {
   // eagerly in ConversationService.createConversation; the bucket auth mirrors
   // conversation membership. Optional so the relation isn't required to be
   // loaded on every fetch.
+  //
+  // cascade is insert/update only (NOT remove): the aggregator's own bucket +
+  // documents + auth are not reachable by a plain cascade-remove, so relying on
+  // remove-cascade would delete the aggregator row while orphaning everything
+  // under it. ConversationService.deleteConversation deletes the aggregator
+  // explicitly (StorageAggregatorService.delete, which cleans bucket + docs +
+  // auth) as the single deletion path (FIX 5).
   @OneToOne(() => StorageAggregator, {
     eager: false,
-    cascade: true,
+    cascade: ['insert', 'update'],
     onDelete: 'SET NULL',
   })
   @JoinColumn()

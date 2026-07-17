@@ -81,6 +81,11 @@ export class RoomResolverMutations {
       attachments
     );
 
+    // feature 013: pin the attachments durable ONLY after the send succeeded. A
+    // failure above (attachment validation or the send itself) leaves the staged
+    // uploads temporary → swept normally, never permanently pinned (FR-024).
+    await this.messageAttachmentService.persistOutboundAttachments(attachments);
+
     // All post-send processing (notifications, activities, subscriptions)
     // now handled by MessageInboxService via Matrix event
     return message;
@@ -194,6 +199,11 @@ export class RoomResolverMutations {
       messageData,
       attachments
     );
+
+    // feature 013: pin the attachments durable ONLY after the send succeeded
+    // (see sendMessageToRoom) — a failure above leaves the staged uploads
+    // temporary → swept normally, never permanently pinned (FR-024).
+    await this.messageAttachmentService.persistOutboundAttachments(attachments);
 
     // All post-send processing (notifications, activities, subscriptions)
     // now handled by MessageInboxService via Matrix event

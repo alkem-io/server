@@ -26,8 +26,17 @@ export class MatrixMediaStorageBucket1782300000001
   // 50 MiB (FR-020), reconciled with Synapse max_upload_size + file-service.
   private readonly maxFileSize = 52428800;
 
-  // Curated safe set: images / audio / video / common documents.
+  // Curated safe set: images / audio / video / common documents. MUST stay
+  // identical to CONVERSATION_MEDIA_ALLOWED_MIME_TYPES in
+  // src/common/enums/mime.file.type.ts — inbound Element media (incl. office
+  // docs) lands here FIRST, so anything the conversation buckets accept must
+  // also pass staging, or it is rejected before it can be re-homed. Inlined
+  // (not imported) to keep this migration a self-contained, immutable snapshot
+  // per repo convention. Order is irrelevant (simple-array `includes`); the
+  // SET must match: visual (excl. SVG) + audio/video + documents.
   private readonly allowedMimeTypes = [
+    // Visual (image/svg+xml intentionally excluded — SVG can carry active
+    // content, so it is not accepted for member-to-member upload).
     'image/bmp',
     'image/jpg',
     'image/jpeg',
@@ -35,11 +44,10 @@ export class MatrixMediaStorageBucket1782300000001
     'image/png',
     'image/gif',
     'image/webp',
-    // image/svg+xml intentionally excluded — SVG can carry active content, so it
-    // is not accepted for member-to-member upload (defense-in-depth, feature 013).
     'image/avif',
     'image/heic',
     'image/heif',
+    // Audio / video.
     'video/mp4',
     'video/webm',
     'video/ogg',
@@ -50,7 +58,26 @@ export class MatrixMediaStorageBucket1782300000001
     'audio/webm',
     'audio/aac',
     'audio/flac',
+    // Documents (full office set — must match MimeTypeDocument).
     'application/pdf',
+    'application/vnd.ms-excel',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+    'application/vnd.oasis.opendocument.spreadsheet',
+    'text/csv',
+    'text/calendar',
+    'application/msword',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+    'application/vnd.oasis.opendocument.text',
+    'application/rtf',
+    'application/vnd.ms-powerpoint',
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+    'application/vnd.oasis.opendocument.presentation',
+    'application/vnd.ms-powerpoint.presentation.macroEnabled.12',
+    'application/vnd.openxmlformats-officedocument.presentationml.slideshow',
+    'application/vnd.ms-powerpoint.slideshow.macroEnabled.12',
+    'application/vnd.openxmlformats-officedocument.presentationml.template',
+    'application/vnd.ms-powerpoint.template.macroEnabled.12',
+    'application/vnd.oasis.opendocument.graphics',
   ].join(',');
 
   public async up(queryRunner: QueryRunner): Promise<void> {

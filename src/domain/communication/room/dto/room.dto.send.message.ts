@@ -1,7 +1,13 @@
 import { VERY_LONG_TEXT_LENGTH } from '@common/constants/entity.field.length.constants';
 import { UUID } from '@domain/common/scalars/scalar.uuid';
 import { Field, InputType } from '@nestjs/graphql';
-import { ArrayMaxSize, IsOptional, IsUUID, MaxLength } from 'class-validator';
+import {
+  ArrayMaxSize,
+  ArrayUnique,
+  IsOptional,
+  IsUUID,
+  MaxLength,
+} from 'class-validator';
 import { MAX_MESSAGE_ATTACHMENTS } from '../../conversation/conversation.media.constants';
 
 @InputType()
@@ -30,6 +36,9 @@ export class RoomSendMessageInput {
   })
   @IsOptional()
   @ArrayMaxSize(MAX_MESSAGE_ATTACHMENTS)
+  // Reject a repeated document id — the same attachment must not be listed
+  // twice (it would be validated/pinned/sent redundantly).
+  @ArrayUnique()
   @IsUUID('4', { each: true })
   attachments?: string[];
 }

@@ -149,9 +149,33 @@ describe('MessageAttachmentService', () => {
       ).rejects.toBeInstanceOf(ValidationException);
     });
 
-    it('resolves valid attachments, READ-gates, and persists temporaryLocation off', async () => {
+    it('rejects an attachment not owned by the sender (outbound == read invariant)', async () => {
+      // FIX 3: a member may only attach their OWN uploads. A doc in the bucket
+      // but owned by another member must be rejected before send.
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-1',
+        createdBy: 'another-member',
+        mimeType: 'image/png',
+        size: 1000,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+
+      await expect(
+        service.resolveOutboundAttachments(
+          conversationRoom,
+          { actorID: 'sender-1' } as any,
+          ['doc-1']
+        )
+      ).rejects.toBeInstanceOf(ValidationException);
+      // Nothing pinned when validation rejects.
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+    });
+
+    it('resolves + validates a sender-owned attachment, READ-gates, and does NOT pin during resolve', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-1',
+        createdBy: 'sender-1',
         displayName: 'pic.png',
         mimeType: 'image/png',
         size: 1000,
@@ -163,14 +187,15 @@ describe('MessageAttachmentService', () => {
 
       const refs = await service.resolveOutboundAttachments(
         conversationRoom,
-        {} as any,
+        { actorID: 'sender-1' } as any,
         ['doc-1']
       );
 
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-1', {
-        temporaryLocation: false,
-      });
+      // FIX 0: pinning (temporaryLocation=false) is DEFERRED to
+      // persistOutboundAttachments (called only after the send succeeds), so
+      // resolve itself must not flip anything.
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
       expect(refs).toEqual([
         {
           documentId: 'doc-1',
@@ -181,6 +206,56 @@ describe('MessageAttachmentService', () => {
           height: 20,
         },
       ]);
+    });
+  });
+
+  // --- FIX 0: deferred pinning after send ---
+
+  describe('persistOutboundAttachments', () => {
+    it('flips temporaryLocation=false for every attachment after a successful send', async () => {
+      await service.persistOutboundAttachments([
+        {
+          documentId: 'doc-1',
+          displayName: 'p',
+          mimeType: 'image/png',
+          size: 1,
+        },
+        {
+          documentId: 'doc-2',
+          displayName: 'q',
+          mimeType: 'image/png',
+          size: 2,
+        },
+      ] as any);
+
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-1', {
+        temporaryLocation: false,
+      });
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-2', {
+        temporaryLocation: false,
+      });
+    });
+
+    it('is a no-op when there are no attachments', async () => {
+      await service.persistOutboundAttachments([]);
+      await service.persistOutboundAttachments(undefined);
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+    });
+
+    it('is best-effort: a pin failure does not throw into the post-send path', async () => {
+      fileServiceAdapter.moveDocument.mockRejectedValueOnce(
+        new Error('transient')
+      );
+      await expect(
+        service.persistOutboundAttachments([
+          {
+            documentId: 'doc-1',
+            displayName: 'p',
+            mimeType: 'image/png',
+            size: 1,
+          },
+        ] as any)
+      ).resolves.toBeUndefined();
     });
   });
 
@@ -216,7 +291,7 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
     });
 
-    it('COPIES (re-share) when the media is already homed elsewhere', async () => {
+    it('COPIES (re-share) when the media is already homed elsewhere, and pins the copy durable', async () => {
       fileServiceAdapter.getDocumentByReference
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce({
@@ -224,6 +299,9 @@ describe('MessageAttachmentService', () => {
           storageBucketId: 'another-conversation-bucket',
           mimeType: 'image/png',
         } as any);
+      fileServiceAdapter.copyDocument.mockResolvedValue({
+        id: 'doc-copied',
+      } as any);
 
       await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
         {
@@ -244,7 +322,36 @@ describe('MessageAttachmentService', () => {
           skipDedup: true,
         })
       );
+      // FIX 10: CopyDocumentInput carries no temporaryLocation, so the copied
+      // re-share row lands temporary; a follow-up PATCH pins it durable, matching
+      // the MOVE branch, so the 24h staging sweep does not delete it.
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
+        'doc-copied',
+        {
+          temporaryLocation: false,
+        }
+      );
+    });
+
+    it('never aborts the inbound handler when target bucket resolution throws (FIX 2)', async () => {
+      // getTargetBucketForRoom → getStorageBucketOrFail throws transiently. The
+      // handler must not propagate — inbound message processing continues.
+      storageBucketService.getStorageBucketOrFail.mockRejectedValueOnce(
+        new Error('bucket lookup failed')
+      );
+
+      await expect(
+        service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+          {
+            media_id: 'media-1',
+            display_name: 'x',
+            mime_type: 'image/png',
+            size: 1,
+          },
+        ])
+      ).resolves.toBeUndefined();
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
     });
 
     it('cleans up the minted auth policy when placement (MOVE) fails', async () => {

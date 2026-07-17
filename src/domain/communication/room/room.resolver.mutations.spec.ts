@@ -11,6 +11,7 @@ import { RoomResolverService } from '@services/infrastructure/entity-resolver/ro
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked } from 'vitest';
+import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
 import { RoomLookupService } from '../room-lookup/room.lookup.service';
 import { IRoom } from './room.interface';
 import { RoomResolverMutations } from './room.resolver.mutations';
@@ -80,6 +81,48 @@ describe('RoomResolverMutations', () => {
         AuthorizationPrivilege.CREATE_MESSAGE,
         expect.any(String)
       );
+    });
+
+    it('pins the resolved attachments durable only AFTER send succeeds (FIX 0)', async () => {
+      const messageAttachmentService = (resolver as any)
+        .messageAttachmentService as Mocked<MessageAttachmentService>;
+      const resolvedRefs = [{ documentId: 'doc-1' }] as any;
+      messageAttachmentService.resolveOutboundAttachments.mockResolvedValue(
+        resolvedRefs
+      );
+      roomLookupService.sendMessage.mockResolvedValue({ id: 'msg-1' } as any);
+
+      await resolver.sendMessageToRoom(
+        { roomID: 'room-1', message: 'Hello', attachments: ['doc-1'] } as any,
+        actorContext
+      );
+
+      // Resolve/validate happens before send; the durable pin happens after,
+      // with the SAME resolved refs (deferred until the send is confirmed).
+      expect(roomLookupService.sendMessage).toHaveBeenCalled();
+      expect(
+        messageAttachmentService.persistOutboundAttachments
+      ).toHaveBeenCalledWith(resolvedRefs);
+    });
+
+    it('does NOT pin attachments when the send throws (FIX 0)', async () => {
+      const messageAttachmentService = (resolver as any)
+        .messageAttachmentService as Mocked<MessageAttachmentService>;
+      messageAttachmentService.resolveOutboundAttachments.mockResolvedValue([
+        { documentId: 'doc-1' },
+      ] as any);
+      roomLookupService.sendMessage.mockRejectedValue(new Error('send failed'));
+
+      await expect(
+        resolver.sendMessageToRoom(
+          { roomID: 'room-1', message: 'Hello', attachments: ['doc-1'] } as any,
+          actorContext
+        )
+      ).rejects.toThrow('send failed');
+
+      expect(
+        messageAttachmentService.persistOutboundAttachments
+      ).not.toHaveBeenCalled();
     });
 
     it('should throw CalloutClosedException when callout comments are disabled', async () => {
