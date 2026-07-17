@@ -291,7 +291,7 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
     });
 
-    it('COPIES (re-share) when the media is already homed elsewhere, and pins the copy durable', async () => {
+    it('COPIES (re-share) when the media is already homed elsewhere; the copy is born durable → NO separate pin', async () => {
       fileServiceAdapter.getDocumentByReference
         .mockResolvedValueOnce(null)
         .mockResolvedValueOnce({
@@ -322,14 +322,35 @@ describe('MessageAttachmentService', () => {
           skipDedup: true,
         })
       );
-      // FIX 10: CopyDocumentInput carries no temporaryLocation, so the copied
-      // re-share row lands temporary; a follow-up PATCH pins it durable, matching
-      // the MOVE branch, so the 24h staging sweep does not delete it.
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
-        'doc-copied',
+      // The file-service copy is born durable (CopyDocument hardcodes
+      // temporaryLocation:false), so the re-share path issues NO follow-up
+      // pin/PATCH — moveDocument is never called on the COPY branch.
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+    });
+
+    it('re-share is idempotent: a second receive of the same media_id early-returns without re-copying', async () => {
+      // Idempotency: the copy already exists in the target bucket → return early,
+      // no re-copy, no canonical lookup, no auth mint, no pin.
+      fileServiceAdapter.getDocumentByReference.mockResolvedValueOnce({
+        id: 'doc-copied',
+        storageBucketId: CONV_BUCKET,
+      } as any);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
         {
-          temporaryLocation: false,
-        }
+          media_id: 'media-1',
+          display_name: 'x',
+          mime_type: 'image/png',
+          size: 1,
+        },
+      ]);
+
+      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(authorizationPolicyService.save).not.toHaveBeenCalled();
+      // Only the single bucket-scoped idempotency lookup ran.
+      expect(fileServiceAdapter.getDocumentByReference).toHaveBeenCalledTimes(
+        1
       );
     });
 
@@ -350,95 +371,6 @@ describe('MessageAttachmentService', () => {
           },
         ])
       ).resolves.toBeUndefined();
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
-    });
-
-    it('re-share COPY: a follow-up pin failure does NOT delete the auth and leaves a valid (temporary) copy (FIX A.1)', async () => {
-      fileServiceAdapter.getDocumentByReference
-        .mockResolvedValueOnce(null) // not already in target
-        .mockResolvedValueOnce({
-          id: 'doc-other',
-          storageBucketId: 'another-conversation-bucket',
-          mimeType: 'image/png',
-        } as any); // canonical (homed elsewhere → COPY)
-      fileServiceAdapter.copyDocument.mockResolvedValue({
-        id: 'doc-copied',
-      } as any);
-      // The durable-pin PATCH throws transiently.
-      fileServiceAdapter.moveDocument.mockRejectedValue(
-        new Error('transient pin failure')
-      );
-
-      await expect(
-        service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-          {
-            media_id: 'media-1',
-            display_name: 'x',
-            mime_type: 'image/png',
-            size: 1,
-          },
-        ])
-      ).resolves.toBeDefined();
-
-      // The copy was created and the pin attempted…
-      expect(fileServiceAdapter.copyDocument).toHaveBeenCalled();
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
-        'doc-copied',
-        {
-          temporaryLocation: false,
-        }
-      );
-      // …but the pin failure must NOT delete the auth the copy points at — the
-      // copy stays valid (merely temporary) and self-heals on the next receive.
-      expect(authorizationPolicyService.deleteById).not.toHaveBeenCalled();
-    });
-
-    it('self-heals a previously un-pinned copy: re-issues the durable pin on the next receive (FIX A.2)', async () => {
-      // Idempotency finds the copy already in the target bucket, still temporary
-      // (a prior pin failed). It must be re-pinned, not early-returned un-pinned.
-      fileServiceAdapter.getDocumentByReference.mockResolvedValueOnce({
-        id: 'doc-copied',
-        storageBucketId: CONV_BUCKET,
-        temporaryLocation: true,
-      } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        {
-          media_id: 'media-1',
-          display_name: 'x',
-          mime_type: 'image/png',
-          size: 1,
-        },
-      ]);
-
-      // Re-pinned durable; no new copy/canonical lookup, no auth mint.
-      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
-        'doc-copied',
-        {
-          temporaryLocation: false,
-        }
-      );
-      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
-      expect(authorizationPolicyService.save).not.toHaveBeenCalled();
-    });
-
-    it('does NOT re-pin an already-durable existing copy (idempotency, temporaryLocation=false)', async () => {
-      fileServiceAdapter.getDocumentByReference.mockResolvedValueOnce({
-        id: 'doc-copied',
-        storageBucketId: CONV_BUCKET,
-        temporaryLocation: false,
-      } as any);
-
-      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
-        {
-          media_id: 'media-1',
-          display_name: 'x',
-          mime_type: 'image/png',
-          size: 1,
-        },
-      ]);
-
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
       expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
     });
@@ -987,6 +919,52 @@ describe('MessageAttachmentService', () => {
       );
 
       expect(result).toEqual([]);
+    });
+
+    it('fault-isolates a per-attachment failure: one attachment throwing omits ONLY it, the read still succeeds (FIX 2)', async () => {
+      // Two outbound attachments. Resolving the SECOND throws where the round-2
+      // guard did NOT reach — the READ-gate (isAccessGranted) on a malformed auth
+      // relation. The batch must not reject: the good attachment resolves, the
+      // failing one is omitted, the whole getMessages query still succeeds.
+      documentService.getDocumentOrFail.mockImplementation(
+        async (id: string) =>
+          ({
+            id,
+            createdBy: 'sender-1',
+            displayName: `${id}.png`,
+            mimeType: 'image/png',
+            size: 10,
+            storageBucket: { id: CONV_BUCKET },
+            authorization: { id: id === 'doc-bad' ? 'bad-auth' : 'good-auth' },
+          }) as any
+      );
+      authorizationService.isAccessGranted.mockImplementation(
+        (_ctx: any, auth: any) => {
+          if (auth?.id === 'bad-auth') {
+            throw new Error('auth check blew up on a malformed relation');
+          }
+          return true;
+        }
+      );
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-good'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { document_id: 'doc-good', mime_type: 'image/png', size: 10 },
+            { document_id: 'doc-bad', mime_type: 'image/png', size: 10 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      // The whole query did NOT reject; only the failing attachment is omitted.
+      expect(result).toEqual([expect.objectContaining({ id: 'doc-good' })]);
     });
   });
 

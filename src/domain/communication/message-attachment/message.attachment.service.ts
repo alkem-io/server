@@ -486,6 +486,7 @@ export class MessageAttachmentService {
           message:
             'Failed to resolve attachment bucket on read; omitting attachments for this message',
           roomId: message.roomID,
+          messageId: message.id,
         },
         LogContext.COMMUNICATION
       );
@@ -500,19 +501,14 @@ export class MessageAttachmentService {
   ): Promise<void> {
     const mediaId = attachment.media_id as string;
 
-    // Idempotency: already homed in the target bucket?
+    // Idempotency: already homed in the target bucket? Plain early-return — a
+    // document already present in the target bucket is DURABLE (the MOVE flips
+    // temporaryLocation:false in its atomic PATCH; the file-service copy is born
+    // durable, see below), so there is nothing to heal. A second receive of the
+    // same media_id simply does nothing.
     const existingInTarget =
       await this.fileServiceAdapter.getDocumentByReference(mediaId, bucket.id);
     if (existingInTarget) {
-      // Self-heal (FIX A.2): a prior re-share COPY may have created the row but
-      // failed to pin it durable (transient), leaving it temporaryLocation=true —
-      // idempotency would otherwise early-return here un-pinned and the 24h sweep
-      // would delete it. Re-issue the durable pin so the next receive for this
-      // media recovers it. Best-effort: a re-pin failure just leaves it temporary
-      // for the next retry (never throws out of the inbound handler — FIX 2).
-      if (existingInTarget.temporaryLocation === true) {
-        await this.pinDocumentDurable(existingInTarget.id, mediaId);
-      }
       return;
     }
 
@@ -532,12 +528,10 @@ export class MessageAttachmentService {
 
     const documentAuthId = await this.mintDocumentAuth(bucket);
 
-    // The auth-owning try covers ONLY the atomic placement unit (the MOVE, or the
-    // COPY that creates the row + points it at documentAuthId). On failure the
-    // minted-but-unused auth is cleaned up. The re-share durable-pin is a SEPARATE
-    // best-effort step AFTER this try (see below) so a transient pin failure never
-    // deletes the auth the copied row already points at (FIX A.1).
-    let copiedDocumentId: string | undefined;
+    // The auth-owning try covers the atomic placement unit (the MOVE, or the COPY
+    // that creates the row + points it at documentAuthId). On failure the minted-
+    // but-unused auth is cleaned up. Both placements land the document DURABLE in
+    // ONE call — no separate follow-up pin exists.
     try {
       if (canonical.storageBucketId === this.matrixMediaBucketId) {
         // MOVE the verbatim staging row into the target bucket (T010) — uniform
@@ -545,10 +539,10 @@ export class MessageAttachmentService {
         // file-service serves a web-renderable rendition at read time (serve-time
         // transcode), so the server no longer mints a separate transcoded doc.
         // Result: one verbatim document per media_id, a single auth mint, no
-        // two-rows-same-reference. This is a SINGLE atomic PATCH that also pins
-        // (temporaryLocation:false); a failure leaves the staging row untouched
-        // and the minted auth unused, so the catch cleanup is correct — there is
-        // no separate pin step to leave the doc corrupt.
+        // two-rows-same-reference. This is a SINGLE atomic PATCH that flips the
+        // genuinely-temporary staging doc durable (temporaryLocation:false); a
+        // failure leaves the staging row untouched and the minted auth unused, so
+        // the catch cleanup is correct.
         await this.fileServiceAdapter.moveDocument(canonical.id, {
           storageBucketId: bucket.id,
           authorizationId: documentAuthId,
@@ -559,11 +553,14 @@ export class MessageAttachmentService {
       } else {
         // Re-share: same media already homed in another conversation → COPY
         // (zero-copy, shared blob) into this bucket, preserving the reference.
+        // The file-service copy contract materializes the new row DURABLE in one
+        // call (CopyDocument hardcodes temporaryLocation:false via the outbox-aware
+        // writeCreate, and auto-backs-up the blob), so NO follow-up pin is needed.
         // `skipDedup: true` is the reference-bearing contract: file-service keys
         // such rows by `externalReference`, not by content, so two distinct
         // media_ids with identical bytes each get their own row instead of
         // collapsing and dropping the second one's reference.
-        const copied = await this.fileServiceAdapter.copyDocument({
+        await this.fileServiceAdapter.copyDocument({
           sourceId: canonical.id,
           destinationBucketId: bucket.id,
           authorizationId: documentAuthId,
@@ -571,7 +568,6 @@ export class MessageAttachmentService {
           externalReference: mediaId,
           skipDedup: true,
         });
-        copiedDocumentId = copied.id;
       }
     } catch (error) {
       // The auth policy is minted before placement; on a failed MOVE/COPY clean
@@ -581,44 +577,6 @@ export class MessageAttachmentService {
         .deleteById(documentAuthId)
         .catch(() => undefined);
       throw error;
-    }
-
-    // Re-share durable-pin (FIX A.1) — OUTSIDE the auth-owning try. CopyDocumentInput
-    // carries no temporaryLocation, so the copied row lands temporary; pin it durable
-    // here. A failure leaves a VALID copy (auth intact) that is merely still
-    // temporary → recovered by the self-heal path above on the next receive. The
-    // pin failure must NOT delete the auth the copy points at.
-    if (copiedDocumentId) {
-      await this.pinDocumentDurable(copiedDocumentId, mediaId);
-    }
-  }
-
-  /**
-   * Pin a re-homed/re-shared document durable (temporaryLocation=false),
-   * best-effort (FIX A). Kept OUTSIDE any auth-owning try: a transient pin
-   * failure just leaves the document temporary — a valid row with its auth
-   * intact — to be re-pinned by the idempotency self-heal on the next
-   * `message.received` for the same media, never a deleted/corrupt auth. Never
-   * throws (consistent with FIX 2: attachment work must not break the handler).
-   */
-  private async pinDocumentDurable(
-    documentId: string,
-    mediaId: string
-  ): Promise<void> {
-    try {
-      await this.fileServiceAdapter.moveDocument(documentId, {
-        temporaryLocation: false,
-      });
-    } catch {
-      this.logger.warn?.(
-        {
-          message:
-            'Failed to pin re-shared attachment durable; it stays temporary and is re-pinned on the next receive',
-          documentId,
-          mediaId,
-        },
-        LogContext.COMMUNICATION
-      );
     }
   }
 
@@ -653,6 +611,14 @@ export class MessageAttachmentService {
     // document lookup (+ file-service round-trip for inbound refs); awaiting them
     // sequentially serialised the round-trips on every history read. Promise.all
     // preserves order, so the resolved attachments keep their original sequence.
+    //
+    // FIX 2 (fault isolation): attachment resolution must NEVER fail the whole
+    // getMessages/getLastMessages query. Each item's resolution is guarded so a
+    // single throw (e.g. a malformed auth relation reaching isAccessGranted) omits
+    // ONLY that attachment instead of rejecting the batch. FIX 3 (observability):
+    // a swallowed failure is logged at warn with roomId + messageId so a
+    // persistent resolution defect surfaces in monitoring rather than silently
+    // presenting as "no attachments".
     const resolved = await Promise.all(
       message.rawAttachments.map(raw =>
         this.resolveReadAttachment(
@@ -660,7 +626,19 @@ export class MessageAttachmentService {
           storageBucketId,
           message.sender,
           actorContext
-        )
+        ).catch(error => {
+          this.logger.warn?.(
+            {
+              message:
+                'Failed to resolve a message attachment on read; omitting it',
+              roomId: message.roomID,
+              messageId: message.id,
+              error: (error as Error)?.message,
+            },
+            LogContext.COMMUNICATION
+          );
+          return null;
+        })
       )
     );
     return resolved.filter(
