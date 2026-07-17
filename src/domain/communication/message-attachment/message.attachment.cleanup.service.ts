@@ -20,6 +20,17 @@ const STAGING_TTL_MS = 24 * 60 * 60 * 1000; // 24h (FR-012, SC-007)
  *    server-created web-composer uploads that were never sent (compose
  *    abandoned).
  *
+ * `temporaryLocation=true` is a PROXY for "never sent" — a SENT attachment can
+ * transiently still be temporary if the post-send flip failed. That proxy is
+ * made safe by three pin anchors that flip a delivered attachment durable
+ * (full-gate [0]): (1) the inline post-send flip
+ * (`persistOutboundAttachments`, fast path), (2) the echo-anchored pin on the
+ * message's own delivery echo (`coalesceOutboundEcho`, retried MQ channel),
+ * and (3) the outbound read-heal on any read of the message
+ * (`resolveAttachmentDocument`). The residual loss window therefore requires
+ * ALL THREE to fail AND the conversation to go completely unread for 24h — a
+ * compound fault, accepted and documented here.
+ *
  * It deliberately does NOT reap `matrix_media` staging rows by age (H2). Those
  * rows back the Synapse media-storage provider's durable, byte-exact copies
  * (comment-room media before/without re-home, genuine Element orphans). The

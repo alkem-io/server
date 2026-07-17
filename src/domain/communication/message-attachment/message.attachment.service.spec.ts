@@ -603,13 +603,16 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
 
-    it('confused-deputy guard: rejects a forged echo whose document_id is owned by another member', async () => {
+    it('confused-deputy guard: rejects a forged echo whose document_id is owned by another member — no stamp AND no pin', async () => {
       // Attacker (sender-1) forges an m.image pointing at victim's re-homed doc
       // D + an arbitrary media_id; D IS in the room bucket but is NOT owned by
-      // the sender → coalesce must NOT overwrite D's reference.
+      // the sender → coalesce must NOT overwrite D's reference, and the
+      // delivery-pin (full-gate [0]) must NOT fire either — a forged event can
+      // never pin someone else's temporary doc.
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-D',
         createdBy: 'victim-member',
+        temporaryLocation: true,
         storageBucket: { id: CONV_BUCKET },
       } as any);
 
@@ -659,7 +662,17 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
 
-    it('no-op when the echo carries no media_id (twin not locatable yet)', async () => {
+    it('echo without media_id + durable doc → nothing to do (no twin work possible, nothing to pin)', async () => {
+      // The guards now run BEFORE the !media_id branch (full-gate [0]), so the
+      // doc IS loaded — but a durable doc needs no pin, and without a media_id
+      // no twin/stamp work is possible.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-D',
+        createdBy: 'sender-1',
+        temporaryLocation: false,
+        storageBucket: { id: CONV_BUCKET },
+      } as any);
+
       await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
         {
           document_id: 'doc-D',
@@ -669,8 +682,93 @@ describe('MessageAttachmentService', () => {
         },
       ]);
 
-      expect(documentService.getDocumentOrFail).not.toHaveBeenCalled();
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.getDocumentByReference).not.toHaveBeenCalled();
+    });
+
+    it('full-gate [0]: echo WITHOUT media_id + temporary doc → standalone delivery-pin, no twin/stamp work', async () => {
+      // The echo is Synapse's proof of delivery: even when no media_id is
+      // surfaced (twin not locatable), the doc must be pinned durable so the
+      // 24h sweep cannot reap a delivered attachment.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-D',
+        createdBy: 'sender-1',
+        temporaryLocation: true,
+        storageBucket: { id: CONV_BUCKET },
+      } as any);
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        {
+          document_id: 'doc-D',
+          display_name: 'pic.png',
+          mime_type: 'image/png',
+          size: 1,
+        },
+      ]);
+
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledTimes(1);
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-D', {
+        temporaryLocation: false,
+      });
+      expect(fileServiceAdapter.getDocumentByReference).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+    });
+
+    it('full-gate [0]: echo WITH media_id + temporary doc → the pin is FOLDED into the stamp (one PATCH)', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-D',
+        createdBy: 'sender-1',
+        temporaryLocation: true,
+        storageBucket: { id: CONV_BUCKET },
+      } as any);
+      mockByReference({
+        [CONV_BUCKET]: null, // reference slot free → stamp
+        [MATRIX_MEDIA_BUCKET]: {
+          id: 'doc-twin',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+        },
+      });
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        outboundEcho,
+      ]);
+
+      // ONE moveDocument carrying BOTH the stamp and the pin.
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledTimes(1);
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-D', {
+        externalReference: 'media-Y',
+        temporaryLocation: false,
+      });
+      // Twin cleanup unaffected.
+      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
+        'doc-twin'
+      );
+    });
+
+    it('full-gate [0]: already stamped to this doc but STILL temporary → standalone pin issued', async () => {
+      // A prior delivery stamped media-Y onto D but the pin never landed (or
+      // the pre-fix code never pinned). The re-delivered echo must still heal.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-D',
+        createdBy: 'sender-1',
+        externalReference: 'media-Y',
+        temporaryLocation: true,
+        storageBucket: { id: CONV_BUCKET },
+      } as any);
+      mockByReference({
+        [CONV_BUCKET]: { id: 'doc-D', storageBucketId: CONV_BUCKET },
+        [MATRIX_MEDIA_BUCKET]: null, // twin already swept
+      });
+
+      await service.rehomeInboundAttachments(conversationRoom, 'sender-1', [
+        outboundEcho,
+      ]);
+
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledTimes(1);
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-D', {
+        temporaryLocation: false,
+      });
       expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
     });
 
@@ -790,6 +888,113 @@ describe('MessageAttachmentService', () => {
       expect(result).toEqual([
         expect.objectContaining({ id: 'doc-1', url: 'https://docs/doc-1' }),
       ]);
+    });
+
+    it('read-heal (full-gate [0]): pins a still-temporary outbound doc durable on read — delivered message is proof-of-send', async () => {
+      // The message EXISTS (it is being read), so it was delivered — yet its doc
+      // is still temporary: the post-send flip and the echo pin both failed.
+      // The read must heal it so the 24h sweep cannot reap it.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-1',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        temporaryLocation: true,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-1'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-1', {
+        temporaryLocation: false,
+      });
+      expect(result).toEqual([expect.objectContaining({ id: 'doc-1' })]);
+    });
+
+    it('read-heal (full-gate [0]): a pin failure NEVER fails the read — the attachment is still returned', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-1',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        temporaryLocation: true,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+      fileServiceAdapter.moveDocument.mockRejectedValue(
+        new Error('file-service down')
+      );
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-1'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      // The pin was attempted, rejected — and the read still succeeded.
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith('doc-1', {
+        temporaryLocation: false,
+      });
+      expect(result).toEqual([expect.objectContaining({ id: 'doc-1' })]);
+    });
+
+    it('read-heal (full-gate [0]): no redundant pin when the outbound doc is already durable', async () => {
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-1',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        temporaryLocation: false,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-1'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(result).toEqual([expect.objectContaining({ id: 'doc-1' })]);
     });
 
     it('attribution-spoof: ignores an outbound document_id owned by another member (forged under the sender)', async () => {

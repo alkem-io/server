@@ -189,10 +189,21 @@ export class MessageAttachmentService {
   /**
    * Pin outbound attachments as durable AFTER the message send is confirmed
    * (FR-024). Flips `temporaryLocation` off for every resolved attachment so the
-   * staging sweep no longer reaps them. Best-effort per document: a transient
-   * failure leaves that document temporary (swept later) rather than throwing
-   * into the post-send path — the message has already been delivered. MUST be
-   * called only once `sendMessage`/`sendMessageReply` has succeeded.
+   * staging sweep no longer reaps them. MUST be called only once
+   * `sendMessage`/`sendMessageReply` has succeeded — a failed send must never
+   * pin, so no durable orphans.
+   *
+   * This is the FAST PATH and is best-effort per document: a transient failure
+   * is logged, never thrown into the post-send path (the message has already
+   * been delivered). A missed flip here is retried by two delivery-fact-anchored
+   * pin points (full-gate [0]):
+   *  1. the ECHO-ANCHORED pin — when the message's own delivery echo arrives on
+   *     the retried MQ channel, `coalesceOutboundEcho` pins the doc durable;
+   *  2. the OUTBOUND READ-HEAL — any read that resolves a delivered message's
+   *     still-temporary doc pins it (see resolveAttachmentDocument).
+   * The 24h staging sweep can therefore only reap a DELIVERED attachment if all
+   * three pins fail AND the conversation goes unread for 24h — a compound
+   * fault, accepted as the documented residual.
    */
   public async persistOutboundAttachments(
     attachments: CommunicationMessageAttachment[] | undefined
@@ -228,12 +239,15 @@ export class MessageAttachmentService {
    * (T010), so reads are plain lookups. Each attachment is one of two kinds:
    *
    *  - OUTBOUND echo (carries `document_id`) — the conversation doc D already
-   *    exists (created at web upload). When the echo also carries the Synapse
-   *    `media_id`, COALESCE: stamp `externalReference = media_id` onto D and
-   *    delete the redundant `matrix_media` staging twin D′ the provider minted
-   *    for the same blob (see coalesceOutboundEcho). No re-home — D is already
-   *    homed. Without a surfaced `media_id` this is a no-op (cross-repo: see the
-   *    note on coalesceOutboundEcho).
+   *    exists (created at web upload). The echo is delivery proof, so D is
+   *    pinned durable if still temporary — regardless of `media_id` presence
+   *    (full-gate [0], see coalesceOutboundEcho). When the echo also carries
+   *    the Synapse `media_id`, COALESCE: stamp `externalReference = media_id`
+   *    onto D and delete the redundant `matrix_media` staging twin D′ the
+   *    provider minted for the same blob (see coalesceOutboundEcho). No
+   *    re-home — D is already homed. Without a surfaced `media_id` the twin
+   *    cannot be located (cross-repo: see the note on coalesceOutboundEcho),
+   *    but the delivery-pin still runs.
    *
    *  - INBOUND (Element-origin, carries `media_id` only) — resolve the canonical
    *    document globally and re-home into the target bucket:
@@ -330,14 +344,24 @@ export class MessageAttachmentService {
    *  2. delete the redundant `matrix_media` staging row D′ — the shared blob
    *     survives because D still references it.
    *
-   * Idempotent: re-delivery/re-read finds D already stamped and D′ already gone,
-   * and does nothing.
+   * Delivery-pin (full-gate [0]): the echo is Synapse's proof the message was
+   * delivered, so this ALSO pins D durable (`temporaryLocation: false`) when it
+   * is still temporary — REGARDLESS of `media_id` presence — folding the flip
+   * into the stamp PATCH when one runs, or issuing it standalone otherwise.
+   * This is the primary retry anchor for a transiently-failed
+   * `persistOutboundAttachments` flip: without it the 24h staging sweep would
+   * reap a delivered message's attachment. The pin is gated behind the same
+   * confused-deputy guards (bucket membership + sender ownership) so a forged
+   * `document_id` can never pin someone else's document.
    *
-   * Cross-repo note: this requires matrix-adapter to surface BOTH
+   * Idempotent: re-delivery/re-read finds D already stamped (and durable) and
+   * D′ already gone, and does nothing.
+   *
+   * Cross-repo note: the coalesce requires matrix-adapter to surface BOTH
    * `io.alkemio.document_id` AND the `media_id` (from the event `url`/`mxc`) on
-   * outbound echoes. While the adapter still clears `media_id` on echoes, this is
-   * a safe no-op (the twin remains until the adapter slice lands) — never an
-   * error.
+   * outbound echoes. While the adapter still clears `media_id` on echoes, the
+   * twin cleanup is a safe no-op (the twin remains until the adapter slice
+   * lands) — the delivery-pin above still runs.
    */
   private async coalesceOutboundEcho(
     bucket: IStorageBucket,
@@ -346,19 +370,18 @@ export class MessageAttachmentService {
   ): Promise<void> {
     const documentId = attachment.document_id as string;
     const mediaId = attachment.media_id;
-    if (!mediaId) {
-      // No staging media id surfaced on this echo → cannot locate the twin.
-      return;
-    }
 
     // Confused-deputy guard (HIGH): BOTH `document_id` and `media_id` are taken
     // verbatim from an attacker-influenceable Matrix event. Before stamping a
-    // reference onto D we require (a) D lives in this room's bucket AND (b) the
-    // SENDER OWNS D. Without the ownership gate a member could forge an `m.image`
-    // pointing at another member's re-homed document D plus an arbitrary
-    // `media_id`, and the stamp below would overwrite D's `externalReference` —
-    // making that document unresolvable by-reference conversation-wide (the
-    // attachment would silently disappear for everyone).
+    // reference onto D (or pinning it durable below) we require (a) D lives in
+    // this room's bucket AND (b) the SENDER OWNS D. Without the ownership gate a
+    // member could forge an `m.image` pointing at another member's re-homed
+    // document D plus an arbitrary `media_id`, and the stamp below would
+    // overwrite D's `externalReference` — making that document unresolvable
+    // by-reference conversation-wide (the attachment would silently disappear
+    // for everyone). The guards run BEFORE the `!mediaId` branch so the
+    // delivery-pin fires regardless of `media_id` presence, but never for a
+    // forged `document_id`.
     const document = await this.documentService.getDocumentOrFail(documentId, {
       relations: { storageBucket: true },
     });
@@ -385,6 +408,25 @@ export class MessageAttachmentService {
         },
         LogContext.COMMUNICATION
       );
+      return;
+    }
+
+    // Echo-anchored durable pin (full-gate [0]): this echo IS Synapse's proof
+    // that the message carrying D was delivered. If D is still temporary, the
+    // inline post-send flip (persistOutboundAttachments) must have failed
+    // transiently — pin it durable here so the 24h staging sweep cannot reap a
+    // DELIVERED message's attachment. The echo arrives on the retried MQ
+    // channel, making this the primary retry anchor for that flip.
+    const needsPin = document.temporaryLocation === true;
+
+    if (!mediaId) {
+      // No staging media id surfaced on this echo → cannot locate the twin, so
+      // no coalesce work is possible — but the delivery-pin still applies.
+      if (needsPin) {
+        await this.fileServiceAdapter.moveDocument(documentId, {
+          temporaryLocation: false,
+        });
+      }
       return;
     }
 
@@ -439,8 +481,19 @@ export class MessageAttachmentService {
       return;
     }
     if (!referenced) {
+      // Fold the delivery-pin into the stamp PATCH — one call flips both when D
+      // is still temporary.
+      const patch: { externalReference: string; temporaryLocation?: boolean } =
+        { externalReference: mediaId };
+      if (needsPin) {
+        patch.temporaryLocation = false;
+      }
+      await this.fileServiceAdapter.moveDocument(documentId, patch);
+    } else if (needsPin) {
+      // Already stamped to D on a prior delivery, but D is STILL temporary —
+      // the earlier pin attempt(s) failed. Issue the standalone pin.
       await this.fileServiceAdapter.moveDocument(documentId, {
-        externalReference: mediaId,
+        temporaryLocation: false,
       });
     }
 
@@ -787,6 +840,31 @@ export class MessageAttachmentService {
             LogContext.COMMUNICATION
           );
           return null;
+        }
+        // Outbound read-heal (full-gate [0], secondary anchor): this document
+        // backs an EXISTING — therefore delivered — message, so observing it
+        // still temporary is proof both the inline post-send flip AND the
+        // echo-anchored pin failed. Heal it now so the 24h staging sweep cannot
+        // reap a delivered attachment. Mirrors the FIX 2 lazy inbound re-home
+        // in this function: best-effort, a pin failure is logged and must NEVER
+        // fail (or block) the read — the next read retries.
+        if (document.temporaryLocation === true) {
+          try {
+            await this.fileServiceAdapter.moveDocument(document.id, {
+              temporaryLocation: false,
+            });
+          } catch (error) {
+            this.logger.warn?.(
+              {
+                message:
+                  'Failed to pin delivered outbound attachment durable on read; will retry on the next read',
+                documentId: document.id,
+                storageBucketId,
+                error: (error as Error)?.message,
+              },
+              LogContext.COMMUNICATION
+            );
+          }
         }
         return document;
       }
