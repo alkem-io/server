@@ -9,8 +9,8 @@ importers:
   .:
     dependencies:
       '@alkemio/matrix-adapter-lib':
-        specifier: 0.8.16
-        version: 0.8.16
+        specifier: https://pkg.pr.new/@alkemio/matrix-adapter-lib@2c70078
+        version: https://pkg.pr.new/@alkemio/matrix-adapter-lib@2c70078
       '@alkemio/notifications-lib':
         specifier: 0.18.0
         version: 0.18.0(@types/express@4.17.23)
@@ -403,8 +403,9 @@ packages:
     resolution: {integrity: sha512-fPSzSjgX838+aNLiHD84JIOmbSIlAT5ZZACg5yOnUnCGlJjBMEQzGbQIWutfl/muiOZs8n+LY2e6kPytbpjsvw==}
     engines: {node: '>=16.15.0', npm: '>=8.5.5'}
 
-  '@alkemio/matrix-adapter-lib@0.8.16':
-    resolution: {integrity: sha512-XwnfgDpfvwOfBHXiUEys6zjAu9nLuOQgOeAKBEqwuaUKXMNEchRBpDOgdTc8Gad/ZPmvJ56XnhPuoP5Rl2yIrw==}
+  '@alkemio/matrix-adapter-lib@https://pkg.pr.new/@alkemio/matrix-adapter-lib@2c70078':
+    resolution: {tarball: https://pkg.pr.new/@alkemio/matrix-adapter-lib@2c70078}
+    version: 0.0.0-develop
     engines: {node: '>=22.x', pnpm: '>=9.x'}
 
   '@alkemio/notifications-lib@0.18.0':
@@ -6541,7 +6542,7 @@ snapshots:
       - encoding
       - supports-color
 
-  '@alkemio/matrix-adapter-lib@0.8.16': {}
+  '@alkemio/matrix-adapter-lib@https://pkg.pr.new/@alkemio/matrix-adapter-lib@2c70078': {}
 
   '@alkemio/notifications-lib@0.18.0(@types/express@4.17.23)':
     dependencies:
