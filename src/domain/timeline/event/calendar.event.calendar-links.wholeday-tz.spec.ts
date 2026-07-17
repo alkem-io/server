@@ -41,4 +41,19 @@ describe('whole-day export is timezone-independent', () => {
     expect(result.icalStart).toBe('20261203');
     expect(result.icalEnd).toBe('20261204');
   });
+
+  it('keeps the exact day count for a multi-day whole-day span crossing a DST transition', () => {
+    // Europe spring-forward 2026 is 29 March. A whole-day event covering
+    // 28–30 March (3 days) is stored as UTC-midnight; UTC date math has no DST,
+    // so the exclusive end is exactly 31 March (last covered day 30 + 1).
+    const result = formatDatesForCalendar(
+      '2026-03-28T00:00:00.000Z',
+      '2026-03-30T00:00:00.000Z',
+      true
+    );
+
+    expect(result.icalStart).toBe('20260328');
+    expect(result.icalEnd).toBe('20260331');
+    expect(result.google).toBe('20260328/20260331');
+  });
 });
