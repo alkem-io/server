@@ -47,6 +47,24 @@ import { IMessageAttachment } from './message.attachment.interface';
 export class MessageAttachmentService {
   private readonly enabled: boolean;
   private readonly matrixMediaBucketId: string;
+  /**
+   * FIX [1]: in-process single-flight for inbound re-homes, keyed by
+   * `${bucketId}:${media_id}`. rehomeOne is check-then-act, and it now runs from
+   * BOTH the eager `rehomeInboundAttachments` path AND the lazy read path
+   * (`resolveAttachmentDocument`). Two concurrent viewers that both miss the
+   * by-reference lookup would otherwise both re-home the same media: the MOVE
+   * branch orphans one minted authorization_policy (last-write-wins), and the COPY
+   * branch creates TWO rows sharing one externalReference (file-service has NO
+   * unique constraint on (bucket, externalReference) in prod). Coalescing collapses
+   * concurrent callers to a single placement.
+   *
+   * Residual: single-flight is PER-PROCESS. Multiple server pods can still race the
+   * same media (rare — only when the eager re-home already failed AND two pods read
+   * the same message simultaneously). The MOVE branch is naturally idempotent on the
+   * same staging row; a cross-pod COPY duplicate needs file-service-side
+   * reconciliation and is an accepted residual (not solved here).
+   */
+  private readonly rehomeInFlight = new Map<string, Promise<void>>();
 
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
@@ -309,7 +327,9 @@ export class MessageAttachmentService {
           await this.coalesceOutboundEcho(bucket, senderActorID, attachment);
         } else if (attachment.media_id) {
           // Inbound Element-origin media → verbatim MOVE / re-share COPY.
-          await this.rehomeOne(bucket, senderActorID, attachment);
+          // FIX [1]: single-flight so this eager re-home can't race a concurrent
+          // lazy read re-home (see resolveAttachmentDocument) on the same media.
+          await this.rehomeOnceCoalesced(bucket, senderActorID, attachment);
         }
       } catch (error) {
         // Never let one attachment break inbound message processing.
@@ -521,31 +541,35 @@ export class MessageAttachmentService {
   }
 
   /**
-   * Resolve the FULL storage bucket a message's attachments live in (H1 + FIX 6).
-   * Returns the `IStorageBucket` (with `authorization` loaded) — not just the id —
-   * so the read path resolves it ONCE and threads it to both the READ-gate and
-   * the lazy inbound re-home (FIX 2), instead of re-querying the conversation +
-   * bucket per attachment. Prefers the bucket id already carried on the message
-   * (set by the live-subscription path), otherwise resolves it from the message's
-   * room so attachments render on every read path, not just the inbox subscription.
+   * Resolve the storage bucket a message's attachments live in (H1 + FIX 6 + FIX
+   * [4]). Returns `{ id, bucket? }`:
+   *  - FAST PATH (live subscription, `message.storageBucketId` set): returns the id
+   *    ONLY, with NO `getStorageBucketOrFail` call — zero queries. The common read
+   *    cases never need the full bucket (outbound-echo id resolution, inbound-hit
+   *    by-reference, READ-gate via `document.authorization`); the full bucket is
+   *    loaded LAZILY inside resolveAttachmentDocument, only when the RARE lazy
+   *    inbound re-home actually needs `bucket.authorization`.
+   *  - HISTORY PATH (no `storageBucketId`): resolves the room → the FULL bucket
+   *    (with `authorization`, already joined by getTargetBucketForRoom per FIX 6) →
+   *    returns `{ id, bucket }` so the lazy re-home reuses it without a re-query.
+   * Returns undefined when the room/bucket can't be resolved.
    */
   private async resolveMessageBucket(
     message: IMessage
-  ): Promise<IStorageBucket | undefined> {
-    // FIX B: attachment resolution must NEVER break message reads. The read/
-    // history path (resolveMessageAttachments → here → getTargetBucketForRoom /
-    // getStorageBucketOrFail) can throw transiently (storage-aggregator / bucket
-    // lookups). An unguarded throw would propagate out of the @ResolveField and
-    // fail the ENTIRE getMessages/getLastMessages query for the viewer. Degrade to
-    // "bucket unknown" (undefined) → resolveMessageAttachments omits this message's
-    // attachments while the history query still succeeds. Same invariant as FIX 2.
+  ): Promise<{ id: string; bucket?: IStorageBucket } | undefined> {
+    // FIX B: attachment resolution must NEVER break message reads. The history path
+    // (resolveMessageAttachments → here → getTargetBucketForRoom) can throw
+    // transiently (storage-aggregator / bucket lookups). An unguarded throw would
+    // propagate out of the @ResolveField and fail the ENTIRE getMessages/
+    // getLastMessages query for the viewer. Degrade to "bucket unknown" (undefined)
+    // → resolveMessageAttachments omits this message's attachments while the history
+    // query still succeeds. Same invariant as FIX 2.
     try {
+      // Fast path: id already carried on the message → no query, no full bucket.
       if (message.storageBucketId) {
-        return await this.storageBucketService.getStorageBucketOrFail(
-          message.storageBucketId,
-          { relations: { authorization: true } }
-        );
+        return { id: message.storageBucketId };
       }
+      // History path: resolve the room → full bucket, then thread it through.
       if (!message.roomID) {
         return undefined;
       }
@@ -556,7 +580,11 @@ export class MessageAttachmentService {
       if (!room) {
         return undefined;
       }
-      return await this.getTargetBucketForRoom(room as IRoom);
+      const bucket = await this.getTargetBucketForRoom(room as IRoom);
+      if (!bucket) {
+        return undefined;
+      }
+      return { id: bucket.id, bucket };
     } catch {
       this.logger.warn?.(
         {
@@ -569,6 +597,33 @@ export class MessageAttachmentService {
       );
       return undefined;
     }
+  }
+
+  /**
+   * FIX [1]: single-flight wrapper around rehomeOne, keyed by
+   * `${bucket.id}:${media_id}`. If a re-home for that key is already in flight,
+   * return its promise so concurrent callers (eager + lazy read) share ONE
+   * placement; otherwise start it, register it, and clear the entry once it settles
+   * (so a later re-home can retry after a failure). The shared promise's rejection
+   * propagates to every awaiter — each caller's own try/catch handles it.
+   */
+  private rehomeOnceCoalesced(
+    bucket: IStorageBucket,
+    senderActorID: string,
+    attachment: ReceivedAttachment
+  ): Promise<void> {
+    const key = `${bucket.id}:${attachment.media_id}`;
+    const inFlight = this.rehomeInFlight.get(key);
+    if (inFlight) {
+      return inFlight;
+    }
+    const promise = this.rehomeOne(bucket, senderActorID, attachment).finally(
+      () => {
+        this.rehomeInFlight.delete(key);
+      }
+    );
+    this.rehomeInFlight.set(key, promise);
+    return promise;
   }
 
   private async rehomeOne(
@@ -679,10 +734,11 @@ export class MessageAttachmentService {
     // message.storageBucketId, but history reads (getMessage/getMessages/
     // getLastMessages) do not — so fall back to resolving it from the message's
     // room. Without this, inbound (media_id) attachments resolve to [] on reads.
-    // FIX 6: resolve the FULL bucket once and thread it down (used both for the
-    // by-reference lookup and the FIX 2 lazy re-home).
-    const bucket = await this.resolveMessageBucket(message);
-    if (!bucket) {
+    // FIX [4]: on the fast path resolveMessageBucket returns only the id
+    // (query-free); the full bucket is loaded LAZILY inside
+    // resolveAttachmentDocument, and ONLY when a rare inbound re-home needs it.
+    const resolved = await this.resolveMessageBucket(message);
+    if (!resolved) {
       return [];
     }
 
@@ -698,11 +754,12 @@ export class MessageAttachmentService {
     // a swallowed failure is logged at warn with roomId + messageId so a
     // persistent resolution defect surfaces in monitoring rather than silently
     // presenting as "no attachments".
-    const resolved = await Promise.all(
+    const resolvedAttachments = await Promise.all(
       message.rawAttachments.map(raw =>
         this.resolveReadAttachment(
           raw,
-          bucket,
+          resolved.id,
+          resolved.bucket,
           message.sender,
           actorContext
         ).catch(error => {
@@ -720,7 +777,7 @@ export class MessageAttachmentService {
         })
       )
     );
-    return resolved.filter(
+    return resolvedAttachments.filter(
       (attachment): attachment is IMessageAttachment => attachment !== null
     );
   }
@@ -733,18 +790,21 @@ export class MessageAttachmentService {
    */
   private async resolveReadAttachment(
     raw: ReceivedAttachment,
-    bucket: IStorageBucket,
+    bucketId: string,
+    bucketForRehome: IStorageBucket | undefined,
     senderActorID: string | undefined,
     actorContext: ActorContext
   ): Promise<IMessageAttachment | null> {
-    // Read path passes the full bucket as `bucketForRehome` so an inbound miss
-    // (media still in staging after a failed eager re-home) can lazily self-heal
-    // (FIX 2). The delete path passes no bucket, so it never re-homes.
+    // Read path passes `allowHeal:true` so the outbound heal + the lazy inbound
+    // re-home run ONLY here, never on delete. On the fast path `bucketForRehome` is
+    // undefined and the full bucket is lazy-loaded inside resolveAttachmentDocument
+    // only if an inbound miss actually needs a re-home; on the history path the
+    // full bucket is already resolved and threaded through to skip that query.
     const document = await this.resolveAttachmentDocument(
       raw,
-      bucket.id,
+      bucketId,
       senderActorID,
-      bucket
+      { allowHeal: true, bucketForRehome }
     );
     if (!document) {
       return null;
@@ -793,11 +853,16 @@ export class MessageAttachmentService {
     raw: ReceivedAttachment,
     storageBucketId: string | undefined,
     senderActorID: string | undefined,
-    // FIX 2: when provided (read path only), a missed inbound (media_id) lookup
-    // triggers a LAZY re-home into this bucket before giving up, so media stranded
-    // in staging by a failed eager re-home stops being permanently invisible. The
-    // delete path omits it, so releasing never re-homes.
-    bucketForRehome?: IStorageBucket
+    // FIX [0]/[4]: the outbound heal and the lazy inbound re-home run on the READ
+    // path ONLY, gated by `allowHeal`. The delete path (releaseAttachments) uses the
+    // default `allowHeal:false`, so releasing never pins a still-temporary doc
+    // durable (which would strand it durable+orphaned past a transiently-failed
+    // delete, beyond the 24h sweep's reach) and never re-homes. `bucketForRehome` is
+    // the pre-resolved full bucket (history path); when absent (fast path) the bucket
+    // is loaded LAZILY below, and ONLY when an inbound re-home is actually needed.
+    opts: { allowHeal: boolean; bucketForRehome?: IStorageBucket } = {
+      allowHeal: false,
+    }
   ): Promise<IDocument | null> {
     // Both branches require the message's bucket: the inbound branch keys the
     // by-reference lookup by it, and the outbound branch needs it to verify
@@ -845,10 +910,12 @@ export class MessageAttachmentService {
         // backs an EXISTING — therefore delivered — message, so observing it
         // still temporary is proof both the inline post-send flip AND the
         // echo-anchored pin failed. Heal it now so the 24h staging sweep cannot
-        // reap a delivered attachment. Mirrors the FIX 2 lazy inbound re-home
-        // in this function: best-effort, a pin failure is logged and must NEVER
-        // fail (or block) the read — the next read retries.
-        if (document.temporaryLocation === true) {
+        // reap a delivered attachment. Gated on `allowHeal` (READ path ONLY): on the
+        // delete path this must NOT fire — pinning a still-temporary doc durable
+        // right before deleteDocument would, if the delete then fails transiently,
+        // leave the doc durable+orphaned and unreachable by the 24h sweep. Best-
+        // effort: a pin failure is logged and must NEVER fail (or block) the read.
+        if (opts.allowHeal && document.temporaryLocation === true) {
           try {
             await this.fileServiceAdapter.moveDocument(document.id, {
               temporaryLocation: false,
@@ -881,16 +948,31 @@ export class MessageAttachmentService {
           // FIX 2 (self-heal): the eager inbound re-home may have failed
           // transiently, leaving the media in the matrix_media staging bucket
           // where this bucket-scoped lookup can't see it — permanent invisibility
-          // before this fix. Lazily re-home now (read path only), then re-run the
-          // lookup. rehomeOne is idempotent and needs the sender to attribute the
-          // doc (createdBy + auth mint), so skip when unattributable. Best-effort:
-          // if file-service is still down the re-home throws (or still misses) and
-          // we return null AS BEFORE — the next read retries and heals.
-          if (!bucketForRehome || !senderActorID) {
+          // before this fix. Lazily re-home now (READ path ONLY, gated by
+          // `allowHeal`), then re-run the lookup. rehomeOne is idempotent and needs
+          // the sender to attribute the doc (createdBy + auth mint), so skip when
+          // unattributable. Best-effort: if file-service is still down the re-home
+          // throws (or still misses) and we return null AS BEFORE — the next read
+          // retries and heals.
+          if (!opts.allowHeal || !senderActorID) {
             return null;
           }
+          // FIX [4]: load the full bucket LAZILY. The fast read path carries only
+          // the bucket id, so pay the getStorageBucketOrFail query + auth join ONLY
+          // here, when an inbound re-home is actually needed (mintDocumentAuth needs
+          // bucket.authorization). The history path pre-resolves it and threads it
+          // through as bucketForRehome, avoiding the extra round-trip.
+          const rehomeBucket =
+            opts.bucketForRehome ??
+            (await this.storageBucketService.getStorageBucketOrFail(
+              storageBucketId,
+              { relations: { authorization: true } }
+            ));
           try {
-            await this.rehomeOne(bucketForRehome, senderActorID, raw);
+            // FIX [1]: coalesce concurrent re-homes of the SAME media so two
+            // simultaneous readers don't both MOVE/COPY it (orphaned auth /
+            // duplicate doc).
+            await this.rehomeOnceCoalesced(rehomeBucket, senderActorID, raw);
           } catch (error) {
             this.logger.warn?.(
               {
@@ -970,7 +1052,11 @@ export class MessageAttachmentService {
       const document = await this.resolveAttachmentDocument(
         raw,
         storageBucketId,
-        senderActorID
+        senderActorID,
+        // Delete path: no outbound heal, no inbound re-home. Healing here would pin
+        // a still-temporary doc durable right before deleteDocument — a transient
+        // delete failure would then strand it durable+orphaned, beyond the sweep.
+        { allowHeal: false }
       );
       if (!document) {
         continue;

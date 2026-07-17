@@ -287,11 +287,16 @@ export class StorageAggregatorService {
         break;
       }
       case StorageAggregatorType.CONVERSATION: {
-        // Conversation storage aggregators (feature 013). A Conversation has no
-        // display name of its own — Matrix renders the peer / group name
-        // client-side — so use a stable literal like the ACCOUNT case, and the
+        // Conversation storage aggregators (feature 013). CONVERSATION was
+        // previously unhandled (it fell through to the default → NotSupportedException);
+        // it is now handled like the other parent types. A Conversation has no
+        // display name / URL of its own — Matrix renders the peer / group name
+        // client-side — so resolve to a stable literal like the ACCOUNT case, and the
         // platform URL as the best available target (no per-conversation URL
-        // generator exists). The hard requirement is that this must NOT throw.
+        // generator exists). Exactly like the sibling cases (Account/Space/Org/User),
+        // a genuinely-missing backing Conversation row throws EntityNotFoundException
+        // (a real data inconsistency): getParentEntity lets that propagate for every
+        // type, so this is deliberately NOT wrapped in a swallowing try/catch.
         const conversation =
           await this.storageAggregatorResolverService.getParentConversationForStorageAggregator(
             storageAggregator

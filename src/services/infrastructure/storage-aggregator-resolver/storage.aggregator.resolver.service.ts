@@ -106,9 +106,13 @@ export class StorageAggregatorResolverService {
       },
     });
     if (!conversation) {
+      // Coding standard: no dynamic data (ids) in the exception message — carry it
+      // in the structured `details` property instead. (The sibling resolvers above
+      // pre-date this rule and are intentionally out of scope.)
       throw new EntityNotFoundException(
-        `Unable to retrieve Conversation for storage aggregator ${storageAggregator.id}`,
-        LogContext.STORAGE_AGGREGATOR
+        'Unable to retrieve Conversation for storage aggregator',
+        LogContext.STORAGE_AGGREGATOR,
+        { storageAggregatorId: storageAggregator.id }
       );
     }
     return conversation;

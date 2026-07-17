@@ -1175,6 +1175,133 @@ describe('MessageAttachmentService', () => {
       expect(result).toEqual([]);
     });
 
+    it('[4] fast path: an outbound read with storageBucketId set never calls getStorageBucketOrFail', async () => {
+      // The live-subscription fast path carries the bucket id on the message. The
+      // common read cases (here: outbound-echo id resolution) never need the full
+      // bucket, so resolveMessageBucket must resolve the id query-free — no
+      // getStorageBucketOrFail round-trip + auth join per subscription message.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-1',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-1'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { document_id: 'doc-1', mime_type: 'image/png', size: 1000 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(
+        storageBucketService.getStorageBucketOrFail
+      ).not.toHaveBeenCalled();
+      expect(result).toEqual([expect.objectContaining({ id: 'doc-1' })]);
+    });
+
+    it('[4] fast path inbound miss: lazy-loads the bucket via getStorageBucketOrFail ONLY when a re-home is needed', async () => {
+      // storageBucketId is set (fast path) so resolveMessageBucket returns the id
+      // with NO bucket. An inbound (media_id) miss needs bucket.authorization to
+      // mint the doc auth, so the full bucket must be loaded LAZILY here — and only
+      // now, not eagerly for every message.
+      const rehomeSpy = vi
+        .spyOn(service as any, 'rehomeOne')
+        .mockResolvedValue(undefined);
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null) // initial bucket-scoped miss
+        .mockResolvedValue({ id: 'doc-rehomed' } as any); // re-lookup after re-home
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-rehomed',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-rehomed'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { media_id: 'media-1', mime_type: 'image/png', size: 1 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      // The bucket was lazy-loaded exactly for the re-home.
+      expect(storageBucketService.getStorageBucketOrFail).toHaveBeenCalledWith(
+        CONV_BUCKET,
+        { relations: { authorization: true } }
+      );
+      expect(rehomeSpy).toHaveBeenCalledTimes(1);
+      expect(result).toEqual([expect.objectContaining({ id: 'doc-rehomed' })]);
+    });
+
+    it('[1] single-flight: two concurrent inbound-miss reads for the same media_id re-home ONCE', async () => {
+      // Both attachments carry the SAME media_id and both MISS the bucket-scoped
+      // lookup. Without coalescing each would re-home the same media (orphaned auth
+      // on MOVE / duplicate doc on COPY). Single-flight collapses them to ONE
+      // rehomeOne invocation.
+      const rehomeSpy = vi
+        .spyOn(service as any, 'rehomeOne')
+        .mockResolvedValue(undefined);
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null) // attachment A initial miss
+        .mockResolvedValueOnce(null) // attachment B initial miss
+        .mockResolvedValue({ id: 'doc-rehomed' } as any); // both re-lookups hit
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-rehomed',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-rehomed'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { media_id: 'media-same', mime_type: 'image/png', size: 1 },
+            { media_id: 'media-same', mime_type: 'image/png', size: 1 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(rehomeSpy).toHaveBeenCalledTimes(1);
+      expect(result).toEqual([
+        expect.objectContaining({ id: 'doc-rehomed' }),
+        expect.objectContaining({ id: 'doc-rehomed' }),
+      ]);
+    });
+
     it('denies a non-member (READ not granted)', async () => {
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-1',
@@ -1311,6 +1438,41 @@ describe('MessageAttachmentService', () => {
       // up (a direct fileServiceAdapter.deleteDocument would leak them).
       expect(documentService.deleteDocument).toHaveBeenCalledWith({
         ID: 'doc-mine',
+      });
+    });
+
+    it('[0] does NOT pin a still-temporary outbound doc on delete (no heal on the delete path)', async () => {
+      // The outbound read-heal must NEVER fire on delete: pinning a still-temporary
+      // doc durable right before deleteDocument would, if the delete then failed
+      // transiently, strand it durable+orphaned beyond the 24h sweep's reach. The
+      // delete path uses allowHeal:false, so moveDocument is never called.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-temp',
+        createdBy: 'sender-1',
+        temporaryLocation: true,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+
+      await service.releaseAttachments(
+        [
+          {
+            document_id: 'doc-temp',
+            display_name: 'pic.png',
+            mime_type: 'image/png',
+            size: 1,
+          },
+        ],
+        CONV_BUCKET,
+        'sender-1'
+      );
+
+      // No durable pin on delete — the read path (allowHeal:true) still heals; see
+      // the "read-heal" tests above.
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      // The canonical delete still runs.
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'doc-temp',
       });
     });
 
