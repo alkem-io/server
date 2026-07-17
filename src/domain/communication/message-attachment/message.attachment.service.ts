@@ -533,15 +533,39 @@ export class MessageAttachmentService {
     }
   }
 
-  /** Resolve the read/resolution bucket id for a room (feature 013). */
+  /**
+   * Resolve the read/resolution bucket id for a room (feature 013).
+   *
+   * FIX [5]: the ONLY caller is the delete-release path, which needs the bucket
+   * ID and NEVER `bucket.authorization`. getTargetBucketForRoom joins
+   * `storageAggregator.directStorage.authorization` (needed by the re-home
+   * callers, FIX 6) — that auth join is dead weight here. Resolve the id WITHOUT
+   * loading the full bucket + authorization: the conversation branch selects only
+   * `storageAggregator.directStorage.id`, and the comment-room branch drops the
+   * authorization relation too. Behaviour is identical (same id, undefined when
+   * unresolved); getTargetBucketForRoom is untouched for the re-home callers.
+   */
   public async getResolutionBucketIdForRoom(
     room: IRoom
   ): Promise<string | undefined> {
     if (!this.enabled) {
       return undefined;
     }
-    const bucket = await this.getTargetBucketForRoom(room);
-    return bucket?.id;
+    if (isConversationRoom(room)) {
+      const conversation = await this.conversationRepository.findOne({
+        where: { room: { id: room.id } },
+        select: {
+          id: true,
+          storageAggregator: { id: true, directStorage: { id: true } },
+        },
+        relations: { storageAggregator: { directStorage: true } },
+      });
+      return conversation?.storageAggregator?.directStorage?.id ?? undefined;
+    }
+    if (this.isCommentRoom(room)) {
+      return this.getCommentRoomParentBucketId(room);
+    }
+    return undefined;
   }
 
   /**
@@ -1035,6 +1059,21 @@ export class MessageAttachmentService {
           );
           return null;
         }
+        // FIX [4] inbound dims: imageWidth/imageHeight are TRANSIENT,
+        // file-service-owned fields (content_metadata) — the getDocumentOrFail DB
+        // load above leaves them undefined. The by-reference `ref` already carries
+        // them (DocumentReferenceResult), so carry them over (only when present) so
+        // resolveReadAttachment surfaces the intrinsic dimensions on the
+        // MessageAttachment. Without them the m.image event / read resolution reach
+        // clients with no width/height and images render with layout reflow. These
+        // are transient runtime fields on the entity, safe to assign — zero extra
+        // I/O (the ref was already fetched for resolution).
+        if (ref.imageWidth !== undefined) {
+          document.imageWidth = ref.imageWidth;
+        }
+        if (ref.imageHeight !== undefined) {
+          document.imageHeight = ref.imageHeight;
+        }
         return document;
       }
     } catch (error) {
@@ -1239,6 +1278,33 @@ export class MessageAttachmentService {
         { relations: { directStorage: { authorization: true } } }
       );
     return fullAggregator.directStorage ?? undefined;
+  }
+
+  /**
+   * Comment-room parent bucket ID (FIX [5]): the id-only counterpart of
+   * getCommentRoomParentBucket for the delete-release path, which never reads
+   * bucket.authorization. Resolves callout → storage aggregator →
+   * directStorage.id WITHOUT joining the authorization relation. Same callout
+   * resolution and same undefined-when-unresolved behaviour as
+   * getCommentRoomParentBucket; only the wasted auth join is dropped.
+   */
+  private async getCommentRoomParentBucketId(
+    room: IRoom
+  ): Promise<string | undefined> {
+    const calloutId = await this.resolveParentCalloutId(room);
+    if (!calloutId) {
+      return undefined;
+    }
+    const aggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorForCallout(
+        calloutId
+      );
+    const fullAggregator =
+      await this.storageAggregatorResolverService.getStorageAggregatorOrFail(
+        aggregator.id,
+        { relations: { directStorage: true } }
+      );
+    return fullAggregator.directStorage?.id ?? undefined;
   }
 
   /** Resolve a comment room (callout or post) to its owning callout id. */

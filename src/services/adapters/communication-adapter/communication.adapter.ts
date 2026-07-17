@@ -793,6 +793,11 @@ export class CommunicationAdapter {
       });
     }
 
+    // FIX 6: map the attachments ONCE — the same AttachmentRef[] feeds both the
+    // outbound Matrix payload and the send-response `rawAttachments` carrier
+    // (AttachmentRef is structurally a ReceivedAttachment; see toAttachmentRefs).
+    const attachmentRefs = this.toAttachmentRefs(sendMessageData.attachments);
+
     const response = await this.sendCommand({
       operation: 'sendMessage',
       topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_SEND,
@@ -800,7 +805,7 @@ export class CommunicationAdapter {
         alkemio_room_id: sendMessageData.roomID,
         sender_actor_id: sendMessageData.actorID,
         content: sendMessageData.message,
-        attachments: this.toAttachmentRefs(sendMessageData.attachments),
+        attachments: attachmentRefs,
       } satisfies SendMessageRequest,
       errorContext: { roomID: sendMessageData.roomID },
       ensureSuccess: true,
@@ -821,7 +826,7 @@ export class CommunicationAdapter {
       // feature 013: carry the just-sent attachments + room on the response so
       // the send result resolves attachments like the read path (roomID is the
       // resolver's fallback to resolve the bucket when storageBucketId is unset).
-      rawAttachments: this.toAttachmentRefs(sendMessageData.attachments),
+      rawAttachments: attachmentRefs,
       roomID: sendMessageData.roomID,
     };
   }
@@ -833,6 +838,10 @@ export class CommunicationAdapter {
   async sendMessageReply(
     sendMessageData: CommunicationSendMessageReplyInput
   ): Promise<IMessage> {
+    // FIX 6: map the attachments ONCE — reused by both the outbound payload and
+    // the reply-response `rawAttachments` carrier (see sendMessage).
+    const attachmentRefs = this.toAttachmentRefs(sendMessageData.attachments);
+
     const response = await this.sendCommand({
       operation: 'sendMessageReply',
       topic: MatrixAdapterEventType.COMMUNICATION_MESSAGE_SEND,
@@ -841,7 +850,7 @@ export class CommunicationAdapter {
         sender_actor_id: sendMessageData.actorID,
         content: sendMessageData.message,
         parent_message_id: sendMessageData.threadID,
-        attachments: this.toAttachmentRefs(sendMessageData.attachments),
+        attachments: attachmentRefs,
       } satisfies SendMessageRequest,
       errorContext: { roomID: sendMessageData.roomID },
       ensureSuccess: true,
@@ -861,7 +870,7 @@ export class CommunicationAdapter {
       reactions: [],
       // feature 013: carry the just-sent attachments + room on the reply response
       // so it resolves attachments like the read path (see sendMessage).
-      rawAttachments: this.toAttachmentRefs(sendMessageData.attachments),
+      rawAttachments: attachmentRefs,
       roomID: sendMessageData.roomID,
     };
   }

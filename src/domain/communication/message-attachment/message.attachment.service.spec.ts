@@ -1091,6 +1091,94 @@ describe('MessageAttachmentService', () => {
       expect(result).toEqual([expect.objectContaining({ id: 'doc-rehomed' })]);
     });
 
+    it('[4] carries the by-reference image dimensions onto the resolved inbound attachment', async () => {
+      // imageWidth/imageHeight are TRANSIENT, file-service-owned fields
+      // (content_metadata) — the getDocumentOrFail DB load leaves them undefined.
+      // The by-reference `ref` already carries them, so the resolved
+      // MessageAttachment must surface width/height (clients render with intrinsic
+      // dimensions, no layout reflow) with zero extra I/O.
+      fileServiceAdapter.getDocumentByReference.mockResolvedValue({
+        id: 'doc-rehomed',
+        imageWidth: 640,
+        imageHeight: 480,
+      } as any);
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-rehomed',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        // No imageWidth/imageHeight on the DB-loaded doc — the transient dims are
+        // lost on a getDocumentOrFail load; they must come from the ref.
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-rehomed'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { media_id: 'media-1', mime_type: 'image/png', size: 1 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: 'doc-rehomed',
+          width: 640,
+          height: 480,
+        }),
+      ]);
+    });
+
+    it('[4] leaves width/height undefined when the by-reference ref carries no dimensions (non-image content)', async () => {
+      // A PDF / non-image ref has no imageWidth/imageHeight — the carry-over is
+      // guarded on presence, so the resolved attachment stays dimensionless
+      // rather than stamping undefined-over-nothing.
+      fileServiceAdapter.getDocumentByReference.mockResolvedValue({
+        id: 'doc-rehomed',
+      } as any);
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-rehomed',
+        createdBy: 'sender-1',
+        displayName: 'doc.pdf',
+        mimeType: 'application/pdf',
+        size: 1000,
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-rehomed'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            { media_id: 'media-1', mime_type: 'application/pdf', size: 1 },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(result).toEqual([
+        expect.objectContaining({
+          id: 'doc-rehomed',
+          width: undefined,
+          height: undefined,
+        }),
+      ]);
+    });
+
     it('FIX 2: lazily re-homes an inbound media_id that missed the bucket lookup, then resolves it', async () => {
       // Eager re-home failed transiently → media still in matrix_media staging,
       // so the bucket-scoped lookup misses. The read path must lazily re-home
