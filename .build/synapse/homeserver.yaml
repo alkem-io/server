@@ -41,6 +41,18 @@ modules_search_paths:
 modules:
   - module: alkemio_room_control.AlkemioRoomControl
     config: {}
+# 013-matrix-media-file-service: bridge Synapse media byte I/O to the Alkemio
+# file-service. Local user uploads are offloaded to file-service (quickstart:
+# the file-service container on :4003); store_synchronous so the store completes
+# before the upload response, making the server's inbound re-home race-free.
+media_storage_providers:
+  - module: alkemio_fileservice_provider.FileServiceStorageProvider
+    store_local: true
+    store_remote: false
+    store_synchronous: true
+    config:
+      file_service_url: "http://file-service:4003"
+      matrix_media_bucket_id: "00000000-0000-4000-8000-000000000013"
 # Password authentication configuration
 # Disabled to enforce SSO-only authentication (FR-001, FR-002)
 password_config:
