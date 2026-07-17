@@ -604,17 +604,21 @@ export class MessageAttachmentService {
   }
 
   /**
-   * FIX [1]: single-flight coalescer for inbound re-homes, keyed by
-   * `${bucketId}:${mediaId}`. The in-flight key is knowable WITHOUT the full
-   * bucket, so the check runs FIRST: if a re-home for that key is already in
-   * flight, return its promise (NO `startRehome` call — the caller's bucket load,
-   * folded into the thunk, is skipped entirely). Otherwise invoke the `startRehome`
-   * thunk — which loads the bucket and runs rehomeOne ONLY for the reader that
-   * actually starts the placement — register it, and clear the entry once it
-   * settles (so a later re-home can retry after a failure). Concurrent callers
-   * (eager + lazy read) thus share ONE placement AND one bucket load; the shared
-   * promise's rejection propagates to every awaiter — each caller's own try/catch
-   * handles it.
+   * FIX [1]: single-flight coalescer for the inbound re-home WRITE, keyed by
+   * `${bucketId}:${mediaId}`. If a re-home for that key is already in flight,
+   * return its promise (NO `startRehome` call). Otherwise invoke the `startRehome`
+   * thunk — which runs the single rehomeOne placement — register it, and clear the
+   * entry once it settles (so a later re-home can retry after a failure).
+   * Concurrent callers (eager + lazy read) thus share ONE placement (preventing the
+   * duplicate mint+MOVE / COPY); the shared promise's rejection propagates to every
+   * awaiter — each caller's own try/catch handles it.
+   *
+   * Only the WRITE is coalesced. The read-only bucket load stays PER-READER at the
+   * caller (fault isolation) — the thunk closes over an already-resolved bucket and
+   * never loads one itself. Folding the load into this shared thunk was tried and
+   * caused a read-path regression: the winning reader's transient bucket-load
+   * failure cascaded to every coalesced reader. See the lazy call site in
+   * resolveAttachmentDocument.
    *
    * Residual: single-flight is PER-PROCESS (see rehomeInFlight above).
    */
@@ -967,28 +971,33 @@ export class MessageAttachmentService {
             return null;
           }
           try {
-            // FIX [1]: coalesce concurrent re-homes of the SAME media so two
-            // simultaneous readers don't both MOVE/COPY it (orphaned auth /
-            // duplicate doc). The in-flight key is `${bucketId}:${media_id}` — known
-            // WITHOUT the full bucket — so the coalescing check runs BEFORE any
-            // bucket load. FIX [4]: the getStorageBucketOrFail query + auth join is
-            // folded INTO the thunk, so on the fast path it runs ONLY for the reader
-            // that actually starts the re-home; a concurrent second reader that
-            // joins the in-flight placement pays NO redundant bucket load. The
-            // history path still threads the pre-resolved bucket through as
+            // Load the bucket PER-READER, BEFORE the coalescer. The bucket load
+            // is a read-only op and is intentionally NOT folded into the shared
+            // single-flight thunk: doing so (tried in a prior round) removed
+            // per-reader fault isolation — a transient bucket-load failure for the
+            // WINNING reader (DB timeout / pool exhaustion) then propagated to
+            // every coalesced reader, so multiple viewers momentarily saw the
+            // attachment missing (self-heals next read, but a read-path
+            // regression). Keeping the load per-reader means one reader's
+            // transient load failure never cascades to concurrent readers. On the
+            // history path the pre-resolved bucket is threaded through as
             // bucketForRehome, avoiding the round-trip entirely.
-            await this.rehomeOnceCoalesced(
-              storageBucketId,
-              raw.media_id,
-              async () => {
-                const rehomeBucket =
-                  opts.bucketForRehome ??
-                  (await this.storageBucketService.getStorageBucketOrFail(
-                    storageBucketId,
-                    { relations: { authorization: true } }
-                  ));
-                await this.rehomeOne(rehomeBucket, senderActorID, raw);
-              }
+            const rehomeBucket =
+              opts.bucketForRehome ??
+              (await this.storageBucketService.getStorageBucketOrFail(
+                storageBucketId,
+                { relations: { authorization: true } }
+              ));
+            // FIX [1]: coalesce only the re-home WRITE so two simultaneous readers
+            // don't both MOVE/COPY the same media (orphaned auth on MOVE /
+            // duplicate doc on COPY) — the thunk closes over the already-resolved
+            // `rehomeBucket` and does NOT load the bucket itself. The redundant
+            // bucket load when two readers concurrently hit the same
+            // not-yet-re-homed media is the accepted, cheap cost of that
+            // fault isolation (this path is already rare — it only runs when the
+            // eager re-home failed).
+            await this.rehomeOnceCoalesced(storageBucketId, raw.media_id, () =>
+              this.rehomeOne(rehomeBucket, senderActorID, raw)
             );
           } catch (error) {
             this.logger.warn?.(

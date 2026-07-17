@@ -1257,14 +1257,15 @@ describe('MessageAttachmentService', () => {
       expect(result).toEqual([expect.objectContaining({ id: 'doc-rehomed' })]);
     });
 
-    it('[1] single-flight: two concurrent inbound-miss reads for the same media_id re-home ONCE and load the bucket ONCE', async () => {
+    it('[1] single-flight: two concurrent inbound-miss reads for the same media_id re-home the WRITE ONCE but load the bucket PER-READER', async () => {
       // Both attachments carry the SAME media_id and both MISS the bucket-scoped
       // lookup. Without coalescing each would re-home the same media (orphaned auth
-      // on MOVE / duplicate doc on COPY). Single-flight collapses them to ONE
-      // rehomeOne invocation. FIX [1] round-5b: the coalescing check runs BEFORE
-      // the bucket load (the thunk), so the second reader joins the in-flight
-      // placement WITHOUT paying a redundant getStorageBucketOrFail — that load now
-      // coalesces too (called exactly once, not twice).
+      // on MOVE / duplicate doc on COPY). Single-flight collapses the WRITE to ONE
+      // rehomeOne invocation. FIX [1] round-5c: the read-only bucket load is
+      // intentionally PER-READER (fault isolation) — a transient bucket-load
+      // failure for one reader must NOT cascade to concurrent coalesced readers, so
+      // getStorageBucketOrFail is called once PER reader (twice here), the accepted
+      // cheap cost of that isolation. Only the WRITE is coalesced.
       const rehomeSpy = vi
         .spyOn(service as any, 'rehomeOne')
         .mockResolvedValue(undefined);
@@ -1298,11 +1299,13 @@ describe('MessageAttachmentService', () => {
         {} as any
       );
 
+      // The WRITE is still coalesced — the key [1] invariant (one placement, so no
+      // duplicate mint+MOVE / COPY).
       expect(rehomeSpy).toHaveBeenCalledTimes(1);
-      // The bucket load is folded into the thunk, which only the reader that
-      // STARTS the re-home runs — the coalesced second reader skips it entirely.
+      // The read-only bucket load is PER-READER for fault isolation — each of the
+      // two concurrent readers loads its own bucket (the deliberate trade).
       expect(storageBucketService.getStorageBucketOrFail).toHaveBeenCalledTimes(
-        1
+        2
       );
       expect(result).toEqual([
         expect.objectContaining({ id: 'doc-rehomed' }),
