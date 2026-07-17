@@ -11,10 +11,12 @@ import { randomUUID } from 'crypto';
  * no data migration for the rules themselves — run one authorization reset
  * post-deploy).
  *
- * Fresh bootstraps seed this role via the seed migration's
- * createPlatformRoles; this migration covers already-bootstrapped databases.
- * Idempotent: it inserts only when the role is absent from the platform
- * RoleSet.
+ * This migration is the single source of the role for BOTH cases: on a fresh
+ * bootstrap it runs after the seed (higher timestamp) and inserts the role;
+ * on an already-bootstrapped database it patches the existing platform RoleSet.
+ * The seed migration is intentionally left untouched (applied migrations are
+ * immutable). Idempotent: it inserts only when the role is absent from the
+ * platform RoleSet.
  */
 export class ServiceAdminRole1783600000000 implements MigrationInterface {
   name = 'ServiceAdminRole1783600000000';
