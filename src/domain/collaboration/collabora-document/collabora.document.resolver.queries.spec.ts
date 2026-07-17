@@ -201,4 +201,51 @@ describe('CollaboraDocumentResolverQueries', () => {
       );
     });
   });
+
+  describe('collaboraServiceAvailable', () => {
+    it('checks read access then returns WOPI health — with no token issued and no analytics', async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+      } as any);
+      vi.mocked(
+        collaboraDocumentService.isWopiServiceAvailable
+      ).mockResolvedValue(true);
+      const contributionReporter = (resolver as any).contributionReporter;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      const result = await resolver.collaboraServiceAvailable(
+        actorContext,
+        'collab-doc-1'
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
+      expect(result).toBe(true);
+      // Side-effect-free health check: no token minted, no analytics recorded.
+      expect(collaboraDocumentService.getEditorUrl).not.toHaveBeenCalled();
+      expect(
+        contributionReporter.collaboraDocumentOpened
+      ).not.toHaveBeenCalled();
+    });
+
+    it('returns false when the WOPI health check reports the service unavailable', async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+      } as any);
+      vi.mocked(
+        collaboraDocumentService.isWopiServiceAvailable
+      ).mockResolvedValue(false);
+
+      const result = await resolver.collaboraServiceAvailable(
+        { actorID: 'user-1' } as any,
+        'collab-doc-1'
+      );
+      expect(result).toBe(false);
+    });
+  });
 });
