@@ -21,8 +21,40 @@ jobs:
         run: |
           docker build -f Dockerfile . -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }} -t ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:latest
           docker push ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
-  migrate:
+
+  # Serialise against a running test-suites nightly. A deploy that lands
+  # mid-nightly rolls the (single-replica) server pod and migrates the DB under
+  # live tests, which tore down the auth endpoint and cascaded the run to
+  # failure (see server#6258 / test-suites#563). The lock is a ConfigMap in the
+  # test cluster; the nightly holds it across cleanup-db + e2e. Held only around
+  # migrate + deploy — the docker build above needs no cluster and stays
+  # unlocked. Nightly-triggered deploys run before the nightly takes the lock,
+  # so there is no deadlock.
+  acquire-lock:
     needs: build
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@v4.1.7
+
+      - name: Install Kubectl
+        uses: azure/setup-kubectl@v4.0.0
+        with:
+          version: 'v1.27.6'
+
+      - name: Set up Kubeconfig for Hetzner k3s
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Acquire test-cluster deploy lock
+        run: |
+          chmod +x .github/scripts/test-cluster-lock.sh
+          .github/scripts/test-cluster-lock.sh acquire "server-deploy-${{ github.run_id }}"
+
+  migrate:
+    needs: acquire-lock
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
@@ -101,3 +133,30 @@ jobs:
             ${{ secrets.REGISTRY_LOGIN_SERVER }}/alkemio-server:${{ github.sha }}
           imagepullsecrets: |
             alkemio-server-secret
+
+  # Always release the lock — even if migrate/deploy failed — so the next deploy
+  # or nightly isn't blocked until the stale-TTL reclaim (60 min) kicks in. Runs
+  # only if the lock was actually acquired.
+  release-lock:
+    needs: [acquire-lock, migrate, deploy]
+    if: always() && needs.acquire-lock.result == 'success'
+    runs-on: ubuntu-latest
+    steps:
+      - name: 'Checkout GitHub Action'
+        uses: actions/checkout@v4.1.7
+
+      - name: Install Kubectl
+        uses: azure/setup-kubectl@v4.0.0
+        with:
+          version: 'v1.27.6'
+
+      - name: Set up Kubeconfig for Hetzner k3s
+        run: |
+          mkdir -p "$HOME/.kube"
+          echo "${{ secrets.KUBECONFIG_SECRET_HETZNER_TEST }}" > "$HOME/.kube/config"
+          chmod 600 "$HOME/.kube/config"
+
+      - name: Release test-cluster deploy lock
+        run: |
+          chmod +x .github/scripts/test-cluster-lock.sh
+          .github/scripts/test-cluster-lock.sh release "server-deploy-${{ github.run_id }}"

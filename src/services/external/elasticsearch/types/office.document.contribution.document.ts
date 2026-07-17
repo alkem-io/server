@@ -1,12 +1,14 @@
 import { ContributionType } from './contribution.type';
+import { TypedActorSet } from './typed.actor.set';
 
 /**
  * Aggregate Elasticsearch `contribution` document for a Collabora document
  * edited within a window. Unlike the per-user contribution documents (which
  * carry a single `author` via {@link ContributionAuthorDetails}), this is ONE
- * aggregate document per (document, window) carrying two user arrays:
- * `writeActors` (write-capable active users) and `readonlyActors` (read-only
- * active users). See feature 003-collabora-doc-contributions.
+ * aggregate document per (document, window) carrying two actor sets:
+ * `writeActors` (write-capable active actors) and `readonlyActors` (read-only
+ * active actors), each grouped by the actor's {@link ActorType}. See features
+ * agents-hq workspace specs 003-collabora-doc-contributions and 012-collabora-actor-type.
  */
 export type OfficeDocumentContributionDocument = {
   /**
@@ -35,13 +37,18 @@ export type OfficeDocumentContributionDocument = {
    */
   space: string;
   /**
-   * Distinct write-capable users active in the edited window — bare actor-id
-   * strings (Elasticsearch indexes a string array as a multi-valued field,
-   * shown comma-joined and individually filterable in Kibana).
+   * Distinct write-capable actors active in the edited window, grouped by the
+   * actor's {@link ActorType} — an object keyed by the exact discriminator
+   * value (e.g. `user`, `virtual-contributor`) plus the reserved `unknown`
+   * bucket, whose value is the array of actor-id strings of that type. Only
+   * non-empty groups are present; an empty set is `{}`. Each key dynamic-maps
+   * to its own multi-valued keyword sub-field, individually filterable in
+   * Kibana (e.g. `writeActors.user`).
    */
-  writeActors: string[];
+  writeActors: TypedActorSet;
   /**
-   * Distinct read-only users active in the edited window — bare actor-id strings.
+   * Distinct read-only actors active in the edited window, grouped by
+   * {@link ActorType} — same type-keyed shape as {@link writeActors}.
    */
-  readonlyActors: string[];
+  readonlyActors: TypedActorSet;
 };

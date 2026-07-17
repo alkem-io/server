@@ -7,6 +7,7 @@ volumes:
   rabbitmq_data:
     driver: local
   alkemio_dev_redis:
+  alkemio_dev_backup:
 
 networks:
   alkemio_dev_net:
@@ -389,7 +390,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.35.0
+    image: alkemio/notifications:v0.36.0
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -504,7 +505,9 @@ services:
   whiteboard-collaboration:
     container_name: alkemio_dev_whiteboard_collaboration
     hostname: whiteboard-collaboration
-    image: alkemio/whiteboard-collaboration-service:v0.11.0
+    # External scene updates (Option A: merge external writes as a collaborator)
+    # shipped in v0.12.0 (2026-06-29), superseding the earlier livepush-local build.
+    image: alkemio/whiteboard-collaboration-service:v0.12.0
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -526,7 +529,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.1.0
+    image: alkemio/file-service:v0.2.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -541,6 +544,13 @@ services:
       - AUTH_SERVICE_URL=http://authorization-evaluation:6060
       - LOCAL_STORAGE_PATH=/storage
       - STORAGE_TYPE=local
+      # 008-continuous-file-backup: write the backup outbox on every non-temporary object so
+      # file-backup-service can replicate it. Consumed by the file-backup-service below.
+      # REQUIRES the file_backup_outbox table + scoped role from server migration 1783508955161 —
+      # run `pnpm run migration:run` (dev-flow step 2) BEFORE uploading files. Until it is applied,
+      # every upload's transactional outbox INSERT fails and the worker below crash-loops on its
+      # startup probe (both recover once the migration runs).
+      - FILE_BACKUP_OUTBOX_ENABLED=true
       - LOG_LEVEL=info
     restart: always
     volumes:
@@ -549,6 +559,69 @@ services:
       - alkemio_dev_net
     ports:
       - 4003
+
+  # 008-continuous-file-backup — one-shot: apply the ledger DB migrations, then exit. The worker
+  # below waits for this to complete (service_completed_successfully).
+  file-backup-migrate:
+    container_name: alkemio_dev_file_backup_migrate
+    image: alkemio/file-backup-service:v0.0.4
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # migrate only needs the ledger DB (it applies the ledger schema, then exits).
+    environment:
+      - FBS_LEDGERDB_HOST=postgres
+      - FBS_LEDGERDB_DBNAME=filebackup
+      - FBS_LEDGERDB_SSLMODE=disable
+      - FBS_LEDGERDB_USER=${POSTGRES_USER}
+      - FBS_LEDGERDB_PASSWORD=${POSTGRES_PASSWORD}
+    command: ['migrate']
+    networks:
+      - alkemio_dev_net
+    restart: 'no'
+
+  # 008-continuous-file-backup — the backup worker: drains the outbox and replicates every object
+  # to the local filesystem target (a Docker volume). Content-addressed by SHA3-256. Configured
+  # ENTIRELY from env (12-factor) — no config file. The nonroot image pre-creates /storage owned by
+  # 65532 + declares it a VOLUME, so the mounted named volume is writable (same as file-service).
+  file-backup-service:
+    container_name: alkemio_dev_file_backup_service
+    hostname: file-backup-service
+    image: alkemio/file-backup-service:v0.0.4
+    depends_on:
+      postgres:
+        condition: service_healthy
+      file-service:
+        condition: service_started
+      file-backup-migrate:
+        condition: service_completed_successfully
+    environment:
+      - FBS_FILESERVICEBASE=http://file-service:4003
+      # the outbox lives in the alkemio DB; the ledger in its own DB — both on the shared dev postgres
+      - FBS_ALKEMIODB_HOST=postgres
+      - FBS_ALKEMIODB_DBNAME=${DATABASE_NAME}
+      - FBS_ALKEMIODB_SSLMODE=disable
+      - FBS_ALKEMIODB_USER=${POSTGRES_USER}
+      - FBS_ALKEMIODB_PASSWORD=${POSTGRES_PASSWORD}
+      - FBS_LEDGERDB_HOST=postgres
+      - FBS_LEDGERDB_DBNAME=filebackup
+      - FBS_LEDGERDB_SSLMODE=disable
+      - FBS_LEDGERDB_USER=${POSTGRES_USER}
+      - FBS_LEDGERDB_PASSWORD=${POSTGRES_PASSWORD}
+      # a single local filesystem target at /storage (a Docker volume)
+      - FBS_TARGETS=local
+      - FBS_TARGET_LOCAL_TYPE=filesystem
+      - FBS_TARGET_LOCAL_PATH=/storage
+      - FBS_POLLEVERYSEC=5
+      - LOG_LEVEL=info
+    command: ['serve']
+    restart: always
+    volumes:
+      - alkemio_dev_backup:/storage
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 4004
 
   kratos-hooks:
     extra_hosts:
@@ -624,9 +697,11 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_wopi_service
     hostname: wopi-service
-    image: alkemio/wopi-service:v0.1.0
+    image: alkemio/wopi-service:v0.1.4
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       authorization-evaluation:
         condition: service_started
@@ -655,6 +730,10 @@ services:
       - WOPI_TOKEN_SECRET=dev-wopi-token-secret-change-in-production
       - WOPI_SERVER_PORT=8080
       - WOPI_PROOF_VALIDATION=false
+      # RabbitMQ — WITHOUT this the publisher is a no-op and every event the WOPI
+      # emits (office-document contribution/view AND the in-editor rename event the
+      # server consumes to persist a Collabora rename) is silently dropped.
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       - LOG_LEVEL=info
     restart: unless-stopped
     networks:
@@ -691,3 +770,90 @@ services:
       - alkemio_dev_net
     ports:
       - 9980
+
+  # Headless auth-reset consumer. Same Alkemio image as the API server; the
+  # AUTH_RESET_WORKER=true env flips main.ts into worker role (binds only the
+  # `alkemio-auth-reset` queue, prefetch=1, no HTTP). The API publisher runs on
+  # the host (`pnpm start:dev`) and emits resets that these containers drain.
+  #
+  # Competing-consumers: scale to N instances that split the queue with no extra
+  # config. Hence NO container_name and NO published port (both would collide
+  # across replicas). profiles: ['auth-reset'] keeps it OUT of a plain `up` — it
+  # boots at 0 and is scaled 0<->N solely by the auth-reset-scaler sidecar below.
+  auth-reset-worker:
+    profiles: ['auth-reset']
+    build:
+      context: .
+      dockerfile: Dockerfile
+    env_file:
+      - .env.docker
+    environment:
+      - AUTH_RESET_WORKER=true
+      # Graceful-drain budget on SIGTERM (default 55s). Short locally so
+      # `compose down` / scale-in returns quickly.
+      - AUTH_RESET_DRAIN_TIMEOUT_SECONDS=55
+      # .env.docker maps DATABASE_HOST=postgres and RABBITMQ_HOST=rabbitmq, but
+      # not REDIS_HOST (defaults to localhost in alkemio.yml — right for the host
+      # server via traefik, wrong inside a container). Point it at the service.
+      - REDIS_HOST=redis
+    # No command override: the image's own CMD (`node dist/main.js`) is correct.
+    # In the Docker build only `src` is copied, so tsc's rootDir collapses to
+    # `src` and output flattens to dist/main.js. (A host `nest build` instead
+    # emits dist/src/main.js because tsconfig `include` also pulls in test/,
+    # keeping src/ as a subdir — that layout does NOT exist in the image.)
+    depends_on:
+      postgres:
+        condition: service_healthy
+      rabbitmq:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    # SIGTERM starts the drain; give it the full budget + margin before SIGKILL.
+    stop_grace_period: 60s
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net
+
+  # Local KEDA analogue. Starts with the base stack (no profile), watches the
+  # `alkemio-auth-reset` queue via the RabbitMQ mgmt API, and drives the worker
+  # 0<->MAX_REPLICAS through the host Docker socket. Nothing manual: `up` brings
+  # this online, it scales the worker up from zero when resets arrive and back to
+  # zero once the queue drains. COMPOSE_PROFILES=auth-reset lets it manage the
+  # profiled worker; COMPOSE_PROJECT_NAME must match the host stack's project
+  # (compose derives it from the repo dir basename, default `server`) so the
+  # sidecar targets the SAME containers/network instead of forking a new stack.
+  auth-reset-scaler:
+    image: docker:27-cli
+    working_dir: /workspace
+    # RABBITMQ_HOST / RABBITMQ_USER / RABBITMQ_PASSWORD (+ optional
+    # RABBITMQ_AUTH_RESET_QUEUE) come straight from .env.docker; the script
+    # derives the mgmt URL and creds from them. No credentials duplicated here.
+    # .env.docker.local (per-dev, gitignored) layers on top when present.
+    env_file:
+      - path: .env.docker
+        required: true
+      - path: .env.docker.local
+        required: false
+    environment:
+      - COMPOSE_PROJECT_NAME=${COMPOSE_PROJECT_NAME:-server}
+      - COMPOSE_PROFILES=auth-reset
+      - COMPOSE_FILE=quickstart-services.yml
+      - ENV_FILE=.env.docker
+      - MAX_REPLICAS=${AUTH_RESET_MAX_REPLICAS:-3}
+      - INTERVAL=${AUTH_RESET_POLL_INTERVAL:-5}
+      - IDLE_ROUNDS=${AUTH_RESET_IDLE_ROUNDS:-3}
+    volumes:
+      # Host Docker socket => the sidecar drives the same daemon the stack runs on.
+      - /var/run/docker.sock:/var/run/docker.sock
+      # Repo mount => the compose file, .env.docker, build context, and the
+      # autoscale script are all visible at /workspace.
+      - .:/workspace
+    depends_on:
+      rabbitmq:
+        condition: service_healthy
+    entrypoint: ['/bin/sh', '-c']
+    command:
+      - 'apk add --no-cache bash jq curl docker-cli-compose >/dev/null && exec bash ./scripts/auth-reset-autoscale.sh'
+    restart: unless-stopped
+    networks:
+      - alkemio_dev_net

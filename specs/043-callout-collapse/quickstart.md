@@ -62,7 +62,7 @@ Expected: Returns `COLLAPSED`.
 
 ### 5. Create a new space and verify default
 
-After creating a new space, query its settings. Expected: `calloutDescriptionDisplayMode: COLLAPSED`.
+After creating a new space, query its settings. Expected: `calloutDescriptionDisplayMode: EXPANDED`.
 
 ## Run Tests
 

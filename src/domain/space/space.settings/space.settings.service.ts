@@ -18,7 +18,7 @@ export class SpaceSettingsService {
     if (!settings.layout?.calloutDescriptionDisplayMode) {
       settings.layout = {
         ...settings.layout,
-        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+        calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
       };
     }
     return settings;
@@ -35,6 +35,10 @@ export class SpaceSettingsService {
       if (updateData.privacy.allowPlatformSupportAsAdmin !== undefined) {
         settings.privacy.allowPlatformSupportAsAdmin =
           updateData.privacy.allowPlatformSupportAsAdmin;
+      }
+      if (updateData.privacy.userInformationVisibility !== undefined) {
+        settings.privacy.userInformationVisibility =
+          updateData.privacy.userInformationVisibility;
       }
     }
     if (updateData.membership) {

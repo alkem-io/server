@@ -256,6 +256,39 @@ export class CommunityResolverService {
     return community;
   }
 
+  /**
+   * Resolve callout → CalloutsSet → Collaboration → Space (the HOST space) for a
+   * collaboration callout, loading the host space's direct subspaces and their
+   * profiles (workspace#013-spaces-collection-callout). Host-space-generic:
+   * works on any level (L0 or L1) — it returns whatever the host space's
+   * subspaces relation contains (empty for a leaf). Returns null when the
+   * callout is not attached to a space (e.g. a template / knowledge-base
+   * callout), so the SPACES collection resolves to an empty list there.
+   */
+  public async getSpaceWithSubspacesFromCollaborationCallout(
+    calloutId: string
+  ): Promise<Space | null> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        collaboration: {
+          calloutsSet: {
+            callouts: {
+              id: calloutId,
+            },
+          },
+        },
+      },
+      relations: {
+        subspaces: {
+          about: {
+            profile: true,
+          },
+        },
+      },
+    });
+    return space ?? null;
+  }
+
   public async getCommunityFromWhiteboardOrFail(
     whiteboardId: string
   ): Promise<ICommunity> {
@@ -561,6 +594,43 @@ export class CommunityResolverService {
       );
     }
     return community;
+  }
+
+  /**
+   * Lightweight spaceID -> roleSetID resolution (only the join needed for the
+   * lookup, no relation hydration beyond it). Returns undefined when the space
+   * (or its community/role-set) does not exist — for best-effort cache
+   * invalidation, not authorisation.
+   */
+  public async getRoleSetIdForSpace(
+    spaceID: string
+  ): Promise<string | undefined> {
+    const space = await this.entityManager.findOne(Space, {
+      where: { id: spaceID },
+      relations: { community: { roleSet: true } },
+    });
+    return space?.community?.roleSet?.id;
+  }
+
+  /**
+   * Settings-only Space read for a role-set: no relation hydration (unlike
+   * {@link getSpaceForRoleSetOrFail}, which joins about.profile). Used on hot
+   * paths that only gate on `space.settings` — e.g. the combined-application
+   * reachability checks, which run per-ancestor during authorization resets.
+   */
+  public async getSpaceSettingsForRoleSet(
+    roleSetID: string
+  ): Promise<ISpace['settings'] | undefined> {
+    const space = await this.entityManager.findOne(Space, {
+      where: {
+        community: {
+          roleSet: {
+            id: roleSetID,
+          },
+        },
+      },
+    });
+    return space?.settings;
   }
 
   public async getSpaceForRoleSetOrFail(roleSetID: string): Promise<ISpace> {

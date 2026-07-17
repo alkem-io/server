@@ -170,13 +170,23 @@ export class BootstrapService {
    * sends this same plaintext as its delegation bearer; the server stores only
    * its SHA-256 hash, bound to the virtual-assistant actor. Idempotent (a no-op
    * once the row matches). Skipped — with a warning, never failing bootstrap —
-   * when the secret is unset or the actor is absent.
+   * when the secret is unset, malformed, or the actor is absent.
    */
   private async ensureAssistantMcpApiKey(): Promise<void> {
     const plaintext = process.env.ASSISTANT_MCP_API_KEY?.trim();
     if (!plaintext) {
       this.logger.warn?.(
         'ASSISTANT_MCP_API_KEY is not set — skipping virtual-assistant MCP key bootstrap; delegated MCP (the Web AI Assistant) is unavailable until it is provisioned',
+        LogContext.BOOTSTRAP
+      );
+      return;
+    }
+    // The MCP API-key strategy only engages `Authorization: Bearer mcp_…`
+    // headers, so a key without the prefix would bootstrap a row that can
+    // never authenticate: every asvc call 401s while bootstrap logs success.
+    if (!plaintext.startsWith('mcp_')) {
+      this.logger.warn?.(
+        "ASSISTANT_MCP_API_KEY does not start with 'mcp_' — skipping virtual-assistant MCP key bootstrap; the MCP host only accepts 'Bearer mcp_…' keys, so this key could never authenticate. Provision a key in the format mcp_<base64url(32)>",
         LogContext.BOOTSTRAP
       );
       return;

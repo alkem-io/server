@@ -343,7 +343,8 @@ describe('ActorService', () => {
       expect(actorRepository.findOne).toHaveBeenCalled();
       expect(credentialService.createCredentialForActor).toHaveBeenCalledWith(
         'actor-1',
-        { type: 'admin' }
+        { type: 'admin' },
+        undefined
       );
       expect(cacheManager.del).toHaveBeenCalledWith('@actor:id:actor-1');
       expect(actorContextCacheService.deleteByActorID).toHaveBeenCalledWith(

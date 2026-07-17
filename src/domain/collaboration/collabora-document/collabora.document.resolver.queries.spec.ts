@@ -141,6 +141,37 @@ describe('CollaboraDocumentResolverQueries', () => {
       });
     });
 
+    it('forwards undefined (not an empty string) when the actor has no display name', async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+        profile: { displayName: 'Quarterly Report' },
+      } as any);
+      vi.mocked(collaboraDocumentService.getEditorUrl).mockResolvedValue({
+        editorUrl: 'https://collabora/editor',
+        accessTokenTTL: 3600,
+      });
+
+      const actorLookupService = (resolver as any).actorLookupService;
+      // Blank displayName and empty nameID → getActorDisplayName returns ''.
+      vi.mocked(actorLookupService.getActorById).mockResolvedValue({
+        profile: { displayName: '  ' },
+        nameID: '',
+      } as any);
+
+      const actorContext = { actorID: 'user-1', isGuest: false } as any;
+      await resolver.collaboraEditorUrl(actorContext, 'collab-doc-1');
+
+      // '' is coalesced to undefined so WOPI applies its own fallback.
+      expect(collaboraDocumentService.getEditorUrl).toHaveBeenCalledWith(
+        'collab-doc-1',
+        'user-1',
+        undefined
+      );
+    });
+
     it('uses the guest name from the ActorContext without an actor lookup (#6170)', async () => {
       vi.mocked(
         collaboraDocumentService.getCollaboraDocumentOrFail
@@ -168,6 +199,53 @@ describe('CollaboraDocumentResolverQueries', () => {
         'guest-abc',
         'Guest Bob'
       );
+    });
+  });
+
+  describe('collaboraServiceAvailable', () => {
+    it('checks read access then returns WOPI health — with no token issued and no analytics', async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+      } as any);
+      vi.mocked(
+        collaboraDocumentService.isWopiServiceAvailable
+      ).mockResolvedValue(true);
+      const contributionReporter = (resolver as any).contributionReporter;
+      const actorContext = { actorID: 'user-1' } as any;
+
+      const result = await resolver.collaboraServiceAvailable(
+        actorContext,
+        'collab-doc-1'
+      );
+
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
+      expect(result).toBe(true);
+      // Side-effect-free health check: no token minted, no analytics recorded.
+      expect(collaboraDocumentService.getEditorUrl).not.toHaveBeenCalled();
+      expect(
+        contributionReporter.collaboraDocumentOpened
+      ).not.toHaveBeenCalled();
+    });
+
+    it('returns false when the WOPI health check reports the service unavailable', async () => {
+      vi.mocked(
+        collaboraDocumentService.getCollaboraDocumentOrFail
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        authorization: { id: 'auth-1' },
+      } as any);
+      vi.mocked(
+        collaboraDocumentService.isWopiServiceAvailable
+      ).mockResolvedValue(false);
+
+      const result = await resolver.collaboraServiceAvailable(
+        { actorID: 'user-1' } as any,
+        'collab-doc-1'
+      );
+      expect(result).toBe(false);
     });
   });
 });

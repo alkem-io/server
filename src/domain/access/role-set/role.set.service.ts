@@ -11,6 +11,7 @@ import { RoleName } from '@common/enums/role.name';
 import { RoleSetRoleImplicit } from '@common/enums/role.set.role.implicit';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { RoleSetUpdateType } from '@common/enums/role.set.update.type';
+import { SpacePrivacyMode } from '@common/enums/space.privacy.mode';
 import {
   EntityNotFoundException,
   EntityNotInitializedException,
@@ -48,13 +49,14 @@ import { UserLookupService } from '@domain/community/user-lookup/user.lookup.ser
 import { IVirtualContributor } from '@domain/community/virtual-contributor/virtual.contributor.interface';
 import { VirtualContributorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { SpaceLookupService } from '@domain/space/space.lookup/space.lookup.service';
+import { ISpaceSettings } from '@domain/space/space.settings/space.settings.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { InAppNotificationService } from '@platform/in-app-notification/in.app.notification.service';
 import { AiServerAdapter } from '@services/adapters/ai-server-adapter/ai.server.adapter';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, In, Not, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, In, Not, Repository } from 'typeorm';
 import { IActorRolePolicy } from '../role/actor.role.policy.interface';
 import { IRole } from '../role/role.interface';
 import { RoleService } from '../role/role.service';
@@ -63,6 +65,36 @@ import { RoleSet } from './role.set.entity';
 import { IRoleSet } from './role.set.interface';
 import { RoleSetCacheService } from './role.set.service.cache';
 import { RoleSetEventsService } from './role.set.service.events';
+
+/**
+ * Options for {@link RoleSetService.ensureMemberOfRoleSetAndAncestors}. The
+ * shared grant service is consumed by the application-approval, the
+ * invitation-accept, and the direct-join flows (feature 017 — FR-017/FR-026);
+ * the source-specific behaviour is expressed through these options.
+ */
+export interface EnsureMemberOfRoleSetAndAncestorsOptions {
+  /**
+   * Which flow is invoking the shared grant. `'join'` (feature 017 round 2 —
+   * direct join / OPEN membership policy) is treated identically to
+   * `'application'` for the ancestor-grant decision, except that it has no
+   * approval step: the combined-flow authorisation is evaluated once, at join
+   * time (no FR-015 re-evaluation window). It carries no invitation-only
+   * post-steps.
+   */
+  source: 'application' | 'invitation' | 'join';
+  /**
+   * Invitation only: whether the invitee should also be granted membership of
+   * the ancestor chain (mirrors `Invitation.invitedToParent`). For the
+   * application and join sources ancestor-granting is decided by evaluating the
+   * combined-flow authorisation (application: re-evaluated at approval time,
+   * FR-015; join: evaluated once at join time), not by this flag.
+   */
+  invitedToParent?: boolean;
+  /** Invitation only: extra roles to (best-effort) grant on the target role-set. */
+  extraRoles?: RoleName[];
+  /** Invitation only (SPACE target): remove the SPACE_MEMBER_INVITEE credential. */
+  removeSpaceInviteeCredential?: boolean;
+}
 
 @Injectable()
 export class RoleSetService {
@@ -713,17 +745,7 @@ export class RoleSetService {
     // 4. Assign role credential
     await this.grantRoleCredential(roleSet, roleType, actorID, actorType);
 
-    // 5. Clear caches (applies to all actors)
-    await this.roleSetCacheService.deleteOpenApplicationFromCache(
-      actorID,
-      roleSet.id
-    );
-    await this.roleSetCacheService.deleteOpenInvitationFromCache(
-      actorID,
-      roleSet.id
-    );
-
-    // 6. Handle implicit roles (for ALL actor types - any actor can be admin!)
+    // 5. Handle implicit roles (for ALL actor types - any actor can be admin!)
     switch (roleSet.type) {
       case RoleSetType.SPACE: {
         if (roleType === RoleName.ADMIN && parentRoleSet) {
@@ -768,27 +790,17 @@ export class RoleSetService {
       }
     }
 
-    // 7. Post-assignment processing (unified for all actors)
-    await this.actorAddedToRole(
-      actorID,
-      actorType,
+    // 6. Post-assignment side-effects (cache clears + community events /
+    // notifications / Matrix membership + type-specific extensions) — one
+    // shared sequence with the ancestor-chain grant path (FR-021).
+    await this.applyRoleGrantSideEffects(
       roleSet,
       roleType,
+      actorID,
+      actorType,
       actorContext,
       triggerNewMemberEvents
     );
-
-    // 8. Type-specific extensions (can be moved to events later)
-    if (
-      actorType === ActorType.VIRTUAL_CONTRIBUTOR &&
-      roleSet.type === RoleSetType.SPACE
-    ) {
-      const space =
-        await this.communityResolverService.getSpaceForRoleSetOrFail(
-          roleSet.id
-        );
-      void this.aiServerAdapter.ensureContextIsLoaded(space.id);
-    }
 
     return actorID;
   }
@@ -819,62 +831,28 @@ export class RoleSetService {
         );
       }
 
-      if (invitation.invitedToParent) {
-        if (!roleSet.parentRoleSet) {
-          throw new EntityNotInitializedException(
-            `Unable to load parent community when flag to add is set: ${invitation.id}`,
-            LogContext.COMMUNITY
-          );
-        }
-        // Check if the actor is already a member of the parent roleSet
-        const isMemberOfParentRoleSet = await this.isMember(
-          actorID,
-          roleSet.parentRoleSet
+      if (invitation.invitedToParent && !roleSet.parentRoleSet) {
+        throw new EntityNotInitializedException(
+          `Unable to load parent community when flag to add is set: ${invitation.id}`,
+          LogContext.COMMUNITY
         );
-        if (!isMemberOfParentRoleSet) {
-          await this.assignActorToRole(
-            roleSet.parentRoleSet,
-            RoleName.MEMBER,
-            actorID,
-            actorContext,
-            true
-          );
-        }
       }
 
-      await this.assignActorToRole(
+      // Route through the shared grant service (feature 017 — FR-017). Behaviour-
+      // preserving: `invitedToParent` drives ancestor granting (now full-chain,
+      // a superset of the previous single-hop — research R2), `extraRoles` and
+      // the invitee-credential cleanup are carried through unchanged, and the two
+      // XState lifecycle machines stay separate.
+      await this.ensureMemberOfRoleSetAndAncestors(
         roleSet,
-        RoleName.MEMBER,
         actorID,
         actorContext,
-        true
-      );
-
-      // Remove invitee credential for ANY actor type (not just users)
-      if (roleSet.type === RoleSetType.SPACE) {
-        await this.removeSpaceInviteeCredential(actorID, roleSet);
-      }
-
-      for (const extraRole of invitation.extraRoles) {
-        try {
-          await this.assignActorToRole(
-            roleSet,
-            extraRole,
-            actorID,
-            actorContext,
-            false
-          );
-        } catch (e: any) {
-          // Do not throw an exception further as there might not be entitlements to grant the extra role
-          this.logger.warn?.(
-            `Unable to add actor (${actorID}) to extra roles (${invitation.extraRoles}) in community: ${e}`,
-            LogContext.COMMUNITY
-          );
+        {
+          source: 'invitation',
+          invitedToParent: invitation.invitedToParent,
+          extraRoles: invitation.extraRoles,
+          removeSpaceInviteeCredential: true,
         }
-      }
-      await this.roleSetCacheService.deleteOpenInvitationFromCache(
-        actorID,
-        roleSet.id
       );
     } catch (e: any) {
       this.logger.error?.(
@@ -1049,7 +1027,8 @@ export class RoleSetService {
     roleSet: IRoleSet,
     roleType: RoleName,
     actorID: string,
-    actorType: ActorType
+    actorType: ActorType,
+    entityManager?: EntityManager
   ): Promise<void> {
     const roleCredential = await this.getCredentialDefinitionForRole(
       roleSet,
@@ -1061,10 +1040,14 @@ export class RoleSetService {
       RoleSetUpdateType.ASSIGN,
       actorType
     );
-    await this.actorService.grantCredentialOrFail(actorID, {
-      type: roleCredential.type,
-      resourceID: roleCredential.resourceID,
-    });
+    await this.actorService.grantCredentialOrFail(
+      actorID,
+      {
+        type: roleCredential.type,
+        resourceID: roleCredential.resourceID,
+      },
+      entityManager
+    );
   }
 
   private async revokeRoleCredential(
@@ -1387,6 +1370,21 @@ export class RoleSetService {
           type: credentialType,
           resourceID: spaceID,
         });
+      }
+
+      // Invalidate the cached membership state on the descendant's role-set:
+      // isMember() / membership-status reads are cache-first, so a stale entry
+      // would keep reporting the revoked membership (e.g. blocking a later
+      // re-application with ROLE_SET_ALREADY_MEMBER). Best-effort resolution —
+      // a descendant deleted between the ID gathering and this loop must not
+      // abort the cascade (later descendants still need their revocations).
+      const descendantRoleSetID =
+        await this.communityResolverService.getRoleSetIdForSpace(spaceID);
+      if (descendantRoleSetID) {
+        await this.roleSetCacheService.cleanActorMembershipCache(
+          actorID,
+          descendantRoleSetID
+        );
       }
     }
   }
@@ -1925,18 +1923,401 @@ export class RoleSetService {
         LogContext.COMMUNITY
       );
 
-    await this.assignActorToRole(
+    // Route through the shared grant service (feature 017 — FR-017). For a
+    // combined Subspace application the applicant is granted MEMBER on the
+    // target AND every missing public ancestor, atomically (FR-020). The
+    // combined-flow authorisation is re-evaluated here at approval time
+    // (FR-015); if it no longer holds the ancestor grants are withheld and the
+    // target grant follows today's rules.
+    await this.ensureMemberOfRoleSetAndAncestors(
       roleSet,
-      RoleName.MEMBER,
       userID,
       actorContext,
-      true
+      {
+        source: 'application',
+      }
     );
+  }
 
+  /**
+   * Shared membership grant for the application-approval, invitation-accept, and
+   * direct-join flows (feature 017 — FR-017/FR-026, single owner of the
+   * ancestor-chain grant so there is no duplicated grant logic, SC-007/SC-013).
+   *
+   * When granting the ancestor chain: walks `parentRoleSet` from the target up
+   * to the L0 root, then grants `RoleName.MEMBER` on every role-set the actor is
+   * NOT already a member of, TOP-DOWN (root first) so the "must be member of the
+   * immediate parent" invariant holds at each step. All credential writes run in
+   * a SINGLE transaction (FR-020, all-or-nothing); event/notification/Matrix and
+   * cache side-effects are sequenced AFTER a successful commit (R6/R7).
+   *
+   * Ancestor granting is authorised by:
+   * - application: re-evaluating the combined-flow authorisation NOW (FR-015) —
+   *   the whole chain still PUBLIC and the ancestor Spaces' setting still enabled;
+   * - join: the same combined-flow authorisation, evaluated once at join time
+   *   (round 2 — no approval step, so no re-evaluation window);
+   * - invitation: the invitation's `invitedToParent` flag (existing invite
+   *   privilege already checked when the invitation was created).
+   * When ancestor granting is NOT authorised the target is granted via the
+   * standard {@link assignActorToRole} (today's single-hop rules, incl. its
+   * parent-membership precondition) — behaviour-preserving for invitations
+   * (FR-018/SC-008).
+   */
+  public async ensureMemberOfRoleSetAndAncestors(
+    targetRoleSet: IRoleSet,
+    actorID: string,
+    actorContext: ActorContext,
+    opts: EnsureMemberOfRoleSetAndAncestorsOptions
+  ): Promise<void> {
+    const actorType =
+      await this.actorLookupService.getActorTypeByIdOrFail(actorID);
+
+    // Application and direct-join share the same combined-flow authorisation:
+    // grant the ancestor chain iff every ancestor the actor would be granted
+    // into is public + opted in (actor-relative). For application this is the
+    // approval-time re-evaluation (FR-015); for join it is the single join-time
+    // evaluation (round 2 — there is no approval window). Invitation is gated by
+    // its own `invitedToParent` flag.
+    const grantAncestors =
+      opts.source === 'application' || opts.source === 'join'
+        ? await this.isCombinedApplicationGrantAuthorised(
+            targetRoleSet,
+            actorID
+          )
+        : opts.invitedToParent === true;
+
+    if (grantAncestors) {
+      // Build the chain root -> target (top-down) and grant MEMBER on every
+      // missing role-set atomically.
+      const chain = await this.getRoleSetAncestorChain(targetRoleSet);
+      const toGrant: IRoleSet[] = [];
+      for (const roleSetInChain of chain) {
+        const alreadyMember = await this.isMember(actorID, roleSetInChain);
+        if (!alreadyMember) {
+          toGrant.push(roleSetInChain);
+        }
+      }
+
+      if (toGrant.length > 0) {
+        // ATOMIC (FR-020): if any grant fails the whole chain rolls back and no
+        // partial ancestry is persisted. The transactional EntityManager is
+        // threaded down to the credential write so the rollback is real.
+        await this.roleSetRepository.manager.transaction(async manager => {
+          for (const roleSetToGrant of toGrant) {
+            await this.grantRoleCredential(
+              roleSetToGrant,
+              RoleName.MEMBER,
+              actorID,
+              actorType,
+              manager
+            );
+          }
+        });
+
+        // POST-COMMIT (outside the transaction): membership events /
+        // notifications / Matrix room membership / caches, one dispatch per
+        // Space joined (FR-021 — parity with the invitation path). The
+        // credentials are already committed, so these dispatches are
+        // best-effort: a failure on one Space is logged and MUST NOT skip the
+        // remaining Spaces' dispatches nor fail the whole flow — throwing
+        // here would leave the caller's lifecycle out of sync with the
+        // committed membership state.
+        for (const grantedRoleSet of toGrant) {
+          try {
+            await this.applyRoleGrantSideEffects(
+              grantedRoleSet,
+              RoleName.MEMBER,
+              actorID,
+              actorType,
+              actorContext,
+              true
+            );
+          } catch (e: any) {
+            this.logger.error(
+              `Post-commit member-grant side-effects failed for roleSet ${grantedRoleSet.id}, actor ${actorID}: ${e}`,
+              e?.stack,
+              LogContext.COMMUNITY
+            );
+          }
+        }
+      }
+    } else {
+      if (opts.source === 'application') {
+        // FR-015: the combined-flow authorisation was revoked between
+        // submission and approval — ancestor grants are withheld. When the
+        // applicant is a member of the immediate parent the target grant
+        // still follows today's rules below; otherwise fail with an
+        // actionable error instead of assignActorToRole's opaque parent-
+        // membership ValidationException. The application remains in
+        // `approving`, from which an admin can REJECT it (see the
+        // application lifecycle machine).
+        const { isMember: hasMemberRoleInParent } =
+          await this.isActorMemberInParentRoleSet(actorID, targetRoleSet.id);
+        if (!hasMemberRoleInParent) {
+          throw new RoleSetMembershipException(
+            'Application approval not possible: the combined-flow authorisation was revoked after submission (an ancestor Space is no longer public or its setting was disabled) and the applicant is not a member of the parent Space. Reject the application, or restore the ancestor chain and retry.',
+            LogContext.COMMUNITY
+          );
+        }
+      }
+      // Not authorised to grant the ancestor chain — grant only the target via
+      // the standard path (enforces the parent-membership precondition; today's
+      // behaviour). For an application this is the FR-015 safe fallback.
+      await this.assignActorToRole(
+        targetRoleSet,
+        RoleName.MEMBER,
+        actorID,
+        actorContext,
+        true
+      );
+    }
+
+    // Invitation-only post-steps (behaviour-preserving; outside the transaction
+    // exactly as today — best-effort, non-atomic).
+    if (
+      opts.removeSpaceInviteeCredential &&
+      targetRoleSet.type === RoleSetType.SPACE
+    ) {
+      await this.removeSpaceInviteeCredential(actorID, targetRoleSet);
+    }
+    for (const extraRole of opts.extraRoles ?? []) {
+      try {
+        await this.assignActorToRole(
+          targetRoleSet,
+          extraRole,
+          actorID,
+          actorContext,
+          false
+        );
+      } catch (e: any) {
+        // Do not throw further as there might not be entitlements to grant the
+        // extra role (behaviour-preserving with the previous invitation flow).
+        this.logger.warn?.(
+          `Unable to add actor (${actorID}) to extra roles (${opts.extraRoles}) in community: ${e}`,
+          LogContext.COMMUNITY
+        );
+      }
+    }
+
+    // Source-specific cache tail (mirrors the original callers). A direct join
+    // (round 2) has neither an open application nor an open invitation, so it
+    // clears neither — the target's membership caches are already invalidated
+    // by applyRoleGrantSideEffects / assignActorToRole above.
+    if (opts.source === 'application') {
+      await this.roleSetCacheService.deleteOpenApplicationFromCache(
+        actorID,
+        targetRoleSet.id
+      );
+    } else if (opts.source === 'invitation') {
+      await this.roleSetCacheService.deleteOpenInvitationFromCache(
+        actorID,
+        targetRoleSet.id
+      );
+    }
+  }
+
+  /**
+   * Walk `parentRoleSet` from the supplied role-set up to the L0 root and return
+   * the chain TOP-DOWN (root first ... target last). Single-hop `getParentRoleSet`
+   * is looped (typ. depth <= 3). Guards against cycles.
+   */
+  public async getRoleSetAncestorChain(roleSet: IRoleSet): Promise<IRoleSet[]> {
+    const chain: IRoleSet[] = [roleSet];
+    const seen = new Set<string>([roleSet.id]);
+    let current: IRoleSet | undefined = roleSet;
+    while (current) {
+      const parent = await this.getParentRoleSet(current);
+      if (!parent || seen.has(parent.id)) {
+        break;
+      }
+      chain.push(parent);
+      seen.add(parent.id);
+      current = parent;
+    }
+    return chain.reverse();
+  }
+
+  /**
+   * Re-evaluates (FR-015) whether the combined Subspace-application flow is
+   * authorised to grant the ancestor chain for the supplied target role-set.
+   *
+   * Reachability is ACTOR-RELATIVE (explicit scope decision, 2026-07-07 — see
+   * ADR 0001): when `actorID` is supplied, ancestors the actor already belongs
+   * to impose NO requirements — they are skipped by the missing-only grant
+   * anyway. Every ancestor the actor would actually be GRANTED into must be
+   * PUBLIC (FR-002) and have `allowSubspaceAdminsToInviteMembers` enabled
+   * (FR-003). The target's own privacy is never part of the gate — a Space
+   * with an application membership policy accepts applications regardless of
+   * its privacy mode. Without `actorID` the check degrades to the generic
+   * non-member reading (every ancestor public + opted in). An L0 Space (no
+   * parent) is not part of the combined flow.
+   *
+   * The client-facing APPLY privilege exposure is driven by
+   * {@link getCombinedApplicationEligibleCriteria}, the credential-rule
+   * counterpart of this predicate, so the offered entry point and the actual
+   * grant stay consistent (contract §1/§2).
+   */
+  public async isCombinedApplicationGrantAuthorised(
+    targetRoleSet: IRoleSet,
+    actorID?: string
+  ): Promise<boolean> {
+    if (targetRoleSet.type !== RoleSetType.SPACE) {
+      return false;
+    }
+    const chain = await this.getRoleSetAncestorChain(targetRoleSet);
+    const ancestors = chain.slice(0, -1); // root .. parent (excludes target)
+    if (ancestors.length === 0) {
+      return false; // L0 Space — no combined flow
+    }
+    for (const ancestorRoleSet of ancestors) {
+      // Actor-relative reachability: an ancestor the actor already belongs to
+      // is not granted (missing-only) and imposes no requirements.
+      if (actorID && (await this.isMember(actorID, ancestorRoleSet))) {
+        continue;
+      }
+      // Every ancestor the actor would be granted into must be reachable
+      // (public) and must have opted in to admitting members via a descendant
+      // application.
+      const settings = await this.getSpaceSettingsForRoleSet(ancestorRoleSet);
+      if (!settings || settings.privacy.mode !== SpacePrivacyMode.PUBLIC) {
+        return false;
+      }
+      if (!settings.membership.allowSubspaceAdminsToInviteMembers) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * Credential-rule counterpart of {@link isCombinedApplicationGrantAuthorised}
+   * for the authorization-policy APPLY exposure (contract §1). Authorization
+   * policies are static credential rules, so actor-relative reachability is
+   * expressed via the platform invariant `member(Space) ⇒ member(parent)`
+   * (upheld by assignActorToRole, the shared top-down grant, and the removal
+   * cascade): being a member of the DEEPEST PRIVATE ancestor implies membership
+   * of every ancestor above it, so that single membership credential identifies
+   * exactly the population for which every non-owned ancestor is public.
+   *
+   * Returns the criteria for who may be offered APPLY on the target:
+   * - `{ kind: 'globalRegistered' }` — no private ancestor; every ancestor is
+   *   public + opted in (the generic non-member cell).
+   * - `{ kind: 'credential', credential }` — the MEMBER credential of the
+   *   deepest private ancestor; every ancestor BELOW it is public + opted in.
+   *   (Ancestors at/above the deepest private ancestor are owned by that
+   *   population by the invariant, so they impose no requirements.)
+   * - `undefined` — no eligible non-parent-member population (some ancestor
+   *   that would need granting is private or not opted in, the deepest private
+   *   ancestor IS the direct parent — that population is already covered by the
+   *   parent-member APPLY rule — or the target is an L0 Space / non-Space).
+   */
+  public async getCombinedApplicationEligibleCriteria(
+    targetRoleSet: IRoleSet
+  ): Promise<
+    | { kind: 'globalRegistered' }
+    | { kind: 'credential'; credential: ICredentialDefinition }
+    | undefined
+  > {
+    if (targetRoleSet.type !== RoleSetType.SPACE) {
+      return undefined;
+    }
+    const chain = await this.getRoleSetAncestorChain(targetRoleSet);
+    const ancestors = chain.slice(0, -1); // root .. parent (top-down)
+    if (ancestors.length === 0) {
+      return undefined; // L0 Space — no combined flow
+    }
+
+    const ancestorSettings = await Promise.all(
+      ancestors.map(a => this.getSpaceSettingsForRoleSet(a))
+    );
+    let deepestPrivateIndex = -1;
+    for (let i = 0; i < ancestors.length; i++) {
+      if (ancestorSettings[i]?.privacy.mode !== SpacePrivacyMode.PUBLIC) {
+        deepestPrivateIndex = i;
+      }
+    }
+
+    // Every ancestor BELOW the deepest private one would be granted to this
+    // population, so it must be public (guaranteed by deepest-private choice)
+    // and opted in via the setting.
+    for (let i = deepestPrivateIndex + 1; i < ancestors.length; i++) {
+      if (!ancestorSettings[i]?.membership.allowSubspaceAdminsToInviteMembers) {
+        return undefined;
+      }
+    }
+
+    if (deepestPrivateIndex === -1) {
+      return { kind: 'globalRegistered' };
+    }
+    if (deepestPrivateIndex === ancestors.length - 1) {
+      // Deepest private ancestor is the direct parent — parent members are
+      // already offered APPLY by the parent-member rule; nothing to add.
+      return undefined;
+    }
+    const credential = await this.getCredentialDefinitionForRole(
+      ancestors[deepestPrivateIndex],
+      RoleName.MEMBER
+    );
+    return { kind: 'credential', credential };
+  }
+
+  private async getSpaceSettingsForRoleSet(
+    roleSet: IRoleSet
+  ): Promise<ISpaceSettings | undefined> {
+    if (roleSet.type !== RoleSetType.SPACE) {
+      return undefined;
+    }
+    // Settings-only read — this runs per-ancestor on hot paths (authorization
+    // resets walk it for every APPLICATIONS subspace), so avoid the full Space
+    // + about.profile hydration of getSpaceForRoleSetOrFail.
+    return this.communityResolverService.getSpaceSettingsForRoleSet(roleSet.id);
+  }
+
+  /**
+   * The post-grant side-effects of a role grant (cache clears + community
+   * events/notifications/Matrix membership + type-specific extensions) — the
+   * SINGLE owner of this sequence, consumed by both {@link assignActorToRole}
+   * and the shared ancestor-chain grant (one dispatch per Space joined,
+   * FR-021). The implicit-role handling (ADMIN/OWNER credentials) stays in
+   * assignActorToRole — ancestor grants are always MEMBER, so it never applies
+   * to the chain path.
+   */
+  private async applyRoleGrantSideEffects(
+    roleSet: IRoleSet,
+    roleType: RoleName,
+    actorID: string,
+    actorType: ActorType,
+    actorContext: ActorContext | undefined,
+    triggerNewMemberEvents: boolean
+  ): Promise<void> {
     await this.roleSetCacheService.deleteOpenApplicationFromCache(
-      userID,
+      actorID,
       roleSet.id
     );
+    await this.roleSetCacheService.deleteOpenInvitationFromCache(
+      actorID,
+      roleSet.id
+    );
+
+    await this.actorAddedToRole(
+      actorID,
+      actorType,
+      roleSet,
+      roleType,
+      actorContext,
+      triggerNewMemberEvents
+    );
+
+    if (
+      actorType === ActorType.VIRTUAL_CONTRIBUTOR &&
+      roleSet.type === RoleSetType.SPACE
+    ) {
+      const space =
+        await this.communityResolverService.getSpaceForRoleSetOrFail(
+          roleSet.id
+        );
+      void this.aiServerAdapter.ensureContextIsLoaded(space.id);
+    }
   }
 
   public async isEntryRole(

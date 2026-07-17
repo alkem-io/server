@@ -15,6 +15,7 @@ import {
   InfoInputData,
   MemoContributionsInputData,
   OfficeDocumentContributionsInputData,
+  OfficeDocumentRenameInputData,
   SaveInputData,
 } from './inputs';
 import {
@@ -131,5 +132,21 @@ export class CollaborativeDocumentIntegrationController {
     );
     ack(context);
     return this.integrationService.officeDocumentViews(data);
+  }
+
+  @MessagePattern(
+    CollaborativeDocumentEventPattern.OFFICE_DOCUMENT_RENAME,
+    Transport.RMQ
+  )
+  public officeDocumentRename(
+    @Payload() data: OfficeDocumentRenameInputData,
+    @Ctx() context: RmqContext
+  ): Promise<void> {
+    this.logger.verbose?.(
+      `Received OFFICE_DOCUMENT_RENAME request for document: ${data.documentId}`,
+      LogContext.COLLAB_DOCUMENT_INTEGRATION
+    );
+    ack(context);
+    return this.integrationService.officeDocumentRename(data);
   }
 }

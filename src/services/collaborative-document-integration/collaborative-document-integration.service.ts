@@ -1,14 +1,21 @@
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
+import { ActorType } from '@common/enums/actor.type';
 import { EntityNotFoundException } from '@common/exceptions';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
 import { AuthorizationService } from '@core/authorization/authorization.service';
+import { ActorLookupService } from '@domain/actor/actor-lookup/actor.lookup.service';
 import { CollaboraDocumentService } from '@domain/collaboration/collabora-document/collabora.document.service';
 import { MemoService } from '@domain/common/memo';
 import { Inject, Injectable } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { MemoContributionsInputData } from '@services/collaborative-document-integration/inputs/memo.contributions.input.data';
 import { OfficeDocumentContributionsInputData } from '@services/collaborative-document-integration/inputs/office.document.contributions.input.data';
+import { OfficeDocumentRenameInputData } from '@services/collaborative-document-integration/inputs/office.document.rename.input.data';
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
+import {
+  TypedActorSet,
+  UNKNOWN_ACTOR_TYPE,
+} from '@services/external/elasticsearch/types/typed.actor.set';
 import { CommunityResolverService } from '@services/infrastructure/entity-resolver/community.resolver.service';
 import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER, WinstonLogger } from 'nest-winston';
@@ -42,7 +49,8 @@ export class CollaborativeDocumentIntegrationService {
     private readonly collaboraDocumentService: CollaboraDocumentService,
     private readonly configService: ConfigService<AlkemioConfig, true>,
     private readonly contributionReporter: ContributionReporterService,
-    private readonly communityResolver: CommunityResolverService
+    private readonly communityResolver: CommunityResolverService,
+    private readonly actorLookupService: ActorLookupService
   ) {
     this.maxCollaboratorsInRoom = this.configService.get(
       'collaboration.memo.max_collaborators_in_room',
@@ -223,6 +231,68 @@ export class CollaborativeDocumentIntegrationService {
   }
 
   /**
+   * Persist a rename initiated from inside the editor (Collabora RenameFile → WOPI
+   * → this event). The server is the rename authority: `updateCollaboraDocument`
+   * updates BOTH the CollaboraDocument profile and the backing file-service
+   * document, so the callout title and the editor's filename stay in sync — the
+   * same path the in-app header pencil uses.
+   *
+   * `documentId` is the storage `Document` id (see {@link reportOfficeDocumentWindow}),
+   * so we reverse-resolve the domain entity first. Best-effort and tolerant: a
+   * bad/stale event is logged and discarded without throwing, so it cannot wedge
+   * the consumer. Authorization was already enforced at the WOPI layer (the editor
+   * token carries write access), consistent with the other events on this consumer.
+   */
+  public async officeDocumentRename({
+    documentId,
+    displayName,
+  }: OfficeDocumentRenameInputData): Promise<void> {
+    // Never blank a document's name from a malformed event (an empty displayName
+    // would collapse the file-service name to just its extension).
+    if (!displayName?.trim()) {
+      this.logger.warn?.(
+        {
+          message: 'Ignoring Collabora document rename event with a blank name',
+          documentId,
+        },
+        LogContext.COLLAB_DOCUMENT_INTEGRATION
+      );
+      return;
+    }
+    try {
+      const collaboraDocument =
+        await this.collaboraDocumentService.getCollaboraDocumentByStorageDocumentId(
+          documentId
+        );
+      if (!collaboraDocument) {
+        this.logger.warn?.(
+          {
+            message:
+              'Discarding Collabora document rename event: no CollaboraDocument for storage document id',
+            documentId,
+          },
+          LogContext.COLLAB_DOCUMENT_INTEGRATION
+        );
+        return;
+      }
+
+      await this.collaboraDocumentService.updateCollaboraDocument(
+        collaboraDocument.id,
+        displayName
+      );
+    } catch (e: any) {
+      this.logger.warn?.(
+        {
+          message: 'Discarding unresolvable Collabora document rename event',
+          documentId,
+          error: e?.message,
+        },
+        LogContext.COLLAB_DOCUMENT_INTEGRATION
+      );
+    }
+  }
+
+  /**
    * Shared reverse-resolve-and-report path for the two Collabora window event
    * types (contribution = edited, view = active-but-not-edited).
    *
@@ -251,8 +321,8 @@ export class CollaborativeDocumentIntegrationService {
       id: string;
       name: string;
       space: string;
-      writeActors: string[];
-      readonlyActors: string[];
+      writeActors: TypedActorSet;
+      readonlyActors: TypedActorSet;
     }) => void
   ): Promise<void> {
     try {
@@ -284,12 +354,19 @@ export class CollaborativeDocumentIntegrationService {
         );
       const displayName = collaboraDocument.profile?.displayName ?? '';
 
+      // Resolve actor types ONCE for the union of both sets (tolerant batch
+      // lookup — unresolvable ids are simply absent and fall to `unknown`),
+      // then partition each set by type. The set of ids is unchanged (SC-006);
+      // only their shape changes (flat array → type-keyed object).
+      const allIds = [...new Set([...writeActors, ...readonlyActors])];
+      const typeById = await this.actorLookupService.getActorTypesByIds(allIds);
+
       report({
         id: collaboraDocument.id,
         name: displayName,
         space: levelZeroSpaceID,
-        writeActors,
-        readonlyActors,
+        writeActors: this.groupActorsByType(writeActors, typeById),
+        readonlyActors: this.groupActorsByType(readonlyActors, typeById),
       });
     } catch (e: any) {
       this.logger.warn?.(
@@ -301,6 +378,29 @@ export class CollaborativeDocumentIntegrationService {
         LogContext.COLLAB_DOCUMENT_INTEGRATION
       );
     }
+  }
+
+  /**
+   * Partition a flat list of actor ids into a {@link TypedActorSet}: an object
+   * keyed by each id's resolved {@link ActorType} (from `typeById`), falling
+   * back to the reserved `unknown` bucket for any id absent from the map
+   * (FR-005). Only non-empty groups appear; an empty input yields `{}`
+   * (FR-003). Ids are de-duplicated so each group holds distinct actor_ids
+   * (matches the record-shape contract) even if the producer repeats one.
+   * Ordering within a group is unspecified (FR-002) — this folds in encounter
+   * order, but callers must not rely on it. See feature 012-collabora-actor-type
+   * (in the agents-hq workspace repo).
+   */
+  private groupActorsByType(
+    ids: string[],
+    typeById: Map<string, ActorType>
+  ): TypedActorSet {
+    const grouped: TypedActorSet = {};
+    for (const id of new Set(ids)) {
+      const key = typeById.get(id) ?? UNKNOWN_ACTOR_TYPE;
+      (grouped[key] ??= []).push(id);
+    }
+    return grouped;
   }
 }
 

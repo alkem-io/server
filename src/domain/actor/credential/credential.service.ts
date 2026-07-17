@@ -2,7 +2,7 @@ import { LogContext } from '@common/enums';
 import { EntityNotFoundException } from '@common/exceptions';
 import { Injectable } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
-import { Repository } from 'typeorm';
+import { EntityManager, Repository } from 'typeorm';
 import { Credential } from './credential.entity';
 import { ICredential } from './credential.interface';
 import { CreateCredentialInput } from './dto/credential.dto.create';
@@ -159,14 +159,22 @@ export class CredentialService {
    */
   async createCredentialForActor(
     actorID: string,
-    credentialInput: CreateCredentialInput
+    credentialInput: CreateCredentialInput,
+    entityManager?: EntityManager
   ): Promise<ICredential> {
     const credential = Credential.create({
       ...credentialInput,
       resourceID: credentialInput.resourceID ?? '',
       actorID,
     });
-    await this.credentialRepository.save(credential);
+    // When a transactional EntityManager is supplied the write participates in
+    // that transaction so it can be rolled back atomically (feature 017 —
+    // combined ancestor-chain membership grant, FR-020).
+    if (entityManager) {
+      await entityManager.getRepository(Credential).save(credential);
+    } else {
+      await this.credentialRepository.save(credential);
+    }
     return credential;
   }
 

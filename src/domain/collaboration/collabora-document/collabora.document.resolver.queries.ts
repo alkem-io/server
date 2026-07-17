@@ -96,13 +96,38 @@ export class CollaboraDocumentResolverQueries {
     return editorUrl;
   }
 
+  @Query(() => Boolean, {
+    description:
+      'Whether the WOPI save service backing this CollaboraDocument is currently reachable. A side-effect-free health check — unlike collaboraEditorUrl it issues no access token and records no analytics — used to surface a save-path outage in the editor.',
+  })
+  async collaboraServiceAvailable(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('collaboraDocumentID', { type: () => UUID })
+    collaboraDocumentID: string
+  ): Promise<boolean> {
+    const collaboraDocument =
+      await this.collaboraDocumentService.getCollaboraDocumentOrFail(
+        collaboraDocumentID
+      );
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      collaboraDocument.authorization,
+      AuthorizationPrivilege.READ,
+      // Static message — no dynamic data (e.g. the document id) in exception messages
+      // (.github/copilot-instructions.md coding standards).
+      'collabora service health check'
+    );
+    return this.collaboraDocumentService.isWopiServiceAvailable();
+  }
+
   /**
    * Resolves the human-readable name to surface in the Collabora editor.
    * Guests carry their name on the ActorContext (no Actor row exists for the
    * synthetic guest id); authenticated users get the canonical, PII-safe
    * `getActorDisplayName` (profile.displayName → nameID, never email).
-   * Returns undefined when no name can be resolved (anonymous, or a failed
-   * lookup), letting the WOPI service apply its own fallback.
+   * Returns undefined when no name can be resolved (anonymous, a failed
+   * lookup, or a resolved actor whose display name is blank), letting the WOPI
+   * service apply its own fallback rather than surfacing an empty name.
    *
    * Best-effort by design: `actorName` is optional and the editor flow works
    * without it, so a failed actor lookup must NEVER block opening the document
@@ -118,7 +143,9 @@ export class CollaboraDocumentResolverQueries {
       const actor = await this.actorLookupService.getActorById(
         actorContext.actorID
       );
-      return actor ? getActorDisplayName(actor) : undefined;
+      // getActorDisplayName can return '' (blank displayName and empty nameID);
+      // coalesce to undefined so WOPI applies its fallback, not a blank name.
+      return (actor && getActorDisplayName(actor)) || undefined;
     } catch (e: any) {
       this.logger.warn?.(
         {

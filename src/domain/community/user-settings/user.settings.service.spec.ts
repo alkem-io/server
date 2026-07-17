@@ -119,6 +119,10 @@ describe('UserSettingsService', () => {
         virtualContributor: {
           adminSpaceCommunityInvitation: defaultNotificationSetting(),
         },
+        sound: {
+          chatMessage: true,
+          inAppNotification: true,
+        },
       },
       homeSpace: {
         spaceID: null,
@@ -214,6 +218,88 @@ describe('UserSettingsService', () => {
       expect(
         result.communication.allowOtherUsersToContactViaEmail
       ).toBeUndefined();
+    });
+  });
+
+  describe('updateSettings - notification.sound', () => {
+    it('should update chatMessage when provided', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: { sound: { chatMessage: false } },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.notification.sound.chatMessage).toBe(false);
+    });
+
+    it('should update inAppNotification when provided', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: { sound: { inAppNotification: false } },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.notification.sound.inAppNotification).toBe(false);
+    });
+
+    it('should leave the sibling flag untouched on a partial update', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: { sound: { chatMessage: false } },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      // Only chatMessage was in the payload → inAppNotification is unchanged.
+      expect(result.notification.sound.chatMessage).toBe(false);
+      expect(result.notification.sound.inAppNotification).toBe(true);
+    });
+
+    it('should leave both flags untouched when sound update data is omitted', () => {
+      const settings = buildSettings();
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: {},
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      expect(result.notification.sound.chatMessage).toBe(true);
+      expect(result.notification.sound.inAppNotification).toBe(true);
+    });
+
+    it('should not write undefined as false when only one flag is provided', () => {
+      const settings = buildSettings({
+        notification: {
+          ...buildSettings().notification,
+          sound: { chatMessage: false, inAppNotification: false },
+        },
+      } as any);
+      const updateData: UpdateUserSettingsEntityInput = {
+        notification: { sound: { chatMessage: true } },
+      };
+
+      const result = service.updateSettings(settings, updateData);
+
+      // inAppNotification omitted from the payload → not coerced to any value,
+      // the stored false survives.
+      expect(result.notification.sound.chatMessage).toBe(true);
+      expect(result.notification.sound.inAppNotification).toBe(false);
+    });
+
+    it('should treat an explicit null as a no-op rather than persisting it', () => {
+      const settings = buildSettings();
+      const updateData = {
+        notification: { sound: { chatMessage: null, inAppNotification: null } },
+      } as unknown as UpdateUserSettingsEntityInput;
+
+      const result = service.updateSettings(settings, updateData);
+
+      // The output fields are Boolean! — a persisted null would fail the non-null
+      // check on every later read of this User, so null must never be written.
+      expect(result.notification.sound.chatMessage).toBe(true);
+      expect(result.notification.sound.inAppNotification).toBe(true);
     });
   });
 

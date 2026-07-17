@@ -38,4 +38,20 @@ export class CreateInnovationHubInput extends CreateNameableInput {
     description: `Spaces with which visibility this Innovation Hub will display. Only valid when type '${InnovationHubType.VISIBILITY}' is used.`,
   })
   spaceVisibilityFilter?: SpaceVisibility;
+
+  @IsOptional()
+  @Field(() => [UUID], {
+    nullable: true,
+    description:
+      'The Innovation Packs curated for this Innovation Hub. When omitted, the Innovation Hub is created with no Innovation Packs.',
+  })
+  innovationPackListFilter?: string[];
+
+  @IsOptional()
+  @Field(() => [UUID], {
+    nullable: true,
+    description:
+      'The Virtual Contributors curated for this Innovation Hub. When omitted, the Innovation Hub is created with no Virtual Contributors.',
+  })
+  virtualContributorListFilter?: string[];
 }

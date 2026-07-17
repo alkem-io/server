@@ -51,6 +51,7 @@ export type AlkemioConfig = {
   search: {
     max_results: number;
     index_pattern: string;
+    collabora_document_max_source_size: number;
   };
   licensing: {
     wingback: {
@@ -203,6 +204,12 @@ export type AlkemioConfig = {
         port: number;
         user: string;
         password: string;
+      };
+      auth_reset: {
+        // Queue the auth/license reset events flow over. Publisher (normal
+        // server) and the dedicated worker (src/main.worker.ts) MUST agree on
+        // this name.
+        queue: string;
       };
       event_bus: {
         exchange: string;

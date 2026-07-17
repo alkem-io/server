@@ -90,6 +90,14 @@ search:
   # the index pattern used when ingesting data in Elasticsearch, e.g. alkemio-data-[organization];
   # The dash at the end is MANDATORY
   index_pattern: ${ELASTIC_SEARCH_INDEX_PATTERN}:alkemio-data-
+  # Pre-parse source-file-size cap (bytes) for in-process Collabora office-document
+  # text extraction (workspace#009-office-doc-search, FR-018). A document whose raw
+  # file exceeds this cap is skipped for content indexing (handled like a no-text
+  # document) to protect the in-process parser from OOM/hang. Default 15 MiB —
+  # matches the largest per-document storage cap (storage.file.max_file_size and
+  # StorageBucketService.DEFAULT_MAX_ALLOWED_FILE_SIZE), so a document that can be
+  # uploaded can always be parsed. Raising it above that has no effect.
+  collabora_document_max_source_size: ${SEARCH_COLLABORA_DOCUMENT_MAX_SOURCE_SIZE}:15728640
 
 licensing:
   wingback:
@@ -356,8 +364,11 @@ storage:
   enabled: ${STORAGE_ENABLED}:true
   #
   file:
-    # 20MB
-    max_file_size: ${STORAGE_MAX_FILE_SIZE}:20971520
+    # 15MB — the upload-middleware guard. Kept equal to
+    # StorageBucketService.DEFAULT_MAX_ALLOWED_FILE_SIZE, which every bucket is
+    # seeded with; a larger value here only defers rejection until after the
+    # whole file has been buffered. Raising it needs a storage_bucket migration.
+    max_file_size: ${STORAGE_MAX_FILE_SIZE}:15728640
     # Timeout in milliseconds for reading file upload streams
     stream_timeout_ms: ${STORAGE_STREAM_TIMEOUT_MS}:60000
   # Database configuration for usage by the Alkemio Server.
@@ -452,6 +463,12 @@ microservices:
 
       # RabbitMQ password
       password: ${RABBITMQ_PASSWORD}:alkemio!
+
+    # Authorization / license reset queue. Consumed by the dedicated worker
+    # (src/main.worker.ts); the normal server publishes reset events here but
+    # never consumes them. Publisher and worker MUST agree on this name.
+    auth_reset:
+      queue: ${RABBITMQ_AUTH_RESET_QUEUE}:alkemio-auth-reset
 
     # configuration for the event bus used by the AiServer
     event_bus:
