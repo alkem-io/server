@@ -7,13 +7,11 @@ import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { MessageID } from '@domain/common/scalars';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { Inject, LoggerService } from '@nestjs/common';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { CommunicationAdapter } from '@services/adapters/communication-adapter/communication.adapter';
 import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
-import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { IMessage } from '../message/message.interface';
 import { IMessageReaction } from '../message.reaction/message.reaction.interface';
 import { MessageAttachmentService } from '../message-attachment/message.attachment.service';
@@ -39,8 +37,7 @@ export class RoomResolverMutations {
     private roomLookupService: RoomLookupService,
     private userLookupService: UserLookupService,
     private communicationAdapter: CommunicationAdapter,
-    private messageAttachmentService: MessageAttachmentService,
-    @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
+    private messageAttachmentService: MessageAttachmentService
   ) {}
 
   @Mutation(() => IMessage, {
@@ -264,52 +261,12 @@ export class RoomResolverMutations {
       `room remove message: ${room.id}`
     );
 
-    // feature 013: capture the message's attachments BEFORE deletion so the
-    // backing documents can be released afterwards (FR-014/015). Best-effort —
-    // never block the delete on attachment lookup.
-    let rawAttachments: IMessage['rawAttachments'];
-    let attachmentBucketId: string | undefined;
-    let attachmentSenderActorID: string | undefined;
-    if (this.messageAttachmentService.isEnabled()) {
-      try {
-        const { message } = await this.roomLookupService.getMessageInRoom(
-          room.id,
-          messageData.messageID
-        );
-        rawAttachments = message.rawAttachments;
-        // The deleted message's sender — used to gate delete-release on document
-        // ownership (confused-deputy HIGH); only this sender's own attachments
-        // are released.
-        attachmentSenderActorID = message.sender;
-        attachmentBucketId =
-          await this.messageAttachmentService.getResolutionBucketIdForRoom(
-            room
-          );
-      } catch (error) {
-        this.logger.warn?.(
-          `Unable to load message attachments before delete: ${
-            (error as Error)?.message
-          }`,
-          LogContext.COMMUNICATION
-        );
-      }
-    }
-
     // Pass actorContext.actorID for future use when Matrix admin reflection is implemented
     // See: docs/matrix-admin-reflection.md
     const messageID = await this.roomService.removeRoomMessage(
       room,
       messageData,
       actorContext.actorID
-    );
-
-    // Release the attachment documents once the message is gone. file-service
-    // GC's the blob only when no row references its externalID, so a re-shared
-    // blob survives in other conversations (FR-015).
-    await this.messageAttachmentService.releaseAttachments(
-      rawAttachments,
-      attachmentBucketId,
-      attachmentSenderActorID
     );
 
     // All post-delete processing (notifications, activities, subscriptions)

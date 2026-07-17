@@ -37,9 +37,14 @@ import { IMessageAttachment } from './message.attachment.interface';
  * Conversation media attachments (feature 013-matrix-media-file-service).
  *
  * Owns: outbound attachment resolution+validation (web compose), the EAGER
- * inbound re-home of Element-origin media (MOVE/COPY), read resolution to
- * `MessageAttachment`, and delete-release. All `file`-table writes go through
- * `FileServiceAdapter`; the bucket policy + auth live on the server.
+ * inbound re-home of Element-origin media (MOVE/COPY), and read resolution to
+ * `MessageAttachment`. All `file`-table writes go through `FileServiceAdapter`;
+ * the bucket policy + auth live on the server.
+ *
+ * This feature is a TIERED CLIENT of Synapse, not a replacement: media DELETION
+ * and blob lifecycle are Synapse's job (message deletion is per-event redaction;
+ * Synapse retention/purge governs the blob), so the server does NOT release or
+ * GC attachment media when a message is deleted.
  *
  * Gated by the `communications.message_attachments.enabled` feature flag.
  */
@@ -534,41 +539,6 @@ export class MessageAttachmentService {
   }
 
   /**
-   * Resolve the read/resolution bucket id for a room (feature 013).
-   *
-   * FIX [5]: the ONLY caller is the delete-release path, which needs the bucket
-   * ID and NEVER `bucket.authorization`. getTargetBucketForRoom joins
-   * `storageAggregator.directStorage.authorization` (needed by the re-home
-   * callers, FIX 6) — that auth join is dead weight here. Resolve the id WITHOUT
-   * loading the full bucket + authorization: the conversation branch selects only
-   * `storageAggregator.directStorage.id`, and the comment-room branch drops the
-   * authorization relation too. Behaviour is identical (same id, undefined when
-   * unresolved); getTargetBucketForRoom is untouched for the re-home callers.
-   */
-  public async getResolutionBucketIdForRoom(
-    room: IRoom
-  ): Promise<string | undefined> {
-    if (!this.enabled) {
-      return undefined;
-    }
-    if (isConversationRoom(room)) {
-      const conversation = await this.conversationRepository.findOne({
-        where: { room: { id: room.id } },
-        select: {
-          id: true,
-          storageAggregator: { id: true, directStorage: { id: true } },
-        },
-        relations: { storageAggregator: { directStorage: true } },
-      });
-      return conversation?.storageAggregator?.directStorage?.id ?? undefined;
-    }
-    if (this.isCommentRoom(room)) {
-      return this.getCommentRoomParentBucketId(room);
-    }
-    return undefined;
-  }
-
-  /**
    * Resolve the storage bucket a message's attachments live in (H1 + FIX 6 + FIX
    * [4]). Returns `{ id, bucket? }`:
    *  - FAST PATH (live subscription, `message.storageBucketId` set): returns the id
@@ -832,8 +802,8 @@ export class MessageAttachmentService {
     senderActorID: string | undefined,
     actorContext: ActorContext
   ): Promise<IMessageAttachment | null> {
-    // Read path passes `allowHeal:true` so the outbound heal + the lazy inbound
-    // re-home run ONLY here, never on delete. On the fast path `bucketForRehome` is
+    // resolveAttachmentDocument is a READ-path helper: the outbound heal and the
+    // lazy inbound re-home always run. On the fast path `bucketForRehome` is
     // undefined and the full bucket is lazy-loaded inside resolveAttachmentDocument
     // only if an inbound miss actually needs a re-home; on the history path the
     // full bucket is already resolved and threaded through to skip that query.
@@ -841,7 +811,7 @@ export class MessageAttachmentService {
       raw,
       bucketId,
       senderActorID,
-      { allowHeal: true, bucketForRehome }
+      bucketForRehome
     );
     if (!document) {
       return null;
@@ -890,16 +860,12 @@ export class MessageAttachmentService {
     raw: ReceivedAttachment,
     storageBucketId: string | undefined,
     senderActorID: string | undefined,
-    // FIX [0]/[4]: the outbound heal and the lazy inbound re-home run on the READ
-    // path ONLY, gated by `allowHeal`. The delete path (releaseAttachments) uses the
-    // default `allowHeal:false`, so releasing never pins a still-temporary doc
-    // durable (which would strand it durable+orphaned past a transiently-failed
-    // delete, beyond the 24h sweep's reach) and never re-homes. `bucketForRehome` is
-    // the pre-resolved full bucket (history path); when absent (fast path) the bucket
-    // is loaded LAZILY below, and ONLY when an inbound re-home is actually needed.
-    opts: { allowHeal: boolean; bucketForRehome?: IStorageBucket } = {
-      allowHeal: false,
-    }
+    // FIX [0]/[4]: this is a READ-path helper — its only caller is the read
+    // resolution path (resolveReadAttachment), so the outbound heal and the lazy
+    // inbound re-home always run. `bucketForRehome` is the pre-resolved full bucket
+    // (history path); when absent (fast path) the bucket is loaded LAZILY below,
+    // and ONLY when an inbound re-home is actually needed.
+    bucketForRehome?: IStorageBucket
   ): Promise<IDocument | null> {
     // Both branches require the message's bucket: the inbound branch keys the
     // by-reference lookup by it, and the outbound branch needs it to verify
@@ -947,12 +913,10 @@ export class MessageAttachmentService {
         // backs an EXISTING — therefore delivered — message, so observing it
         // still temporary is proof both the inline post-send flip AND the
         // echo-anchored pin failed. Heal it now so the 24h staging sweep cannot
-        // reap a delivered attachment. Gated on `allowHeal` (READ path ONLY): on the
-        // delete path this must NOT fire — pinning a still-temporary doc durable
-        // right before deleteDocument would, if the delete then fails transiently,
-        // leave the doc durable+orphaned and unreachable by the 24h sweep. Best-
-        // effort: a pin failure is logged and must NEVER fail (or block) the read.
-        if (opts.allowHeal && document.temporaryLocation === true) {
+        // reap a delivered attachment. This is a READ-path operation (the only
+        // caller is the read resolution path). Best-effort: a pin failure is
+        // logged and must NEVER fail (or block) the read.
+        if (document.temporaryLocation === true) {
           try {
             await this.fileServiceAdapter.moveDocument(document.id, {
               temporaryLocation: false,
@@ -985,13 +949,12 @@ export class MessageAttachmentService {
           // FIX 2 (self-heal): the eager inbound re-home may have failed
           // transiently, leaving the media in the matrix_media staging bucket
           // where this bucket-scoped lookup can't see it — permanent invisibility
-          // before this fix. Lazily re-home now (READ path ONLY, gated by
-          // `allowHeal`), then re-run the lookup. rehomeOne is idempotent and needs
-          // the sender to attribute the doc (createdBy + auth mint), so skip when
-          // unattributable. Best-effort: if file-service is still down the re-home
-          // throws (or still misses) and we return null AS BEFORE — the next read
-          // retries and heals.
-          if (!opts.allowHeal || !senderActorID) {
+          // before this fix. Lazily re-home now (READ path), then re-run the
+          // lookup. rehomeOne is idempotent and needs the sender to attribute the
+          // doc (createdBy + auth mint), so skip when unattributable. Best-effort:
+          // if file-service is still down the re-home throws (or still misses) and
+          // we return null AS BEFORE — the next read retries and heals.
+          if (!senderActorID) {
             return null;
           }
           try {
@@ -1007,7 +970,7 @@ export class MessageAttachmentService {
             // history path the pre-resolved bucket is threaded through as
             // bucketForRehome, avoiding the round-trip entirely.
             const rehomeBucket =
-              opts.bucketForRehome ??
+              bucketForRehome ??
               (await this.storageBucketService.getStorageBucketOrFail(
                 storageBucketId,
                 { relations: { authorization: true } }
@@ -1086,64 +1049,6 @@ export class MessageAttachmentService {
       );
     }
     return null;
-  }
-
-  // ---------------------------------------------------------------------------
-  // Delete-release (T015).
-  // ---------------------------------------------------------------------------
-
-  /**
-   * Release the documents backing a deleted message's attachments (FR-014/015).
-   * The blob is GC'd by file-service once no row references its `externalID`.
-   * Outbound media is released by `document_id`; inbound by bucket-scoped
-   * by-reference. Never throws into the delete flow.
-   *
-   * SECURITY (delete-release confused-deputy, HIGH): the resolution is gated on
-   * `document.createdBy === senderActorID` (the deleting message's sender) via
-   * `resolveAttachmentDocument`. Without it a member could forge an `m.image`
-   * carrying another member's `document_id` from the same bucket and delete
-   * their own message to release someone else's document. `senderActorID` is the
-   * sender of the message being deleted.
-   */
-  public async releaseAttachments(
-    rawAttachments: ReceivedAttachment[] | undefined,
-    storageBucketId: string | undefined,
-    senderActorID: string | undefined
-  ): Promise<void> {
-    if (!this.enabled || !rawAttachments?.length) {
-      return;
-    }
-    for (const raw of rawAttachments) {
-      const document = await this.resolveAttachmentDocument(
-        raw,
-        storageBucketId,
-        senderActorID,
-        // Delete path: no outbound heal, no inbound re-home. Healing here would pin
-        // a still-temporary doc durable right before deleteDocument — a transient
-        // delete failure would then strand it durable+orphaned, beyond the sweep.
-        { allowHeal: false }
-      );
-      if (!document) {
-        continue;
-      }
-      try {
-        // FIX 5: route through the CANONICAL delete path so the server-owned
-        // authorization_policy (minted by mintDocumentAuth for inbound docs / by
-        // the upload path for composer uploads) and tagset rows are cleaned up
-        // from the DeleteDocumentResult — a direct fileServiceAdapter.deleteDocument
-        // discards that result and leaks both rows.
-        await this.documentService.deleteDocument({ ID: document.id });
-      } catch (error) {
-        this.logger.error?.(
-          {
-            message: 'Failed to release attachment document on delete',
-            documentId: document.id,
-          },
-          (error as Error)?.stack,
-          LogContext.COMMUNICATION
-        );
-      }
-    }
   }
 
   // ---------------------------------------------------------------------------
@@ -1278,33 +1183,6 @@ export class MessageAttachmentService {
         { relations: { directStorage: { authorization: true } } }
       );
     return fullAggregator.directStorage ?? undefined;
-  }
-
-  /**
-   * Comment-room parent bucket ID (FIX [5]): the id-only counterpart of
-   * getCommentRoomParentBucket for the delete-release path, which never reads
-   * bucket.authorization. Resolves callout → storage aggregator →
-   * directStorage.id WITHOUT joining the authorization relation. Same callout
-   * resolution and same undefined-when-unresolved behaviour as
-   * getCommentRoomParentBucket; only the wasted auth join is dropped.
-   */
-  private async getCommentRoomParentBucketId(
-    room: IRoom
-  ): Promise<string | undefined> {
-    const calloutId = await this.resolveParentCalloutId(room);
-    if (!calloutId) {
-      return undefined;
-    }
-    const aggregator =
-      await this.storageAggregatorResolverService.getStorageAggregatorForCallout(
-        calloutId
-      );
-    const fullAggregator =
-      await this.storageAggregatorResolverService.getStorageAggregatorOrFail(
-        aggregator.id,
-        { relations: { directStorage: true } }
-      );
-    return fullAggregator.directStorage?.id ?? undefined;
   }
 
   /** Resolve a comment room (callout or post) to its owning callout id. */
