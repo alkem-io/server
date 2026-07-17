@@ -107,6 +107,7 @@ describe('InnovationFlowResolverFields', () => {
         visible: true,
         descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
         showPublishDetails: true,
+        forumMode: true,
       });
     });
   });
