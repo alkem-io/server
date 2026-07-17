@@ -446,11 +446,12 @@ export class StorageAggregatorResolverService {
   }
 
   public async getStorageAggregatorForCallout(
-    calloutID: string
+    calloutID: string,
+    options?: FindOneOptions<StorageAggregator>
   ): Promise<IStorageAggregator> {
     const storageAggregatorId =
       await this.getStorageAggregatorIdForCallout(calloutID);
-    return await this.getStorageAggregatorOrFail(storageAggregatorId);
+    return await this.getStorageAggregatorOrFail(storageAggregatorId, options);
   }
 
   private async getStorageAggregatorIdForCallout(

@@ -96,10 +96,6 @@ export class MessageAttachmentService {
     );
   }
 
-  public isEnabled(): boolean {
-    return this.enabled;
-  }
-
   // ---------------------------------------------------------------------------
   // Outbound (web compose) — resolve + validate document ids into adapter refs.
   // ---------------------------------------------------------------------------
@@ -583,13 +579,14 @@ export class MessageAttachmentService {
         return undefined;
       }
       return { id: bucket.id, bucket };
-    } catch {
+    } catch (error) {
       this.logger.warn?.(
         {
           message:
             'Failed to resolve attachment bucket on read; omitting attachments for this message',
           roomId: message.roomID,
           messageId: message.id,
+          error: (error as Error)?.message,
         },
         LogContext.COMMUNICATION
       );
@@ -1175,14 +1172,10 @@ export class MessageAttachmentService {
 
     const aggregator =
       await this.storageAggregatorResolverService.getStorageAggregatorForCallout(
-        calloutId
-      );
-    const fullAggregator =
-      await this.storageAggregatorResolverService.getStorageAggregatorOrFail(
-        aggregator.id,
+        calloutId,
         { relations: { directStorage: { authorization: true } } }
       );
-    return fullAggregator.directStorage ?? undefined;
+    return aggregator.directStorage ?? undefined;
   }
 
   /** Resolve a comment room (callout or post) to its owning callout id. */

@@ -1,5 +1,6 @@
 import {
   ENUM_LENGTH,
+  EXTERNAL_REFERENCE_LENGTH,
   MID_TEXT_LENGTH,
   SMALL_TEXT_LENGTH,
 } from '@common/constants';
@@ -69,7 +70,7 @@ export class Document extends AuthorizableEntity implements IDocument {
   // per DocumentWriteGuard) so the server can honour the coalesce "never
   // overwrite an existing reference" invariant without an extra round-trip.
   // Column created by migration 1782299000000-FileExternalReference (varchar 256).
-  @Column('varchar', { length: 256, nullable: true })
+  @Column('varchar', { length: EXTERNAL_REFERENCE_LENGTH, nullable: true })
   externalReference?: string;
 
   @Column('boolean', { nullable: false, default: false })

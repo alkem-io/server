@@ -112,10 +112,6 @@ describe('MessageAttachmentService', () => {
     } as any);
   });
 
-  it('is enabled when the flag is on', () => {
-    expect(service.isEnabled()).toBe(true);
-  });
-
   // --- T009 outbound validation ---
 
   describe('resolveOutboundAttachments', () => {
@@ -487,9 +483,6 @@ describe('MessageAttachmentService', () => {
         id: 'callout-1',
       });
       storageAggregatorResolverService.getStorageAggregatorForCallout.mockResolvedValue(
-        { id: 'agg-1' } as any
-      );
-      storageAggregatorResolverService.getStorageAggregatorOrFail.mockResolvedValue(
         {
           id: 'agg-1',
           directStorage: { id: CALLOUT_BUCKET, authorization: { id: 'cb-a' } },
