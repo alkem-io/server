@@ -1257,11 +1257,14 @@ describe('MessageAttachmentService', () => {
       expect(result).toEqual([expect.objectContaining({ id: 'doc-rehomed' })]);
     });
 
-    it('[1] single-flight: two concurrent inbound-miss reads for the same media_id re-home ONCE', async () => {
+    it('[1] single-flight: two concurrent inbound-miss reads for the same media_id re-home ONCE and load the bucket ONCE', async () => {
       // Both attachments carry the SAME media_id and both MISS the bucket-scoped
       // lookup. Without coalescing each would re-home the same media (orphaned auth
       // on MOVE / duplicate doc on COPY). Single-flight collapses them to ONE
-      // rehomeOne invocation.
+      // rehomeOne invocation. FIX [1] round-5b: the coalescing check runs BEFORE
+      // the bucket load (the thunk), so the second reader joins the in-flight
+      // placement WITHOUT paying a redundant getStorageBucketOrFail — that load now
+      // coalesces too (called exactly once, not twice).
       const rehomeSpy = vi
         .spyOn(service as any, 'rehomeOne')
         .mockResolvedValue(undefined);
@@ -1296,6 +1299,11 @@ describe('MessageAttachmentService', () => {
       );
 
       expect(rehomeSpy).toHaveBeenCalledTimes(1);
+      // The bucket load is folded into the thunk, which only the reader that
+      // STARTS the re-home runs — the coalesced second reader skips it entirely.
+      expect(storageBucketService.getStorageBucketOrFail).toHaveBeenCalledTimes(
+        1
+      );
       expect(result).toEqual([
         expect.objectContaining({ id: 'doc-rehomed' }),
         expect.objectContaining({ id: 'doc-rehomed' }),

@@ -329,7 +329,11 @@ export class MessageAttachmentService {
           // Inbound Element-origin media → verbatim MOVE / re-share COPY.
           // FIX [1]: single-flight so this eager re-home can't race a concurrent
           // lazy read re-home (see resolveAttachmentDocument) on the same media.
-          await this.rehomeOnceCoalesced(bucket, senderActorID, attachment);
+          // The eager path already holds the full `bucket`, so its thunk just runs
+          // rehomeOne directly.
+          await this.rehomeOnceCoalesced(bucket.id, attachment.media_id, () =>
+            this.rehomeOne(bucket, senderActorID, attachment)
+          );
         }
       } catch (error) {
         // Never let one attachment break inbound message processing.
@@ -600,28 +604,33 @@ export class MessageAttachmentService {
   }
 
   /**
-   * FIX [1]: single-flight wrapper around rehomeOne, keyed by
-   * `${bucket.id}:${media_id}`. If a re-home for that key is already in flight,
-   * return its promise so concurrent callers (eager + lazy read) share ONE
-   * placement; otherwise start it, register it, and clear the entry once it settles
-   * (so a later re-home can retry after a failure). The shared promise's rejection
-   * propagates to every awaiter — each caller's own try/catch handles it.
+   * FIX [1]: single-flight coalescer for inbound re-homes, keyed by
+   * `${bucketId}:${mediaId}`. The in-flight key is knowable WITHOUT the full
+   * bucket, so the check runs FIRST: if a re-home for that key is already in
+   * flight, return its promise (NO `startRehome` call — the caller's bucket load,
+   * folded into the thunk, is skipped entirely). Otherwise invoke the `startRehome`
+   * thunk — which loads the bucket and runs rehomeOne ONLY for the reader that
+   * actually starts the placement — register it, and clear the entry once it
+   * settles (so a later re-home can retry after a failure). Concurrent callers
+   * (eager + lazy read) thus share ONE placement AND one bucket load; the shared
+   * promise's rejection propagates to every awaiter — each caller's own try/catch
+   * handles it.
+   *
+   * Residual: single-flight is PER-PROCESS (see rehomeInFlight above).
    */
   private rehomeOnceCoalesced(
-    bucket: IStorageBucket,
-    senderActorID: string,
-    attachment: ReceivedAttachment
+    bucketId: string,
+    mediaId: string,
+    startRehome: () => Promise<void>
   ): Promise<void> {
-    const key = `${bucket.id}:${attachment.media_id}`;
+    const key = `${bucketId}:${mediaId}`;
     const inFlight = this.rehomeInFlight.get(key);
     if (inFlight) {
       return inFlight;
     }
-    const promise = this.rehomeOne(bucket, senderActorID, attachment).finally(
-      () => {
-        this.rehomeInFlight.delete(key);
-      }
-    );
+    const promise = startRehome().finally(() => {
+      this.rehomeInFlight.delete(key);
+    });
     this.rehomeInFlight.set(key, promise);
     return promise;
   }
@@ -957,22 +966,30 @@ export class MessageAttachmentService {
           if (!opts.allowHeal || !senderActorID) {
             return null;
           }
-          // FIX [4]: load the full bucket LAZILY. The fast read path carries only
-          // the bucket id, so pay the getStorageBucketOrFail query + auth join ONLY
-          // here, when an inbound re-home is actually needed (mintDocumentAuth needs
-          // bucket.authorization). The history path pre-resolves it and threads it
-          // through as bucketForRehome, avoiding the extra round-trip.
-          const rehomeBucket =
-            opts.bucketForRehome ??
-            (await this.storageBucketService.getStorageBucketOrFail(
-              storageBucketId,
-              { relations: { authorization: true } }
-            ));
           try {
             // FIX [1]: coalesce concurrent re-homes of the SAME media so two
             // simultaneous readers don't both MOVE/COPY it (orphaned auth /
-            // duplicate doc).
-            await this.rehomeOnceCoalesced(rehomeBucket, senderActorID, raw);
+            // duplicate doc). The in-flight key is `${bucketId}:${media_id}` — known
+            // WITHOUT the full bucket — so the coalescing check runs BEFORE any
+            // bucket load. FIX [4]: the getStorageBucketOrFail query + auth join is
+            // folded INTO the thunk, so on the fast path it runs ONLY for the reader
+            // that actually starts the re-home; a concurrent second reader that
+            // joins the in-flight placement pays NO redundant bucket load. The
+            // history path still threads the pre-resolved bucket through as
+            // bucketForRehome, avoiding the round-trip entirely.
+            await this.rehomeOnceCoalesced(
+              storageBucketId,
+              raw.media_id,
+              async () => {
+                const rehomeBucket =
+                  opts.bucketForRehome ??
+                  (await this.storageBucketService.getStorageBucketOrFail(
+                    storageBucketId,
+                    { relations: { authorization: true } }
+                  ));
+                await this.rehomeOne(rehomeBucket, senderActorID, raw);
+              }
+            );
           } catch (error) {
             this.logger.warn?.(
               {
