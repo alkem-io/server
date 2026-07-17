@@ -305,6 +305,14 @@ export class CollaboraDocumentService {
     };
   }
 
+  /**
+   * Side-effect-free health check of the WOPI save service (no token issued, no analytics
+   * recorded). Lets the editor surface a save-path outage without the cost of {@link getEditorUrl}.
+   */
+  public isWopiServiceAvailable(): Promise<boolean> {
+    return this.wopiServiceAdapter.checkHealth();
+  }
+
   public async deleteCollaboraDocument(
     collaboraDocumentID: string
   ): Promise<ICollaboraDocument> {
