@@ -1,5 +1,8 @@
 import { LogContext } from '@common/enums';
-import { ForbiddenException } from '@common/exceptions';
+import {
+  EntityNotInitializedException,
+  ForbiddenException,
+} from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -52,6 +55,21 @@ describe('ConversationResolverFields.storageBucket (C1)', () => {
     const result = await resolver.storageBucket(conversation, {} as any);
     expect(result).toBe(bucket);
     expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
+  });
+
+  it('returns null when the conversation has no bucket yet (FIX 4, backfillable state)', async () => {
+    await build(true);
+    // getStorageBucket throws EntityNotInitializedException for a bucket-less
+    // conversation; the nullable field must resolve to null, not fail the query.
+    conversationService.getStorageBucket.mockRejectedValue(
+      new EntityNotInitializedException(
+        'no bucket',
+        LogContext.COMMUNICATION_CONVERSATION
+      )
+    );
+    const result = await resolver.storageBucket(conversation, {} as any);
+    expect(result).toBeNull();
+    expect(authorizationService.grantAccessOrFail).not.toHaveBeenCalled();
   });
 
   it('denies a non-member (READ gate throws)', async () => {

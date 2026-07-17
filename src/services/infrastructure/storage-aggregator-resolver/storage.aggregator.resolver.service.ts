@@ -4,6 +4,7 @@ import { InvalidUUID } from '@common/exceptions/invalid.uuid';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Collaboration } from '@domain/collaboration/collaboration/collaboration.entity';
 import { KnowledgeBase } from '@domain/common/knowledge-base/knowledge.base.entity';
+import { Conversation } from '@domain/communication/conversation/conversation.entity';
 import { IOrganization, Organization } from '@domain/community/organization';
 import { User } from '@domain/community/user/user.entity';
 import { IUser } from '@domain/community/user/user.interface';
@@ -92,6 +93,25 @@ export class StorageAggregatorResolverService {
       );
     }
     return account;
+  }
+
+  public async getParentConversationForStorageAggregator(
+    storageAggregator: IStorageAggregator
+  ): Promise<Conversation> {
+    const conversation = await this.entityManager.findOne(Conversation, {
+      where: {
+        storageAggregator: {
+          id: storageAggregator.id,
+        },
+      },
+    });
+    if (!conversation) {
+      throw new EntityNotFoundException(
+        `Unable to retrieve Conversation for storage aggregator ${storageAggregator.id}`,
+        LogContext.STORAGE_AGGREGATOR
+      );
+    }
+    return conversation;
   }
 
   public async getParentSpaceForStorageAggregator(

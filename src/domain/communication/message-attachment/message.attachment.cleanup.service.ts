@@ -1,11 +1,11 @@
 import { LogContext } from '@common/enums';
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { Document } from '@domain/storage/document/document.entity';
+import { DocumentService } from '@domain/storage/document/document.service';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { Cron, CronExpression } from '@nestjs/schedule';
 import { InjectRepository } from '@nestjs/typeorm';
-import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { LessThan, Repository } from 'typeorm';
@@ -29,9 +29,12 @@ const STAGING_TTL_MS = 24 * 60 * 60 * 1000; // 24h (FR-012, SC-007)
  * responsibility, keyed on real un-referenced blobs — not a server age sweep.
  *
  * Reads the (read-only) `file` table via TypeORM and releases stale rows through
- * `FileServiceAdapter.deleteDocument` (never direct TypeORM writes). Disabled
- * unless the feature flag is on. If the platform runs an equivalent file-service
- * CronJob, that is authoritative and this can be left off (see plan / infra).
+ * the canonical `DocumentService.deleteDocument` (FIX 5) — which delegates the
+ * `file` delete to file-service AND cleans up the server-owned auth-policy +
+ * tagset rows from the DeleteDocumentResult (never direct TypeORM writes).
+ * Disabled unless the feature flag is on. If the platform runs an equivalent
+ * file-service CronJob, that is authoritative and this can be left off (see
+ * plan / infra).
  */
 @Injectable()
 export class MessageAttachmentCleanupService {
@@ -39,7 +42,7 @@ export class MessageAttachmentCleanupService {
 
   constructor(
     private readonly configService: ConfigService<AlkemioConfig, true>,
-    private readonly fileServiceAdapter: FileServiceAdapter,
+    private readonly documentService: DocumentService,
     @InjectRepository(Document)
     private readonly documentRepository: Repository<Document>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
@@ -89,7 +92,10 @@ export class MessageAttachmentCleanupService {
     let count = 0;
     for (const id of documentIds) {
       try {
-        await this.fileServiceAdapter.deleteDocument(id);
+        // FIX 5: canonical delete path — cleans up the auth-policy + tagset rows
+        // owned by the server, which a direct fileServiceAdapter.deleteDocument
+        // would leak.
+        await this.documentService.deleteDocument({ ID: id });
         count++;
       } catch (error) {
         this.logger.error?.(

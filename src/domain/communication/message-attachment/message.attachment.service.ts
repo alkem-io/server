@@ -150,6 +150,21 @@ export class MessageAttachmentService {
         );
       }
 
+      // Single-use invariant (FIX 1): a legitimate outbound attachment is always
+      // a FRESH, unsent upload — the web client uploads a NEW temporary document
+      // per attachment (temporaryLocation === true). A durable (already-sent)
+      // document means it was consumed by a prior send; re-attaching it would let
+      // the SAME document id back two separate messages, so deleting one message
+      // would call deleteDocument(D) and destroy the other message's only file
+      // row (cross-message delete-release destruction). Reject durable docs to
+      // enforce single-use.
+      if (document.temporaryLocation !== true) {
+        throw new ValidationException(
+          'Attachment has already been sent',
+          LogContext.COMMUNICATION
+        );
+      }
+
       this.authorizationService.grantAccessOrFail(
         actorContext,
         document.authorization,
@@ -248,8 +263,11 @@ export class MessageAttachmentService {
     // called on the inbound message.received path, which does NOT wrap it — so
     // an unhandled throw here would skip publish/notifications/VC invocation for
     // the whole message. Never let attachment re-home break inbound processing:
-    // log best-effort and return undefined (media stays in staging, resolvable
-    // later via the room fallback on read).
+    // log best-effort and return undefined. Media then stays in the matrix_media
+    // staging bucket; the read path self-heals by LAZILY re-homing on the first
+    // read that misses the bucket-scoped lookup (see resolveAttachmentDocument),
+    // so a transient re-home failure no longer makes the attachment permanently
+    // invisible.
     let bucket: IStorageBucket | undefined;
     try {
       bucket = await this.getTargetBucketForRoom(room);
@@ -450,28 +468,34 @@ export class MessageAttachmentService {
   }
 
   /**
-   * Resolve the bucket a message's attachments live in (H1). Prefers the bucket
-   * id already carried on the message (set by the live-subscription path), and
-   * otherwise resolves it from the message's room so attachments render on every
-   * read path, not just the inbox subscription.
+   * Resolve the FULL storage bucket a message's attachments live in (H1 + FIX 6).
+   * Returns the `IStorageBucket` (with `authorization` loaded) — not just the id —
+   * so the read path resolves it ONCE and threads it to both the READ-gate and
+   * the lazy inbound re-home (FIX 2), instead of re-querying the conversation +
+   * bucket per attachment. Prefers the bucket id already carried on the message
+   * (set by the live-subscription path), otherwise resolves it from the message's
+   * room so attachments render on every read path, not just the inbox subscription.
    */
-  private async resolveMessageBucketId(
+  private async resolveMessageBucket(
     message: IMessage
-  ): Promise<string | undefined> {
-    if (message.storageBucketId) {
-      return message.storageBucketId;
-    }
-    if (!message.roomID) {
-      return undefined;
-    }
+  ): Promise<IStorageBucket | undefined> {
     // FIX B: attachment resolution must NEVER break message reads. The read/
-    // history path (resolveMessageAttachments → here → getResolutionBucketIdForRoom
-    // → getTargetBucketForRoom) can throw transiently (storage-aggregator / bucket
+    // history path (resolveMessageAttachments → here → getTargetBucketForRoom /
+    // getStorageBucketOrFail) can throw transiently (storage-aggregator / bucket
     // lookups). An unguarded throw would propagate out of the @ResolveField and
     // fail the ENTIRE getMessages/getLastMessages query for the viewer. Degrade to
     // "bucket unknown" (undefined) → resolveMessageAttachments omits this message's
     // attachments while the history query still succeeds. Same invariant as FIX 2.
     try {
+      if (message.storageBucketId) {
+        return await this.storageBucketService.getStorageBucketOrFail(
+          message.storageBucketId,
+          { relations: { authorization: true } }
+        );
+      }
+      if (!message.roomID) {
+        return undefined;
+      }
       const room = await this.roomRepository.findOne({
         where: { id: message.roomID },
         select: { id: true, type: true },
@@ -479,7 +503,7 @@ export class MessageAttachmentService {
       if (!room) {
         return undefined;
       }
-      return await this.getResolutionBucketIdForRoom(room as IRoom);
+      return await this.getTargetBucketForRoom(room as IRoom);
     } catch {
       this.logger.warn?.(
         {
@@ -602,8 +626,10 @@ export class MessageAttachmentService {
     // message.storageBucketId, but history reads (getMessage/getMessages/
     // getLastMessages) do not — so fall back to resolving it from the message's
     // room. Without this, inbound (media_id) attachments resolve to [] on reads.
-    const storageBucketId = await this.resolveMessageBucketId(message);
-    if (!storageBucketId) {
+    // FIX 6: resolve the FULL bucket once and thread it down (used both for the
+    // by-reference lookup and the FIX 2 lazy re-home).
+    const bucket = await this.resolveMessageBucket(message);
+    if (!bucket) {
       return [];
     }
 
@@ -623,7 +649,7 @@ export class MessageAttachmentService {
       message.rawAttachments.map(raw =>
         this.resolveReadAttachment(
           raw,
-          storageBucketId,
+          bucket,
           message.sender,
           actorContext
         ).catch(error => {
@@ -654,14 +680,18 @@ export class MessageAttachmentService {
    */
   private async resolveReadAttachment(
     raw: ReceivedAttachment,
-    storageBucketId: string,
+    bucket: IStorageBucket,
     senderActorID: string | undefined,
     actorContext: ActorContext
   ): Promise<IMessageAttachment | null> {
+    // Read path passes the full bucket as `bucketForRehome` so an inbound miss
+    // (media still in staging after a failed eager re-home) can lazily self-heal
+    // (FIX 2). The delete path passes no bucket, so it never re-homes.
     const document = await this.resolveAttachmentDocument(
       raw,
-      storageBucketId,
-      senderActorID
+      bucket.id,
+      senderActorID,
+      bucket
     );
     if (!document) {
       return null;
@@ -709,7 +739,12 @@ export class MessageAttachmentService {
   private async resolveAttachmentDocument(
     raw: ReceivedAttachment,
     storageBucketId: string | undefined,
-    senderActorID: string | undefined
+    senderActorID: string | undefined,
+    // FIX 2: when provided (read path only), a missed inbound (media_id) lookup
+    // triggers a LAZY re-home into this bucket before giving up, so media stranded
+    // in staging by a failed eager re-home stops being permanently invisible. The
+    // delete path omits it, so releasing never re-homes.
+    bucketForRehome?: IStorageBucket
   ): Promise<IDocument | null> {
     // Both branches require the message's bucket: the inbound branch keys the
     // by-reference lookup by it, and the outbound branch needs it to verify
@@ -760,12 +795,44 @@ export class MessageAttachmentService {
       // applies: the re-home stamped `createdBy = sender`, so a forged media_id
       // pointing at another member's re-homed doc fails the gate.
       if (raw.media_id) {
-        const ref = await this.fileServiceAdapter.getDocumentByReference(
+        let ref = await this.fileServiceAdapter.getDocumentByReference(
           raw.media_id,
           storageBucketId
         );
         if (!ref) {
-          return null;
+          // FIX 2 (self-heal): the eager inbound re-home may have failed
+          // transiently, leaving the media in the matrix_media staging bucket
+          // where this bucket-scoped lookup can't see it — permanent invisibility
+          // before this fix. Lazily re-home now (read path only), then re-run the
+          // lookup. rehomeOne is idempotent and needs the sender to attribute the
+          // doc (createdBy + auth mint), so skip when unattributable. Best-effort:
+          // if file-service is still down the re-home throws (or still misses) and
+          // we return null AS BEFORE — the next read retries and heals.
+          if (!bucketForRehome || !senderActorID) {
+            return null;
+          }
+          try {
+            await this.rehomeOne(bucketForRehome, senderActorID, raw);
+          } catch (error) {
+            this.logger.warn?.(
+              {
+                message:
+                  'Lazy inbound re-home failed on read; media stays in staging and will retry on the next read',
+                mediaId: raw.media_id,
+                storageBucketId,
+                error: (error as Error)?.message,
+              },
+              LogContext.COMMUNICATION
+            );
+            return null;
+          }
+          ref = await this.fileServiceAdapter.getDocumentByReference(
+            raw.media_id,
+            storageBucketId
+          );
+          if (!ref) {
+            return null;
+          }
         }
         const document = await this.documentService.getDocumentOrFail(ref.id, {
           relations: { authorization: true },
@@ -831,7 +898,12 @@ export class MessageAttachmentService {
         continue;
       }
       try {
-        await this.fileServiceAdapter.deleteDocument(document.id);
+        // FIX 5: route through the CANONICAL delete path so the server-owned
+        // authorization_policy (minted by mintDocumentAuth for inbound docs / by
+        // the upload path for composer uploads) and tagset rows are cleaned up
+        // from the DeleteDocumentResult — a direct fileServiceAdapter.deleteDocument
+        // discards that result and leaks both rows.
+        await this.documentService.deleteDocument({ ID: document.id });
       } catch (error) {
         this.logger.error?.(
           {
@@ -916,17 +988,16 @@ export class MessageAttachmentService {
     room: IRoom
   ): Promise<IStorageBucket | undefined> {
     if (isConversationRoom(room)) {
+      // FIX 6: join the bucket's authorization in this single conversation query
+      // and return directStorage directly, instead of resolving the bucket id here
+      // and issuing a SECOND getStorageBucketOrFail round-trip for the same bucket.
       const conversation = await this.conversationRepository.findOne({
         where: { room: { id: room.id } },
-        relations: { storageAggregator: { directStorage: true } },
+        relations: {
+          storageAggregator: { directStorage: { authorization: true } },
+        },
       });
-      const bucketId = conversation?.storageAggregator?.directStorage?.id;
-      if (!bucketId) {
-        return undefined;
-      }
-      return this.storageBucketService.getStorageBucketOrFail(bucketId, {
-        relations: { authorization: true },
-      });
+      return conversation?.storageAggregator?.directStorage ?? undefined;
     }
 
     if (this.isCommentRoom(room)) {

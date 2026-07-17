@@ -1,9 +1,9 @@
 import { StorageAggregatorType } from '@common/enums/storage.aggregator.type';
 import { Document } from '@domain/storage/document/document.entity';
+import { DocumentService } from '@domain/storage/document/document.service';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
-import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { type Mocked } from 'vitest';
@@ -22,7 +22,7 @@ const mockConfig = {
 
 describe('MessageAttachmentCleanupService', () => {
   let service: MessageAttachmentCleanupService;
-  let fileServiceAdapter: Mocked<FileServiceAdapter>;
+  let documentService: Mocked<DocumentService>;
   let documentRepository: { find: ReturnType<typeof vi.fn> };
 
   beforeEach(async () => {
@@ -44,7 +44,7 @@ describe('MessageAttachmentCleanupService', () => {
       .compile();
 
     service = module.get(MessageAttachmentCleanupService);
-    fileServiceAdapter = module.get(FileServiceAdapter);
+    documentService = module.get(DocumentService);
   });
 
   it('reaps unsent temporaryLocation conversation uploads only — never matrix_media staging rows (H2/H3)', async () => {
@@ -64,11 +64,12 @@ describe('MessageAttachmentCleanupService', () => {
     const serialized = JSON.stringify(documentRepository.find.mock.calls);
     expect(serialized).not.toContain(MATRIX_MEDIA_BUCKET);
 
-    // Only the unsent upload is released.
-    expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledTimes(1);
-    expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
-      'unsent-upload'
-    );
+    // Only the unsent upload is released — via the canonical DocumentService
+    // delete path (FIX 5) so the auth-policy + tagset rows are cleaned up too.
+    expect(documentService.deleteDocument).toHaveBeenCalledTimes(1);
+    expect(documentService.deleteDocument).toHaveBeenCalledWith({
+      ID: 'unsent-upload',
+    });
   });
 
   it('does nothing when the feature flag is off', async () => {

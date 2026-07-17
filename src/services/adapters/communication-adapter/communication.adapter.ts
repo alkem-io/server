@@ -821,7 +821,7 @@ export class CommunicationAdapter {
       // feature 013: carry the just-sent attachments + room on the response so
       // the send result resolves attachments like the read path (roomID is the
       // resolver's fallback to resolve the bucket when storageBucketId is unset).
-      rawAttachments: this.toReceivedAttachments(sendMessageData.attachments),
+      rawAttachments: this.toAttachmentRefs(sendMessageData.attachments),
       roomID: sendMessageData.roomID,
     };
   }
@@ -861,7 +861,7 @@ export class CommunicationAdapter {
       reactions: [],
       // feature 013: carry the just-sent attachments + room on the reply response
       // so it resolves attachments like the read path (see sendMessage).
-      rawAttachments: this.toReceivedAttachments(sendMessageData.attachments),
+      rawAttachments: this.toAttachmentRefs(sendMessageData.attachments),
       roomID: sendMessageData.roomID,
     };
   }
@@ -1428,33 +1428,17 @@ export class CommunicationAdapter {
    * Map resolved server-side attachments (feature 013) to the matrix-adapter-lib
    * `AttachmentRef` wire shape. Returns undefined when there are none so the
    * payload stays identical to the pre-feature shape.
+   *
+   * FIX 7: single shared mapper. Outbound attachments are keyed by `document_id`
+   * and produce exactly the `AttachmentRef` shape. `AttachmentRef` is structurally
+   * assignable to `ReceivedAttachment` (its `document_id` is required, the others
+   * optional/matching), so the same result also feeds the `rawAttachments`
+   * carrier on the send-response IMessage — so the send response carries its own
+   * attachments (consistent with the read path), not just the Matrix echo.
    */
   private toAttachmentRefs(
     attachments?: CommunicationMessageAttachment[]
   ): AttachmentRef[] | undefined {
-    if (!attachments || attachments.length === 0) {
-      return undefined;
-    }
-    return attachments.map(a => ({
-      document_id: a.documentId,
-      display_name: a.displayName,
-      mime_type: a.mimeType,
-      size: a.size,
-      width: a.width,
-      height: a.height,
-    }));
-  }
-
-  /**
-   * Map resolved server-side attachments (feature 013) to the `rawAttachments`
-   * carrier shape (`ReceivedAttachment`) for the IMessage returned by the send
-   * path — so the send response carries its own attachments (consistent with
-   * the read path), not just the Matrix echo. Outbound attachments are keyed by
-   * `document_id`. Returns undefined when there are none.
-   */
-  private toReceivedAttachments(
-    attachments?: CommunicationMessageAttachment[]
-  ): ReceivedAttachment[] | undefined {
     if (!attachments || attachments.length === 0) {
       return undefined;
     }

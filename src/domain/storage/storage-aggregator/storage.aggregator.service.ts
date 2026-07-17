@@ -286,6 +286,21 @@ export class StorageAggregatorService {
         result.url = this.urlGeneratorService.generateUrlForPlatform();
         break;
       }
+      case StorageAggregatorType.CONVERSATION: {
+        // Conversation storage aggregators (feature 013). A Conversation has no
+        // display name of its own — Matrix renders the peer / group name
+        // client-side — so use a stable literal like the ACCOUNT case, and the
+        // platform URL as the best available target (no per-conversation URL
+        // generator exists). The hard requirement is that this must NOT throw.
+        const conversation =
+          await this.storageAggregatorResolverService.getParentConversationForStorageAggregator(
+            storageAggregator
+          );
+        result.id = conversation.id;
+        result.displayName = 'conversation';
+        result.url = this.urlGeneratorService.generateUrlForPlatform();
+        break;
+      }
       default:
         throw new NotSupportedException(
           `Retrieval of parent entity information for storage aggregator on ${storageAggregator.id} of type ${storageAggregator.type} not yet implemented`,

@@ -426,6 +426,25 @@ describe('StorageAggregatorService', () => {
       expect(result.url).toBe('/platform');
     });
 
+    it('should resolve CONVERSATION parent info without throwing (feature 013)', async () => {
+      const aggregator = {
+        id: 'agg-conversation',
+        type: StorageAggregatorType.CONVERSATION,
+      } as IStorageAggregator;
+      (
+        storageAggregatorResolverService.getParentConversationForStorageAggregator as Mock
+      ).mockResolvedValue({ id: 'conversation-1' });
+      (urlGeneratorService.generateUrlForPlatform as Mock).mockReturnValue(
+        '/platform'
+      );
+
+      const result = await service.getParentEntity(aggregator);
+
+      expect(result.id).toBe('conversation-1');
+      expect(result.displayName).toBe('conversation');
+      expect(result.url).toBe('/platform');
+    });
+
     it('should throw NotSupportedException when aggregator type is unknown', async () => {
       const aggregator = {
         id: 'agg-unknown',

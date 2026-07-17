@@ -1,5 +1,6 @@
 import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
+import { EntityNotInitializedException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
@@ -81,9 +82,19 @@ export class ConversationResolverFields {
     if (!this.attachmentsEnabled) {
       return null;
     }
-    const bucket = await this.conversationService.getStorageBucket(
-      conversation.id
-    );
+    // A conversation with no bucket yet is an accepted, backfillable state
+    // (getStorageBucket throws EntityNotInitializedException). The field is
+    // nullable, so resolve to null instead of failing the whole query; re-throw
+    // anything else.
+    let bucket: IStorageBucket;
+    try {
+      bucket = await this.conversationService.getStorageBucket(conversation.id);
+    } catch (error) {
+      if (error instanceof EntityNotInitializedException) {
+        return null;
+      }
+      throw error;
+    }
     // READ-gate (C1): the bucket auth mirrors the conversation-member credential,
     // so non-members are denied.
     this.authorizationService.grantAccessOrFail(

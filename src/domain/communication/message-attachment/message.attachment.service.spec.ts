@@ -172,6 +172,30 @@ describe('MessageAttachmentService', () => {
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
     });
 
+    it('rejects a durable (already-sent) attachment — single-use invariant (FIX 1)', async () => {
+      // A durable doc (temporaryLocation !== true) was already consumed by a
+      // prior send; re-attaching it would let one document back two messages, so
+      // deleting one would destroy the other's only file row. Reject it.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-1',
+        createdBy: 'sender-1',
+        mimeType: 'image/png',
+        size: 1000,
+        temporaryLocation: false,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+
+      await expect(
+        service.resolveOutboundAttachments(
+          conversationRoom,
+          { actorID: 'sender-1' } as any,
+          ['doc-1']
+        )
+      ).rejects.toBeInstanceOf(ValidationException);
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+    });
+
     it('resolves + validates a sender-owned attachment, READ-gates, and does NOT pin during resolve', async () => {
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-1',
@@ -181,6 +205,7 @@ describe('MessageAttachmentService', () => {
         size: 1000,
         imageWidth: 10,
         imageHeight: 20,
+        temporaryLocation: true,
         storageBucket: { id: CONV_BUCKET },
         authorization: { id: 'doc-auth' },
       } as any);
@@ -355,9 +380,10 @@ describe('MessageAttachmentService', () => {
     });
 
     it('never aborts the inbound handler when target bucket resolution throws (FIX 2)', async () => {
-      // getTargetBucketForRoom → getStorageBucketOrFail throws transiently. The
-      // handler must not propagate — inbound message processing continues.
-      storageBucketService.getStorageBucketOrFail.mockRejectedValueOnce(
+      // getTargetBucketForRoom → conversationRepository.findOne throws
+      // transiently. The handler must not propagate — inbound message processing
+      // continues.
+      conversationRepository.findOne.mockRejectedValueOnce(
         new Error('bucket lookup failed')
       );
 
@@ -860,6 +886,90 @@ describe('MessageAttachmentService', () => {
       expect(result).toEqual([expect.objectContaining({ id: 'doc-rehomed' })]);
     });
 
+    it('FIX 2: lazily re-homes an inbound media_id that missed the bucket lookup, then resolves it', async () => {
+      // Eager re-home failed transiently → media still in matrix_media staging,
+      // so the bucket-scoped lookup misses. The read path must lazily re-home
+      // (MOVE) and then resolve the now-homed doc, instead of returning nothing
+      // forever.
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null) // (1) initial bucket-scoped miss
+        .mockResolvedValueOnce(null) // (2) rehomeOne: not already in target
+        .mockResolvedValueOnce({
+          id: 'doc-staging',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+          mimeType: 'image/png',
+        } as any) // (3) rehomeOne: global canonical lookup
+        .mockResolvedValueOnce({ id: 'doc-rehomed' } as any); // (4) re-run after re-home
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-rehomed',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        authorization: { id: 'doc-auth' },
+      } as any);
+      authorizationService.isAccessGranted.mockReturnValue(true);
+      documentService.getPubliclyAccessibleURL.mockReturnValue(
+        'https://docs/doc-rehomed'
+      );
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          sender: 'sender-1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            {
+              media_id: 'media-1',
+              display_name: 'x',
+              mime_type: 'image/png',
+              size: 1,
+            },
+          ],
+        } as any,
+        {} as any
+      );
+
+      // The lazy re-home MOVEd the staging doc into the conversation bucket...
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
+        'doc-staging',
+        expect.objectContaining({
+          storageBucketId: CONV_BUCKET,
+          createdBy: 'sender-1',
+          externalReference: 'media-1',
+        })
+      );
+      // ...and the attachment now resolves instead of being permanently invisible.
+      expect(result).toEqual([expect.objectContaining({ id: 'doc-rehomed' })]);
+    });
+
+    it('FIX 2: does not lazily re-home when the sender is unknown (cannot attribute)', async () => {
+      // No sender → the re-home cannot stamp createdBy / mint attribution, so it
+      // must be skipped and the attachment omitted (still self-heals once a read
+      // carries a sender).
+      fileServiceAdapter.getDocumentByReference.mockResolvedValue(null);
+
+      const result = await service.resolveMessageAttachments(
+        {
+          id: 'm1',
+          storageBucketId: CONV_BUCKET,
+          rawAttachments: [
+            {
+              media_id: 'media-1',
+              display_name: 'x',
+              mime_type: 'image/png',
+              size: 1,
+            },
+          ],
+        } as any,
+        {} as any
+      );
+
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
+      expect(result).toEqual([]);
+    });
+
     it('denies a non-member (READ not granted)', async () => {
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-1',
@@ -992,9 +1102,11 @@ describe('MessageAttachmentService', () => {
         'sender-1'
       );
 
-      expect(fileServiceAdapter.deleteDocument).toHaveBeenCalledWith(
-        'doc-mine'
-      );
+      // FIX 5: canonical delete path so the auth-policy + tagset rows are cleaned
+      // up (a direct fileServiceAdapter.deleteDocument would leak them).
+      expect(documentService.deleteDocument).toHaveBeenCalledWith({
+        ID: 'doc-mine',
+      });
     });
 
     it('does NOT release a forged document_id owned by another member', async () => {
@@ -1021,7 +1133,7 @@ describe('MessageAttachmentService', () => {
         'sender-1'
       );
 
-      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
 
     it('does NOT release when the sender is unknown (fail-closed)', async () => {
@@ -1045,7 +1157,7 @@ describe('MessageAttachmentService', () => {
         undefined
       );
 
-      expect(fileServiceAdapter.deleteDocument).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
   });
 });
