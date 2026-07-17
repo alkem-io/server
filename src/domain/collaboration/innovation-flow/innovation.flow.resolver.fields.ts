@@ -8,6 +8,10 @@ import { IProfile } from '@domain/common/profile/profile.interface';
 import { UseGuards } from '@nestjs/common';
 import { Parent, ResolveField, Resolver } from '@nestjs/graphql';
 import { IInnovationFlowState } from '../innovation-flow-state/innovation.flow.state.interface';
+import {
+  normalizeStateSettings,
+  normalizeStatesSettings,
+} from '../innovation-flow-state/normalize.state.settings';
 import { sortBySortOrder } from '../innovation-flow-state/utils/sortBySortOrder';
 import { InnovationFlow } from './innovation.flow.entity';
 import { IInnovationFlow } from './innovation.flow.interface';
@@ -26,9 +30,14 @@ export class InnovationFlowResolverFields {
   async states(
     @Parent() innovationFlow: IInnovationFlow
   ): Promise<IInnovationFlowState[]> {
-    // If states were eagerly loaded (e.g. from getInnovationFlow), reuse them
+    // If states were eagerly loaded (e.g. from getInnovationFlow), reuse them.
+    // Normalize: these are raw TypeORM rows that never pass through
+    // getInnovationFlowStateOrFail, so an un-backfilled row would serialize null
+    // into the NonNull settings fields and fail the whole [InnovationFlowState!]! list.
     if (innovationFlow.states?.length) {
-      return [...innovationFlow.states].sort(sortBySortOrder);
+      return normalizeStatesSettings(
+        [...innovationFlow.states].sort(sortBySortOrder)
+      );
     }
     return await this.innovationFlowService.getStates(innovationFlow.id);
   }
@@ -47,11 +56,10 @@ export class InnovationFlowResolverFields {
     }
     // If states were eagerly loaded, find currentState from the array
     if (innovationFlow.states?.length) {
-      return (
-        innovationFlow.states.find(
-          s => s.id === innovationFlow.currentStateID
-        ) ?? null
+      const currentState = innovationFlow.states.find(
+        s => s.id === innovationFlow.currentStateID
       );
+      return currentState ? normalizeStateSettings(currentState) : null;
     }
     return await this.innovationFlowService.getCurrentState(
       innovationFlow.currentStateID

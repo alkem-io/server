@@ -3,8 +3,7 @@ import { ELASTICSEARCH_CLIENT_PROVIDER } from '@constants/index';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorService } from '@domain/actor';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
-import { Client as ElasticClient } from '@elastic/elasticsearch';
-import { WriteResponseBase } from '@elastic/elasticsearch/lib/api/types';
+import { Client as ElasticClient, estypes } from '@elastic/elasticsearch';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types';
@@ -243,6 +242,28 @@ export class ContributionReporterService {
     void this.createDocument(
       {
         type: CONTRIBUTION_TYPE.COLLABORA_DOCUMENT_UPLOADED,
+        id: contribution.id,
+        name: contribution.name,
+        space: contribution.space,
+      },
+      actorContext
+    );
+  }
+
+  /**
+   * A CollaboraDocument's backing file was swapped in place (the document
+   * identity is preserved; only its content changed). Single-actor shape,
+   * identical to {@link calloutCollaboraDocumentUploaded}; the record `id`
+   * is the `CollaboraDocument.id`. See feature 014-officedocs-replace-file
+   * (FR-014).
+   */
+  public calloutCollaboraDocumentReplaced(
+    contribution: ContributionDetails,
+    actorContext: ContributionActorContext
+  ): void {
+    void this.createDocument(
+      {
+        type: CONTRIBUTION_TYPE.COLLABORA_DOCUMENT_REPLACED,
         id: contribution.id,
         name: contribution.name,
         space: contribution.space,
@@ -563,7 +584,7 @@ export class ContributionReporterService {
     contribution: Omit<TObject, 'author'>,
     actorContext: ContributionActorContext,
     timestamp: number
-  ): Promise<WriteResponseBase | undefined> {
+  ): Promise<estypes.WriteResponseBase | undefined> {
     if (!this.client) {
       return undefined;
     }
@@ -601,7 +622,7 @@ export class ContributionReporterService {
   private async createDocument<TObject extends BaseContribution>(
     contribution: Omit<TObject, 'author'>,
     actorContext: ContributionActorContext
-  ): Promise<WriteResponseBase | undefined> {
+  ): Promise<estypes.WriteResponseBase | undefined> {
     if (!this.client) {
       return undefined;
     }
@@ -648,7 +669,7 @@ export class ContributionReporterService {
       OfficeDocumentContributionDocument,
       '@timestamp' | 'environment'
     >
-  ): Promise<WriteResponseBase | undefined> {
+  ): Promise<estypes.WriteResponseBase | undefined> {
     if (!this.client) {
       return undefined;
     }

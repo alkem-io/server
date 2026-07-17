@@ -78,7 +78,7 @@ describe('RoleSetResolverMutationsMembership', () => {
   });
 
   describe('joinRoleSet', () => {
-    it('should join roleSet when type is SPACE', async () => {
+    it('should join roleSet via the shared grant service (source: join) when type is SPACE', async () => {
       const actorContext = { actorID: 'user-1' } as any;
       const mockRoleSet = {
         id: 'rs-1',
@@ -93,20 +93,24 @@ describe('RoleSetResolverMutationsMembership', () => {
       (authorizationService.grantAccessOrFail as Mock).mockReturnValue(
         undefined
       );
-      (roleSetService.assignActorToRole as Mock).mockResolvedValue('user-1');
+      (
+        roleSetService.ensureMemberOfRoleSetAndAncestors as Mock
+      ).mockResolvedValue(undefined);
 
       const result = await resolver.joinRoleSet(actorContext, {
         roleSetID: 'rs-1',
       } as any);
 
       expect(result).toBe(mockRoleSet);
-      expect(roleSetService.assignActorToRole).toHaveBeenCalledWith(
-        mockRoleSet,
-        RoleName.MEMBER,
-        'user-1',
-        actorContext,
-        true
-      );
+      // Feature 017 round 2 — join routes through the shared grant so an
+      // eligible non-parent-member is registered in the Subspace + ancestors.
+      expect(
+        roleSetService.ensureMemberOfRoleSetAndAncestors
+      ).toHaveBeenCalledWith(mockRoleSet, 'user-1', actorContext, {
+        source: 'join',
+      });
+      // The JOIN privilege is still enforced as the first gate.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalled();
     });
 
     it('should throw when invitation is pending', async () => {

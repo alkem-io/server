@@ -159,8 +159,9 @@ describe('SearchIngestService', () => {
       const result = await (service as any).ensureIndicesExist(suffix);
 
       expect(result.acknowledged).toBe(true);
-      // 8 aliases: spaces, subspaces, organizations, users, posts, callouts, whiteboards, memos
-      expect(mockElasticClient.indices.create).toHaveBeenCalledTimes(8);
+      // 9 aliases: spaces, subspaces, organizations, users, posts, callouts,
+      // whiteboards, memos, office-document
+      expect(mockElasticClient.indices.create).toHaveBeenCalledTimes(9);
     });
 
     it('should return not acknowledged when a create call fails', async () => {

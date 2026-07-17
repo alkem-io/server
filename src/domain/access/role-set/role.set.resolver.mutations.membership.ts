@@ -158,12 +158,20 @@ export class RoleSetResolverMutationsMembership {
       `join community: ${roleSet.id}`
     );
 
-    await this.roleSetService.assignActorToRole(
+    // Feature 017 round 2 — combined Subspace direct join. Route through the
+    // shared grant service so an eligible non-parent-member joining an open
+    // Subspace is registered in the Subspace AND every missing public ancestor,
+    // atomically (FR-023/FR-026). The combined-flow authorisation is evaluated
+    // once, here at join time (there is no approval step). For a parent-member
+    // or a non-eligible join the shared service falls back to today's single-
+    // target grant via assignActorToRole (behaviour-preserving — FR-028).
+    await this.roleSetService.ensureMemberOfRoleSetAndAncestors(
       roleSet,
-      RoleName.MEMBER,
       actorContext.actorID,
       actorContext,
-      true
+      {
+        source: 'join',
+      }
     );
 
     return roleSet;
