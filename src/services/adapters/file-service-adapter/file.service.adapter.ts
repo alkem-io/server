@@ -10,12 +10,12 @@ import { AlkemioConfig } from '@src/types/alkemio.config';
 import { isAxiosError } from 'axios';
 import FormData from 'form-data';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
+import { firstValueFrom } from 'rxjs';
 import type {
   CopyDocumentInput,
   CreateDocumentMetadata,
   CreateDocumentResult,
   DeleteDocumentResult,
-  DocumentMetaResult,
   DocumentReferenceResult,
   UpdateDocumentInput,
   UpdateDocumentResult,
@@ -27,6 +27,15 @@ import {
 
 const LOG_PREFIX = '[FileService]';
 const FILE_PATH_PREFIX = '/internal/file';
+
+/**
+ * SHORT timeout for the best-effort outbound image-dimensions fetch
+ * (`getDocumentMeta`). Deliberately far below the adapter's full request
+ * timeout: image dims are a cosmetic rendering hint on the hot send path, so a
+ * degraded file-service `/meta` must add at most this much latency per image —
+ * never the full timeout × retries — and must never block the send.
+ */
+const DOCUMENT_META_TIMEOUT_MS = 2500;
 
 @Injectable()
 export class FileServiceAdapter extends HttpClientBase {
@@ -265,31 +274,42 @@ export class FileServiceAdapter extends HttpClientBase {
    * intrinsic image dimensions (`imageWidth` / `imageHeight`): those are
    * transient, file-service-owned fields (cached `content_metadata`), absent
    * from the server's Document entity after a DB load, so the outbound
-   * attachment ref can only carry them by asking file-service.
+   * attachment ref can only carry them by asking file-service. The `/meta`
+   * response is the SAME `documentMetaResponse` shape returned by-reference, so
+   * it deserializes as a `DocumentReferenceResult` (dims are all the caller
+   * reads).
    *
-   * Returns `null` on 404 (unknown document) rather than throwing, mirroring
-   * `getDocumentByReference`; the caller guards the result anyway.
+   * BEST-EFFORT + FULLY ISOLATED (deliberately unlike every other method here):
+   * image dims are a cosmetic rendering hint, so this fetch MUST NOT be able to
+   * (a) block the hot send path for long, or (b) pollute the SHARED circuit
+   * breaker that guards uploads/pins — a degraded `/meta` must never fast-fail
+   * unrelated healthy file-service traffic. It therefore does NOT route through
+   * `sendRequest` / `checkEnabledAndCircuit`: it issues a DIRECT axios GET with a
+   * SHORT timeout (`DOCUMENT_META_TIMEOUT_MS`), ZERO retries, and no breaker
+   * accounting, and swallows EVERY failure (timeout / 4xx / 5xx / network / 404)
+   * to `null`. The `enabled` gate is kept (returns `null`, does not throw). The
+   * caller also guards the result, as defence-in-depth.
    */
   async getDocumentMeta(
     documentId: string
-  ): Promise<DocumentMetaResult | null> {
-    this.checkEnabledAndCircuit('getDocumentMeta');
+  ): Promise<DocumentReferenceResult | null> {
+    if (!this.enabled) {
+      return null;
+    }
 
+    const url = `${this.baseUrl}${this.fileMetaPath(documentId)}`;
     try {
-      return await this.sendRequest<DocumentMetaResult>(
-        'getDocumentMeta',
-        'get',
-        this.fileMetaPath(documentId),
-        { documentId }
+      const response = await firstValueFrom(
+        this.httpService.get<DocumentReferenceResult>(url, {
+          timeout: DOCUMENT_META_TIMEOUT_MS,
+        })
       );
-    } catch (error) {
-      if (
-        error instanceof FileServiceAdapterException &&
-        error.httpStatus === 404
-      ) {
-        return null;
-      }
-      throw error;
+      return response.data;
+    } catch {
+      // Any failure (timeout / 4xx / 5xx / network / 404) → null. Dims are a
+      // best-effort rendering hint; the send proceeds without them and the
+      // shared breaker is untouched.
+      return null;
     }
   }
 

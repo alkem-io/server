@@ -138,6 +138,10 @@ export class MessageAttachmentService {
     const bucket = await this.getConversationBucketForRoomOrFail(room);
 
     const refs: CommunicationMessageAttachment[] = [];
+    // Image refs whose dims are fetched AFTER validation, in PARALLEL (below).
+    // Each entry references its ref object (built in documentIds order) so the
+    // concurrent dims fetch mutates dims in place without disturbing ref ORDER.
+    const imageRefs: CommunicationMessageAttachment[] = [];
     for (const documentId of documentIds) {
       const document = await this.documentService.getDocumentOrFail(
         documentId,
@@ -193,35 +197,42 @@ export class MessageAttachmentService {
 
       this.validateAgainstBucketPolicy(bucket, document);
 
-      // Outbound image dimensions ([4], completes both directions): imageWidth/
-      // imageHeight are TRANSIENT, file-service-owned fields (content_metadata) —
-      // the getDocumentOrFail DB load above leaves them undefined on the server
-      // entity, so document.imageWidth/imageHeight are always undefined here.
-      // Source them from file-service's by-id meta endpoint so Alkemio-composed
-      // images reach matrix-adapter with intrinsic dimensions (the m.image event's
-      // info.w/h; clients render without layout reflow). Guarded on image/* to
-      // skip the extra round-trip for non-image files, and best-effort: a meta
-      // failure MUST leave width/height undefined and MUST NOT fail (or block) the
-      // send. Bounded by MAX_MESSAGE_ATTACHMENTS (<=10) per send.
-      let width: number | undefined;
-      let height: number | undefined;
-      if (document.mimeType?.startsWith('image/')) {
-        const meta = await this.fileServiceAdapter
-          .getDocumentMeta(document.id)
-          .catch(() => undefined);
-        width = meta?.imageWidth;
-        height = meta?.imageHeight;
-      }
-
-      refs.push({
+      const ref: CommunicationMessageAttachment = {
         documentId: document.id,
         displayName: document.displayName,
         mimeType: document.mimeType,
         size: document.size,
-        width,
-        height,
-      });
+      };
+      refs.push(ref);
+      if (document.mimeType?.startsWith('image/')) {
+        imageRefs.push(ref);
+      }
     }
+
+    // Outbound image dimensions ([4], completes both directions): imageWidth/
+    // imageHeight are TRANSIENT, file-service-owned fields (content_metadata) —
+    // the getDocumentOrFail DB loads above leave them undefined on the server
+    // entities, so we source them from file-service's by-id meta endpoint. This
+    // lets Alkemio-composed images reach matrix-adapter with intrinsic dimensions
+    // (the m.image event's info.w/h; clients render without layout reflow).
+    //
+    // Run the (image-only) meta round-trips in PARALLEL, AFTER validation —
+    // NOT sequentially inside the loop above, which would serialise up to
+    // MAX_MESSAGE_ATTACHMENTS (<=10) fetches on the hot send path. Worst-case
+    // added latency is then ONE getDocumentMeta timeout, not N. getDocumentMeta
+    // is itself best-effort and isolated (short timeout, no retry, breaker-
+    // bypass); the extra `.catch` here is defence-in-depth so a meta failure just
+    // leaves width/height undefined and never fails (or blocks) the send.
+    await Promise.all(
+      imageRefs.map(async ref => {
+        const meta = await this.fileServiceAdapter
+          .getDocumentMeta(ref.documentId)
+          .catch(() => undefined);
+        ref.width = meta?.imageWidth;
+        ref.height = meta?.imageHeight;
+      })
+    );
+
     return refs;
   }
 

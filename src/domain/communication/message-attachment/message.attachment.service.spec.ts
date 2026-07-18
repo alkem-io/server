@@ -304,6 +304,101 @@ describe('MessageAttachmentService', () => {
         },
       ]);
     });
+
+    it('fetches image dims in PARALLEL, matches each to its ref, and preserves ref order ([0])', async () => {
+      // Multiple images: the dims fetches must run concurrently (worst-case ONE
+      // short timeout, not N) yet each ref keeps its OWN dims and the returned
+      // refs keep their original input order.
+      const docs: Record<string, any> = {
+        'img-a': {
+          id: 'img-a',
+          createdBy: 'sender-1',
+          displayName: 'a.png',
+          mimeType: 'image/png',
+          size: 1,
+          temporaryLocation: true,
+          storageBucket: { id: CONV_BUCKET },
+          authorization: { id: 'auth-a' },
+        },
+        'img-b': {
+          id: 'img-b',
+          createdBy: 'sender-1',
+          displayName: 'b.png',
+          mimeType: 'image/png',
+          size: 2,
+          temporaryLocation: true,
+          storageBucket: { id: CONV_BUCKET },
+          authorization: { id: 'auth-b' },
+        },
+        'img-c': {
+          id: 'img-c',
+          createdBy: 'sender-1',
+          displayName: 'c.png',
+          mimeType: 'image/png',
+          size: 3,
+          temporaryLocation: true,
+          storageBucket: { id: CONV_BUCKET },
+          authorization: { id: 'auth-c' },
+        },
+      };
+      documentService.getDocumentOrFail.mockImplementation((id: string) =>
+        Promise.resolve(docs[id])
+      );
+
+      const dims: Record<string, any> = {
+        'img-a': { imageWidth: 100, imageHeight: 10 },
+        'img-b': { imageWidth: 200, imageHeight: 20 },
+        'img-c': { imageWidth: 300, imageHeight: 30 },
+      };
+      // Track concurrency: all fetches must be in flight simultaneously.
+      let inFlight = 0;
+      let maxInFlight = 0;
+      fileServiceAdapter.getDocumentMeta.mockImplementation(
+        async (id: string) => {
+          inFlight += 1;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          await Promise.resolve();
+          inFlight -= 1;
+          return dims[id];
+        }
+      );
+
+      const refs = await service.resolveOutboundAttachments(
+        conversationRoom,
+        { actorID: 'sender-1' } as any,
+        ['img-a', 'img-b', 'img-c']
+      );
+
+      // Order preserved, each ref carrying its OWN dims.
+      expect(refs).toEqual([
+        {
+          documentId: 'img-a',
+          displayName: 'a.png',
+          mimeType: 'image/png',
+          size: 1,
+          width: 100,
+          height: 10,
+        },
+        {
+          documentId: 'img-b',
+          displayName: 'b.png',
+          mimeType: 'image/png',
+          size: 2,
+          width: 200,
+          height: 20,
+        },
+        {
+          documentId: 'img-c',
+          displayName: 'c.png',
+          mimeType: 'image/png',
+          size: 3,
+          width: 300,
+          height: 30,
+        },
+      ]);
+      // Proven parallel: all three meta fetches overlapped in flight.
+      expect(maxInFlight).toBe(3);
+    });
   });
 
   // --- FIX 0: deferred pinning after send ---

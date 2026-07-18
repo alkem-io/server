@@ -405,8 +405,8 @@ describe('FileServiceAdapter', () => {
     });
   });
 
-  describe('getDocumentMeta', () => {
-    it('GETs /internal/file/{id}/meta and returns the metadata incl. image dimensions', async () => {
+  describe('getDocumentMeta (best-effort, isolated from the shared breaker)', () => {
+    it('issues a DIRECT GET with the SHORT timeout — bypassing sendRequest/the breaker — and returns the metadata incl. image dimensions', async () => {
       const responseData = {
         id: 'doc-1',
         externalID: 'hash-123',
@@ -417,18 +417,19 @@ describe('FileServiceAdapter', () => {
         imageHeight: 480,
       };
 
-      (httpService.request as Mock).mockReturnValue(
+      (httpService.get as Mock).mockReturnValue(
         of(axiosResponse(responseData))
       );
 
       const result = await adapter.getDocumentMeta('doc-1');
 
       expect(result).toEqual(responseData);
-      const callArgs = (httpService.request as Mock).mock.calls[0][0];
-      expect(callArgs.method).toBe('get');
-      expect(callArgs.url).toBe(
-        'http://file-service:4003/internal/file/doc-1/meta'
-      );
+      // Direct httpService.get (NOT the breaker-routed request pipeline).
+      expect(httpService.request).not.toHaveBeenCalled();
+      const [url, options] = (httpService.get as Mock).mock.calls[0];
+      expect(url).toBe('http://file-service:4003/internal/file/doc-1/meta');
+      // SHORT per-call timeout (DOCUMENT_META_TIMEOUT_MS), no retries config.
+      expect(options).toEqual({ timeout: 2500 });
     });
 
     it('returns null on 404 (unknown document) rather than throwing', async () => {
@@ -440,29 +441,145 @@ describe('FileServiceAdapter', () => {
         config: { headers: new AxiosHeaders() },
       });
 
-      (httpService.request as Mock).mockReturnValue(
-        throwError(() => axiosError)
-      );
+      (httpService.get as Mock).mockReturnValue(throwError(() => axiosError));
 
       await expect(adapter.getDocumentMeta('missing')).resolves.toBeNull();
     });
 
-    it('rethrows non-404 errors', async () => {
-      const axiosError = new AxiosError('Boom', '500', undefined, null, {
+    it('swallows EVERY failure (5xx / timeout / network) to null — never propagates', async () => {
+      const failures = [
+        // 5xx
+        new AxiosError('Boom', '500', undefined, null, {
+          status: 500,
+          data: { error: 'internal' },
+          statusText: 'Internal Server Error',
+          headers: {},
+          config: { headers: new AxiosHeaders() },
+        }),
+        // timeout
+        Object.assign(
+          new AxiosError('timeout of 2500ms exceeded', 'ECONNABORTED'),
+          {
+            code: 'ECONNABORTED',
+          }
+        ),
+        // network (no response)
+        Object.assign(new AxiosError('socket hang up', 'ECONNRESET'), {
+          code: 'ECONNRESET',
+        }),
+      ];
+
+      for (const err of failures) {
+        (httpService.get as Mock).mockReturnValue(throwError(() => err));
+        await expect(adapter.getDocumentMeta('doc-1')).resolves.toBeNull();
+      }
+    });
+
+    it('does NOT gate on the shared circuit breaker — still fetches even when the breaker is OPEN', async () => {
+      // Trip the SHARED breaker via 5 failing breaker-guarded requests (503 is
+      // retriable + counted). One breaker failure per completed request.
+      const err503 = new AxiosError(
+        'Service Unavailable',
+        '503',
+        undefined,
+        null,
+        {
+          status: 503,
+          data: {},
+          statusText: 'Service Unavailable',
+          headers: {},
+          config: { headers: new AxiosHeaders() },
+        }
+      );
+      (httpService.request as Mock).mockReturnValue(throwError(() => err503));
+      for (let i = 0; i < 5; i++) {
+        await adapter.deleteDocument(`doc-${i}`).catch(() => undefined);
+      }
+      // Sanity: the breaker is now OPEN — a guarded call short-circuits (no HTTP).
+      (httpService.request as Mock).mockClear();
+      await expect(adapter.deleteDocument('guarded')).rejects.toThrow(
+        StorageServiceUnavailableException
+      );
+      expect(httpService.request).not.toHaveBeenCalled();
+
+      // getDocumentMeta ignores the open breaker: it STILL issues its direct GET
+      // and returns dims (never throws the open-circuit exception).
+      (httpService.get as Mock).mockReturnValue(
+        of(
+          axiosResponse({
+            id: 'doc-1',
+            externalID: 'ext',
+            mimeType: 'image/png',
+            size: 1,
+            storageBucketId: 'bucket-1',
+            imageWidth: 4,
+            imageHeight: 2,
+          })
+        )
+      );
+      const result = await adapter.getDocumentMeta('doc-1');
+      expect(result).toMatchObject({ imageWidth: 4, imageHeight: 2 });
+      expect(httpService.get).toHaveBeenCalledTimes(1);
+    });
+
+    it('failing meta fetches never trip the shared breaker guarding uploads/pins', async () => {
+      const err500 = new AxiosError('Boom', '500', undefined, null, {
         status: 500,
         data: { error: 'internal' },
         statusText: 'Internal Server Error',
         headers: {},
         config: { headers: new AxiosHeaders() },
       });
+      (httpService.get as Mock).mockReturnValue(throwError(() => err500));
 
+      // Ten failed meta fetches — far past the breaker threshold if they counted.
+      for (let i = 0; i < 10; i++) {
+        await expect(adapter.getDocumentMeta(`doc-${i}`)).resolves.toBeNull();
+      }
+
+      // The shared breaker is still CLOSED: a guarded delete reaches the network,
+      // not short-circuited.
       (httpService.request as Mock).mockReturnValue(
-        throwError(() => axiosError)
+        of(axiosResponse({ authorizationId: 'a', tagsetId: 't' }))
       );
+      await adapter.deleteDocument('doc-x');
+      expect(httpService.request).toHaveBeenCalledTimes(1);
+    });
 
-      await expect(adapter.getDocumentMeta('doc-1')).rejects.toThrow(
-        FileServiceAdapterException
-      );
+    it('returns null when the adapter is disabled (best-effort, does not throw)', async () => {
+      const disabledModule = await Test.createTestingModule({
+        providers: [
+          FileServiceAdapter,
+          {
+            provide: HttpService,
+            useValue: { request: vi.fn(), get: vi.fn() },
+          },
+          {
+            provide: ConfigService,
+            useValue: {
+              get: vi.fn((key: string) =>
+                key === 'storage.file_service.enabled'
+                  ? false
+                  : mockConfigValues[key]
+              ),
+            },
+          },
+          {
+            provide: WINSTON_MODULE_NEST_PROVIDER,
+            useValue: mockLogger,
+          },
+        ],
+      }).compile();
+
+      const disabledAdapter =
+        disabledModule.get<FileServiceAdapter>(FileServiceAdapter);
+      const disabledHttp = disabledModule.get<HttpService>(HttpService);
+
+      await expect(
+        disabledAdapter.getDocumentMeta('doc-1')
+      ).resolves.toBeNull();
+      // No HTTP attempted when disabled.
+      expect(disabledHttp.get).not.toHaveBeenCalled();
     });
   });
 
