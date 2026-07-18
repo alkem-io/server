@@ -138,25 +138,6 @@ export class MessageAttachmentService {
       );
     }
 
-    // FR-001: web-client OUTBOUND (compose) attachments are CONVERSATION-only
-    // (U2U + group). Comment-rooms (callout/post) RENDER inbound Matrix media but
-    // their compose UI does not accept web-client uploads, so an outbound
-    // attachment on a comment room is never a valid flow. Reject it EARLY, BEFORE
-    // resolving the bucket: getAttachmentBucketForRoomOrFail also supports comment
-    // rooms, so without this guard a comment-room attachment would be staged into
-    // the parent's COLLABORATION bucket — where the 24h never-sent sweep
-    // (CONVERSATION buckets only) never reaps it, an unbounded leak. This makes
-    // the sweep's CONVERSATION-only scope correct: no comment-room outbound
-    // temporary uploads exist to leak. The INBOUND re-home path intentionally
-    // still supports every room type (getTargetBucketForRoom) — only outbound
-    // compose is conversation-only.
-    if (!isConversationRoom(room)) {
-      throw new ValidationException(
-        'Message attachments are only supported on conversations',
-        LogContext.COMMUNICATION
-      );
-    }
-
     const bucket = await this.getAttachmentBucketForRoomOrFail(room);
 
     // FIX [1]: load every attachment document in PARALLEL, preserving

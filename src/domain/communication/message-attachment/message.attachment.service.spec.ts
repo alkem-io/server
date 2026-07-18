@@ -138,50 +138,6 @@ describe('MessageAttachmentService', () => {
       ).rejects.toBeInstanceOf(ValidationException);
     });
 
-    it('[0] FR-001: rejects CALLOUT comment-room attachments (outbound is conversation-only) without loading the doc or resolving the collab bucket', async () => {
-      // Outbound web-client attachments are conversation-only (FR-001). A CALLOUT
-      // comment-room send WITH attachments must be rejected BEFORE the bucket is
-      // resolved — so no upload is ever staged into the parent COLLABORATION
-      // bucket (where the CONVERSATION-only 24h sweep would never reap it).
-      await expect(
-        service.resolveOutboundAttachments(
-          calloutRoom,
-          { actorID: 'sender-1' } as any,
-          ['doc-1']
-        )
-      ).rejects.toBeInstanceOf(ValidationException);
-      // Guard fires before any document load or bucket resolution / pin.
-      expect(documentService.getDocumentOrFail).not.toHaveBeenCalled();
-      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
-    });
-
-    it('[0] FR-001: rejects POST comment-room attachments (outbound is conversation-only)', async () => {
-      const postRoom: IRoom = {
-        id: 'post-room-1',
-        type: RoomType.POST,
-      } as IRoom;
-      await expect(
-        service.resolveOutboundAttachments(
-          postRoom,
-          { actorID: 'sender-1' } as any,
-          ['doc-1']
-        )
-      ).rejects.toBeInstanceOf(ValidationException);
-      expect(documentService.getDocumentOrFail).not.toHaveBeenCalled();
-    });
-
-    it('[0] FR-001: a comment-room message with NO attachments is unaffected (returns [])', async () => {
-      // The guard only rejects comment rooms that carry attachments; a plain
-      // comment message (no uploads) short-circuits on the empty-list check and
-      // is never blocked.
-      const refs = await service.resolveOutboundAttachments(
-        calloutRoom,
-        { actorID: 'sender-1' } as any,
-        undefined
-      );
-      expect(refs).toEqual([]);
-    });
-
     it('rejects a document that is not in the conversation bucket', async () => {
       documentService.getDocumentOrFail.mockResolvedValue({
         id: 'doc-1',
@@ -1066,13 +1022,39 @@ describe('MessageAttachmentService', () => {
       ).rejects.toBe(dbError);
     });
 
-    it('[0] FR-001: OUTBOUND attachments on a CALLOUT comment-room are rejected BEFORE the callout resolver runs (conversation-only guard)', async () => {
-      // FR-001 scopes outbound (web-client compose) attachments to conversation
-      // rooms only. The conversation-only guard now short-circuits a CALLOUT send
-      // that carries attachments BEFORE getAttachmentBucketForRoomOrFail →
-      // resolveParentCalloutId is ever reached — so the outbound path no longer
-      // exercises this resolver at all (it was previously the entry point that
-      // masked/propagated its DB errors). No parent-callout resolve happens.
+    it('[0] OUTBOUND: a transient DB error on a VALID comment room surfaces the REAL error, NOT a terminal ValidationException', async () => {
+      // The regression: the outbound send path has NO leave-in-staging wrapper,
+      // so a masked no-callout miss became a terminal
+      // ValidationException('...only supported on conversation and comment
+      // rooms') for a valid comment room during a momentary DB blip. With the
+      // narrowed catch the real (retryable) DB error must propagate instead.
+      const dbError = new Error('db connection reset');
+      roomResolverService.getCalloutForRoom.mockRejectedValue(dbError);
+
+      const error = await service
+        .resolveOutboundAttachments(
+          calloutRoom,
+          { actorID: 'sender-1' } as any,
+          ['doc-1']
+        )
+        .catch(e => e);
+
+      expect(error).toBe(dbError);
+      expect(error).not.toBeInstanceOf(ValidationException);
+    });
+
+    it('[0] OUTBOUND: a genuine no-callout (EntityNotFoundException) still yields the terminal ValidationException for an unsupported/unresolvable room', async () => {
+      // The genuine no-callout case (helper throws EntityNotFoundException) is
+      // caught → undefined → getAttachmentBucketForRoomOrFail throws the terminal
+      // ValidationException. This is the correct terminal outcome for a room whose
+      // parent callout truly cannot be resolved.
+      roomResolverService.getCalloutForRoom.mockRejectedValue(
+        new EntityNotFoundException(
+          'Unable to identify Callout for Room',
+          LogContext.COLLABORATION
+        )
+      );
+
       await expect(
         service.resolveOutboundAttachments(
           calloutRoom,
@@ -1080,25 +1062,6 @@ describe('MessageAttachmentService', () => {
           ['doc-1']
         )
       ).rejects.toBeInstanceOf(ValidationException);
-      expect(roomResolverService.getCalloutForRoom).not.toHaveBeenCalled();
-    });
-
-    it('[0] FR-001: OUTBOUND attachments on a POST comment-room are rejected BEFORE the callout resolver runs (conversation-only guard)', async () => {
-      const postRoom: IRoom = {
-        id: 'post-room-1',
-        type: RoomType.POST,
-      } as IRoom;
-
-      await expect(
-        service.resolveOutboundAttachments(
-          postRoom,
-          { actorID: 'sender-1' } as any,
-          ['doc-1']
-        )
-      ).rejects.toBeInstanceOf(ValidationException);
-      expect(
-        roomResolverService.getCalloutWithPostContributionForRoom
-      ).not.toHaveBeenCalled();
     });
   });
 

@@ -20,6 +20,19 @@ const STAGING_TTL_MS = 24 * 60 * 60 * 1000; // 24h (FR-012, SC-007)
  *    server-created web-composer uploads that were never sent (compose
  *    abandoned).
  *
+ * SCOPE — CONVERSATION buckets only, BY DESIGN. Feature 013 owns the
+ * CONVERSATION buckets it created, so it is authoritative to age-sweep abandoned
+ * temporary uploads there. Comment-room (callout/post) outbound attachments
+ * re-home into the parent's PRE-EXISTING COLLABORATION bucket, whose abandoned
+ * temporary-upload lifecycle is a broader, pre-existing PLATFORM concern (no
+ * age-sweep exists there for ANY producer, not just 013). 013 deliberately does
+ * NOT extend this sweep into collaboration buckets: from a bucket row alone it
+ * could not distinguish an abandoned message attachment from a legitimate
+ * in-progress content upload, so an age sweep there would risk reaping live
+ * uploads. Nor does 013 restrict the send codepath (e.g. a conversation-only
+ * outbound guard) to sidestep that gap — the codepath stays general; the
+ * collaboration-bucket lifecycle is simply out of this feature's scope.
+ *
  * `temporaryLocation=true` is a PROXY for "never sent" — a SENT attachment can
  * transiently still be temporary if the post-send flip failed. That proxy is
  * made safe by three pin anchors that flip a delivered attachment durable
