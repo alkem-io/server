@@ -193,13 +193,33 @@ export class MessageAttachmentService {
 
       this.validateAgainstBucketPolicy(bucket, document);
 
+      // Outbound image dimensions ([4], completes both directions): imageWidth/
+      // imageHeight are TRANSIENT, file-service-owned fields (content_metadata) —
+      // the getDocumentOrFail DB load above leaves them undefined on the server
+      // entity, so document.imageWidth/imageHeight are always undefined here.
+      // Source them from file-service's by-id meta endpoint so Alkemio-composed
+      // images reach matrix-adapter with intrinsic dimensions (the m.image event's
+      // info.w/h; clients render without layout reflow). Guarded on image/* to
+      // skip the extra round-trip for non-image files, and best-effort: a meta
+      // failure MUST leave width/height undefined and MUST NOT fail (or block) the
+      // send. Bounded by MAX_MESSAGE_ATTACHMENTS (<=10) per send.
+      let width: number | undefined;
+      let height: number | undefined;
+      if (document.mimeType?.startsWith('image/')) {
+        const meta = await this.fileServiceAdapter
+          .getDocumentMeta(document.id)
+          .catch(() => undefined);
+        width = meta?.imageWidth;
+        height = meta?.imageHeight;
+      }
+
       refs.push({
         documentId: document.id,
         displayName: document.displayName,
         mimeType: document.mimeType,
         size: document.size,
-        width: document.imageWidth,
-        height: document.imageHeight,
+        width,
+        height,
       });
     }
     return refs;

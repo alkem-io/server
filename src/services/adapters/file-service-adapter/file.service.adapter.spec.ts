@@ -405,6 +405,67 @@ describe('FileServiceAdapter', () => {
     });
   });
 
+  describe('getDocumentMeta', () => {
+    it('GETs /internal/file/{id}/meta and returns the metadata incl. image dimensions', async () => {
+      const responseData = {
+        id: 'doc-1',
+        externalID: 'hash-123',
+        mimeType: 'image/png',
+        size: 1024,
+        storageBucketId: 'bucket-1',
+        imageWidth: 640,
+        imageHeight: 480,
+      };
+
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(responseData))
+      );
+
+      const result = await adapter.getDocumentMeta('doc-1');
+
+      expect(result).toEqual(responseData);
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.method).toBe('get');
+      expect(callArgs.url).toBe(
+        'http://file-service:4003/internal/file/doc-1/meta'
+      );
+    });
+
+    it('returns null on 404 (unknown document) rather than throwing', async () => {
+      const axiosError = new AxiosError('Not Found', '404', undefined, null, {
+        status: 404,
+        data: { error: 'document not found' },
+        statusText: 'Not Found',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      });
+
+      (httpService.request as Mock).mockReturnValue(
+        throwError(() => axiosError)
+      );
+
+      await expect(adapter.getDocumentMeta('missing')).resolves.toBeNull();
+    });
+
+    it('rethrows non-404 errors', async () => {
+      const axiosError = new AxiosError('Boom', '500', undefined, null, {
+        status: 500,
+        data: { error: 'internal' },
+        statusText: 'Internal Server Error',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      });
+
+      (httpService.request as Mock).mockReturnValue(
+        throwError(() => axiosError)
+      );
+
+      await expect(adapter.getDocumentMeta('doc-1')).rejects.toThrow(
+        FileServiceAdapterException
+      );
+    });
+  });
+
   describe('getDocumentContent', () => {
     it('should GET binary content and return Buffer', async () => {
       const fileContent = Buffer.from('file-binary-data');

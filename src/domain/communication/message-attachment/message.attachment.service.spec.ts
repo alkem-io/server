@@ -199,11 +199,17 @@ describe('MessageAttachmentService', () => {
         displayName: 'pic.png',
         mimeType: 'image/png',
         size: 1000,
-        imageWidth: 10,
-        imageHeight: 20,
+        // imageWidth/imageHeight are TRANSIENT, file-service-owned fields — a DB
+        // load leaves them undefined on the entity, so the ref must source dims
+        // from the by-id meta endpoint, NOT from the document.
         temporaryLocation: true,
         storageBucket: { id: CONV_BUCKET },
         authorization: { id: 'doc-auth' },
+      } as any);
+      fileServiceAdapter.getDocumentMeta.mockResolvedValue({
+        id: 'doc-1',
+        imageWidth: 10,
+        imageHeight: 20,
       } as any);
 
       const refs = await service.resolveOutboundAttachments(
@@ -217,6 +223,8 @@ describe('MessageAttachmentService', () => {
       // persistOutboundAttachments (called only after the send succeeds), so
       // resolve itself must not flip anything.
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      // Dims are sourced from the file-service by-id meta endpoint.
+      expect(fileServiceAdapter.getDocumentMeta).toHaveBeenCalledWith('doc-1');
       expect(refs).toEqual([
         {
           documentId: 'doc-1',
@@ -225,6 +233,74 @@ describe('MessageAttachmentService', () => {
           size: 1000,
           width: 10,
           height: 20,
+        },
+      ]);
+    });
+
+    it('outbound image: a getDocumentMeta failure leaves width/height undefined and does NOT fail the send ([4])', async () => {
+      // Meta sourcing is best-effort: a rejected/failed meta fetch must degrade
+      // to undefined dims, never propagate out of resolveOutboundAttachments.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-1',
+        createdBy: 'sender-1',
+        displayName: 'pic.png',
+        mimeType: 'image/png',
+        size: 1000,
+        temporaryLocation: true,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+      fileServiceAdapter.getDocumentMeta.mockRejectedValue(
+        new Error('file-service down')
+      );
+
+      const refs = await service.resolveOutboundAttachments(
+        conversationRoom,
+        { actorID: 'sender-1' } as any,
+        ['doc-1']
+      );
+
+      expect(fileServiceAdapter.getDocumentMeta).toHaveBeenCalledWith('doc-1');
+      expect(refs).toEqual([
+        {
+          documentId: 'doc-1',
+          displayName: 'pic.png',
+          mimeType: 'image/png',
+          size: 1000,
+          width: undefined,
+          height: undefined,
+        },
+      ]);
+    });
+
+    it('non-image attachment: getDocumentMeta is NOT called (no wasted round-trip) and the ref carries no dims ([4])', async () => {
+      // The image-guard skips the extra meta round-trip for non-image files.
+      documentService.getDocumentOrFail.mockResolvedValue({
+        id: 'doc-pdf',
+        createdBy: 'sender-1',
+        displayName: 'doc.pdf',
+        mimeType: 'application/pdf',
+        size: 1000,
+        temporaryLocation: true,
+        storageBucket: { id: CONV_BUCKET },
+        authorization: { id: 'doc-auth' },
+      } as any);
+
+      const refs = await service.resolveOutboundAttachments(
+        conversationRoom,
+        { actorID: 'sender-1' } as any,
+        ['doc-pdf']
+      );
+
+      expect(fileServiceAdapter.getDocumentMeta).not.toHaveBeenCalled();
+      expect(refs).toEqual([
+        {
+          documentId: 'doc-pdf',
+          displayName: 'doc.pdf',
+          mimeType: 'application/pdf',
+          size: 1000,
+          width: undefined,
+          height: undefined,
         },
       ]);
     });

@@ -15,6 +15,7 @@ import type {
   CreateDocumentMetadata,
   CreateDocumentResult,
   DeleteDocumentResult,
+  DocumentMetaResult,
   DocumentReferenceResult,
   UpdateDocumentInput,
   UpdateDocumentResult,
@@ -257,12 +258,51 @@ export class FileServiceAdapter extends HttpClientBase {
     }
   }
 
+  /**
+   * Fetch a document's metadata by id (feature 013):
+   * `GET /internal/file/{documentId}/meta` — the by-id meta route
+   * `documentMetaResponse` backs. The OUTBOUND send path uses this to source
+   * intrinsic image dimensions (`imageWidth` / `imageHeight`): those are
+   * transient, file-service-owned fields (cached `content_metadata`), absent
+   * from the server's Document entity after a DB load, so the outbound
+   * attachment ref can only carry them by asking file-service.
+   *
+   * Returns `null` on 404 (unknown document) rather than throwing, mirroring
+   * `getDocumentByReference`; the caller guards the result anyway.
+   */
+  async getDocumentMeta(
+    documentId: string
+  ): Promise<DocumentMetaResult | null> {
+    this.checkEnabledAndCircuit('getDocumentMeta');
+
+    try {
+      return await this.sendRequest<DocumentMetaResult>(
+        'getDocumentMeta',
+        'get',
+        this.fileMetaPath(documentId),
+        { documentId }
+      );
+    } catch (error) {
+      if (
+        error instanceof FileServiceAdapterException &&
+        error.httpStatus === 404
+      ) {
+        return null;
+      }
+      throw error;
+    }
+  }
+
   private filePath(documentId: string): string {
     return `${FILE_PATH_PREFIX}/${documentId}`;
   }
 
   private fileContentPath(documentId: string): string {
     return `${this.filePath(documentId)}/content`;
+  }
+
+  private fileMetaPath(documentId: string): string {
+    return `${this.filePath(documentId)}/meta`;
   }
 
   private checkEnabledAndCircuit(operation: string): void {
