@@ -406,6 +406,95 @@ describe('FileServiceAdapter', () => {
     });
   });
 
+  describe('getDocumentByReference', () => {
+    it('[1] issues a GET with ref+bucketId as QUERY params and NO request body', async () => {
+      const responseData = {
+        id: 'doc-ref',
+        externalID: 'media-1',
+        mimeType: 'image/png',
+        size: 2048,
+        storageBucketId: 'bucket-1',
+      };
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse(responseData))
+      );
+
+      const result = await adapter.getDocumentByReference(
+        'media-1',
+        'bucket-1'
+      );
+
+      expect(result).toEqual(responseData);
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.method).toBe('get');
+      // ref + bucketId travel as query params in the URL...
+      expect(callArgs.url).toBe(
+        'http://file-service:4003/internal/file/by-reference?ref=media-1&bucketId=bucket-1'
+      );
+      // ...and NOT as a request body: a GET must carry no data (the misplaced
+      // 4th positional arg previously put {ref,bucketId} here).
+      expect(callArgs.data).toBeUndefined();
+    });
+
+    it('[1] global lookup (no bucketId) sends ref-only query and no body', async () => {
+      (httpService.request as Mock).mockReturnValue(
+        of(axiosResponse({ id: 'doc-ref', externalID: 'media-1' }))
+      );
+
+      await adapter.getDocumentByReference('media-1');
+
+      const callArgs = (httpService.request as Mock).mock.calls[0][0];
+      expect(callArgs.url).toBe(
+        'http://file-service:4003/internal/file/by-reference?ref=media-1'
+      );
+      expect(callArgs.data).toBeUndefined();
+    });
+
+    it('returns null on 404 (no match) rather than throwing', async () => {
+      const axiosError = new AxiosError('Not Found', '404', undefined, null, {
+        status: 404,
+        data: { error: 'not found' },
+        statusText: 'Not Found',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      });
+      (httpService.request as Mock).mockReturnValue(
+        throwError(() => axiosError)
+      );
+
+      await expect(
+        adapter.getDocumentByReference('media-1', 'bucket-1')
+      ).resolves.toBeNull();
+    });
+
+    it('[1] a non-404 failure surfaces an error whose context carries ref + bucketId', async () => {
+      // 400 is never retried (http-4xx), so this asserts immediately without the
+      // idempotent-GET retry timers a 5xx would incur.
+      const axiosError = new AxiosError('Bad Request', '400', undefined, null, {
+        status: 400,
+        data: { error: 'bad request' },
+        statusText: 'Bad Request',
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      });
+      (httpService.request as Mock).mockReturnValue(
+        throwError(() => axiosError)
+      );
+
+      const error = await adapter
+        .getDocumentByReference('media-1', 'bucket-1')
+        .catch(e => e);
+
+      expect(error).toBeInstanceOf(FileServiceAdapterException);
+      // The context (6th) arg reaches handleError → the exception details, so a
+      // failure stays diagnosable with the reference that triggered it.
+      expect(error.details).toMatchObject({
+        ref: 'media-1',
+        bucketId: 'bucket-1',
+      });
+    });
+  });
+
   describe('getDocumentMeta (best-effort, isolated from the shared breaker)', () => {
     it('issues a DIRECT GET with the SHORT timeout — bypassing sendRequest/the breaker — and returns the metadata incl. image dimensions', async () => {
       const responseData = {

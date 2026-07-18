@@ -88,16 +88,14 @@ export class RoomResolverMutations {
     return message;
   }
 
-  // [2] Accepted double-resolve: on a CALLOUT comment-room send WITH attachments
-  // the owning callout is resolved here (for commentsEnabled) and again inside
-  // resolveOutboundAttachments → getTargetBucketForRoom → resolveParentCalloutId.
-  // Left deliberately un-threaded: this validation is a resolver-layer concern
-  // that needs the FULL callout and THROWS on miss, whereas the attachment path
-  // is a generic best-effort (catch-EntityNotFound→undefined) bucket resolver in
-  // the service layer that covers callout AND post AND conversation rooms — only
-  // one of which is pre-resolved here. Passing this callout down through four
-  // nested private methods, for one branch, with divergent error contracts,
-  // would couple the layers worse than the redundant load on this non-hot path.
+  // No attachment-path double-resolve on CALLOUT rooms: per FR-001 the outbound
+  // compose path is conversation-only, so resolveOutboundAttachments rejects a
+  // CALLOUT/POST comment-room send that carries attachments BEFORE it would
+  // resolve the parent callout (getTargetBucketForRoom → resolveParentCalloutId
+  // is never reached for a comment room outbound). This resolver-layer
+  // commentsEnabled check therefore does the ONLY callout resolve on the CALLOUT
+  // send path — it needs the FULL callout and THROWS on miss, a concern distinct
+  // from the service-layer best-effort bucket resolver.
   private async validateMessageOnCalloutOrFail(room: IRoom) {
     if (room.type === RoomType.CALLOUT) {
       const callout = await this.roomResolverService.getCalloutForRoom(room.id);

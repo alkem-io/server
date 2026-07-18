@@ -241,10 +241,17 @@ export class FileServiceAdapter extends HttpClientBase {
     const path = `${FILE_PATH_PREFIX}/by-reference?${params.toString()}`;
 
     try {
+      // ref + bucketId are already carried as QUERY params in `path`. They must
+      // ride the `context` (6th) arg — NOT `data` (4th) — so this GET issues no
+      // body and, on a non-404 failure, the error context still carries
+      // ref/bucketId. Positional signature:
+      // sendRequest(operation, method, path, data?, headers?, context?).
       return await this.sendRequest<DocumentReferenceResult>(
         'getDocumentByReference',
         'get',
         path,
+        undefined,
+        undefined,
         { ref, bucketId }
       );
     } catch (error) {
