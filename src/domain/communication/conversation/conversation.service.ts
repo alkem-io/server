@@ -160,17 +160,7 @@ export class ConversationService {
       // never mask the original failure.
       const orphanedAggregatorId = conversation.storageAggregator?.id;
       if (orphanedAggregatorId) {
-        await this.storageAggregatorService
-          .delete(orphanedAggregatorId)
-          .catch(cleanupError =>
-            this.logger.error(
-              `Failed to roll back orphaned conversation storage aggregator ${orphanedAggregatorId}: ${
-                (cleanupError as Error)?.message
-              }`,
-              (cleanupError as Error)?.stack,
-              LogContext.COMMUNICATION_CONVERSATION
-            )
-          );
+        await this.rollbackConversationStorageAggregator(orphanedAggregatorId);
       }
       throw error;
     }
@@ -240,22 +230,41 @@ export class ConversationService {
         storageAggregator.directStorage =
           await this.storageBucketService.save(bucket);
       } catch (error) {
-        await this.storageAggregatorService
-          .delete(storageAggregator.id)
-          .catch(cleanupError =>
-            this.logger.error(
-              `Failed to roll back partially-created conversation storage aggregator ${storageAggregator.id}: ${
-                (cleanupError as Error)?.message
-              }`,
-              (cleanupError as Error)?.stack,
-              LogContext.COMMUNICATION_CONVERSATION
-            )
-          );
+        // Keep this method atomic: best-effort roll back the just-created
+        // aggregator, then re-throw the ORIGINAL error unmasked (FIX 1). The
+        // helper only handles its OWN cleanup failure.
+        await this.rollbackConversationStorageAggregator(storageAggregator.id);
         throw error;
       }
     }
 
     return storageAggregator;
+  }
+
+  /**
+   * Best-effort rollback of a conversation's storage aggregator during
+   * create-time cleanup (FIX 1). Shared by both createConversation catch
+   * blocks: the inner one (a partially-created aggregator whose step-2 bucket
+   * policy save failed) and the outer one (an aggregator orphaned by a later
+   * room/conversation/membership failure). Deletes the aggregator + bucket +
+   * auth rows via StorageAggregatorService.delete and never throws — it only
+   * logs its OWN cleanup failure so the caller can re-throw the ORIGINAL error
+   * unmasked.
+   */
+  private async rollbackConversationStorageAggregator(
+    aggregatorId: string
+  ): Promise<void> {
+    await this.storageAggregatorService
+      .delete(aggregatorId)
+      .catch(cleanupError =>
+        this.logger.error(
+          `Failed to roll back conversation storage aggregator ${aggregatorId} during create cleanup: ${
+            (cleanupError as Error)?.message
+          }`,
+          (cleanupError as Error)?.stack,
+          LogContext.COMMUNICATION_CONVERSATION
+        )
+      );
   }
 
   /**
