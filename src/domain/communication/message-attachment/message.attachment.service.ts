@@ -2,7 +2,10 @@ import { ReceivedAttachment } from '@alkemio/matrix-adapter-lib';
 import { AuthorizationPrivilege, LogContext } from '@common/enums';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { RoomType } from '@common/enums/room.type';
-import { ValidationException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import {
@@ -138,15 +141,20 @@ export class MessageAttachmentService {
     const bucket = await this.getAttachmentBucketForRoomOrFail(room);
 
     // FIX [1]: load every attachment document in PARALLEL, preserving
-    // documentIds ORDER. These are independent DB round-trips (each joining
+    // documentIds ORDER and the original sequential loop's per-position error
+    // precedence. These are independent DB round-trips (each joining
     // authorization + storageBucket); awaiting them one-by-one inside the
     // validation loop serialised up to MAX_MESSAGE_ATTACHMENTS (<=10) fetches on
-    // the hot send path. The per-doc VALIDATION below is CPU-only and runs in a
-    // SECOND pass over the loaded docs, so the exact validation semantics +
-    // ValidationException messages + fail-order are unchanged — only WHEN the
-    // loads are issued. Promise.all preserves order, so documents[i] is
-    // documentIds[i].
-    const documents = await Promise.all(
+    // the hot send path. `Promise.allSettled` issues all loads concurrently while
+    // (unlike `Promise.all`, which rejects on the FIRST load failure regardless
+    // of position) letting the SECOND pass below decide which error surfaces: it
+    // walks the settled results IN ORDER (index 0..n) and, for each position,
+    // either re-throws that position's LOAD failure or runs the CPU-only
+    // VALIDATION chain on the loaded doc. So position i's error (load OR
+    // validation) always surfaces before position i+1's — reproducing the old
+    // sequential (load-then-validate, in order) semantics exactly, with every
+    // validation guard/message unchanged. settled[i] corresponds to documentIds[i].
+    const settled = await Promise.allSettled(
       documentIds.map(documentId =>
         this.documentService.getDocumentOrFail(documentId, {
           relations: { authorization: true, storageBucket: true },
@@ -159,7 +167,14 @@ export class MessageAttachmentService {
     // Each entry references its ref object (built in documentIds order) so the
     // concurrent dims fetch mutates dims in place without disturbing ref ORDER.
     const imageRefs: CommunicationMessageAttachment[] = [];
-    for (const document of documents) {
+    for (const outcome of settled) {
+      // Ordered pass: surface position i's LOAD error at its position (e.g. a
+      // not-found id), matching the old sequential loop that would have thrown
+      // there before reaching any later position.
+      if (outcome.status === 'rejected') {
+        throw outcome.reason;
+      }
+      const document = outcome.value;
       if (document.storageBucket?.id !== bucket.id) {
         throw new ValidationException(
           'Attachment does not belong to this conversation',
@@ -1232,33 +1247,54 @@ export class MessageAttachmentService {
    * delegates to RoomResolverService's canonical room→callout resolution
    * (getCalloutForRoom for callout comment rooms, getCalloutWithPostContributionForRoom
    * for post comment rooms) instead of re-querying Callout/Post here. Those
-   * helpers THROW EntityNotFoundException when the room can't be resolved, but
-   * this re-home path is best-effort and must return `undefined` (leave the
-   * media in staging) — so each call is wrapped to preserve that non-throw
-   * contract.
+   * helpers THROW EntityNotFoundException for a genuine "no callout for this
+   * room" miss, but also PROPAGATE real DB/infra errors from the underlying
+   * find. This re-home path is best-effort for the genuine no-callout case and
+   * must return `undefined` (leave the media in staging) — so each call catches
+   * ONLY EntityNotFoundException and RE-THROWS everything else. A transient DB
+   * error must NOT be swallowed into `undefined`: on the OUTBOUND send path a
+   * masked miss becomes a terminal ValidationException ("only supported on
+   * conversation and comment rooms") for a VALID comment room during a momentary
+   * DB blip, when the send should instead see the real (retryable) error. The
+   * INBOUND re-home path already wraps getTargetBucketForRoom in its own
+   * leave-in-staging try/catch, so a re-thrown DB error still degrades gracefully
+   * there.
    */
   private async resolveParentCalloutId(
     room: IRoom
   ): Promise<string | undefined> {
     if (room.type === RoomType.CALLOUT) {
       try {
+        // [2] accepted DRY cost: getCalloutForRoom eager-loads the full Callout
+        // (+ calloutsSet join) where only callout.id is used here — the accepted
+        // tradeoff for a single source of truth over a hand-rolled id-only query
+        // on this (non-hottest) re-home path.
         const callout = await this.roomResolverService.getCalloutForRoom(
           room.id
         );
         return callout?.id;
-      } catch {
-        return undefined;
+      } catch (e) {
+        if (e instanceof EntityNotFoundException) {
+          return undefined; // genuine no-callout → leave media in staging
+        }
+        throw e; // real DB/infra error must propagate (retryable), not be masked
       }
     }
     if (room.type === RoomType.POST) {
       try {
+        // [2] accepted DRY cost: getCalloutWithPostContributionForRoom eager-loads
+        // the full Callout + contribution + post + profile joins where only
+        // callout.id is used — accepted for the single-source-of-truth reuse.
         const { callout } =
           await this.roomResolverService.getCalloutWithPostContributionForRoom(
             room.id
           );
         return callout?.id;
-      } catch {
-        return undefined;
+      } catch (e) {
+        if (e instanceof EntityNotFoundException) {
+          return undefined; // genuine no-callout → leave media in staging
+        }
+        throw e; // real DB/infra error must propagate (retryable), not be masked
       }
     }
     return undefined;

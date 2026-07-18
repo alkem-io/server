@@ -1,5 +1,9 @@
+import { LogContext } from '@common/enums';
 import { RoomType } from '@common/enums/room.type';
-import { ValidationException } from '@common/exceptions';
+import {
+  EntityNotFoundException,
+  ValidationException,
+} from '@common/exceptions';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { IRoom } from '@domain/communication/room/room.interface';
@@ -465,6 +469,94 @@ describe('MessageAttachmentService', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(3);
       expect(refs.map(r => r.documentId)).toEqual(['doc-x', 'doc-y', 'doc-z']);
     });
+
+    it('[1] restores per-position error precedence: doc[0] WRONG-BUCKET ValidationException surfaces before doc[1] not-found, and loads still overlap', async () => {
+      // Regression guard: Promise.all rejected on the FIRST load failure
+      // regardless of position, so a LATER doc's not-found could preempt an
+      // EARLIER doc's ValidationException. allSettled + an ordered validation
+      // pass restores the sequential loop's precedence — position 0's error
+      // (here a WRONG-BUCKET ValidationException) surfaces before position 1's
+      // not-found — while both loads still run concurrently.
+      let inFlight = 0;
+      let maxInFlight = 0;
+      documentService.getDocumentOrFail.mockImplementation(
+        async (id: string) => {
+          inFlight += 1;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          await Promise.resolve();
+          inFlight -= 1;
+          if (id === 'doc-missing') {
+            // Later position's LOAD failure — must NOT preempt position 0.
+            throw new EntityNotFoundException(
+              'Document not found',
+              LogContext.COMMUNICATION
+            );
+          }
+          // Position 0: owned + staged, but in the WRONG bucket → its VALIDATION
+          // must throw first.
+          return {
+            id: 'doc-wrong-bucket',
+            createdBy: 'sender-1',
+            mimeType: 'image/png',
+            size: 1000,
+            temporaryLocation: true,
+            storageBucket: { id: 'some-other-bucket' },
+            authorization: { id: 'a' },
+          } as any;
+        }
+      );
+
+      const error = await service
+        .resolveOutboundAttachments(
+          conversationRoom,
+          { actorID: 'sender-1' } as any,
+          ['doc-wrong-bucket', 'doc-missing']
+        )
+        .catch(e => e);
+
+      // Position 0's WRONG-BUCKET ValidationException surfaces — NOT doc[1]'s
+      // not-found.
+      expect(error).toBeInstanceOf(ValidationException);
+      expect((error as Error).message).toContain(
+        'Attachment does not belong to this conversation'
+      );
+      // Both loads still overlapped in flight → allSettled kept them concurrent.
+      expect(maxInFlight).toBe(2);
+    });
+
+    it('[1] a load failure at position 0 surfaces that load error (not masked by later positions)', async () => {
+      // When the FIRST position's load fails, its error surfaces at its position
+      // (the ordered pass re-throws settled[0].reason) — matching the old
+      // sequential loop, which would have thrown on doc-0 before touching doc-1.
+      const notFound = new EntityNotFoundException(
+        'Document not found',
+        LogContext.COMMUNICATION
+      );
+      documentService.getDocumentOrFail.mockImplementation(
+        async (id: string) => {
+          if (id === 'doc-0') {
+            throw notFound;
+          }
+          return {
+            id,
+            createdBy: 'sender-1',
+            mimeType: 'image/png',
+            size: 1000,
+            temporaryLocation: true,
+            storageBucket: { id: CONV_BUCKET },
+            authorization: { id: 'a' },
+          } as any;
+        }
+      );
+
+      await expect(
+        service.resolveOutboundAttachments(
+          conversationRoom,
+          { actorID: 'sender-1' } as any,
+          ['doc-0', 'doc-1']
+        )
+      ).rejects.toBe(notFound);
+    });
   });
 
   // --- FIX 0: deferred pinning after send ---
@@ -813,13 +905,17 @@ describe('MessageAttachmentService', () => {
       );
     });
 
-    it('comment-room: an EntityNotFound throw from the resolver leaves media in staging (best-effort, no throw)', async () => {
-      // The RoomResolverService helpers THROW when they can't resolve the room;
-      // resolveParentCalloutId wraps them to preserve the non-throw contract, so
-      // an unresolvable callout comment room leaves the media in staging instead
-      // of aborting inbound processing.
+    it('comment-room: a genuine no-callout (EntityNotFoundException) leaves media in staging (best-effort, no throw)', async () => {
+      // The RoomResolverService helpers THROW EntityNotFoundException for a
+      // genuine "no callout for this room" miss; resolveParentCalloutId catches
+      // ONLY that not-found case and returns undefined, so an unresolvable callout
+      // comment room leaves the media in staging instead of aborting inbound
+      // processing.
       roomResolverService.getCalloutForRoom.mockRejectedValue(
-        new Error('Unable to identify Callout for Room')
+        new EntityNotFoundException(
+          'Unable to identify Callout for Room',
+          LogContext.COLLABORATION
+        )
       );
 
       const bucketId = await service.rehomeInboundAttachments(
@@ -838,6 +934,134 @@ describe('MessageAttachmentService', () => {
       expect(bucketId).toBeUndefined();
       expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
       expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
+    });
+
+    it('[0] comment-room: a transient DB error from the resolver still degrades gracefully on the INBOUND path (outer wrapper catches it, media stays in staging)', async () => {
+      // A NON-not-found error (transient DB/infra) is RE-THROWN by
+      // resolveParentCalloutId (not swallowed into undefined). On the inbound
+      // re-home path getTargetBucketForRoom is wrapped in its own
+      // leave-in-staging try/catch, so the propagated error is still handled here
+      // — inbound message processing is never aborted.
+      roomResolverService.getCalloutForRoom.mockRejectedValue(
+        new Error('db connection reset')
+      );
+
+      const bucketId = await service.rehomeInboundAttachments(
+        calloutRoom,
+        'sender-1',
+        [
+          {
+            media_id: 'media-c',
+            display_name: 'x',
+            mime_type: 'image/png',
+            size: 1,
+          },
+        ]
+      );
+
+      expect(bucketId).toBeUndefined();
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
+    });
+  });
+
+  // --- FIX [0]: resolveParentCalloutId error narrowing ---
+
+  describe('resolveParentCalloutId (FIX [0]) — narrow not-found catch, propagate DB errors', () => {
+    it('callout room: a genuine no-callout (EntityNotFoundException) → returns undefined', async () => {
+      roomResolverService.getCalloutForRoom.mockRejectedValue(
+        new EntityNotFoundException(
+          'Unable to identify Callout for Room',
+          LogContext.COLLABORATION
+        )
+      );
+
+      await expect(
+        (service as any).resolveParentCalloutId(calloutRoom)
+      ).resolves.toBeUndefined();
+    });
+
+    it('callout room: a real DB/infra error (generic Error) PROPAGATES OUT (not swallowed, not converted to undefined)', async () => {
+      const dbError = new Error('db connection reset');
+      roomResolverService.getCalloutForRoom.mockRejectedValue(dbError);
+
+      await expect(
+        (service as any).resolveParentCalloutId(calloutRoom)
+      ).rejects.toBe(dbError);
+    });
+
+    it('post room: a genuine no-callout (EntityNotFoundException) → returns undefined', async () => {
+      const postRoom: IRoom = {
+        id: 'post-room-1',
+        type: RoomType.POST,
+      } as IRoom;
+      roomResolverService.getCalloutWithPostContributionForRoom.mockRejectedValue(
+        new EntityNotFoundException(
+          'Unable to identify Callout with Post contribution for Room',
+          LogContext.COLLABORATION
+        )
+      );
+
+      await expect(
+        (service as any).resolveParentCalloutId(postRoom)
+      ).resolves.toBeUndefined();
+    });
+
+    it('post room: a real DB/infra error (generic Error) PROPAGATES OUT (not swallowed)', async () => {
+      const postRoom: IRoom = {
+        id: 'post-room-1',
+        type: RoomType.POST,
+      } as IRoom;
+      const dbError = new Error('db pool exhausted');
+      roomResolverService.getCalloutWithPostContributionForRoom.mockRejectedValue(
+        dbError
+      );
+
+      await expect(
+        (service as any).resolveParentCalloutId(postRoom)
+      ).rejects.toBe(dbError);
+    });
+
+    it('[0] OUTBOUND: a transient DB error on a VALID comment room surfaces the REAL error, NOT a terminal ValidationException', async () => {
+      // The regression: the outbound send path has NO leave-in-staging wrapper,
+      // so a masked no-callout miss became a terminal
+      // ValidationException('...only supported on conversation and comment
+      // rooms') for a valid comment room during a momentary DB blip. With the
+      // narrowed catch the real (retryable) DB error must propagate instead.
+      const dbError = new Error('db connection reset');
+      roomResolverService.getCalloutForRoom.mockRejectedValue(dbError);
+
+      const error = await service
+        .resolveOutboundAttachments(
+          calloutRoom,
+          { actorID: 'sender-1' } as any,
+          ['doc-1']
+        )
+        .catch(e => e);
+
+      expect(error).toBe(dbError);
+      expect(error).not.toBeInstanceOf(ValidationException);
+    });
+
+    it('[0] OUTBOUND: a genuine no-callout (EntityNotFoundException) still yields the terminal ValidationException for an unsupported/unresolvable room', async () => {
+      // The genuine no-callout case (helper throws EntityNotFoundException) is
+      // caught → undefined → getAttachmentBucketForRoomOrFail throws the terminal
+      // ValidationException. This is the correct terminal outcome for a room whose
+      // parent callout truly cannot be resolved.
+      roomResolverService.getCalloutForRoom.mockRejectedValue(
+        new EntityNotFoundException(
+          'Unable to identify Callout for Room',
+          LogContext.COLLABORATION
+        )
+      );
+
+      await expect(
+        service.resolveOutboundAttachments(
+          calloutRoom,
+          { actorID: 'sender-1' } as any,
+          ['doc-1']
+        )
+      ).rejects.toBeInstanceOf(ValidationException);
     });
   });
 
