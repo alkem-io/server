@@ -286,9 +286,12 @@ export class FileServiceAdapter extends HttpClientBase {
    * unrelated healthy file-service traffic. It therefore does NOT route through
    * `sendRequest` / `checkEnabledAndCircuit`: it issues a DIRECT axios GET with a
    * SHORT timeout (`DOCUMENT_META_TIMEOUT_MS`), ZERO retries, and no breaker
-   * accounting, and swallows EVERY failure (timeout / 4xx / 5xx / network / 404)
-   * to `null`. The `enabled` gate is kept (returns `null`, does not throw). The
-   * caller also guards the result, as defence-in-depth.
+   * accounting, and resolves EVERY failure (timeout / 4xx / 5xx / network / 404)
+   * to `null` — NEVER propagating. A benign 404 (no meta / not found) is expected
+   * and stays quiet; every other failure (timeout / 5xx / network / other) is
+   * logged at WARN so the dropped dimensions stay observable. The `enabled` gate
+   * is kept (returns `null`, does not throw). The caller also guards the result,
+   * as defence-in-depth.
    */
   async getDocumentMeta(
     documentId: string
@@ -305,10 +308,24 @@ export class FileServiceAdapter extends HttpClientBase {
         })
       );
       return response.data;
-    } catch {
-      // Any failure (timeout / 4xx / 5xx / network / 404) → null. Dims are a
-      // best-effort rendering hint; the send proceeds without them and the
-      // shared breaker is untouched.
+    } catch (error) {
+      // Best-effort: EVERY failure resolves to `null` — dims are a rendering
+      // hint, so the send proceeds without them and the shared breaker is
+      // untouched. A genuine 404 (the document has no meta / not found) is
+      // expected on this path and stays QUIET to avoid log spam; every other
+      // failure (timeout / 5xx / network / other) is logged at WARN so dropped
+      // dimensions are observable. Failures are logged but NEVER propagate.
+      if (isAxiosError(error) && error.response?.status === 404) {
+        return null;
+      }
+      this.logger.warn?.(
+        {
+          message: `${this.logPrefix} Best-effort document meta lookup failed; attachment dimensions omitted`,
+          documentId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        this.logContext
+      );
       return null;
     }
   }

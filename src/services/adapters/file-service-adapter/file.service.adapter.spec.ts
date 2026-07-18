@@ -1,3 +1,4 @@
+import { LogContext } from '@common/enums';
 import { HttpService } from '@nestjs/axios';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -432,7 +433,7 @@ describe('FileServiceAdapter', () => {
       expect(options).toEqual({ timeout: 2500 });
     });
 
-    it('returns null on 404 (unknown document) rather than throwing', async () => {
+    it('returns null on 404 (unknown document) rather than throwing — QUIETLY, without logging', async () => {
       const axiosError = new AxiosError('Not Found', '404', undefined, null, {
         status: 404,
         data: { error: 'document not found' },
@@ -442,11 +443,14 @@ describe('FileServiceAdapter', () => {
       });
 
       (httpService.get as Mock).mockReturnValue(throwError(() => axiosError));
+      mockLogger.warn.mockClear();
 
       await expect(adapter.getDocumentMeta('missing')).resolves.toBeNull();
+      // A benign 404 is expected on this best-effort path — no warn (would spam).
+      expect(mockLogger.warn).not.toHaveBeenCalled();
     });
 
-    it('swallows EVERY failure (5xx / timeout / network) to null — never propagates', async () => {
+    it('swallows EVERY failure (5xx / timeout / network) to null — never propagates — and logs a WARN so dropped dims are observable', async () => {
       const failures = [
         // 5xx
         new AxiosError('Boom', '500', undefined, null, {
@@ -471,7 +475,23 @@ describe('FileServiceAdapter', () => {
 
       for (const err of failures) {
         (httpService.get as Mock).mockReturnValue(throwError(() => err));
+        mockLogger.warn.mockClear();
+
         await expect(adapter.getDocumentMeta('doc-1')).resolves.toBeNull();
+
+        // Non-404 degradation → exactly one WARN carrying the documentId + the
+        // error message, and the STORAGE_BUCKET context the adapter's other
+        // logs use.
+        expect(mockLogger.warn).toHaveBeenCalledTimes(1);
+        const [payload, context] = mockLogger.warn.mock.calls[0];
+        expect(payload).toMatchObject({
+          message: expect.stringContaining(
+            'Best-effort document meta lookup failed'
+          ),
+          documentId: 'doc-1',
+          error: err.message,
+        });
+        expect(context).toBe(LogContext.STORAGE_BUCKET);
       }
     });
 
