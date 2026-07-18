@@ -1264,40 +1264,50 @@ export class MessageAttachmentService {
     room: IRoom
   ): Promise<string | undefined> {
     if (room.type === RoomType.CALLOUT) {
-      try {
-        // [2] accepted DRY cost: getCalloutForRoom eager-loads the full Callout
-        // (+ calloutsSet join) where only callout.id is used here — the accepted
-        // tradeoff for a single source of truth over a hand-rolled id-only query
-        // on this (non-hottest) re-home path.
-        const callout = await this.roomResolverService.getCalloutForRoom(
-          room.id
-        );
-        return callout?.id;
-      } catch (e) {
-        if (e instanceof EntityNotFoundException) {
-          return undefined; // genuine no-callout → leave media in staging
-        }
-        throw e; // real DB/infra error must propagate (retryable), not be masked
-      }
+      // [2] accepted DRY cost: getCalloutForRoom eager-loads the full Callout
+      // (+ calloutsSet join) where only callout.id is used here — the accepted
+      // tradeoff for a single source of truth over a hand-rolled id-only query
+      // on this (non-hottest) re-home path.
+      return this.resolveCalloutIdOrUndefined(() =>
+        this.roomResolverService.getCalloutForRoom(room.id)
+      );
     }
     if (room.type === RoomType.POST) {
-      try {
-        // [2] accepted DRY cost: getCalloutWithPostContributionForRoom eager-loads
-        // the full Callout + contribution + post + profile joins where only
-        // callout.id is used — accepted for the single-source-of-truth reuse.
-        const { callout } =
-          await this.roomResolverService.getCalloutWithPostContributionForRoom(
-            room.id
-          );
-        return callout?.id;
-      } catch (e) {
-        if (e instanceof EntityNotFoundException) {
-          return undefined; // genuine no-callout → leave media in staging
-        }
-        throw e; // real DB/infra error must propagate (retryable), not be masked
-      }
+      // [2] accepted DRY cost: getCalloutWithPostContributionForRoom eager-loads
+      // the full Callout + contribution + post + profile joins where only
+      // callout.id is used — accepted for the single-source-of-truth reuse.
+      return this.resolveCalloutIdOrUndefined(
+        async () =>
+          (
+            await this.roomResolverService.getCalloutWithPostContributionForRoom(
+              room.id
+            )
+          ).callout
+      );
     }
     return undefined;
+  }
+
+  /**
+   * Shared not-found→undefined narrowing for both comment-room paths (callout
+   * and post). The RoomResolverService helpers THROW EntityNotFoundException
+   * for a genuine "no callout for this room" miss but PROPAGATE real DB/infra
+   * errors — so catch ONLY EntityNotFoundException (→ undefined, leave media in
+   * staging) and RE-THROW everything else (retryable, must not be masked).
+   * Extracted from the two branches above so the not-found-vs-propagate policy
+   * cannot silently diverge between them.
+   */
+  private async resolveCalloutIdOrUndefined(
+    load: () => Promise<{ id: string } | undefined>
+  ): Promise<string | undefined> {
+    try {
+      return (await load())?.id;
+    } catch (e) {
+      if (e instanceof EntityNotFoundException) {
+        return undefined; // genuine no-callout → leave media in staging
+      }
+      throw e; // real DB/infra error must propagate (retryable), not be masked
+    }
   }
 
   private isCommentRoom(room: IRoom): boolean {
