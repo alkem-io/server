@@ -12,6 +12,7 @@ import { RoomAuthorizationService } from '@domain/communication/room/room.servic
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { VirtualActorLookupService } from '@domain/community/virtual-contributor-lookup/virtual.contributor.lookup.service';
 import { StorageAggregatorService } from '@domain/storage/storage-aggregator/storage.aggregator.service';
+import { StorageBucketService } from '@domain/storage/storage-bucket/storage.bucket.service';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors';
@@ -34,6 +35,7 @@ describe('ConversationService', () => {
   let virtualActorLookupService: Mocked<VirtualActorLookupService>;
   let platformWellKnownVCService: Mocked<PlatformWellKnownVirtualContributorsService>;
   let storageAggregatorService: Mocked<StorageAggregatorService>;
+  let storageBucketService: Mocked<StorageBucketService>;
   let conversationRepo: Mocked<Repository<Conversation>>;
   let membershipRepo: Mocked<Repository<ConversationMembership>>;
   let mockManagerFind: ReturnType<typeof vi.fn>;
@@ -69,6 +71,7 @@ describe('ConversationService', () => {
       PlatformWellKnownVirtualContributorsService
     );
     storageAggregatorService = module.get(StorageAggregatorService);
+    storageBucketService = module.get(StorageBucketService);
     conversationRepo = module.get(getRepositoryToken(Conversation));
     membershipRepo = module.get(getRepositoryToken(ConversationMembership));
 
@@ -747,6 +750,38 @@ describe('ConversationService', () => {
       ).rejects.toThrow('matrix room RPC failed');
 
       expect(storageAggregatorService.delete).toHaveBeenCalledWith('agg-1');
+    });
+
+    it('cleans up the aggregator when the bucket-policy save inside createConversationStorageAggregator fails (FIX 1)', async () => {
+      // createStorageAggregator (step 1) has already committed the aggregator +
+      // bucket + 2 auth rows. The SECOND step — tightening the bucket policy via
+      // storageBucketService.save — then fails. This throws BEFORE the aggregator
+      // is assigned to conversation.storageAggregator and BEFORE the outer
+      // try/catch is entered, so the caller's rollback can't reach it. The method
+      // must therefore clean up its own just-created aggregator (same
+      // StorageAggregatorService.delete) so nothing leaks, then propagate.
+      storageAggregatorService.createStorageAggregator.mockResolvedValue({
+        id: 'agg-1',
+        directStorage: { id: 'bucket-1' },
+      } as any);
+      storageBucketService.save.mockRejectedValue(
+        new Error('bucket policy save failed')
+      );
+
+      await expect(
+        service.createConversation(
+          'agent-1',
+          ['agent-2'],
+          RoomType.CONVERSATION_DIRECT
+        )
+      ).rejects.toThrow('bucket policy save failed');
+
+      // Cleaned up exactly once — the outer rollback never runs because the throw
+      // happens before conversation.storageAggregator is assigned.
+      expect(storageAggregatorService.delete).toHaveBeenCalledWith('agg-1');
+      expect(storageAggregatorService.delete).toHaveBeenCalledTimes(1);
+      // The room RPC is never reached — the failure is in storage creation.
+      expect(roomService.createRoom).not.toHaveBeenCalled();
     });
   });
 

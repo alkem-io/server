@@ -222,12 +222,37 @@ export class ConversationService {
       );
 
     // Tighten the directStorage bucket policy to the conversation media set.
+    // createStorageAggregator has ALREADY committed the aggregator + bucket + 2
+    // auth rows (step 1). This bucket save is a SECOND persistence step: if it
+    // fails transiently the exception would otherwise propagate BEFORE the
+    // aggregator is assigned to conversation.storageAggregator and BEFORE the
+    // caller's outer try/catch is entered, so the caller's rollback could not
+    // reach it and the just-created aggregator + bucket + auth rows would leak
+    // permanently (FIX 1). Keep this method ATOMIC instead: on a step-2 failure,
+    // roll the aggregator back via the SAME StorageAggregatorService.delete the
+    // caller's rollback drives, then re-throw — best-effort, never masking the
+    // original error.
     const bucket = storageAggregator.directStorage;
     if (bucket) {
-      bucket.allowedMimeTypes = CONVERSATION_MEDIA_ALLOWED_MIME_TYPES;
-      bucket.maxFileSize = CONVERSATION_MEDIA_MAX_FILE_SIZE;
-      storageAggregator.directStorage =
-        await this.storageBucketService.save(bucket);
+      try {
+        bucket.allowedMimeTypes = CONVERSATION_MEDIA_ALLOWED_MIME_TYPES;
+        bucket.maxFileSize = CONVERSATION_MEDIA_MAX_FILE_SIZE;
+        storageAggregator.directStorage =
+          await this.storageBucketService.save(bucket);
+      } catch (error) {
+        await this.storageAggregatorService
+          .delete(storageAggregator.id)
+          .catch(cleanupError =>
+            this.logger.error(
+              `Failed to roll back partially-created conversation storage aggregator ${storageAggregator.id}: ${
+                (cleanupError as Error)?.message
+              }`,
+              (cleanupError as Error)?.stack,
+              LogContext.COMMUNICATION_CONVERSATION
+            )
+          );
+        throw error;
+      }
     }
 
     return storageAggregator;

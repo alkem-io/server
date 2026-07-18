@@ -38,7 +38,17 @@ export class ConversationAuthorizationService {
             authorization: true,
             directStorage: {
               authorization: true,
-              documents: true,
+              // Mirror the sibling StorageAggregatorAuthorizationService relation
+              // spec EXACTLY (`documents: { tagset: true }`): the bucket auth
+              // reset cascades into DocumentAuthorizationService.applyAuthorizationPolicy,
+              // which dereferences `document.tagset` + `document.tagset.authorization`
+              // (both throw RelationshipNotFoundException if unloaded). `authorization`
+              // is eager on Document/Tagset (AuthorizableEntity), so requesting the
+              // tagset relation is what makes the nested auth available once a
+              // conversation has accrued attachment documents (FIX 0).
+              documents: {
+                tagset: true,
+              },
             },
           },
         },

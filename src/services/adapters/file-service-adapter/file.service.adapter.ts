@@ -210,14 +210,11 @@ export class FileServiceAdapter extends HttpClientBase {
       | 'displayName'
     >
   ): Promise<UpdateDocumentResult> {
-    this.checkEnabledAndCircuit('moveDocument');
-
-    return this.sendRequest<UpdateDocumentResult>(
-      'moveDocument',
-      'patch',
-      this.filePath(documentId),
-      patch
-    );
+    // DELEGATE to updateDocument: identical endpoint/verb/body/return type, so
+    // there is ONE PATCH implementation. Re-home callers keep the narrower typed
+    // surface via this signature; only the shared transport differs (the
+    // operation is logged/circuit-accounted as `updateDocument`).
+    return this.updateDocument(documentId, patch);
   }
 
   /**
