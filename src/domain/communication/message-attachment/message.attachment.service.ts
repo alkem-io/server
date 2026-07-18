@@ -5,8 +5,6 @@ import { RoomType } from '@common/enums/room.type';
 import { ValidationException } from '@common/exceptions';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
-import { Callout } from '@domain/collaboration/callout/callout.entity';
-import { Post } from '@domain/collaboration/post/post.entity';
 import {
   AuthorizationPolicy,
   IAuthorizationPolicy,
@@ -24,6 +22,7 @@ import { ConfigService } from '@nestjs/config';
 import { InjectRepository } from '@nestjs/typeorm';
 import { CommunicationMessageAttachment } from '@services/adapters/communication-adapter/dto/communication.message.attachment';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -79,6 +78,7 @@ export class MessageAttachmentService {
     private readonly authorizationService: AuthorizationService,
     private readonly authorizationPolicyService: AuthorizationPolicyService,
     private readonly storageAggregatorResolverService: StorageAggregatorResolverService,
+    private readonly roomResolverService: RoomResolverService,
     @InjectRepository(Conversation)
     private readonly conversationRepository: Repository<Conversation>,
     @InjectRepository(Room)
@@ -135,21 +135,31 @@ export class MessageAttachmentService {
       );
     }
 
-    const bucket = await this.getConversationBucketForRoomOrFail(room);
+    const bucket = await this.getAttachmentBucketForRoomOrFail(room);
+
+    // FIX [1]: load every attachment document in PARALLEL, preserving
+    // documentIds ORDER. These are independent DB round-trips (each joining
+    // authorization + storageBucket); awaiting them one-by-one inside the
+    // validation loop serialised up to MAX_MESSAGE_ATTACHMENTS (<=10) fetches on
+    // the hot send path. The per-doc VALIDATION below is CPU-only and runs in a
+    // SECOND pass over the loaded docs, so the exact validation semantics +
+    // ValidationException messages + fail-order are unchanged — only WHEN the
+    // loads are issued. Promise.all preserves order, so documents[i] is
+    // documentIds[i].
+    const documents = await Promise.all(
+      documentIds.map(documentId =>
+        this.documentService.getDocumentOrFail(documentId, {
+          relations: { authorization: true, storageBucket: true },
+        })
+      )
+    );
 
     const refs: CommunicationMessageAttachment[] = [];
     // Image refs whose dims are fetched AFTER validation, in PARALLEL (below).
     // Each entry references its ref object (built in documentIds order) so the
     // concurrent dims fetch mutates dims in place without disturbing ref ORDER.
     const imageRefs: CommunicationMessageAttachment[] = [];
-    for (const documentId of documentIds) {
-      const document = await this.documentService.getDocumentOrFail(
-        documentId,
-        {
-          relations: { authorization: true, storageBucket: true },
-        }
-      );
-
+    for (const document of documents) {
       if (document.storageBucket?.id !== bucket.id) {
         throw new ValidationException(
           'Attachment does not belong to this conversation',
@@ -1124,13 +1134,21 @@ export class MessageAttachmentService {
     }
   }
 
-  private async getConversationBucketForRoomOrFail(
+  /**
+   * Resolve the attachment bucket for ANY supported room type — conversation
+   * rooms (the conversation's own bucket) AND comment rooms (the parent
+   * callout/post's collaboration bucket), both via getTargetBucketForRoom.
+   * Throws only when the room type is genuinely unsupported (or its target
+   * bucket can't be resolved), so the error message must reflect that comment
+   * rooms ARE supported.
+   */
+  private async getAttachmentBucketForRoomOrFail(
     room: IRoom
   ): Promise<IStorageBucket> {
     const bucket = await this.getTargetBucketForRoom(room);
     if (!bucket) {
       throw new ValidationException(
-        'Attachments are only supported on conversation rooms',
+        'Attachments are only supported on conversation and comment rooms',
         LogContext.COMMUNICATION
       );
     }
@@ -1209,24 +1227,39 @@ export class MessageAttachmentService {
     return aggregator.directStorage ?? undefined;
   }
 
-  /** Resolve a comment room (callout or post) to its owning callout id. */
+  /**
+   * Resolve a comment room (callout or post) to its owning callout id. DRY:
+   * delegates to RoomResolverService's canonical room→callout resolution
+   * (getCalloutForRoom for callout comment rooms, getCalloutWithPostContributionForRoom
+   * for post comment rooms) instead of re-querying Callout/Post here. Those
+   * helpers THROW EntityNotFoundException when the room can't be resolved, but
+   * this re-home path is best-effort and must return `undefined` (leave the
+   * media in staging) — so each call is wrapped to preserve that non-throw
+   * contract.
+   */
   private async resolveParentCalloutId(
     room: IRoom
   ): Promise<string | undefined> {
-    const manager = this.conversationRepository.manager;
     if (room.type === RoomType.CALLOUT) {
-      const callout = await manager.findOne(Callout, {
-        where: { comments: { id: room.id } },
-        select: { id: true },
-      });
-      return callout?.id;
+      try {
+        const callout = await this.roomResolverService.getCalloutForRoom(
+          room.id
+        );
+        return callout?.id;
+      } catch {
+        return undefined;
+      }
     }
     if (room.type === RoomType.POST) {
-      const post = await manager.findOne(Post, {
-        where: { comments: { id: room.id } },
-        relations: { contribution: { callout: true } },
-      });
-      return post?.contribution?.callout?.id;
+      try {
+        const { callout } =
+          await this.roomResolverService.getCalloutWithPostContributionForRoom(
+            room.id
+          );
+        return callout?.id;
+      } catch {
+        return undefined;
+      }
     }
     return undefined;
   }

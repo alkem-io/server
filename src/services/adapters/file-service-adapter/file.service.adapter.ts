@@ -111,12 +111,6 @@ export class FileServiceAdapter extends HttpClientBase {
     if (metadata.skipDedup) {
       form.append('skipDedup', 'true');
     }
-    if (metadata.externalReference) {
-      form.append('externalReference', metadata.externalReference);
-    }
-    if (metadata.skipImageProcessing) {
-      form.append('skipImageProcessing', 'true');
-    }
 
     return this.sendRequest<CreateDocumentResult>(
       'createDocument',

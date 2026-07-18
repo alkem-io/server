@@ -9,6 +9,7 @@ import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { getRepositoryToken } from '@nestjs/typeorm';
 import { FileServiceAdapter } from '@services/adapters/file-service-adapter/file.service.adapter';
+import { RoomResolverService } from '@services/infrastructure/entity-resolver/room.resolver.service';
 import { StorageAggregatorResolverService } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.service';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
@@ -55,6 +56,7 @@ describe('MessageAttachmentService', () => {
   let authorizationService: Mocked<AuthorizationService>;
   let authorizationPolicyService: Mocked<AuthorizationPolicyService>;
   let storageAggregatorResolverService: Mocked<StorageAggregatorResolverService>;
+  let roomResolverService: Mocked<RoomResolverService>;
   let conversationRepository: {
     findOne: ReturnType<typeof vi.fn>;
     manager: { findOne: ReturnType<typeof vi.fn> };
@@ -96,6 +98,7 @@ describe('MessageAttachmentService', () => {
     storageAggregatorResolverService = module.get(
       StorageAggregatorResolverService
     );
+    roomResolverService = module.get(RoomResolverService);
 
     conversationRepository.findOne.mockResolvedValue({
       id: 'conv-1',
@@ -399,6 +402,69 @@ describe('MessageAttachmentService', () => {
       // Proven parallel: all three meta fetches overlapped in flight.
       expect(maxInFlight).toBe(3);
     });
+
+    it('[1] loads the attachment documents in PARALLEL, then validates in order (refs keep input order)', async () => {
+      // The per-id getDocumentOrFail loads are independent I/O and must be issued
+      // concurrently (worst-case ~1 round-trip, not N) BEFORE the CPU-only
+      // validation pass. Track concurrency of the loads and assert the returned
+      // refs keep documentIds order. Non-image docs so getDocumentMeta stays out
+      // of the way — this isolates the load-concurrency assertion.
+      const docs: Record<string, any> = {
+        'doc-x': {
+          id: 'doc-x',
+          createdBy: 'sender-1',
+          displayName: 'x.pdf',
+          mimeType: 'application/pdf',
+          size: 1,
+          temporaryLocation: true,
+          storageBucket: { id: CONV_BUCKET },
+          authorization: { id: 'auth-x' },
+        },
+        'doc-y': {
+          id: 'doc-y',
+          createdBy: 'sender-1',
+          displayName: 'y.pdf',
+          mimeType: 'application/pdf',
+          size: 2,
+          temporaryLocation: true,
+          storageBucket: { id: CONV_BUCKET },
+          authorization: { id: 'auth-y' },
+        },
+        'doc-z': {
+          id: 'doc-z',
+          createdBy: 'sender-1',
+          displayName: 'z.pdf',
+          mimeType: 'application/pdf',
+          size: 3,
+          temporaryLocation: true,
+          storageBucket: { id: CONV_BUCKET },
+          authorization: { id: 'auth-z' },
+        },
+      };
+      let inFlight = 0;
+      let maxInFlight = 0;
+      documentService.getDocumentOrFail.mockImplementation(
+        async (id: string) => {
+          inFlight += 1;
+          maxInFlight = Math.max(maxInFlight, inFlight);
+          await Promise.resolve();
+          inFlight -= 1;
+          return docs[id];
+        }
+      );
+
+      const refs = await service.resolveOutboundAttachments(
+        conversationRoom,
+        { actorID: 'sender-1' } as any,
+        ['doc-x', 'doc-y', 'doc-z']
+      );
+
+      // All three loads overlapped in flight → parallelised, not serialised.
+      expect(maxInFlight).toBe(3);
+      // Validation still ran (READ-gate) and refs preserve documentIds order.
+      expect(authorizationService.grantAccessOrFail).toHaveBeenCalledTimes(3);
+      expect(refs.map(r => r.documentId)).toEqual(['doc-x', 'doc-y', 'doc-z']);
+    });
   });
 
   // --- FIX 0: deferred pinning after send ---
@@ -650,9 +716,11 @@ describe('MessageAttachmentService', () => {
     });
 
     it('comment-room (callout): re-homes into the parent callout bucket', async () => {
-      conversationRepository.manager.findOne.mockResolvedValue({
+      // FIX [2]: parent-callout resolution now delegates to RoomResolverService's
+      // canonical getCalloutForRoom instead of a hand-rolled Callout query.
+      roomResolverService.getCalloutForRoom.mockResolvedValue({
         id: 'callout-1',
-      });
+      } as any);
       storageAggregatorResolverService.getStorageAggregatorForCallout.mockResolvedValue(
         {
           id: 'agg-1',
@@ -681,10 +749,95 @@ describe('MessageAttachmentService', () => {
       );
 
       expect(bucketId).toBe(CALLOUT_BUCKET);
+      expect(roomResolverService.getCalloutForRoom).toHaveBeenCalledWith(
+        'callout-room-1'
+      );
       expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
         'doc-staging',
         expect.objectContaining({ storageBucketId: CALLOUT_BUCKET })
       );
+    });
+
+    it('comment-room (post): resolves the parent callout via the post helper and re-homes into its bucket', async () => {
+      // FIX [2]: post comment rooms resolve their owning callout via
+      // RoomResolverService.getCalloutWithPostContributionForRoom; the callout id
+      // is extracted from the returned { post, callout, contribution } shape.
+      const postRoom: IRoom = {
+        id: 'post-room-1',
+        type: RoomType.POST,
+      } as IRoom;
+      roomResolverService.getCalloutWithPostContributionForRoom.mockResolvedValue(
+        {
+          post: { id: 'post-1' },
+          callout: { id: 'callout-1' },
+          contribution: { id: 'contrib-1' },
+        } as any
+      );
+      storageAggregatorResolverService.getStorageAggregatorForCallout.mockResolvedValue(
+        {
+          id: 'agg-1',
+          directStorage: { id: CALLOUT_BUCKET, authorization: { id: 'cb-a' } },
+        } as any
+      );
+      fileServiceAdapter.getDocumentByReference
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'doc-staging',
+          storageBucketId: MATRIX_MEDIA_BUCKET,
+          mimeType: 'image/png',
+        } as any);
+
+      const bucketId = await service.rehomeInboundAttachments(
+        postRoom,
+        'sender-1',
+        [
+          {
+            media_id: 'media-p',
+            display_name: 'x',
+            mime_type: 'image/png',
+            size: 1,
+          },
+        ]
+      );
+
+      expect(bucketId).toBe(CALLOUT_BUCKET);
+      expect(
+        roomResolverService.getCalloutWithPostContributionForRoom
+      ).toHaveBeenCalledWith('post-room-1');
+      expect(
+        storageAggregatorResolverService.getStorageAggregatorForCallout
+      ).toHaveBeenCalledWith('callout-1', expect.anything());
+      expect(fileServiceAdapter.moveDocument).toHaveBeenCalledWith(
+        'doc-staging',
+        expect.objectContaining({ storageBucketId: CALLOUT_BUCKET })
+      );
+    });
+
+    it('comment-room: an EntityNotFound throw from the resolver leaves media in staging (best-effort, no throw)', async () => {
+      // The RoomResolverService helpers THROW when they can't resolve the room;
+      // resolveParentCalloutId wraps them to preserve the non-throw contract, so
+      // an unresolvable callout comment room leaves the media in staging instead
+      // of aborting inbound processing.
+      roomResolverService.getCalloutForRoom.mockRejectedValue(
+        new Error('Unable to identify Callout for Room')
+      );
+
+      const bucketId = await service.rehomeInboundAttachments(
+        calloutRoom,
+        'sender-1',
+        [
+          {
+            media_id: 'media-c',
+            display_name: 'x',
+            mime_type: 'image/png',
+            size: 1,
+          },
+        ]
+      );
+
+      expect(bucketId).toBeUndefined();
+      expect(fileServiceAdapter.moveDocument).not.toHaveBeenCalled();
+      expect(fileServiceAdapter.copyDocument).not.toHaveBeenCalled();
     });
   });
 

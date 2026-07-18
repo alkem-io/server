@@ -7,6 +7,7 @@ import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.buck
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { FileServiceAdapterModule } from '@services/adapters/file-service-adapter/file.service.adapter.module';
+import { EntityResolverModule } from '@services/infrastructure/entity-resolver/entity.resolver.module';
 import { StorageAggregatorResolverModule } from '@services/infrastructure/storage-aggregator-resolver/storage.aggregator.resolver.module';
 import { Conversation } from '../conversation/conversation.entity';
 import { MessageAttachmentCleanupService } from './message.attachment.cleanup.service';
@@ -20,6 +21,7 @@ import { MessageAttachmentService } from './message.attachment.service';
     StorageBucketModule,
     FileServiceAdapterModule,
     StorageAggregatorResolverModule,
+    EntityResolverModule,
     TypeOrmModule.forFeature([Conversation, Document, Room]),
   ],
   providers: [MessageAttachmentService, MessageAttachmentCleanupService],
