@@ -8,8 +8,11 @@ import { formatDatesForCalendar } from './calendar.event.calendar-links';
  * process-local derivation slipped a day.
  *
  * The process timezone is fixed at Node startup (runtime `process.env.TZ` reassignment
- * does NOT take effect), so this file is designed to be run under several launch-time
- * timezones and assert the SAME output each time:
+ * does NOT take effect), so these fixed-string assertions only prove TZ-independence
+ * when the process runs under a non-UTC timezone. `calendar.event.calendar-links.wholeday-tz.harness.spec.ts`
+ * re-runs this file in a child process pinned to `America/Los_Angeles`, so the guarantee
+ * holds in `test:ci` regardless of the runner's timezone (e.g. a UTC CI). To sweep it
+ * by hand across zones:
  *
  *   for z in UTC Europe/Amsterdam Europe/Sofia America/Los_Angeles; do \
  *     TZ=$z npx vitest run src/domain/timeline/event/calendar.event.calendar-links.wholeday-tz.spec.ts; done
