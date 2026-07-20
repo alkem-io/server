@@ -197,13 +197,21 @@ selfservice:
             - hook: session
 
 session:
-  # Align with the OIDC BFF session's ABSOLUTE ceiling (alkemio.yml
-  # absolute_ttl_s = 2592000s = 720h = 30d), NOT the 14d idle window: an
-  # actively-used alkemio_session slides its idle window forward on every
-  # /api/private/graphql call up to that 30d ceiling. Keeping the Kratos SSO
-  # session shorter let the header's whoami-based login indicator flip to
-  # "logged out" while the still-valid alkemio_session kept authorizing CRUD
-  # (client-web#9965). Mirrors the prod/infra base values (720h / 360h).
+  # Sized so the Kratos SSO session never dies BEFORE the OIDC BFF session.
+  # The reference point is the BFF's absolute cap (alkemio.yml absolute_ttl_s =
+  # 2592000s = 720h = 30d), not its 14d idle window: an actively-used
+  # alkemio_session slides that idle window forward on every
+  # /api/private/graphql call, up to the 30d cap. At 48h Kratos expired first,
+  # so the header's whoami-based login indicator flipped to "logged out" while
+  # the still-valid alkemio_session kept authorizing CRUD (client-web#9965).
+  #
+  # Note these are NOT a shared deadline. Kratos' lifespan is a rolling window
+  # with no absolute cap: once a session is older than earliest_possible_extend,
+  # the next /sessions/whoami renews it to now + lifespan, indefinitely. So a
+  # Kratos session can outlive the BFF's 30d cap — harmless, because the BFF
+  # session is the authoritative gate for both API access and the login
+  # indicator (client-web#10053); Kratos alone never reads as logged in.
+  # Mirrors the prod/infra base values (720h / 360h).
   lifespan: 720h
   earliest_possible_extend: 360h
 
