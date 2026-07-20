@@ -597,7 +597,12 @@ export class NotificationExternalAdapter {
       calculateCalendarEventEndDate(calendarEvent).toISOString(),
       'endDate'
     );
-    validateCalendarDateRange(startDateIso, endDateIso, calendarEvent.id);
+    validateCalendarDateRange(
+      startDateIso,
+      endDateIso,
+      calendarEvent.id,
+      calendarEvent.wholeDay
+    );
 
     const description = calendarEvent.profile?.description ?? undefined;
     const location = formatLocation(calendarEvent.profile?.location);

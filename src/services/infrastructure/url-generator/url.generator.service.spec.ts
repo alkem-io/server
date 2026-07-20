@@ -449,6 +449,56 @@ describe('UrlGeneratorService', () => {
         `${ENDPOINT}/${UrlPathBase.VIRTUAL_CONTRIBUTOR}/my-vc/${UrlPathElement.KNOWLEDGE_BASE}`
       );
     });
+
+    // A CollaboraDocument has no nameID and no deep-link route — its URL is
+    // the parent callout's URL. Without this branch the switch fell through to
+    // '' and every Collabora search result rendered a dead link.
+    it('should generate the parent callout URL for a framing COLLABORA_DOCUMENT profile', async () => {
+      entityManager.findOne
+        .mockResolvedValueOnce({ id: 'cd-1' }) // CollaboraDocument by profile id
+        .mockResolvedValueOnce({ id: 'callout-1' }); // Callout via framing
+      const calloutUrl = `${ENDPOINT}/my-space/${UrlPathElement.COLLABORATION}/my-callout`;
+      vi.spyOn(service, 'getCalloutUrlPath').mockResolvedValue(calloutUrl);
+
+      const result = await service.generateUrlForProfile({
+        id: 'profile-cd',
+        type: ProfileType.COLLABORA_DOCUMENT,
+      } as any);
+
+      expect(result).toBe(calloutUrl);
+      expect(service.getCalloutUrlPath).toHaveBeenCalledWith('callout-1');
+    });
+
+    it('should fall back to the contribution parent callout for a contribution COLLABORA_DOCUMENT profile', async () => {
+      entityManager.findOne
+        .mockResolvedValueOnce({ id: 'cd-2' }) // CollaboraDocument by profile id
+        .mockResolvedValueOnce(null) // not a framing document
+        .mockResolvedValueOnce({ id: 'callout-2' }); // Callout via contribution
+      const calloutUrl = `${ENDPOINT}/my-space/${UrlPathElement.COLLABORATION}/other-callout`;
+      vi.spyOn(service, 'getCalloutUrlPath').mockResolvedValue(calloutUrl);
+
+      const result = await service.generateUrlForProfile({
+        id: 'profile-cd',
+        type: ProfileType.COLLABORA_DOCUMENT,
+      } as any);
+
+      expect(result).toBe(calloutUrl);
+      expect(service.getCalloutUrlPath).toHaveBeenCalledWith('callout-2');
+    });
+
+    it('should throw EntityNotFoundException when a COLLABORA_DOCUMENT profile has no parent callout', async () => {
+      entityManager.findOne
+        .mockResolvedValueOnce({ id: 'cd-3' }) // CollaboraDocument by profile id
+        .mockResolvedValueOnce(null) // no framing parent
+        .mockResolvedValueOnce(null); // no contribution parent
+
+      await expect(
+        service.generateUrlForProfile({
+          id: 'profile-cd',
+          type: ProfileType.COLLABORA_DOCUMENT,
+        } as any)
+      ).rejects.toThrow(EntityNotFoundException);
+    });
   });
 
   describe('getForumDiscussionUrlPath', () => {

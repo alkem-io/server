@@ -138,4 +138,30 @@ describe('CalloutFramingService.validateAndNormalizeContributorsSettings', () =>
       ContributorCollectionView.LIST
     );
   });
+
+  // 013: a SPACES framing is config-free. Any contributors config on it is
+  // rejected (workspace#013-spaces-collection-callout, FR-004b); a bare
+  // (config-free) SPACES framing validates unchanged.
+  it('rejects contributors settings on a SPACES framing (config-free, FR-004b)', () => {
+    expect(() =>
+      service.validateAndNormalizeContributorsSettings(
+        CalloutFramingType.SPACES,
+        framing({
+          contributorTypes: [ActorType.USER],
+          defaultContributorType: ActorType.USER,
+          defaultView: ContributorCollectionView.LIST,
+        })
+      )
+    ).toThrow(ValidationException);
+  });
+
+  it('accepts a config-free SPACES framing unchanged (FR-004b)', () => {
+    const settings = framing(undefined);
+    const result = service.validateAndNormalizeContributorsSettings(
+      CalloutFramingType.SPACES,
+      settings
+    );
+    expect(result.contributors).toBeUndefined();
+    expect(result).toBe(settings);
+  });
 });

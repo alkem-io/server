@@ -26,17 +26,17 @@ As a space administrator, I want to set a space-level callout description displa
 
 ### User Story 2 - Default Display Mode for New Spaces (Priority: P1)
 
-As a platform operator, I want new spaces to default to "Collapsed" callout description display mode, so that new spaces benefit from a compact layout without requiring manual configuration.
+As a platform operator, I want new spaces to default to "Expanded" callout description display mode, so that callout descriptions are visible out-of-the-box without requiring manual configuration.
 
-**Why this priority**: Correct defaults are essential for the feature to work out-of-the-box. New spaces must initialize with the collapsed default.
+**Why this priority**: Correct defaults are essential for the feature to work out-of-the-box. New spaces must initialize with the expanded default.
 
-**Independent Test**: Can be fully tested by creating a new space via the `createSpace` mutation and querying its settings to verify `calloutDescriptionDisplayMode` is `COLLAPSED`.
+**Independent Test**: Can be fully tested by creating a new space via the `createSpace` mutation and querying its settings to verify `calloutDescriptionDisplayMode` is `EXPANDED`.
 
 **Acceptance Scenarios**:
 
-1. **Given** a user creates a new space without specifying `calloutDescriptionDisplayMode`, **When** the space settings are queried, **Then** `calloutDescriptionDisplayMode` is `COLLAPSED`.
-2. **Given** a user creates a new space and explicitly sets `calloutDescriptionDisplayMode: EXPANDED`, **When** the space settings are queried, **Then** `calloutDescriptionDisplayMode` is `EXPANDED`.
-3. **Given** a user creates a new subspace without specifying the display mode, **When** the subspace settings are queried, **Then** `calloutDescriptionDisplayMode` is `COLLAPSED` (independent of parent space setting).
+1. **Given** a user creates a new space without specifying `calloutDescriptionDisplayMode`, **When** the space settings are queried, **Then** `calloutDescriptionDisplayMode` is `EXPANDED`.
+2. **Given** a user creates a new space and explicitly sets `calloutDescriptionDisplayMode: COLLAPSED`, **When** the space settings are queried, **Then** `calloutDescriptionDisplayMode` is `COLLAPSED`.
+3. **Given** a user creates a new subspace without specifying the display mode, **When** the subspace settings are queried, **Then** `calloutDescriptionDisplayMode` is `EXPANDED` (independent of parent space setting).
 
 ---
 
@@ -75,7 +75,7 @@ As a space administrator with subspaces, I want each space and subspace to have 
 
 - What happens if the `layout` object or `calloutDescriptionDisplayMode` field is missing from the JSONB settings? The server falls back to `EXPANDED` to preserve current behavior.
 - What happens if an invalid value is provided for the display mode? The server rejects the mutation with a validation error (enum constraint).
-- What happens when a space is created from a template that has a specific display mode? The template's display mode is inherited during space creation, following existing template-based settings behavior.
+- What happens when a space is created from a template that has a specific display mode? The template's display mode is inherited during space creation, following existing template-based settings behavior. The platform-level default templates carry `EXPANDED`, so platform-provisioned new spaces default to `EXPANDED`.
 
 ## Requirements _(mandatory)_
 
@@ -85,7 +85,7 @@ As a space administrator with subspaces, I want each space and subspace to have 
 - **FR-002**: The `SpaceSettingsLayout` GraphQL type MUST include a `calloutDescriptionDisplayMode` field of enum type `CalloutDescriptionDisplayMode` with values `COLLAPSED` and `EXPANDED`.
 - **FR-003**: The `UpdateSpaceSettingsEntityInput` GraphQL input MUST accept an optional `layout` field of type `UpdateSpaceSettingsLayoutInput`, containing an optional `calloutDescriptionDisplayMode` field.
 - **FR-004**: The `ISpaceSettings` JSONB interface MUST include a `layout` property with nested `calloutDescriptionDisplayMode`, persisted in the existing `settings` JSONB column on the `space` table.
-- **FR-005**: New spaces MUST default to `layout: { calloutDescriptionDisplayMode: COLLAPSED }` when no explicit value is provided during creation.
+- **FR-005**: New spaces MUST default to `layout: { calloutDescriptionDisplayMode: EXPANDED }` when no explicit value is provided during creation. This default is authoritative both in code (`SpaceSettingsService.applyCreationDefaults`) and in the platform-level default space/subspace templates.
 - **FR-006**: A database migration MUST backfill all existing spaces with `layout: { calloutDescriptionDisplayMode: EXPANDED }` in their JSONB settings.
 - **FR-007**: The GraphQL field resolver MUST return `EXPANDED` as the fallback when the `layout` or `calloutDescriptionDisplayMode` field is absent from the stored JSONB (defensive default).
 - **FR-008**: Each space and subspace MUST store its own `layout.calloutDescriptionDisplayMode` independently; no inheritance from parent to child.
@@ -106,11 +106,15 @@ As a space administrator with subspaces, I want each space and subspace to have 
 
 - **SC-001**: Space administrators can update the callout display mode setting via a single GraphQL mutation call.
 - **SC-002**: 100% of existing spaces return `EXPANDED` as their callout display mode after migration, with zero regressions.
-- **SC-003**: 100% of newly created spaces default to `COLLAPSED` without requiring explicit configuration.
+- **SC-003**: 100% of newly created spaces default to `EXPANDED` without requiring explicit configuration.
 - **SC-004**: The display mode setting is independently queryable per space/subspace with no cross-space inheritance.
 - **SC-005**: The migration is fully reversible without data loss in other settings fields.
 
 ## Clarifications
+
+### Session 2026-07-06
+
+- Q: Should the default display mode for newly created spaces be `COLLAPSED` or `EXPANDED`? -> A: `EXPANDED`. The default is flipped from the original `COLLAPSED` to `EXPANDED`. It is enforced both in code (`SpaceSettingsService.applyCreationDefaults`) and by explicitly setting `layout.calloutDescriptionDisplayMode = 'expanded'` on the four platform-level default templates (`platform-space`, `platform-subspace`, `platform-subspace-knowledge`, `platform-space-tutorials`) via migration. Existing spaces are unaffected (already backfilled to `EXPANDED`). The GraphQL schema encodes no default, so `schema.graphql`/`schema-baseline.graphql` remain consistent.
 
 ### Session 2026-03-11
 

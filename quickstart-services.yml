@@ -7,6 +7,7 @@ volumes:
   rabbitmq_data:
     driver: local
   alkemio_dev_redis:
+  alkemio_dev_backup:
 
 networks:
   alkemio_dev_net:
@@ -389,7 +390,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.35.0
+    image: alkemio/notifications:v0.36.0
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -523,46 +524,12 @@ services:
     ports:
       - 4002
 
-  # Web-Client AI Assistant (workspace#004-web-ai-assistant). The MCP host runs in
-  # the server, started from source on the host (:4000) — reached via host.docker.internal.
-  # Secrets (ASSISTANT_LLM_API_KEY = Mistral key, ASSISTANT_MCP_API_KEY = virtual-assistant
-  # mcp_api_key) come from the compose env — merge assistant-service/.env via a second
-  # --env-file, or add them to .env.docker.
-  assistant-service:
-    extra_hosts:
-      - 'host.docker.internal:host-gateway'
-    container_name: alkemio_dev_assistant_service
-    hostname: assistant-service
-    # Token-budget metering (app/budget/*) landed on develop and shipped in the
-    # published v0.1.3 image (2026-07-02), superseding the local-develop build.
-    image: alkemio/assistant-service:v0.1.3
-    depends_on:
-      postgres:
-        condition: service_healthy
-      redis:
-        condition: service_started
-    environment:
-      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/assistant
-      - REDIS_URL=redis://redis:6379
-      - MCP_URL=http://host.docker.internal:4000/rest/mcp
-      - ASSISTANT_LLM_PROVIDER=mistral
-      - ASSISTANT_LLM_MODEL=mistral-large-latest
-      - ASSISTANT_LLM_API_KEY=${ASSISTANT_LLM_API_KEY}
-      - ASSISTANT_MCP_API_KEY=${ASSISTANT_MCP_API_KEY}
-      - ASSISTANT_CORS_ORIGIN=http://localhost:3001
-      - ASSISTANT_PORT=4006
-    restart: always
-    networks:
-      - alkemio_dev_net
-    ports:
-      - 4006:4006
-
   file-service:
     extra_hosts:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.1.0
+    image: alkemio/file-service:v0.2.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -577,6 +544,13 @@ services:
       - AUTH_SERVICE_URL=http://authorization-evaluation:6060
       - LOCAL_STORAGE_PATH=/storage
       - STORAGE_TYPE=local
+      # 008-continuous-file-backup: write the backup outbox on every non-temporary object so
+      # file-backup-service can replicate it. Consumed by the file-backup-service below.
+      # REQUIRES the file_backup_outbox table + scoped role from server migration 1783508955161 —
+      # run `pnpm run migration:run` (dev-flow step 2) BEFORE uploading files. Until it is applied,
+      # every upload's transactional outbox INSERT fails and the worker below crash-loops on its
+      # startup probe (both recover once the migration runs).
+      - FILE_BACKUP_OUTBOX_ENABLED=true
       - LOG_LEVEL=info
     restart: always
     volumes:
@@ -585,6 +559,69 @@ services:
       - alkemio_dev_net
     ports:
       - 4003
+
+  # 008-continuous-file-backup — one-shot: apply the ledger DB migrations, then exit. The worker
+  # below waits for this to complete (service_completed_successfully).
+  file-backup-migrate:
+    container_name: alkemio_dev_file_backup_migrate
+    image: alkemio/file-backup-service:v0.0.4
+    depends_on:
+      postgres:
+        condition: service_healthy
+    # migrate only needs the ledger DB (it applies the ledger schema, then exits).
+    environment:
+      - FBS_LEDGERDB_HOST=postgres
+      - FBS_LEDGERDB_DBNAME=filebackup
+      - FBS_LEDGERDB_SSLMODE=disable
+      - FBS_LEDGERDB_USER=${POSTGRES_USER}
+      - FBS_LEDGERDB_PASSWORD=${POSTGRES_PASSWORD}
+    command: ['migrate']
+    networks:
+      - alkemio_dev_net
+    restart: 'no'
+
+  # 008-continuous-file-backup — the backup worker: drains the outbox and replicates every object
+  # to the local filesystem target (a Docker volume). Content-addressed by SHA3-256. Configured
+  # ENTIRELY from env (12-factor) — no config file. The nonroot image pre-creates /storage owned by
+  # 65532 + declares it a VOLUME, so the mounted named volume is writable (same as file-service).
+  file-backup-service:
+    container_name: alkemio_dev_file_backup_service
+    hostname: file-backup-service
+    image: alkemio/file-backup-service:v0.0.4
+    depends_on:
+      postgres:
+        condition: service_healthy
+      file-service:
+        condition: service_started
+      file-backup-migrate:
+        condition: service_completed_successfully
+    environment:
+      - FBS_FILESERVICEBASE=http://file-service:4003
+      # the outbox lives in the alkemio DB; the ledger in its own DB — both on the shared dev postgres
+      - FBS_ALKEMIODB_HOST=postgres
+      - FBS_ALKEMIODB_DBNAME=${DATABASE_NAME}
+      - FBS_ALKEMIODB_SSLMODE=disable
+      - FBS_ALKEMIODB_USER=${POSTGRES_USER}
+      - FBS_ALKEMIODB_PASSWORD=${POSTGRES_PASSWORD}
+      - FBS_LEDGERDB_HOST=postgres
+      - FBS_LEDGERDB_DBNAME=filebackup
+      - FBS_LEDGERDB_SSLMODE=disable
+      - FBS_LEDGERDB_USER=${POSTGRES_USER}
+      - FBS_LEDGERDB_PASSWORD=${POSTGRES_PASSWORD}
+      # a single local filesystem target at /storage (a Docker volume)
+      - FBS_TARGETS=local
+      - FBS_TARGET_LOCAL_TYPE=filesystem
+      - FBS_TARGET_LOCAL_PATH=/storage
+      - FBS_POLLEVERYSEC=5
+      - LOG_LEVEL=info
+    command: ['serve']
+    restart: always
+    volumes:
+      - alkemio_dev_backup:/storage
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 4004
 
   kratos-hooks:
     extra_hosts:
@@ -660,9 +697,11 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_wopi_service
     hostname: wopi-service
-    image: alkemio/wopi-service:v0.1.0
+    image: alkemio/wopi-service:v0.1.4
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       authorization-evaluation:
         condition: service_started
@@ -691,6 +730,10 @@ services:
       - WOPI_TOKEN_SECRET=dev-wopi-token-secret-change-in-production
       - WOPI_SERVER_PORT=8080
       - WOPI_PROOF_VALIDATION=false
+      # RabbitMQ — WITHOUT this the publisher is a no-op and every event the WOPI
+      # emits (office-document contribution/view AND the in-editor rename event the
+      # server consumes to persist a Collabora rename) is silently dropped.
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       - LOG_LEVEL=info
     restart: unless-stopped
     networks:

@@ -158,12 +158,20 @@ export class RoleSetResolverMutationsMembership {
       `join community: ${roleSet.id}`
     );
 
-    await this.roleSetService.assignActorToRole(
+    // Feature 017 round 2 — combined Subspace direct join. Route through the
+    // shared grant service so an eligible non-parent-member joining an open
+    // Subspace is registered in the Subspace AND every missing public ancestor,
+    // atomically (FR-023/FR-026). The combined-flow authorisation is evaluated
+    // once, here at join time (there is no approval step). For a parent-member
+    // or a non-eligible join the shared service falls back to today's single-
+    // target grant via assignActorToRole (behaviour-preserving — FR-028).
+    await this.roleSetService.ensureMemberOfRoleSetAndAncestors(
       roleSet,
-      RoleName.MEMBER,
       actorContext.actorID,
       actorContext,
-      true
+      {
+        source: 'join',
+      }
     );
 
     return roleSet;
@@ -201,10 +209,25 @@ export class RoleSetResolverMutationsMembership {
         RoleName.MEMBER
       );
       if (!userIsMemberInParent) {
-        throw new RoleSetMembershipException(
-          `Unable to apply for Community (${roleSet.id}): user is not a member of the parent Community`,
-          LogContext.COMMUNITY
-        );
+        // Feature 017 — combined Subspace application: a non-parent-member may
+        // apply directly IFF the combined-flow preconditions hold for THIS
+        // applicant (actor-relative reachability, ADR 0001 — ancestors they
+        // already belong to impose no requirements; every ancestor they would
+        // be granted into must be PUBLIC with
+        // `allowSubspaceAdminsToInviteMembers` enabled). On approval they are
+        // registered in the Subspace AND every missing ancestor. Otherwise
+        // today's "join the parent first" still fires.
+        const combinedApplicationAllowed =
+          await this.roleSetService.isCombinedApplicationGrantAuthorised(
+            roleSet,
+            actorContext.actorID
+          );
+        if (!combinedApplicationAllowed) {
+          throw new RoleSetMembershipException(
+            `Unable to apply for Community (${roleSet.id}): user is not a member of the parent Community`,
+            LogContext.COMMUNITY
+          );
+        }
       }
     }
 

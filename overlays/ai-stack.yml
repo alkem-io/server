@@ -1,7 +1,8 @@
 # AI stack overlay.
 #
-# Adds the vector store (ChromaDB) plus all virtual-contributor engines
-# and ingest services. Included by quickstart-services-ai.yml.
+# Adds the vector store (ChromaDB), assistant service, and all
+# virtual-contributor engines/ingest services. Included by
+# quickstart-services-ai.yml.
 #
 # The 6 unified engines (guidance / expert / generic / openai-assistant /
 # ingest-website / ingest-space) share the alkemio/virtual-contributor
@@ -281,3 +282,39 @@ services:
       - RABBITMQ_EVENT_BUS_EXCHANGE
       - RABBITMQ_RESULT_ROUTING_KEY
       - LOG_LEVEL=DEBUG
+
+  # Web-Client AI Assistant (workspace#004-web-ai-assistant). The MCP host runs in
+  # the server, started from source on the host (:4000) - reached via host.docker.internal.
+  # Secrets (ASSISTANT_LLM_API_KEY = Mistral key, ASSISTANT_MCP_API_KEY = virtual-assistant
+  # mcp_api_key) come from the compose env - merge assistant-service/.env via a second
+  # --env-file, or add them to .env.docker.
+  assistant-service:
+    extra_hosts:
+      - 'host.docker.internal:host-gateway'
+    container_name: alkemio_dev_assistant_service
+    hostname: assistant-service
+    # Token-budget metering (app/budget/*) landed on develop and shipped in the
+    # published v0.1.3 image (2026-07-02), superseding the local-develop build.
+    image: alkemio/assistant-service:v0.1.3
+    # amd64-only image - pin the platform so it runs under emulation on arm64 (Apple Silicon).
+    platform: linux/amd64
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_started
+    environment:
+      - DATABASE_URL=postgresql+asyncpg://${POSTGRES_USER}:${POSTGRES_PASSWORD}@postgres:5432/assistant
+      - REDIS_URL=redis://redis:6379
+      - MCP_URL=http://host.docker.internal:4000/rest/mcp
+      - ASSISTANT_LLM_PROVIDER=mistral
+      - ASSISTANT_LLM_MODEL=mistral-large-latest
+      - ASSISTANT_LLM_API_KEY=${ASSISTANT_LLM_API_KEY}
+      - ASSISTANT_MCP_API_KEY=${ASSISTANT_MCP_API_KEY}
+      - ASSISTANT_CORS_ORIGIN=http://localhost:3001
+      - ASSISTANT_PORT=4006
+    restart: always
+    networks:
+      - alkemio_dev_net
+    ports:
+      - 4006:4006
