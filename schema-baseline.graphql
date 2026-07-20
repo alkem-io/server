@@ -1308,6 +1308,25 @@ type CalloutPostCreated {
   sortOrder: Float!
 }
 
+"""
+The selection mode for a collection callout (Contributors or Subspaces). AUTO (default) returns the full computed set; CUSTOM restricts to the admin-curated selectedIds list.
+"""
+enum CalloutSelectionMode {
+  AUTO
+  CUSTOM
+}
+
+type CalloutSelectionSettings {
+  """
+  The selection mode: AUTO (full computed set) or CUSTOM (admin-curated subset).
+  """
+  mode: CalloutSelectionMode!
+  """
+  The selected actor/space IDs in CUSTOM mode (0–500 entries). Ignored when mode is AUTO.
+  """
+  selectedIds: [ID!]!
+}
+
 type CalloutSettings {
   """Callout Contribution Settings."""
   contribution: CalloutSettingsContribution!
@@ -1337,6 +1356,10 @@ type CalloutSettingsFraming {
   Configuration for a contributor-collection callout. Present only when framing.type = CONTRIBUTORS.
   """
   contributors: CalloutContributorsSettings
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Absent / null ⇒ AUTO (full computed set).
+  """
+  selection: CalloutSelectionSettings
 }
 
 enum CalloutVisibility {
@@ -2109,6 +2132,24 @@ input CreateCalloutOnCalloutsSetInput {
   sortOrder: Float
 }
 
+type CreateCalloutSelectionSettingsData {
+  """The selection mode (AUTO or CUSTOM). Defaults to AUTO when omitted."""
+  mode: CalloutSelectionMode
+  """
+  The curated selection of actor/space IDs (CUSTOM mode). At most 500. Deduplicated by the server.
+  """
+  selectedIds: [ID!]
+}
+
+input CreateCalloutSelectionSettingsInput {
+  """The selection mode (AUTO or CUSTOM). Defaults to AUTO when omitted."""
+  mode: CalloutSelectionMode
+  """
+  The curated selection of actor/space IDs (CUSTOM mode). At most 500. Deduplicated by the server.
+  """
+  selectedIds: [ID!]
+}
+
 type CreateCalloutSettingsContributionData {
   """Allowed Contribution types."""
   allowedTypes: [CalloutContributionType!]
@@ -2149,6 +2190,10 @@ type CreateCalloutSettingsFramingData {
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
   contributors: CreateCalloutContributorsSettingsData
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
+  """
+  selection: CreateCalloutSelectionSettingsData
 }
 
 input CreateCalloutSettingsFramingInput {
@@ -2158,6 +2203,10 @@ input CreateCalloutSettingsFramingInput {
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
   contributors: CreateCalloutContributorsSettingsInput
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
+  """
+  selection: CreateCalloutSelectionSettingsInput
 }
 
 input CreateCalloutSettingsInput {
@@ -8051,6 +8100,17 @@ input UpdateCalloutPublishInfoInput {
   publisherID: UUID
 }
 
+input UpdateCalloutSelectionSettingsInput {
+  """
+  The selection mode (AUTO or CUSTOM). When omitted, the stored mode is unchanged.
+  """
+  mode: CalloutSelectionMode
+  """
+  Replaces the curated selection in full (CUSTOM mode). At most 500 entries. Deduplicated by the server. When omitted, the stored list is unchanged.
+  """
+  selectedIds: [ID!]
+}
+
 input UpdateCalloutSettingsContributionInput {
   """Indicate who can add more contributions to the callout."""
   canAddContributions: CalloutAllowedActors
@@ -8069,6 +8129,10 @@ input UpdateCalloutSettingsFramingInput {
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
   contributors: UpdateCalloutContributorsSettingsInput
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
+  """
+  selection: UpdateCalloutSelectionSettingsInput
 }
 
 input UpdateCalloutSettingsInput {
