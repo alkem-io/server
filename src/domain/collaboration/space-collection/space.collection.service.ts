@@ -1,3 +1,4 @@
+import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { ISpace } from '@domain/space/space/space.interface';
 import { orderSubspaces } from '@domain/space/space/subspace.ordering';
@@ -48,6 +49,25 @@ export class SpaceCollectionService {
     if (!hostSpace || !hostSpace.subspaces) {
       return [];
     }
-    return orderSubspaces(hostSpace.subspaces);
+
+    // Apply pinned-first, then sortOrder ordering (FR-010).
+    const ordered = orderSubspaces(hostSpace.subspaces);
+
+    // CUSTOM-mode intersection: apply the stored selectedIds as a FINAL
+    // Set.has filter AFTER ordering (shrink-only, FR-007). AUTO returns the
+    // full ordered list. The intersection IS the host-membership re-check
+    // (a persisted foreign id can never appear in hostSpace.subspaces —
+    // FR-008 stale-id inertness is free).
+    const selectionMode =
+      callout.settings?.framing?.selection?.mode ?? CalloutSelectionMode.AUTO;
+
+    if (selectionMode === CalloutSelectionMode.CUSTOM) {
+      const selectedIds = new Set(
+        callout.settings?.framing?.selection?.selectedIds ?? []
+      );
+      return ordered.filter(s => selectedIds.has(s.id));
+    }
+
+    return ordered;
   }
 }
