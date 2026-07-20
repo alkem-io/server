@@ -1,4 +1,5 @@
 import { ActorType } from '@common/enums/actor.type';
+import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { UserInformationVisibility } from '@common/enums/user.information.visibility';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
@@ -21,7 +22,10 @@ describe('ContributorCollectionService', () => {
   const roleSet = { id: 'role-set-1' } as any;
   const community = { id: 'community-1' } as any;
 
-  const calloutWith = (contributorTypes: ActorType[]): ICallout =>
+  const calloutWith = (
+    contributorTypes: ActorType[],
+    selection?: { mode: CalloutSelectionMode; selectedIds: string[] }
+  ): ICallout =>
     ({
       id: 'callout-1',
       settings: {
@@ -32,6 +36,7 @@ describe('ContributorCollectionService', () => {
             defaultContributorType: contributorTypes[0],
             defaultView: 'list',
           },
+          selection,
         },
       },
     }) as unknown as ICallout;
@@ -77,7 +82,10 @@ describe('ContributorCollectionService', () => {
             generateUrlForVC: vi.fn(),
           },
         },
-        { provide: EntityManager, useValue: { findOne: vi.fn() } },
+        {
+          provide: EntityManager,
+          useValue: { findOne: vi.fn(), find: vi.fn().mockResolvedValue([]) },
+        },
       ],
     }).compile();
 
@@ -183,6 +191,142 @@ describe('ContributorCollectionService', () => {
       );
 
       expect(counts.users).toBe(1);
+    });
+  });
+
+  // --- Selection settings (workspace#025, T010) ---
+  describe('CUSTOM selection mode intersection (T010 / FR-007)', () => {
+    const anon = new ActorContext();
+
+    it('[S1] legacy-shaped callout without selection block ⇒ AUTO behavior (byte-identical)', async () => {
+      mockFindOne(spaceWithVisibility());
+      // calloutWith() with no selection = undefined → read-time AUTO default
+      const counts = await service.getContributorCounts(
+        calloutWith([ActorType.ORGANIZATION]),
+        anon
+      );
+      expect(counts.organizations).toBe(1); // u1 returned by default mock
+    });
+
+    it('[S2] AUTO mode with non-empty selectedIds ⇒ selectedIds are inert (full set returned)', async () => {
+      mockFindOne(spaceWithVisibility());
+      // AUTO + some ids → filter NOT applied
+      const counts = await service.getContributorCounts(
+        calloutWith([ActorType.ORGANIZATION], {
+          mode: CalloutSelectionMode.AUTO,
+          selectedIds: ['some-other-id'],
+        }),
+        anon
+      );
+      expect(counts.organizations).toBe(1); // full set
+    });
+
+    it('[S3] CUSTOM + members-only space + anonymous viewer → selected member users NOT returned', async () => {
+      mockFindOne(spaceWithVisibility(UserInformationVisibility.MEMBERS_ONLY));
+      vi.spyOn(roleSetService, 'isMember').mockResolvedValue(false);
+      // 'u1' would be selected, but members-only hides all users from anon
+      const result = await service.getContributors(
+        calloutWith([ActorType.USER], {
+          mode: CalloutSelectionMode.CUSTOM,
+          selectedIds: ['u1'],
+        }),
+        ActorType.USER,
+        anon // anonymous
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('[S4] CUSTOM + selected id absent from RoleSet (departed) ⇒ silently dropped', async () => {
+      mockFindOne(spaceWithVisibility());
+      // u1 is the only "member" in the RoleSet (default mock), but we select 'other-id'
+      const result = await service.getContributors(
+        calloutWith([ActorType.USER], {
+          mode: CalloutSelectionMode.CUSTOM,
+          selectedIds: ['other-id'],
+        }),
+        ActorType.USER,
+        anon
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('[S4] all selected ids departed → returns [] (empty state, never fallback)', async () => {
+      mockFindOne(spaceWithVisibility());
+      vi.spyOn(roleSetService, 'getUsersWithRole').mockResolvedValue([]);
+      const result = await service.getContributors(
+        calloutWith([ActorType.USER], {
+          mode: CalloutSelectionMode.CUSTOM,
+          selectedIds: ['gone-1', 'gone-2'],
+        }),
+        ActorType.USER,
+        anon
+      );
+      expect(result).toEqual([]);
+    });
+
+    it('[S5] counts equal rendered set per type (CUSTOM filters count too)', async () => {
+      mockFindOne(spaceWithVisibility());
+      // Default mock returns [{ id: 'u1' }] for USER member
+      // We select 'u1' → count should be 1
+      const countsWithSelection = await service.getContributorCounts(
+        calloutWith([ActorType.USER], {
+          mode: CalloutSelectionMode.CUSTOM,
+          selectedIds: ['u1'],
+        }),
+        anon
+      );
+      expect(countsWithSelection.users).toBe(1);
+
+      // We select 'non-member' → count should be 0
+      const countsEmpty = await service.getContributorCounts(
+        calloutWith([ActorType.USER], {
+          mode: CalloutSelectionMode.CUSTOM,
+          selectedIds: ['non-member'],
+        }),
+        anon
+      );
+      expect(countsEmpty.users).toBe(0);
+    });
+
+    it('[S6] result order equals the AUTO order filtered (leads first, then alphabetical)', async () => {
+      mockFindOne(spaceWithVisibility());
+      // Mock: LEAD role → u1; MEMBER → u2, u3
+      vi.spyOn(roleSetService, 'getUsersWithRole').mockImplementation(
+        async (_rs, role) =>
+          role === 'lead'
+            ? ([{ id: 'u1' }] as any)
+            : role === 'member'
+              ? ([{ id: 'u2' }, { id: 'u3' }] as any)
+              : []
+      );
+
+      // Select only u2 (plain member) and u1 (lead) — ordering: leads first
+      const result = await service.getContributors(
+        calloutWith([ActorType.USER], {
+          mode: CalloutSelectionMode.CUSTOM,
+          selectedIds: ['u2', 'u1'],
+        }),
+        ActorType.USER,
+        anon
+      );
+      // IDs present; profiles will be undefined (entityManager.find returns [])
+      // but the important thing is the order: u1 (lead rank 2) before u2 (member rank 1)
+      expect(result.map(r => r.id)).toEqual(['u1', 'u2']);
+    });
+
+    it('[FR-011] id outside included contributorTypes ⇒ type-filter still applies', async () => {
+      mockFindOne(spaceWithVisibility());
+      // Callout only includes ORGANIZATION; we query USER → type filter returns []
+      // before selection even runs
+      const result = await service.getContributors(
+        calloutWith([ActorType.ORGANIZATION], {
+          mode: CalloutSelectionMode.CUSTOM,
+          selectedIds: ['u1'],
+        }),
+        ActorType.USER, // querying USER, which is not in contributorTypes
+        anon
+      );
+      expect(result).toEqual([]);
     });
   });
 });
