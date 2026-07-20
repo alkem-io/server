@@ -307,12 +307,22 @@ export const isIsoDateString = (value: string): boolean =>
 export const validateCalendarDateRange = (
   startIso: string,
   endIso: string,
-  eventId: string
+  eventId: string,
+  wholeDay = false
 ): void => {
   const start = new Date(startIso).getTime();
   const end = new Date(endIso).getTime();
 
-  if (Number.isNaN(start) || Number.isNaN(end) || start >= end) {
+  // A whole-day event may be a single day (start === end, i.e. durationMinutes 0);
+  // its exclusive end is added at export. A timed event must end strictly after
+  // its start.
+  const invalid =
+    Number.isNaN(start) ||
+    Number.isNaN(end) ||
+    start > end ||
+    (!wholeDay && start === end);
+
+  if (invalid) {
     throw new ValidationException(
       'Invalid calendar event date range',
       LogContext.CALENDAR,

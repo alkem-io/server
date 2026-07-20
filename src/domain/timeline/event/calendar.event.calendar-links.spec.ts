@@ -5,8 +5,66 @@ import {
   formatDatesForCalendar,
   generateCalendarUrls,
   generateICS,
+  validateCalendarDateRange,
 } from './calendar.event.calendar-links';
 import { ICalendarEvent } from './event.interface';
+
+describe('validateCalendarDateRange', () => {
+  const ID = 'evt-1';
+
+  it('accepts a single-day whole-day event (start === end)', () => {
+    // durationMinutes = 0 ⇒ end === start; the exclusive +1 day is added at export.
+    expect(() =>
+      validateCalendarDateRange(
+        '2026-07-20T00:00:00.000Z',
+        '2026-07-20T00:00:00.000Z',
+        ID,
+        true
+      )
+    ).not.toThrow();
+  });
+
+  it('accepts a multi-day whole-day event (end after start)', () => {
+    expect(() =>
+      validateCalendarDateRange(
+        '2026-07-20T00:00:00.000Z',
+        '2026-07-22T00:00:00.000Z',
+        ID,
+        true
+      )
+    ).not.toThrow();
+  });
+
+  it('rejects a zero-length timed event (start === end)', () => {
+    expect(() =>
+      validateCalendarDateRange(
+        '2026-07-20T10:00:00.000Z',
+        '2026-07-20T10:00:00.000Z',
+        ID,
+        false
+      )
+    ).toThrow();
+  });
+
+  it('rejects an end before the start (whole-day and timed)', () => {
+    expect(() =>
+      validateCalendarDateRange(
+        '2026-07-22T00:00:00.000Z',
+        '2026-07-20T00:00:00.000Z',
+        ID,
+        true
+      )
+    ).toThrow();
+    expect(() =>
+      validateCalendarDateRange(
+        '2026-07-20T12:00:00.000Z',
+        '2026-07-20T10:00:00.000Z',
+        ID,
+        false
+      )
+    ).toThrow();
+  });
+});
 
 describe('CalendarEventCalendarLinks', () => {
   it('formats calendar dates for Google and Outlook', () => {
