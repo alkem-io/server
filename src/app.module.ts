@@ -106,7 +106,6 @@ import {
 } from '@src/types';
 import * as redisStore from 'cache-manager-redis-store';
 import { print } from 'graphql/language/printer';
-import { CloseCode } from 'graphql-ws';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 import { ApmApolloPlugin } from './apm/plugins';
@@ -284,22 +283,11 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
                 };
               },
             },
-            'graphql-ws': {
-              onNext: (ctx, message, args, result) => {
-                const context = args.contextValue as IGraphQLContext;
-                const expiry = context.req?.user?.expiry;
-                // if the session has expired, close the socket
-                if (expiry && expiry < Date.now()) {
-                  (ctx as WebsocketContext).extra.socket.close(
-                    CloseCode.Unauthorized,
-                    'Session expired'
-                  );
-                  return;
-                }
-
-                return result;
-              },
-            },
+            // graphql-ws needs no per-message hook: the Kratos-session expiry
+            // that the old onNext guard checked (ActorContext.expiry) had no
+            // writer since the OIDC BFF migration — sockets are authenticated
+            // at connection time via the BFF session like every other request.
+            'graphql-ws': true,
           },
         };
       },
