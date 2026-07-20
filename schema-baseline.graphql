@@ -1308,6 +1308,25 @@ type CalloutPostCreated {
   sortOrder: Float!
 }
 
+"""
+The selection mode for a collection callout (Contributors or Subspaces). AUTO (default) returns the full computed set; CUSTOM restricts to the admin-curated selectedIds list.
+"""
+enum CalloutSelectionMode {
+  AUTO
+  CUSTOM
+}
+
+type CalloutSelectionSettings {
+  """
+  The selection mode: AUTO (full computed set) or CUSTOM (admin-curated subset).
+  """
+  mode: CalloutSelectionMode!
+  """
+  The selected actor/space IDs in CUSTOM mode (0–500 entries). Ignored when mode is AUTO.
+  """
+  selectedIds: [ID!]!
+}
+
 type CalloutSettings {
   """Callout Contribution Settings."""
   contribution: CalloutSettingsContribution!
@@ -1337,6 +1356,10 @@ type CalloutSettingsFraming {
   Configuration for a contributor-collection callout. Present only when framing.type = CONTRIBUTORS.
   """
   contributors: CalloutContributorsSettings
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Absent / null ⇒ AUTO (full computed set).
+  """
+  selection: CalloutSelectionSettings
 }
 
 enum CalloutVisibility {
@@ -1445,7 +1468,9 @@ enum CollaboraDocumentType {
 }
 
 type CollaboraEditorUrlResult {
-  """The time-to-live of the access token in seconds."""
+  """
+  When the access token expires, as an absolute Unix timestamp in milliseconds (the WOPI access_token_ttl passed through from the WOPI host); 0 means it does not expire.
+  """
   accessTokenTTL: Float!
   """The URL to open the document in the Collabora editor."""
   editorUrl: String!
@@ -2107,6 +2132,24 @@ input CreateCalloutOnCalloutsSetInput {
   sortOrder: Float
 }
 
+type CreateCalloutSelectionSettingsData {
+  """The selection mode (AUTO or CUSTOM). Defaults to AUTO when omitted."""
+  mode: CalloutSelectionMode
+  """
+  The curated selection of actor/space IDs (CUSTOM mode). At most 500. Deduplicated by the server.
+  """
+  selectedIds: [ID!]
+}
+
+input CreateCalloutSelectionSettingsInput {
+  """The selection mode (AUTO or CUSTOM). Defaults to AUTO when omitted."""
+  mode: CalloutSelectionMode
+  """
+  The curated selection of actor/space IDs (CUSTOM mode). At most 500. Deduplicated by the server.
+  """
+  selectedIds: [ID!]
+}
+
 type CreateCalloutSettingsContributionData {
   """Allowed Contribution types."""
   allowedTypes: [CalloutContributionType!]
@@ -2147,6 +2190,10 @@ type CreateCalloutSettingsFramingData {
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
   contributors: CreateCalloutContributorsSettingsData
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
+  """
+  selection: CreateCalloutSelectionSettingsData
 }
 
 input CreateCalloutSettingsFramingInput {
@@ -2156,6 +2203,10 @@ input CreateCalloutSettingsFramingInput {
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
   contributors: CreateCalloutContributorsSettingsInput
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
+  """
+  selection: CreateCalloutSelectionSettingsInput
 }
 
 input CreateCalloutSettingsInput {
@@ -2307,6 +2358,14 @@ type CreateInnovationFlowStateSettingsData {
   """The flag to set."""
   allowNewCallouts: Boolean!
   """
+  Optional. How Post descriptions in this State are displayed in the feed: expanded or collapsed. Defaults to EXPANDED when omitted.
+  """
+  descriptionDisplayMode: CalloutDescriptionDisplayMode
+  """
+  Optional. Whether Posts in this State show publish details in the feed. Defaults to true when omitted.
+  """
+  showPublishDetails: Boolean
+  """
   Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
   """
   visible: Boolean
@@ -2315,6 +2374,14 @@ type CreateInnovationFlowStateSettingsData {
 input CreateInnovationFlowStateSettingsInput {
   """The flag to set."""
   allowNewCallouts: Boolean!
+  """
+  Optional. How Post descriptions in this State are displayed in the feed: expanded or collapsed. Defaults to EXPANDED when omitted.
+  """
+  descriptionDisplayMode: CalloutDescriptionDisplayMode
+  """
+  Optional. Whether Posts in this State show publish details in the feed. Defaults to true when omitted.
+  """
+  showPublishDetails: Boolean
   """
   Optional. Whether the phase is shown in member-facing navigation. Defaults to true when omitted.
   """
@@ -3594,6 +3661,14 @@ type InnovationFlowState {
 type InnovationFlowStateSettings {
   """Whether new callouts can be added to this State."""
   allowNewCallouts: Boolean!
+  """
+  How Post descriptions in this State are displayed in the feed: expanded or collapsed. Default expanded.
+  """
+  descriptionDisplayMode: CalloutDescriptionDisplayMode!
+  """
+  Whether Posts in this State show publish details (publisher, publish date, avatar) in the feed. Presentation only — does not restrict access to publisher data. Default true.
+  """
+  showPublishDetails: Boolean!
   """
   Whether this State/phase is shown in the member-facing navigation. Default true. UI-affordance only: it does NOT gate access to the phase content.
   """
@@ -6149,6 +6224,10 @@ type Query {
   aiServer: AiServer!
   """Retrieves the editor URL for the specified CollaboraDocument."""
   collaboraEditorUrl(collaboraDocumentID: UUID!): CollaboraEditorUrlResult!
+  """
+  Whether the WOPI save service backing this CollaboraDocument is currently reachable. A side-effect-free health check — unlike collaboraEditorUrl it issues no access token and records no analytics — used to surface a save-path outage in the editor.
+  """
+  collaboraServiceAvailable(collaboraDocumentID: UUID!): Boolean!
   """Active Spaces only, order by most active in the past X days."""
   exploreSpaces(options: ExploreSpacesInput): [Space!]!
   """
@@ -6476,7 +6555,7 @@ input ReplaceCollaboraDocumentInput {
   """The ID of the CollaboraDocument whose backing file is being replaced."""
   ID: UUID!
   """
-  Optional title chosen in the replace dialog (defaults to the incoming file title). ACCEPTED FOR FORWARD-COMPATIBILITY BUT NOT APPLIED in this feature: the stored display name is left unchanged. Persisting a rename is owned by feature 016-officedocs-rename-ux (FR-009 / FR-015). Present so reviewers do not read the unused field as a bug.
+  Optional title chosen in the replace dialog (defaults to the incoming file title). When supplied it is persisted as the CollaboraDocument display name (the same entity), propagating to the editor title and the download filename. Omit to leave the current name unchanged.
   """
   displayName: String
 }
@@ -7004,6 +7083,29 @@ type SearchResultCallout implements SearchResult {
   type: SearchResultType!
 }
 
+type SearchResultCollaboraDocument implements SearchResult {
+  """The Callout of the Collabora document."""
+  callout: Callout!
+  """The Collabora document that was found."""
+  collaboraDocument: CollaboraDocument!
+  """
+  The identifier of the search result. Does not represent the entity in Alkemio.
+  """
+  id: UUID!
+  """
+  Whether the Collabora document is a contribution (response) or part of the framing.
+  """
+  isContribution: Boolean!
+  """The score for this search result; more matches means a higher score."""
+  score: Float!
+  """The Space of the Collabora document."""
+  space: Space!
+  """The terms that were matched for this result"""
+  terms: [String!]!
+  """The type of returned result for this search."""
+  type: SearchResultType!
+}
+
 type SearchResultMemo implements SearchResult {
   """The Callout of the Memo."""
   callout: Callout!
@@ -7079,6 +7181,7 @@ type SearchResultSpace implements SearchResult {
 """The different types of available search results."""
 enum SearchResultType {
   CALLOUT
+  COLLABORA_DOCUMENT
   MEMO
   ORGANIZATION
   POST
@@ -7356,7 +7459,7 @@ type SpaceSettingsCollaboration {
 
 type SpaceSettingsLayout {
   """The default display mode for callout descriptions in this Space."""
-  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode!
+  calloutDescriptionDisplayMode: CalloutDescriptionDisplayMode! @deprecated(reason: "REMOVE_AFTER=2026-10-31 | superseded by InnovationFlowStateSettings.descriptionDisplayMode")
 }
 
 type SpaceSettingsMembership {
@@ -7997,6 +8100,17 @@ input UpdateCalloutPublishInfoInput {
   publisherID: UUID
 }
 
+input UpdateCalloutSelectionSettingsInput {
+  """
+  The selection mode (AUTO or CUSTOM). When omitted, the stored mode is unchanged.
+  """
+  mode: CalloutSelectionMode
+  """
+  Replaces the curated selection in full (CUSTOM mode). At most 500 entries. Deduplicated by the server. When omitted, the stored list is unchanged.
+  """
+  selectedIds: [ID!]
+}
+
 input UpdateCalloutSettingsContributionInput {
   """Indicate who can add more contributions to the callout."""
   canAddContributions: CalloutAllowedActors
@@ -8015,6 +8129,10 @@ input UpdateCalloutSettingsFramingInput {
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
   contributors: UpdateCalloutContributorsSettingsInput
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
+  """
+  selection: UpdateCalloutSelectionSettingsInput
 }
 
 input UpdateCalloutSettingsInput {
@@ -8153,10 +8271,14 @@ input UpdateInnovationFlowInput {
 }
 
 input UpdateInnovationFlowStateInput {
-  """The explanation text to clarify the State."""
+  """
+  Optional. The explanation text to clarify the State; omission leaves the stored value unchanged.
+  """
   description: Markdown
-  """The display name for the State"""
-  displayName: String!
+  """
+  Optional. The display name for the State; omission leaves the stored value unchanged.
+  """
+  displayName: String
   """ID of the Innovation Flow"""
   innovationFlowStateID: UUID!
   settings: UpdateInnovationFlowStateSettingsInput
@@ -8167,6 +8289,14 @@ input UpdateInnovationFlowStateSettingsInput {
   Optional. Sets whether new callouts can be added to this State; omission leaves the stored value unchanged.
   """
   allowNewCallouts: Boolean
+  """
+  Optional. Sets how Post descriptions in this State are displayed in the feed; omission leaves the stored value unchanged.
+  """
+  descriptionDisplayMode: CalloutDescriptionDisplayMode
+  """
+  Optional. Sets whether Posts in this State show publish details (publisher, publish date, avatar) in the feed; omission leaves the stored value unchanged.
+  """
+  showPublishDetails: Boolean
   """
   Optional. Sets whether the phase is shown in member-facing navigation; omission leaves the stored value unchanged.
   """
@@ -8642,6 +8772,8 @@ input UpdateUserSettingsNotificationInput {
   organization: UpdateUserSettingsNotificationOrganizationInput
   """Settings related to Platform Notifications."""
   platform: UpdateUserSettingsNotificationPlatformInput
+  """Settings related to notification sound playback."""
+  sound: UpdateUserSettingsNotificationSoundInput
   """Settings related to Space Notifications."""
   space: UpdateUserSettingsNotificationSpaceInput
   """Settings related to User Notifications."""
@@ -8687,6 +8819,15 @@ input UpdateUserSettingsNotificationPlatformInput {
   forumDiscussionComment: NotificationSettingInput
   """Receive a notification when a new Discussion is created in the Forum"""
   forumDiscussionCreated: NotificationSettingInput
+}
+
+input UpdateUserSettingsNotificationSoundInput {
+  """Play a sound when a chat message is received. Default true."""
+  chatMessage: Boolean
+  """
+  Play a sound when a non-chat in-app notification is received. Default true.
+  """
+  inAppNotification: Boolean
 }
 
 input UpdateUserSettingsNotificationSpaceAdminInput {
@@ -9213,6 +9354,8 @@ type UserSettingsNotification {
   organization: UserSettingsNotificationOrganization!
   """The notifications settings for Platform events for this User"""
   platform: UserSettingsNotificationPlatform!
+  """The sound playback settings for this User."""
+  sound: UserSettingsNotificationSound!
   """The notifications settings for Space events for this User"""
   space: UserSettingsNotificationSpace!
   """The notifications settings for User events for this User"""
@@ -9265,6 +9408,15 @@ type UserSettingsNotificationPlatformAdmin {
   userProfileCreated: UserSettingsNotificationChannels!
   """Receive a notification when a user profile is removed"""
   userProfileRemoved: UserSettingsNotificationChannels!
+}
+
+type UserSettingsNotificationSound {
+  """Play a sound when a chat message is received. Default true."""
+  chatMessage: Boolean!
+  """
+  Play a sound when a non-chat in-app notification is received. Default true.
+  """
+  inAppNotification: Boolean!
 }
 
 type UserSettingsNotificationSpace {

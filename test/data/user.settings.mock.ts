@@ -183,6 +183,10 @@ export const userSettingsData: { userSettings: IUserSettings } = {
           },
         },
       },
+      sound: {
+        chatMessage: true,
+        inAppNotification: true,
+      },
     },
     homeSpace: {
       spaceID: null,

@@ -711,6 +711,11 @@ describe('CalloutService', () => {
       vi.mocked(
         framingService.validateAndNormalizeContributorsSettings
       ).mockImplementation((_type, settings) => settings as any);
+      // workspace#025: validateAndNormalizeSelectionSettings must also be a
+      // pass-through here so callout.settings.framing stays a plain object.
+      vi.mocked(
+        framingService.validateAndNormalizeSelectionSettings
+      ).mockImplementation((_type, settings) => settings as any);
 
       await service.updateCallout(
         callout,

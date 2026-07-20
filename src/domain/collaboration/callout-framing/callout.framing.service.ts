@@ -2,6 +2,7 @@ import { ProfileType } from '@common/enums';
 import { ActorType } from '@common/enums/actor.type';
 import { AuthorizationPolicyType } from '@common/enums/authorization.policy.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import {
   CONTRIBUTOR_ACTOR_TYPES,
   isContributorActorType,
@@ -773,6 +774,73 @@ export class CalloutFramingService {
         !hasLocatableType)
     ) {
       contributors.defaultView = ContributorCollectionView.LIST;
+    }
+
+    return framingSettings;
+  }
+
+  /**
+   * Validate + normalize the selection settings against the framing type
+   * (FR-013/FR-022 — workspace#025-callout-manual-selection). Mutates and
+   * returns the framing settings object so the caller can persist the result.
+   *
+   * Called AFTER validateAndNormalizeContributorsSettings at both create and
+   * update call sites in CalloutService.
+   *
+   * Rules:
+   * - `selection` present only iff `framingType ∈ {CONTRIBUTORS, SPACES}`.
+   * - On collection kinds: materialize a missing `selection` to
+   *   `{mode: AUTO, selectedIds: []}` (FR-002/FR-016 default).
+   * - Partial-update semantics (FR-022): omitted field ⇒ keep stored value;
+   *   provided field ⇒ replace whole. Works identically for create (no stored
+   *   value → both fields default to AUTO / []).
+   * - `selectedIds` is deduplicated in place (FR-004/T004).
+   * - The byte-identical contributors guard above is kept untouched.
+   */
+  public validateAndNormalizeSelectionSettings(
+    framingType: CalloutFramingType,
+    framingSettings: ICalloutSettingsFraming,
+    incomingSelection?: { mode?: CalloutSelectionMode; selectedIds?: string[] }
+  ): ICalloutSettingsFraming {
+    const isCollectionKind =
+      framingType === CalloutFramingType.CONTRIBUTORS ||
+      framingType === CalloutFramingType.SPACES;
+
+    if (!isCollectionKind) {
+      // Any provided selection on a non-collection kind is a caller error.
+      if (incomingSelection !== undefined) {
+        throw new ValidationException(
+          'Selection settings can only be set when framing.type ∈ {CONTRIBUTORS, SPACES}.',
+          LogContext.COLLABORATION
+        );
+      }
+      // Non-collection framing: strip any stale selection that might linger
+      // from a type change (defensive; the merge path in CalloutService strips
+      // it too, but belt-and-suspenders).
+      delete framingSettings.selection;
+      return framingSettings;
+    }
+
+    // --- Collection kind ---
+    // Materialize the stored block if absent (read-time default — FR-016).
+    if (!framingSettings.selection) {
+      framingSettings.selection = {
+        mode: CalloutSelectionMode.AUTO,
+        selectedIds: [],
+      };
+    }
+
+    if (incomingSelection !== undefined) {
+      // Partial-update: only replace the fields that were explicitly provided.
+      if (incomingSelection.mode !== undefined) {
+        framingSettings.selection.mode = incomingSelection.mode;
+      }
+      if (incomingSelection.selectedIds !== undefined) {
+        // Deduplicate, preserving first occurrence (FR-004).
+        framingSettings.selection.selectedIds = [
+          ...new Set(incomingSelection.selectedIds),
+        ];
+      }
     }
 
     return framingSettings;
