@@ -106,6 +106,7 @@ import {
 } from '@src/types';
 import * as redisStore from 'cache-manager-redis-store';
 import { print } from 'graphql/language/printer';
+import { CloseCode } from 'graphql-ws';
 import { WinstonModule } from 'nest-winston';
 import { join } from 'path';
 import { ApmApolloPlugin } from './apm/plugins';
@@ -283,11 +284,28 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
                 };
               },
             },
-            // graphql-ws needs no per-message hook: the Kratos-session expiry
-            // that the old onNext guard checked (ActorContext.expiry) had no
-            // writer since the OIDC BFF migration — sockets are authenticated
-            // at connection time via the BFF session like every other request.
-            'graphql-ws': true,
+            'graphql-ws': {
+              // Sockets are authenticated once at connection time, so a
+              // long-lived subscription would outlive its session. ActorContext
+              // .absoluteExpiry is stamped by CookieSessionStrategy from the
+              // BFF alkemio_session's ABSOLUTE ceiling (absolute_expires_at).
+              // Deliberately NOT enforced here: `.expiry` (access-token, ~10min,
+              // self-renews) and the sliding idle window (renews on activity).
+              onNext: (ctx, _message, args, result) => {
+                const context = args.contextValue as IGraphQLContext;
+                const absoluteExpiry = context.req?.user?.absoluteExpiry;
+                // if the session has passed its absolute ceiling, close the socket
+                if (absoluteExpiry && absoluteExpiry < Date.now()) {
+                  (ctx as WebsocketContext).extra.socket.close(
+                    CloseCode.Unauthorized,
+                    'Session expired'
+                  );
+                  return;
+                }
+
+                return result;
+              },
+            },
           },
         };
       },
