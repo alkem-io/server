@@ -197,8 +197,15 @@ selfservice:
             - hook: session
 
 session:
-  lifespan: 48h
-  earliest_possible_extend: 24h
+  # Align with the OIDC BFF session's ABSOLUTE ceiling (alkemio.yml
+  # absolute_ttl_s = 2592000s = 720h = 30d), NOT the 14d idle window: an
+  # actively-used alkemio_session slides its idle window forward on every
+  # /api/private/graphql call up to that 30d ceiling. Keeping the Kratos SSO
+  # session shorter let the header's whoami-based login indicator flip to
+  # "logged out" while the still-valid alkemio_session kept authorizing CRUD
+  # (client-web#9965). Mirrors the prod/infra base values (720h / 360h).
+  lifespan: 720h
+  earliest_possible_extend: 360h
 
 log:
   level: debug
