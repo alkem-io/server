@@ -115,4 +115,54 @@ input InputType { id: ID }`;
     expect(idx.inputs).not.toHaveProperty('ObjectType');
     expect(idx.types).not.toHaveProperty('InputType');
   });
+
+  it('classifies a new required input field WITH a default value as ADDITIVE', () => {
+    const oldSDL = `type Query { ping: String }
+input ExistingInput { id: ID }`;
+    const newSDL = `type Query { ping: String }
+input ExistingInput { id: ID, requiredWithDefault: String! = "x" }`;
+    const oldIdx = indexSDL(oldSDL);
+    const newIdx = indexSDL(newSDL);
+    const ctx = createDiffContext();
+    diffInputs(oldIdx, newIdx, ctx);
+    expect(
+      ctx.entries.some(
+        e =>
+          e.element === 'ExistingInput.requiredWithDefault' &&
+          e.changeType === ChangeType.ADDITIVE
+      )
+    ).toBe(true);
+  });
+
+  it('classifies a required -> optional input field relaxation as INFO (non-breaking)', () => {
+    const oldSDL = `type Query { ping: String }
+input ExistingInput { id: ID, name: String! }`;
+    const newSDL = `type Query { ping: String }
+input ExistingInput { id: ID, name: String }`;
+    const oldIdx = indexSDL(oldSDL);
+    const newIdx = indexSDL(newSDL);
+    const ctx = createDiffContext();
+    diffInputs(oldIdx, newIdx, ctx);
+    const entry = ctx.entries.find(
+      e =>
+        e.element === 'ExistingInput.name' && e.detail.includes('type changed')
+    );
+    expect(entry?.changeType).toBe(ChangeType.INFO);
+  });
+
+  it('classifies an optional -> required input field tightening as BREAKING', () => {
+    const oldSDL = `type Query { ping: String }
+input ExistingInput { id: ID, name: String }`;
+    const newSDL = `type Query { ping: String }
+input ExistingInput { id: ID, name: String! }`;
+    const oldIdx = indexSDL(oldSDL);
+    const newIdx = indexSDL(newSDL);
+    const ctx = createDiffContext();
+    diffInputs(oldIdx, newIdx, ctx);
+    const entry = ctx.entries.find(
+      e =>
+        e.element === 'ExistingInput.name' && e.detail.includes('type changed')
+    );
+    expect(entry?.changeType).toBe(ChangeType.BREAKING);
+  });
 });

@@ -1,7 +1,11 @@
-// T025-F2: Diff InputObjectTypeDefinition nodes — tracks new input types and new
-// fields on existing input types as ADDITIVE; removed input types / fields as
-// BREAKING. Input fields carry no @deprecated directives (the spec forbids it),
-// so deprecation logic is intentionally omitted here.
+// Diff InputObjectTypeDefinition nodes — tracks new input types and new fields on
+// existing input types as ADDITIVE; removed input types / fields as BREAKING; and a
+// nullability relaxation (required -> optional) as non-breaking (INFO).
+// NOTE: GraphQL DOES allow @deprecated on INPUT_FIELD_DEFINITION (except on a required
+// field without a default). Deprecation grace-period tracking (REMOVE_AFTER) for input
+// fields is not yet wired here: an input-field removal is classified BREAKING outright
+// (safe/conservative — requires BREAKING-APPROVED) rather than flowing through the
+// deprecate-then-remove workflow that object fields / enum values use. Follow-up.
 import { InputValueDefinitionNode, TypeNode } from 'graphql';
 import { ChangeType, ElementType } from '../model';
 import { unionKeys } from './cleanup';
@@ -76,8 +80,10 @@ export function diffInputs(
 
         if (!of && nf) {
           // New field on existing input type — ADDITIVE when optional (nullable),
-          // BREAKING when required (NonNull), because existing callers omit it.
-          const isRequired = nf.type.kind === 'NonNullType';
+          // BREAKING only when required (NonNull) AND without a default value: a
+          // required field that supplies a default can still be omitted by existing
+          // callers, so its addition is backward-compatible.
+          const isRequired = nf.type.kind === 'NonNullType' && !nf.defaultValue;
           pushEntry(ctx, {
             element: key,
             elementType: ElementType.FIELD,
@@ -104,10 +110,17 @@ export function diffInputs(
           const oldTypeStr = printTypeNode(of.type);
           const newTypeStr = printTypeNode(nf.type);
           if (oldTypeStr !== newTypeStr) {
+            // Relaxing a required field to optional (e.g. String! -> String) is
+            // backward-compatible for existing callers; only tightening or other
+            // type changes are breaking.
+            const becameOptional =
+              of.type.kind === 'NonNullType' &&
+              nf.type.kind !== 'NonNullType' &&
+              printTypeNode(of.type.type) === printTypeNode(nf.type);
             pushEntry(ctx, {
               element: key,
               elementType: ElementType.FIELD,
-              changeType: ChangeType.BREAKING,
+              changeType: becameOptional ? ChangeType.INFO : ChangeType.BREAKING,
               detail: `Input field type changed: ${key} ${oldTypeStr} -> ${newTypeStr}`,
             });
           }
