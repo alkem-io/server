@@ -1308,6 +1308,25 @@ type CalloutPostCreated {
   sortOrder: Float!
 }
 
+"""
+The selection mode for a collection callout (Contributors or Subspaces). AUTO (default) returns the full computed set; CUSTOM restricts to the admin-curated selectedIds list.
+"""
+enum CalloutSelectionMode {
+  AUTO
+  CUSTOM
+}
+
+type CalloutSelectionSettings {
+  """
+  The selection mode: AUTO (full computed set) or CUSTOM (admin-curated subset).
+  """
+  mode: CalloutSelectionMode!
+  """
+  The selected actor/space IDs in CUSTOM mode (0–500 entries). Ignored when mode is AUTO.
+  """
+  selectedIds: [ID!]!
+}
+
 type CalloutSettings {
   """Callout Contribution Settings."""
   contribution: CalloutSettingsContribution!
@@ -1337,6 +1356,10 @@ type CalloutSettingsFraming {
   Configuration for a contributor-collection callout. Present only when framing.type = CONTRIBUTORS.
   """
   contributors: CalloutContributorsSettings
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Absent / null ⇒ AUTO (full computed set).
+  """
+  selection: CalloutSelectionSettings
 }
 
 enum CalloutVisibility {
@@ -1445,7 +1468,9 @@ enum CollaboraDocumentType {
 }
 
 type CollaboraEditorUrlResult {
-  """The time-to-live of the access token in seconds."""
+  """
+  When the access token expires, as an absolute Unix timestamp in milliseconds (the WOPI access_token_ttl passed through from the WOPI host); 0 means it does not expire.
+  """
   accessTokenTTL: Float!
   """The URL to open the document in the Collabora editor."""
   editorUrl: String!
@@ -2107,6 +2132,24 @@ input CreateCalloutOnCalloutsSetInput {
   sortOrder: Float
 }
 
+type CreateCalloutSelectionSettingsData {
+  """The selection mode (AUTO or CUSTOM). Defaults to AUTO when omitted."""
+  mode: CalloutSelectionMode
+  """
+  The curated selection of actor/space IDs (CUSTOM mode). At most 500. Deduplicated by the server.
+  """
+  selectedIds: [ID!]
+}
+
+input CreateCalloutSelectionSettingsInput {
+  """The selection mode (AUTO or CUSTOM). Defaults to AUTO when omitted."""
+  mode: CalloutSelectionMode
+  """
+  The curated selection of actor/space IDs (CUSTOM mode). At most 500. Deduplicated by the server.
+  """
+  selectedIds: [ID!]
+}
+
 type CreateCalloutSettingsContributionData {
   """Allowed Contribution types."""
   allowedTypes: [CalloutContributionType!]
@@ -2147,6 +2190,10 @@ type CreateCalloutSettingsFramingData {
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
   contributors: CreateCalloutContributorsSettingsData
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
+  """
+  selection: CreateCalloutSelectionSettingsData
 }
 
 input CreateCalloutSettingsFramingInput {
@@ -2156,6 +2203,10 @@ input CreateCalloutSettingsFramingInput {
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
   contributors: CreateCalloutContributorsSettingsInput
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
+  """
+  selection: CreateCalloutSelectionSettingsInput
 }
 
 input CreateCalloutSettingsInput {
@@ -6173,6 +6224,10 @@ type Query {
   aiServer: AiServer!
   """Retrieves the editor URL for the specified CollaboraDocument."""
   collaboraEditorUrl(collaboraDocumentID: UUID!): CollaboraEditorUrlResult!
+  """
+  Whether the WOPI save service backing this CollaboraDocument is currently reachable. A side-effect-free health check — unlike collaboraEditorUrl it issues no access token and records no analytics — used to surface a save-path outage in the editor.
+  """
+  collaboraServiceAvailable(collaboraDocumentID: UUID!): Boolean!
   """Active Spaces only, order by most active in the past X days."""
   exploreSpaces(options: ExploreSpacesInput): [Space!]!
   """
@@ -8045,6 +8100,17 @@ input UpdateCalloutPublishInfoInput {
   publisherID: UUID
 }
 
+input UpdateCalloutSelectionSettingsInput {
+  """
+  The selection mode (AUTO or CUSTOM). When omitted, the stored mode is unchanged.
+  """
+  mode: CalloutSelectionMode
+  """
+  Replaces the curated selection in full (CUSTOM mode). At most 500 entries. Deduplicated by the server. When omitted, the stored list is unchanged.
+  """
+  selectedIds: [ID!]
+}
+
 input UpdateCalloutSettingsContributionInput {
   """Indicate who can add more contributions to the callout."""
   canAddContributions: CalloutAllowedActors
@@ -8063,6 +8129,10 @@ input UpdateCalloutSettingsFramingInput {
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
   contributors: UpdateCalloutContributorsSettingsInput
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
+  """
+  selection: UpdateCalloutSelectionSettingsInput
 }
 
 input UpdateCalloutSettingsInput {
@@ -8702,6 +8772,8 @@ input UpdateUserSettingsNotificationInput {
   organization: UpdateUserSettingsNotificationOrganizationInput
   """Settings related to Platform Notifications."""
   platform: UpdateUserSettingsNotificationPlatformInput
+  """Settings related to notification sound playback."""
+  sound: UpdateUserSettingsNotificationSoundInput
   """Settings related to Space Notifications."""
   space: UpdateUserSettingsNotificationSpaceInput
   """Settings related to User Notifications."""
@@ -8747,6 +8819,15 @@ input UpdateUserSettingsNotificationPlatformInput {
   forumDiscussionComment: NotificationSettingInput
   """Receive a notification when a new Discussion is created in the Forum"""
   forumDiscussionCreated: NotificationSettingInput
+}
+
+input UpdateUserSettingsNotificationSoundInput {
+  """Play a sound when a chat message is received. Default true."""
+  chatMessage: Boolean
+  """
+  Play a sound when a non-chat in-app notification is received. Default true.
+  """
+  inAppNotification: Boolean
 }
 
 input UpdateUserSettingsNotificationSpaceAdminInput {
@@ -9273,6 +9354,8 @@ type UserSettingsNotification {
   organization: UserSettingsNotificationOrganization!
   """The notifications settings for Platform events for this User"""
   platform: UserSettingsNotificationPlatform!
+  """The sound playback settings for this User."""
+  sound: UserSettingsNotificationSound!
   """The notifications settings for Space events for this User"""
   space: UserSettingsNotificationSpace!
   """The notifications settings for User events for this User"""
@@ -9325,6 +9408,15 @@ type UserSettingsNotificationPlatformAdmin {
   userProfileCreated: UserSettingsNotificationChannels!
   """Receive a notification when a user profile is removed"""
   userProfileRemoved: UserSettingsNotificationChannels!
+}
+
+type UserSettingsNotificationSound {
+  """Play a sound when a chat message is received. Default true."""
+  chatMessage: Boolean!
+  """
+  Play a sound when a non-chat in-app notification is received. Default true.
+  """
+  inAppNotification: Boolean!
 }
 
 type UserSettingsNotificationSpace {
