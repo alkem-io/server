@@ -8,7 +8,7 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: 'Login into ACR'
         uses: azure/docker-login@v2
@@ -35,10 +35,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Install Kubectl
-        uses: azure/setup-kubectl@v4.0.0
+        uses: azure/setup-kubectl@v5.1.0
         with:
           version: 'v1.27.6'
 
@@ -58,10 +58,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Install Kubectl
-        uses: azure/setup-kubectl@v4.0.0
+        uses: azure/setup-kubectl@v5.1.0
         with:
           version: 'v1.27.6' # Ensure this matches the version used in your cluster
 
@@ -79,7 +79,7 @@ jobs:
             --docker-password=${{ secrets.REGISTRY_PASSWORD }} \
             --dry-run=client -o yaml | kubectl apply -f -
 
-      - uses: azure/k8s-deploy@v5.0.0
+      - uses: azure/k8s-deploy@v7.0.0
         with:
           manifests: |
             manifests/26-server-migration.yaml
@@ -102,10 +102,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Install Kubectl
-        uses: azure/setup-kubectl@v4.0.0
+        uses: azure/setup-kubectl@v5.1.0
         with:
           version: 'v1.27.6' # Ensure this matches the version used in your cluster
 
@@ -124,7 +124,7 @@ jobs:
             --dry-run=client -o yaml | kubectl apply -f -
 
       - name: Deploy to k3s on Hetzner
-        uses: azure/k8s-deploy@v5.0.0
+        uses: azure/k8s-deploy@v7.0.0
         with:
           manifests: |
             manifests/25-server-deployment-dev.yaml
@@ -143,10 +143,10 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - name: 'Checkout GitHub Action'
-        uses: actions/checkout@v4.1.7
+        uses: actions/checkout@v7
 
       - name: Install Kubectl
-        uses: azure/setup-kubectl@v4.0.0
+        uses: azure/setup-kubectl@v5.1.0
         with:
           version: 'v1.27.6'
 
