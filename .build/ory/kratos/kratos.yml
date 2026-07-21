@@ -206,8 +206,8 @@ session:
   # the still-valid alkemio_session kept authorizing CRUD (client-web#9965).
   #
   # Note these are NOT a shared deadline. Kratos' lifespan is a rolling window
-  # with no absolute cap: once a session is older than earliest_possible_extend,
-  # the next /sessions/whoami renews it to now + lifespan, indefinitely. So a
+  # with no absolute cap: once a session is within earliest_possible_extend of
+  # expiring, the next /sessions/whoami can renew it to now + lifespan. So a
   # Kratos session can outlive the BFF's 30d cap — harmless, because the BFF
   # session is the authoritative gate for both API access and the login
   # indicator (client-web#10053); Kratos alone never reads as logged in.
