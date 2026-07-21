@@ -24,8 +24,34 @@ export class ActorContext {
   /** Guest name for guest users (not authenticated but named) */
   guestName?: string;
 
-  /** Session expiry timestamp (milliseconds since epoch) - for session management */
+  /**
+   * Near-term session expiry (milliseconds since epoch), from the BFF
+   * `alkemio_session` payload's `expires_at` — the Hydra access-token expiry
+   * (~10 min), i.e. the moment the BFF must silently refresh. NOT a logout
+   * deadline: the session self-renews past it. Use `absoluteExpiry` for the
+   * hard cutoff. Stamped per-request by CookieSessionStrategy on a
+   * request-scoped copy — NEVER written to the actorID-keyed cached instance,
+   * which is shared across all of the actor's sessions (a per-session value
+   * on a per-actor cache is a data race).
+   */
   expiry?: number;
+
+  /**
+   * Hard session cutoff (milliseconds since epoch), from the BFF payload's
+   * `absolute_expires_at` — the 30d absolute ceiling that never extends
+   * (unlike the sliding idle window, which renews on activity and cannot be
+   * stamped statically). This is the value enforcement should use (e.g. the
+   * graphql-ws socket-close guard). Same per-request stamping rules as
+   * `expiry`.
+   */
+  absoluteExpiry?: number;
+
+  /**
+   * Session creation timestamp (milliseconds since epoch), from the BFF
+   * `alkemio_session` payload's `created_at`. Same per-request stamping
+   * rules as `expiry`.
+   */
+  issuedAt?: number;
 
   /**
    * Assistant attribution (004-web-ai-assistant, FR-016/FR-019). Present on the
