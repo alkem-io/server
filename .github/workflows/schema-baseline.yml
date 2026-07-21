@@ -34,7 +34,7 @@ jobs:
           } >> "$GITHUB_ENV"
 
       - name: Install pnpm
-        uses: pnpm/action-setup@v6
+        uses: pnpm/action-setup@v4
         with:
           dest: ${{ runner.temp }}/setup-pnpm
 
