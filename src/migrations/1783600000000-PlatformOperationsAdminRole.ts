@@ -2,10 +2,11 @@ import { MigrationInterface, QueryRunner } from 'typeorm';
 import { randomUUID } from 'crypto';
 
 /**
- * 019-service-admin-role: registers the `service-admin` role on the existing
+ * workspace#019 (Platform Operations Admin): registers the
+ * `platform-operations-admin` role on the existing
  * platform RoleSet so the EXISTING `assignPlatformRoleToUser` /
  * `removePlatformRoleFromUser` mutations can grant / revoke the
- * `service-admin` credential per user. Holders are granted the dedicated
+ * `platform-operations-admin` credential per user. Holders are granted the dedicated
  * AUTHORIZATION_RESET privilege by the credential rules in the
  * *.service.authorization.ts files (applied on authorization-policy reset;
  * no data migration for the rules themselves — run one authorization reset
@@ -18,11 +19,11 @@ import { randomUUID } from 'crypto';
  * immutable). Idempotent: it inserts only when the role is absent from the
  * platform RoleSet.
  */
-export class ServiceAdminRole1783600000000 implements MigrationInterface {
-  name = 'ServiceAdminRole1783600000000';
+export class PlatformOperationsAdminRole1783600000000 implements MigrationInterface {
+  name = 'PlatformOperationsAdminRole1783600000000';
 
-  private readonly roleName = 'service-admin';
-  private readonly credential = { type: 'service-admin', resourceID: '' };
+  private readonly roleName = 'platform-operations-admin';
+  private readonly credential = { type: 'platform-operations-admin', resourceID: '' };
   private readonly userPolicy = { minimum: 0, maximum: -1 };
 
   public async up(queryRunner: QueryRunner): Promise<void> {

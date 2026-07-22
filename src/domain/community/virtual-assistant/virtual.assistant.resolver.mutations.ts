@@ -40,7 +40,7 @@ export class VirtualAssistantResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       'updating the virtual-assistant admin capability grant'
     );
 

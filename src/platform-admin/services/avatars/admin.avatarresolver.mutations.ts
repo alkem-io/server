@@ -41,7 +41,7 @@ export class AdminSearchContributorsMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       `Update contributor avatars to be stored as Documents: ${actorContext.actorID}`
     );
 

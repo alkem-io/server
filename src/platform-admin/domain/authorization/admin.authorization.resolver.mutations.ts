@@ -234,7 +234,7 @@ export class AdminAuthorizationResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       `reset authorization on platform: ${actorContext.actorID}`
     );
 

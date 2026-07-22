@@ -217,7 +217,7 @@ export class AdminLicensingResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       licensing.authorization,
-      AuthorizationPrivilege.GRANT,
+      AuthorizationPrivilege.LICENSE_RESET,
       'reset licenses on accounts'
     );
 

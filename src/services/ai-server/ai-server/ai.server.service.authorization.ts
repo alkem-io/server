@@ -1,6 +1,7 @@
 import {
   CREDENTIAL_RULE_AI_SERVER_AUTH_RESET,
   CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS,
+  CREDENTIAL_RULE_AI_SERVER_PLATFORM_OPERATIONS,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import {
   AuthorizationCredential,
@@ -88,19 +89,33 @@ export class AiServerAuthorizationService {
       );
     credentialRules.push(globalAdmins);
 
-    // Reset kept separate: SERVICE_ADMIN must not gain CRUD/GRANT
+    // Reset kept separate: PLATFORM_OPERATIONS_ADMIN must not gain CRUD/GRANT
     const authorizationReset =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.SERVICE_ADMIN,
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
         ],
         CREDENTIAL_RULE_AI_SERVER_AUTH_RESET
       );
     authorizationReset.cascade = false;
     credentialRules.push(authorizationReset);
+
+    // Operational family (persona create, embeddings cleanup): dedicated rule
+    // so the Platform Operations Admin never gains the CRUD/GRANT bundle above
+    const platformOperations =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+        ],
+        CREDENTIAL_RULE_AI_SERVER_PLATFORM_OPERATIONS
+      );
+    platformOperations.cascade = false;
+    credentialRules.push(platformOperations);
 
     return credentialRules;
   }

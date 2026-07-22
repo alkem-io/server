@@ -60,7 +60,7 @@ export class AiServerResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platformAuthorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       'User not authenticated to migrate embeddings'
     );
 
@@ -150,7 +150,7 @@ export class AiServerResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       aiServer.authorization,
-      AuthorizationPrivilege.CREATE,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       `create Virtual persona: ${aiPersonaData.engine}`
     );
     let aiPersona = await this.aiPersonaService.createAiPersona(

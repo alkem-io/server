@@ -7,6 +7,7 @@ import {
   CREDENTIAL_RULE_TYPES_PLATFORM_FILE_UPLOAD_ANY_USER,
   CREDENTIAL_RULE_TYPES_PLATFORM_GRANT_GLOBAL_ADMINS,
   CREDENTIAL_RULE_TYPES_PLATFORM_MGMT,
+  CREDENTIAL_RULE_TYPES_PLATFORM_OPERATIONS_ADMIN,
   CREDENTIAL_RULE_TYPES_PLATFORM_READ_REGISTERED,
 } from '@common/constants';
 import {
@@ -262,6 +263,23 @@ export class PlatformAuthorizationService {
     platformAdmin.cascade = false;
     credentialRules.push(platformAdmin);
 
+    // Operational & maintenance mutation family — dedicated privilege, own
+    // rule (never merged into the platformAdmin rule above). Grant set mirrors
+    // today's PLATFORM_ADMIN holders plus the Platform Operations Admin role.
+    const platformOperationsAdmin =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+        ],
+        CREDENTIAL_RULE_TYPES_PLATFORM_OPERATIONS_ADMIN
+      );
+    platformOperationsAdmin.cascade = false;
+    credentialRules.push(platformOperationsAdmin);
+
     // Allow global admins to manage the platform settings
     // Separate rule + privilege as can imagine that we later define this as a separate
     // platform role
@@ -298,7 +316,7 @@ export class PlatformAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.SERVICE_ADMIN,
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_PLATFORM_AUTH_RESET
       );

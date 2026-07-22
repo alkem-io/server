@@ -329,20 +329,25 @@ export class AccountAuthorizationService {
     manageGlobalRoles.cascade = false;
     newRules.push(manageGlobalRoles);
 
-    // Dedicated reset rule: three-role set for AUTHORIZATION_RESET only.
-    // Global License Manager is intentionally excluded from auth reset.
-    const serviceAdminReset =
+    // Dedicated reset rule: three-role set for AUTHORIZATION_RESET plus
+    // LICENSE_RESET (additive only for Platform Operations Admin — GA/GS
+    // already hold LICENSE_RESET via manageGlobalRoles above; GLM keeps its
+    // license reset there and stays excluded from auth reset).
+    const platformOperationsAdminReset =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.AUTHORIZATION_RESET],
+        [
+          AuthorizationPrivilege.AUTHORIZATION_RESET,
+          AuthorizationPrivilege.LICENSE_RESET,
+        ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.SERVICE_ADMIN,
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_AUTH_RESET
       );
-    serviceAdminReset.cascade = false;
-    newRules.push(serviceAdminReset);
+    platformOperationsAdminReset.cascade = false;
+    newRules.push(platformOperationsAdminReset);
 
     // Allow Global Spaces Read to view Spaces + contents
     const globalSpacesReader =

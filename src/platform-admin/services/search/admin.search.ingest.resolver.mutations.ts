@@ -35,7 +35,7 @@ export class AdminSearchIngestResolverMutations {
       this.authorizationService.grantAccessOrFail(
         actorContext,
         platformPolicy,
-        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
         `Ingest new data into Elasticsearch from scratch: ${actorContext.actorID}`
       );
     } catch (e: any) {

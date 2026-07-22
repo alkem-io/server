@@ -38,7 +38,7 @@ export class AdminGeoLocationMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       `Update GeoLocation data: ${actorContext.actorID}`
     );
 

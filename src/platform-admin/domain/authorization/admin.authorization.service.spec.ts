@@ -401,7 +401,7 @@ describe('AdminAuthorizationService', () => {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.SERVICE_ADMIN,
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
         ],
         expect.any(String)
       );

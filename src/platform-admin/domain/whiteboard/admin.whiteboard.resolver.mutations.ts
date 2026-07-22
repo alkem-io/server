@@ -34,7 +34,7 @@ export class AdminWhiteboardResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       `upload files from content to storage: ${actorContext.actorID}`
     );
 

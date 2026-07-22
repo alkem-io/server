@@ -27,10 +27,15 @@ export class AdminCommunicationResolverMutations {
     private adminCommunicationService: AdminCommunicationService,
     private adminCommunicationSpaceSyncService: AdminCommunicationSpaceSyncService
   ) {
+    // Operational family: GA + Platform Operations Admin only — GS/GLM could
+    // not run comms mutations before this policy and must not gain them.
     this.communicationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
-        [AuthorizationRoleGlobal.GLOBAL_ADMIN],
-        [AuthorizationPrivilege.GRANT, AuthorizationPrivilege.PLATFORM_ADMIN],
+        [
+          AuthorizationRoleGlobal.GLOBAL_ADMIN,
+          AuthorizationRoleGlobal.PLATFORM_OPERATIONS_ADMIN,
+        ],
+        [AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN],
         GLOBAL_POLICY_ADMIN_COMMUNICATION_GRANT
       );
   }
@@ -48,7 +53,7 @@ export class AdminCommunicationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       this.communicationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       `grant community members access to communications: ${actorContext.actorID}`
     );
     return await this.adminCommunicationService.ensureCommunityAccessToCommunications(
@@ -68,7 +73,7 @@ export class AdminCommunicationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       this.communicationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       `communications admin remove orphaned room: ${actorContext.actorID}`
     );
     return await this.adminCommunicationService.removeOrphanedRoom(
@@ -88,7 +93,7 @@ export class AdminCommunicationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       this.communicationGlobalAdminPolicy,
-      AuthorizationPrivilege.GRANT,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       `communications admin update join rule on all rooms: ${actorContext.actorID}`
     );
     return await this.adminCommunicationService.updateRoomState(
@@ -109,7 +114,7 @@ export class AdminCommunicationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       this.communicationGlobalAdminPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       `communications admin migrate orphaned conversations: ${actorContext.actorID}`
     );
     return await this.adminCommunicationService.migrateConversationRooms();
@@ -126,7 +131,7 @@ export class AdminCommunicationResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       this.communicationGlobalAdminPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       'communications admin sync space hierarchy'
     );
     return await this.adminCommunicationSpaceSyncService.syncSpaceHierarchy();
