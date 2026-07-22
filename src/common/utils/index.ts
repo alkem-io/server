@@ -6,7 +6,6 @@ export * from './compare.enums';
 export * from './convert-to-entity';
 export * from './email.util';
 export * from './file.util';
-export * from './get.session';
 export * from './get-differences';
 export * from './has-allowed-allowed-fields';
 export * from './is.defined';
