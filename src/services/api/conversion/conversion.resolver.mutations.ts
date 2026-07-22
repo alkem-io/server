@@ -33,6 +33,7 @@ import { ConvertSpaceL1ToSpaceL2Input } from './dto/convert.dto.space.l1.to.spac
 import { ConvertSpaceL2ToSpaceL1Input } from './dto/convert.dto.space.l2.to.space.l1.input';
 import { MoveSpaceL1ToSpaceL0Input } from './dto/move.dto.space.l1.to.space.l0.input';
 import { MoveSpaceL1ToSpaceL2Input } from './dto/move.dto.space.l1.to.space.l2.input';
+import { MoveSpaceL2ToSpaceL1Input } from './dto/move.dto.space.l2.to.space.l1.input';
 
 @InstrumentResolver()
 @Resolver()
@@ -239,6 +240,68 @@ export class ConversionResolverMutations {
     const { space, removedActorIds } =
       await this.conversionService.moveSpaceL1ToSpaceL2OrFail(moveData);
     const savedSpace = await this.spaceService.save(space);
+
+    const parentAuthorization = await this.getParentSpaceAuthorization(
+      savedSpace.id
+    );
+    const updatedAuthorizations =
+      await this.spaceAuthorizationService.applyAuthorizationPolicy(
+        savedSpace.id,
+        parentAuthorization
+      );
+    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    // Post-commit: fire-and-forget
+    await this.conversionService.invalidateUrlCachesForSubtree(savedSpace.id);
+    void this.conversionService.moveRoomsService.handleRoomsDuringMove(
+      savedSpace.id,
+      removedActorIds
+    );
+    if (moveData.autoInvite) {
+      void this.conversionService.dispatchAutoInvitesAfterMove(
+        removedActorIds,
+        savedSpace.levelZeroSpaceID,
+        savedSpace.id,
+        actorContext.actorID,
+        moveData.invitationMessage
+      );
+    }
+
+    return this.spaceService.getSpaceOrFail(savedSpace.id);
+  }
+
+  @Mutation(() => ISpace, {
+    description:
+      'Move an L2 sub-subspace to become an L2 subspace under a target L1 in a different L0 space. \
+      The subspace stays at level 2 but changes both its parent L1 and its top-level L0. \
+      All community roles (including admins) are cleared and pending invitations dropped. \
+      Platform access rules are recomputed from the new parent hierarchy. \
+      Requires platform admin privileges.',
+  })
+  async moveSpaceL2ToSpaceL1(
+    @CurrentActor() actorContext: ActorContext,
+    @Args('moveData') moveData: MoveSpaceL2ToSpaceL1Input
+  ): Promise<ISpace> {
+    this.authorizationService.grantAccessOrFail(
+      actorContext,
+      this.authorizationGlobalAdminPolicy,
+      AuthorizationPrivilege.PLATFORM_ADMIN,
+      `move space L2 to L1 in different L0: ${actorContext.actorID}`
+    );
+
+    const { space, removedActorIds } =
+      await this.conversionService.moveSpaceL2ToSpaceL1OrFail(moveData);
+    const savedSpace = await this.spaceService.save(space);
+
+    // S7 (R-1): recompute platform-level access from the NEW parent hierarchy
+    // BEFORE the authorization policy is re-applied.
+    const targetParentL1 = await this.spaceService.getSpaceOrFail(
+      moveData.targetSpaceL1ID
+    );
+    await this.spaceService.updatePlatformRolesAccessRecursively(
+      savedSpace,
+      targetParentL1.platformRolesAccess
+    );
 
     const parentAuthorization = await this.getParentSpaceAuthorization(
       savedSpace.id
