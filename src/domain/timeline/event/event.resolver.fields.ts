@@ -138,7 +138,12 @@ export class CalendarEventResolverFields {
       'endDate'
     );
 
-    validateCalendarDateRange(startDateIso, endDateIso, event.id);
+    validateCalendarDateRange(
+      startDateIso,
+      endDateIso,
+      event.id,
+      event.wholeDay
+    );
 
     const profile = await this.calendarEventService.getProfileOrFail(event);
     const description = profile?.description ?? undefined;

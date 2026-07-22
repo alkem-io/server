@@ -123,6 +123,26 @@ export class WopiServiceAdapter {
   }
 
   /**
+   * Side-effect-free reachability check of the WOPI service (`GET /health`) — unlike
+   * {@link issueToken} it mints no access token and records no analytics. Used by the editor
+   * to distinguish a genuine save-path outage (WOPI down) from a cosmetic "unsaved" flag.
+   * Returns false on any failure (unreachable / non-2xx / timeout).
+   */
+  async checkHealth(): Promise<boolean> {
+    const url = `${this.baseUrl}/health`;
+    // Must exceed the WOPI /health handler's own worst-case budget (a ~5s context that includes a
+    // live Collabora probe up to ~2s) — a tighter timeout would report a slow-but-healthy service
+    // as down and surface a spurious save-path outage in the editor. A genuinely-down service
+    // fails fast (connection refused) regardless.
+    const request$ = this.httpService.get(url).pipe(
+      timeout({ first: 6000 }),
+      map(response => response.status >= 200 && response.status < 300),
+      catchError(() => of(false))
+    );
+    return firstValueFrom(request$);
+  }
+
+  /**
    * Read-only check of whether a document currently has a non-expired WOPI
    * lock (i.e. it is actively being edited in Collabora). Used to block an
    * in-place backing-file replace while someone is editing (FR-013).

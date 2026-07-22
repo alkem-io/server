@@ -1,4 +1,5 @@
 import { ActorType } from '@common/enums/actor.type';
+import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { RoleName } from '@common/enums/role.name';
 import { UserInformationVisibility } from '@common/enums/user.information.visibility';
 import { VisualType } from '@common/enums/visual.type';
@@ -46,6 +47,22 @@ export class ContributorCollectionService {
     callout: ICallout
   ): ICalloutContributorsSettings | undefined {
     return callout.settings?.framing?.contributors;
+  }
+
+  /**
+   * Read-time defaulting for the selection block (FR-016):
+   * absent / null ⇒ {AUTO, []} — defensive, covers rows the migration
+   * never saw and the deploy-to-migrate window.
+   */
+  private getSelectionMode(callout: ICallout): CalloutSelectionMode {
+    return (
+      callout.settings?.framing?.selection?.mode ?? CalloutSelectionMode.AUTO
+    );
+  }
+
+  private getSelectedIds(callout: ICallout): Set<string> {
+    const ids = callout.settings?.framing?.selection?.selectedIds ?? [];
+    return new Set(ids);
   }
 
   /**
@@ -281,7 +298,16 @@ export class ContributorCollectionService {
       }
     }
 
-    const ranked = await this.getRankedIdsForType(roleSet, type);
+    let ranked = await this.getRankedIdsForType(roleSet, type);
+
+    // CUSTOM-mode intersection: apply the stored selectedIds as a FINAL Set.has
+    // filter AFTER the eligibility + visibility pipeline (FR-007 shrink-only).
+    // AUTO skips the filter entirely. Ordering code is untouched (FR-010).
+    if (this.getSelectionMode(callout) === CalloutSelectionMode.CUSTOM) {
+      const selectedIds = this.getSelectedIds(callout);
+      ranked = ranked.filter(r => selectedIds.has(r.id));
+    }
+
     const profilesById = await this.loadProfilesById(ranked.map(r => r.id));
 
     const items: (IContributorCollectionItem & { rank: number })[] = [];
@@ -356,6 +382,17 @@ export class ContributorCollectionService {
     }
     const { roleSet, space } = context;
 
+    const selectionMode = this.getSelectionMode(callout);
+    const selectedIds =
+      selectionMode === CalloutSelectionMode.CUSTOM
+        ? this.getSelectedIds(callout)
+        : null; // null → AUTO, no filter
+
+    const applySelectionFilter = (
+      ranked: { id: string }[]
+    ): { id: string }[] =>
+      selectedIds !== null ? ranked.filter(r => selectedIds.has(r.id)) : ranked;
+
     if (settings.contributorTypes.includes(ActorType.USER)) {
       const hide = await this.shouldHideMemberUsers(
         space,
@@ -364,7 +401,7 @@ export class ContributorCollectionService {
       );
       if (!hide) {
         const ranked = await this.getRankedIdsForType(roleSet, ActorType.USER);
-        counts.users = ranked.length;
+        counts.users = applySelectionFilter(ranked).length;
       }
     }
     if (settings.contributorTypes.includes(ActorType.ORGANIZATION)) {
@@ -372,14 +409,14 @@ export class ContributorCollectionService {
         roleSet,
         ActorType.ORGANIZATION
       );
-      counts.organizations = ranked.length;
+      counts.organizations = applySelectionFilter(ranked).length;
     }
     if (settings.contributorTypes.includes(ActorType.VIRTUAL_CONTRIBUTOR)) {
       const ranked = await this.getRankedIdsForType(
         roleSet,
         ActorType.VIRTUAL_CONTRIBUTOR
       );
-      counts.virtualContributors = ranked.length;
+      counts.virtualContributors = applySelectionFilter(ranked).length;
     }
     return counts;
   }

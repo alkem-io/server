@@ -11,7 +11,7 @@ jobs:
     steps:
     # 1. Checkout the repository code
     - name: Checkout Code
-      uses: actions/checkout@v4
+      uses: actions/checkout@v7
       with:
         # Fetch depth 0 is important to get the base branch reference for diffing
         fetch-depth: 0
@@ -69,7 +69,7 @@ jobs:
     # 5b. Determine whether the review label changed
     - name: Determine Review Label State
       id: review_label_state
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
@@ -106,7 +106,7 @@ jobs:
     # 6. Post Metrics Comment
     - name: Post Metrics Comment
       if: steps.review_label_state.outputs.label_changed == 'true'
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |
@@ -161,7 +161,7 @@ jobs:
     # 7. Add Label Based on Review Type
     - name: Add Review Type Label
       if: steps.review_label_state.outputs.label_changed == 'true'
-      uses: actions/github-script@v7
+      uses: actions/github-script@v9
       with:
         github-token: ${{ secrets.GITHUB_TOKEN }}
         script: |

@@ -5,7 +5,9 @@ import {
   CalloutContributionType,
 } from '@common/enums/callout.contribution.type';
 import { CalloutFramingType } from '@common/enums/callout.framing.type';
+import { CalloutSelectionMode } from '@common/enums/callout.selection.mode';
 import { CalloutVisibility } from '@common/enums/callout.visibility';
+import { RoleName } from '@common/enums/role.name';
 import { RoomType } from '@common/enums/room.type';
 import {
   EntityNotFoundException,
@@ -14,6 +16,7 @@ import {
   ValidationException,
 } from '@common/exceptions';
 import { limitAndShuffle } from '@common/utils';
+import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { ICallout } from '@domain/collaboration/callout/callout.interface';
 import { CreateCalloutInput } from '@domain/collaboration/callout/dto/index';
@@ -28,6 +31,7 @@ import { CreateWhiteboardInput } from '@domain/common/whiteboard/dto/whiteboard.
 import { IRoom } from '@domain/communication/room/room.interface';
 import { RoomService } from '@domain/communication/room/room.service';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
+import { Space } from '@domain/space/space/space.entity';
 import { IStorageAggregator } from '@domain/storage/storage-aggregator/storage.aggregator.interface';
 import { IStorageBucket } from '@domain/storage/storage-bucket/storage.bucket.interface';
 import { Injectable } from '@nestjs/common';
@@ -72,6 +76,7 @@ export class CalloutService {
     private collaboraDocumentService: CollaboraDocumentService,
     private storageAggregatorResolverService: StorageAggregatorResolverService,
     private classificationService: ClassificationService,
+    private roleSetService: RoleSetService,
     @InjectRepository(Callout)
     private calloutRepository: Repository<Callout>
   ) {}
@@ -114,6 +119,24 @@ export class CalloutService {
         callout.framing.type,
         callout.settings.framing
       );
+
+    // Validate + normalize selection settings (workspace#025, FR-013/FR-022).
+    // Runs after contributors normalization so the framing type is stable.
+    callout.settings.framing =
+      this.calloutFramingService.validateAndNormalizeSelectionSettings(
+        callout.framing.type,
+        callout.settings.framing,
+        calloutData.settings?.framing?.selection
+      );
+
+    // AC3 host-scope guard: reject any selectedId not in the host's RoleSet
+    // (contributors) or not a direct subspace of the host (spaces). Only runs
+    // when the normalized selection is CUSTOM + non-empty (FR-006).
+    await this.validateSelectionScopeGuard(
+      callout.framing.type,
+      callout.settings.framing.selection,
+      parentSpaceId
+    );
 
     if (callout.settings.visibility === CalloutVisibility.PUBLISHED) {
       callout.publishedDate = new Date();
@@ -483,6 +506,41 @@ export class CalloutService {
         callout.framing.type,
         callout.settings.framing
       );
+
+    // Re-validate + normalize selection settings (workspace#025, FR-013/FR-022).
+    // Strip stale selection on framing-type change (non-collection type change)
+    // and apply partial-update semantics for the new value.
+    if (
+      callout.framing.type !== CalloutFramingType.CONTRIBUTORS &&
+      callout.framing.type !== CalloutFramingType.SPACES &&
+      callout.settings.framing.selection
+    ) {
+      delete callout.settings.framing.selection;
+    }
+    callout.settings.framing =
+      this.calloutFramingService.validateAndNormalizeSelectionSettings(
+        callout.framing.type,
+        callout.settings.framing,
+        calloutUpdateData.settings?.framing?.selection
+      );
+
+    // AC3 host-scope guard on update: only validate ids the caller explicitly
+    // submitted in this request (FR-008: stale stored ids must be inert — no
+    // admin action required to remove a since-departed member/subspace).
+    // The guard still runs in full on the CREATE path (line ~135) where there
+    // are no pre-existing stored ids.
+    if (
+      calloutUpdateData.settings?.framing?.selection?.selectedIds !== undefined
+    ) {
+      const updateParentSpaceId = callout.calloutsSet
+        ? await this.getParentSpaceId(callout.calloutsSet.id)
+        : undefined;
+      await this.validateSelectionScopeGuard(
+        callout.framing.type,
+        callout.settings.framing.selection,
+        updateParentSpaceId
+      );
+    }
 
     if (calloutUpdateData.classification) {
       callout.classification = this.classificationService.updateClassification(
@@ -1052,6 +1110,128 @@ export class CalloutService {
     }
 
     return result;
+  }
+
+  /**
+   * AC3 host-scope guard (workspace#025, FR-006/FR-007).
+   * Enforced at WRITE time on CUSTOM selections with at least one id.
+   *
+   * CONTRIBUTORS: every selectedId must be an accepted community member of the
+   *   host space (any role across USER/ORG/VC — uses the same RoleSetService
+   *   reads as ContributorCollectionService). Uses three role fetches and union
+   *   into a Set for the cheapest single-pass check over the submitted ids.
+   * SPACES: every selectedId must be a direct subspace of the host space.
+   *   Since the host's subspaces are already the only read-time resolution
+   *   surface, this write-time guard is the PRIMARY barrier.
+   * Template/KB context (no host space): any non-empty selection is rejected.
+   *
+   * Auto skips when: mode is AUTO, selectedIds is empty, or framing is not a
+   * collection kind (normalization already ensures this is consistent).
+   */
+  private async validateSelectionScopeGuard(
+    framingType: CalloutFramingType,
+    selection:
+      | { mode: CalloutSelectionMode; selectedIds: string[] }
+      | undefined,
+    hostSpaceId: string | undefined
+  ): Promise<void> {
+    if (!selection) return;
+    if (selection.mode !== CalloutSelectionMode.CUSTOM) return;
+    if (selection.selectedIds.length === 0) return;
+    if (
+      framingType !== CalloutFramingType.CONTRIBUTORS &&
+      framingType !== CalloutFramingType.SPACES
+    ) {
+      return; // normalizer already rejects non-collection kinds with selection
+    }
+
+    // Non-empty CUSTOM selection without a host space → reject (template/KB).
+    if (!hostSpaceId) {
+      throw new ValidationException(
+        'Selection requires a host space: custom selection is not allowed on template or knowledge-base callouts.',
+        LogContext.COLLABORATION
+      );
+    }
+
+    if (framingType === CalloutFramingType.CONTRIBUTORS) {
+      await this.validateContributorSelectionScope(
+        selection.selectedIds,
+        hostSpaceId
+      );
+    } else {
+      await this.validateSubspaceSelectionScope(
+        selection.selectedIds,
+        hostSpaceId
+      );
+    }
+  }
+
+  private async validateContributorSelectionScope(
+    selectedIds: string[],
+    hostSpaceId: string
+  ): Promise<void> {
+    // Load the host Space → community → roleSet
+    // (Space owns the FK to Community; Community owns the FK to RoleSet).
+    const spaceWithCommunity = await this.calloutRepository.manager.findOne(
+      Space,
+      {
+        where: { id: hostSpaceId },
+        relations: { community: { roleSet: true } },
+      }
+    );
+    if (!spaceWithCommunity?.community?.roleSet) {
+      throw new ValidationException(
+        'Unable to resolve host community for selection scope validation.',
+        LogContext.COLLABORATION
+      );
+    }
+    const roleSet = spaceWithCommunity.community.roleSet;
+
+    // Union all member/lead/admin ids across all three contributor actor types.
+    const allRoles = [RoleName.MEMBER, RoleName.LEAD, RoleName.ADMIN];
+    const eligibleIds = new Set<string>();
+    for (const role of allRoles) {
+      const [users, orgs, vcs] = await Promise.all([
+        this.roleSetService.getUsersWithRole(roleSet, role),
+        this.roleSetService.getOrganizationsWithRole(roleSet, role),
+        this.roleSetService.getVirtualContributorsWithRole(roleSet, role),
+      ]);
+      for (const u of users) eligibleIds.add(u.id);
+      for (const o of orgs) eligibleIds.add(o.id);
+      for (const v of vcs) eligibleIds.add(v.id);
+    }
+
+    const offender = selectedIds.find(id => !eligibleIds.has(id));
+    if (offender) {
+      throw new ValidationException(
+        'One or more selected contributors are not accepted community members of this space.',
+        LogContext.COLLABORATION,
+        { offendingId: offender }
+      );
+    }
+  }
+
+  private async validateSubspaceSelectionScope(
+    selectedIds: string[],
+    hostSpaceId: string
+  ): Promise<void> {
+    // Load the host space's direct subspaces.
+    const hostSpace = await this.calloutRepository.manager.findOne(Space, {
+      where: { id: hostSpaceId },
+      relations: { subspaces: true },
+    });
+    const subspaceIds = new Set(
+      (hostSpace?.subspaces ?? []).map((s: { id: string }) => s.id)
+    );
+
+    const offender = selectedIds.find(id => !subspaceIds.has(id));
+    if (offender) {
+      throw new ValidationException(
+        'One or more selected subspaces are not direct subspaces of this space.',
+        LogContext.COLLABORATION,
+        { offendingId: offender }
+      );
+    }
   }
 
   /**

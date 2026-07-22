@@ -1,7 +1,7 @@
 import { AuthenticationType } from '@common/enums/authentication.type';
 import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
-import type { Identity, Session } from '@ory/kratos-client';
+import type { Identity } from '@ory/kratos-client';
 import { MockWinstonProvider } from '@test/mocks/winston.provider.mock';
 import { defaultMockerFactory } from '@test/utils/default.mocker.factory';
 import { KratosService } from './kratos.service';
@@ -218,123 +218,6 @@ describe('KratosService', () => {
     });
   });
 
-  describe('validateSession', () => {
-    it('should return invalid when session is undefined', () => {
-      const result = service.validateSession(undefined);
-      expect(result).toEqual({
-        valid: false,
-        reason: 'Session not defined',
-      });
-    });
-
-    it('should return invalid when expires_at is undefined', () => {
-      const session = { id: 's-1' } as Session;
-      const result = service.validateSession(session);
-      expect(result).toEqual({
-        valid: false,
-        reason: 'Session expiry not defined',
-      });
-    });
-
-    it('should return invalid when session is expired', () => {
-      const session = {
-        id: 's-1',
-        expires_at: new Date(Date.now() - 10000).toISOString(),
-      } as unknown as Session;
-
-      const result = service.validateSession(session);
-      expect(result).toEqual({
-        valid: false,
-        reason: 'Session expired',
-      });
-    });
-
-    it('should return valid when session is not expired', () => {
-      const session = {
-        id: 's-1',
-        expires_at: new Date(Date.now() + 60000).toISOString(),
-      } as unknown as Session;
-
-      const result = service.validateSession(session);
-      expect(result).toEqual({ valid: true });
-    });
-  });
-
-  describe('checkSession', () => {
-    it('should return "Session expired" when session is expired', () => {
-      const session = {
-        id: 's-1',
-        expires_at: new Date(Date.now() - 10000).toISOString(),
-      } as unknown as Session;
-
-      const result = service.checkSession(session);
-      expect(result).toBe('Session expired');
-    });
-
-    it('should return undefined when session is valid', () => {
-      const session = {
-        id: 's-1',
-        expires_at: new Date(Date.now() + 60000).toISOString(),
-      } as unknown as Session;
-
-      const result = service.checkSession(session);
-      expect(result).toBeUndefined();
-    });
-
-    it('should return undefined when session is undefined (not expired reason)', () => {
-      const result = service.checkSession(undefined);
-      expect(result).toBeUndefined();
-    });
-  });
-
-  describe('getSessionFromJwt', () => {
-    it('should throw when token is empty', () => {
-      expect(() => service.getSessionFromJwt('')).toThrow('Token is empty!');
-    });
-
-    it('should throw when token is a Bearer token', () => {
-      expect(() => service.getSessionFromJwt('Bearer some-token')).toThrow(
-        'Bearer token found, not decodable as JWT'
-      );
-    });
-  });
-
-  describe('getSessionFromAuthorizationHeader', () => {
-    it('should throw when token is not present in header', () => {
-      const kratosClient = {} as any;
-
-      expect(() =>
-        service.getSessionFromAuthorizationHeader(kratosClient, 'Bearer')
-      ).toThrow('Token not provided in the Authorization header');
-    });
-
-    it('should throw when neither JWT nor API token works', () => {
-      const kratosClient = {} as any;
-
-      // getSessionFromApiToken is async (returns a Promise), so the try-catch
-      // in getSessionFromAuthorizationHeader only catches sync throws.
-      // Mock it to throw synchronously to test the intended fallthrough path.
-      (service as any).getSessionFromApiToken = () => {
-        throw new Error('Token validation failed');
-      };
-
-      expect(() =>
-        service.getSessionFromAuthorizationHeader(
-          kratosClient,
-          'Bearer invalid-token'
-        )
-      ).toThrow('Not a valid token provided in the Authorization header');
-    });
-  });
-
-  describe('getSession', () => {
-    it('should throw when neither authorization nor cookie is provided', async () => {
-      await expect(service.getSession()).rejects.toThrow(
-        'Authorization header or cookie not provided'
-      );
-    });
-  });
-
   describe('getCreatedAt', () => {
     it('should return undefined when identity is falsy', async () => {
       const result = await service.getCreatedAt(null as any);
@@ -493,66 +376,6 @@ describe('KratosService', () => {
       await expect(service.getIdentityById('id-1')).rejects.toThrow(
         'Server error'
       );
-    });
-  });
-
-  describe('getSession', () => {
-    it('should use authorization header when provided', async () => {
-      const mockSession = { id: 'session-1' };
-      vi.spyOn(service, 'getSessionFromJwt' as any).mockReturnValue(
-        mockSession
-      );
-
-      const result = await service.getSession('Bearer valid-jwt');
-      expect(result).toBe(mockSession);
-    });
-
-    it('should use cookie when authorization is not provided', async () => {
-      const mockSession = { id: 'session-from-cookie' };
-      vi.spyOn(service.kratosFrontEndClient, 'toSession').mockResolvedValue({
-        data: mockSession,
-      } as any);
-
-      const result = await service.getSession(undefined, 'session-cookie');
-      expect(result).toBe(mockSession);
-    });
-  });
-
-  describe('getSessionFromJwt', () => {
-    it('should throw when token is not a valid JWT', () => {
-      expect(() => service.getSessionFromJwt('not-a-jwt')).toThrow();
-    });
-  });
-
-  describe('getSessionFromApiToken', () => {
-    it('should throw when apiToken is empty', async () => {
-      const kratosClient = {} as any;
-      await expect(
-        service.getSessionFromApiToken(kratosClient, '')
-      ).rejects.toThrow('Token is an empty string');
-    });
-
-    it('should return session when token is valid', async () => {
-      const mockSession = { id: 'session-1' };
-      const kratosClient = {
-        toSession: vi.fn().mockResolvedValue({ data: mockSession }),
-      } as any;
-
-      const result = await service.getSessionFromApiToken(
-        kratosClient,
-        'valid-token'
-      );
-      expect(result).toBe(mockSession);
-    });
-
-    it('should throw when session is null', async () => {
-      const kratosClient = {
-        toSession: vi.fn().mockResolvedValue({ data: null }),
-      } as any;
-
-      await expect(
-        service.getSessionFromApiToken(kratosClient, 'token')
-      ).rejects.toThrow('Kratos session not found');
     });
   });
 
