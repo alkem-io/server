@@ -73,5 +73,10 @@ export class PlatformOperationsAdminRole1784556812652
       `DELETE FROM "role" WHERE "roleSetId" = $1 AND name = $2`,
       [roleSetId, this.roleName]
     );
+    // Revoke issued credentials too: the credential rules live in code, so a
+    // leftover credential would keep granting the privileges after rollback.
+    await queryRunner.query(`DELETE FROM "credential" WHERE "type" = $1`, [
+      this.credential.type,
+    ]);
   }
 }

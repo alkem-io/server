@@ -83,18 +83,20 @@ export class AiServerAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.GRANT,
+          // Kept here (and cascading) so Global Admin retains the inherited
+          // AUTHORIZATION_RESET it has always had on aiServer child policies.
+          AuthorizationPrivilege.AUTHORIZATION_RESET,
         ],
         [AuthorizationCredential.GLOBAL_ADMIN],
         CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS
       );
     credentialRules.push(globalAdmins);
 
-    // Reset kept separate: PLATFORM_OPERATIONS_ADMIN must not gain CRUD/GRANT
+    // Additive reset rule: PLATFORM_OPERATIONS_ADMIN must not gain CRUD/GRANT
     const authorizationReset =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
-          AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
           AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
         ],
@@ -104,10 +106,16 @@ export class AiServerAuthorizationService {
     credentialRules.push(authorizationReset);
 
     // Operational family (persona create, embeddings cleanup): dedicated rule
-    // so the Platform Operations Admin never gains the CRUD/GRANT bundle above
+    // so the Platform Operations Admin never gains the full CRUD/GRANT bundle
+    // above. CREATE is granted explicitly because createAiPersona keeps its
+    // pre-existing CREATE gate — narrowing that gate would strip the privilege
+    // from existing CREATE holders.
     const platformOperations =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN],
+        [
+          AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
+          AuthorizationPrivilege.CREATE,
+        ],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,

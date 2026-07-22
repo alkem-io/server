@@ -150,7 +150,7 @@ export class AiServerResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       aiServer.authorization,
-      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
+      AuthorizationPrivilege.CREATE,
       `create Virtual persona: ${aiPersonaData.engine}`
     );
     let aiPersona = await this.aiPersonaService.createAiPersona(
