@@ -63,7 +63,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `grant credential: ${actorContext.actorID}`
+      'grant credential'
     );
 
     const user =
@@ -94,7 +94,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `revoke credential: ${actorContext.actorID}`
+      'revoke credential'
     );
     const user =
       await this.adminAuthorizationService.revokeCredentialFromUser(
@@ -122,7 +122,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `grant credential: ${actorContext.actorID}`
+      'grant credential'
     );
     return await this.adminAuthorizationService.grantCredentialToOrganization(
       grantCredentialData
@@ -142,7 +142,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       this.authorizationGlobalAdminPolicy,
       AuthorizationPrivilege.GRANT_GLOBAL_ADMINS,
-      `revoke credential: ${actorContext.actorID}`
+      'revoke credential'
     );
     return await this.adminAuthorizationService.revokeCredentialFromOrganization(
       credentialRemoveData
@@ -162,7 +162,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization on platform: ${actorContext.actorID}`
+      'reset authorization on platform'
     );
 
     return this.authResetService.publishResetAll();
@@ -182,7 +182,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset platformRolesAccess on all Spaces: ${actorContext.actorID}`
+      'reset platformRolesAccess on all Spaces'
     );
 
     const spaces = await this.entityManager.find(Space, {
@@ -214,7 +214,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization on a single authorization policy: ${actorContext.actorID}`
+      'reset authorization on a single authorization policy'
     );
 
     return this.adminAuthorizationService.resetAuthorizationPolicy(
@@ -235,7 +235,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-      `refresh all bodies of knowledge: ${actorContext.actorID}`
+      'refresh all bodies of knowledge'
     );
 
     return this.virtualContributorService.refreshAllBodiesOfKnowledge(

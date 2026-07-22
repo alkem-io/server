@@ -37,7 +37,7 @@ export class AdminAuthorizationResolverQueries {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `actorsWithCredential query: ${actorContext.actorID}`
+      'actorsWithCredential query'
     );
     return await this.adminAuthorizationService.actorsWithCredential(
       credentialType,
@@ -59,7 +59,7 @@ export class AdminAuthorizationResolverQueries {
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
       AuthorizationPrivilege.READ_USERS,
-      `authorization query: ${actorContext.actorID}`
+      'authorization query'
     );
     return await this.adminAuthorizationService.usersWithCredentials(
       credentialsCriteriaData

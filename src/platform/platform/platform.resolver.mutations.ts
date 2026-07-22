@@ -41,7 +41,7 @@ export class PlatformResolverMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization on platform: ${actorContext.actorID}`
+      'reset authorization on platform'
     );
     const updatedAuthorizations =
       await this.platformAuthorizationService.applyAuthorizationPolicy();
