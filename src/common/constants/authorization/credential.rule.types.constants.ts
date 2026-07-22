@@ -108,8 +108,8 @@ export const CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS =
   'credentialRuleTypes-aiServerGlobalAdmins';
 export const CREDENTIAL_RULE_AI_SERVER_AUTH_RESET =
   'credentialRuleTypes-aiServerAuthReset';
-export const CREDENTIAL_RULE_AI_SERVER_PLATFORM_OPERATIONS =
-  'credentialRuleTypes-aiServerPlatformOperations';
+export const CREDENTIAL_RULE_AI_SERVER_PERSONA_CREATE =
+  'credentialRuleTypes-aiServerPersonaCreate';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_AUTH_RESET =
   'credentialRuleTypes-accountAuthReset';
 export const CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE =

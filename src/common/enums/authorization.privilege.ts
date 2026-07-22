@@ -12,6 +12,11 @@ export enum AuthorizationPrivilege {
   PLATFORM_ADMIN = 'platform-admin', // To determine if the user should have access to the platform administration
   PLATFORM_OPERATIONS_ADMIN = 'platform-operations-admin', // gates the operational & maintenance mutation family
   PLATFORM_SETTINGS_ADMIN = 'platform-settings-admin', // To determine if the user should be able to update platform wide settings
+  // Gates the messaging-platform maintenance mutations (adminCommunication*).
+  // Deliberately distinct from PLATFORM_OPERATIONS_ADMIN: these mutations act
+  // directly on Matrix rooms and their grant set is narrower. See
+  // AdminCommunicationResolverMutations for the roles that hold it.
+  COMMUNICATION_ADMIN = 'communication-admin',
   CONTRIBUTE = 'contribute',
   CREATE_CALLOUT = 'create-callout',
   CREATE_POST = 'create-post',

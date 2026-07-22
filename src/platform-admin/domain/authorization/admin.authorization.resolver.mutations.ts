@@ -204,15 +204,15 @@ export class AdminAuthorizationResolverMutations {
     @CurrentActor() actorContext: ActorContext,
     @Args('authorizationID') authorizationID: string
   ): Promise<IAuthorizationPolicy> {
+    // The platform policy already grants AUTHORIZATION_RESET (see
+    // PlatformAuthorizationService.createPlatformCredentialRules), so it is
+    // checked directly — extending it here would add a rule that is a strict
+    // subset of what the policy already allows.
     const platformPolicy =
       await this.platformAuthorizationPolicyService.getPlatformAuthorizationPolicy();
-    const platformPolicyUpdated =
-      this.adminAuthorizationService.extendAuthorizationPolicyWithAuthorizationReset(
-        platformPolicy
-      );
     this.authorizationService.grantAccessOrFail(
       actorContext,
-      platformPolicyUpdated,
+      platformPolicy,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization on a single authorization policy: ${actorContext.actorID}`
     );
@@ -235,7 +235,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-      `reset authorization on platform: ${actorContext.actorID}`
+      `refresh all bodies of knowledge: ${actorContext.actorID}`
     );
 
     return this.virtualContributorService.refreshAllBodiesOfKnowledge(

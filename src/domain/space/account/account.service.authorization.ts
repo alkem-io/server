@@ -306,13 +306,12 @@ export class AccountAuthorizationService {
       );
 
     // Allow global admins/support/license-manager to manage platform
-    // settings, reset licenses and transfer resources. AUTHORIZATION_RESET
-    // moved to the dedicated reset rule below (same holders + the new
-    // Platform Operations Admin).
+    // settings and transfer resources. AUTHORIZATION_RESET and LICENSE_RESET
+    // moved to the dedicated reset rule below, which grants them to the same
+    // three roles plus the new Platform Operations Admin.
     const manageGlobalRoles =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
-          AuthorizationPrivilege.LICENSE_RESET,
           AuthorizationPrivilege.PLATFORM_ADMIN,
           AuthorizationPrivilege.CREATE_SPACE,
           AuthorizationPrivilege.CREATE_INNOVATION_HUB,
@@ -330,8 +329,9 @@ export class AccountAuthorizationService {
     newRules.push(manageGlobalRoles);
 
     // Dedicated reset rule: strictly additive. GA/GS/GLM keep the
-    // AUTHORIZATION_RESET they held via manageGlobalRoles before this feature;
-    // the Platform Operations Admin is added alongside them.
+    // AUTHORIZATION_RESET and LICENSE_RESET they held via manageGlobalRoles
+    // before this feature; the Platform Operations Admin joins them. Sole
+    // grant of both reset privileges on this policy.
     const platformOperationsAdminReset =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [

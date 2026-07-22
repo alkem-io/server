@@ -1,7 +1,7 @@
 import {
   CREDENTIAL_RULE_AI_SERVER_AUTH_RESET,
   CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS,
-  CREDENTIAL_RULE_AI_SERVER_PLATFORM_OPERATIONS,
+  CREDENTIAL_RULE_AI_SERVER_PERSONA_CREATE,
 } from '@common/constants/authorization/credential.rule.types.constants';
 import {
   AuthorizationCredential,
@@ -105,22 +105,16 @@ export class AiServerAuthorizationService {
     authorizationReset.cascade = false;
     credentialRules.push(authorizationReset);
 
-    // Operational family (persona create, embeddings cleanup): dedicated rule
-    // so the Platform Operations Admin never gains the full CRUD/GRANT bundle
-    // above. CREATE is granted explicitly because createAiPersona keeps its
-    // pre-existing CREATE gate — narrowing that gate would strip the privilege
-    // from existing CREATE holders.
+    // Operational family (persona create): CREATE only, so the Platform
+    // Operations Admin never gains the full CRUD/GRANT bundle above.
+    // createAiPersona keeps its pre-existing CREATE gate — narrowing that gate
+    // would strip the privilege from existing CREATE holders. GLOBAL_ADMIN is
+    // not repeated here; it already holds CREATE via globalAdmins above.
     const platformOperations =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
-        [
-          AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-          AuthorizationPrivilege.CREATE,
-        ],
-        [
-          AuthorizationCredential.GLOBAL_ADMIN,
-          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-        ],
-        CREDENTIAL_RULE_AI_SERVER_PLATFORM_OPERATIONS
+        [AuthorizationPrivilege.CREATE],
+        [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
+        CREDENTIAL_RULE_AI_SERVER_PERSONA_CREATE
       );
     platformOperations.cascade = false;
     credentialRules.push(platformOperations);

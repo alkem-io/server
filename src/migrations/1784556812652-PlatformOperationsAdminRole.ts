@@ -32,7 +32,9 @@ export class PlatformOperationsAdminRole1784556812652
   public async up(queryRunner: QueryRunner): Promise<void> {
     // Resolve the platform RoleSet id (the platform row carries roleSetId).
     const platformRows: { roleSetId: string | null }[] =
-      await queryRunner.query(`SELECT "roleSetId" FROM "platform" LIMIT 1`);
+      await queryRunner.query(
+        `SELECT "roleSetId" FROM "platform" ORDER BY "createdDate" ASC LIMIT 1`
+      );
     const roleSetId = platformRows?.[0]?.roleSetId;
     if (!roleSetId) {
       // No platform RoleSet (e.g. a not-yet-bootstrapped DB) — nothing to do;
@@ -64,7 +66,9 @@ export class PlatformOperationsAdminRole1784556812652
 
   public async down(queryRunner: QueryRunner): Promise<void> {
     const platformRows: { roleSetId: string | null }[] =
-      await queryRunner.query(`SELECT "roleSetId" FROM "platform" LIMIT 1`);
+      await queryRunner.query(
+        `SELECT "roleSetId" FROM "platform" ORDER BY "createdDate" ASC LIMIT 1`
+      );
     const roleSetId = platformRows?.[0]?.roleSetId;
     if (!roleSetId) {
       return;
@@ -75,6 +79,8 @@ export class PlatformOperationsAdminRole1784556812652
     );
     // Revoke issued credentials too: the credential rules live in code, so a
     // leftover credential would keep granting the privileges after rollback.
+    // Safe to delete unconditionally — `credential` has no inbound FKs (it
+    // only references `actor`), and this type string is unique to this role.
     await queryRunner.query(`DELETE FROM "credential" WHERE "type" = $1`, [
       this.credential.type,
     ]);

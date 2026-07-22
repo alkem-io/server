@@ -198,15 +198,11 @@ describe('AdminAuthorizationResolverMutations', () => {
   });
 
   describe('authorizationPolicyResetToGlobalAdminsAccess', () => {
-    it('should extend policy and reset authorization', async () => {
+    it('should check the platform policy and reset authorization', async () => {
       const platformPolicy = { id: 'platform-auth' };
-      const extendedPolicy = { id: 'extended-policy' };
       const resetPolicy = { id: 'reset-auth' };
       platformAuthorizationPolicyService.getPlatformAuthorizationPolicy.mockResolvedValue(
         platformPolicy
-      );
-      adminAuthorizationService.extendAuthorizationPolicyWithAuthorizationReset.mockReturnValue(
-        extendedPolicy
       );
       adminAuthorizationService.resetAuthorizationPolicy.mockResolvedValue(
         resetPolicy
@@ -220,7 +216,7 @@ describe('AdminAuthorizationResolverMutations', () => {
 
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
-        extendedPolicy,
+        platformPolicy,
         AuthorizationPrivilege.AUTHORIZATION_RESET,
         expect.any(String)
       );
