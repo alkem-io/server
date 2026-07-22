@@ -39,7 +39,7 @@ export class AdminGeoLocationMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-      `Update GeoLocation data: ${actorContext.actorID}`
+      'Update GeoLocation data'
     );
 
     if (!this.geoapifyService.isEnabled()) {

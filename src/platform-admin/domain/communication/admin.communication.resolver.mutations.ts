@@ -33,11 +33,15 @@ export class AdminCommunicationResolverMutations {
     // deliberately NARROWER role set than the platform authorization policy.
     //
     // Grant set: GLOBAL_ADMIN (historic, pre-dates the Platform Operations
-    // Admin role) + PLATFORM_OPERATIONS_ADMIN (added by workspace#019).
-    // GLOBAL_SUPPORT and GLOBAL_LICENSE_MANAGER are deliberately EXCLUDED:
-    // they hold PLATFORM_ADMIN and PLATFORM_OPERATIONS_ADMIN on the platform
-    // policy, but have never been able to run these mutations, which act
-    // directly on Matrix rooms across every Space.
+    // Admin role) + PLATFORM_OPERATIONS_ADMIN (added by workspace#019) — and
+    // deliberately NOTHING else. Every other global role, GLOBAL_SUPPORT
+    // included, is EXCLUDED: they hold PLATFORM_ADMIN /
+    // PLATFORM_OPERATIONS_ADMIN on the platform policy, but have never been
+    // able to run these mutations, which act directly on Matrix rooms across
+    // every Space. Swapping in the platform authorization policy would widen
+    // access to those broader credentials (GLOBAL_LICENSE_MANAGER among them —
+    // note it is not an AuthorizationRoleGlobal, so it cannot even be named in
+    // this synthetic policy's role list).
     //
     // This is why the gate is COMMUNICATION_ADMIN and not
     // PLATFORM_OPERATIONS_ADMIN: reusing the platform-wide privilege name here
@@ -74,7 +78,7 @@ export class AdminCommunicationResolverMutations {
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.COMMUNICATION_ADMIN,
-      `grant community members access to communications: ${actorContext.actorID}`
+      'grant community members access to communications'
     );
     return await this.adminCommunicationService.ensureCommunityAccessToCommunications(
       ensureAccessData
@@ -94,7 +98,7 @@ export class AdminCommunicationResolverMutations {
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.COMMUNICATION_ADMIN,
-      `communications admin remove orphaned room: ${actorContext.actorID}`
+      'communications admin remove orphaned room'
     );
     return await this.adminCommunicationService.removeOrphanedRoom(
       orphanedRoomData
@@ -114,7 +118,7 @@ export class AdminCommunicationResolverMutations {
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.COMMUNICATION_ADMIN,
-      `communications admin update join rule on all rooms: ${actorContext.actorID}`
+      'communications admin update join rule on all rooms'
     );
     return await this.adminCommunicationService.updateRoomState(
       roomStateData.roomID,
@@ -135,7 +139,7 @@ export class AdminCommunicationResolverMutations {
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.COMMUNICATION_ADMIN,
-      `communications admin migrate orphaned conversations: ${actorContext.actorID}`
+      'communications admin migrate orphaned conversations'
     );
     return await this.adminCommunicationService.migrateConversationRooms();
   }

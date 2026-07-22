@@ -379,7 +379,7 @@ describe('AdminAuthorizationService', () => {
   });
 
   describe('extendAuthorizationPolicyWithAuthorizationReset', () => {
-    it('should add AUTHORIZATION_RESET rule for global admins and support', () => {
+    it('should add AUTHORIZATION_RESET rule for global admins, support and platform operations admins', () => {
       const authorization = { id: 'auth-1', credentialRules: [] } as any;
       const rule = { cascade: true } as any;
       const extendedAuth = { id: 'auth-1-extended' } as any;

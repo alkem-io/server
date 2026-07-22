@@ -309,10 +309,12 @@ export class PlatformAuthorizationService {
     globalSupportPlatformAdmin.cascade = true;
     credentialRules.push(globalSupportPlatformAdmin);
 
-    // Allow global support to reset auth. GLOBAL_LICENSE_MANAGER is included
-    // because the platform reset mutations were previously gated on
-    // PLATFORM_ADMIN (GA/GS/GLM); re-gating them on AUTHORIZATION_RESET must
-    // not strip GLM of access it already had.
+    // AUTHORIZATION_RESET holders: GLOBAL_ADMIN, GLOBAL_SUPPORT,
+    // GLOBAL_LICENSE_MANAGER and PLATFORM_OPERATIONS_ADMIN.
+    // GA/GS/GLM are carried over because the platform reset mutations were
+    // previously gated on PLATFORM_ADMIN (GA/GS/GLM); re-gating them on
+    // AUTHORIZATION_RESET must not strip any of them of access they already
+    // had. PLATFORM_OPERATIONS_ADMIN is the new grant added by workspace#019.
     const platformResetAuth =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.AUTHORIZATION_RESET],

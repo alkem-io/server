@@ -61,7 +61,7 @@ export class AiServerResolverMutations {
       actorContext,
       platformAuthorization,
       AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-      'User not authenticated to migrate embeddings'
+      'cleanup ai server collections'
     );
 
     const { host, port, credentials } = this.config.get('platform.vector_db', {

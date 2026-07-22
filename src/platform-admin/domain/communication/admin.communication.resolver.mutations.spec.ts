@@ -127,7 +127,9 @@ describe('AdminCommunicationResolverMutations', () => {
 
   // These tests pin the grant set of the synthetic comms policy. They exist
   // because that grant set is deliberately NARROWER than the platform
-  // authorization policy: GLOBAL_SUPPORT and GLOBAL_LICENSE_MANAGER hold
+  // authorization policy: the other global roles (GLOBAL_SUPPORT here, and
+  // GLOBAL_LICENSE_MANAGER on the platform policy, which is not an
+  // AuthorizationRoleGlobal so cannot be asserted against directly) hold
   // PLATFORM_ADMIN / PLATFORM_OPERATIONS_ADMIN platform-wide but have never
   // been able to run the adminCommunication* mutations, which act directly on
   // Matrix rooms across every Space. If a future change harmonises the
@@ -148,7 +150,7 @@ describe('AdminCommunicationResolverMutations', () => {
       );
     });
 
-    it('does not grant the comms family to GLOBAL_SUPPORT or GLOBAL_LICENSE_MANAGER', () => {
+    it('does not grant the comms family to GLOBAL_SUPPORT or GLOBAL_COMMUNITY_READ', () => {
       const [roles] =
         authorizationPolicyService.createGlobalRolesAuthorizationPolicy.mock
           .calls[0];

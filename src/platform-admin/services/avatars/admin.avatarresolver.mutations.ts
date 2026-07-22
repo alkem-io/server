@@ -42,7 +42,7 @@ export class AdminSearchContributorsMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-      `Update contributor avatars to be stored as Documents: ${actorContext.actorID}`
+      'Update contributor avatars to be stored as Documents'
     );
 
     let profile =
