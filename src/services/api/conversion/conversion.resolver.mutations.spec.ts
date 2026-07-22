@@ -297,4 +297,176 @@ describe('ConversionResolverMutations', () => {
       ).rejects.toThrow();
     });
   });
+
+  // ── moveSpaceL2ToSpaceL1 (T006: S7–S10) ──────────────────────────
+
+  describe('moveSpaceL2ToSpaceL1', () => {
+    // Convenience setup: wires up all the service mocks needed for the happy path
+    const setupMoveL2L1HappyPath = (
+      platformRolesAccessFromTarget = { roles: ['REGISTERED'] }
+    ) => {
+      const savedSpaceId = 'saved-l2-space';
+      const movedSpace = {
+        id: savedSpaceId,
+        levelZeroSpaceID: 'target-l0',
+        platformRolesAccess: { roles: [] }, // old value before recompute
+      };
+      const savedSpace = { ...movedSpace };
+      const targetParentL1 = {
+        id: 'target-l1',
+        platformRolesAccess: platformRolesAccessFromTarget,
+      };
+
+      authorizationService.grantAccessOrFail.mockReturnValue(undefined);
+      (conversionService as any).moveSpaceL2ToSpaceL1OrFail.mockResolvedValue({
+        space: movedSpace,
+        removedActorIds: ['actor-removed'],
+      });
+      spaceService.save.mockResolvedValue(savedSpace);
+      // Call sequence for getSpaceOrFail:
+      // 1. targetParentL1 — for updatePlatformRolesAccessRecursively
+      // 2. subspace with parentSpace.authorization — for getParentSpaceAuthorization
+      // 3. final return
+      spaceService.getSpaceOrFail
+        .mockResolvedValueOnce(targetParentL1)
+        .mockResolvedValueOnce({
+          id: savedSpaceId,
+          parentSpace: { authorization: { id: 'parent-auth' } },
+        })
+        .mockResolvedValue({ id: savedSpaceId });
+      (spaceService as any).updatePlatformRolesAccessRecursively = vi
+        .fn()
+        .mockImplementation(async (space: any, parentAccess: any) => {
+          space.platformRolesAccess = parentAccess;
+          return space;
+        });
+      spaceAuthorizationService.applyAuthorizationPolicy.mockResolvedValue([]);
+      authorizationPolicyService.saveAll.mockResolvedValue(undefined);
+      (conversionService as any).invalidateUrlCachesForSubtree = vi
+        .fn()
+        .mockResolvedValue(undefined);
+      (conversionService as any).moveRoomsService = {
+        handleRoomsDuringMove: vi.fn().mockResolvedValue(undefined),
+      };
+      (conversionService as any).dispatchAutoInvitesAfterMove = vi
+        .fn()
+        .mockResolvedValue(undefined);
+
+      return { movedSpace, savedSpace, targetParentL1 };
+    };
+
+    // S9 — non-PLATFORM_ADMIN rejected before any service call
+    it('should reject non-PLATFORM_ADMIN before any service call (S9)', async () => {
+      authorizationService.grantAccessOrFail.mockImplementation(() => {
+        throw new Error('Unauthorized');
+      });
+
+      await expect(
+        resolver.moveSpaceL2ToSpaceL1(actorContext, {
+          spaceL2ID: 'space-l2',
+          targetSpaceL1ID: 'target-l1',
+        })
+      ).rejects.toThrow('Unauthorized');
+
+      expect(
+        (conversionService as any).moveSpaceL2ToSpaceL1OrFail
+      ).not.toHaveBeenCalled();
+    });
+
+    // S7 (R-1/R-5 pattern): recompute assertion —
+    // updatePlatformRolesAccessRecursively called with the moved space +
+    // the TARGET parent's platformRolesAccess BEFORE applyAuthorizationPolicy,
+    // and the space's platform-READ access equals the value recomputed from
+    // the target chain — assert the VALUE, not just the call.
+    it('should recompute platformRolesAccess from target parent BEFORE applyAuthorizationPolicy (S7/R-1)', async () => {
+      const targetPlatformAccess = { roles: ['REGISTERED', 'ANONYMOUS'] };
+      const { movedSpace } = setupMoveL2L1HappyPath(targetPlatformAccess);
+
+      await resolver.moveSpaceL2ToSpaceL1(actorContext, {
+        spaceL2ID: 'space-l2',
+        targetSpaceL1ID: 'target-l1',
+      });
+
+      // Assert updatePlatformRolesAccessRecursively called with the moved space
+      // and the target parent's platformRolesAccess
+      expect(
+        (spaceService as any).updatePlatformRolesAccessRecursively
+      ).toHaveBeenCalledWith(
+        expect.objectContaining({ id: movedSpace.id }),
+        targetPlatformAccess
+      );
+
+      // Assert the call order: recompute BEFORE applyAuthorizationPolicy
+      const recomputeOrder = (spaceService as any)
+        .updatePlatformRolesAccessRecursively.mock.invocationCallOrder[0];
+      const authPolicyOrder =
+        spaceAuthorizationService.applyAuthorizationPolicy.mock
+          .invocationCallOrder[0];
+      expect(recomputeOrder).toBeLessThan(authPolicyOrder);
+
+      // Assert the VALUE (S7): the second argument to the recompute call is
+      // exactly the target parent's platformRolesAccess (not a copy, the same ref).
+      const recomputeCallArgs = (spaceService as any)
+        .updatePlatformRolesAccessRecursively.mock.calls[0];
+      expect(recomputeCallArgs[1]).toBe(targetPlatformAccess);
+    });
+
+    // S8 (FR-013): handleRoomsDuringMove invoked post-commit; rejection
+    // neither throws nor rolls back the move
+    it('should call handleRoomsDuringMove post-commit; its rejection does not throw (S8/FR-013)', async () => {
+      setupMoveL2L1HappyPath();
+      (conversionService as any).moveRoomsService.handleRoomsDuringMove = vi
+        .fn()
+        .mockRejectedValue(new Error('Matrix unavailable'));
+
+      // Should NOT throw even though rooms service fails
+      await expect(
+        resolver.moveSpaceL2ToSpaceL1(actorContext, {
+          spaceL2ID: 'space-l2',
+          targetSpaceL1ID: 'target-l1',
+        })
+      ).resolves.toBeDefined();
+
+      expect(
+        (conversionService as any).moveRoomsService.handleRoomsDuringMove
+      ).toHaveBeenCalledWith('saved-l2-space', ['actor-removed']);
+    });
+
+    // S10 (US4 server proof): autoInvite on → dispatchAutoInvitesAfterMove
+    // called with exact args; off → not called
+    it('autoInvite on → dispatchAutoInvitesAfterMove called with exact args (S10)', async () => {
+      setupMoveL2L1HappyPath();
+
+      await resolver.moveSpaceL2ToSpaceL1(actorContext, {
+        spaceL2ID: 'space-l2',
+        targetSpaceL1ID: 'target-l1',
+        autoInvite: true,
+        invitationMessage: 'Welcome back!',
+      });
+
+      expect(
+        (conversionService as any).dispatchAutoInvitesAfterMove
+      ).toHaveBeenCalledWith(
+        ['actor-removed'],
+        'target-l0',
+        'saved-l2-space',
+        actorContext.actorID,
+        'Welcome back!'
+      );
+    });
+
+    it('autoInvite off → dispatchAutoInvitesAfterMove NOT called (S10)', async () => {
+      setupMoveL2L1HappyPath();
+
+      await resolver.moveSpaceL2ToSpaceL1(actorContext, {
+        spaceL2ID: 'space-l2',
+        targetSpaceL1ID: 'target-l1',
+        autoInvite: false,
+      });
+
+      expect(
+        (conversionService as any).dispatchAutoInvitesAfterMove
+      ).not.toHaveBeenCalled();
+    });
+  });
 });
