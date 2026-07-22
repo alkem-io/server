@@ -64,6 +64,12 @@ describe('CollaboraDocumentResolverMutations', () => {
         profile: { displayName: 'Quarterly Report' },
       } as any);
       vi.mocked(
+        collaboraDocumentService.updateCollaboraDocument
+      ).mockResolvedValue({
+        id: 'collab-doc-1',
+        profile: { displayName: 'A New Title' },
+      } as any);
+      vi.mocked(
         communityResolverService.getCommunityForCollaboraDocumentOrFail
       ).mockResolvedValue({ id: 'community-1' } as any);
       vi.mocked(
@@ -71,7 +77,7 @@ describe('CollaboraDocumentResolverMutations', () => {
       ).mockResolvedValue('space-root');
     };
 
-    it('enforces UPDATE, does not forward displayName, and reports COLLABORA_DOCUMENT_REPLACED on success', async () => {
+    it('enforces UPDATE, applies the chosen displayName via the rename path, and reports COLLABORA_DOCUMENT_REPLACED on success', async () => {
       wireHappyPath();
       const actorContext = { actorID: 'user-1' } as any;
 
@@ -88,9 +94,7 @@ describe('CollaboraDocumentResolverMutations', () => {
         expect.any(String)
       );
 
-      // displayName is accepted but NOT applied (FR-009/FR-015): it must never
-      // reach the service. The service is called with id/buffer/filename/mime/
-      // actorID only.
+      // The file swap is called with id/buffer/filename/mime/actorID only …
       expect(
         collaboraDocumentService.replaceCollaboraDocument
       ).toHaveBeenCalledWith(
@@ -101,18 +105,58 @@ describe('CollaboraDocumentResolverMutations', () => {
         'user-1'
       );
 
+      // … then the chosen title is persisted as the display name via the rename
+      // path, keeping the same document entity.
+      expect(
+        collaboraDocumentService.updateCollaboraDocument
+      ).toHaveBeenCalledWith('collab-doc-1', 'A New Title');
+
       expect(
         contributionReporter.calloutCollaboraDocumentReplaced
       ).toHaveBeenCalledWith(
         expect.objectContaining({
           id: 'collab-doc-1',
-          name: 'Quarterly Report',
+          name: 'A New Title',
           space: 'space-root',
         }),
         actorContext
       );
 
       expect(result.id).toBe('collab-doc-1');
+    });
+
+    it('does not rename when no title is supplied', async () => {
+      wireHappyPath();
+
+      await resolver.replaceCollaboraDocument(
+        { actorID: 'user-1' } as any,
+        { ID: 'collab-doc-1' },
+        fileUpload()
+      );
+
+      expect(
+        collaboraDocumentService.updateCollaboraDocument
+      ).not.toHaveBeenCalled();
+    });
+
+    it('still returns the swapped document when persisting the chosen title fails (best-effort, no double-swap)', async () => {
+      wireHappyPath();
+      vi.mocked(
+        collaboraDocumentService.updateCollaboraDocument
+      ).mockRejectedValue(new Error('file-service blip'));
+
+      const result = await resolver.replaceCollaboraDocument(
+        { actorID: 'user-1' } as any,
+        { ID: 'collab-doc-1', displayName: 'A New Title' },
+        fileUpload()
+      );
+
+      // The already-committed swap is returned; the mutation does not throw
+      // (which would prompt a client retry → a second swap).
+      expect(result.id).toBe('collab-doc-1');
+      expect(
+        collaboraDocumentService.replaceCollaboraDocument
+      ).toHaveBeenCalledTimes(1);
     });
 
     it('refuses when the caller lacks UPDATE and never touches the document', async () => {

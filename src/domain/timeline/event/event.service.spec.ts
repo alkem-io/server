@@ -528,6 +528,39 @@ describe('CalendarEventService', () => {
       expect(result.startDate).toEqual(updateInput.startDate);
     });
 
+    it('applies durationMinutes/durationDays of 0 (shrinking a multi-day event to a single day)', async () => {
+      // Editing a 4-day whole-day event down to a single day sends 0/0. A truthy
+      // guard would drop those and keep the old multi-day span.
+      const updateInput = buildUpdateInput({
+        wholeDay: true,
+        durationMinutes: 0,
+        durationDays: 0,
+      });
+      const mockEvent = {
+        id: 'event-1',
+        nameID: 'test-event',
+        durationMinutes: 5760, // old 4-day span
+        durationDays: 4,
+        wholeDay: true,
+        multipleDays: true,
+        startDate: new Date('2025-06-15'),
+        type: CalendarEventType.EVENT,
+        visibleOnParentCalendar: true,
+        profile: { id: 'profile-1', displayName: 'Test Event' },
+        comments: { id: 'room-1' },
+      } as unknown as CalendarEvent;
+
+      vi.spyOn(calendarEventRepository, 'findOne').mockResolvedValue(mockEvent);
+      vi.spyOn(calendarEventRepository, 'save').mockImplementation(entity =>
+        Promise.resolve(entity as CalendarEvent)
+      );
+
+      const result = await service.updateCalendarEvent(updateInput);
+
+      expect(result.durationMinutes).toBe(0);
+      expect(result.durationDays).toBe(0);
+    });
+
     it('should update the profile when profileData is provided and profile exists', async () => {
       // Arrange
       const updatedProfile = {

@@ -1,12 +1,70 @@
 import {
   calculateCalendarEventEndDate,
   foldIcsLine,
-  formatDateOnly,
+  formatDateOnlyUtc,
   formatDatesForCalendar,
   generateCalendarUrls,
   generateICS,
+  validateCalendarDateRange,
 } from './calendar.event.calendar-links';
 import { ICalendarEvent } from './event.interface';
+
+describe('validateCalendarDateRange', () => {
+  const ID = 'evt-1';
+
+  it('accepts a single-day whole-day event (start === end)', () => {
+    // durationMinutes = 0 ⇒ end === start; the exclusive +1 day is added at export.
+    expect(() =>
+      validateCalendarDateRange(
+        '2026-07-20T00:00:00.000Z',
+        '2026-07-20T00:00:00.000Z',
+        ID,
+        true
+      )
+    ).not.toThrow();
+  });
+
+  it('accepts a multi-day whole-day event (end after start)', () => {
+    expect(() =>
+      validateCalendarDateRange(
+        '2026-07-20T00:00:00.000Z',
+        '2026-07-22T00:00:00.000Z',
+        ID,
+        true
+      )
+    ).not.toThrow();
+  });
+
+  it('rejects a zero-length timed event (start === end)', () => {
+    expect(() =>
+      validateCalendarDateRange(
+        '2026-07-20T10:00:00.000Z',
+        '2026-07-20T10:00:00.000Z',
+        ID,
+        false
+      )
+    ).toThrow();
+  });
+
+  it('rejects an end before the start (whole-day and timed)', () => {
+    expect(() =>
+      validateCalendarDateRange(
+        '2026-07-22T00:00:00.000Z',
+        '2026-07-20T00:00:00.000Z',
+        ID,
+        true
+      )
+    ).toThrow();
+    expect(() =>
+      validateCalendarDateRange(
+        '2026-07-20T12:00:00.000Z',
+        '2026-07-20T10:00:00.000Z',
+        ID,
+        false
+      )
+    ).toThrow();
+  });
+});
 
 describe('CalendarEventCalendarLinks', () => {
   it('formats calendar dates for Google and Outlook', () => {
@@ -22,7 +80,8 @@ describe('CalendarEventCalendarLinks', () => {
     expect(result.icalEnd).toBe('20260220T110000Z');
   });
 
-  it('formats whole-day dates as date-only values', () => {
+  it('formats whole-day dates as date-only values with an exclusive end', () => {
+    // Last covered day is the 21st; every target's end is exclusive (the 22nd).
     const result = formatDatesForCalendar(
       '2026-02-20T00:00:00Z',
       '2026-02-21T00:00:00Z',
@@ -31,14 +90,51 @@ describe('CalendarEventCalendarLinks', () => {
 
     expect(result.google).toBe('20260220/20260222');
     expect(result.outlookStart).toBe('2026-02-20');
-    expect(result.outlookEnd).toBe('2026-02-21');
+    expect(result.outlookEnd).toBe('2026-02-22');
     expect(result.icalStart).toBe('20260220');
-    expect(result.icalEnd).toBe('20260221');
+    expect(result.icalEnd).toBe('20260222');
     expect(result.wholeDay).toBe(true);
   });
 
-  it('formatDateOnly extracts YYYYMMDD from ISO string', () => {
-    expect(formatDateOnly('2026-02-20T10:00:00.000Z')).toBe('20260220');
+  it('formatDateOnlyUtc extracts the UTC calendar day YYYYMMDD', () => {
+    expect(formatDateOnlyUtc('2026-02-20T00:00:00.000Z')).toBe('20260220');
+  });
+
+  describe('whole-day date-only handling', () => {
+    // A whole-day event is a bare calendar date, sent by the client as
+    // UTC-midnight of the intended day and exported as that UTC calendar day —
+    // timezone-independent (see calendar.event.calendar-links.wholeday-tz.spec.ts).
+
+    it('exports the UTC calendar day with an exclusive end for a single-day event', () => {
+      // Whole-day "23 July 2026", single day, stored as UTC-midnight.
+      const result = formatDatesForCalendar(
+        '2026-07-23T00:00:00.000Z',
+        '2026-07-23T00:00:00.000Z',
+        true
+      );
+
+      expect(result.icalStart).toBe('20260723');
+      expect(result.icalEnd).toBe('20260724');
+      expect(result.outlookStart).toBe('2026-07-23');
+      expect(result.outlookEnd).toBe('2026-07-24');
+      expect(result.google).toBe('20260723/20260724');
+    });
+
+    it('emits an exclusive DTEND (last day + 1) for a multi-day whole-day event', () => {
+      // The reported case: an event covering Jan 1–Jan 3 (three days). The
+      // stored end date is the last covered day (the 3rd); DTEND must be the
+      // 4th so importers show Jan 1–3 rather than Jan 1–2.
+      const result = formatDatesForCalendar(
+        '2001-01-01T00:00:00.000Z',
+        '2001-01-03T00:00:00.000Z',
+        true
+      );
+
+      expect(result.icalStart).toBe('20010101');
+      expect(result.icalEnd).toBe('20010104');
+      expect(result.outlookEnd).toBe('2001-01-04');
+      expect(result.google).toBe('20010101/20010104');
+    });
   });
 
   it('generates calendar URLs with encoded fields', () => {
@@ -87,7 +183,8 @@ describe('CalendarEventCalendarLinks', () => {
     expect(urls.googleCalendarUrl).toContain('dates=20260310/20260312');
     expect(urls.outlookCalendarUrl).toContain('allday=true');
     expect(urls.outlookCalendarUrl).toContain('startdt=2026-03-10');
-    expect(urls.outlookCalendarUrl).toContain('enddt=2026-03-11');
+    // Exclusive end — the day after the last covered day (the 11th → the 12th).
+    expect(urls.outlookCalendarUrl).toContain('enddt=2026-03-12');
   });
 
   it('generates RFC5545 iCalendar content', () => {

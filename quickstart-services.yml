@@ -390,7 +390,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_notifications
     hostname: notifications
-    image: alkemio/notifications:v0.35.0
+    image: alkemio/notifications:v0.36.0
     depends_on:
       rabbitmq:
         condition: service_healthy
@@ -529,7 +529,7 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_file_service
     hostname: file-service
-    image: alkemio/file-service:v0.2.1
+    image: alkemio/file-service:v0.2.2
     depends_on:
       postgres:
         condition: service_healthy
@@ -564,7 +564,7 @@ services:
   # below waits for this to complete (service_completed_successfully).
   file-backup-migrate:
     container_name: alkemio_dev_file_backup_migrate
-    image: alkemio/file-backup-service:v0.0.2
+    image: alkemio/file-backup-service:v0.0.4
     depends_on:
       postgres:
         condition: service_healthy
@@ -587,7 +587,7 @@ services:
   file-backup-service:
     container_name: alkemio_dev_file_backup_service
     hostname: file-backup-service
-    image: alkemio/file-backup-service:v0.0.2
+    image: alkemio/file-backup-service:v0.0.4
     depends_on:
       postgres:
         condition: service_healthy
@@ -697,9 +697,11 @@ services:
       - 'host.docker.internal:host-gateway'
     container_name: alkemio_dev_wopi_service
     hostname: wopi-service
-    image: alkemio/wopi-service:v0.1.0
+    image: alkemio/wopi-service:v0.1.4
     depends_on:
       postgres:
+        condition: service_healthy
+      rabbitmq:
         condition: service_healthy
       authorization-evaluation:
         condition: service_started
@@ -728,6 +730,10 @@ services:
       - WOPI_TOKEN_SECRET=dev-wopi-token-secret-change-in-production
       - WOPI_SERVER_PORT=8080
       - WOPI_PROOF_VALIDATION=false
+      # RabbitMQ — WITHOUT this the publisher is a no-op and every event the WOPI
+      # emits (office-document contribution/view AND the in-editor rename event the
+      # server consumes to persist a Collabora rename) is silently dropped.
+      - RABBITMQ_URL=amqp://${RABBITMQ_USER}:${RABBITMQ_PASSWORD}@rabbitmq:5672/
       - LOG_LEVEL=info
     restart: unless-stopped
     networks:

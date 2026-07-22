@@ -6,24 +6,27 @@ import { randomUUID } from 'crypto';
  * `platform-operations-admin` role on the existing
  * platform RoleSet so the EXISTING `assignPlatformRoleToUser` /
  * `removePlatformRoleFromUser` mutations can grant / revoke the
- * `platform-operations-admin` credential per user. Holders are granted the dedicated
- * AUTHORIZATION_RESET privilege by the credential rules in the
- * *.service.authorization.ts files (applied on authorization-policy reset;
- * no data migration for the rules themselves — run one authorization reset
- * post-deploy).
+ * `platform-operations-admin` credential per user. Holders are granted the
+ * dedicated AUTHORIZATION_RESET and PLATFORM_OPERATIONS_ADMIN privileges by the
+ * credential rules in the *.service.authorization.ts files (applied on
+ * authorization-policy reset; no data migration for the rules themselves — run
+ * one authorization reset post-deploy).
  *
- * This migration is the single source of the role for BOTH cases: on a fresh
- * bootstrap it runs after the seed (higher timestamp) and inserts the role;
- * on an already-bootstrapped database it patches the existing platform RoleSet.
- * The seed migration is intentionally left untouched (applied migrations are
- * immutable). Idempotent: it inserts only when the role is absent from the
- * platform RoleSet.
+ * Fresh bootstraps seed this role via the seed migration's createPlatformRoles;
+ * this migration covers already-bootstrapped databases (same split as
+ * 1780600000000-PlatformAssistantAccessRole). Idempotent: it inserts only when
+ * the role is absent from the platform RoleSet.
  */
-export class PlatformOperationsAdminRole1783600000000 implements MigrationInterface {
-  name = 'PlatformOperationsAdminRole1783600000000';
+export class PlatformOperationsAdminRole1784556812652
+  implements MigrationInterface
+{
+  name = 'PlatformOperationsAdminRole1784556812652';
 
   private readonly roleName = 'platform-operations-admin';
-  private readonly credential = { type: 'platform-operations-admin', resourceID: '' };
+  private readonly credential = {
+    type: 'platform-operations-admin',
+    resourceID: '',
+  };
   private readonly userPolicy = { minimum: 0, maximum: -1 };
 
   public async up(queryRunner: QueryRunner): Promise<void> {

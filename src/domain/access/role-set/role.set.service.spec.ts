@@ -2805,6 +2805,242 @@ describe('RoleSetService', () => {
       ]);
       expect(invitationCalls).toEqual(applicationCalls);
     });
+
+    // Feature 017 round 2 — direct join (source: 'join'). The join source is
+    // treated identically to 'application' for the ancestor-grant decision,
+    // evaluated once at join time (no approval re-check).
+    describe("source: 'join' (direct join — round 2)", () => {
+      it('(US4/FR-023) grants the full 3-level chain atomically for an eligible non-parent-member join', async () => {
+        const root = spaceRoleSet('root');
+        const mid = spaceRoleSet('mid');
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          root,
+          mid,
+          target,
+        ]);
+        const authSpy = vi
+          .spyOn(service, 'isCombinedApplicationGrantAuthorised')
+          .mockResolvedValue(true);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        const grantSpy = vi
+          .spyOn(service as any, 'grantRoleCredential')
+          .mockResolvedValue(undefined);
+        const sideEffectsSpy = vi
+          .spyOn(service as any, 'applyRoleGrantSideEffects')
+          .mockResolvedValue(undefined);
+        const transaction = passthroughTransaction();
+
+        await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'join' }
+        );
+
+        // Same combined-flow authorisation predicate as the application source.
+        expect(authSpy).toHaveBeenCalledWith(target, 'user-1');
+        expect(transaction).toHaveBeenCalledTimes(1);
+        expect(grantSpy.mock.calls.map((c: any[]) => c[0].id)).toEqual([
+          'root',
+          'mid',
+          'target',
+        ]);
+        expect(sideEffectsSpy).toHaveBeenCalledTimes(3);
+      });
+
+      it('(US4) grants only the MISSING ancestors — already-member ancestors skipped', async () => {
+        const root = spaceRoleSet('root');
+        const mid = spaceRoleSet('mid');
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          root,
+          mid,
+          target,
+        ]);
+        vi.spyOn(
+          service,
+          'isCombinedApplicationGrantAuthorised'
+        ).mockResolvedValue(true);
+        // Already a member of root + mid (e.g. a member of a private root that
+        // opened a public sub-subspace) — only target is missing.
+        vi.spyOn(service, 'isMember').mockImplementation(
+          async (_actorID: string, rs: IRoleSet) => rs.id !== 'target'
+        );
+        const grantSpy = vi
+          .spyOn(service as any, 'grantRoleCredential')
+          .mockResolvedValue(undefined);
+        vi.spyOn(service as any, 'applyRoleGrantSideEffects').mockResolvedValue(
+          undefined
+        );
+        passthroughTransaction();
+
+        await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'join' }
+        );
+
+        expect(grantSpy.mock.calls.map((c: any[]) => c[0].id)).toEqual([
+          'target',
+        ]);
+      });
+
+      it('(US4/FR-026) rolls back atomically on a mid-chain failure — no side-effects, error propagates', async () => {
+        const root = spaceRoleSet('root');
+        const mid = spaceRoleSet('mid');
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          root,
+          mid,
+          target,
+        ]);
+        vi.spyOn(
+          service,
+          'isCombinedApplicationGrantAuthorised'
+        ).mockResolvedValue(true);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(service as any, 'grantRoleCredential').mockImplementation(
+          async (...args: unknown[]) => {
+            if ((args[0] as IRoleSet).id === 'mid') {
+              throw new Error('grant failed mid-chain');
+            }
+          }
+        );
+        const sideEffectsSpy = vi
+          .spyOn(service as any, 'applyRoleGrantSideEffects')
+          .mockResolvedValue(undefined);
+        passthroughTransaction();
+
+        await expect(
+          service.ensureMemberOfRoleSetAndAncestors(
+            target,
+            'user-1',
+            { actorID: 'user-1' } as any,
+            { source: 'join' }
+          )
+        ).rejects.toThrow('grant failed mid-chain');
+        expect(sideEffectsSpy).not.toHaveBeenCalled();
+      });
+
+      it('(US4/FR-028 behaviour preservation) a parent-member / non-eligible join grants ONLY the target via assignActorToRole (no ancestor walk)', async () => {
+        const target = spaceRoleSet('target');
+        // grantAncestors resolves false (e.g. a parent-member: every ancestor is
+        // already owned so nothing to gate, or a non-combined case).
+        vi.spyOn(
+          service,
+          'isCombinedApplicationGrantAuthorised'
+        ).mockResolvedValue(false);
+        const chainSpy = vi.spyOn(service, 'getRoleSetAncestorChain');
+        const grantSpy = vi
+          .spyOn(service as any, 'grantRoleCredential')
+          .mockResolvedValue(undefined);
+        const assignSpy = vi
+          .spyOn(service, 'assignActorToRole')
+          .mockResolvedValue('user-1');
+        const transaction = passthroughTransaction();
+
+        await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'join' }
+        );
+
+        // No FR-015 stranded-approval throw for the join source — that branch is
+        // application-only; join simply grants the target via today's rule.
+        expect(chainSpy).not.toHaveBeenCalled();
+        expect(grantSpy).not.toHaveBeenCalled();
+        expect(transaction).not.toHaveBeenCalled();
+        expect(assignSpy).toHaveBeenCalledWith(
+          target,
+          RoleName.MEMBER,
+          'user-1',
+          expect.anything(),
+          true
+        );
+      });
+
+      it('(FR-027) notification/event parity: join emits the SAME per-Space dispatch as application', async () => {
+        const root = spaceRoleSet('root');
+        const mid = spaceRoleSet('mid');
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          root,
+          mid,
+          target,
+        ]);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(
+          service,
+          'isCombinedApplicationGrantAuthorised'
+        ).mockResolvedValue(true);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        passthroughTransaction();
+        const dispatch = vi
+          .spyOn(service as any, 'actorAddedToRole')
+          .mockResolvedValue(undefined);
+
+        await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'join' }
+        );
+
+        expect(
+          dispatch.mock.calls.map((c: any[]) => ({
+            roleSetId: c[2].id,
+            triggerEvents: c[5],
+          }))
+        ).toEqual([
+          { roleSetId: 'root', triggerEvents: true },
+          { roleSetId: 'mid', triggerEvents: true },
+          { roleSetId: 'target', triggerEvents: true },
+        ]);
+      });
+
+      it('does not touch open-application / open-invitation caches (a direct join has neither)', async () => {
+        const target = spaceRoleSet('target');
+        vi.spyOn(service, 'getRoleSetAncestorChain').mockResolvedValue([
+          target,
+        ]);
+        vi.spyOn(
+          service,
+          'isCombinedApplicationGrantAuthorised'
+        ).mockResolvedValue(true);
+        vi.spyOn(service, 'isMember').mockResolvedValue(false);
+        vi.spyOn(service as any, 'grantRoleCredential').mockResolvedValue(
+          undefined
+        );
+        vi.spyOn(service as any, 'applyRoleGrantSideEffects').mockResolvedValue(
+          undefined
+        );
+        passthroughTransaction();
+        const appCache = vi.fn();
+        const invCache = vi.fn();
+        (service as any).roleSetCacheService.deleteOpenApplicationFromCache =
+          appCache;
+        (service as any).roleSetCacheService.deleteOpenInvitationFromCache =
+          invCache;
+
+        await service.ensureMemberOfRoleSetAndAncestors(
+          target,
+          'user-1',
+          { actorID: 'user-1' } as any,
+          { source: 'join' }
+        );
+
+        // The source-specific cache tail is skipped for 'join'. (The per-grant
+        // applyRoleGrantSideEffects is mocked out here, so any cache calls it
+        // would make are not counted — this asserts the tail specifically.)
+        expect(appCache).not.toHaveBeenCalled();
+        expect(invCache).not.toHaveBeenCalled();
+      });
+    });
   });
 
   // Feature 017 — the combined-flow authorisation predicate. Drives BOTH the

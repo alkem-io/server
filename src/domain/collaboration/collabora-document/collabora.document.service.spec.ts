@@ -88,7 +88,7 @@ describe('CollaboraDocumentService', () => {
           document: { id: 'new-doc' },
         } as any);
 
-      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue(false);
+      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue('unlocked');
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).mockResolvedValue({ id: 'new-doc', mimeType: XLSX_MIME } as any);
@@ -148,7 +148,7 @@ describe('CollaboraDocumentService', () => {
 
     it('refuses a locked (being-edited) document and makes no change', async () => {
       repository.findOne.mockResolvedValueOnce(existingDoc());
-      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue(true);
+      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue('locked');
 
       await expect(
         service.replaceCollaboraDocument(
@@ -168,9 +168,33 @@ describe('CollaboraDocumentService', () => {
       expect(documentService.deleteDocument).not.toHaveBeenCalled();
     });
 
+    it('refuses when the lock check is unavailable (fails closed with a distinct message) and makes no change', async () => {
+      repository.findOne.mockResolvedValueOnce(existingDoc());
+      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue(
+        'unavailable'
+      );
+
+      await expect(
+        service.replaceCollaboraDocument(
+          'collab-doc-1',
+          Buffer.from('x'),
+          'report.xlsx',
+          XLSX_MIME
+        )
+      ).rejects.toThrow(
+        'The document could not be checked for active edits. Please try again in a moment.'
+      );
+
+      expect(
+        storageBucketService.uploadFileAsDocumentFromBuffer
+      ).not.toHaveBeenCalled();
+      expect(repository.save).not.toHaveBeenCalled();
+      expect(documentService.deleteDocument).not.toHaveBeenCalled();
+    });
+
     it('rejects a different-type replacement and compensates the staged file, leaving the original intact', async () => {
       repository.findOne.mockResolvedValueOnce(existingDoc());
-      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue(false);
+      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue('unlocked');
       // Sniffed as a Word doc, but the existing document is a spreadsheet.
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
@@ -224,7 +248,7 @@ describe('CollaboraDocumentService', () => {
           document: { id: 'new-doc' },
           profile: { displayName: 'Quarterly Report' },
         } as any);
-      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue(false);
+      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue('unlocked');
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).mockResolvedValue({
@@ -261,7 +285,7 @@ describe('CollaboraDocumentService', () => {
         ...existingDoc(),
         authorization: { id: 'collab-auth' },
       });
-      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue(false);
+      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue('unlocked');
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).mockResolvedValue({
@@ -297,7 +321,7 @@ describe('CollaboraDocumentService', () => {
 
     it('propagates an unsupported-format rejection from staging and makes no change', async () => {
       repository.findOne.mockResolvedValueOnce(existingDoc());
-      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue(false);
+      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue('unlocked');
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).mockRejectedValue(new Error('415 ErrUnsupportedMediaType'));
@@ -319,7 +343,7 @@ describe('CollaboraDocumentService', () => {
 
     it('propagates an oversized-file rejection from staging and makes no change', async () => {
       repository.findOne.mockResolvedValueOnce(existingDoc());
-      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue(false);
+      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue('unlocked');
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).mockRejectedValue(new Error('file exceeds maximum size'));
@@ -345,7 +369,7 @@ describe('CollaboraDocumentService', () => {
           documentType: CollaboraDocumentType.SPREADSHEET,
           profile: { id: 'profile-1', displayName: 'Quarterly Report' },
         } as any);
-      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue(false);
+      vi.mocked(wopiServiceAdapter.getLockStatus).mockResolvedValue('unlocked');
       vi.mocked(
         storageBucketService.uploadFileAsDocumentFromBuffer
       ).mockResolvedValue({ id: 'new-doc', mimeType: XLSX_MIME } as any);

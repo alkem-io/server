@@ -1,3 +1,4 @@
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { IInnovationFlow } from '@domain/collaboration/innovation-flow/innovation.flow.interface';
 import { InnovationFlowService } from '@domain/collaboration/innovation-flow/innovation.flow.service';
 import { IInnovationFlowState } from '@domain/collaboration/innovation-flow-state/innovation.flow.state.interface';
@@ -72,6 +73,41 @@ describe('InnovationFlowResolverFields', () => {
 
       expect(result).toEqual(serviceStates);
       expect(innovationFlowService.getStates).toHaveBeenCalledWith('flow-1');
+    });
+
+    // Every field of `settings` is NonNull in GraphQL, and `states` is [InnovationFlowState!]!,
+    // so a single un-backfilled row returning null here does not degrade — it errors the whole
+    // flow, and the space page with it. This is the read path that actually serves these fields.
+    it('should coerce settings of an un-backfilled row to defaults rather than serializing null', async () => {
+      const unbackfilled = {
+        id: 's-1',
+        sortOrder: 1,
+        settings: { allowNewCallouts: false },
+      } as unknown as IInnovationFlowState;
+      const flow = makeFlow('flow-1', [unbackfilled]);
+
+      const [state] = await resolver.states(flow);
+
+      expect(state.settings.descriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.EXPANDED
+      );
+      expect(state.settings.showPublishDetails).toBe(true);
+      expect(state.settings.visible).toBe(true);
+      // a stored value must survive the coercion
+      expect(state.settings.allowNewCallouts).toBe(false);
+    });
+
+    it('should coerce a row with no settings object at all', async () => {
+      const flow = makeFlow('flow-1', [makeState('s-1', 1)]);
+
+      const [state] = await resolver.states(flow);
+
+      expect(state.settings).toEqual({
+        allowNewCallouts: true,
+        visible: true,
+        descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+        showPublishDetails: true,
+      });
     });
   });
 

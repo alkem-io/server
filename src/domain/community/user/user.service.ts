@@ -384,6 +384,10 @@ export class UserService {
             push: true,
           },
         },
+        sound: {
+          chatMessage: true,
+          inAppNotification: true,
+        },
       },
       homeSpace: {
         spaceID: null,

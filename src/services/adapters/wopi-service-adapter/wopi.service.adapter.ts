@@ -6,7 +6,14 @@ import { ConfigService } from '@nestjs/config';
 import { AlkemioConfig } from '@src/types/alkemio.config';
 import { isAxiosError } from 'axios';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { catchError, firstValueFrom, map, of, timeout } from 'rxjs';
+import {
+  catchError,
+  firstValueFrom,
+  map,
+  type Observable,
+  of,
+  timeout,
+} from 'rxjs';
 
 export interface WopiTokenResult {
   accessToken: string;
@@ -19,6 +26,19 @@ export interface WopiLockStatusResult {
   locked: boolean;
   expiresAt?: string;
 }
+
+/**
+ * Outcome of a lock-status check:
+ * - `locked`      — the document is genuinely locked (someone is editing).
+ * - `unlocked`    — the document is free to replace.
+ * - `unavailable` — the check could not be completed (transient error / unreadable
+ *                   response); callers should fail-closed but say the check failed
+ *                   rather than claiming an active edit.
+ * A missing lock-status route (HTTP 404) is deliberately reported as `unlocked`, not
+ * `unavailable`: that is a stale/misconfigured wopi-service, and a deployment fault
+ * must not permanently block replace.
+ */
+export type WopiLockCheck = 'locked' | 'unlocked' | 'unavailable';
 
 @Injectable()
 export class WopiServiceAdapter {
@@ -103,6 +123,26 @@ export class WopiServiceAdapter {
   }
 
   /**
+   * Side-effect-free reachability check of the WOPI service (`GET /health`) — unlike
+   * {@link issueToken} it mints no access token and records no analytics. Used by the editor
+   * to distinguish a genuine save-path outage (WOPI down) from a cosmetic "unsaved" flag.
+   * Returns false on any failure (unreachable / non-2xx / timeout).
+   */
+  async checkHealth(): Promise<boolean> {
+    const url = `${this.baseUrl}/health`;
+    // Must exceed the WOPI /health handler's own worst-case budget (a ~5s context that includes a
+    // live Collabora probe up to ~2s) — a tighter timeout would report a slow-but-healthy service
+    // as down and surface a spurious save-path outage in the editor. A genuinely-down service
+    // fails fast (connection refused) regardless.
+    const request$ = this.httpService.get(url).pipe(
+      timeout({ first: 6000 }),
+      map(response => response.status >= 200 && response.status < 300),
+      catchError(() => of(false))
+    );
+    return firstValueFrom(request$);
+  }
+
+  /**
    * Read-only check of whether a document currently has a non-expired WOPI
    * lock (i.e. it is actively being edited in Collabora). Used to block an
    * in-place backing-file replace while someone is editing (FR-013).
@@ -119,7 +159,7 @@ export class WopiServiceAdapter {
    * replaces. This is why wopi-service must ship before this mutation
    * (rollout ordering). See contracts/wopi-lock-status.md.
    */
-  async getLockStatus(documentId: string): Promise<boolean> {
+  async getLockStatus(documentId: string): Promise<WopiLockCheck> {
     const url = `${this.baseUrl}/wopi/files/${documentId}/lock-status`;
 
     this.logger.verbose?.(
@@ -138,40 +178,54 @@ export class WopiServiceAdapter {
       })
       .pipe(
         timeout({ first: 10000 }),
-        map(response => {
+        map((response): WopiLockCheck => {
           const locked = response.data?.locked;
           if (typeof locked !== 'boolean') {
-            // Fail-closed on an unexpected/malformed body shape (not just on a
-            // thrown transport error): a 200 without a boolean `locked` must not
-            // be read as "free" and allow a swap during an active edit.
+            // A 200 without a boolean `locked` is an unreadable answer: we can't
+            // claim the document is free, but we also can't honestly claim it is
+            // being edited — report the check as unavailable so the caller can
+            // say so rather than inventing an active edit.
             this.logger.warn?.(
-              `[WopiService] getLockStatus: malformed response body for ${documentId}, treating as locked`,
+              `[WopiService] getLockStatus: malformed response body for ${documentId}, treating as unavailable`,
               LogContext.COLLABORATION
             );
-            return true;
+            return 'unavailable';
           }
           this.logger.verbose?.(
             `[WopiService] getLockStatus: locked=${locked}`,
             LogContext.COLLABORATION
           );
-          return locked;
+          return locked ? 'locked' : 'unlocked';
         }),
-        // FAIL-CLOSED: any error means we cannot confirm the document is
-        // free, so we conservatively report it as locked to block the swap.
-        catchError(error => {
+        catchError((error): Observable<WopiLockCheck> => {
+          // A definitive 404 means the lock-status route is absent — a
+          // stale/misconfigured wopi-service, not an active edit. A deployment
+          // fault must not silently block every replace, so proceed (report
+          // `unlocked`) but log loudly so the drift is caught.
+          if (isAxiosError(error) && error.response?.status === 404) {
+            this.logger.error?.(
+              `[WopiService] getLockStatus: lock-status route missing (HTTP 404) for ${documentId}; the wopi-service is stale or misconfigured. Skipping the active-edit guard for this replace — deploy the lock-status endpoint.`,
+              error.stack,
+              LogContext.COLLABORATION
+            );
+            return of('unlocked');
+          }
+          // Any other error means we genuinely could not confirm lock state
+          // (transient HTTP error, network failure, timeout): report the check
+          // as unavailable so the caller fails closed but tells the truth.
           if (isAxiosError(error) && error.response) {
             this.logger.warn?.(
-              `[WopiService] getLockStatus failed (fail-closed, treating as locked): HTTP ${error.response.status}`,
+              `[WopiService] getLockStatus failed (check unavailable): HTTP ${error.response.status}`,
               LogContext.COLLABORATION
             );
           } else {
             this.logger.error?.(
-              `[WopiService] getLockStatus failed (fail-closed, treating as locked): ${error.message ?? error}`,
+              `[WopiService] getLockStatus failed (check unavailable): ${error.message ?? error}`,
               error.stack,
               LogContext.COLLABORATION
             );
           }
-          return of(true);
+          return of('unavailable');
         })
       );
 

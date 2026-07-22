@@ -20,6 +20,7 @@ type NonInteractiveLoginEventType =
   | 'non_interactive_login.bearer_accepted'
   | 'non_interactive_login.bearer_rejected'
   | 'non_interactive_login.credentials_rejected'
+  | 'non_interactive_login.rate_limited'
   | 'non_interactive_login.actor_id_missing'
   | 'non_interactive_login.kratos_unreachable';
 

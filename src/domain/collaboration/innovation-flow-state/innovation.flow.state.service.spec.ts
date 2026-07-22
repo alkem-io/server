@@ -1,3 +1,4 @@
+import { CalloutDescriptionDisplayMode } from '@common/enums/callout.description.display.mode';
 import { TemplateType } from '@common/enums/template.type';
 import {
   EntityNotFoundException,
@@ -105,6 +106,53 @@ describe('InnovationFlowStateService', () => {
 
       expect(result.sortOrder).toBe(0);
     });
+
+    // FR-001/021: descriptionDisplayMode defaults
+    it('should default settings.descriptionDisplayMode to EXPANDED when not provided (FR-001)', async () => {
+      const stateData = { displayName: 'Draft' };
+
+      const result = await service.createInnovationFlowState(stateData as any);
+
+      expect(result.settings.descriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.EXPANDED
+      );
+    });
+
+    it('should honor an explicit create-time descriptionDisplayMode=COLLAPSED (FR-001)', async () => {
+      const stateData = {
+        displayName: 'Dense Phase',
+        settings: {
+          allowNewCallouts: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+        },
+      };
+
+      const result = await service.createInnovationFlowState(stateData as any);
+
+      expect(result.settings.descriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.COLLAPSED
+      );
+    });
+
+    // FR-002/021: showPublishDetails defaults
+    it('should default settings.showPublishDetails to true when not provided (FR-002)', async () => {
+      const stateData = { displayName: 'Draft' };
+
+      const result = await service.createInnovationFlowState(stateData as any);
+
+      expect(result.settings.showPublishDetails).toBe(true);
+    });
+
+    it('should honor an explicit create-time showPublishDetails=false (FR-002)', async () => {
+      const stateData = {
+        displayName: 'Content Block',
+        settings: { allowNewCallouts: true, showPublishDetails: false },
+      };
+
+      const result = await service.createInnovationFlowState(stateData as any);
+
+      expect(result.settings.showPublishDetails).toBe(false);
+    });
   });
 
   describe('update', () => {
@@ -204,6 +252,44 @@ describe('InnovationFlowStateService', () => {
       expect(state.settings.visible).toBe(false);
     });
 
+    it('should preserve every stored settings field when sent as explicit null (never overwrite a NonNull field)', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: false,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+          showPublishDetails: false,
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      // A nullable GraphQL input can arrive as explicit null; the `!= null` guard must
+      // treat it like omission and keep the stored values (so the mutation's own NonNull
+      // response never fails to serialize).
+      await service.update(state, {
+        displayName: 'Name',
+        settings: {
+          allowNewCallouts: null,
+          descriptionDisplayMode: null,
+          showPublishDetails: null,
+          visible: null,
+        },
+      } as any);
+
+      expect(state.settings.descriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.COLLAPSED
+      );
+      expect(state.settings.showPublishDetails).toBe(false);
+      expect(state.settings.visible).toBe(true);
+      // allowNewCallouts is Boolean! on the output type: an explicit null must never be
+      // persisted, or every subsequent read of this state fails NonNull serialization.
+      expect(state.settings.allowNewCallouts).toBe(false);
+    });
+
     it('should preserve stored settings.allowNewCallouts when omitted from the update', async () => {
       const state = {
         id: 'state-1',
@@ -243,7 +329,10 @@ describe('InnovationFlowStateService', () => {
       expect(state.settings.visible).toBe(false);
     });
 
-    it('should default description to empty string when undefined', async () => {
+    // FR-013: displayName/description are partial updates too. A client editing only
+    // `settings` omits them, and omission must preserve — previously `description ?? ''`
+    // wiped the stored description whenever it was not re-sent.
+    it('should preserve the stored description when omitted from the update (FR-013)', async () => {
       const state = {
         id: 'state-1',
         displayName: 'Name',
@@ -258,7 +347,171 @@ describe('InnovationFlowStateService', () => {
         description: undefined,
       } as any);
 
+      expect(state.description).toBe('Old');
+    });
+
+    it('should clear the description when an explicit empty string is sent', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: 'Old',
+        settings: { allowNewCallouts: true },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        description: '',
+      } as any);
+
       expect(state.description).toBe('');
+    });
+
+    it('should preserve the stored displayName when omitted from the update (FR-013)', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Original',
+        description: 'Desc',
+        settings: { allowNewCallouts: true },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      // A settings-only edit must not clobber a concurrent rename it never saw.
+      await service.update(state, {
+        settings: { showPublishDetails: false },
+      } as any);
+
+      expect(state.displayName).toBe('Original');
+      expect(state.description).toBe('Desc');
+      expect(state.settings.showPublishDetails).toBe(false);
+    });
+
+    // FR-001/021: descriptionDisplayMode partial update
+    it('should update descriptionDisplayMode to COLLAPSED when explicitly set (FR-001)', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: {
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+        },
+      } as any);
+
+      expect(state.settings.descriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.COLLAPSED
+      );
+    });
+
+    it('should preserve stored descriptionDisplayMode when omitted from the update (FR-013)', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+          showPublishDetails: true,
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { visible: true },
+      } as any);
+
+      expect(state.settings.descriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.COLLAPSED
+      );
+    });
+
+    // FR-002/021: showPublishDetails partial update
+    it('should update showPublishDetails to false when explicitly set (FR-002)', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: true,
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { showPublishDetails: false },
+      } as any);
+
+      expect(state.settings.showPublishDetails).toBe(false);
+    });
+
+    it('should preserve stored showPublishDetails when omitted from the update (FR-013)', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: false,
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { visible: true },
+      } as any);
+
+      expect(state.settings.showPublishDetails).toBe(false);
+    });
+
+    it('should not alter descriptionDisplayMode when only showPublishDetails changes (FR-013)', async () => {
+      const state = {
+        id: 'state-1',
+        displayName: 'Name',
+        description: '',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+          showPublishDetails: true,
+        },
+      } as any;
+
+      vi.mocked(repository.save).mockResolvedValue(state);
+
+      await service.update(state, {
+        displayName: 'Name',
+        settings: { showPublishDetails: false },
+      } as any);
+
+      expect(state.settings.descriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.COLLAPSED
+      );
+      expect(state.settings.showPublishDetails).toBe(false);
     });
   });
 
@@ -328,6 +581,81 @@ describe('InnovationFlowStateService', () => {
 
       expect(result.settings.visible).toBe(true);
       expect(result.settings.allowNewCallouts).toBe(true);
+    });
+
+    // FR-001/021: descriptionDisplayMode coercion
+    it('should coerce absent descriptionDisplayMode to EXPANDED on read (FR-001)', async () => {
+      const state = {
+        id: 'state-1',
+        settings: { allowNewCallouts: true, visible: true },
+      } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(state);
+
+      const result = await service.getInnovationFlowStateOrFail('state-1');
+
+      expect(result.settings.descriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.EXPANDED
+      );
+    });
+
+    it('should not overwrite an existing descriptionDisplayMode=COLLAPSED on read (FR-001)', async () => {
+      const state = {
+        id: 'state-1',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.COLLAPSED,
+        },
+      } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(state);
+
+      const result = await service.getInnovationFlowStateOrFail('state-1');
+
+      expect(result.settings.descriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.COLLAPSED
+      );
+    });
+
+    // FR-002/021: showPublishDetails coercion
+    it('should coerce absent showPublishDetails to true on read (FR-002)', async () => {
+      const state = {
+        id: 'state-1',
+        settings: { allowNewCallouts: true, visible: true },
+      } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(state);
+
+      const result = await service.getInnovationFlowStateOrFail('state-1');
+
+      expect(result.settings.showPublishDetails).toBe(true);
+    });
+
+    it('should not overwrite an existing showPublishDetails=false on read (FR-002)', async () => {
+      const state = {
+        id: 'state-1',
+        settings: {
+          allowNewCallouts: true,
+          visible: true,
+          descriptionDisplayMode: CalloutDescriptionDisplayMode.EXPANDED,
+          showPublishDetails: false,
+        },
+      } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(state);
+
+      const result = await service.getInnovationFlowStateOrFail('state-1');
+
+      expect(result.settings.showPublishDetails).toBe(false);
+    });
+
+    it('should initialize settings with all defaults when settings is entirely absent on read (FR-001/FR-002)', async () => {
+      const state = { id: 'state-1' } as any;
+      vi.mocked(repository.findOne).mockResolvedValue(state);
+
+      const result = await service.getInnovationFlowStateOrFail('state-1');
+
+      expect(result.settings.descriptionDisplayMode).toBe(
+        CalloutDescriptionDisplayMode.EXPANDED
+      );
+      expect(result.settings.showPublishDetails).toBe(true);
     });
   });
 

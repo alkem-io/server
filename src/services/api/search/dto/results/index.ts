@@ -1,6 +1,7 @@
 export * from './base.search.hit';
 export * from './search.category.result';
 export * from './search.result.callout';
+export * from './search.result.collabora-document';
 export * from './search.result.dto';
 export * from './search.result.interface';
 export * from './search.result.memo';

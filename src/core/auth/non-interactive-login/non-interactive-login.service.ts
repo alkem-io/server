@@ -20,6 +20,13 @@ export class NonInteractiveLoginInvalidCredentialsError extends Error {
   }
 }
 
+export class NonInteractiveLoginRateLimitedError extends Error {
+  constructor() {
+    super('rate_limited');
+    this.name = 'NonInteractiveLoginRateLimitedError';
+  }
+}
+
 export class NonInteractiveLoginActorIdMissingError extends Error {
   constructor() {
     super('actor_id_missing');
@@ -117,8 +124,8 @@ export class NonInteractiveLoginService {
   }
 
   // Calls Kratos native login flow with the supplied credentials. Returns
-  // the identity object on success. Maps Kratos 4xx → InvalidCredentials,
-  // 5xx / network errors → KratosUnavailable.
+  // the identity object on success. Maps Kratos 429 → RateLimited, other 4xx →
+  // InvalidCredentials, 5xx / network errors → KratosUnavailable.
   private async loginAgainstKratos(
     email: string,
     password: string,
@@ -164,6 +171,19 @@ export class NonInteractiveLoginService {
       return identity;
     } catch (e) {
       const status = extractHttpStatus(e);
+      if (status === 429) {
+        // Kratos rate-limited the login flow. Distinct from a wrong password so
+        // callers (and audit) can tell "slow down" from "bad credentials" — a
+        // 429 folded into invalid_credentials makes load look like an auth bug
+        // (test-suites#563).
+        this.audit.emit({
+          event_type: 'non_interactive_login.rate_limited',
+          outcome: 'failure',
+          email_hash: emailHash,
+          error_code: 'kratos_429',
+        });
+        throw new NonInteractiveLoginRateLimitedError();
+      }
       if (status !== null && status >= 400 && status < 500) {
         this.audit.emit({
           event_type: 'non_interactive_login.credentials_rejected',
