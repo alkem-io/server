@@ -2274,6 +2274,10 @@ type Config {
   featureFlags: [PlatformFeatureFlag!]!
   """Integration with a 3rd party Geo information service"""
   geo: Geo!
+  """
+  Language configuration: eligible set for proactive offers and the platform default.
+  """
+  language: LanguageConfig!
   """Platform related locations."""
   locations: PlatformLocations!
   """Sentry (client monitoring) related configuration."""
@@ -3269,6 +3273,10 @@ type Invitation {
   nextEvents: [String!]!
   """The current state of this Lifecycle."""
   state: String!
+  """
+  Optional language the inviter expects the invitee to prefer (FR-014b — recorded per invitation; DL-1 ruling: present on both Invitation and PlatformInvitation).
+  """
+  suggestedLanguage: String
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   welcomeMessage: String
@@ -3330,6 +3338,15 @@ type KratosIdentity {
   lastName: String
   """The current verification status of the email address."""
   verificationStatus: String!
+}
+
+type LanguageConfig {
+  """The platform-wide default interface language."""
+  default: String!
+  """
+  Languages the platform proactively detects, offers, and allows as invitation suggestions — subset of the supported set; empty = all proactive offers disabled.
+  """
+  eligible: [String!]!
 }
 
 type LatestReleaseDiscussion {
@@ -4841,6 +4858,10 @@ type PlatformInvitation {
   roleSetExtraRoles: [RoleName!]!
   """Whether to also add the invited user to the parent community."""
   roleSetInvitedToParent: Boolean!
+  """
+  Optional language the inviter expects the invitee to prefer (FR-014b — recorded per invitation; DL-1 ruling: present on both Invitation and PlatformInvitation).
+  """
+  suggestedLanguage: String
   """The date at which the entity was last updated."""
   updatedDate: DateTime!
   welcomeMessage: String
@@ -6765,6 +6786,14 @@ type UserSettings {
   homeSpace: UserSettingsHomeSpace!
   """The ID of the entity"""
   id: UUID!
+  """
+  The interface language chosen by this User. Null = the User has never chosen a language (distinct from having chosen the platform default).
+  """
+  language: String
+  """
+  Whether this User has answered the one-time language offer (global across all languages — FR-005a). Latched true by any language write.
+  """
+  languageOfferAnswered: Boolean!
   """The notification settings for this User."""
   notification: UserSettingsNotification!
   """The privacy settings for this User"""
@@ -8342,6 +8371,10 @@ input InviteForEntryRoleOnRoleSetInput {
   invitedActorIDs: [UUID!]!
   invitedUserEmails: [String!]!
   roleSetID: UUID!
+  """
+  Optional language the inviter expects the invitees to prefer (single value for the whole batch — FR-014a; must be in the eligible set at compose time — DL-8). Recorded per-invitation so per-invitee granularity later is a UI change, not a migration (FR-014b).
+  """
+  suggestedLanguage: String
   """The welcome message to send"""
   welcomeMessage: String
 }
@@ -9594,6 +9627,14 @@ input UpdateUserSettingsEntityInput {
   designVersion: Int
   """Settings related to Home Space."""
   homeSpace: UpdateUserSettingsHomeSpaceInput
+  """
+  Set the user's interface language preference. Must be a value from the supported languages set. Any language write also latches languageOfferAnswered=true (FR-023 invariant).
+  """
+  language: String
+  """
+  Mark that this User has answered the one-time language offer. One-way latch: setting false is rejected (FR-005a).
+  """
+  languageOfferAnswered: Boolean
   """Settings related to this users Notifications preferences."""
   notification: UpdateUserSettingsNotificationInput
   """Settings related to Privacy."""

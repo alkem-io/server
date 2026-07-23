@@ -1,6 +1,7 @@
+import { SUPPORTED_INTERFACE_LANGUAGES } from '@common/constants/supported.languages';
 import { Field, InputType, Int } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, ValidateNested } from 'class-validator';
+import { IsIn, IsInt, IsOptional, ValidateNested } from 'class-validator';
 import { UpdateUserSettingsAssistantInput } from './user.settings.assistant.dto.update';
 import { UpdateUserSettingsCommunicationInput } from './user.settings.communications.dto.update';
 import { UpdateUserSettingsHomeSpaceInput } from './user.settings.home.space.dto.update';
@@ -59,4 +60,21 @@ export class UpdateUserSettingsEntityInput {
   @IsOptional()
   @IsInt()
   designVersion?: number;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      "Set the user's interface language preference. Must be a value from the supported languages set. Any language write also latches languageOfferAnswered=true (FR-023 invariant).",
+  })
+  @IsOptional()
+  @IsIn([...SUPPORTED_INTERFACE_LANGUAGES])
+  language?: string;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Mark that this User has answered the one-time language offer. One-way latch: setting false is rejected (FR-005a).',
+  })
+  @IsOptional()
+  languageOfferAnswered?: boolean;
 }

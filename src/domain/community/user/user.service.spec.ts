@@ -125,6 +125,18 @@ describe('UserService', () => {
         inAppNotification: true,
       });
     });
+
+    it('should default language to null (never chose)', () => {
+      const defaults = (service as any).getDefaultUserSettings();
+
+      expect(defaults.language).toBeNull();
+    });
+
+    it('should default languageOfferAnswered to false', () => {
+      const defaults = (service as any).getDefaultUserSettings();
+
+      expect(defaults.languageOfferAnswered).toBe(false);
+    });
   });
 
   describe('getUserByIdOrFail', () => {

@@ -43,4 +43,7 @@ export class PlatformInvitation
 
   @Column('boolean', { default: false })
   profileCreated!: boolean;
+
+  @Column('varchar', { length: 16, nullable: true })
+  suggestedLanguage?: string;
 }

@@ -290,6 +290,14 @@ export type AlkemioConfig = {
       max_collaborators_in_room: number;
     };
   };
+  language: {
+    /**
+     * Comma-separated list of language codes the platform proactively offers.
+     * Parsed by KonfigService into a string[]. Empty string ⇒ empty array (kill switch).
+     */
+    eligible: string;
+    default: string;
+  };
   platform: {
     terms: string;
     privacy: string;

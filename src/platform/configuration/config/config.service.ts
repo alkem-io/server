@@ -31,6 +31,15 @@ export class KonfigService {
     const fileConfig = this.configService.get('storage.file', {
       infer: true,
     });
+    const languageConfig = this.configService.get('language', { infer: true });
+    const eligibleRaw: string = languageConfig?.eligible ?? '';
+    const eligible = eligibleRaw
+      ? eligibleRaw
+          .split(',')
+          .map((s: string) => s.trim())
+          .filter((s: string) => s.length > 0)
+      : [];
+
     return {
       authentication: {
         providers: await this.getAuthenticationProvidersConfig(),
@@ -133,6 +142,10 @@ export class KonfigService {
         file: {
           maxFileSize: fileConfig?.max_file_size,
         },
+      },
+      language: {
+        eligible,
+        default: languageConfig?.default ?? 'en',
       },
     };
   }

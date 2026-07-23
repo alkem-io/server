@@ -1,5 +1,4 @@
 import { CommunityMembershipStatus } from '@common/enums/community.membership.status';
-import { RoleName } from '@common/enums/role.name';
 import { RoleSetInvitationResultType } from '@common/enums/role.set.invitation.result.type';
 import { RoleSetType } from '@common/enums/role.set.type';
 import { ValidationException } from '@common/exceptions';

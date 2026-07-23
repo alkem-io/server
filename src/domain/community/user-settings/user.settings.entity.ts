@@ -33,4 +33,10 @@ export class UserSettings extends AuthorizableEntity implements IUserSettings {
 
   @Column('int', { nullable: false, default: DESIGN_VERSION_CURRENT_DEFAULT })
   designVersion!: number;
+
+  @Column('varchar', { length: 16, nullable: true })
+  language!: string | null;
+
+  @Column('boolean', { nullable: false, default: false })
+  languageOfferAnswered!: boolean;
 }

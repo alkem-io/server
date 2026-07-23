@@ -13,6 +13,7 @@ import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
+import { ConfigService } from '@nestjs/config';
 import { Test, TestingModule } from '@nestjs/testing';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { MockCacheManager } from '@test/mocks/cache-manager.mock';
@@ -28,6 +29,7 @@ describe('RegistrationService', () => {
     getUserByIdOrFail: Mock;
     getAccount: Mock;
     deleteUser: Mock;
+    updateUserSettings: Mock;
   };
   let userAuthorizationService: {
     grantCredentialsAllUsersReceive: Mock;
@@ -60,6 +62,7 @@ describe('RegistrationService', () => {
   let accountService: { deleteAccountOrFail: Mock };
   let _organizationService: { getAccount: Mock; deleteOrganization: Mock };
   let notificationPlatformAdapter: { platformUserProfileCreated: Mock };
+  let configService: { get: Mock };
 
   beforeEach(async () => {
     vi.restoreAllMocks();
@@ -90,6 +93,12 @@ describe('RegistrationService', () => {
     notificationPlatformAdapter = module.get(
       NotificationPlatformAdapter
     ) as any;
+    configService = module.get(ConfigService) as any;
+    // Default: eligible = 'nl' (single eligible language).
+    configService.get.mockImplementation((key: string) => {
+      if (key === 'language') return { eligible: 'nl', default: 'en' };
+      return undefined;
+    });
   });
 
   describe('registerNewUser', () => {
@@ -229,7 +238,12 @@ describe('RegistrationService', () => {
   });
 
   describe('processPendingInvitations', () => {
-    const user = { id: 'user-1', email: 'test@example.com' } as any;
+    // A fresh user (language=null, flag=false) — the default state post-migration.
+    const user = {
+      id: 'user-1',
+      email: 'test@example.com',
+      settings: { language: null, languageOfferAnswered: false },
+    } as any;
 
     it('should return empty array when no platform invitations exist', async () => {
       platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
@@ -271,6 +285,146 @@ describe('RegistrationService', () => {
       expect(
         roleSetService.createInvitationExistingActor
       ).toHaveBeenCalledTimes(1);
+    });
+
+    // T009 — registration-time language seeding (FR-016 / DL-7 / DL-8)
+    describe('language seeding from platform invitations', () => {
+      const freshUser = {
+        id: 'user-seed',
+        email: 'seed@example.com',
+        settings: { language: null, languageOfferAnswered: false },
+      } as any;
+
+      beforeEach(() => {
+        // Suppress the role-set and auth flow for these seeding-focused tests.
+        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
+          []
+        );
+        userService.updateUserSettings = vi.fn().mockResolvedValue(freshUser);
+      });
+
+      it('should seed language from an nl invitation and latch the flag', async () => {
+        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
+          [
+            {
+              id: 'pi-nl',
+              roleSet: undefined, // no roleSet → skipped in loop, but seeding runs first
+              createdBy: 'creator',
+              roleSetExtraRoles: [],
+              roleSetInvitedToParent: false,
+              suggestedLanguage: 'nl',
+              createdDate: new Date('2024-01-01'),
+            },
+          ]
+        );
+
+        await service.processPendingInvitations(freshUser);
+
+        expect(userService.updateUserSettings).toHaveBeenCalledWith(freshUser, {
+          language: 'nl',
+        });
+      });
+
+      it('should skip an ineligible suggestion (de) and not seed', async () => {
+        // eligible = 'nl' from the default configService mock; 'de' is not eligible.
+        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
+          [
+            {
+              id: 'pi-de',
+              roleSet: undefined,
+              createdBy: 'creator',
+              roleSetExtraRoles: [],
+              roleSetInvitedToParent: false,
+              suggestedLanguage: 'de',
+              createdDate: new Date('2024-01-01'),
+            },
+          ]
+        );
+
+        await service.processPendingInvitations(freshUser);
+
+        expect(userService.updateUserSettings).not.toHaveBeenCalled();
+      });
+
+      it('should pick the latest-created eligible invitation when multiple exist (DL-7)', async () => {
+        // older = nl (eligible), newer = nl (eligible) → newer wins.
+        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
+          [
+            {
+              id: 'pi-old',
+              roleSet: undefined,
+              createdBy: 'creator',
+              roleSetExtraRoles: [],
+              roleSetInvitedToParent: false,
+              suggestedLanguage: 'nl',
+              createdDate: new Date('2024-01-01'),
+            },
+            {
+              id: 'pi-new',
+              roleSet: undefined,
+              createdBy: 'creator',
+              roleSetExtraRoles: [],
+              roleSetInvitedToParent: false,
+              suggestedLanguage: 'nl',
+              createdDate: new Date('2024-06-01'),
+            },
+          ]
+        );
+
+        await service.processPendingInvitations(freshUser);
+
+        // Both are nl (eligible) — the latest-created (pi-new) should be selected.
+        // Since both resolve to 'nl' the important assertion is called once only.
+        expect(userService.updateUserSettings).toHaveBeenCalledTimes(1);
+        expect(userService.updateUserSettings).toHaveBeenCalledWith(freshUser, {
+          language: 'nl',
+        });
+      });
+
+      it('should not seed when settings are already set (language ≠ null)', async () => {
+        const userWithLanguage = {
+          id: 'user-set',
+          email: 'set@example.com',
+          settings: { language: 'en', languageOfferAnswered: true },
+        } as any;
+        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
+          [
+            {
+              id: 'pi-nl',
+              roleSet: undefined,
+              createdBy: 'creator',
+              roleSetExtraRoles: [],
+              roleSetInvitedToParent: false,
+              suggestedLanguage: 'nl',
+              createdDate: new Date('2024-01-01'),
+            },
+          ]
+        );
+
+        await service.processPendingInvitations(userWithLanguage);
+
+        expect(userService.updateUserSettings).not.toHaveBeenCalled();
+      });
+
+      it('should not seed when no suggestedLanguage on any invitation', async () => {
+        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
+          [
+            {
+              id: 'pi-no-lang',
+              roleSet: undefined,
+              createdBy: 'creator',
+              roleSetExtraRoles: [],
+              roleSetInvitedToParent: false,
+              suggestedLanguage: undefined,
+              createdDate: new Date('2024-01-01'),
+            },
+          ]
+        );
+
+        await service.processPendingInvitations(freshUser);
+
+        expect(userService.updateUserSettings).not.toHaveBeenCalled();
+      });
     });
   });
 

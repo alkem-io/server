@@ -9,4 +9,7 @@ export class CreatePlatformInvitationInput {
   roleSetID?: string;
   roleSetInvitedToParent!: boolean;
   roleSetExtraRoles!: RoleName[];
+
+  /** Optional language the inviter expects the invitee to prefer (FR-014b). */
+  suggestedLanguage?: string;
 }

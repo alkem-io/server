@@ -62,4 +62,7 @@ export class Invitation extends AuthorizableEntity implements IInvitation {
 
   @Column('simple-array', { nullable: false })
   extraRoles!: RoleName[];
+
+  @Column('varchar', { length: 16, nullable: true })
+  suggestedLanguage?: string;
 }
