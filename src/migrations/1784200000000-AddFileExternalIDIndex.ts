@@ -15,8 +15,25 @@ export class AddFileExternalIDIndex1784200000000 implements MigrationInterface {
     // PostgreSQL requires CREATE INDEX CONCURRENTLY to run outside a transaction. Temporarily end
     // the framework transaction using the repository's established migration pattern, then restore
     // it so TypeORM can continue normally. IF NOT EXISTS deliberately adopts a canonical index that
-    // an operator may already have built by hand before rollout.
+    // an operator may already have built by hand before rollout. A failed concurrent build can leave
+    // an INVALID index behind; remove that unusable artifact first so a retry cannot falsely succeed.
     await this.runOutsideTransaction(queryRunner, async () => {
+      const existingIndex: { isValid: boolean }[] = await queryRunner.query(`
+        SELECT index_state.indisvalid AS "isValid"
+        FROM pg_catalog.pg_index AS index_state
+        INNER JOIN pg_catalog.pg_class AS index_class
+          ON index_class.oid = index_state.indexrelid
+        INNER JOIN pg_catalog.pg_namespace AS index_schema
+          ON index_schema.oid = index_class.relnamespace
+        WHERE index_schema.nspname = current_schema()
+          AND index_class.relname = 'IDX_file_externalID'
+      `);
+      if (existingIndex.some(index => !index.isValid)) {
+        await queryRunner.query(
+          `DROP INDEX CONCURRENTLY IF EXISTS "IDX_file_externalID"`
+        );
+      }
+
       await queryRunner.query(
         `CREATE INDEX CONCURRENTLY IF NOT EXISTS "IDX_file_externalID" ON "file" ("externalID")`
       );
