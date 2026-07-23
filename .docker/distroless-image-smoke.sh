@@ -86,6 +86,20 @@ SHARP_OUT="$(run_node -e "require('/usr/src/app/node_modules/sharp'); console.lo
 [ "$SHARP_OUT" = "sharp-ok" ] || fail "expected sharp to load, got: $SHARP_OUT"
 pass "sharp loads (glibc-matched native binary)"
 
+# --- US5-AS2: bare k8s `command:` override resolves `node` via PATH --------
+# A k8s Deployment/Job `command:` replaces the container's ENTRYPOINT
+# entirely — the same as `docker run --entrypoint node <image> ...` (NOT
+# `--entrypoint /nodejs/bin/node`). The distroless base's ENTRYPOINT is the
+# absolute path, so a bare `command: ["node", ...]` (dev-orchestration's
+# migration CronJob invokes the literal `node ./node_modules/typeorm/cli.js
+# ...`) only resolves if /nodejs/bin is on PATH. Regression for the fix that
+# closed this (previously: "exec: \"node\": executable file not found in
+# $PATH").
+BARE_NODE_OUT="$(docker run --rm --entrypoint node "$IMAGE" -e "console.log('bare-node-ok')")"
+[ "$BARE_NODE_OUT" = "bare-node-ok" ] ||
+  fail "bare 'node' (no absolute path) did not resolve via PATH — a k8s bare command: override would fail with 'executable file not found in \$PATH'"
+pass "bare 'node' entrypoint override resolves via PATH (k8s bare command: compatibility)"
+
 # --- SC-001: size reduction vs baseline ------------------------------------
 IMAGE_DIGEST="$(docker inspect "$IMAGE" --format '{{.Id}}')"
 IMAGE_SIZE_BYTES="$(docker save "$IMAGE" | wc -c)"

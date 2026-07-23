@@ -76,6 +76,17 @@ ARG ENV_ARG
 ENV NODE_ENV=$ENV_ARG
 ENV GRAPHQL_ENDPOINT_PORT=$GRAPHQL_ENDPOINT_PORT_ARG
 ENV NODE_OPTIONS=--max-old-space-size=2048
+# US5-AS2 fix: the distroless base sets ENTRYPOINT ["/nodejs/bin/node"], but a
+# bare k8s `command:` override (dev-orchestration's migration CronJob invokes
+# the literal `node ./node_modules/typeorm/cli.js ...`, per the
+# server-migration-entrypoint contract) REPLACES that entrypoint entirely, so
+# the container runtime resolves "node" via PATH lookup before exec — which
+# fails ("exec: \"node\": executable file not found in $PATH") because
+# distroless's default PATH does not include /nodejs/bin. Prepending it here
+# makes the documented literal `node ...` command resolve for any bare
+# command: override, without requiring every consumer to know the absolute
+# binary path.
+ENV PATH="/nodejs/bin:${PATH}"
 
 WORKDIR /usr/src/app
 
