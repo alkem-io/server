@@ -14,7 +14,7 @@ import { UpdateTagsetInput } from '@domain/common/tagset/dto/tagset.dto.update';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
-import { FindOneOptions, Repository } from 'typeorm';
+import { EntityManager, FindOneOptions, Repository } from 'typeorm';
 import { AuthorizationPolicyService } from '../authorization-policy/authorization.policy.service';
 import { ITagsetTemplate } from '../tagset-template';
 import { Tagset } from './tagset.entity';
@@ -280,7 +280,10 @@ export class TagsetService {
     return this.createTagset(tagsetData);
   }
 
-  async save(tagset: ITagset): Promise<ITagset> {
+  async save(tagset: ITagset, mgr?: EntityManager): Promise<ITagset> {
+    if (mgr) {
+      return await mgr.save(Tagset, tagset as Tagset);
+    }
     return await this.tagsetRepository.save(tagset);
   }
 
