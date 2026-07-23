@@ -1,0 +1,81 @@
+# ARC hardening PoC — benchmark (workspace 025 follow-up).
+# Times the real CI workload (mirror of ci-tests.yml's test job, no Sonar, no
+# secrets) on a selectable runner: criteria 1, 5, 7 of
+# platform/github-self-hosted-runners/poc/README.md.
+#
+# Benchmark protocol: dispatch twice per runner — run 1 = cold cache,
+# run 2 = warm (on arc-poc the pnpm cache restores from the in-cluster cache
+# server; the pod itself is always fresh).
+#
+# workflow_dispatch ONLY — the arc-poc lane is trusted-trigger only.
+name: ARC PoC benchmark
+
+on:
+  workflow_dispatch:
+    inputs:
+      runner:
+        description: 'Runner to benchmark'
+        required: true
+        default: 'arc-poc'
+        type: choice
+        options:
+          - arc-poc
+          - ubuntu-latest
+          - m4
+
+permissions:
+  contents: read
+
+jobs:
+  benchmark:
+    runs-on: ${{ inputs.runner == 'm4' && fromJSON('["self-hosted", "macOS", "ARM64", "apple-silicon", "m4"]') || inputs.runner }}
+    timeout-minutes: 30
+    env:
+      NODE_OPTIONS: '--max-old-space-size=4096'
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install pnpm
+        uses: pnpm/action-setup@v4
+        with:
+          dest: ${{ runner.temp }}/setup-pnpm
+
+      - name: Setup Node.js (pnpm cache via actions/cache)
+        uses: actions/setup-node@v7
+        with:
+          node-version: '22.22.0'
+          cache: 'pnpm'
+
+      - name: Install dependencies (timed)
+        run: |
+          start=$(date +%s)
+          pnpm install --frozen-lockfile
+          echo "INSTALL_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+
+      - name: Typecheck (timed)
+        run: |
+          start=$(date +%s)
+          pnpm run typecheck:native
+          echo "TYPECHECK_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+
+      - name: Tests with coverage (timed)
+        timeout-minutes: 15
+        run: |
+          start=$(date +%s)
+          pnpm run test:ci
+          echo "TEST_SECONDS=$(( $(date +%s) - start ))" >> "$GITHUB_ENV"
+
+      - name: Benchmark summary
+        if: always()
+        run: |
+          {
+            echo "## ARC PoC benchmark — ${{ inputs.runner }}"
+            echo "| stage | seconds |"
+            echo "|---|---|"
+            echo "| install | ${INSTALL_SECONDS:-n/a} |"
+            echo "| typecheck | ${TYPECHECK_SECONDS:-n/a} |"
+            echo "| tests | ${TEST_SECONDS:-n/a} |"
+            echo ""
+            echo "- runner: \`${{ inputs.runner }}\`, host: \`$(hostname)\`"
+            echo "- cpus: $(getconf _NPROCESSORS_ONLN), node: $(node --version 2>/dev/null || echo n/a)"
+          } >> "$GITHUB_STEP_SUMMARY"
