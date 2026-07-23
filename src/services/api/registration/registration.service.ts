@@ -263,13 +263,24 @@ export class RegistrationService {
     user: IUser,
     platformInvitations: IPlatformInvitation[]
   ): Promise<void> {
+    // Ensure the settings relation is loaded.  grantCredentialsAllUsersReceive
+    // (called earlier in finalizeUserRegistration) fetches the user with no
+    // relations, so user.settings is undefined on the real production path —
+    // User.settings is declared eager:false (user.entity.ts).  Reload with the
+    // relation when it is missing so the guard below operates on real data, not
+    // on an absent proxy.  (corr-server-1 / spec-server-1 / qual-server-1)
+    let settingsUser = user;
+    if (!settingsUser.settings) {
+      settingsUser = await this.userService.getUserByIdOrFail(user.id, {
+        relations: { settings: true },
+      });
+    }
+
     // Only seed for a truly fresh account (null language + flag false).
-    // Guard against missing settings (e.g. in test harnesses where the mock
-    // user object does not include a settings block).
     if (
-      !user.settings ||
-      user.settings.language !== null ||
-      user.settings.languageOfferAnswered !== false
+      !settingsUser.settings ||
+      settingsUser.settings.language !== null ||
+      settingsUser.settings.languageOfferAnswered !== false
     ) {
       return;
     }
@@ -300,12 +311,14 @@ export class RegistrationService {
       const lang = invitation.suggestedLanguage;
       if (lang && eligible.includes(lang)) {
         // Found the latest-created eligible suggestion — seed and latch.
-        await this.userService.updateUserSettings(user, {
+        // Use settingsUser (which has settings loaded) so updateUserSettings
+        // can read user.settings without hitting an undefined dereference.
+        await this.userService.updateUserSettings(settingsUser, {
           language: lang,
           // languageOfferAnswered is automatically latched by updateSettings (T004)
         });
         this.logger.verbose?.(
-          `Seeded language '${lang}' from platform invitation for user ${user.id} (DL-7/FR-016)`,
+          `Seeded language '${lang}' from platform invitation for user ${settingsUser.id} (DL-7/FR-016)`,
           LogContext.COMMUNITY
         );
         return;

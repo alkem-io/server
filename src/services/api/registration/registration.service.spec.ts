@@ -347,7 +347,15 @@ describe('RegistrationService', () => {
       });
 
       it('should pick the latest-created eligible invitation when multiple exist (DL-7)', async () => {
-        // older = nl (eligible), newer = nl (eligible) → newer wins.
+        // Two DISTINCT eligible languages: pi-old='en' (created earlier),
+        // pi-new='nl' (created later).  With eligible='nl,en', both are
+        // candidates.  The latest-created one (pi-new → 'nl') must win.
+        // An ascending-sort implementation would incorrectly seed 'en' and
+        // fail the assertion — this is what makes the test meaningful (R-6).
+        configService.get.mockImplementation((key: string) => {
+          if (key === 'language') return { eligible: 'nl,en', default: 'en' };
+          return undefined;
+        });
         platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
           [
             {
@@ -356,7 +364,7 @@ describe('RegistrationService', () => {
               createdBy: 'creator',
               roleSetExtraRoles: [],
               roleSetInvitedToParent: false,
-              suggestedLanguage: 'nl',
+              suggestedLanguage: 'en', // older, eligible — must NOT win
               createdDate: new Date('2024-01-01'),
             },
             {
@@ -365,7 +373,7 @@ describe('RegistrationService', () => {
               createdBy: 'creator',
               roleSetExtraRoles: [],
               roleSetInvitedToParent: false,
-              suggestedLanguage: 'nl',
+              suggestedLanguage: 'nl', // newer, eligible — must win
               createdDate: new Date('2024-06-01'),
             },
           ]
@@ -373,8 +381,10 @@ describe('RegistrationService', () => {
 
         await service.processPendingInvitations(freshUser);
 
-        // Both are nl (eligible) — the latest-created (pi-new) should be selected.
-        // Since both resolve to 'nl' the important assertion is called once only.
+        // The latest-created eligible invitation (pi-new → 'nl') must be
+        // selected and the call must happen exactly once.  If the sort were
+        // ascending, 'en' (pi-old) would be seeded instead and this assertion
+        // would fail — proving the sort direction is correct (DL-7).
         expect(userService.updateUserSettings).toHaveBeenCalledTimes(1);
         expect(userService.updateUserSettings).toHaveBeenCalledWith(freshUser, {
           language: 'nl',
@@ -424,6 +434,87 @@ describe('RegistrationService', () => {
         await service.processPendingInvitations(freshUser);
 
         expect(userService.updateUserSettings).not.toHaveBeenCalled();
+      });
+
+      // Regression test for corr-server-1 / spec-server-1 / qual-server-1:
+      // The real production path has user.settings === undefined because
+      // grantCredentialsAllUsersReceive fetches the user with no relations and
+      // User.settings is eager:false.  The previous guard `!user.settings →
+      // return` silently aborted seeding.  The fix reloads the user with
+      // { relations: { settings: true } } when settings is absent.
+      it('should reload settings and seed language when user.settings is not loaded (production path)', async () => {
+        // Simulates what grantCredentialsAllUsersReceive returns: user WITHOUT
+        // the settings relation loaded (eager:false, no options passed).
+        const userWithoutSettings = {
+          id: 'user-seed-prod',
+          email: 'prod@example.com',
+          settings: undefined, // ← the real production state
+        } as any;
+
+        // The user object that getUserByIdOrFail returns when called with
+        // { relations: { settings: true } } — a fresh account.
+        const userWithSettings = {
+          id: 'user-seed-prod',
+          email: 'prod@example.com',
+          settings: { language: null, languageOfferAnswered: false },
+        } as any;
+
+        userService.getUserByIdOrFail.mockResolvedValue(userWithSettings);
+        userService.updateUserSettings = vi
+          .fn()
+          .mockResolvedValue(userWithSettings);
+
+        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
+          [
+            {
+              id: 'pi-nl-prod',
+              roleSet: undefined,
+              createdBy: 'creator',
+              roleSetExtraRoles: [],
+              roleSetInvitedToParent: false,
+              suggestedLanguage: 'nl',
+              createdDate: new Date('2024-01-01'),
+            },
+          ]
+        );
+
+        await service.processPendingInvitations(userWithoutSettings);
+
+        // getUserByIdOrFail must be called with settings relation to hydrate settings
+        expect(userService.getUserByIdOrFail).toHaveBeenCalledWith(
+          'user-seed-prod',
+          { relations: { settings: true } }
+        );
+        // Language must be seeded on the reloaded (settings-bearing) user object
+        expect(userService.updateUserSettings).toHaveBeenCalledWith(
+          userWithSettings,
+          { language: 'nl' }
+        );
+      });
+
+      it('should not reload settings when user.settings is already loaded', async () => {
+        // freshUser already has settings populated — no extra DB fetch needed.
+        platformInvitationService.findPlatformInvitationsForUser.mockResolvedValue(
+          [
+            {
+              id: 'pi-nl-preloaded',
+              roleSet: undefined,
+              createdBy: 'creator',
+              roleSetExtraRoles: [],
+              roleSetInvitedToParent: false,
+              suggestedLanguage: 'nl',
+              createdDate: new Date('2024-01-01'),
+            },
+          ]
+        );
+
+        await service.processPendingInvitations(freshUser);
+
+        // No reload when settings are already on the object
+        expect(userService.getUserByIdOrFail).not.toHaveBeenCalled();
+        expect(userService.updateUserSettings).toHaveBeenCalledWith(freshUser, {
+          language: 'nl',
+        });
       });
     });
   });
