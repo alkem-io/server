@@ -52,7 +52,7 @@
     "schema:sort": "ts-node -r tsconfig-paths/register src/tools/schema/sort-sdl.ts schema.graphql",
     "schema:diff": "ts-node -r tsconfig-paths/register src/tools/schema/diff-schema.ts --old tmp/prev.schema.graphql --new schema.graphql --out change-report.json --deprecations deprecations.json",
     "schema:validate": "ts-node -r tsconfig-paths/register src/tools/schema/validate-artifacts.ts change-report.json deprecations.json",
-    "prepare": "husky"
+    "prepare": "husky || true"
   },
   "overrides": {
     "fs-capacitor": "6.2.0",
@@ -145,8 +145,6 @@
     "replace-special-characters": "^1.2.7",
     "rxjs": "^7.8.1",
     "sharp": "^0.34.5",
-    "ts-node": "^10.9.2",
-    "tsconfig-paths": "4.2.0",
     "typeorm": "https://pkg.pr.new/antst/typeorm@2c8f380",
     "uuid": "^13.0.0",
     "web-push": "^3.6.7",
@@ -188,6 +186,8 @@
     "lint-staged": "^15.2.7",
     "rimraf": "^6.0.1",
     "supertest": "^7.0.0",
+    "ts-node": "^10.9.2",
+    "tsconfig-paths": "4.2.0",
     "typescript": "npm:@typescript/typescript6@6.0.2",
     "@typescript/native": "npm:typescript@7.0.2",
     "unplugin-swc": "^1.5.9",
@@ -205,7 +205,18 @@
   "pnpm": {
     "onlyBuiltDependencies": [
       "sharp"
-    ]
+    ],
+    "supportedArchitectures": {
+      "os": [
+        "current"
+      ],
+      "cpu": [
+        "current"
+      ],
+      "libc": [
+        "glibc"
+      ]
+    }
   },
   "volta": {
     "node": "22.21.1"
