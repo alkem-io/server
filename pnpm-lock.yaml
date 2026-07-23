@@ -39,6 +39,11 @@ overrides:
   '@swc/core-linux-x64-musl': 'false'
   '@swc/core-linux-arm64-musl': 'false'
 
+patchedDependencies:
+  typeorm@0.3.13:
+    hash: 900fefc861876e5a2e5379bc9477be4434233cdbad5d3043cf8c810b26cc80a4
+    path: patches/typeorm@0.3.13.patch
+
 importers:
 
   .:
@@ -108,7 +113,7 @@ importers:
         version: 4.1.2(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)
       '@nestjs/typeorm':
         specifier: 10.0.2
-        version: 10.0.2(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@https://pkg.pr.new/antst/typeorm@2c8f380(ioredis@5.10.1)(mysql2@3.15.1)(pg@8.16.3)(redis@3.1.2)(ts-node@10.9.2(@swc/core@1.15.8(@swc/helpers@0.5.17))(@types/node@22.19.2)(@typescript/typescript6@6.0.2)))
+        version: 10.0.2(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@https://pkg.pr.new/antst/typeorm@2c8f380(patch_hash=900fefc861876e5a2e5379bc9477be4434233cdbad5d3043cf8c810b26cc80a4)(ioredis@5.10.1)(mysql2@3.15.1)(pg@8.16.3)(redis@3.1.2)(ts-node@10.9.2(@swc/core@1.15.8(@swc/helpers@0.5.17))(@types/node@22.19.2)(@typescript/typescript6@6.0.2)))
       '@ory/kratos-client':
         specifier: ^26.2.0
         version: 26.2.0
@@ -291,7 +296,7 @@ importers:
         version: 0.35.3(@types/node@22.19.2)
       typeorm:
         specifier: https://pkg.pr.new/antst/typeorm@2c8f380
-        version: https://pkg.pr.new/antst/typeorm@2c8f380(ioredis@5.10.1)(mysql2@3.15.1)(pg@8.16.3)(redis@3.1.2)(ts-node@10.9.2(@swc/core@1.15.8(@swc/helpers@0.5.17))(@types/node@22.19.2)(@typescript/typescript6@6.0.2))
+        version: https://pkg.pr.new/antst/typeorm@2c8f380(patch_hash=900fefc861876e5a2e5379bc9477be4434233cdbad5d3043cf8c810b26cc80a4)(ioredis@5.10.1)(mysql2@3.15.1)(pg@8.16.3)(redis@3.1.2)(ts-node@10.9.2(@swc/core@1.15.8(@swc/helpers@0.5.17))(@types/node@22.19.2)(@typescript/typescript6@6.0.2))
       uuid:
         specifier: ^13.0.0
         version: 13.0.0
@@ -7912,13 +7917,13 @@ snapshots:
       '@nestjs/microservices': 10.4.20(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)(amqp-connection-manager@4.1.15(amqplib@0.10.9))(amqplib@0.10.9)(cache-manager@5.7.6)(ioredis@5.10.1)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/platform-express': 10.4.20(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)
 
-  '@nestjs/typeorm@10.0.2(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@https://pkg.pr.new/antst/typeorm@2c8f380(ioredis@5.10.1)(mysql2@3.15.1)(pg@8.16.3)(redis@3.1.2)(ts-node@10.9.2(@swc/core@1.15.8(@swc/helpers@0.5.17))(@types/node@22.19.2)(@typescript/typescript6@6.0.2)))':
+  '@nestjs/typeorm@10.0.2(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/core@10.4.20)(reflect-metadata@0.2.2)(rxjs@7.8.2)(typeorm@https://pkg.pr.new/antst/typeorm@2c8f380(patch_hash=900fefc861876e5a2e5379bc9477be4434233cdbad5d3043cf8c810b26cc80a4)(ioredis@5.10.1)(mysql2@3.15.1)(pg@8.16.3)(redis@3.1.2)(ts-node@10.9.2(@swc/core@1.15.8(@swc/helpers@0.5.17))(@types/node@22.19.2)(@typescript/typescript6@6.0.2)))':
     dependencies:
       '@nestjs/common': 10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       '@nestjs/core': 10.4.20(@nestjs/common@10.4.20(class-transformer@0.5.1)(class-validator@0.14.0)(reflect-metadata@0.2.2)(rxjs@7.8.2))(@nestjs/microservices@10.4.20)(@nestjs/platform-express@10.4.20)(reflect-metadata@0.2.2)(rxjs@7.8.2)
       reflect-metadata: 0.2.2
       rxjs: 7.8.2
-      typeorm: https://pkg.pr.new/antst/typeorm@2c8f380(ioredis@5.10.1)(mysql2@3.15.1)(pg@8.16.3)(redis@3.1.2)(ts-node@10.9.2(@swc/core@1.15.8(@swc/helpers@0.5.17))(@types/node@22.19.2)(@typescript/typescript6@6.0.2))
+      typeorm: https://pkg.pr.new/antst/typeorm@2c8f380(patch_hash=900fefc861876e5a2e5379bc9477be4434233cdbad5d3043cf8c810b26cc80a4)(ioredis@5.10.1)(mysql2@3.15.1)(pg@8.16.3)(redis@3.1.2)(ts-node@10.9.2(@swc/core@1.15.8(@swc/helpers@0.5.17))(@types/node@22.19.2)(@typescript/typescript6@6.0.2))
       uuid: 9.0.1
 
   '@noble/hashes@1.8.0': {}
@@ -12377,7 +12382,7 @@ snapshots:
 
   typedarray@0.0.6: {}
 
-  typeorm@https://pkg.pr.new/antst/typeorm@2c8f380(ioredis@5.10.1)(mysql2@3.15.1)(pg@8.16.3)(redis@3.1.2)(ts-node@10.9.2(@swc/core@1.15.8(@swc/helpers@0.5.17))(@types/node@22.19.2)(@typescript/typescript6@6.0.2)):
+  typeorm@https://pkg.pr.new/antst/typeorm@2c8f380(patch_hash=900fefc861876e5a2e5379bc9477be4434233cdbad5d3043cf8c810b26cc80a4)(ioredis@5.10.1)(mysql2@3.15.1)(pg@8.16.3)(redis@3.1.2)(ts-node@10.9.2(@swc/core@1.15.8(@swc/helpers@0.5.17))(@types/node@22.19.2)(@typescript/typescript6@6.0.2)):
     dependencies:
       '@sqltools/formatter': 1.2.5
       app-root-path: 3.1.0

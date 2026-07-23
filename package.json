@@ -243,6 +243,9 @@
       "@napi-rs/canvas-linux-arm64-musl": "false",
       "@swc/core-linux-x64-musl": "false",
       "@swc/core-linux-arm64-musl": "false"
+    },
+    "patchedDependencies": {
+      "typeorm@0.3.13": "patches/typeorm@0.3.13.patch"
     }
   },
   "volta": {

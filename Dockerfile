@@ -2,21 +2,33 @@
 # workspace#026-distroless-runtime-images
 #
 # Three-stage build producing a distroless, non-root runtime image:
-#   1. builder  — glibc (Debian bookworm), installs full deps, compiles TS
+#   1. builder  — glibc (Debian trixie), installs full deps, compiles TS
 #   2. proddeps — glibc, fresh `pnpm install --prod` (NEVER copied from an
 #                 Alpine/musl layer — this is the sentinel that keeps native
 #                 modules such as `sharp` glibc-linked; see spec R-2)
-#   3. runtime  — gcr.io/distroless/nodejs22-debian12:nonroot: no shell, no
+#   3. runtime  — gcr.io/distroless/nodejs22-debian13:nonroot: no shell, no
 #                 package manager, no sources, no dev deps, no /wait binary.
 #
 # Base images are pinned by digest (resolved via
 # `docker buildx imagetools inspect <image>:<tag>`). Re-resolve and update
 # both the tag *and* the digest together when bumping.
 #
-#   node:22.21.1-bookworm-slim   (matches Volta pin 22.21.1, glibc/Debian 12)
-#     digest: sha256:25b3eb23a00590b7499f2a2ce939322727fcce1b15fdd69754fcd09536a3ae2c
-#   gcr.io/distroless/nodejs22-debian12:nonroot
-#     digest: sha256:13593b7570658e8477de39e2f4a1dd25db2f836d68a0ba771251572d23bb4f8e
+#   node:22.21.1-trixie-slim   (matches Volta pin 22.21.1, glibc/Debian 13)
+#     digest: sha256:c3bf4cf764467f1bf9789fde549971a2cf8e720196df6cf3f95bafa590e5f4af
+#   gcr.io/distroless/nodejs22-debian13:nonroot
+#     digest: sha256:a2723a2817c5b01b8e7b98d567bc8b5a6b0e713e25bfb0a82b6ade4b9db06f50
+#
+# US5-AS1 fix-pass correction (post-verification): the feature's original
+# chief decision C-1 pinned the Debian 12 pair (bookworm builder +
+# distroless/nodejs22-debian12:nonroot) because the story named "debian12"
+# verbatim. Live CVE verification (trivy on the exact tested digest) found
+# `libssl3` on that Debian 12 pair carries 1 CRITICAL + 5 HIGH fixable CVEs
+# with NO newer Debian-12 build available — Google's distroless project has
+# frozen Debian 12 variants (only Debian 13/trixie receives fresh builds) and
+# this Node patch tag (22.21.1) is itself frozen upstream. Zero fixable
+# HIGH/CRITICAL is a hard spec gate (FR-015/US5-AS1/SC-004); it supersedes the
+# story's naming preference. Moved to the Debian 13/trixie matched pair —
+# same glibc family, same Volta-pinned Node version, actively maintained base.
 #
 # Migrations: the compiled entrypoint consumers (dev-orchestration CronJob,
 # infra-ops at release time — spec R-8) MUST invoke:
@@ -31,7 +43,7 @@ ARG ENV_ARG=production
 ###############################################################################
 # Stage 1: builder — full deps (incl. dev), compile TypeScript -> dist/
 ###############################################################################
-FROM node:22.21.1-bookworm-slim@sha256:25b3eb23a00590b7499f2a2ce939322727fcce1b15fdd69754fcd09536a3ae2c AS builder
+FROM node:22.21.1-trixie-slim@sha256:c3bf4cf764467f1bf9789fde549971a2cf8e720196df6cf3f95bafa590e5f4af AS builder
 WORKDIR /usr/src/app
 
 # Install pnpm (locked version to align with repo)
@@ -39,6 +51,7 @@ RUN npm i -g pnpm@10.17.1
 
 # Dependencies (full set so the Nest CLI build toolchain is available)
 COPY package.json pnpm-lock.yaml ./
+COPY patches ./patches
 RUN pnpm install --frozen-lockfile
 
 # Copy sources & build
@@ -55,11 +68,12 @@ RUN pnpm run build
 # edge case "musl artifact leakage"). This stage installs on the SAME glibc
 # base as `builder`, so `sharp` resolves `@img/sharp-linux-x64` (glibc).
 ###############################################################################
-FROM node:22.21.1-bookworm-slim@sha256:25b3eb23a00590b7499f2a2ce939322727fcce1b15fdd69754fcd09536a3ae2c AS proddeps
+FROM node:22.21.1-trixie-slim@sha256:c3bf4cf764467f1bf9789fde549971a2cf8e720196df6cf3f95bafa590e5f4af AS proddeps
 WORKDIR /usr/src/app
 
 RUN npm i -g pnpm@10.17.1
 COPY package.json pnpm-lock.yaml ./
+COPY patches ./patches
 RUN pnpm install --frozen-lockfile --prod
 
 ###############################################################################
@@ -69,7 +83,7 @@ RUN pnpm install --frozen-lockfile --prod
 # `groundnuty/k8s-wait-for` initContainer, not the image's own /wait — spec
 # C-2).
 ###############################################################################
-FROM gcr.io/distroless/nodejs22-debian12:nonroot@sha256:13593b7570658e8477de39e2f4a1dd25db2f836d68a0ba771251572d23bb4f8e AS runtime
+FROM gcr.io/distroless/nodejs22-debian13:nonroot@sha256:a2723a2817c5b01b8e7b98d567bc8b5a6b0e713e25bfb0a82b6ade4b9db06f50 AS runtime
 
 ARG GRAPHQL_ENDPOINT_PORT_ARG
 ARG ENV_ARG
