@@ -285,11 +285,17 @@ import { AdminSearchIngestModule } from './platform-admin/services/search/admin.
               },
             },
             'graphql-ws': {
-              onNext: (ctx, message, args, result) => {
+              // Sockets are authenticated once at connection time, so a
+              // long-lived subscription would outlive its session. ActorContext
+              // .absoluteExpiry is stamped by CookieSessionStrategy from the
+              // BFF alkemio_session's ABSOLUTE ceiling (absolute_expires_at).
+              // Deliberately NOT enforced here: `.expiry` (access-token, ~10min,
+              // self-renews) and the sliding idle window (renews on activity).
+              onNext: (ctx, _message, args, result) => {
                 const context = args.contextValue as IGraphQLContext;
-                const expiry = context.req?.user?.expiry;
-                // if the session has expired, close the socket
-                if (expiry && expiry < Date.now()) {
+                const absoluteExpiry = context.req?.user?.absoluteExpiry;
+                // if the session has passed its absolute ceiling, close the socket
+                if (absoluteExpiry && absoluteExpiry < Date.now()) {
                   (ctx as WebsocketContext).extra.socket.close(
                     CloseCode.Unauthorized,
                     'Session expired'

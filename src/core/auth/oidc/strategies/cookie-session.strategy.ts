@@ -133,6 +133,21 @@ export class CookieSessionStrategy extends PassportStrategy(
     if (!payload.alkemio_actor_id) {
       return this.actorContextService.createAnonymous();
     }
-    return this.authService.createActorContext(payload.alkemio_actor_id);
+    const actorContext = await this.authService.createActorContext(
+      payload.alkemio_actor_id
+    );
+    // Stamp session lifetime onto a REQUEST-SCOPED COPY. createActorContext
+    // returns the actorID-keyed cached instance, shared across all of this
+    // actor's sessions and concurrent requests — writing per-session values
+    // onto it would let sessions overwrite each other.
+    // Payload times are epoch-seconds; ActorContext uses milliseconds.
+    // expiry = access-token expiry (self-renews — informational);
+    // absoluteExpiry = the 30d ceiling that never extends (enforcement);
+    // the sliding idle window renews on activity and cannot be stamped.
+    return Object.assign(new ActorContext(), actorContext, {
+      expiry: payload.expires_at * 1000,
+      absoluteExpiry: payload.absolute_expires_at * 1000,
+      issuedAt: payload.created_at * 1000,
+    });
   }
 }
