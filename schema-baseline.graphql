@@ -1308,6 +1308,25 @@ type CalloutPostCreated {
   sortOrder: Float!
 }
 
+"""
+The selection mode for a collection callout (Contributors or Subspaces). AUTO (default) returns the full computed set; CUSTOM restricts to the admin-curated selectedIds list.
+"""
+enum CalloutSelectionMode {
+  AUTO
+  CUSTOM
+}
+
+type CalloutSelectionSettings {
+  """
+  The selection mode: AUTO (full computed set) or CUSTOM (admin-curated subset).
+  """
+  mode: CalloutSelectionMode!
+  """
+  The selected actor/space IDs in CUSTOM mode (0–500 entries). Ignored when mode is AUTO.
+  """
+  selectedIds: [ID!]!
+}
+
 type CalloutSettings {
   """Callout Contribution Settings."""
   contribution: CalloutSettingsContribution!
@@ -1337,6 +1356,10 @@ type CalloutSettingsFraming {
   Configuration for a contributor-collection callout. Present only when framing.type = CONTRIBUTORS.
   """
   contributors: CalloutContributorsSettings
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Absent / null ⇒ AUTO (full computed set).
+  """
+  selection: CalloutSelectionSettings
 }
 
 enum CalloutVisibility {
@@ -2109,6 +2132,24 @@ input CreateCalloutOnCalloutsSetInput {
   sortOrder: Float
 }
 
+type CreateCalloutSelectionSettingsData {
+  """The selection mode (AUTO or CUSTOM). Defaults to AUTO when omitted."""
+  mode: CalloutSelectionMode
+  """
+  The curated selection of actor/space IDs (CUSTOM mode). At most 500. Deduplicated by the server.
+  """
+  selectedIds: [ID!]
+}
+
+input CreateCalloutSelectionSettingsInput {
+  """The selection mode (AUTO or CUSTOM). Defaults to AUTO when omitted."""
+  mode: CalloutSelectionMode
+  """
+  The curated selection of actor/space IDs (CUSTOM mode). At most 500. Deduplicated by the server.
+  """
+  selectedIds: [ID!]
+}
+
 type CreateCalloutSettingsContributionData {
   """Allowed Contribution types."""
   allowedTypes: [CalloutContributionType!]
@@ -2149,6 +2190,10 @@ type CreateCalloutSettingsFramingData {
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
   contributors: CreateCalloutContributorsSettingsData
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
+  """
+  selection: CreateCalloutSelectionSettingsData
 }
 
 input CreateCalloutSettingsFramingInput {
@@ -2158,6 +2203,10 @@ input CreateCalloutSettingsFramingInput {
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
   contributors: CreateCalloutContributorsSettingsInput
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
+  """
+  selection: CreateCalloutSelectionSettingsInput
 }
 
 input CreateCalloutSettingsInput {
@@ -4551,6 +4600,21 @@ input MoveSpaceL1ToSpaceL2Input {
   targetSpaceL1ID: UUID!
 }
 
+input MoveSpaceL2ToSpaceL1Input {
+  """
+  Send invitations to former community members who are also in the target L0 community.
+  """
+  autoInvite: Boolean = false
+  """Custom invitation message. Used only when autoInvite is true."""
+  invitationMessage: String
+  """The L2 subspace to move (stays L2)."""
+  spaceL2ID: UUID!
+  """
+  The target L1 subspace in a different L0 (new parent for the moved L2).
+  """
+  targetSpaceL1ID: UUID!
+}
+
 type Mutation {
   """Adds an Iframe Allowed URL to the Platform Settings"""
   addIframeAllowedURL(whitelistedURL: String!): [String!]!
@@ -4842,6 +4906,10 @@ type Mutation {
   Move an L1 subspace to become an L2 sub-subspace under a target L1 in a different L0 space.       The space is demoted from level 1 to level 2. All community roles are cleared.       Requires platform admin privileges.
   """
   moveSpaceL1ToSpaceL2(moveData: MoveSpaceL1ToSpaceL2Input!): Space!
+  """
+  Move an L2 sub-subspace to become an L2 subspace under a target L1 in a different L0 space.       The subspace stays at level 2 but changes both its parent L1 and its top-level L0.       All community roles (including admins) are cleared and pending invitations dropped.       Platform access rules are recomputed from the new parent hierarchy.       Requires platform admin privileges.
+  """
+  moveSpaceL2ToSpaceL1(moveData: MoveSpaceL2ToSpaceL1Input!): Space!
   """Refresh the Bodies of Knowledge on All VCs"""
   refreshAllBodiesOfKnowledge: Boolean!
   """
@@ -8051,6 +8119,17 @@ input UpdateCalloutPublishInfoInput {
   publisherID: UUID
 }
 
+input UpdateCalloutSelectionSettingsInput {
+  """
+  The selection mode (AUTO or CUSTOM). When omitted, the stored mode is unchanged.
+  """
+  mode: CalloutSelectionMode
+  """
+  Replaces the curated selection in full (CUSTOM mode). At most 500 entries. Deduplicated by the server. When omitted, the stored list is unchanged.
+  """
+  selectedIds: [ID!]
+}
+
 input UpdateCalloutSettingsContributionInput {
   """Indicate who can add more contributions to the callout."""
   canAddContributions: CalloutAllowedActors
@@ -8069,6 +8148,10 @@ input UpdateCalloutSettingsFramingInput {
   Configuration for a contributor-collection callout. Provide only when framing.type = CONTRIBUTORS.
   """
   contributors: UpdateCalloutContributorsSettingsInput
+  """
+  Manual-selection settings for collection callouts (CONTRIBUTORS or SPACES). Provide only when framing.type ∈ {CONTRIBUTORS, SPACES}.
+  """
+  selection: UpdateCalloutSelectionSettingsInput
 }
 
 input UpdateCalloutSettingsInput {

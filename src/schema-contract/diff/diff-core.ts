@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'crypto';
 import {
   DocumentNode,
   EnumTypeDefinitionNode,
+  InputObjectTypeDefinitionNode,
   Kind,
   ObjectTypeDefinitionNode,
   parse,
@@ -21,6 +22,7 @@ export interface IndexedSchema {
   types: Record<string, ObjectTypeDefinitionNode>;
   enums: Record<string, EnumTypeDefinitionNode>;
   scalars: Record<string, ScalarTypeDefinitionNode>;
+  inputs: Record<string, InputObjectTypeDefinitionNode>;
   rawSDL: string;
 }
 
@@ -37,6 +39,7 @@ export function indexSDL(sdl: string): IndexedSchema {
   const types: Record<string, ObjectTypeDefinitionNode> = {};
   const enums: Record<string, EnumTypeDefinitionNode> = {};
   const scalars: Record<string, ScalarTypeDefinitionNode> = {};
+  const inputs: Record<string, InputObjectTypeDefinitionNode> = {};
   for (const def of doc.definitions) {
     switch (def.kind) {
       case 'ObjectTypeDefinition':
@@ -48,11 +51,14 @@ export function indexSDL(sdl: string): IndexedSchema {
       case 'ScalarTypeDefinition':
         if (def.name?.value) scalars[def.name.value] = def;
         break;
+      case 'InputObjectTypeDefinition':
+        if (def.name?.value) inputs[def.name.value] = def;
+        break;
       default:
         break;
     }
   }
-  return { doc, types, enums, scalars, rawSDL: sdl };
+  return { doc, types, enums, scalars, inputs, rawSDL: sdl };
 }
 
 export function emptyCounts(): ClassificationCount {
