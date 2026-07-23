@@ -1,6 +1,7 @@
+import { SUPPORTED_INTERFACE_LANGUAGES } from '@common/constants/supported.languages';
 import { Field, InputType, Int } from '@nestjs/graphql';
 import { Type } from 'class-transformer';
-import { IsInt, IsOptional, ValidateNested } from 'class-validator';
+import { IsIn, IsInt, IsOptional, ValidateNested } from 'class-validator';
 import { CreateUserSettingsAssistantInput } from './user.settings.assistant.dto.create';
 import { CreateUserSettingsCommunicationInput } from './user.settings.communications.dto.create';
 import { CreateUserSettingsHomeSpaceInput } from './user.settings.home.space.dto.create';
@@ -58,4 +59,21 @@ export class CreateUserSettingsInput {
   @IsOptional()
   @IsInt()
   designVersion?: number;
+
+  @Field(() => String, {
+    nullable: true,
+    description:
+      'Initial interface language for this User. Null = user has never chosen a language.',
+  })
+  @IsOptional()
+  @IsIn([...SUPPORTED_INTERFACE_LANGUAGES])
+  language?: string | null;
+
+  @Field(() => Boolean, {
+    nullable: true,
+    description:
+      'Whether this User has already answered the one-time language offer (global flag — FR-005a).',
+  })
+  @IsOptional()
+  languageOfferAnswered?: boolean;
 }

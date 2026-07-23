@@ -38,6 +38,8 @@ export class UserSettingsService {
       },
       designVersion:
         settingsData.designVersion ?? DESIGN_VERSION_CURRENT_DEFAULT,
+      language: settingsData.language ?? null,
+      languageOfferAnswered: settingsData.languageOfferAnswered ?? false,
     });
     settings.authorization = new AuthorizationPolicy(
       AuthorizationPolicyType.USER_SETTINGS
@@ -311,6 +313,29 @@ export class UserSettingsService {
     // unsupported — the column is NOT NULL with a default of 2).
     if (updateData.designVersion != null) {
       settings.designVersion = updateData.designVersion;
+    }
+
+    // Language preference + one-way latch (FR-023 / R-3):
+    // (a) Any language write latches languageOfferAnswered = true
+    //     (invariant: language ≠ NULL ⇒ flag = true).
+    // (b) Setting languageOfferAnswered = true without a language is the
+    //     decline path (stores the answered flag, leaves language null).
+    // (c) Setting languageOfferAnswered = false is rejected — the latch is
+    //     one-way; un-answering is not a valid state transition.
+    if (updateData.language !== undefined) {
+      settings.language = updateData.language;
+      settings.languageOfferAnswered = true;
+    }
+
+    if (updateData.languageOfferAnswered !== undefined) {
+      if (updateData.languageOfferAnswered === false) {
+        throw new ValidationException(
+          'languageOfferAnswered cannot be set back to false — it is a one-way latch (FR-005a / R-3)',
+          LogContext.COMMUNITY
+        );
+      }
+      // true: latch the flag (decline path — no language written)
+      settings.languageOfferAnswered = true;
     }
 
     return settings;

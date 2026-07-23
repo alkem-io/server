@@ -10,6 +10,7 @@ import { CreateInvitationInput } from '@domain/access/invitation/dto/invitation.
 import { IInvitation } from '@domain/access/invitation/invitation.interface';
 import { InvitationService } from '@domain/access/invitation/invitation.service';
 import { InvitationAuthorizationService } from '@domain/access/invitation/invitation.service.authorization';
+import { IPlatformInvitation } from '@domain/access/invitation.platform/platform.invitation.interface';
 import { PlatformInvitationService } from '@domain/access/invitation.platform/platform.invitation.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -23,8 +24,10 @@ import { UserAuthorizationService } from '@domain/community/user/user.service.au
 import { AccountService } from '@domain/space/account/account.service';
 import { AccountAuthorizationService } from '@domain/space/account/account.service.authorization';
 import { Inject, LoggerService } from '@nestjs/common';
+import { ConfigService } from '@nestjs/config';
 import { NotificationInputPlatformUserRegistered } from '@services/adapters/notification-adapter/dto/platform/notification.dto.input.platform.user.registered';
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
+import { AlkemioConfig } from '@src/types';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 
 export class RegistrationService {
@@ -42,6 +45,7 @@ export class RegistrationService {
     private applicationService: ApplicationService,
     private roleSetService: RoleSetService,
     private notificationPlatformAdapter: NotificationPlatformAdapter,
+    private configService: ConfigService<AlkemioConfig, true>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private readonly logger: LoggerService
   ) {}
 
@@ -193,6 +197,13 @@ export class RegistrationService {
         user.email
       );
 
+    // Seed language from the latest-created platform invitation that carries an
+    // eligible suggested language (DL-7 determinism — latest-created wins).
+    // Must run before the loop so the settings update is complete before any
+    // invitation authorization writes (no interleaving issue — both are in the
+    // same synchronous processPendingInvitations call, FR-016 / DL-12).
+    await this.seedLanguageFromInvitation(user, platformInvitations);
+
     const roleSetInvitations: IInvitation[] = [];
     for (const platformInvitation of platformInvitations) {
       const roleSet = platformInvitation.roleSet;
@@ -232,6 +243,87 @@ export class RegistrationService {
       );
     }
     return roleSetInvitations;
+  }
+
+  /**
+   * Seeds the new account's language setting from the latest-created platform
+   * invitation that carries an eligible suggestedLanguage (FR-016, DL-7, DL-8).
+   *
+   * Rules:
+   * - Only seeds when the account still has {language: null, languageOfferAnswered: false}
+   *   (a fresh account that has not yet had a language written by any other path).
+   * - Eligible = currently configured language.eligible list; an invitation whose
+   *   suggestedLanguage is no longer eligible is silently skipped (FR-018).
+   * - Among the invitations that pass eligibility, the latest-created (highest
+   *   createdAt) wins (DL-7 determinism).
+   * - Writing language also latches languageOfferAnswered = true via
+   *   UserSettingsService.updateSettings (T004 invariant).
+   */
+  private async seedLanguageFromInvitation(
+    user: IUser,
+    platformInvitations: IPlatformInvitation[]
+  ): Promise<void> {
+    // Ensure the settings relation is loaded.  grantCredentialsAllUsersReceive
+    // (called earlier in finalizeUserRegistration) fetches the user with no
+    // relations, so user.settings is undefined on the real production path —
+    // User.settings is declared eager:false (user.entity.ts).  Reload with the
+    // relation when it is missing so the guard below operates on real data, not
+    // on an absent proxy.  (corr-server-1 / spec-server-1 / qual-server-1)
+    let settingsUser = user;
+    if (!settingsUser.settings) {
+      settingsUser = await this.userService.getUserByIdOrFail(user.id, {
+        relations: { settings: true },
+      });
+    }
+
+    // Only seed for a truly fresh account (null language + flag false).
+    if (
+      !settingsUser.settings ||
+      settingsUser.settings.language !== null ||
+      settingsUser.settings.languageOfferAnswered !== false
+    ) {
+      return;
+    }
+
+    const languageConfig = this.configService.get('language', { infer: true });
+    const eligibleRaw: string = languageConfig?.eligible ?? '';
+    const eligible = eligibleRaw
+      ? eligibleRaw
+          .split(',')
+          .map((s: string) => s.trim())
+          .filter((s: string) => s.length > 0)
+      : [];
+
+    if (eligible.length === 0) {
+      // Kill switch: empty eligible set — no seeding (FR-018).
+      return;
+    }
+
+    // Sort by createdDate descending to get the latest-created invitation first
+    // (DL-7 determinism: latest-created with an eligible suggestion wins).
+    const sorted = [...platformInvitations].sort((a, b) => {
+      const aTime = a.createdDate ? new Date(a.createdDate).getTime() : 0;
+      const bTime = b.createdDate ? new Date(b.createdDate).getTime() : 0;
+      return bTime - aTime;
+    });
+
+    for (const invitation of sorted) {
+      const lang = invitation.suggestedLanguage;
+      if (lang && eligible.includes(lang)) {
+        // Found the latest-created eligible suggestion — seed and latch.
+        // Use settingsUser (which has settings loaded) so updateUserSettings
+        // can read user.settings without hitting an undefined dereference.
+        await this.userService.updateUserSettings(settingsUser, {
+          language: lang,
+          // languageOfferAnswered is automatically latched by updateSettings (T004)
+        });
+        this.logger.verbose?.(
+          `Seeded language '${lang}' from platform invitation for user ${settingsUser.id} (DL-7/FR-016)`,
+          LogContext.COMMUNITY
+        );
+        return;
+      }
+    }
   }
 
   async deleteUserWithPendingMemberships(

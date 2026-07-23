@@ -381,6 +381,66 @@ describe('UserSettingsService', () => {
     });
   });
 
+  describe('updateSettings - language / languageOfferAnswered', () => {
+    it('should set language and latch languageOfferAnswered when language is provided', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+      } as any);
+      const result = service.updateSettings(settings, { language: 'nl' });
+
+      expect(result.language).toBe('nl');
+      expect(result.languageOfferAnswered).toBe(true);
+    });
+
+    it('should latch languageOfferAnswered to true (decline path) without writing a language', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+      } as any);
+      const result = service.updateSettings(settings, {
+        languageOfferAnswered: true,
+      });
+
+      expect(result.language).toBeNull();
+      expect(result.languageOfferAnswered).toBe(true);
+    });
+
+    it('should throw ValidationException when languageOfferAnswered is set to false (one-way latch)', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: true,
+      } as any);
+
+      expect(() =>
+        service.updateSettings(settings, { languageOfferAnswered: false })
+      ).toThrow(ValidationException);
+    });
+
+    it('should leave other settings blocks untouched by a language-only update', () => {
+      const settings = buildSettings({
+        language: null,
+        languageOfferAnswered: false,
+        designVersion: 3,
+      } as any);
+      const result = service.updateSettings(settings, { language: 'en' });
+
+      expect(result.designVersion).toBe(3);
+      expect(result.privacy.contributionRolesPubliclyVisible).toBe(false);
+    });
+
+    it('should not change language when language update is omitted', () => {
+      const settings = buildSettings({
+        language: 'nl',
+        languageOfferAnswered: true,
+      } as any);
+      const result = service.updateSettings(settings, {});
+
+      expect(result.language).toBe('nl');
+      expect(result.languageOfferAnswered).toBe(true);
+    });
+  });
+
   describe('updateSettings - designVersion', () => {
     it('should update designVersion when provided', () => {
       // buildSettings() seeds the current default; switching back to the
