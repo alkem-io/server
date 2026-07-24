@@ -1,3 +1,5 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import {
   EntityNotInitializedException,
   RelationshipNotFoundException,
@@ -417,6 +419,113 @@ describe('AccountAuthorizationService', () => {
       expect(
         authorizationPolicyService.appendCredentialAuthorizationRules
       ).toHaveBeenCalled();
+    });
+  });
+
+  // workspace#032: privilege hardening for the Platform Operations Admin role.
+  describe('PLATFORM_OPERATIONS_ADMIN credential hardening', () => {
+    const arrange = () => {
+      const mockAccount = createMockAccount();
+      (accountService.getAccountOrFail as any).mockResolvedValue(mockAccount);
+      (authorizationPolicyService.reset as any).mockReturnValue(
+        mockAccount.authorization
+      );
+      (
+        authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess as any
+      ).mockReturnValue(mockAccount.authorization);
+      (
+        platformAuthorizationService.inheritRootAuthorizationPolicy as any
+      ).mockReturnValue(mockAccount.authorization);
+      (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+      ).mockImplementation((privileges: any, types: any, name: any) => ({
+        grantedPrivileges: privileges,
+        criterias: types,
+        name,
+        cascade: true,
+      }));
+      (authorizationPolicyService.createCredentialRule as any).mockReturnValue({
+        criterias: [],
+        cascade: false,
+      });
+      (
+        authorizationPolicyService.appendCredentialAuthorizationRules as any
+      ).mockReturnValue(mockAccount.authorization);
+      (authorizationPolicyService.save as any).mockResolvedValue(
+        mockAccount.authorization
+      );
+      (
+        authorizationPolicyService.cloneAuthorizationPolicy as any
+      ).mockReturnValue(mockAccount.authorization);
+      (
+        licenseAuthorizationService.applyAuthorizationPolicy as any
+      ).mockReturnValue([]);
+      (
+        storageAggregatorAuthorizationService.applyAuthorizationPolicy as any
+      ).mockResolvedValue([]);
+      return mockAccount;
+    };
+
+    const privilegesGrantedToRole = () => {
+      const granted = new Set<AuthorizationPrivilege>();
+      for (const [privileges, credentialTypes] of (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+      ).mock.calls) {
+        if (
+          credentialTypes.includes(
+            AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+          )
+        ) {
+          for (const p of privileges) {
+            granted.add(p);
+          }
+        }
+      }
+      return granted;
+    };
+
+    it('grants the role exactly the two reset privileges on the account policy, on a non-cascading rule', async () => {
+      const mockAccount = arrange();
+
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      expect(privilegesGrantedToRole()).toEqual(
+        new Set([
+          AuthorizationPrivilege.AUTHORIZATION_RESET,
+          AuthorizationPrivilege.LICENSE_RESET,
+        ])
+      );
+
+      const roleRules = (
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly as any
+      ).mock.results
+        .map((r: any) => r.value)
+        .filter((rule: any) =>
+          rule.criterias?.includes?.(
+            AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+          )
+        );
+      expect(roleRules.length).toBeGreaterThan(0);
+      for (const rule of roleRules) {
+        expect(rule.cascade).toBe(false);
+      }
+    });
+
+    it('never grants the role account CRUD, GRANT, or global-role management', async () => {
+      const mockAccount = arrange();
+
+      await service.applyAuthorizationPolicy(mockAccount);
+
+      const granted = privilegesGrantedToRole();
+      for (const excluded of [
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+        AuthorizationPrivilege.CREATE,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+      ]) {
+        expect(granted).not.toContain(excluded);
+      }
     });
   });
 });

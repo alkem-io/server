@@ -119,4 +119,31 @@ describe('LicensingFrameworkAuthorizationService', () => {
       licensePolicyAuthorizationService.applyAuthorizationPolicy
     ).toHaveBeenCalledWith(licensing.licensePolicy, authorization);
   });
+
+  // workspace#032: privilege hardening for the Platform Operations Admin role.
+  it('grants PLATFORM_OPERATIONS_ADMIN exactly LICENSE_RESET on the licensing policy — never the license-manager CRUD/GRANT bundle', async () => {
+    const licensing = {
+      id: 'licensing-id',
+      authorization: { id: 'authorization' },
+      licensePolicy: {},
+    } as unknown as ILicensingFramework;
+
+    await service.applyAuthorizationPolicy(licensing, undefined);
+
+    const granted = new Set<AuthorizationPrivilege>();
+    for (const [privileges, credentialTypes] of authorizationPolicyService
+      .createCredentialRuleUsingTypesOnly.mock.calls) {
+      if (
+        credentialTypes.includes(
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+        )
+      ) {
+        for (const p of privileges) {
+          granted.add(p);
+        }
+      }
+    }
+
+    expect(granted).toEqual(new Set([AuthorizationPrivilege.LICENSE_RESET]));
+  });
 });

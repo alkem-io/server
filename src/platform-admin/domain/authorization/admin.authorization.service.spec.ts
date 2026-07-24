@@ -412,4 +412,50 @@ describe('AdminAuthorizationService', () => {
       expect(result).toEqual(extendedAuth);
     });
   });
+
+  // workspace#032: privilege hardening for the Platform Operations Admin role.
+  describe('PLATFORM_OPERATIONS_ADMIN credential hardening', () => {
+    it('resetAuthorizationPolicy grants the role exactly AUTHORIZATION_RESET — READ/UPDATE/DELETE stay GLOBAL_ADMIN-only', async () => {
+      const authorization = { id: 'auth-1', credentialRules: [] as any[] };
+
+      vi.mocked(
+        authorizationPolicyService.getAuthorizationPolicyOrFail
+      ).mockResolvedValue(authorization as any);
+      vi.mocked(
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly
+      ).mockImplementation(((privileges: any, types: any, name: any) => ({
+        grantedPrivileges: privileges,
+        criterias: types,
+        name,
+        cascade: true,
+      })) as any);
+      vi.mocked(
+        authorizationPolicyService.appendCredentialAuthorizationRules
+      ).mockImplementation(((auth: any) => auth) as any);
+      vi.mocked(authorizationPolicyService.save).mockImplementation(
+        (async (auth: any) => auth) as any
+      );
+
+      await service.resetAuthorizationPolicy('auth-1');
+
+      const granted = new Set<AuthorizationPrivilege>();
+      for (const [privileges, credentialTypes] of vi.mocked(
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly
+      ).mock.calls) {
+        if (
+          (credentialTypes as AuthorizationCredential[]).includes(
+            AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+          )
+        ) {
+          for (const p of privileges as AuthorizationPrivilege[]) {
+            granted.add(p);
+          }
+        }
+      }
+
+      expect(granted).toEqual(
+        new Set([AuthorizationPrivilege.AUTHORIZATION_RESET])
+      );
+    });
+  });
 });

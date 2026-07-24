@@ -1,3 +1,5 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
+import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { RelationshipNotFoundException } from '@common/exceptions/relationship.not.found.exception';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { Test, TestingModule } from '@nestjs/testing';
@@ -121,6 +123,90 @@ describe('AiServerAuthorizationService', () => {
       ).not.toHaveBeenCalled();
       expect(result).toHaveLength(1);
       expect(result[0]).toEqual(serverAuth);
+    });
+  });
+
+  // workspace#032: privilege hardening for the Platform Operations Admin role.
+  describe('PLATFORM_OPERATIONS_ADMIN credential hardening', () => {
+    beforeEach(() => {
+      aiServerService.getAiServerOrFail.mockResolvedValue({
+        id: 'server-1',
+        authorization: { id: 'server-auth' },
+        aiPersonas: [],
+      });
+      authorizationPolicyService.reset.mockImplementation(auth => auth);
+      authorizationPolicyService.appendCredentialAuthorizationRules.mockImplementation(
+        auth => auth
+      );
+      authorizationPolicyService.createCredentialRuleUsingTypesOnly.mockImplementation(
+        (privileges, types, name) => ({
+          grantedPrivileges: privileges,
+          criterias: types,
+          name,
+          cascade: true,
+        })
+      );
+    });
+
+    const privilegesGrantedToRole = () => {
+      const granted = new Set<AuthorizationPrivilege>();
+      for (const [privileges, credentialTypes] of authorizationPolicyService
+        .createCredentialRuleUsingTypesOnly.mock.calls) {
+        if (
+          credentialTypes.includes(
+            AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+          )
+        ) {
+          for (const p of privileges) {
+            granted.add(p);
+          }
+        }
+      }
+      return granted;
+    };
+
+    it('grants the role exactly AUTHORIZATION_RESET and persona CREATE on the aiServer policy', async () => {
+      await service.applyAuthorizationPolicy();
+
+      expect(privilegesGrantedToRole()).toEqual(
+        new Set([
+          AuthorizationPrivilege.AUTHORIZATION_RESET,
+          AuthorizationPrivilege.CREATE,
+        ])
+      );
+    });
+
+    it('never grants the role the full CRUD/GRANT bundle reserved for GLOBAL_ADMIN', async () => {
+      await service.applyAuthorizationPolicy();
+
+      const granted = privilegesGrantedToRole();
+      for (const excluded of [
+        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.READ,
+        AuthorizationPrivilege.UPDATE,
+        AuthorizationPrivilege.DELETE,
+        AuthorizationPrivilege.PLATFORM_ADMIN,
+      ]) {
+        expect(granted).not.toContain(excluded);
+      }
+    });
+
+    it('keeps the role rules non-cascading so persona children inherit nothing', async () => {
+      await service.applyAuthorizationPolicy();
+
+      const roleRules =
+        authorizationPolicyService.createCredentialRuleUsingTypesOnly.mock.results
+          .map(r => r.value)
+          .filter(rule =>
+            rule.criterias?.includes(
+              AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN
+            )
+          );
+
+      expect(roleRules.length).toBeGreaterThan(0);
+      for (const rule of roleRules) {
+        expect(rule.cascade).toBe(false);
+      }
     });
   });
 });

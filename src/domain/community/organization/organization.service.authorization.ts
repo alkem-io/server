@@ -34,7 +34,6 @@ import { OrganizationService } from './organization.service';
 export class OrganizationAuthorizationService {
   constructor(
     private organizationService: OrganizationService,
-    private authorizationPolicy: AuthorizationPolicyService,
     private authorizationPolicyService: AuthorizationPolicyService,
     private userGroupAuthorizationService: UserGroupAuthorizationService,
     private organizationVerificationAuthorizationService: OrganizationVerificationAuthorizationService,
@@ -112,7 +111,7 @@ export class OrganizationAuthorizationService {
       );
     // To ensure that profile on an organization is always publicly visible, even for non-authenticated users
     clonedOrganizationAuthorizationAnonymousAccess =
-      this.authorizationPolicy.appendCredentialRuleAnonymousRegisteredAccess(
+      this.authorizationPolicyService.appendCredentialRuleAnonymousRegisteredAccess(
         clonedOrganizationAuthorizationAnonymousAccess,
         AuthorizationPrivilege.READ
       );
@@ -179,7 +178,7 @@ export class OrganizationAuthorizationService {
 
     // Allow global admins to reset authorization
     const globalAdminNotInherited =
-      this.authorizationPolicy.createCredentialRuleUsingTypesOnly(
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
         [
           AuthorizationCredential.GLOBAL_ADMIN,
@@ -269,7 +268,7 @@ export class OrganizationAuthorizationService {
     newRules.push(organizationAdmin);
 
     const updatedAuthorization =
-      this.authorizationPolicy.appendCredentialAuthorizationRules(
+      this.authorizationPolicyService.appendCredentialAuthorizationRules(
         authorization,
         newRules
       );
