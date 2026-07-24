@@ -47,6 +47,7 @@ export class AdminSearchIngestResolverMutations {
         actorID: actorContext.actorID,
         action: 'adminSearchIngestFromScratch',
         outcome: 'failure',
+        target: { taskID: task.id },
         error: e,
       });
 

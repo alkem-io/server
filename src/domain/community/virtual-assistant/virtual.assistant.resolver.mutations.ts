@@ -33,7 +33,7 @@ export class VirtualAssistantResolverMutations {
 
   @Mutation(() => IVirtualAssistant, {
     description:
-      'Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires platform-admin.',
+      'Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires the platform-operations-admin privilege.',
   })
   async updateAssistantActorCapabilities(
     @CurrentActor() actorContext: ActorContext,
