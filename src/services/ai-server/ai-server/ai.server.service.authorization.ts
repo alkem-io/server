@@ -96,10 +96,7 @@ export class AiServerAuthorizationService {
     const authorizationReset =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [AuthorizationPrivilege.AUTHORIZATION_RESET],
-        [
-          AuthorizationCredential.GLOBAL_SUPPORT,
-          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
-        ],
+        [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
         CREDENTIAL_RULE_AI_SERVER_AUTH_RESET
       );
     authorizationReset.cascade = false;
