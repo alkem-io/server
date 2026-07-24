@@ -191,6 +191,20 @@ export class ConversionResolverMutations {
       await this.conversionService.moveSpaceL1ToSpaceL0OrFail(moveData);
     const savedSpace = await this.spaceService.save(space);
 
+    // Recompute platform-level access (anonymous/guest/registered visibility)
+    // from the NEW target L0 hierarchy BEFORE the authorization policy is
+    // re-applied. platformRolesAccess is a persisted, precomputed field that
+    // applyAuthorizationPolicy only READS — without this, a public L1 moved
+    // into a private L0 keeps stale anonymous READ (a visibility leak).
+    // Mirrors moveSpaceL2ToSpaceL1 / convertSpaceL1ToSpaceL0.
+    const targetParentL0 = await this.spaceService.getSpaceOrFail(
+      moveData.targetSpaceL0ID
+    );
+    await this.spaceService.updatePlatformRolesAccessRecursively(
+      savedSpace,
+      targetParentL0.platformRolesAccess
+    );
+
     const parentAuthorization = await this.getParentSpaceAuthorization(
       savedSpace.id
     );
@@ -240,6 +254,20 @@ export class ConversionResolverMutations {
     const { space, removedActorIds } =
       await this.conversionService.moveSpaceL1ToSpaceL2OrFail(moveData);
     const savedSpace = await this.spaceService.save(space);
+
+    // Recompute platform-level access (anonymous/guest/registered visibility)
+    // from the NEW target L1 hierarchy BEFORE the authorization policy is
+    // re-applied. platformRolesAccess is a persisted, precomputed field that
+    // applyAuthorizationPolicy only READS — without this, a public L1 demoted
+    // into a private chain keeps stale anonymous READ (a visibility leak).
+    // Mirrors moveSpaceL2ToSpaceL1 / convertSpaceL1ToSpaceL0.
+    const targetParentL1 = await this.spaceService.getSpaceOrFail(
+      moveData.targetSpaceL1ID
+    );
+    await this.spaceService.updatePlatformRolesAccessRecursively(
+      savedSpace,
+      targetParentL1.platformRolesAccess
+    );
 
     const parentAuthorization = await this.getParentSpaceAuthorization(
       savedSpace.id
