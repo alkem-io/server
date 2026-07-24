@@ -2,6 +2,7 @@ import {
   CREDENTIAL_RULE_PLATFORM_CREATE_INNOVATION_PACK,
   CREDENTIAL_RULE_PLATFORM_CREATE_SPACE,
   CREDENTIAL_RULE_PLATFORM_CREATE_VC,
+  CREDENTIAL_RULE_TYPES_ACCOUNT_AUTH_RESET,
   CREDENTIAL_RULE_TYPES_ACCOUNT_CHILD_ENTITIES,
   CREDENTIAL_RULE_TYPES_ACCOUNT_LICENSE_MANAGE,
   CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE,
@@ -304,13 +305,13 @@ export class AccountAuthorizationService {
         AuthorizationPrivilege.READ
       );
 
-    // Allow global admins to reset authorization, manage platform settings
-    // and transfer resources
-    const authorizationReset =
+    // Allow global admins/support/license-manager to manage platform
+    // settings and transfer resources. AUTHORIZATION_RESET and LICENSE_RESET
+    // moved to the dedicated reset rule below, which grants them to the same
+    // three roles plus the new Platform Operations Admin.
+    const manageGlobalRoles =
       this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
         [
-          AuthorizationPrivilege.AUTHORIZATION_RESET,
-          AuthorizationPrivilege.LICENSE_RESET,
           AuthorizationPrivilege.PLATFORM_ADMIN,
           AuthorizationPrivilege.CREATE_SPACE,
           AuthorizationPrivilege.CREATE_INNOVATION_HUB,
@@ -324,8 +325,29 @@ export class AccountAuthorizationService {
         ],
         CREDENTIAL_RULE_TYPES_ACCOUNT_MANAGE_GLOBAL_ROLES
       );
-    authorizationReset.cascade = false;
-    newRules.push(authorizationReset);
+    manageGlobalRoles.cascade = false;
+    newRules.push(manageGlobalRoles);
+
+    // Dedicated reset rule: strictly additive. GA/GS/GLM keep the
+    // AUTHORIZATION_RESET and LICENSE_RESET they held via manageGlobalRoles
+    // before this feature; the Platform Operations Admin joins them. Sole
+    // grant of both reset privileges on this policy.
+    const platformOperationsAdminReset =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [
+          AuthorizationPrivilege.AUTHORIZATION_RESET,
+          AuthorizationPrivilege.LICENSE_RESET,
+        ],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+        ],
+        CREDENTIAL_RULE_TYPES_ACCOUNT_AUTH_RESET
+      );
+    platformOperationsAdminReset.cascade = false;
+    newRules.push(platformOperationsAdminReset);
 
     // Allow Global Spaces Read to view Spaces + contents
     const globalSpacesReader =

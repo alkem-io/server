@@ -3,11 +3,13 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { InAppNotification } from '@platform/in-app-notification/in.app.notification.entity';
+import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { InAppNotificationAdminResolverMutations } from './in.app.notification.admin.resolver.mutations';
 import { InAppNotificationAdminService } from './in.app.notification.admin.service';
 
 @Module({
   imports: [
+    PlatformOperationsAuditModule,
     PlatformAuthorizationPolicyModule,
     AuthorizationModule,
     TypeOrmModule.forFeature([InAppNotification]),

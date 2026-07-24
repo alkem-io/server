@@ -347,7 +347,7 @@ describe('AdminLicensingResolverMutations', () => {
       expect(authorizationService.grantAccessOrFail).toHaveBeenCalledWith(
         actorContext,
         licensing.authorization,
-        AuthorizationPrivilege.GRANT,
+        AuthorizationPrivilege.LICENSE_RESET,
         'reset licenses on accounts'
       );
       expect(adminLicensingService.getAllAccounts).toHaveBeenCalled();

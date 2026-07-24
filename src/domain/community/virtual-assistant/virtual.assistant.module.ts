@@ -4,6 +4,7 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { VirtualAssistant } from './virtual.assistant.entity';
 import { VirtualAssistantResolverFields } from './virtual.assistant.resolver.fields';
 import { VirtualAssistantResolverMutations } from './virtual.assistant.resolver.mutations';
@@ -12,6 +13,7 @@ import { VirtualAssistantAuthorizationService } from './virtual.assistant.servic
 
 @Module({
   imports: [
+    PlatformOperationsAuditModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     ProfileModule,
