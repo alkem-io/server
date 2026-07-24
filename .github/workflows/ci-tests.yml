@@ -7,14 +7,11 @@ on:
     branches: [develop, main]
   workflow_dispatch:
 
-permissions:
-  contents: read
-  pull-requests: write
-  checks: write
-
 jobs:
   test:
-    runs-on: [self-hosted, macOS, ARM64, apple-silicon, m4]
+    runs-on: ${{ (github.event_name == 'push' || (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/develop')) && 'arc-trusted-linux-x64' || 'ubuntu-latest' }}
+    permissions:
+      contents: read
     env:
       NODE_OPTIONS: "--max-old-space-size=4096"
     steps:
@@ -51,7 +48,11 @@ jobs:
 
   sonarqube:
     needs: test
-    runs-on: [self-hosted, macOS, ARM64, apple-silicon, m4]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      pull-requests: write
+      checks: write
     steps:
       - name: Checkout code
         uses: actions/checkout@v7
