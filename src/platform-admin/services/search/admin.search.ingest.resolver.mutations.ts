@@ -52,8 +52,8 @@ export class AdminSearchIngestResolverMutations {
 
       throw e;
     }
-    // start it asynchronously
-    this.searchIngestService.ingestFromScratch(task);
+    // start it asynchronously — intentional fire-and-forget
+    void this.searchIngestService.ingestFromScratch(task);
     await this.platformOperationsAuditService.recordOperation({
       actorID: actorContext.actorID,
       action: 'adminSearchIngestFromScratch',
