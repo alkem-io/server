@@ -185,6 +185,7 @@ export class UserAuthorizationService {
         [
           AuthorizationCredential.GLOBAL_ADMIN,
           AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
         ],
         CREDENTIAL_RULE_TYPES_USER_AUTHORIZATION_RESET
       );

@@ -6,11 +6,13 @@ import { SpaceModule } from '@domain/space/space/space.module';
 import { Module } from '@nestjs/common';
 import { LicenseIssuerModule } from '@platform/licensing/credential-based/license-credential-issuer/license.issuer.module';
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
+import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { AdminLicensingResolverMutations } from './admin.licensing.resolver.mutations';
 import { AdminLicensingService } from './admin.licensing.service';
 
 @Module({
   imports: [
+    PlatformOperationsAuditModule,
     AccountModule,
     AccountLookupModule,
     SpaceModule,

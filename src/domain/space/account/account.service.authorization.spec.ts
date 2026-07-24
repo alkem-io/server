@@ -368,10 +368,10 @@ describe('AccountAuthorizationService', () => {
       expect(
         authorizationPolicyService.appendCredentialAuthorizationRules
       ).toHaveBeenCalled();
-      // Should create rules for global roles, space reader, resources manage, transfer accept, license manage
+      // Should create rules for global roles, auth reset, space reader, resources manage, transfer accept, license manage
       expect(
         authorizationPolicyService.createCredentialRuleUsingTypesOnly
-      ).toHaveBeenCalledTimes(5);
+      ).toHaveBeenCalledTimes(6);
       // Should create rules for host manage, create space, create VC, create innovation pack
       expect(
         authorizationPolicyService.createCredentialRule

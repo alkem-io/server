@@ -14,6 +14,7 @@ import { ILicensingFramework } from '@platform/licensing/credential-based/licens
 import { LicensingFrameworkService } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor, Profiling } from '@src/common/decorators';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { AdminLicensingService } from './admin.licensing.service';
 import { AssignLicensePlanToAccount } from './dto/admin.licensing.dto.assign.license.plan.to.account';
 import { AssignLicensePlanToSpace } from './dto/admin.licensing.dto.assign.license.plan.to.space';
@@ -31,7 +32,8 @@ export class AdminLicensingResolverMutations {
     private accountLicenseService: AccountLicenseService,
     private licensingFrameworkService: LicensingFrameworkService,
     private licenseService: LicenseService,
-    private adminLicensingService: AdminLicensingService
+    private adminLicensingService: AdminLicensingService,
+    private platformOperationsAuditService: PlatformOperationsAuditService
   ) {}
 
   @Mutation(() => String, {
@@ -217,16 +219,30 @@ export class AdminLicensingResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       licensing.authorization,
-      AuthorizationPrivilege.GRANT,
+      AuthorizationPrivilege.LICENSE_RESET,
       'reset licenses on accounts'
     );
 
-    const accounts = await this.adminLicensingService.getAllAccounts();
-    for (const account of accounts) {
-      const updatedLicenses =
-        await this.accountLicenseService.applyLicensePolicy(account.id);
-      await this.licenseService.saveAll(updatedLicenses);
+    try {
+      const accounts = await this.adminLicensingService.getAllAccounts();
+      for (const account of accounts) {
+        const updatedLicenses =
+          await this.accountLicenseService.applyLicensePolicy(account.id);
+        await this.licenseService.saveAll(updatedLicenses);
+      }
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'resetLicenseOnAccounts',
+        outcome: 'success',
+      });
+      return true;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'resetLicenseOnAccounts',
+        outcome: 'failure',
+      });
+      throw error;
     }
-    return true;
   }
 }

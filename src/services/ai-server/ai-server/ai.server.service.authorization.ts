@@ -1,4 +1,8 @@
-import { CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS } from '@common/constants/authorization/credential.rule.types.constants';
+import {
+  CREDENTIAL_RULE_AI_SERVER_AUTH_RESET,
+  CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS,
+  CREDENTIAL_RULE_AI_SERVER_PERSONA_CREATE,
+} from '@common/constants/authorization/credential.rule.types.constants';
 import {
   AuthorizationCredential,
   AuthorizationPrivilege,
@@ -79,12 +83,41 @@ export class AiServerAuthorizationService {
           AuthorizationPrivilege.UPDATE,
           AuthorizationPrivilege.DELETE,
           AuthorizationPrivilege.GRANT,
+          // Kept here (and cascading) so Global Admin retains the inherited
+          // AUTHORIZATION_RESET it has always had on aiServer child policies.
           AuthorizationPrivilege.AUTHORIZATION_RESET,
         ],
         [AuthorizationCredential.GLOBAL_ADMIN],
         CREDENTIAL_RULE_AI_SERVER_GLOBAL_ADMINS
       );
     credentialRules.push(globalAdmins);
+
+    // Additive reset rule: PLATFORM_OPERATIONS_ADMIN must not gain CRUD/GRANT
+    const authorizationReset =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.AUTHORIZATION_RESET],
+        [
+          AuthorizationCredential.GLOBAL_SUPPORT,
+          AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN,
+        ],
+        CREDENTIAL_RULE_AI_SERVER_AUTH_RESET
+      );
+    authorizationReset.cascade = false;
+    credentialRules.push(authorizationReset);
+
+    // Operational family (persona create): CREATE only, so the Platform
+    // Operations Admin never gains the full CRUD/GRANT bundle above.
+    // createAiPersona keeps its pre-existing CREATE gate — narrowing that gate
+    // would strip the privilege from existing CREATE holders. GLOBAL_ADMIN is
+    // not repeated here; it already holds CREATE via globalAdmins above.
+    const platformOperations =
+      this.authorizationPolicyService.createCredentialRuleUsingTypesOnly(
+        [AuthorizationPrivilege.CREATE],
+        [AuthorizationCredential.PLATFORM_OPERATIONS_ADMIN],
+        CREDENTIAL_RULE_AI_SERVER_PERSONA_CREATE
+      );
+    platformOperations.cascade = false;
+    credentialRules.push(platformOperations);
 
     return credentialRules;
   }

@@ -78,6 +78,15 @@ export interface PasswordChangeAuditDetails {
 }
 
 /**
+ * Platform-operations category payload shape (workspace#032). One row per
+ * execution of a gated operational/maintenance mutation; `action` carries the
+ * GraphQL mutation name.
+ */
+export interface PlatformOperationsAuditDetails {
+  action?: string;
+}
+
+/**
  * Cross-category shape of `platform_audit_entry.details`. Every field is
  * optional — the per-category audit-service (`UserEmailChangeAuditService`,
  * `UserPasswordChangeAuditService`, ...) enforces which keys it writes for
@@ -86,7 +95,8 @@ export interface PasswordChangeAuditDetails {
  * carry a discriminator.
  */
 export type PlatformAuditDetails = EmailChangeAuditDetails &
-  PasswordChangeAuditDetails;
+  PasswordChangeAuditDetails &
+  PlatformOperationsAuditDetails;
 
 /**
  * Row shape of `platform_audit_entry`. Append-only; retained indefinitely

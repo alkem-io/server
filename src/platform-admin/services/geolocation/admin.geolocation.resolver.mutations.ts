@@ -11,6 +11,7 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { GeoapifyService } from '@services/external/geoapify';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { EntityManager, IsNull, Not } from 'typeorm';
 
@@ -22,6 +23,7 @@ export class AdminGeoLocationMutations {
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
     private locationService: LocationService,
     private geoapifyService: GeoapifyService,
+    private platformOperationsAuditService: PlatformOperationsAuditService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     @Inject(WINSTON_MODULE_NEST_PROVIDER) private logger: LoggerService
@@ -38,57 +40,78 @@ export class AdminGeoLocationMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       `Update GeoLocation data: ${actorContext.actorID}`
     );
 
-    if (!this.geoapifyService.isEnabled()) {
-      this.logger.warn?.(
-        'GeoLocation is not enabled, skipping update.',
+    try {
+      if (!this.geoapifyService.isEnabled()) {
+        this.logger.warn?.(
+          'GeoLocation is not enabled, skipping update.',
+          LogContext.GEO
+        );
+        await this.platformOperationsAuditService.recordOperation({
+          actorID: actorContext.actorID,
+          action: 'adminUpdateGeoLocationData',
+          outcome: 'success',
+        });
+        return false;
+      }
+
+      // Get all the location entities which have a country set and the string length is greater than zero
+      const locations = await this.entityManager.find(Location, {
+        where: {
+          country: Not(IsNull()),
+        },
+      });
+      // Filter out empty strings in code
+      const filteredLocations = locations.filter(
+        loc =>
+          loc.country &&
+          loc.country.trim().length > 0 &&
+          (!loc.geoLocation || !loc.geoLocation.isValid)
+      );
+      this.logger.verbose?.(
+        `Identified ${filteredLocations.length} locations to potentially GeoLocation data for.`,
         LogContext.GEO
       );
-      return false;
-    }
-
-    // Get all the location entities which have a country set and the string length is greater than zero
-    const locations = await this.entityManager.find(Location, {
-      where: {
-        country: Not(IsNull()),
-      },
-    });
-    // Filter out empty strings in code
-    const filteredLocations = locations.filter(
-      loc =>
-        loc.country &&
-        loc.country.trim().length > 0 &&
-        (!loc.geoLocation || !loc.geoLocation.isValid)
-    );
-    this.logger.verbose?.(
-      `Identified ${filteredLocations.length} locations to potentially GeoLocation data for.`,
-      LogContext.GEO
-    );
-    for (const location of filteredLocations) {
-      try {
-        if (this.locationService.hasValidLocationDataForGeoLocation(location)) {
-          this.logger.verbose?.(
-            `Updating GeoLocation for location: ${location.id} -  ${location.country}, ${location.city}`,
+      for (const location of filteredLocations) {
+        try {
+          if (
+            this.locationService.hasValidLocationDataForGeoLocation(location)
+          ) {
+            this.logger.verbose?.(
+              `Updating GeoLocation for location: ${location.id} -  ${location.country}, ${location.city}`,
+              LogContext.GEO
+            );
+          }
+          location.geoLocation =
+            await this.locationService.checkAndUpdateGeoLocation(location);
+          await this.locationService.save(location);
+        } catch (error: any) {
+          this.logger.error?.(
+            `Failed to update all GeoLocations: ${error.message}`,
+            LogContext.GEO
+          );
+          throw new GeoLocationException(
+            `Failed to updateGeoLocationData: ${error.message}`,
             LogContext.GEO
           );
         }
-        location.geoLocation =
-          await this.locationService.checkAndUpdateGeoLocation(location);
-        await this.locationService.save(location);
-      } catch (error: any) {
-        this.logger.error?.(
-          `Failed to update all GeoLocations: ${error.message}`,
-          LogContext.GEO
-        );
-        throw new GeoLocationException(
-          `Failed to updateGeoLocationData: ${error.message}`,
-          LogContext.GEO
-        );
       }
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'adminUpdateGeoLocationData',
+        outcome: 'success',
+      });
+      return true;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'adminUpdateGeoLocationData',
+        outcome: 'failure',
+      });
+      throw error;
     }
-    return true;
   }
 }

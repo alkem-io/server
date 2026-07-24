@@ -10,6 +10,7 @@ import { InjectEntityManager } from '@nestjs/typeorm';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor, Profiling } from '@src/common/decorators';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { AlkemioConfig } from '@src/types';
 import { ChromaClient } from 'chromadb';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
@@ -44,6 +45,7 @@ export class AiServerResolverMutations {
     @InjectEntityManager('default')
     private entityManager: EntityManager,
     private config: ConfigService<AlkemioConfig, true>,
+    private platformOperationsAuditService: PlatformOperationsAuditService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private logger: LoggerService
   ) {}
@@ -60,10 +62,29 @@ export class AiServerResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platformAuthorization,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      'User not authenticated to migrate embeddings'
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
+      'cleanup ai server collections'
     );
 
+    try {
+      const result = await this.cleanupCollectionsInner();
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'cleanupCollections',
+        outcome: 'success',
+      });
+      return result;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'cleanupCollections',
+        outcome: 'failure',
+      });
+      throw error;
+    }
+  }
+
+  private async cleanupCollectionsInner(): Promise<IMigrateEmbeddingsResponse> {
     const { host, port, credentials } = this.config.get('platform.vector_db', {
       infer: true,
     });
@@ -129,13 +150,28 @@ export class AiServerResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       aiServer.authorization,
-      AuthorizationPrivilege.GRANT, // to be auth reset
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization on aiServer: ${actorContext.actorID}`
     );
-    const authorizations =
-      await this.aiServerAuthorizationService.applyAuthorizationPolicy();
-    await this.authorizationPolicyService.saveAll(authorizations);
-    return await this.aiServerService.getAiServerOrFail();
+    try {
+      const authorizations =
+        await this.aiServerAuthorizationService.applyAuthorizationPolicy();
+      await this.authorizationPolicyService.saveAll(authorizations);
+      const result = await this.aiServerService.getAiServerOrFail();
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'aiServerAuthorizationPolicyReset',
+        outcome: 'success',
+      });
+      return result;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'aiServerAuthorizationPolicyReset',
+        outcome: 'failure',
+      });
+      throw error;
+    }
   }
 
   @Mutation(() => IAiPersona, {
@@ -153,20 +189,37 @@ export class AiServerResolverMutations {
       AuthorizationPrivilege.CREATE,
       `create Virtual persona: ${aiPersonaData.engine}`
     );
-    let aiPersona = await this.aiPersonaService.createAiPersona(
-      aiPersonaData,
-      aiServer
-    );
-    aiPersona.aiServer = aiServer;
-    aiPersona = await this.aiPersonaService.save(aiPersona);
-
-    const authorizations =
-      await this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
-        aiPersona,
-        aiServer.authorization
+    try {
+      let aiPersona = await this.aiPersonaService.createAiPersona(
+        aiPersonaData,
+        aiServer
       );
-    await this.authorizationPolicyService.saveAll(authorizations);
+      aiPersona.aiServer = aiServer;
+      aiPersona = await this.aiPersonaService.save(aiPersona);
 
-    return this.aiPersonaService.getAiPersonaOrFail(aiPersona.id);
+      const authorizations =
+        await this.aiPersonaAuthorizationService.applyAuthorizationPolicy(
+          aiPersona,
+          aiServer.authorization
+        );
+      await this.authorizationPolicyService.saveAll(authorizations);
+
+      const result = await this.aiPersonaService.getAiPersonaOrFail(
+        aiPersona.id
+      );
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'aiServerCreateAiPersona',
+        outcome: 'success',
+      });
+      return result;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'aiServerCreateAiPersona',
+        outcome: 'failure',
+      });
+      throw error;
+    }
   }
 }

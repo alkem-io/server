@@ -5,10 +5,12 @@ import { ProfileModule } from '@domain/common/profile/profile.module';
 import { StorageBucketModule } from '@domain/storage/storage-bucket/storage.bucket.module';
 import { Module } from '@nestjs/common';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
+import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { AdminSearchContributorsMutations } from './admin.avatarresolver.mutations';
 
 @Module({
   imports: [
+    PlatformOperationsAuditModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     PlatformAuthorizationPolicyModule,

@@ -19,6 +19,7 @@ import { NotificationPlatformAdapter } from '@services/adapters/notification-ada
 import { AuthResetService } from '@services/auth-reset/publisher/auth-reset.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor, Profiling } from '@src/common/decorators';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { EntityManager } from 'typeorm';
 import { AdminAuthorizationService } from './admin.authorization.service';
 import { GrantAuthorizationCredentialInput } from './dto/authorization.dto.credential.grant';
@@ -41,7 +42,8 @@ export class AdminAuthorizationResolverMutations {
     private virtualContributorService: VirtualContributorService,
     @InjectEntityManager('default')
     private entityManager: EntityManager,
-    private spaceService: SpaceService
+    private spaceService: SpaceService,
+    private platformOperationsAuditService: PlatformOperationsAuditService
   ) {
     this.authorizationGlobalAdminPolicy =
       this.authorizationPolicyService.createGlobalRolesAuthorizationPolicy(
@@ -161,11 +163,26 @@ export class AdminAuthorizationResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN, // todo: replace with AUTHORIZATION_RESET once that has been granted
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization on platform: ${actorContext.actorID}`
     );
 
-    return this.authResetService.publishResetAll();
+    try {
+      const result = await this.authResetService.publishResetAll();
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'authorizationPolicyResetAll',
+        outcome: 'success',
+      });
+      return result;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'authorizationPolicyResetAll',
+        outcome: 'failure',
+      });
+      throw error;
+    }
   }
 
   @Mutation(() => Boolean, {
@@ -181,19 +198,33 @@ export class AdminAuthorizationResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN, // todo: replace with AUTHORIZATION_RESET once that has been granted
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset platformRolesAccess on all Spaces: ${actorContext.actorID}`
     );
 
-    const spaces = await this.entityManager.find(Space, {
-      where: {
-        level: SpaceLevel.L0,
-      },
-    });
-    for (const space of spaces) {
-      await this.spaceService.updatePlatformRolesAccessRecursively(space);
+    try {
+      const spaces = await this.entityManager.find(Space, {
+        where: {
+          level: SpaceLevel.L0,
+        },
+      });
+      for (const space of spaces) {
+        await this.spaceService.updatePlatformRolesAccessRecursively(space);
+      }
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'authorizationPlatformRolesAccessReset',
+        outcome: 'success',
+      });
+      return true;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'authorizationPlatformRolesAccessReset',
+        outcome: 'failure',
+      });
+      throw error;
     }
-    return true;
   }
 
   @Mutation(() => IAuthorizationPolicy, {
@@ -217,9 +248,25 @@ export class AdminAuthorizationResolverMutations {
       `reset authorization on a single authorization policy: ${actorContext.actorID}`
     );
 
-    return this.adminAuthorizationService.resetAuthorizationPolicy(
-      authorizationID
-    );
+    try {
+      const result =
+        await this.adminAuthorizationService.resetAuthorizationPolicy(
+          authorizationID
+        );
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'authorizationPolicyResetToGlobalAdminsAccess',
+        outcome: 'success',
+      });
+      return result;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'authorizationPolicyResetToGlobalAdminsAccess',
+        outcome: 'failure',
+      });
+      throw error;
+    }
   }
 
   @Mutation(() => Boolean, {
@@ -234,13 +281,29 @@ export class AdminAuthorizationResolverMutations {
     this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN,
-      `reset authorization on platform: ${actorContext.actorID}`
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
+      `refresh all bodies of knowledge: ${actorContext.actorID}`
     );
 
-    return this.virtualContributorService.refreshAllBodiesOfKnowledge(
-      actorContext
-    );
+    try {
+      const result =
+        await this.virtualContributorService.refreshAllBodiesOfKnowledge(
+          actorContext
+        );
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'refreshAllBodiesOfKnowledge',
+        outcome: 'success',
+      });
+      return result;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'refreshAllBodiesOfKnowledge',
+        outcome: 'failure',
+      });
+      throw error;
+    }
   }
 
   private async notifyPlatformGlobalRoleChange(

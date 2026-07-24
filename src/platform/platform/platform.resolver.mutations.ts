@@ -12,6 +12,7 @@ import { IPlatformSettings } from '@platform/platform-settings/platform.settings
 import { PlatformSettingsService } from '@platform/platform-settings/platform.settings.service';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor, Profiling } from '@src/common/decorators';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { IPlatform } from './platform.interface';
 import { PlatformService } from './platform.service';
 import { PlatformAuthorizationService } from './platform.service.authorization';
@@ -25,7 +26,8 @@ export class PlatformResolverMutations {
     private platformService: PlatformService,
     private platformAuthorizationService: PlatformAuthorizationService,
     private platformAuthorizationPolicyService: PlatformAuthorizationPolicyService,
-    private platformSettingsService: PlatformSettingsService
+    private platformSettingsService: PlatformSettingsService,
+    private platformOperationsAuditService: PlatformOperationsAuditService
   ) {}
 
   @Mutation(() => IPlatform, {
@@ -40,13 +42,28 @@ export class PlatformResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       platformPolicy,
-      AuthorizationPrivilege.PLATFORM_ADMIN, // TODO: back to authorization reset
+      AuthorizationPrivilege.AUTHORIZATION_RESET,
       `reset authorization on platform: ${actorContext.actorID}`
     );
-    const updatedAuthorizations =
-      await this.platformAuthorizationService.applyAuthorizationPolicy();
-    await this.authorizationPolicyService.saveAll(updatedAuthorizations);
-    return await this.platformService.getPlatformOrFail();
+    try {
+      const updatedAuthorizations =
+        await this.platformAuthorizationService.applyAuthorizationPolicy();
+      await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+      const result = await this.platformService.getPlatformOrFail();
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'authorizationPolicyResetOnPlatform',
+        outcome: 'success',
+      });
+      return result;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'authorizationPolicyResetOnPlatform',
+        outcome: 'failure',
+      });
+      throw error;
+    }
   }
 
   @Mutation(() => IPlatformSettings, {

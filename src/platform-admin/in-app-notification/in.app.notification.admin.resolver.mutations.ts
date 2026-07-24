@@ -5,6 +5,7 @@ import { AuthorizationService } from '@core/authorization/authorization.service'
 import { Mutation, Resolver } from '@nestjs/graphql';
 import { PlatformAuthorizationPolicyService } from '@platform/authorization/platform.authorization.policy.service';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { PlatformOperationsAuditService } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.service';
 import { PruneInAppNotificationAdminResult } from './dto/in.app.notification.admin.dto.prune.result';
 import { InAppNotificationAdminService } from './in.app.notification.admin.service';
 
@@ -14,7 +15,8 @@ export class InAppNotificationAdminResolverMutations {
   constructor(
     private readonly inAppNotificationsAdminService: InAppNotificationAdminService,
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
-    private readonly authorizationService: AuthorizationService
+    private readonly authorizationService: AuthorizationService,
+    private readonly platformOperationsAuditService: PlatformOperationsAuditService
   ) {}
 
   @Mutation(() => PruneInAppNotificationAdminResult, {
@@ -27,10 +29,26 @@ export class InAppNotificationAdminResolverMutations {
     await this.authorizationService.grantAccessOrFail(
       actorContext,
       await this.platformAuthorizationService.getPlatformAuthorizationPolicy(),
-      AuthorizationPrivilege.PLATFORM_ADMIN,
+      AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
       'pruning InApp Notifications'
     );
 
-    return await this.inAppNotificationsAdminService.pruneInAppNotifications();
+    try {
+      const result =
+        await this.inAppNotificationsAdminService.pruneInAppNotifications();
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'adminInAppNotificationsPrune',
+        outcome: 'success',
+      });
+      return result;
+    } catch (error) {
+      await this.platformOperationsAuditService.recordOperation({
+        actorID: actorContext.actorID,
+        action: 'adminInAppNotificationsPrune',
+        outcome: 'failure',
+      });
+      throw error;
+    }
   }
 }

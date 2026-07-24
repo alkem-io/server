@@ -419,6 +419,11 @@ export class Seed1764590884533 implements MigrationInterface {
         credential: { type: 'global-support-manager', resourceID: '' },
         userPolicy: { minimum: 0, maximum: -1 },
       },
+      {
+        name: 'platform-operations-admin',
+        credential: { type: 'platform-operations-admin', resourceID: '' },
+        userPolicy: { minimum: 0, maximum: -1 },
+      },
     ];
 
     for (const role of roles) {

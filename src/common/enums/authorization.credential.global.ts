@@ -3,4 +3,5 @@ export enum AuthorizationRoleGlobal {
   GLOBAL_COMMUNITY_READ = 'global-community-read',
   GLOBAL_SUPPORT = 'global-support',
   GLOBAL_ADMIN = 'global-admin',
+  PLATFORM_OPERATIONS_ADMIN = 'platform-operations-admin',
 }

@@ -12,12 +12,14 @@ import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { Forum } from '@platform/forum/forum.entity';
 import { CommunicationAdapterModule } from '@services/adapters/communication-adapter/communication-adapter.module';
+import { PlatformOperationsAuditModule } from '@src/platform-admin/platform-operations-audit/platform.operations.audit.module';
 import { AdminCommunicationResolverMutations } from './admin.communication.resolver.mutations';
 import { AdminCommunicationService } from './admin.communication.service';
 import { AdminCommunicationSpaceSyncService } from './admin.communication.space.sync.service';
 
 @Module({
   imports: [
+    PlatformOperationsAuditModule,
     AuthorizationModule,
     AuthorizationPolicyModule,
     CommunityModule,
