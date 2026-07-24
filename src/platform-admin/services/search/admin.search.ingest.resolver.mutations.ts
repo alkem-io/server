@@ -47,6 +47,7 @@ export class AdminSearchIngestResolverMutations {
         actorID: actorContext.actorID,
         action: 'adminSearchIngestFromScratch',
         outcome: 'failure',
+        error: e,
       });
 
       throw e;
@@ -57,6 +58,7 @@ export class AdminSearchIngestResolverMutations {
       actorID: actorContext.actorID,
       action: 'adminSearchIngestFromScratch',
       outcome: 'success',
+      target: { taskID: task.id },
     });
     // return the task in the meantime
     return task.id;

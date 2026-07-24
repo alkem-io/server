@@ -40,6 +40,11 @@ export class InAppNotificationAdminResolverMutations {
         actorID: actorContext.actorID,
         action: 'adminInAppNotificationsPrune',
         outcome: 'success',
+        target: {
+          removedCountOutsideRetentionPeriod:
+            result.removedCountOutsideRetentionPeriod,
+          removedCountExceedingUserLimit: result.removedCountExceedingUserLimit,
+        },
       });
       return result;
     } catch (error) {
@@ -47,6 +52,7 @@ export class InAppNotificationAdminResolverMutations {
         actorID: actorContext.actorID,
         action: 'adminInAppNotificationsPrune',
         outcome: 'failure',
+        error,
       });
       throw error;
     }

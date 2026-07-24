@@ -15,8 +15,20 @@ export interface RecordOperationInput {
   /** GraphQL mutation name of the operational action. */
   action: string;
   outcome: 'success' | 'failure';
-  details?: Omit<PlatformOperationsAuditDetails, 'action'>;
+  /**
+   * Allowlisted identifying fields of the operation (target IDs, safe
+   * scalars, result counts). Callers name each key explicitly — never
+   * spread the raw mutation input.
+   */
+  target?: Record<string, unknown>;
+  /**
+   * Failure rows: the caught error. Serialized to `<name>: <message>` and
+   * truncated before persisting; stack traces and causes are never stored.
+   */
+  error?: unknown;
 }
+
+const ERROR_DETAIL_MAX_LENGTH = 500;
 
 /**
  * Audit trail for the operational & maintenance mutation family
@@ -46,6 +58,15 @@ export class PlatformOperationsAuditService {
 
   public async recordOperation(input: RecordOperationInput): Promise<void> {
     try {
+      const details: PlatformOperationsAuditDetails = {
+        action: input.action,
+      };
+      if (input.target && Object.keys(input.target).length > 0) {
+        details.target = input.target;
+      }
+      if (input.outcome === 'failure' && input.error !== undefined) {
+        details.error = this.serializeError(input.error);
+      }
       const entry = this.auditRepository.create({
         category: PlatformAuditCategory.PLATFORM_OPERATIONS,
         subjectUserId: input.actorID,
@@ -55,7 +76,7 @@ export class PlatformOperationsAuditService {
           input.outcome === 'success'
             ? PlatformAuditOutcome.OPERATION_SUCCEEDED
             : PlatformAuditOutcome.OPERATION_FAILED,
-        details: { ...input.details, action: input.action },
+        details,
       });
       await this.auditRepository.save(entry);
     } catch (error) {
@@ -70,5 +91,13 @@ export class PlatformOperationsAuditService {
         LogContext.PLATFORM
       );
     }
+  }
+
+  private serializeError(error: unknown): string {
+    const text =
+      error instanceof Error
+        ? `${error.name}: ${error.message}`
+        : String(error);
+    return text.slice(0, ERROR_DETAIL_MAX_LENGTH);
   }
 }

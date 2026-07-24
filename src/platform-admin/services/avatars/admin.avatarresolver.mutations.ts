@@ -91,6 +91,7 @@ export class AdminSearchContributorsMutations {
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,
         action: 'adminUpdateContributorAvatars',
+        target: { profileID },
         outcome: 'success',
       });
       return result;
@@ -98,7 +99,9 @@ export class AdminSearchContributorsMutations {
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,
         action: 'adminUpdateContributorAvatars',
+        target: { profileID },
         outcome: 'failure',
+        error,
       });
       throw error;
     }

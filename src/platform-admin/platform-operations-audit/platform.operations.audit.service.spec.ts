@@ -61,6 +61,46 @@ describe('PlatformOperationsAuditService', () => {
     expect(entry.outcome).toBe(PlatformAuditOutcome.OPERATION_FAILED);
   });
 
+  it('persists allowlisted target fields in details', async () => {
+    await service.recordOperation({
+      actorID: 'actor-1',
+      action: 'adminCommunicationRemoveOrphanedRoom',
+      outcome: 'success',
+      target: { roomID: 'room-42' },
+    });
+
+    const entry = repo.create.mock.calls[0][0];
+    expect(entry.details).toEqual({
+      action: 'adminCommunicationRemoveOrphanedRoom',
+      target: { roomID: 'room-42' },
+    });
+  });
+
+  it('serializes the error into details on failure rows, truncated', async () => {
+    await service.recordOperation({
+      actorID: 'actor-1',
+      action: 'resetLicenseOnAccounts',
+      outcome: 'failure',
+      error: new Error('x'.repeat(600)),
+    });
+
+    const entry = repo.create.mock.calls[0][0];
+    expect(entry.details.error).toMatch(/^Error: x+$/);
+    expect(entry.details.error.length).toBe(500);
+  });
+
+  it('never writes an error key on success rows', async () => {
+    await service.recordOperation({
+      actorID: 'actor-1',
+      action: 'cleanupCollections',
+      outcome: 'success',
+      error: new Error('should be ignored'),
+    });
+
+    const entry = repo.create.mock.calls[0][0];
+    expect(entry.details).toEqual({ action: 'cleanupCollections' });
+  });
+
   it('is fail-open: a repository error is swallowed, never thrown into the mutation path', async () => {
     repo.save.mockRejectedValue(new Error('db down'));
 

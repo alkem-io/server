@@ -56,6 +56,7 @@ export class AdminWhiteboardResolverMutations {
         actorID: actorContext.actorID,
         action: 'adminUploadFilesFromContentToStorageBucket',
         outcome: 'failure',
+        error,
       });
       throw error;
     }

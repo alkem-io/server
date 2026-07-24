@@ -79,6 +79,7 @@ export class AiServerResolverMutations {
         actorID: actorContext.actorID,
         action: 'cleanupCollections',
         outcome: 'failure',
+        error,
       });
       throw error;
     }
@@ -169,6 +170,7 @@ export class AiServerResolverMutations {
         actorID: actorContext.actorID,
         action: 'aiServerAuthorizationPolicyReset',
         outcome: 'failure',
+        error,
       });
       throw error;
     }
@@ -211,6 +213,7 @@ export class AiServerResolverMutations {
         actorID: actorContext.actorID,
         action: 'aiServerCreateAiPersona',
         outcome: 'success',
+        target: { aiPersonaID: result.id, engine: aiPersonaData.engine },
       });
       return result;
     } catch (error) {
@@ -218,6 +221,8 @@ export class AiServerResolverMutations {
         actorID: actorContext.actorID,
         action: 'aiServerCreateAiPersona',
         outcome: 'failure',
+        target: { engine: aiPersonaData.engine },
+        error,
       });
       throw error;
     }

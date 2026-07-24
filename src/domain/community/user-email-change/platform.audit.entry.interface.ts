@@ -84,6 +84,18 @@ export interface PasswordChangeAuditDetails {
  */
 export interface PlatformOperationsAuditDetails {
   action?: string;
+  /**
+   * Allowlisted identifying fields of the operation — target IDs and safe
+   * scalars (e.g. `roomID`, `communityID`, result counts). Never a raw dump
+   * of the mutation input: each resolver names the keys it writes, so
+   * sensitive payload fields (prompts, configs, emails) cannot leak in.
+   */
+  target?: Record<string, unknown>;
+  /**
+   * Failure rows only: `<ErrorName>: <message>`, truncated — enough to
+   * attribute the failure without mirroring internals into the audit row.
+   */
+  error?: string;
 }
 
 /**

@@ -54,6 +54,12 @@ export class VirtualAssistantResolverMutations {
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,
         action: 'updateAssistantActorCapabilities',
+        target: {
+          virtualAssistantID: grantData.virtualAssistantID,
+          capabilities: grantData.enabledCapabilities.map(
+            toggle => `${toggle.capability}=${toggle.enabled}`
+          ),
+        },
         outcome: 'success',
       });
       return result;
@@ -61,7 +67,14 @@ export class VirtualAssistantResolverMutations {
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,
         action: 'updateAssistantActorCapabilities',
+        target: {
+          virtualAssistantID: grantData.virtualAssistantID,
+          capabilities: grantData.enabledCapabilities.map(
+            toggle => `${toggle.capability}=${toggle.enabled}`
+          ),
+        },
         outcome: 'failure',
+        error,
       });
       throw error;
     }

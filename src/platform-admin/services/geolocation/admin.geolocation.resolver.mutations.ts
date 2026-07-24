@@ -110,6 +110,7 @@ export class AdminGeoLocationMutations {
         actorID: actorContext.actorID,
         action: 'adminUpdateGeoLocationData',
         outcome: 'failure',
+        error,
       });
       throw error;
     }

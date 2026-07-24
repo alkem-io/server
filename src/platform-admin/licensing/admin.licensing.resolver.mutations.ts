@@ -241,6 +241,7 @@ export class AdminLicensingResolverMutations {
         actorID: actorContext.actorID,
         action: 'resetLicenseOnAccounts',
         outcome: 'failure',
+        error,
       });
       throw error;
     }

@@ -180,6 +180,7 @@ export class AdminAuthorizationResolverMutations {
         actorID: actorContext.actorID,
         action: 'authorizationPolicyResetAll',
         outcome: 'failure',
+        error,
       });
       throw error;
     }
@@ -222,6 +223,7 @@ export class AdminAuthorizationResolverMutations {
         actorID: actorContext.actorID,
         action: 'authorizationPlatformRolesAccessReset',
         outcome: 'failure',
+        error,
       });
       throw error;
     }
@@ -256,6 +258,7 @@ export class AdminAuthorizationResolverMutations {
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,
         action: 'authorizationPolicyResetToGlobalAdminsAccess',
+        target: { authorizationID },
         outcome: 'success',
       });
       return result;
@@ -263,7 +266,9 @@ export class AdminAuthorizationResolverMutations {
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,
         action: 'authorizationPolicyResetToGlobalAdminsAccess',
+        target: { authorizationID },
         outcome: 'failure',
+        error,
       });
       throw error;
     }
@@ -301,6 +306,7 @@ export class AdminAuthorizationResolverMutations {
         actorID: actorContext.actorID,
         action: 'refreshAllBodiesOfKnowledge',
         outcome: 'failure',
+        error,
       });
       throw error;
     }

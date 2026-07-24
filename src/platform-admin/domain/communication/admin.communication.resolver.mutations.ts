@@ -84,6 +84,7 @@ export class AdminCommunicationResolverMutations {
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,
         action: 'adminCommunicationEnsureAccessToCommunications',
+        target: { communityID: ensureAccessData.communityID },
         outcome: 'success',
       });
       return result;
@@ -91,7 +92,9 @@ export class AdminCommunicationResolverMutations {
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,
         action: 'adminCommunicationEnsureAccessToCommunications',
+        target: { communityID: ensureAccessData.communityID },
         outcome: 'failure',
+        error,
       });
       throw error;
     }
@@ -120,6 +123,7 @@ export class AdminCommunicationResolverMutations {
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,
         action: 'adminCommunicationRemoveOrphanedRoom',
+        target: { roomID: orphanedRoomData.roomID },
         outcome: 'success',
       });
       return result;
@@ -127,7 +131,9 @@ export class AdminCommunicationResolverMutations {
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,
         action: 'adminCommunicationRemoveOrphanedRoom',
+        target: { roomID: orphanedRoomData.roomID },
         outcome: 'failure',
+        error,
       });
       throw error;
     }
@@ -157,6 +163,11 @@ export class AdminCommunicationResolverMutations {
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,
         action: 'adminCommunicationUpdateRoomState',
+        target: {
+          roomID: roomStateData.roomID,
+          isPublic: roomStateData.isPublic,
+          isWorldVisible: roomStateData.isWorldVisible,
+        },
         outcome: 'success',
       });
       return result;
@@ -164,7 +175,13 @@ export class AdminCommunicationResolverMutations {
       await this.platformOperationsAuditService.recordOperation({
         actorID: actorContext.actorID,
         action: 'adminCommunicationUpdateRoomState',
+        target: {
+          roomID: roomStateData.roomID,
+          isPublic: roomStateData.isPublic,
+          isWorldVisible: roomStateData.isWorldVisible,
+        },
         outcome: 'failure',
+        error,
       });
       throw error;
     }
@@ -198,6 +215,7 @@ export class AdminCommunicationResolverMutations {
         actorID: actorContext.actorID,
         action: 'adminCommunicationMigrateOrphanedConversations',
         outcome: 'failure',
+        error,
       });
       throw error;
     }
@@ -231,6 +249,7 @@ export class AdminCommunicationResolverMutations {
         actorID: actorContext.actorID,
         action: 'adminCommunicationSyncSpaceHierarchy',
         outcome: 'failure',
+        error,
       });
       throw error;
     }
