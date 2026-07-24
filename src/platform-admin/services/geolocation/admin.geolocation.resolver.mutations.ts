@@ -41,7 +41,7 @@ export class AdminGeoLocationMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-      `Update GeoLocation data: ${actorContext.actorID}`
+      `Update GeoLocation data`
     );
 
     try {
@@ -91,10 +91,11 @@ export class AdminGeoLocationMutations {
         } catch (error: any) {
           this.logger.error?.(
             `Failed to update all GeoLocations: ${error.message}`,
+            error?.stack,
             LogContext.GEO
           );
           throw new GeoLocationException(
-            `Failed to updateGeoLocationData: ${error.message}`,
+            'Failed to update GeoLocation data',
             LogContext.GEO
           );
         }

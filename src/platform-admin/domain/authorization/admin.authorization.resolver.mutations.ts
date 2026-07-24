@@ -164,7 +164,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization on platform: ${actorContext.actorID}`
+      `reset authorization on platform`
     );
 
     try {
@@ -200,7 +200,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset platformRolesAccess on all Spaces: ${actorContext.actorID}`
+      `reset platformRolesAccess on all Spaces`
     );
 
     try {
@@ -247,7 +247,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       platformPolicyUpdated,
       AuthorizationPrivilege.AUTHORIZATION_RESET,
-      `reset authorization on a single authorization policy: ${actorContext.actorID}`
+      `reset authorization on a single authorization policy`
     );
 
     try {
@@ -287,7 +287,7 @@ export class AdminAuthorizationResolverMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-      `refresh all bodies of knowledge: ${actorContext.actorID}`
+      `refresh all bodies of knowledge`
     );
 
     try {

@@ -44,7 +44,7 @@ export class AdminSearchContributorsMutations {
       actorContext,
       platformPolicy,
       AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-      `Update contributor avatars to be stored as Documents: ${actorContext.actorID}`
+      `Update contributor avatars to be stored as Documents`
     );
 
     try {
@@ -68,15 +68,17 @@ export class AdminSearchContributorsMutations {
 
       if (!profile.storageBucket) {
         throw new RelationshipNotFoundException(
-          `Unable to find StorageBucket for Profile ${profile.id}`,
-          LogContext.PROFILE
+          'Unable to find StorageBucket for Profile',
+          LogContext.PROFILE,
+          { profileID: profile.id }
         );
       }
 
       if (!profile.authorization) {
         throw new RelationshipNotFoundException(
-          `Profile ${profile.id} does not have authorization information.`,
-          LogContext.PROFILE
+          'Profile does not have authorization information',
+          LogContext.PROFILE,
+          { profileID: profile.id }
         );
       }
 

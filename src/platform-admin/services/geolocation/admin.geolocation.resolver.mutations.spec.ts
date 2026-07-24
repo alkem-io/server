@@ -171,7 +171,7 @@ describe('AdminGeoLocationMutations', () => {
 
       await expect(
         resolver.adminUpdateGeoLocationData(actorContext)
-      ).rejects.toThrow('API failure');
+      ).rejects.toThrow('Failed to update GeoLocation data');
     });
   });
 });

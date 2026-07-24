@@ -74,7 +74,7 @@ export class AdminCommunicationResolverMutations {
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-      `grant community members access to communications: ${actorContext.actorID}`
+      `grant community members access to communications`
     );
     try {
       const result =
@@ -113,7 +113,7 @@ export class AdminCommunicationResolverMutations {
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-      `communications admin remove orphaned room: ${actorContext.actorID}`
+      `communications admin remove orphaned room`
     );
     try {
       const result =
@@ -152,7 +152,7 @@ export class AdminCommunicationResolverMutations {
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-      `communications admin update join rule on all rooms: ${actorContext.actorID}`
+      `communications admin update join rule on all rooms`
     );
     try {
       const result = await this.adminCommunicationService.updateRoomState(
@@ -199,7 +199,7 @@ export class AdminCommunicationResolverMutations {
       actorContext,
       this.communicationGlobalAdminPolicy,
       AuthorizationPrivilege.PLATFORM_OPERATIONS_ADMIN,
-      `communications admin migrate orphaned conversations: ${actorContext.actorID}`
+      `communications admin migrate orphaned conversations`
     );
     try {
       const result =
