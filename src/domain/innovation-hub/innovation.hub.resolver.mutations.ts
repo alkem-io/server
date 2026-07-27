@@ -1,9 +1,11 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor, Profiling } from '@src/common/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { DeleteInnovationHubInput } from './dto/innovation.hub.dto.delete';
 import { UpdateInnovationHubInput } from './dto/innovation.hub.dto.update';
 import { IInnovationHub } from './innovation.hub.interface';
@@ -14,7 +16,8 @@ import { InnovationHubService } from './innovation.hub.service';
 export class InnovationHubResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private innovationHubService: InnovationHubService
+    private innovationHubService: InnovationHubService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService
   ) {}
 
   @Mutation(() => IInnovationHub, {
@@ -83,6 +86,23 @@ export class InnovationHubResolverMutations {
         'delete innovation hub'
       );
     }
-    return await this.innovationHubService.delete(deleteData.ID);
+    const deleted = await this.innovationHubService.delete(deleteData.ID);
+    // T058/FR-018a: audit ONLY on the PLATFORM branch.
+    if (canDeleteAsContentFullAccess) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        {
+          resourceKind: 'innovation-hub',
+          resourceId: innovationHub.id,
+          outcome: 'deleted',
+        }
+      );
+    }
+    return deleted;
   }
 }

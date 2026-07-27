@@ -3,6 +3,7 @@ import { Callout } from '@domain/collaboration/callout/callout.entity';
 import { Module } from '@nestjs/common';
 import { TypeOrmModule } from '@nestjs/typeorm';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator';
+import { PlatformResourceAuditModule } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.module';
 import { CalloutModule } from '../callout/callout.module';
 import { CollaborationLicenseModule } from '../collaboration/collaboration.license.module';
 import { CalloutContribution } from './callout.contribution.entity';
@@ -17,6 +18,7 @@ import { CalloutContributionMoveService } from './callout.contribution.move.serv
     CalloutContributionModule,
     CollaborationLicenseModule,
     UrlGeneratorModule,
+    PlatformResourceAuditModule,
     TypeOrmModule.forFeature([CalloutContribution, Callout]),
   ],
   providers: [

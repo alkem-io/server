@@ -512,7 +512,17 @@ describe('BootstrapService', () => {
     });
 
     it('creates new users with credentials and authorization', async () => {
-      mocks.userLookupService.isRegisteredUser.mockResolvedValue(false);
+      // 027-platform-role-redesign (T053): existence + credentials are
+      // resolved via `userService.getUserByEmail` in ONE call — not found
+      // on the first lookup, then RELOADED (with credentials) after
+      // creation for the seeded-credential grant loop.
+      mocks.userService.getUserByEmail
+        .mockResolvedValueOnce(null)
+        .mockResolvedValueOnce({
+          id: 'user-new',
+          email: 'new@alkem.io',
+          credentials: [],
+        });
 
       await service.createUserProfiles([
         {
@@ -532,10 +542,37 @@ describe('BootstrapService', () => {
       ).toHaveBeenCalledOnce();
     });
 
+    it('grants only MISSING credentials on an existing account (T053, idempotent across restarts)', async () => {
+      mocks.userService.getUserByEmail.mockResolvedValueOnce({
+        id: 'admin-1',
+        email: 'admin@alkem.io',
+        credentials: [{ type: 'platform-roles-admin', resourceID: '' }],
+      });
+
+      await service.createUserProfiles([
+        {
+          email: 'admin@alkem.io',
+          firstName: 'admin',
+          lastName: 'alkemio',
+          credentials: [
+            { type: 'platform-roles-admin', resourceID: '' },
+            { type: 'global-admin', resourceID: '' },
+          ],
+        },
+      ]);
+
+      expect(mocks.userService.createUser).not.toHaveBeenCalled();
+      // Only the MISSING `global-admin` credential is granted.
+      expect(
+        mocks.adminAuthorizationService.grantCredentialToUser
+      ).toHaveBeenCalledOnce();
+      expect(
+        mocks.adminAuthorizationService.grantCredentialToUser
+      ).toHaveBeenCalledWith(expect.objectContaining({ type: 'global-admin' }));
+    });
+
     it('wraps errors in BootstrapException', async () => {
-      mocks.userLookupService.isRegisteredUser.mockRejectedValue(
-        new Error('DB error')
-      );
+      mocks.userService.getUserByEmail.mockRejectedValue(new Error('DB error'));
 
       await expect(
         service.createUserProfiles([

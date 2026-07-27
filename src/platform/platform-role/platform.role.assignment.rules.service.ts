@@ -89,6 +89,44 @@ export class PlatformRoleAssignmentRulesService {
     }
   }
 
+  /**
+   * Seed-path evaluation (T054, `bootstrap.service.ts`) — rules 2-5 ONLY.
+   * Rule 1 (assigner capability) is meaningless for a bootstrap seed: there
+   * is no assigner performing a mutation — the seed IS the platform
+   * establishing its own initial state (`users.json`), which typically runs
+   * before the platform authorization policy even carries the rules rule 1
+   * would check. Sharing rules 2-5 with the mutation path is what makes
+   * "seeding is not a rule bypass" true BY CONSTRUCTION (FR-013, FR-028): a
+   * misconfigured seed (wrong holder kind, a missing `serviceProfile`
+   * marker, two mutually exclusive roles, the break-glass Roles Admin
+   * revoked) fails exactly as it would through the resolver, and the caller
+   * MUST treat a violation as fatal — never force it through by stripping
+   * the role, never silently skip.
+   *
+   * @throws {ForbiddenException} naming the first violated rule (2-5).
+   */
+  public evaluateSeedOrFail(
+    input: Omit<
+      PlatformRoleAssignmentEvaluationInput,
+      'actorContext' | 'roleSetAuthorization'
+    >
+  ): void {
+    const violation =
+      this.checkHolderKind(input as PlatformRoleAssignmentEvaluationInput) ??
+      this.checkSpacesReaderServiceAccount(
+        input as PlatformRoleAssignmentEvaluationInput
+      ) ??
+      this.checkAuditReaderExclusion(
+        input as PlatformRoleAssignmentEvaluationInput
+      ) ??
+      this.checkLastRolesAdmin(input as PlatformRoleAssignmentEvaluationInput);
+    if (violation) {
+      throw new ForbiddenException(violation.message, LogContext.PLATFORM, {
+        ruleId: violation.ruleId,
+      });
+    }
+  }
+
   /** Pure evaluation — returns the first violated rule, or `undefined` if
    * every rule passes. Exposed separately so unit specs (T070c) can assert
    * the SPECIFIC violated rule without parsing thrown message text twice. */

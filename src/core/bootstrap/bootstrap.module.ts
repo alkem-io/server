@@ -23,6 +23,7 @@ import { LicensePlanModule } from '@platform/licensing/credential-based/license-
 import { LicensingFrameworkModule } from '@platform/licensing/credential-based/licensing-framework/licensing.framework.module';
 import { PlatformModule } from '@platform/platform/platform.module';
 import { PlatformWellKnownVirtualContributorsModule } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.module';
+import { PlatformRoleModule } from '@platform/platform-role/platform.role.module';
 import { PlatformTemplatesModule } from '@platform/platform-templates/platform.templates.module';
 import { AiPersonaModule } from '@services/ai-server/ai-persona';
 import { AiServerModule } from '@services/ai-server/ai-server/ai.server.module';
@@ -30,6 +31,7 @@ import { SearchIngestModule } from '@services/api/search/ingest';
 import { McpApiKey } from '@services/mcp-server/auth/mcp-api-key.entity';
 import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
 import { AdminAuthorizationModule } from '@src/platform-admin/domain/authorization/admin.authorization.module';
+import { PlatformRoleAssignmentAuditModule } from '@src/platform-admin/platform-role-assignment-audit/platform.role.assignment.audit.module';
 import { BootstrapService } from './bootstrap.service';
 
 @Module({
@@ -62,6 +64,11 @@ import { BootstrapService } from './bootstrap.service';
     MessagingModule,
     PlatformWellKnownVirtualContributorsModule,
     RoleSetModule,
+    // 027-platform-role-redesign (T053-T055): seeded credential grants route
+    // through the SAME assignment rule engine and fail-open audit writer the
+    // mutation path uses (T030-T032).
+    PlatformRoleModule,
+    PlatformRoleAssignmentAuditModule,
   ],
   providers: [BootstrapService, McpApiKeyService],
   exports: [BootstrapService],

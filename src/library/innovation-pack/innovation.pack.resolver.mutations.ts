@@ -1,9 +1,11 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor, Profiling } from '@src/common/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { UpdateInnovationPackInput } from './dto/innovation.pack.dto.update';
 import { DeleteInnovationPackInput } from './dto/innovationPack.dto.delete';
 import { IInnovationPack } from './innovation.pack.interface';
@@ -14,7 +16,8 @@ import { InnovationPackService } from './innovation.pack.service';
 export class InnovationPackResolverMutations {
   constructor(
     private authorizationService: AuthorizationService,
-    private innovationPackService: InnovationPackService
+    private innovationPackService: InnovationPackService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService
   ) {}
 
   @Mutation(() => IInnovationPack, {
@@ -93,6 +96,24 @@ export class InnovationPackResolverMutations {
         `deleteInnovationPack: ${innovationPack.id}`
       );
     }
-    return await this.innovationPackService.deleteInnovationPack(deleteData);
+    const deleted =
+      await this.innovationPackService.deleteInnovationPack(deleteData);
+    // T058/FR-018a: audit ONLY on the PLATFORM branch.
+    if (canDeleteAsContentFullAccess) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        {
+          resourceKind: 'innovation-pack',
+          resourceId: innovationPack.id,
+          outcome: 'deleted',
+        }
+      );
+    }
+    return deleted;
   }
 }

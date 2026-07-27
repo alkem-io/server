@@ -1,4 +1,5 @@
 import { SUBSCRIPTION_SUBSPACE_CREATED } from '@common/constants/providers';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { AuthorizationPrivilege } from '@common/enums/authorization.privilege';
 import { SubscriptionType } from '@common/enums/subscription.type';
 import { ActorContext } from '@core/actor-context/actor.context';
@@ -16,6 +17,7 @@ import { ActivityAdapter } from '@services/adapters/activity-adapter/activity.ad
 import { ContributionReporterService } from '@services/external/elasticsearch/contribution-reporter';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor } from '@src/common/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { PubSubEngine } from 'graphql-subscriptions';
 import { CreateSubspaceInput } from './dto/space.dto.create.subspace';
 import { UpdateSpacePlatformSettingsInput } from './dto/space.dto.update.platform.settings';
@@ -40,7 +42,8 @@ export class SpaceResolverMutations {
     @Inject(SUBSCRIPTION_SUBSPACE_CREATED)
     private subspaceCreatedSubscription: PubSubEngine,
     private spaceLicenseService: SpaceLicenseService,
-    private licenseService: LicenseService
+    private licenseService: LicenseService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService
   ) {}
 
   @Mutation(() => ISpace, {
@@ -111,7 +114,26 @@ export class SpaceResolverMutations {
         `deleteSpace: ${space.nameID}`
       );
     }
-    return await this.spaceService.deleteSpaceOrFail(deleteData);
+    const deletedSpaceId = space.id;
+    const deleted = await this.spaceService.deleteSpaceOrFail(deleteData);
+    // T058/FR-018a: audit ONLY on the PLATFORM branch — taken from the
+    // authorization RESULT above, never re-derived from the actor's roles.
+    if (canDeleteAsContentFullAccess) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        {
+          resourceKind: 'space',
+          resourceId: deletedSpaceId,
+          outcome: 'deleted',
+        }
+      );
+    }
+    return deleted;
   }
 
   @Mutation(() => ISpace, {
@@ -173,6 +195,7 @@ export class SpaceResolverMutations {
       `update platform settings on space: ${space.id}`
     );
 
+    const previousVisibility = space.visibility;
     space = await this.spaceService.updateSpacePlatformSettings(
       space,
       updateData
@@ -182,6 +205,28 @@ export class SpaceResolverMutations {
     const updatedAuthorizations =
       await this.spaceAuthorizationService.applyAuthorizationPolicy(space.id);
     await this.authorizationPolicyService.saveAll(updatedAuthorizations);
+
+    // T058 — single-path surface (no owner branch): every successful call
+    // is, by construction, authorized by ACCOUNT_LICENSE_MANAGE (A14).
+    if (
+      updateData.visibility !== undefined &&
+      updateData.visibility !== previousVisibility
+    ) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        [AuthorizationCredential.PLATFORM_LICENSE_MANAGER],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        {
+          resourceKind: 'space-visibility',
+          resourceId: space.id,
+          visibility: updateData.visibility,
+          outcome: 'visibility_changed',
+        }
+      );
+    }
 
     return await this.spaceService.getSpaceOrFail(space.id);
   }

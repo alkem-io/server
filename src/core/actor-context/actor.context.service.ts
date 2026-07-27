@@ -60,8 +60,75 @@ export class ActorContextService {
     actorID: string
   ): Promise<void> {
     ctx.actorID = actorID;
-    ctx.credentials =
+    const ownCredentials =
       await this.actorLookupService.getActorCredentialsOrFail(actorID);
+    ctx.credentials =
+      await this.expandWithOrganizationInheritedFeatureCredentials(
+        ownCredentials
+      );
+  }
+
+  /**
+   * 027-platform-role-redesign (T056, research D8, FR-002/FR-031): an
+   * `ORGANIZATION_ADMIN` / `ORGANIZATION_OWNER` of an organization inherits
+   * that organization's OWN `feature-*` credentials — a `feature-*` role is
+   * grantable to an organization (T032a) as well as a user, and its holder
+   * kind rule (rule 2) explicitly allows either. A plain
+   * `ORGANIZATION_ASSOCIATE` inherits nothing.
+   *
+   * `platform-*` credentials are NEVER expanded this way, in either
+   * direction — the `platform-`/`feature-` prefix is load-bearing (D2): a
+   * `platform-*` role is scoped by rule 2 to a single human/service holder,
+   * never an organization, and expanding it through organization standing
+   * would silently multiply who holds it, defeating that rule.
+   */
+  private async expandWithOrganizationInheritedFeatureCredentials(
+    credentials: ICredential[]
+  ): Promise<ICredential[]> {
+    const organizationIDs = [
+      ...new Set(
+        credentials
+          .filter(
+            c =>
+              c.type === AuthorizationCredential.ORGANIZATION_ADMIN ||
+              c.type === AuthorizationCredential.ORGANIZATION_OWNER
+          )
+          .map(c => c.resourceID)
+          .filter((id): id is string => !!id)
+      ),
+    ];
+
+    if (organizationIDs.length === 0) {
+      return credentials;
+    }
+
+    const expanded = [...credentials];
+    for (const organizationID of organizationIDs) {
+      let organizationCredentials: ICredential[];
+      try {
+        organizationCredentials =
+          await this.actorLookupService.getActorCredentialsOrFail(
+            organizationID
+          );
+      } catch {
+        // A dangling/stale ORGANIZATION_ADMIN/OWNER resourceID must not
+        // fail the whole actor-context build — skip that organization.
+        continue;
+      }
+      for (const credential of organizationCredentials) {
+        if (!isFeatureCredentialType(credential.type)) {
+          continue;
+        }
+        const alreadyHeld = expanded.some(
+          c =>
+            c.type === credential.type && c.resourceID === credential.resourceID
+        );
+        if (!alreadyHeld) {
+          expanded.push(credential);
+        }
+      }
+    }
+    return expanded;
   }
 
   /**
@@ -149,6 +216,13 @@ export class ActorContextService {
     // throws if the user does not exist
     return this.buildForUser(actorID);
   }
+}
+
+/** D2's `feature-` prefix filter (T056) — kept as a single named predicate
+ * rather than an inline string check so `platform.role.assignment.rules.service.spec.ts`-adjacent
+ * specs and this service's own spec assert against ONE definition. */
+export function isFeatureCredentialType(type: string): boolean {
+  return type.startsWith('feature-');
 }
 
 const normalizeGuestName = (guestName?: string): string => {

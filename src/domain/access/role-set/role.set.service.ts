@@ -21,6 +21,7 @@ import {
 } from '@common/exceptions';
 import { RoleSetMembershipException } from '@common/exceptions/role.set.membership.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
+import { ActorContextCacheService } from '@core/actor-context/actor.context.cache.service';
 import {
   CreateApplicationInput,
   IApplication,
@@ -122,7 +123,16 @@ export class RoleSetService {
     private roleSetRepository: Repository<RoleSet>,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService,
-    private readonly roleSetCacheService: RoleSetCacheService
+    private readonly roleSetCacheService: RoleSetCacheService,
+    // 027-platform-role-redesign (T057, research D8, FR-031/SC-016): a
+    // user's ORGANIZATION_ADMIN/OWNER standing drives the org-inherited
+    // `feature-*` credential expansion (T056). Explicit invalidation here —
+    // ON TOP OF the invalidation `ActorService.grantCredentialOrFail` /
+    // `.revokeCredential` already perform for the affected actor's OWN
+    // credential change — makes the guarantee hold by construction rather
+    // than by an incidental call chain a future refactor could silently
+    // remove.
+    private readonly actorContextCacheService: ActorContextCacheService
   ) {}
 
   async createRoleSet(roleSetData: CreateRoleSetInput): Promise<IRoleSet> {
@@ -787,6 +797,11 @@ export class RoleSetService {
             });
           }
         }
+        // T057 (FR-031/SC-016): standing on an ORGANIZATION role-set drives
+        // T056's org-inherited `feature-*` credential expansion — a newly
+        // promoted ADMIN/OWNER must pick up the org's `feature-*`
+        // credentials on the NEXT request, not after the 60s TTL.
+        await this.actorContextCacheService.deleteByActorID(actorID);
         break;
       }
     }
@@ -1162,6 +1177,11 @@ export class RoleSetService {
             adminCredential.resourceID
           );
         }
+        // T057 (FR-031/SC-016): a demotion (ADMIN/OWNER → ASSOCIATE) or a
+        // departure (MEMBER/ASSOCIATE removed entirely) must deny the
+        // org-inherited `feature-*` credentials (T056) on the NEXT request
+        // rather than surviving the 60s ActorContext cache TTL.
+        await this.actorContextCacheService.deleteByActorID(actorID);
         break;
       }
     }

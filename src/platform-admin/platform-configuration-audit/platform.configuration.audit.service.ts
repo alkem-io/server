@@ -1,4 +1,6 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { LogContext } from '@common/enums/logging.context';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { PlatformAuditCategory } from '@domain/community/user-email-change/enums/platform.audit.category';
 import { PlatformAuditInitiatorRole } from '@domain/community/user-email-change/enums/platform.audit.initiator.role';
 import { PlatformAuditOutcome } from '@domain/community/user-email-change/enums/platform.audit.outcome';
@@ -6,6 +8,7 @@ import { PlatformAuditEntry } from '@domain/community/user-email-change/platform
 import { PlatformConfigurationAuditDetails } from '@domain/community/user-email-change/platform.audit.entry.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { resolveInitiatorRole } from '@src/platform-admin/platform-audit-attribution/resolve.initiator.role';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 
@@ -35,6 +38,49 @@ export class PlatformConfigurationAuditService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  /** T058 convenience wrapper — see `PlatformResourceAuditService.recordEventForActor`
+   * for the FR-025 attribution / fail-open rationale (identical here). A10/A13
+   * are single-path surfaces (no owner branch), so every successful call is,
+   * by construction, a platform-privileged one — no FR-018a discriminator
+   * needed at these call sites. */
+  public async recordChangeForActor(
+    actorContext: ActorContext,
+    intendedOwners: readonly AuthorizationCredential[],
+    legacyReachers: readonly AuthorizationCredential[],
+    input: Omit<
+      RecordConfigurationChangeInput,
+      'initiatorUserId' | 'initiatorRole'
+    >
+  ): Promise<void> {
+    let initiatorRole: PlatformAuditInitiatorRole;
+    try {
+      initiatorRole = resolveInitiatorRole({
+        actorCredentialTypes: actorContext.credentials?.map(
+          c => c.type as AuthorizationCredential
+        ),
+        intendedOwners,
+        legacyReachers,
+      });
+    } catch (error) {
+      this.logger.error?.(
+        {
+          message:
+            'Failed to resolve FR-025 attribution for a platform-configuration audit entry — write skipped (fail-open)',
+          setting: input.setting,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        error instanceof Error ? error.stack : undefined,
+        LogContext.PLATFORM
+      );
+      return;
+    }
+    await this.recordChange({
+      ...input,
+      initiatorUserId: actorContext.actorID,
+      initiatorRole,
+    });
+  }
 
   public async recordChange(
     input: RecordConfigurationChangeInput

@@ -30,6 +30,7 @@ import { ContributionReporterModule } from '@services/external/elasticsearch/con
 import { NamingModule } from '@services/infrastructure/naming/naming.module';
 import { SpaceFilterModule } from '@services/infrastructure/space-filter/space.filter.module';
 import { UrlGeneratorModule } from '@services/infrastructure/url-generator/url.generator.module';
+import { PlatformResourceAuditModule } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.module';
 import { AccountLookupModule } from '../account.lookup/account.lookup.module';
 import { SpaceAboutModule } from '../space.about/space.about.module';
 import { SpaceDefaultsModule } from '../space.defaults/space.defaults.module';
@@ -70,6 +71,7 @@ import { SpacePlatformRolesAccessService } from './space.service.platform.roles.
     LicenseModule,
     UrlGeneratorModule,
     ActorLookupModule,
+    PlatformResourceAuditModule,
     TypeOrmModule.forFeature([Space]),
   ],
   providers: [

@@ -7,6 +7,7 @@ import {
 import { Profiling } from '@common/decorators';
 import { LogContext } from '@common/enums';
 import { AiPersonaEngine } from '@common/enums/ai.persona.engine';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { RoleName } from '@common/enums/role.name';
 import { SpaceLevel } from '@common/enums/space.level';
 import { TemplateDefaultType } from '@common/enums/template.default.type';
@@ -19,6 +20,7 @@ import { EntityNotFoundException } from '@common/exceptions';
 import { BootstrapException } from '@common/exceptions/bootstrap.exception';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { ActorContextService } from '@core/actor-context/actor.context.service';
+import { ROLE_CREDENTIAL_MAP } from '@domain/access/platform-roles-access/platform.roles.access.service';
 import { RoleSetService } from '@domain/access/role-set/role.set.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
 import { LicenseService } from '@domain/common/license/license.service';
@@ -26,8 +28,10 @@ import { MessagingService } from '@domain/communication/messaging/messaging.serv
 import { OrganizationService } from '@domain/community/organization/organization.service';
 import { OrganizationAuthorizationService } from '@domain/community/organization/organization.service.authorization';
 import { OrganizationLookupService } from '@domain/community/organization-lookup/organization.lookup.service';
+import { IUser } from '@domain/community/user/user.interface';
 import { UserService } from '@domain/community/user/user.service';
 import { UserAuthorizationService } from '@domain/community/user/user.service.authorization';
+import { PlatformAuditInitiatorRole } from '@domain/community/user-email-change/enums/platform.audit.initiator.role';
 import { UserLookupService } from '@domain/community/user-lookup/user.lookup.service';
 import { IVirtualAssistant } from '@domain/community/virtual-assistant/virtual.assistant.interface';
 import { VirtualAssistantService } from '@domain/community/virtual-assistant/virtual.assistant.service';
@@ -49,11 +53,18 @@ import { LicensingFrameworkService } from '@platform/licensing/credential-based/
 import { PlatformService } from '@platform/platform/platform.service';
 import { PlatformAuthorizationService } from '@platform/platform/platform.service.authorization';
 import { PlatformWellKnownVirtualContributorsService } from '@platform/platform.well.known.virtual.contributors/platform.well.known.virtual.contributors.service';
+import {
+  FEATURE_FAMILY_ROLES,
+  PLATFORM_FAMILY_ROLES,
+  PlatformRoleAssignmentRulesService,
+} from '@platform/platform-role/platform.role.assignment.rules.service';
 import { PlatformTemplatesService } from '@platform/platform-templates/platform.templates.service';
 import { AiServerService } from '@services/ai-server/ai-server/ai.server.service';
 import { AiServerAuthorizationService } from '@services/ai-server/ai-server/ai.server.service.authorization';
 import { McpApiKeyService } from '@services/mcp-server/auth/mcp-api-key.service';
 import { AdminAuthorizationService } from '@src/platform-admin/domain/authorization/admin.authorization.service';
+import { resolveInitiatorRole } from '@src/platform-admin/platform-audit-attribution/resolve.initiator.role';
+import { PlatformRoleAssignmentAuditService } from '@src/platform-admin/platform-role-assignment-audit/platform.role.assignment.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 import { bootstrapTemplateSpaceContentCalloutsSpaceL0Tutorials } from './platform-template-definitions/default-templates/bootstrap.template.space.content.callouts.space.l0.tutorials';
@@ -99,7 +110,12 @@ export class BootstrapService {
     private platformWellKnownVirtualContributorsService: PlatformWellKnownVirtualContributorsService,
     private roleSetService: RoleSetService,
     private readonly virtualAssistantService: VirtualAssistantService,
-    private readonly mcpApiKeyService: McpApiKeyService
+    private readonly mcpApiKeyService: McpApiKeyService,
+    // 027-platform-role-redesign (T053-T055): the shared assignment rule
+    // engine and the (fail-open) role-assignment audit writer — seeded
+    // grants go through the SAME enforcement point as the mutation path.
+    private readonly platformRoleAssignmentRulesService: PlatformRoleAssignmentRulesService,
+    private readonly platformRoleAssignmentAuditService: PlatformRoleAssignmentAuditService
   ) {}
 
   async bootstrap() {
@@ -368,14 +384,26 @@ export class BootstrapService {
     }
   }
 
+  /**
+   * 027-platform-role-redesign (T053-T055, research C7/D12): the credential
+   * grant loop now runs on EVERY start, for EVERY configured account — not
+   * only the FIRST time the account is created. A break-glass Roles Admin
+   * or a spaces-reader service account whose seeded credential was later
+   * revoked out-of-band (or was simply never granted, on an environment
+   * seeded before this feature) is re-granted on the next restart, exactly
+   * as FR-013b's "out-of-band lockout repaired by restart" requires — and
+   * granting only what is MISSING makes this idempotent on every other
+   * restart.
+   */
   async createUserProfiles(usersData: any[]) {
     try {
       for (const userData of usersData) {
-        const userExists = await this.userLookupService.isRegisteredUser(
-          userData.email
-        );
-        if (!userExists) {
-          const user = await this.userService.createUser({
+        let user = await this.userService.getUserByEmail(userData.email, {
+          relations: { credentials: true },
+        });
+
+        if (!user) {
+          const created = await this.userService.createUser({
             email: userData.email,
             firstName: userData.firstName,
             lastName: userData.lastName,
@@ -384,37 +412,141 @@ export class BootstrapService {
             },
           });
 
+          // T055: the seeded service account's `serviceProfile` marker MUST
+          // be set BEFORE its grant is evaluated below — rule 3 of the
+          // assignment rule engine keys on it, and a violation is FATAL
+          // (T054), so getting this order wrong means the server refuses to
+          // start rather than seeding a broken marker. Set directly on the
+          // entity (not via `updateUser`) — bootstrap is a system process,
+          // not a `SET_SERVICE_PROFILE`-gated mutation, and the platform
+          // authorization policy carrying that privilege may not even be
+          // populated yet at this point in `bootstrap()` (`ensureAuthorizationsPopulated()`
+          // runs later).
+          if (userData.serviceProfile === true) {
+            created.serviceProfile = true;
+            await this.userService.save(created);
+          }
+
           // Once all is done, reset the user authorizations
           const userAuthorizations =
             await this.userAuthorizationService.applyAuthorizationPolicy(
-              user.id
+              created.id
             );
           await this.authorizationPolicyService.saveAll(userAuthorizations);
 
-          const account = await this.userService.getAccount(user);
+          const account = await this.userService.getAccount(created);
           const accountAuthorizations =
             await this.accountAuthorizationService.applyAuthorizationPolicy(
               account
             );
           await this.authorizationPolicyService.saveAll(accountAuthorizations);
 
-          const credentialsData = userData.credentials;
-          for (const credentialData of credentialsData) {
-            await this.adminAuthorizationService.grantCredentialToUser({
-              userID: user.id,
-              type: credentialData.type,
-              resourceID: credentialData.resourceID,
-            });
-          }
           await this.userAuthorizationService.grantCredentialsAllUsersReceive(
-            user.id
+            created.id
+          );
+
+          // Reload with `credentials` populated for the grant loop below.
+          user = await this.userService.getUserByEmail(userData.email, {
+            relations: { credentials: true },
+          });
+        }
+
+        if (!user) {
+          throw new BootstrapException(
+            'Unable to (re)load seeded user after creation',
+            { userEmail: userData.email }
           );
         }
+
+        await this.grantSeededCredentials(user, userData.credentials ?? []);
       }
     } catch (error: any) {
+      if (error instanceof BootstrapException) {
+        throw error;
+      }
       throw new BootstrapException(
         `Unable to create profiles ${error.message}`
       );
+    }
+  }
+
+  /**
+   * T053/T054 — grants only the credentials `user` does not already hold
+   * (idempotent across restarts), routing every credential that belongs to
+   * the NEW target role vocabulary (`platform-*` / `feature-*`) through the
+   * SAME `PlatformRoleAssignmentRulesService` the resolver mutation path
+   * uses (T030-T032a) via `evaluateSeedOrFail()` — rules 2-5, never rule 1
+   * (there is no assigner; see that method's doc comment). Legacy
+   * credentials (`global-admin`, ...) are outside the rule engine's scope
+   * in Slice A and are granted unconditionally, exactly as before.
+   *
+   * A rule violation is FATAL (`BootstrapException`, naming the account and
+   * the violated rule) — never forced through by stripping the role, never
+   * silently skipped (FR-013, FR-028). The audit write is FAIL-OPEN
+   * (`seeded: true`, FR-027): the break-glass grant must not depend on a
+   * healthy audit store.
+   */
+  private async grantSeededCredentials(
+    user: IUser,
+    credentialsData: { type: AuthorizationCredential; resourceID?: string }[]
+  ): Promise<void> {
+    const alreadyHeld = new Set(
+      (user.credentials ?? []).map(c => `${c.type}::${c.resourceID ?? ''}`)
+    );
+
+    for (const credentialData of credentialsData) {
+      const key = `${credentialData.type}::${credentialData.resourceID ?? ''}`;
+      if (alreadyHeld.has(key)) {
+        continue;
+      }
+
+      // D2: identical strings for the new `platform-*`/`feature-*` roles —
+      // the two enums are nominally distinct, so the cast goes via
+      // `unknown`, exactly as `platform.roles.access.service.ts` documents.
+      const asRole = credentialData.type as unknown as RoleName;
+      const isTargetRoleModel =
+        PLATFORM_FAMILY_ROLES.has(asRole) || FEATURE_FAMILY_ROLES.has(asRole);
+
+      if (isTargetRoleModel) {
+        try {
+          this.platformRoleAssignmentRulesService.evaluateSeedOrFail({
+            action: 'grant',
+            role: asRole,
+            targetActorType: 'user',
+            targetServiceProfile: user.serviceProfile,
+          });
+        } catch (error: any) {
+          throw new BootstrapException(
+            `Seeded credential grant rejected: role ${asRole} violates ${
+              error?.details?.ruleId ?? 'an assignment rule'
+            }`,
+            { userId: user.id, role: asRole, cause: error?.message }
+          );
+        }
+      }
+
+      await this.adminAuthorizationService.grantCredentialToUser({
+        userID: user.id,
+        type: credentialData.type,
+        resourceID: credentialData.resourceID,
+      });
+
+      if (isTargetRoleModel) {
+        // FR-027: seeded writes fail OPEN — logged, never blocking startup.
+        // No actor at all (bootstrap-seeded) — resolves to `system`
+        // regardless of `intendedOwners` (T058a's second fallback case).
+        const initiatorRole: PlatformAuditInitiatorRole = resolveInitiatorRole({
+          intendedOwners: [ROLE_CREDENTIAL_MAP[asRole]],
+        });
+        await this.platformRoleAssignmentAuditService.recordGrantOrRevoke({
+          initiatorRole,
+          targetKind: 'user',
+          targetId: user.id,
+          role: asRole,
+          outcome: 'granted',
+          seeded: true,
+        });
+      }
     }
   }
 

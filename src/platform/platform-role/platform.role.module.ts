@@ -33,6 +33,9 @@ import { PlatformRoleResolverMutations } from './platform.role.resolver.mutation
     PlatformRoleResolverMutations,
     PlatformRoleAssignmentRulesService,
   ],
-  exports: [],
+  // 027-platform-role-redesign (T054): BootstrapService reuses the SAME
+  // rule engine for seeded grants — "seeding is not a bypass" only holds if
+  // both callers share one instance/one set of rules.
+  exports: [PlatformRoleAssignmentRulesService],
 })
 export class PlatformRoleModule {}

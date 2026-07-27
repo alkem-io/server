@@ -1,11 +1,13 @@
 import { CurrentActor } from '@common/decorators';
 import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { CalloutContributionType } from '@common/enums/callout.contribution.type';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { CollaborationLicenseService } from '@domain/collaboration/collaboration/collaboration.service.license';
 import { Args, Mutation, Resolver } from '@nestjs/graphql';
 import { InstrumentResolver } from '@src/apm/decorators';
+import { PlatformResourceAuditService } from '@src/platform-admin/platform-resource-audit/platform.resource.audit.service';
 import { ICalloutContribution } from './callout.contribution.interface';
 import { CalloutContributionMoveService } from './callout.contribution.move.service';
 import { CalloutContributionService } from './callout.contribution.service';
@@ -19,7 +21,8 @@ export class CalloutContributionMoveResolverMutations {
     private authorizationService: AuthorizationService,
     private calloutContributionService: CalloutContributionService,
     private calloutContributionMoveService: CalloutContributionMoveService,
-    private collaborationLicenseService: CollaborationLicenseService
+    private collaborationLicenseService: CollaborationLicenseService,
+    private readonly platformResourceAuditService: PlatformResourceAuditService
   ) {}
 
   @Mutation(() => ICalloutContribution, {
@@ -48,10 +51,25 @@ export class CalloutContributionMoveResolverMutations {
         moveContributionData.calloutID
       );
     }
-    return this.calloutContributionMoveService.moveContributionToCallout(
-      moveContributionData.contributionID,
-      moveContributionData.calloutID
+    const moved =
+      await this.calloutContributionMoveService.moveContributionToCallout(
+        moveContributionData.contributionID,
+        moveContributionData.calloutID
+      );
+    // T058 — A9, single-path surface: every successful call is, by
+    // construction, authorized by MOVE_CONTRIBUTION.
+    await this.platformResourceAuditService.recordEventForActor(
+      actorContext,
+      [AuthorizationCredential.PLATFORM_RESOURCE_ADMIN],
+      [AuthorizationCredential.GLOBAL_ADMIN],
+      {
+        resourceKind: 'callout-contribution',
+        resourceId: contribution.id,
+        toAccountId: moveContributionData.calloutID,
+        outcome: 'moved',
+      }
     );
+    return moved;
   }
 
   @Mutation(() => ICalloutContribution, {
@@ -88,6 +106,25 @@ export class CalloutContributionMoveResolverMutations {
       );
     }
 
-    return this.calloutContributionService.delete(contribution.id);
+    const deleted = await this.calloutContributionService.delete(
+      contribution.id
+    );
+    // T058/FR-018a: audit ONLY on the PLATFORM branch.
+    if (canDeleteAsContentFullAccess) {
+      await this.platformResourceAuditService.recordEventForActor(
+        actorContext,
+        [AuthorizationCredential.PLATFORM_CONTENT_FULL_ACCESS],
+        [
+          AuthorizationCredential.GLOBAL_ADMIN,
+          AuthorizationCredential.GLOBAL_SUPPORT,
+        ],
+        {
+          resourceKind: 'callout-contribution',
+          resourceId: contribution.id,
+          outcome: 'deleted',
+        }
+      );
+    }
+    return deleted;
   }
 }
