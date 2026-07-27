@@ -27,12 +27,30 @@ export class DiscussionResolverMutations {
     const discussion = await this.discussionService.getDiscussionOrFail(
       deleteData.ID
     );
-    await this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T049, A15, FR-007(e)): dual-path —
+    // ordinary DELETE (today's reach, including the GLOBAL_SUPPORT
+    // platform-subtree cascade this feature does not touch until Slice B,
+    // T073) alongside platform-support's own PLATFORM_FORUM_MANAGE
+    // privilege, so Support does not lose forum access when that cascade is
+    // deleted.
+    const canDeleteAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       discussion.authorization,
-      AuthorizationPrivilege.DELETE,
-      `delete discussion: ${discussion.id}`
+      AuthorizationPrivilege.DELETE
     );
+    const canDeleteAsForumManager = this.authorizationService.isAccessGranted(
+      actorContext,
+      discussion.authorization,
+      AuthorizationPrivilege.PLATFORM_FORUM_MANAGE
+    );
+    if (!canDeleteAsOwner && !canDeleteAsForumManager) {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        discussion.authorization,
+        AuthorizationPrivilege.DELETE,
+        `delete discussion: ${discussion.id}`
+      );
+    }
     return await this.discussionService.removeDiscussion(deleteData);
   }
 
@@ -49,12 +67,26 @@ export class DiscussionResolverMutations {
         relations: { profile: true, comments: true },
       }
     );
-    await this.authorizationService.grantAccessOrFail(
+    // 027-platform-role-redesign (T049, A15, FR-007(e)): dual-path — see
+    // the identical comment on deleteDiscussion above.
+    const canUpdateAsOwner = this.authorizationService.isAccessGranted(
       actorContext,
       discussion.authorization,
-      AuthorizationPrivilege.UPDATE,
-      `Update discussion: ${discussion.id}`
+      AuthorizationPrivilege.UPDATE
     );
+    const canUpdateAsForumManager = this.authorizationService.isAccessGranted(
+      actorContext,
+      discussion.authorization,
+      AuthorizationPrivilege.PLATFORM_FORUM_MANAGE
+    );
+    if (!canUpdateAsOwner && !canUpdateAsForumManager) {
+      await this.authorizationService.grantAccessOrFail(
+        actorContext,
+        discussion.authorization,
+        AuthorizationPrivilege.UPDATE,
+        `Update discussion: ${discussion.id}`
+      );
+    }
     return await this.discussionService.updateDiscussion(
       discussion,
       updateData
