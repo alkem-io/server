@@ -1743,6 +1743,49 @@ describe('RoleSetService', () => {
 
       expect(result).toBe('actor-1');
     });
+
+    // 027-platform-role-redesign (T057, FR-031/SC-016): a promotion on an
+    // ORGANIZATION role-set must invalidate the actor's cached ActorContext
+    // so the org-inherited feature-* credential expansion (T056) picks up
+    // the new standing on the NEXT request.
+    it('invalidates the actor-context cache on an ORGANIZATION role assignment', async () => {
+      const roleSet = {
+        id: 'rs-org-1',
+        type: RoleSetType.ORGANIZATION,
+        roles: [
+          {
+            name: RoleName.ADMIN,
+            credential: { type: 'org-admin', resourceID: 'org-1' },
+            userPolicy: { minimum: -1, maximum: -1 },
+            organizationPolicy: { minimum: -1, maximum: -1 },
+            virtualContributorPolicy: { minimum: -1, maximum: -1 },
+          },
+        ],
+      } as any;
+
+      (actorLookupService.getActorTypeByIdOrFail as Mock).mockResolvedValue(
+        'user'
+      );
+      vi.spyOn(roleSetRepository, 'findOne').mockResolvedValue({
+        ...roleSet,
+        parentRoleSet: undefined,
+      });
+      (actorService.hasValidCredential as Mock).mockResolvedValue(false);
+      (actorService.grantCredentialOrFail as Mock).mockResolvedValue(undefined);
+
+      const orgLookupService = (service as any).organizationLookupService;
+      (orgLookupService.getOrganizationByIdOrFail as Mock)?.mockResolvedValue?.(
+        { accountID: 'account-1' }
+      );
+
+      await service.assignActorToRole(roleSet, RoleName.ADMIN, 'actor-1');
+
+      const actorContextCacheService = (service as any)
+        .actorContextCacheService;
+      expect(actorContextCacheService.deleteByActorID).toHaveBeenCalledWith(
+        'actor-1'
+      );
+    });
   });
 
   describe('removeActorFromRole', () => {
@@ -1809,6 +1852,14 @@ describe('RoleSetService', () => {
       expect(
         roleSetCacheService.cleanActorMembershipCache
       ).toHaveBeenCalledWith('actor-1', 'rs-1');
+      // 027-platform-role-redesign (T057, FR-031/SC-016): a demotion/
+      // departure on an ORGANIZATION role-set must deny the org-inherited
+      // feature-* credentials (T056) on the NEXT request.
+      const actorContextCacheService = (service as any)
+        .actorContextCacheService;
+      expect(actorContextCacheService.deleteByActorID).toHaveBeenCalledWith(
+        'actor-1'
+      );
     });
 
     it('should clean the membership cache of every descendant role-set when removing MEMBER from a SPACE (cascade)', async () => {

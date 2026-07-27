@@ -4,6 +4,7 @@ import { UserLookupModule } from '@domain/community/user-lookup/user.lookup.modu
 import { Module } from '@nestjs/common';
 import { PlatformAuthorizationPolicyModule } from '@platform/authorization/platform.authorization.policy.module';
 import { KratosModule } from '@services/infrastructure/kratos/kratos.module';
+import { PlatformUserRecordAuditModule } from '@src/platform-admin/platform-user-record-audit/platform.user.record.audit.module';
 import { AdminIdentityResolverFields } from './admin.identity.resolver.fields';
 import { AdminIdentityResolverMutations } from './admin.identity.resolver.mutations';
 import { AdminIdentityResolverQueries } from './admin.identity.resolver.queries';
@@ -16,6 +17,7 @@ import { AdminIdentityService } from './admin.identity.service';
     PlatformAuthorizationPolicyModule,
     UserModule,
     UserLookupModule,
+    PlatformUserRecordAuditModule,
   ],
   providers: [
     AdminIdentityService,

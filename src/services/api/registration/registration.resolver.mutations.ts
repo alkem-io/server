@@ -1,4 +1,5 @@
 import { AuthorizationPrivilege } from '@common/enums';
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { ActorContext } from '@core/actor-context/actor.context';
 import { AuthorizationService } from '@core/authorization/authorization.service';
 import { AuthorizationPolicyService } from '@domain/common/authorization-policy/authorization.policy.service';
@@ -19,8 +20,19 @@ import { NotificationInputPlatformUserRemoved } from '@services/adapters/notific
 import { NotificationPlatformAdapter } from '@services/adapters/notification-adapter/notification.platform.adapter';
 import { InstrumentResolver } from '@src/apm/decorators';
 import { CurrentActor, Profiling } from '@src/common/decorators';
+import { PlatformUserRecordAuditService } from '@src/platform-admin/platform-user-record-audit/platform.user.record.audit.service';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { RegistrationService } from './registration.service';
+
+/** T063 — A5's declared owner/legacy-reachers (T062's grant). */
+const A5_INTENDED_OWNERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.PLATFORM_USERS_ADMIN,
+];
+const A5_LEGACY_REACHERS: readonly AuthorizationCredential[] = [
+  AuthorizationCredential.GLOBAL_ADMIN,
+  AuthorizationCredential.GLOBAL_SUPPORT,
+  AuthorizationCredential.GLOBAL_LICENSE_MANAGER,
+];
 
 @InstrumentResolver()
 @Resolver()
@@ -35,6 +47,7 @@ export class RegistrationResolverMutations {
     private platformAuthorizationService: PlatformAuthorizationPolicyService,
     private accountAuthorizationService: AccountAuthorizationService,
     private authorizationPolicyService: AuthorizationPolicyService,
+    private readonly platformUserRecordAuditService: PlatformUserRecordAuditService,
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
@@ -146,6 +159,20 @@ export class RegistrationResolverMutations {
       await this.registrationService.deleteUserWithPendingMemberships(
         deleteData
       );
+    // T063/FR-018a: audit ONLY on the PLATFORM branch — a self-service
+    // deletion is not an administrative action.
+    if (canDeleteAsPlatformUsersAdmin) {
+      await this.platformUserRecordAuditService.recordActionForActor(
+        actorContext,
+        A5_INTENDED_OWNERS,
+        A5_LEGACY_REACHERS,
+        {
+          action: 'deleteUser',
+          targetUserId: user.id,
+          outcome: 'identity_deleted',
+        }
+      );
+    }
     // Send the notification
     const notificationInput: NotificationInputPlatformUserRemoved = {
       triggeredBy: actorContext.actorID,

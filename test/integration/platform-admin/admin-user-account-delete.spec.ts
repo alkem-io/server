@@ -8,6 +8,7 @@ import { PlatformAuthorizationPolicyService } from '@platform/authorization/plat
 import { KratosService } from '@services/infrastructure/kratos/kratos.service';
 import { AdminIdentityService } from '@src/platform-admin/core/identity/admin.identity.service';
 import { AdminUsersMutations } from '@src/platform-admin/domain/user/admin.users.resolver.mutations';
+import { PlatformUserRecordAuditService } from '@src/platform-admin/platform-user-record-audit/platform.user.record.audit.service';
 import { Mock, vi } from 'vitest';
 
 const createLogger = () =>
@@ -48,12 +49,18 @@ describe('Platform-admin identity deletion flows', () => {
       getUserByIdOrFail: Mock;
       clearAuthenticationIDForUser: Mock;
     };
+    const platformUserRecordAuditService = {
+      recordActionForActor: vi.fn().mockResolvedValue(undefined),
+    } as unknown as PlatformUserRecordAuditService & {
+      recordActionForActor: Mock;
+    };
 
     const resolver = new AdminUsersMutations(
       authorizationService,
       platformAuthorizationPolicyService,
       kratosService,
       userService,
+      platformUserRecordAuditService,
       createLogger()
     );
 
@@ -75,6 +82,20 @@ describe('Platform-admin identity deletion flows', () => {
     );
     expect(userService.clearAuthenticationIDForUser).toHaveBeenCalled();
     expect(result.authenticationID).toBeNull();
+    // T063: single-path surface — every successful call is audited, real
+    // targeted user as subject (FR-030, SC-015).
+    expect(
+      platformUserRecordAuditService.recordActionForActor
+    ).toHaveBeenCalledWith(
+      actorContext,
+      expect.any(Array),
+      expect.any(Array),
+      expect.objectContaining({
+        action: 'adminUserAccountDelete',
+        targetUserId: 'user-1',
+        outcome: 'account_reset',
+      })
+    );
   });
 
   it('clears authentication ID when deleting Kratos identity by ID', async () => {

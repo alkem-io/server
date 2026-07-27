@@ -1,4 +1,6 @@
+import { AuthorizationCredential } from '@common/enums/authorization.credential';
 import { LogContext } from '@common/enums/logging.context';
+import { ActorContext } from '@core/actor-context/actor.context';
 import { PlatformAuditCategory } from '@domain/community/user-email-change/enums/platform.audit.category';
 import { PlatformAuditInitiatorRole } from '@domain/community/user-email-change/enums/platform.audit.initiator.role';
 import { PlatformAuditOutcome } from '@domain/community/user-email-change/enums/platform.audit.outcome';
@@ -6,6 +8,7 @@ import { PlatformAuditEntry } from '@domain/community/user-email-change/platform
 import { PlatformUserRecordAuditDetails } from '@domain/community/user-email-change/platform.audit.entry.interface';
 import { Inject, Injectable, LoggerService } from '@nestjs/common';
 import { InjectRepository } from '@nestjs/typeorm';
+import { resolveInitiatorRole } from '@src/platform-admin/platform-audit-attribution/resolve.initiator.role';
 import { WINSTON_MODULE_NEST_PROVIDER } from 'nest-winston';
 import { Repository } from 'typeorm';
 
@@ -38,6 +41,54 @@ export class PlatformUserRecordAuditService {
     @Inject(WINSTON_MODULE_NEST_PROVIDER)
     private readonly logger: LoggerService
   ) {}
+
+  /**
+   * T063 convenience wrapper — resolves FR-025 attribution (T058a) from the
+   * calling actor's OWN credentials and A5's declared owner/legacy
+   * reachers, then writes exactly as `recordAction` would. `deleteUser` is
+   * a DUAL-PATH surface (self-service DELETE ∨ PLATFORM_USERS_ADMIN) —
+   * callers MUST only invoke this on the PLATFORM branch (FR-018a); a
+   * self-service deletion is not an administrative action and must not be
+   * written here.
+   */
+  public async recordActionForActor(
+    actorContext: ActorContext,
+    intendedOwners: readonly AuthorizationCredential[],
+    legacyReachers: readonly AuthorizationCredential[],
+    input: Omit<
+      RecordUserRecordActionInput,
+      'initiatorUserId' | 'initiatorRole'
+    >
+  ): Promise<void> {
+    let initiatorRole: PlatformAuditInitiatorRole;
+    try {
+      initiatorRole = resolveInitiatorRole({
+        actorCredentialTypes: actorContext.credentials?.map(
+          c => c.type as AuthorizationCredential
+        ),
+        intendedOwners,
+        legacyReachers,
+      });
+    } catch (error) {
+      this.logger.error?.(
+        {
+          message:
+            'Failed to resolve FR-025 attribution for a platform-user-record audit entry — write skipped (fail-open)',
+          action: input.action,
+          targetUserId: input.targetUserId,
+          error: error instanceof Error ? error.message : String(error),
+        },
+        error instanceof Error ? error.stack : undefined,
+        LogContext.PLATFORM
+      );
+      return;
+    }
+    await this.recordAction({
+      ...input,
+      initiatorUserId: actorContext.actorID,
+      initiatorRole,
+    });
+  }
 
   public async recordAction(input: RecordUserRecordActionInput): Promise<void> {
     try {
