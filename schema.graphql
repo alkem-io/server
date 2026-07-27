@@ -104,6 +104,9 @@ enum AuthorizationCredential {
   ACCOUNT_ADMIN
   ASSISTANT_ACCESS
   BETA_TESTER
+  FEATURE_BETA_TESTER
+  FEATURE_ORGANIZATION_CREATOR
+  FEATURE_VIRTUAL_ASSISTANT
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
   GLOBAL_COMMUNITY_READ
@@ -117,7 +120,16 @@ enum AuthorizationCredential {
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
+  PLATFORM_AUDIT_READER
+  PLATFORM_CONTENT_FULL_ACCESS
+  PLATFORM_LICENSE_MANAGER
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_RESOURCE_ADMIN
+  PLATFORM_ROLES_ADMIN
+  PLATFORM_SETTINGS_ADMIN
+  PLATFORM_SPACES_READER
+  PLATFORM_SUPPORT
+  PLATFORM_USERS_ADMIN
   SPACE_ADMIN
   SPACE_LEAD
   SPACE_MEMBER
@@ -217,6 +229,9 @@ enum AuthorizationPrivilege {
   CREATE_VIRTUAL
   CREATE_WHITEBOARD
   DELETE
+  DELETE_ORGANIZATION
+  FEATURE_ROLE_ASSIGN
+  FEATURE_ROLE_HOLDERS_READ
   FILE_DELETE
   FILE_UPLOAD
   GRANT
@@ -225,8 +240,14 @@ enum AuthorizationPrivilege {
   MOVE_CONTRIBUTION
   MOVE_POST
   PLATFORM_ADMIN
+  PLATFORM_AUDIT_READ
+  PLATFORM_CONTENT_FULL_ACCESS
+  PLATFORM_FORUM_MANAGE
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_ROLE_HOLDERS_READ
   PLATFORM_SETTINGS_ADMIN
+  PLATFORM_SUPPORT_ORG_RESOURCES
+  PLATFORM_USERS_ADMIN
   PUBLIC_SHARE
   READ
   READ_ABOUT
@@ -245,12 +266,14 @@ enum AuthorizationPrivilege {
   ROLESET_ENTRY_ROLE_INVITE
   ROLESET_ENTRY_ROLE_INVITE_ACCEPT
   ROLESET_ENTRY_ROLE_JOIN
+  SET_SERVICE_PROFILE
   TRANSFER_RESOURCE_ACCEPT
   TRANSFER_RESOURCE_OFFER
   UPDATE
   UPDATE_CALLOUT_PUBLISHER
   UPDATE_CONTENT
   UPDATE_INNOVATION_FLOW
+  UPDATE_NAMEID
 }
 
 enum CalendarEventType {
@@ -368,6 +391,9 @@ enum CredentialType {
   ACCOUNT_LICENSE_PLUS
   ASSISTANT_ACCESS
   BETA_TESTER
+  FEATURE_BETA_TESTER
+  FEATURE_ORGANIZATION_CREATOR
+  FEATURE_VIRTUAL_ASSISTANT
   GLOBAL_ADMIN
   GLOBAL_ANONYMOUS
   GLOBAL_COMMUNITY_READ
@@ -381,7 +407,16 @@ enum CredentialType {
   ORGANIZATION_ADMIN
   ORGANIZATION_ASSOCIATE
   ORGANIZATION_OWNER
+  PLATFORM_AUDIT_READER
+  PLATFORM_CONTENT_FULL_ACCESS
+  PLATFORM_LICENSE_MANAGER
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_RESOURCE_ADMIN
+  PLATFORM_ROLES_ADMIN
+  PLATFORM_SETTINGS_ADMIN
+  PLATFORM_SPACES_READER
+  PLATFORM_SUPPORT
+  PLATFORM_USERS_ADMIN
   SPACE_ADMIN
   SPACE_FEATURE_MEMO_MULTI_USER
   SPACE_FEATURE_OFFICE_DOCUMENTS
@@ -737,6 +772,9 @@ enum RoleName {
   ADMIN
   ANONYMOUS
   ASSOCIATE
+  FEATURE_BETA_TESTER
+  FEATURE_ORGANIZATION_CREATOR
+  FEATURE_VIRTUAL_ASSISTANT
   GLOBAL_ADMIN
   GLOBAL_COMMUNITY_READER
   GLOBAL_LICENSE_MANAGER
@@ -749,8 +787,17 @@ enum RoleName {
   MEMBER
   OWNER
   PLATFORM_ASSISTANT_ACCESS
+  PLATFORM_AUDIT_READER
   PLATFORM_BETA_TESTER
+  PLATFORM_CONTENT_FULL_ACCESS
+  PLATFORM_LICENSE_MANAGER
   PLATFORM_OPERATIONS_ADMIN
+  PLATFORM_RESOURCE_ADMIN
+  PLATFORM_ROLES_ADMIN
+  PLATFORM_SETTINGS_ADMIN
+  PLATFORM_SPACES_READER
+  PLATFORM_SUPPORT
+  PLATFORM_USERS_ADMIN
   PLATFORM_VC_CAMPAIGN
   REGISTERED
 }
@@ -3974,11 +4021,11 @@ type Mutation {
   """
   adminUserAccountDelete(userID: UUID!): User!
   """
-  Change a user's login email synchronously, acting as a platform administrator. The admin is responsible for verifying the subject user's identity out-of-band — the platform does NOT send a confirmation message to the new mailbox and does NOT require the new mailbox to prove ownership. Validates uniqueness, commits Kratos → Alkemio with bounded retry, invalidates the subject's existing sessions, and sends a security-signal notification to the old address. Requires PLATFORM_ADMIN.
+  Change a user's login email synchronously, acting as a platform administrator. The admin is responsible for verifying the subject user's identity out-of-band — the platform does NOT send a confirmation message to the new mailbox and does NOT require the new mailbox to prove ownership. Validates uniqueness, commits Kratos → Alkemio with bounded retry, invalidates the subject's existing sessions, and sends a security-signal notification to the old address. Requires PLATFORM_USERS_ADMIN.
   """
   adminUserEmailChange(adminUserEmailChangeData: AdminUserEmailChangeInput!): UserEmailChangeResult!
   """
-  Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio and Kratos to a canonical email chosen by the admin. Requires PLATFORM_ADMIN.
+  Reconcile an outstanding drift-detected state for a subject user by force-aligning Alkemio and Kratos to a canonical email chosen by the admin. Requires PLATFORM_USERS_ADMIN.
   """
   adminUserEmailChangeDriftResolve(adminUserEmailChangeDriftResolveData: AdminUserEmailChangeDriftResolveInput!): UserEmailChangeResult!
   """Create a test customer on wingback."""
@@ -4003,6 +4050,8 @@ type Mutation {
   assignLicensePlanToAccount(planData: AssignLicensePlanToAccount!): Account!
   """Assign the specified LicensePlan to a Space."""
   assignLicensePlanToSpace(planData: AssignLicensePlanToSpace!): Space!
+  """Assigns an Organization to a role on the Platform."""
+  assignPlatformRoleToOrganization(roleData: AssignPlatformRoleInput!): Organization!
   """Assigns a User to a role on the Platform."""
   assignPlatformRoleToUser(roleData: AssignPlatformRoleInput!): User!
   """
@@ -4235,6 +4284,8 @@ type Mutation {
   removeMessageOnRoom(messageData: RoomRemoveMessageInput!): MessageID!
   """Removes an email address from the platform notification blacklist"""
   removeNotificationEmailFromBlacklist(input: NotificationEmailAddressInput!): [String!]!
+  """Removes an Organization from a Role on the Platform."""
+  removePlatformRoleFromOrganization(roleData: RemovePlatformRoleInput!): Organization!
   """Removes a User from a Role on the Platform."""
   removePlatformRoleFromUser(roleData: RemovePlatformRoleInput!): User!
   """
@@ -4324,7 +4375,7 @@ type Mutation {
   """Update the Application Form used by this RoleSet."""
   updateApplicationFormOnRoleSet(applicationFormData: UpdateApplicationFormOnRoleSetInput!): RoleSet!
   """
-  Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires platform-admin.
+  Set the admin per-capability grant on the virtual-assistant actor, governing what it may do system-invoked (default read-only). Requires the platform-operations-admin privilege.
   """
   updateAssistantActorCapabilities(grantData: GrantAssistantActorCapabilitiesInput!): VirtualAssistant!
   """Update the baseline License Plan on the specified Account."""
